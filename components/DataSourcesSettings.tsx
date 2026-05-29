@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { migratePersonnelToDatabase } from '../lib/api';
 import { ESL_DATA } from '../mockData';
+import {
+  DEFAULT_EXTERNAL_DATA_CONTROLS,
+  ExternalDataControls,
+  readExternalDataControls,
+  writeExternalDataControls,
+} from '../utils/externalDataControls';
 
 interface DataSourceSettings {
   staff: boolean;      // Staff MockData ON/OFF
@@ -23,6 +29,7 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
     staffDb: true,
     traineeDb: true,
   });
+  const [externalControls, setExternalControls] = useState<ExternalDataControls>(DEFAULT_EXTERNAL_DATA_CONTROLS);
 
   const [migrationState, setMigrationState] = useState<MigrationState>('idle');
   const [migrationResult, setMigrationResult] = useState<{
@@ -47,6 +54,7 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
     } catch (e) {
       console.warn('Could not read dataSourceSettings from localStorage');
     }
+    setExternalControls(readExternalDataControls());
   }, []);
 
   const handleToggle = (key: keyof DataSourceSettings) => {
@@ -67,6 +75,40 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
     } catch (e) {
       console.error('Could not save dataSourceSettings to localStorage');
     }
+  };
+
+  const handleExternalToggle = (key: keyof ExternalDataControls) => {
+    const next: ExternalDataControls = key === 'externalDataEnabled'
+      ? externalControls.externalDataEnabled
+        ? {
+            ...externalControls,
+            externalDataEnabled: false,
+            weatherDataEnabled: false,
+            flightTrackingEnabled: false,
+            productionApiFallbackEnabled: false,
+            externalMediaEnabled: false,
+          }
+        : {
+            externalDataEnabled: true,
+            weatherDataEnabled: true,
+            flightTrackingEnabled: true,
+            productionApiFallbackEnabled: true,
+            externalMediaEnabled: true,
+          }
+      : { ...externalControls, [key]: !externalControls[key] };
+    const normalized = key !== 'externalDataEnabled' && next[key]
+      ? { ...next, externalDataEnabled: true }
+      : next;
+    setExternalControls(normalized);
+    writeExternalDataControls(normalized);
+    const labels: Record<keyof ExternalDataControls, string> = {
+      externalDataEnabled: 'External data master switch',
+      weatherDataEnabled: 'TAF weather data',
+      flightTrackingEnabled: 'ADS-B flight tracking',
+      productionApiFallbackEnabled: 'Production API fallback',
+      externalMediaEnabled: 'External media assets',
+    };
+    onShowSuccess(`${labels[key]} ${normalized[key] ? 'enabled' : 'disabled'}.`);
   };
 
   const handleMigrateStaff = async () => {
@@ -180,6 +222,70 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
                 icon={<path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />}
               />
 
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-700" />
+
+          {/* Section: External Data */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">External Data & Network Controls</p>
+            <div className="space-y-3">
+              <ToggleRow
+                label="External Data Master Switch"
+                description={externalControls.externalDataEnabled ? 'Weather, public flight tracking and production fallback endpoints are allowed' : 'External services are blocked; the app will use only same-origin app/database APIs'}
+                enabled={externalControls.externalDataEnabled}
+                onToggle={() => handleExternalToggle('externalDataEnabled')}
+                iconBg="bg-cyan-900/50"
+                iconColor="text-cyan-400"
+                labelColor="text-cyan-400"
+                icon={<path fillRule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm8-6a6 6 0 00-5.917 5h3.001A12.04 12.04 0 018 4.34 5.98 5.98 0 0010 4zm2 0.34A12.04 12.04 0 0112.916 9h3.001A6.01 6.01 0 0012 4.34zM10 6.03A10.05 10.05 0 009.1 9h1.8A10.05 10.05 0 0010 6.03zM4.083 11A6.01 6.01 0 008 15.66 12.04 12.04 0 017.084 11H4.083zm5.017 0a10.05 10.05 0 00.9 2.97 10.05 10.05 0 00.9-2.97H9.1zm3.816 0A12.04 12.04 0 0112 15.66 6.01 6.01 0 0015.917 11h-3.001z" clipRule="evenodd" />}
+              />
+
+              <ToggleRow
+                label="TAF Weather Data"
+                description={externalControls.weatherDataEnabled && externalControls.externalDataEnabled ? 'Supervisor dashboard may request TAFs from AVWX' : 'TAF widget will not call AVWX or refresh weather data'}
+                enabled={externalControls.externalDataEnabled && externalControls.weatherDataEnabled}
+                onToggle={() => handleExternalToggle('weatherDataEnabled')}
+                iconBg="bg-sky-900/50"
+                iconColor="text-sky-400"
+                labelColor="text-sky-400"
+                icon={<path d="M5.5 16a4.5 4.5 0 01.7-8.945 5.5 5.5 0 0110.14 2.01A3.5 3.5 0 1116.5 16h-11z" />}
+              />
+
+              <ToggleRow
+                label="ADS-B Flight Tracking"
+                description={externalControls.flightTrackingEnabled && externalControls.externalDataEnabled ? 'Supervisor dashboard may embed public ADS-B map data' : 'Flight tracking map embeds and external tracker links are disabled'}
+                enabled={externalControls.externalDataEnabled && externalControls.flightTrackingEnabled}
+                onToggle={() => handleExternalToggle('flightTrackingEnabled')}
+                iconBg="bg-violet-900/50"
+                iconColor="text-violet-400"
+                labelColor="text-violet-400"
+                icon={<path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14A1 1 0 003 18h14a1 1 0 00.894-1.447l-7-14zM10 6l4.5 9h-9L10 6z" />}
+              />
+
+              <ToggleRow
+                label="Production API Fallback"
+                description={externalControls.productionApiFallbackEnabled && externalControls.externalDataEnabled ? 'Local/non-Railway clients may call the hosted Railway API if same-origin API is unavailable' : 'Clients use only the same-origin /api path; Vite-only local sessions may need the app backend running on the same origin'}
+                enabled={externalControls.externalDataEnabled && externalControls.productionApiFallbackEnabled}
+                onToggle={() => handleExternalToggle('productionApiFallbackEnabled')}
+                iconBg="bg-amber-900/50"
+                iconColor="text-amber-400"
+                labelColor="text-amber-400"
+                icon={<path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v2h16V6a2 2 0 00-2-2H4zm14 6H2v4a2 2 0 002 2h12a2 2 0 002-2v-4zM4 13a1 1 0 011-1h2a1 1 0 110 2H5a1 1 0 01-1-1z" clipRule="evenodd" />}
+              />
+
+              <ToggleRow
+                label="External Media Assets"
+                description={externalControls.externalMediaEnabled && externalControls.externalDataEnabled ? 'Remote profile/media assets may be loaded from configured public hosts' : 'Remote image/media asset loads are blocked and local placeholders are shown'}
+                enabled={externalControls.externalDataEnabled && externalControls.externalMediaEnabled}
+                onToggle={() => handleExternalToggle('externalMediaEnabled')}
+                iconBg="bg-rose-900/50"
+                iconColor="text-rose-400"
+                labelColor="text-rose-400"
+                icon={<path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm1 4a2 2 0 114 0 2 2 0 01-4 0zm11 7l-3.5-4-2.5 3-1.5-2L4 16h12v-2z" clipRule="evenodd" />}
+              />
             </div>
           </div>
 
@@ -331,6 +437,18 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
               <div className="flex items-center space-x-2">
                 <span className={`w-2 h-2 rounded-full ${settings.trainee ? 'bg-indigo-400' : 'bg-gray-600'}`} />
                 <span className="text-gray-300">Trainee Mock: <span className={settings.trainee ? 'text-indigo-400' : 'text-gray-500'}>{settings.trainee ? 'ON' : 'OFF'}</span></span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`w-2 h-2 rounded-full ${externalControls.externalDataEnabled ? 'bg-cyan-400' : 'bg-gray-600'}`} />
+                <span className="text-gray-300">External Data: <span className={externalControls.externalDataEnabled ? 'text-cyan-400' : 'text-gray-500'}>{externalControls.externalDataEnabled ? 'ON' : 'OFF'}</span></span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`w-2 h-2 rounded-full ${externalControls.productionApiFallbackEnabled && externalControls.externalDataEnabled ? 'bg-amber-400' : 'bg-gray-600'}`} />
+                <span className="text-gray-300">Railway Fallback: <span className={externalControls.productionApiFallbackEnabled && externalControls.externalDataEnabled ? 'text-amber-400' : 'text-gray-500'}>{externalControls.productionApiFallbackEnabled && externalControls.externalDataEnabled ? 'ON' : 'OFF'}</span></span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`w-2 h-2 rounded-full ${externalControls.externalMediaEnabled && externalControls.externalDataEnabled ? 'bg-rose-400' : 'bg-gray-600'}`} />
+                <span className="text-gray-300">External Media: <span className={externalControls.externalMediaEnabled && externalControls.externalDataEnabled ? 'text-rose-400' : 'text-gray-500'}>{externalControls.externalMediaEnabled && externalControls.externalDataEnabled ? 'ON' : 'OFF'}</span></span>
               </div>
             </div>
           </div>

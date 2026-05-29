@@ -1376,19 +1376,60 @@ function logAudit(pageOrParams, action, description, changes) {
     console.error("Error logging audit entry:", error);
   }
 }
+const EXTERNAL_DATA_CONTROLS_STORAGE_KEY = "neo_external_data_controls";
+const EXTERNAL_DATA_CONTROLS_EVENT = "neo-external-data-controls-changed";
+const PRODUCTION_API_ORIGIN = "https://dfp-neo-v2-production.up.railway.app";
+const DEFAULT_EXTERNAL_DATA_CONTROLS = {
+  externalDataEnabled: true,
+  weatherDataEnabled: true,
+  flightTrackingEnabled: true,
+  productionApiFallbackEnabled: true,
+  externalMediaEnabled: true
+};
+const safeWindow = () => typeof window === "undefined" ? null : window;
+const normalizeExternalDataControls = (value) => ({
+  externalDataEnabled: value?.externalDataEnabled !== false,
+  weatherDataEnabled: value?.weatherDataEnabled !== false,
+  flightTrackingEnabled: value?.flightTrackingEnabled !== false,
+  productionApiFallbackEnabled: value?.productionApiFallbackEnabled !== false,
+  externalMediaEnabled: value?.externalMediaEnabled !== false
+});
+const readExternalDataControls = () => {
+  const win = safeWindow();
+  if (!win) return DEFAULT_EXTERNAL_DATA_CONTROLS;
+  try {
+    const stored = win.localStorage.getItem(EXTERNAL_DATA_CONTROLS_STORAGE_KEY);
+    if (!stored) return DEFAULT_EXTERNAL_DATA_CONTROLS;
+    return normalizeExternalDataControls(JSON.parse(stored));
+  } catch {
+    return DEFAULT_EXTERNAL_DATA_CONTROLS;
+  }
+};
+const writeExternalDataControls = (settings) => {
+  const win = safeWindow();
+  if (!win) return;
+  const normalized = normalizeExternalDataControls(settings);
+  win.localStorage.setItem(EXTERNAL_DATA_CONTROLS_STORAGE_KEY, JSON.stringify(normalized));
+  win.dispatchEvent(new CustomEvent(EXTERNAL_DATA_CONTROLS_EVENT, { detail: normalized }));
+};
+const isExternalDataAllowed = (key) => {
+  const settings = readExternalDataControls();
+  if (!settings.externalDataEnabled) return false;
+  return key ? settings[key] !== false : true;
+};
+const getAppApiBase = () => {
+  const win = safeWindow();
+  if (!win) return "/api";
+  const currentOrigin = win.location.origin;
+  if (currentOrigin === PRODUCTION_API_ORIGIN || currentOrigin.includes("railway.app")) return "/api";
+  return isExternalDataAllowed("productionApiFallbackEnabled") ? `${PRODUCTION_API_ORIGIN}/api` : "/api";
+};
 const SETTINGS_VERSION = "1.0";
 const ORG_ID = "default";
 let saveDebounceTimer = null;
 let pendingSettings = null;
 let isSaving = false;
-const getApiBase$3 = () => {
-  const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
-  const currentOrigin = window.location.origin;
-  if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) {
-    return "/api";
-  }
-  return `${railwayBackend}/api`;
-};
+const getApiBase$3 = () => getAppApiBase();
 const loadSettingsFromDB = async () => {
   try {
     const apiBase2 = getApiBase$3();
@@ -1679,12 +1720,7 @@ const emptyPlatformConfig = {
   platformUsers: [],
   schedulingRuleSets: []
 };
-const getApiBase$2 = () => {
-  const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
-  const currentOrigin = window.location.origin;
-  if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) return "/api";
-  return `${railwayBackend}/api`;
-};
+const getApiBase$2 = () => getAppApiBase();
 const loadPlatformConfigFromDB = async () => {
   try {
     const res = await fetch(`${getApiBase$2()}/platform-config`, {
@@ -2571,12 +2607,7 @@ const AuditFlyout = ({
   const [logs, setLogs] = reactExports.useState([]);
   const [sortField, setSortField] = reactExports.useState("timestamp");
   const [sortDirection, setSortDirection] = reactExports.useState("desc");
-  const getApiBase2 = () => {
-    const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
-    const currentOrigin = window.location.origin;
-    if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) return "/api";
-    return `${railwayBackend}/api`;
-  };
+  const getApiBase2 = () => getAppApiBase();
   const summariseValue = (value) => {
     if (value === null || value === void 0 || value === "") return "blank";
     if (Array.isArray(value)) return value.join(", ") || "blank";
@@ -11549,7 +11580,7 @@ const TraineeProfileFlyout = ({
                     (() => {
                       const primaries = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
                       return primaries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1.5", children: primaries.map((name2, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") && isExternalDataAllowed("externalMediaEnabled") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
                         onOpenInstructorProfile ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "button",
                           {
@@ -11572,7 +11603,7 @@ const TraineeProfileFlyout = ({
                     (() => {
                       const secondaries = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
                       return secondaries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1.5", children: secondaries.map((name2, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") && isExternalDataAllowed("externalMediaEnabled") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
                         onOpenInstructorProfile ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "button",
                           {
@@ -18950,6 +18981,16 @@ const TafWeatherWidget = ({ onClose }) => {
   const [editLocations, setEditLocations] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(/* @__PURE__ */ new Set());
   const [lastUpdate, setLastUpdate] = reactExports.useState(/* @__PURE__ */ new Date());
+  const [externalDataAllowed, setExternalDataAllowed] = reactExports.useState(() => isExternalDataAllowed("weatherDataEnabled"));
+  reactExports.useEffect(() => {
+    const update = () => setExternalDataAllowed(isExternalDataAllowed("weatherDataEnabled"));
+    window.addEventListener(EXTERNAL_DATA_CONTROLS_EVENT, update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener(EXTERNAL_DATA_CONTROLS_EVENT, update);
+      window.removeEventListener("storage", update);
+    };
+  }, []);
   const highlightTafText = (text) => {
     const regex = /(\b(?:INTER|TEMPO)\s+\d{4}\/\d{4})/g;
     const parts = text.split(regex);
@@ -18961,6 +19002,7 @@ const TafWeatherWidget = ({ onClose }) => {
     });
   };
   const fetchTaf = async (icao) => {
+    if (!isExternalDataAllowed("weatherDataEnabled")) return;
     setLoading((prev) => new Set(prev).add(icao));
     try {
       const response = await fetch(
@@ -19006,6 +19048,7 @@ const TafWeatherWidget = ({ onClose }) => {
     }
   };
   const fetchAllTafs = () => {
+    if (!isExternalDataAllowed("weatherDataEnabled")) return;
     setLastUpdate(/* @__PURE__ */ new Date());
     locations.forEach((location) => {
       if (location.trim()) {
@@ -19014,22 +19057,28 @@ const TafWeatherWidget = ({ onClose }) => {
     });
   };
   reactExports.useEffect(() => {
+    if (!externalDataAllowed) {
+      setLoading(/* @__PURE__ */ new Set());
+      return;
+    }
     fetchAllTafs();
     const interval = setInterval(() => {
       fetchAllTafs();
     }, REFRESH_INTERVAL);
     return () => clearInterval(interval);
-  }, [locations]);
+  }, [locations, externalDataAllowed]);
   const handleSaveLocations = () => {
     const validLocations = editLocations.map((loc) => loc.trim().toUpperCase()).filter((loc) => loc.length >= 4);
     setLocations(validLocations);
     localStorage.setItem("tafLocations", JSON.stringify(validLocations));
     setIsEditing(false);
-    validLocations.forEach((location) => {
-      if (!tafData.has(location)) {
-        fetchTaf(location);
-      }
-    });
+    if (isExternalDataAllowed("weatherDataEnabled")) {
+      validLocations.forEach((location) => {
+        if (!tafData.has(location)) {
+          fetchTaf(location);
+        }
+      });
+    }
   };
   const handleEditLocations = () => {
     setEditLocations([...locations]);
@@ -19104,7 +19153,10 @@ const TafWeatherWidget = ({ onClose }) => {
         ] })
       ] })
     ] }),
-    isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+    !externalDataAllowed && !isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-700/50 bg-amber-900/20 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "External weather disabled" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "TAF requests to AVWX are blocked by Settings - Data Sources." })
+    ] }) : isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Enter ICAO codes (e.g., YMES, YMEN)" }),
       editLocations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400 text-sm w-8", children: [
@@ -19430,9 +19482,19 @@ const buildTrackerUrl = (location, enlarged = false) => {
 };
 const FlightTrackingWidget = ({ school, locationName }) => {
   const [isExpanded, setIsExpanded] = reactExports.useState(false);
+  const [trackingAllowed, setTrackingAllowed] = reactExports.useState(() => isExternalDataAllowed("flightTrackingEnabled"));
   const trackingLocation = reactExports.useMemo(() => resolveTrackingLocation(school, locationName), [school, locationName]);
   const compactTrackerUrl = reactExports.useMemo(() => buildTrackerUrl(trackingLocation), [trackingLocation]);
   const expandedTrackerUrl = reactExports.useMemo(() => buildTrackerUrl(trackingLocation, true), [trackingLocation]);
+  React.useEffect(() => {
+    const update = () => setTrackingAllowed(isExternalDataAllowed("flightTrackingEnabled"));
+    window.addEventListener(EXTERNAL_DATA_CONTROLS_EVENT, update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener(EXTERNAL_DATA_CONTROLS_EVENT, update);
+      window.removeEventListener("storage", update);
+    };
+  }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 flex flex-col flex-1", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start gap-3 mb-4", children: [
@@ -19445,7 +19507,7 @@ const FlightTrackingWidget = ({ school, locationName }) => {
             ")"
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+        trackingAllowed && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "a",
           {
             href: expandedTrackerUrl,
@@ -19456,7 +19518,7 @@ const FlightTrackingWidget = ({ school, locationName }) => {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg overflow-hidden border border-gray-700 bg-gray-900 h-64", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg overflow-hidden border border-gray-700 bg-gray-900 h-64", children: trackingAllowed ? /* @__PURE__ */ jsxRuntimeExports.jsx(
         "iframe",
         {
           title: `Flight tracking map centered on ${trackingLocation.label}`,
@@ -19465,18 +19527,22 @@ const FlightTrackingWidget = ({ school, locationName }) => {
           loading: "lazy",
           referrerPolicy: "no-referrer-when-downgrade"
         }
-      ) }),
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center justify-center p-6 text-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "External flight tracking disabled" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Public ADS-B map embeds are blocked by Settings - Data Sources." })
+      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-2 gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
             type: "button",
             onClick: () => setIsExpanded(true),
+            disabled: !trackingAllowed,
             className: "px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed text-sm",
             children: "Enlarge Map"
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+        trackingAllowed ? /* @__PURE__ */ jsxRuntimeExports.jsx(
           "a",
           {
             href: expandedTrackerUrl,
@@ -19485,11 +19551,11 @@ const FlightTrackingWidget = ({ school, locationName }) => {
             className: "px-4 py-2 rounded-md transition-colors font-semibold btn-aluminium-brushed text-sm text-center",
             children: "ADS-B.lol"
           }
-        )
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-4 py-2 rounded-md border border-gray-700 bg-gray-900 text-center text-sm font-semibold text-gray-500", children: "ADS-B.lol" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500", children: "Free public ADS-B display centered on the active DFP location." })
     ] }),
-    isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-600 rounded-lg shadow-2xl w-full max-w-6xl h-[82vh] flex flex-col overflow-hidden", children: [
+    isExpanded && trackingAllowed && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-600 rounded-lg shadow-2xl w-full max-w-6xl h-[82vh] flex flex-col overflow-hidden", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-4 border-b border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-white", children: [
@@ -58527,6 +58593,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     staffDb: true,
     traineeDb: true
   });
+  const [externalControls, setExternalControls] = reactExports.useState(DEFAULT_EXTERNAL_DATA_CONTROLS);
   const [migrationState, setMigrationState] = reactExports.useState("idle");
   const [migrationResult, setMigrationResult] = reactExports.useState(null);
   reactExports.useEffect(() => {
@@ -58544,6 +58611,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     } catch (e) {
       console.warn("Could not read dataSourceSettings from localStorage");
     }
+    setExternalControls(readExternalDataControls());
   }, []);
   const handleToggle = (key) => {
     const newSettings = { ...settings, [key]: !settings[key] };
@@ -58562,6 +58630,33 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     } catch (e) {
       console.error("Could not save dataSourceSettings to localStorage");
     }
+  };
+  const handleExternalToggle = (key) => {
+    const next = key === "externalDataEnabled" ? externalControls.externalDataEnabled ? {
+      ...externalControls,
+      externalDataEnabled: false,
+      weatherDataEnabled: false,
+      flightTrackingEnabled: false,
+      productionApiFallbackEnabled: false,
+      externalMediaEnabled: false
+    } : {
+      externalDataEnabled: true,
+      weatherDataEnabled: true,
+      flightTrackingEnabled: true,
+      productionApiFallbackEnabled: true,
+      externalMediaEnabled: true
+    } : { ...externalControls, [key]: !externalControls[key] };
+    const normalized = key !== "externalDataEnabled" && next[key] ? { ...next, externalDataEnabled: true } : next;
+    setExternalControls(normalized);
+    writeExternalDataControls(normalized);
+    const labels = {
+      externalDataEnabled: "External data master switch",
+      weatherDataEnabled: "TAF weather data",
+      flightTrackingEnabled: "ADS-B flight tracking",
+      productionApiFallbackEnabled: "Production API fallback",
+      externalMediaEnabled: "External media assets"
+    };
+    onShowSuccess(`${labels[key]} ${normalized[key] ? "enabled" : "disabled"}.`);
   };
   const handleMigrateStaff = async () => {
     setMigrationState("running");
@@ -58643,6 +58738,77 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
               iconColor: "text-teal-400",
               labelColor: "text-teal-400",
               icon: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" })
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-gray-700" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "External Data & Network Controls" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            ToggleRow,
+            {
+              label: "External Data Master Switch",
+              description: externalControls.externalDataEnabled ? "Weather, public flight tracking and production fallback endpoints are allowed" : "External services are blocked; the app will use only same-origin app/database APIs",
+              enabled: externalControls.externalDataEnabled,
+              onToggle: () => handleExternalToggle("externalDataEnabled"),
+              iconBg: "bg-cyan-900/50",
+              iconColor: "text-cyan-400",
+              labelColor: "text-cyan-400",
+              icon: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M2 10a8 8 0 1116 0 8 8 0 01-16 0zm8-6a6 6 0 00-5.917 5h3.001A12.04 12.04 0 018 4.34 5.98 5.98 0 0010 4zm2 0.34A12.04 12.04 0 0112.916 9h3.001A6.01 6.01 0 0012 4.34zM10 6.03A10.05 10.05 0 009.1 9h1.8A10.05 10.05 0 0010 6.03zM4.083 11A6.01 6.01 0 008 15.66 12.04 12.04 0 017.084 11H4.083zm5.017 0a10.05 10.05 0 00.9 2.97 10.05 10.05 0 00.9-2.97H9.1zm3.816 0A12.04 12.04 0 0112 15.66 6.01 6.01 0 0015.917 11h-3.001z", clipRule: "evenodd" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            ToggleRow,
+            {
+              label: "TAF Weather Data",
+              description: externalControls.weatherDataEnabled && externalControls.externalDataEnabled ? "Supervisor dashboard may request TAFs from AVWX" : "TAF widget will not call AVWX or refresh weather data",
+              enabled: externalControls.externalDataEnabled && externalControls.weatherDataEnabled,
+              onToggle: () => handleExternalToggle("weatherDataEnabled"),
+              iconBg: "bg-sky-900/50",
+              iconColor: "text-sky-400",
+              labelColor: "text-sky-400",
+              icon: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M5.5 16a4.5 4.5 0 01.7-8.945 5.5 5.5 0 0110.14 2.01A3.5 3.5 0 1116.5 16h-11z" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            ToggleRow,
+            {
+              label: "ADS-B Flight Tracking",
+              description: externalControls.flightTrackingEnabled && externalControls.externalDataEnabled ? "Supervisor dashboard may embed public ADS-B map data" : "Flight tracking map embeds and external tracker links are disabled",
+              enabled: externalControls.externalDataEnabled && externalControls.flightTrackingEnabled,
+              onToggle: () => handleExternalToggle("flightTrackingEnabled"),
+              iconBg: "bg-violet-900/50",
+              iconColor: "text-violet-400",
+              labelColor: "text-violet-400",
+              icon: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M10.894 2.553a1 1 0 00-1.788 0l-7 14A1 1 0 003 18h14a1 1 0 00.894-1.447l-7-14zM10 6l4.5 9h-9L10 6z" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            ToggleRow,
+            {
+              label: "Production API Fallback",
+              description: externalControls.productionApiFallbackEnabled && externalControls.externalDataEnabled ? "Local/non-Railway clients may call the hosted Railway API if same-origin API is unavailable" : "Clients use only the same-origin /api path; Vite-only local sessions may need the app backend running on the same origin",
+              enabled: externalControls.externalDataEnabled && externalControls.productionApiFallbackEnabled,
+              onToggle: () => handleExternalToggle("productionApiFallbackEnabled"),
+              iconBg: "bg-amber-900/50",
+              iconColor: "text-amber-400",
+              labelColor: "text-amber-400",
+              icon: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 4a2 2 0 00-2 2v2h16V6a2 2 0 00-2-2H4zm14 6H2v4a2 2 0 002 2h12a2 2 0 002-2v-4zM4 13a1 1 0 011-1h2a1 1 0 110 2H5a1 1 0 01-1-1z", clipRule: "evenodd" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            ToggleRow,
+            {
+              label: "External Media Assets",
+              description: externalControls.externalMediaEnabled && externalControls.externalDataEnabled ? "Remote profile/media assets may be loaded from configured public hosts" : "Remote image/media asset loads are blocked and local placeholders are shown",
+              enabled: externalControls.externalDataEnabled && externalControls.externalMediaEnabled,
+              onToggle: () => handleExternalToggle("externalMediaEnabled"),
+              iconBg: "bg-rose-900/50",
+              iconColor: "text-rose-400",
+              labelColor: "text-rose-400",
+              icon: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm1 4a2 2 0 114 0 2 2 0 01-4 0zm11 7l-3.5-4-2.5 3-1.5-2L4 16h12v-2z", clipRule: "evenodd" })
             }
           )
         ] })
@@ -58781,6 +58947,27 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-300", children: [
               "Trainee Mock: ",
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: settings.trainee ? "text-indigo-400" : "text-gray-500", children: settings.trainee ? "ON" : "OFF" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-2 h-2 rounded-full ${externalControls.externalDataEnabled ? "bg-cyan-400" : "bg-gray-600"}` }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-300", children: [
+              "External Data: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: externalControls.externalDataEnabled ? "text-cyan-400" : "text-gray-500", children: externalControls.externalDataEnabled ? "ON" : "OFF" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-2 h-2 rounded-full ${externalControls.productionApiFallbackEnabled && externalControls.externalDataEnabled ? "bg-amber-400" : "bg-gray-600"}` }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-300", children: [
+              "Railway Fallback: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: externalControls.productionApiFallbackEnabled && externalControls.externalDataEnabled ? "text-amber-400" : "text-gray-500", children: externalControls.productionApiFallbackEnabled && externalControls.externalDataEnabled ? "ON" : "OFF" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-2 h-2 rounded-full ${externalControls.externalMediaEnabled && externalControls.externalDataEnabled ? "bg-rose-400" : "bg-gray-600"}` }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-300", children: [
+              "External Media: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: externalControls.externalMediaEnabled && externalControls.externalDataEnabled ? "text-rose-400" : "text-gray-500", children: externalControls.externalMediaEnabled && externalControls.externalDataEnabled ? "ON" : "OFF" })
             ] })
           ] })
         ] })
@@ -59463,12 +59650,7 @@ const emptyConfig = {
   platformUsers: [],
   schedulingRuleSets: []
 };
-const getApiBase = () => {
-  const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
-  const currentOrigin = window.location.origin;
-  if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) return "/api";
-  return `${railwayBackend}/api`;
-};
+const getApiBase = () => getAppApiBase();
 const fieldClass = "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none";
 const labelClass = "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400";
 const sectionClass = "overflow-hidden rounded-xl border border-sky-500/35 bg-gray-800 shadow-[0_0_0_1px_rgba(125,211,252,0.08),0_18px_45px_rgba(0,0,0,0.28)]";
@@ -61866,7 +62048,7 @@ const UserSearchSelect = ({
     )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-2 text-xs text-yellow-100", children: "No users match that name." }) })
   ] });
 };
-const apiBase = () => window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+const apiBase = () => getAppApiBase();
 const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
   const [status, setStatus] = reactExports.useState("idle");
   const [metadata, setMetadata] = reactExports.useState(null);
@@ -78792,7 +78974,7 @@ const App = () => {
               "BPC+IPC": bpcIpcSyllabus,
               "FIC": ficSyllabus
             };
-            const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+            const apiBase2 = getAppApiBase();
             const syncRes = await fetch(`${apiBase2}/trainees/lmp-sync`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -79018,7 +79200,7 @@ const App = () => {
     const requestedSchool = school;
     const loadHistoricalData = async () => {
       try {
-        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+        const apiBase2 = getAppApiBase();
         try {
           const snapRes = await fetch(`${apiBase2}/daily-snapshot?school=${requestedSchool}`);
           if (cancelled) return;
@@ -79147,7 +79329,7 @@ const App = () => {
   reactExports.useEffect(() => {
     const loadSnapshotDates = async () => {
       try {
-        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+        const apiBase2 = getAppApiBase();
         const res = await fetch(`${apiBase2}/daily-snapshot/dates`);
         if (!res.ok) return;
         const data = await res.json();
@@ -79215,7 +79397,7 @@ const App = () => {
     }
     const retryDelays = [0, 2e3, 5e3, 1e4];
     try {
-      const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+      const apiBase2 = getAppApiBase();
       let lastError = null;
       for (let attempt = 0; attempt < retryDelays.length; attempt++) {
         const delay = retryDelays[attempt];
@@ -79678,14 +79860,7 @@ const App = () => {
     const m = Math.round((decimalHour - h) * 60);
     return `${h.toString().padStart(2, "0")}${m.toString().padStart(2, "0")}`;
   };
-  const getApiBaseUrl = () => {
-    const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
-    const currentOrigin = window.location.origin;
-    if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) {
-      return "/api";
-    }
-    return `${railwayBackend}/api`;
-  };
+  const getApiBaseUrl = () => getAppApiBase();
   const postAvailabilityEvent = async (availableCount, changeType, totalAircraftOverride, notesOverride, timestampOverride) => {
     const requestId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     console.log(`
@@ -83965,7 +84140,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     try {
       const activeTraineeNames = traineesData.filter((t) => !t.isPaused).map((t) => t.fullName).filter(Boolean);
       if (activeTraineeNames.length > 0) {
-        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+        const apiBase2 = getAppApiBase();
         markNeoBuildTiming(timingReport, "elce:request-start", { activeTrainees: activeTraineeNames.length });
         const elceRes = await fetch(`${apiBase2}/event-completions/elce`, {
           method: "POST",
@@ -85614,7 +85789,7 @@ ${conflictLines.join("\n")}${moreText}`,
   }, []);
   const syncUnavailabilityFromDatabase = reactExports.useCallback(async () => {
     try {
-      const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+      const apiBase2 = getAppApiBase();
       const [personnelRes, traineesRes] = await Promise.all([
         fetch(`${apiBase2}/personnel`, { credentials: "include" }),
         fetch(`${apiBase2}/trainees`, { credentials: "include" })
@@ -85676,7 +85851,7 @@ ${conflictLines.join("\n")}${moreText}`,
   }, [liveSyncEnabled, syncUnavailabilityFromDatabase]);
   const syncAlertsForCurrentDate = reactExports.useCallback(async () => {
     try {
-      const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+      const apiBase2 = getAppApiBase();
       const res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
       if (!res.ok) return;
       const data = await res.json();
@@ -89200,7 +89375,7 @@ Do you want to replace the existing entry?`,
                   ...item,
                   completedAt: completedSet.has(item.id || item.code) ? allScoresForTrainee.find((s) => s.event === (item.id || item.code))?.date || (/* @__PURE__ */ new Date()).toISOString() : null
                 }));
-                const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+                const apiBase2 = getAppApiBase();
                 const res = await fetch(`${apiBase2}/trainees/${trainee.id}/lmp`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },

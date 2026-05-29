@@ -38,6 +38,7 @@ import {
 } from './utils/personnelDisplaySettings';
 import { getTrainingReportTerminology } from './utils/trainingReportTerminology';
 import { getInsertEventTypes } from './utils/insertEventTypes';
+import { getAppApiBase } from './utils/externalDataControls';
 import type { InsertLmpEventRequest } from './components/TraineeLmpView';
 import {
     getStaffCallsignAssignments,
@@ -9689,9 +9690,7 @@ const App: React.FC = () => {
                             'FIC': ficSyllabus,
                         };
 
-                        const apiBase = window.location.origin.includes('railway.app')
-                            ? '/api'
-                            : 'https://dfp-neo-v2-production.up.railway.app/api';
+                        const apiBase = getAppApiBase();
 
                         const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
                             method: 'POST',
@@ -9981,7 +9980,7 @@ const App: React.FC = () => {
         const requestedSchool = school;
         const loadHistoricalData = async () => {
             try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const apiBase = getAppApiBase();
 
                 // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
                 try {
@@ -10140,7 +10139,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const loadSnapshotDates = async () => {
             try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const apiBase = getAppApiBase();
                 const res = await fetch(`${apiBase}/daily-snapshot/dates`);
                 if (!res.ok) return;
                 const data = await res.json();
@@ -10231,7 +10230,7 @@ const App: React.FC = () => {
         const retryDelays = [0, 2000, 5000, 10000];
 
         try {
-            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            const apiBase = getAppApiBase();
             let lastError: unknown = null;
 
             for (let attempt = 0; attempt < retryDelays.length; attempt++) {
@@ -10798,18 +10797,7 @@ const App: React.FC = () => {
     };
 
     // Helper: get the correct API base URL for cross-origin deployments
-    const getApiBaseUrl = (): string => {
-        const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
-        const currentOrigin = window.location.origin;
-
-        // If we're on the Railway backend, use relative URL
-        if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) {
-            return '/api';
-        }
-
-        // Otherwise, use absolute URL to the Railway backend
-        return `${railwayBackend}/api`;
-    };
+    const getApiBaseUrl = (): string => getAppApiBase();
 
     // Helper: post an aircraft availability event to the database
     const postAvailabilityEvent = async (
@@ -16236,9 +16224,7 @@ const App: React.FC = () => {
                 .filter(Boolean);
 
             if (activeTraineeNames.length > 0) {
-                const apiBase = window.location.origin.includes('railway.app')
-                    ? '/api'
-                    : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const apiBase = getAppApiBase();
 
                 markNeoBuildTiming(timingReport, 'elce:request-start', { activeTrainees: activeTraineeNames.length });
                 const elceRes = await fetch(`${apiBase}/event-completions/elce`, {
@@ -18297,7 +18283,7 @@ updates.forEach(update => {
 
     const syncUnavailabilityFromDatabase = useCallback(async (): Promise<boolean> => {
         try {
-            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            const apiBase = getAppApiBase();
             const [personnelRes, traineesRes] = await Promise.all([
                 fetch(`${apiBase}/personnel`, { credentials: 'include' }),
                 fetch(`${apiBase}/trainees`,  { credentials: 'include' }),
@@ -18364,7 +18350,7 @@ updates.forEach(update => {
     // Poll alert statuses for the current date every 5 seconds
     const syncAlertsForCurrentDate = useCallback(async () => {
         try {
-            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            const apiBase = getAppApiBase();
             const res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
             if (!res.ok) return;
             const data = await res.json();
@@ -22477,9 +22463,7 @@ updates.forEach(update => {
                                         : null,
                                 }));
 
-                                const apiBase = window.location.origin.includes('railway.app')
-                                    ? '/api'
-                                    : 'https://dfp-neo-v2-production.up.railway.app/api';
+                                const apiBase = getAppApiBase();
 
                                 const res = await fetch(`${apiBase}/trainees/${(trainee as any).id}/lmp`, {
                                     method: 'PUT',

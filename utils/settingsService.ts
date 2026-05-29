@@ -4,6 +4,8 @@
  * Settings are persisted org-wide (not per-user) so they survive restarts.
  */
 
+import { getAppApiBase } from './externalDataControls';
+
 export interface ServiceDefinition {
   longName: string;   // e.g. "Air Force"
   shortName: string;  // e.g. "RAAF"
@@ -117,14 +119,7 @@ let isSaving = false;
 /**
  * Get the API base URL depending on environment
  */
-const getApiBase = (): string => {
-  const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
-  const currentOrigin = window.location.origin;
-  if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) {
-    return '/api';
-  }
-  return `${railwayBackend}/api`;
-};
+const getApiBase = (): string => getAppApiBase();
 
 /**
  * Load settings from the database

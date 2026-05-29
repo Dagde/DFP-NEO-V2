@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { EXTERNAL_DATA_CONTROLS_EVENT, isExternalDataAllowed } from '../utils/externalDataControls';
 
 interface TafData {
     station: string;
@@ -27,6 +28,17 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
     const [editLocations, setEditLocations] = useState<string[]>([]);
     const [loading, setLoading] = useState<Set<string>>(new Set());
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+    const [externalDataAllowed, setExternalDataAllowed] = useState(() => isExternalDataAllowed('weatherDataEnabled'));
+
+    useEffect(() => {
+        const update = () => setExternalDataAllowed(isExternalDataAllowed('weatherDataEnabled'));
+        window.addEventListener(EXTERNAL_DATA_CONTROLS_EVENT, update as EventListener);
+        window.addEventListener('storage', update);
+        return () => {
+            window.removeEventListener(EXTERNAL_DATA_CONTROLS_EVENT, update as EventListener);
+            window.removeEventListener('storage', update);
+        };
+    }, []);
 
     // Function to highlight INTER and TEMPO with their time periods in TAF text
     const highlightTafText = (text: string) => {
@@ -44,6 +56,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
 
     // Fetch TAF data for a specific location
     const fetchTaf = async (icao: string) => {
+        if (!isExternalDataAllowed('weatherDataEnabled')) return;
         setLoading(prev => new Set(prev).add(icao));
         try {
             const response = await fetch(
@@ -96,6 +109,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
 
     // Fetch all TAFs
     const fetchAllTafs = () => {
+        if (!isExternalDataAllowed('weatherDataEnabled')) return;
         setLastUpdate(new Date());
         locations.forEach(location => {
             if (location.trim()) {
@@ -106,6 +120,10 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
 
     // Initial fetch and auto-refresh setup
     useEffect(() => {
+        if (!externalDataAllowed) {
+            setLoading(new Set());
+            return;
+        }
         fetchAllTafs();
         
         const interval = setInterval(() => {
@@ -113,7 +131,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
         }, REFRESH_INTERVAL);
 
         return () => clearInterval(interval);
-    }, [locations]);
+    }, [locations, externalDataAllowed]);
 
     // Save locations to localStorage
     const handleSaveLocations = () => {
@@ -126,11 +144,13 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
         setIsEditing(false);
         
         // Fetch TAFs for new locations
-        validLocations.forEach(location => {
-            if (!tafData.has(location)) {
-                fetchTaf(location);
-            }
-        });
+        if (isExternalDataAllowed('weatherDataEnabled')) {
+            validLocations.forEach(location => {
+                if (!tafData.has(location)) {
+                    fetchTaf(location);
+                }
+            });
+        }
     };
 
     const handleEditLocations = () => {
@@ -211,7 +231,14 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
                 </div>
             </div>
 
-            {isEditing ? (
+            {!externalDataAllowed && !isEditing ? (
+                <div className="rounded-lg border border-amber-700/50 bg-amber-900/20 p-4">
+                    <p className="text-sm font-semibold text-amber-300">External weather disabled</p>
+                    <p className="mt-1 text-xs text-amber-200/80">
+                        TAF requests to AVWX are blocked by Settings - Data Sources.
+                    </p>
+                </div>
+            ) : isEditing ? (
                 <div className="space-y-3">
                     <p className="text-sm text-gray-400">Enter ICAO codes (e.g., YMES, YMEN)</p>
                     {editLocations.map((location, index) => (

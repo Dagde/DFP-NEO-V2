@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getAppApiBase } from '../utils/externalDataControls';
 
 interface SeedingMetadata {
     seededAt?: string;
@@ -17,10 +18,7 @@ interface HistoricalDataSeederProps {
     onDataSeeded?: () => void;
 }
 
-const apiBase = () =>
-    window.location.origin.includes('railway.app')
-        ? '/api'
-        : 'https://dfp-neo-v2-production.up.railway.app/api';
+const apiBase = () => getAppApiBase();
 
 export const HistoricalDataSeeder: React.FC<HistoricalDataSeederProps> = ({ onClose, onDataSeeded }) => {
     const [status, setStatus] = useState<'idle' | 'loading' | 'seeding' | 'refreshing' | 'clearing' | 'done' | 'error'>('idle');

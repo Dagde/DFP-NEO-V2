@@ -16,6 +16,7 @@ import {
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import { getAppApiBase } from '../utils/externalDataControls';
 import {
   DEFAULT_INSERT_EVENT_TYPES,
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -76,12 +77,7 @@ const emptyConfig: PlatformConfig = {
   schedulingRuleSets: [],
 };
 
-const getApiBase = (): string => {
-  const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
-  const currentOrigin = window.location.origin;
-  if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) return '/api';
-  return `${railwayBackend}/api`;
-};
+const getApiBase = (): string => getAppApiBase();
 
 const fieldClass = 'w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none';
 const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400';

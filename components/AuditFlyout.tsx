@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { getAuditLogs } from '../utils/auditLogger';
 import { AuditLog } from '../types/audit';
+import { getAppApiBase } from '../utils/externalDataControls';
 
 interface AuditFlyoutProps {
   pageName: string;
@@ -18,12 +19,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   const [sortField, setSortField] = useState<'timestamp' | 'user' | 'action'>('timestamp');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  const getApiBase = (): string => {
-    const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
-    const currentOrigin = window.location.origin;
-    if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) return '/api';
-    return `${railwayBackend}/api`;
-  };
+  const getApiBase = (): string => getAppApiBase();
 
   const summariseValue = (value: any): string => {
     if (value === null || value === undefined || value === '') return 'blank';

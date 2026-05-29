@@ -30,6 +30,7 @@ import {
   isTraineeSuspended,
   setTraineeSuspendedMarker,
 } from '../utils/traineeStatus';
+import { isExternalDataAllowed } from '../utils/externalDataControls';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -1404,7 +1405,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                     {primaries.map((name, idx) => (
                                       <div key={idx} className="flex items-center gap-2">
                                         <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                          {name.toLowerCase().includes('burns') ? (
+                                          {name.toLowerCase().includes('burns') && isExternalDataAllowed('externalMediaEnabled') ? (
                                             <img src="https://dfp-neo.com/burns-profile.png" alt={name} className="w-full h-full object-cover object-top" />
                                           ) : (
                                             <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
@@ -1443,7 +1444,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                     {secondaries.map((name, idx) => (
                                       <div key={idx} className="flex items-center gap-2">
                                         <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                          {name.toLowerCase().includes('burns') ? (
+                                          {name.toLowerCase().includes('burns') && isExternalDataAllowed('externalMediaEnabled') ? (
                                             <img src="https://dfp-neo.com/burns-profile.png" alt={name} className="w-full h-full object-cover object-top" />
                                           ) : (
                                             <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>

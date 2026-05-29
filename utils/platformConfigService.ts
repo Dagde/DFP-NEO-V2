@@ -1,3 +1,5 @@
+import { getAppApiBase } from './externalDataControls';
+
 export interface PlatformLocation {
   code: string;
   name: string;
@@ -221,12 +223,7 @@ const emptyPlatformConfig: PlatformConfig = {
   schedulingRuleSets: [],
 };
 
-const getApiBase = (): string => {
-  const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
-  const currentOrigin = window.location.origin;
-  if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) return '/api';
-  return `${railwayBackend}/api`;
-};
+const getApiBase = (): string => getAppApiBase();
 
 export const loadPlatformConfigFromDB = async (): Promise<PlatformConfig | null> => {
   try {

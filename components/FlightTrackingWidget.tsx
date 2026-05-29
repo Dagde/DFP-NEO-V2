@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { EXTERNAL_DATA_CONTROLS_EVENT, isExternalDataAllowed } from '../utils/externalDataControls';
 
 interface FlightTrackingWidgetProps {
     school: string;
@@ -57,9 +58,20 @@ const buildTrackerUrl = (location: TrackingLocation, enlarged = false) => {
 
 const FlightTrackingWidget: React.FC<FlightTrackingWidgetProps> = ({ school, locationName }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [trackingAllowed, setTrackingAllowed] = useState(() => isExternalDataAllowed('flightTrackingEnabled'));
     const trackingLocation = useMemo(() => resolveTrackingLocation(school, locationName), [school, locationName]);
     const compactTrackerUrl = useMemo(() => buildTrackerUrl(trackingLocation), [trackingLocation]);
     const expandedTrackerUrl = useMemo(() => buildTrackerUrl(trackingLocation, true), [trackingLocation]);
+
+    React.useEffect(() => {
+        const update = () => setTrackingAllowed(isExternalDataAllowed('flightTrackingEnabled'));
+        window.addEventListener(EXTERNAL_DATA_CONTROLS_EVENT, update as EventListener);
+        window.addEventListener('storage', update);
+        return () => {
+            window.removeEventListener(EXTERNAL_DATA_CONTROLS_EVENT, update as EventListener);
+            window.removeEventListener('storage', update);
+        };
+    }, []);
 
     return (
         <>
@@ -69,42 +81,60 @@ const FlightTrackingWidget: React.FC<FlightTrackingWidgetProps> = ({ school, loc
                         <h2 className="text-xl font-semibold text-sky-400">Flight Tracking</h2>
                         <p className="text-xs text-gray-400 mt-1">{trackingLocation.label} ({trackingLocation.shortCode})</p>
                     </div>
-                    <a
-                        href={expandedTrackerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
-                    >
-                        Open
-                    </a>
+                    {trackingAllowed && (
+                        <a
+                            href={expandedTrackerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm font-semibold transition-colors whitespace-nowrap"
+                        >
+                            Open
+                        </a>
+                    )}
                 </div>
 
                 <div className="rounded-lg overflow-hidden border border-gray-700 bg-gray-900 h-64">
-                    <iframe
-                        title={`Flight tracking map centered on ${trackingLocation.label}`}
-                        src={compactTrackerUrl}
-                        className="w-full h-full"
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                    />
+                    {trackingAllowed ? (
+                        <iframe
+                            title={`Flight tracking map centered on ${trackingLocation.label}`}
+                            src={compactTrackerUrl}
+                            className="w-full h-full"
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                        />
+                    ) : (
+                        <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+                            <p className="text-sm font-semibold text-amber-300">External flight tracking disabled</p>
+                            <p className="mt-2 text-xs text-amber-200/75">
+                                Public ADS-B map embeds are blocked by Settings - Data Sources.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
                     <button
                         type="button"
                         onClick={() => setIsExpanded(true)}
+                        disabled={!trackingAllowed}
                         className="px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed text-sm"
                     >
                         Enlarge Map
                     </button>
-                    <a
-                        href={expandedTrackerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-md transition-colors font-semibold btn-aluminium-brushed text-sm text-center"
-                    >
-                        ADS-B.lol
-                    </a>
+                    {trackingAllowed ? (
+                        <a
+                            href={expandedTrackerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 rounded-md transition-colors font-semibold btn-aluminium-brushed text-sm text-center"
+                        >
+                            ADS-B.lol
+                        </a>
+                    ) : (
+                        <span className="px-4 py-2 rounded-md border border-gray-700 bg-gray-900 text-center text-sm font-semibold text-gray-500">
+                            ADS-B.lol
+                        </span>
+                    )}
                 </div>
 
                 <p className="mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500">
@@ -112,7 +142,7 @@ const FlightTrackingWidget: React.FC<FlightTrackingWidgetProps> = ({ school, loc
                 </p>
             </div>
 
-            {isExpanded && (
+            {isExpanded && trackingAllowed && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-6">
                     <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl w-full max-w-6xl h-[82vh] flex flex-col overflow-hidden">
                         <div className="flex items-center justify-between p-4 border-b border-gray-700">
