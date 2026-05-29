@@ -96,6 +96,7 @@ interface TIEThresholds {
   concernThresholdGrade: number; // grade BELOW which an element is a concern (pass = >= this value)
   bottleneckThresholdPct: number;// % of trainees below concern threshold to flag event as bottleneck
   highVarianceThreshold: number; // grade std-dev ABOVE which event has high variance
+  normalMinGrade: number;
   atRiskAverageEnabled: boolean;
   atRiskSustainedDeclineEnabled: boolean;
   atRiskRecentDropEnabled: boolean;
@@ -114,6 +115,7 @@ const DEFAULT_THRESHOLDS: TIEThresholds = {
   concernThresholdGrade: 3,
   bottleneckThresholdPct: 40,
   highVarianceThreshold: 1.0,
+  normalMinGrade: 3.5,
   atRiskAverageEnabled: true,
   atRiskSustainedDeclineEnabled: true,
   atRiskRecentDropEnabled: true,
@@ -215,6 +217,36 @@ const riskCriteriaRows = (thresholds: TIEThresholds) => [
     ? `${thresholds.recurringWeakElementCount}+ recurring weak elements`
     : null,
 ].filter(Boolean) as string[];
+
+const TimelineZoomControl: React.FC<{
+  value: number;
+  onChange: (next: number) => void;
+  max?: number;
+}> = ({ value, onChange, max = 6 }) => (
+  <div className="flex items-center gap-1 rounded-md border border-gray-700 bg-gray-950 p-1">
+    <button
+      type="button"
+      onClick={() => onChange(Math.max(0, value - 1))}
+      disabled={value <= 0}
+      className="flex h-7 w-7 items-center justify-center rounded text-sm font-bold text-gray-300 transition-colors hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+      title="Zoom out"
+    >
+      -
+    </button>
+    <span className="min-w-[64px] text-center text-[11px] font-semibold text-gray-400">
+      {value === 0 ? 'Full' : `${value}x`}
+    </span>
+    <button
+      type="button"
+      onClick={() => onChange(Math.min(max, value + 1))}
+      disabled={value >= max}
+      className="flex h-7 w-7 items-center justify-center rounded text-sm font-bold text-gray-300 transition-colors hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+      title="Zoom in"
+    >
+      +
+    </button>
+  </div>
+);
 
 const parseJ = (raw: any, fallback: any) => {
   if (!raw) return fallback;
@@ -560,7 +592,8 @@ const Tag: React.FC<{ text: string; type?: 'red' | 'green' | 'yellow' | 'blue' |
 // ── Grade Progression Modal (interactive, enlarged) ─────────────────────────────
 
 const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: string; trend: string; onClose: () => void }> = ({ data, labels: propLabels, name, trend, onClose }) => {
-  const [zoomMode, setZoomMode] = React.useState<'full' | 'focus'>('full');
+  const [timelineZoom, setTimelineZoom] = React.useState(0);
+  const [scoreZoom, setScoreZoom] = React.useState(0);
   const color = trend === 'improving' ? '#10b981' : trend === 'worsening' ? '#ef4444' : '#60a5fa';
   const avgVal = data.reduce((s, v) => s + v, 0) / data.length;
   const minVal = Math.min(...data);
@@ -569,8 +602,9 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
   const focusPad = Math.max(0.25, (maxVal - minVal) * 0.2);
   const focusMin = Math.max(0, minVal - focusPad);
   const focusMax = Math.min(5, maxVal + focusPad);
-  const chartYMin = zoomMode === 'focus' ? focusMin : 0;
-  const chartYMax = zoomMode === 'focus' ? focusMax : 5;
+  const chartYMin = scoreZoom > 0 ? focusMin : 0;
+  const chartYMax = scoreZoom > 0 ? focusMax : 5;
+  const chartWidth = timelineZoom === 0 ? 760 : Math.max(760, data.length * (24 + timelineZoom * 12));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
@@ -580,22 +614,14 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
             <h3 className="text-white font-bold text-lg">{name} &mdash; Grade Progression</h3>
             <p className="text-gray-400 text-sm mt-0.5">{data.length} assessments across the course to date &middot; hover over a point to see details</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex rounded-md border border-gray-700 bg-gray-950 p-1">
-              {([
-                { key: 'full' as const, label: 'Full 0-5' },
-                { key: 'focus' as const, label: 'Zoom' },
-              ]).map(option => (
-                <button
-                  key={option.key}
-                  onClick={() => setZoomMode(option.key)}
-                  className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                    zoomMode === option.key ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Timeline</span>
+              <TimelineZoomControl value={timelineZoom} onChange={setTimelineZoom} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Score</span>
+              <TimelineZoomControl value={scoreZoom} onChange={setScoreZoom} max={1} />
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0">&times;</button>
           </div>
@@ -604,15 +630,15 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
         <div className="bg-gray-800 rounded-xl p-5">
           <div className="flex gap-3">
             <div className="flex flex-col justify-between text-xs text-gray-500 py-1 flex-shrink-0 text-right" style={{ width: 28, height: 220 }}>
-              <span>{chartYMax.toFixed(zoomMode === 'focus' ? 1 : 0)}</span>
-              <span>{((chartYMax + chartYMin) / 2).toFixed(zoomMode === 'focus' ? 1 : 0)}</span>
-              <span>{chartYMin.toFixed(zoomMode === 'focus' ? 1 : 0)}</span>
+              <span>{chartYMax.toFixed(scoreZoom > 0 ? 1 : 0)}</span>
+              <span>{((chartYMax + chartYMin) / 2).toFixed(scoreZoom > 0 ? 1 : 0)}</span>
+              <span>{chartYMin.toFixed(scoreZoom > 0 ? 1 : 0)}</span>
             </div>
             <div className="flex-1 overflow-x-auto">
               <SparkLine
                 data={data}
                 labels={labels}
-                width={Math.max(760, data.length * 48)}
+                width={chartWidth}
                 height={220}
                 color={color}
                 interactive={true}
@@ -821,7 +847,9 @@ const GradeByTraineeModal: React.FC<{
   trainees: Array<{ label: string; value: number }>;
   onClose: () => void;
 }> = ({ trainees, onClose }) => {
-  const [zoomMode, setZoomMode] = React.useState<'full' | 'focus'>('full');
+  const [timelineZoom, setTimelineZoom] = React.useState(0);
+  const [scoreZoom, setScoreZoom] = React.useState(0);
+  const visibleData = trainees;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-2" style={{ maxWidth: '1100px' }} onClick={e => e.stopPropagation()}>
@@ -830,28 +858,22 @@ const GradeByTraineeModal: React.FC<{
             <h3 className="text-white font-bold text-lg">Grade by Trainee (sorted low to high)</h3>
             <p className="text-gray-400 text-sm mt-0.5">{trainees.length} trainees &middot; course-to-date average grade per trainee</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex rounded-md border border-gray-700 bg-gray-950 p-1">
-              {([
-                { key: 'full' as const, label: 'Full 0-5' },
-                { key: 'focus' as const, label: 'Zoom' },
-              ]).map(option => (
-                <button
-                  key={option.key}
-                  onClick={() => setZoomMode(option.key)}
-                  className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                    zoomMode === option.key ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Timeline</span>
+              <TimelineZoomControl value={timelineZoom} onChange={setTimelineZoom} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Score</span>
+              <TimelineZoomControl value={scoreZoom} onChange={setScoreZoom} max={1} />
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0">&times;</button>
           </div>
         </div>
         <div className="bg-gray-800 rounded-xl p-5 overflow-x-auto">
-          <ColChartExpanded data={trainees} max={5} height={420} zoomY={zoomMode === 'focus'} />
+          <div style={{ width: timelineZoom === 0 ? '100%' : Math.max(900, visibleData.length * (42 + timelineZoom * 16)) }}>
+            <ColChartExpanded data={visibleData} max={5} height={420} zoomY={scoreZoom > 0} />
+          </div>
         </div>
         <div className="flex flex-wrap gap-4 mt-4 justify-center text-xs">
           {[
@@ -902,6 +924,7 @@ const ThresholdSettingsPanel: React.FC<{
         concernThresholdGrade: 'concern_threshold_grade',
         bottleneckThresholdPct: 'bottleneck_threshold_pct',
         highVarianceThreshold: 'high_variance_threshold',
+        normalMinGrade: 'normal_min_grade',
         atRiskAverageEnabled: 'at_risk_average_enabled',
         atRiskSustainedDeclineEnabled: 'at_risk_sustained_decline_enabled',
         atRiskRecentDropEnabled: 'at_risk_recent_drop_enabled',
@@ -959,6 +982,12 @@ const ThresholdSettingsPanel: React.FC<{
       label: 'High Variance Threshold',
       desc: 'Grade standard deviation above which an event is flagged as high-variance (inconsistent trainee performance).',
       min: 0.3, max: 2.5, step: 0.1,
+    },
+    {
+      key: 'normalMinGrade',
+      label: 'Normal Status Minimum',
+      desc: 'Average grade at or above which a trainee is Normal when they are not At Risk or Exceeding. Lower averages become Monitor.',
+      min: 2.5, max: 4.5, step: 0.1,
     },
   ];
 
@@ -1136,7 +1165,7 @@ const ThresholdSettingsPanel: React.FC<{
                 <div>
                   <span className="text-yellow-300 font-semibold">Monitor / Watch — </span>
                   <span className="text-gray-400">
-                    Avg grade between {local.atRiskAvgGrade.toFixed(1)} and 3.5 (not at risk, but below normal).
+                    Avg grade below {local.normalMinGrade.toFixed(1)} once not classified At Risk.
                     Performance is acceptable but warrants monitoring.
                   </span>
                 </div>
@@ -1146,7 +1175,7 @@ const ThresholdSettingsPanel: React.FC<{
                 <div>
                   <span className="text-blue-300 font-semibold">Normal — </span>
                   <span className="text-gray-400">
-                    Avg grade ≥ 3.5 and &lt; {local.exceedingAvgGrade.toFixed(1)}.
+                    Avg grade ≥ {local.normalMinGrade.toFixed(1)} and &lt; {local.exceedingAvgGrade.toFixed(1)}.
                     Trainee is meeting expectations satisfactorily.
                   </span>
                 </div>
@@ -1281,7 +1310,7 @@ const CourseTab: React.FC<{
                 <span className="w-2 h-2 rounded-full bg-yellow-500 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-400">
                   <span className="text-yellow-300 font-semibold">Monitor: </span>
-                  Avg grade <span className="text-white font-mono">{thresholds.atRiskAvgGrade.toFixed(1)}–3.5</span>.
+                  Avg grade below <span className="text-white font-mono">{thresholds.normalMinGrade.toFixed(1)}</span> once not classified At Risk.
                   {' '}Below normal — watch closely.
                 </span>
               </div>
@@ -1289,7 +1318,7 @@ const CourseTab: React.FC<{
                 <span className="w-2 h-2 rounded-full bg-blue-500 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-400">
                   <span className="text-blue-300 font-semibold">Normal: </span>
-                  Avg grade 3.5–<span className="text-white font-mono">{thresholds.exceedingAvgGrade.toFixed(1)}</span>.
+                  Avg grade <span className="text-white font-mono">{thresholds.normalMinGrade.toFixed(1)}</span>–<span className="text-white font-mono">{thresholds.exceedingAvgGrade.toFixed(1)}</span>.
                   {' '}Meeting expectations.
                 </span>
               </div>
@@ -1459,6 +1488,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
   const [selected, setSelected] = useState<TIETraineeSummary | null>(null);
   const [progressionModal, setProgressionModal] = useState<{ data: number[]; labels: string[]; name: string; trend: string } | null>(null);
   const [gradeByTraineeModal, setGradeByTraineeModal] = useState(false);
+  const [detailTimelineZoom, setDetailTimelineZoom] = useState(0);
 
   const atRiskCount = trainees.filter(t => t.riskLevel === 'at_risk').length;
   const monitorCount = trainees.filter(t => t.riskLevel === 'monitor').length;
@@ -1700,11 +1730,15 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
             {/* Progression sparkline — interactive inline + click to enlarge */}
             {selProgression.length >= 2 && (
               <SCard title="Grade Progression">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-xs text-gray-500">Full course timeline</span>
+                  <TimelineZoomControl value={detailTimelineZoom} onChange={setDetailTimelineZoom} max={4} />
+                </div>
                 <div className="overflow-x-auto">
                   <SparkLine
                     data={selProgression}
                     labels={selProgression.map((_, i) => `Assessment #${i + 1}`)}
-                    width={Math.max(230, selProgression.length * 28)}
+                    width={detailTimelineZoom === 0 ? 230 : Math.max(230, selProgression.length * (18 + detailTimelineZoom * 10))}
                     height={90}
                     color={selected.overallTrend === 'improving' ? '#10b981' : selected.overallTrend === 'worsening' ? '#ef4444' : '#60a5fa'}
                     interactive={true}
@@ -1789,7 +1823,8 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
   const [struggleSelected, setStruggleSelected] = useState<TIEEventSummary | null>(null);
   const [excelSelected, setExcelSelected] = useState<TIEEventSummary | null>(null);
   const [chartModal, setChartModal] = useState<{ title: string; data: { label: string; value: number; color: string }[]; max: number } | null>(null);
-  const [chartZoomMode, setChartZoomMode] = useState<'full' | 'focus'>('full');
+  const [chartTimelineZoom, setChartTimelineZoom] = useState(0);
+  const [chartScoreZoom, setChartScoreZoom] = useState(0);
 
   // Derive passRate when DB value is null (old rows pre-fix)
   // Grading scale: 1=Unsatisfactory, 2=Below Standard, 3=Satisfactory(Pass), 4=Above Avg, 5=Exceptional
@@ -2184,28 +2219,22 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                     <h3 className="text-white font-bold text-xl">{chartModal.title}</h3>
                     <p className="text-gray-400 text-sm mt-0.5">{chartModal.data.length} events &mdash; click outside to close</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex rounded-md border border-gray-700 bg-gray-950 p-1">
-                      {([
-                        { key: 'full' as const, label: 'Full scale' },
-                        { key: 'focus' as const, label: 'Zoom' },
-                      ]).map(option => (
-                        <button
-                          key={option.key}
-                          onClick={() => setChartZoomMode(option.key)}
-                          className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                            chartZoomMode === option.key ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Timeline</span>
+                      <TimelineZoomControl value={chartTimelineZoom} onChange={setChartTimelineZoom} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Value</span>
+                      <TimelineZoomControl value={chartScoreZoom} onChange={setChartScoreZoom} max={1} />
                     </div>
                     <button onClick={() => setChartModal(null)} className="text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0">&times;</button>
                   </div>
                 </div>
                 <div className="bg-gray-800 rounded-xl p-4 overflow-x-auto mt-3">
-                  <ColChartModal data={chartModal.data} max={chartModal.max} height={420} zoomY={chartZoomMode === 'focus'} />
+                  <div style={{ width: chartTimelineZoom === 0 ? '100%' : Math.max(900, chartModal.data.length * (42 + chartTimelineZoom * 16)) }}>
+                    <ColChartModal data={chartModal.data} max={chartModal.max} height={420} zoomY={chartScoreZoom > 0} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -2217,7 +2246,8 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
               className="cursor-pointer group"
               title="Click to expand"
               onClick={() => {
-                setChartZoomMode('full');
+                setChartTimelineZoom(0);
+                setChartScoreZoom(0);
                 const data = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map(ev => ({
                   label: ev.eventCode,
                   value: getPassRate(ev),
@@ -2247,7 +2277,8 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
               className="cursor-pointer group"
               title="Click to expand"
               onClick={() => {
-                setChartZoomMode('full');
+                setChartTimelineZoom(0);
+                setChartScoreZoom(0);
                 const data = [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map(ev => ({
                   label: ev.eventCode,
                   value: safeN(ev.gradeVariance),
@@ -2429,6 +2460,7 @@ const TrainingIntelligenceTab: React.FC = () => {
           concernThresholdGrade: Number(map['concern_threshold_grade'] ?? DEFAULT_THRESHOLDS.concernThresholdGrade),
           bottleneckThresholdPct: Number(map['bottleneck_threshold_pct'] ?? DEFAULT_THRESHOLDS.bottleneckThresholdPct),
           highVarianceThreshold: Number(map['high_variance_threshold'] ?? DEFAULT_THRESHOLDS.highVarianceThreshold),
+          normalMinGrade: Number(map['normal_min_grade'] ?? DEFAULT_THRESHOLDS.normalMinGrade),
           atRiskAverageEnabled: boolSetting(map['at_risk_average_enabled'], DEFAULT_THRESHOLDS.atRiskAverageEnabled),
           atRiskSustainedDeclineEnabled: boolSetting(map['at_risk_sustained_decline_enabled'], DEFAULT_THRESHOLDS.atRiskSustainedDeclineEnabled),
           atRiskRecentDropEnabled: boolSetting(map['at_risk_recent_drop_enabled'], DEFAULT_THRESHOLDS.atRiskRecentDropEnabled),

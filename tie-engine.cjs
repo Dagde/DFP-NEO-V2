@@ -301,6 +301,7 @@ async function seedTIEDefaults(db) {
     { key: 'over_service_threshold', value: 85, description: 'Avg grade above which an event may be over-serviced' },
     { key: 'at_risk_avg_grade', value: 3.2, description: 'Avg grade below which a trainee is at-risk' },
     { key: 'exceeding_avg_grade', value: 4.2, description: 'Avg grade above which a trainee is exceeding' },
+    { key: 'normal_min_grade', value: 3.5, description: 'Avg grade at or above which a trainee is normal when not at-risk or exceeding' },
     { key: 'high_variance_threshold', value: 1.0, description: 'Grade standard deviation above which event has high variance' },
     { key: 'at_risk_average_enabled', value: true, description: 'At-risk criterion: whole-course average below threshold' },
     { key: 'at_risk_sustained_decline_enabled', value: true, description: 'At-risk criterion: sustained decline across recent assessments' },
@@ -844,6 +845,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     const OVER_SERVICE_AVG = Number(settings.over_service_threshold) || 4.3;
     const AT_RISK_AVG = Number(settings.at_risk_avg_grade) || 3.2;
     const EXCEEDING_AVG = Number(settings.exceeding_avg_grade) || 4.2;
+    const NORMAL_MIN_GRADE = Number(settings.normal_min_grade) || 3.5;
     const AT_RISK_AVERAGE_ENABLED = settingBool(settings.at_risk_average_enabled, true);
     const AT_RISK_SUSTAINED_DECLINE_ENABLED = settingBool(settings.at_risk_sustained_decline_enabled, true);
     const AT_RISK_RECENT_DROP_ENABLED = settingBool(settings.at_risk_recent_drop_enabled, true);
@@ -1134,7 +1136,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       const atRisk = enoughDataForRisk && atRiskReasons.length > 0;
       const exceeding = avgGrade >= EXCEEDING_AVG && trend !== 'worsening';
 
-      const riskLevel = atRisk ? 'at_risk' : exceeding ? 'exceeding' : (avgGrade >= 3.5 && trend !== 'worsening') ? 'normal' : 'monitor';
+      const riskLevel = atRisk ? 'at_risk' : exceeding ? 'exceeding' : (avgGrade >= NORMAL_MIN_GRADE && trend !== 'worsening') ? 'normal' : 'monitor';
       if (atRisk) atRiskTrainees.push(traineeFullName);
       if (exceeding) exceedingTrainees.push(traineeFullName);
 
