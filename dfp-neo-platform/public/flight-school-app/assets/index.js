@@ -4917,14 +4917,11 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || "") : displayStudentNameForRender;
     const isGroundEventFromName = event.flightNumber.includes("CPT") || event.flightNumber.includes("MB") || event.flightNumber.includes("TUT") || event.flightNumber.includes("QUIZ");
     if (event.type === "deployment") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden text-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-white/80 font-medium text-sm", children: "DEPLOYMENT" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-white/60 truncate", children: "deployed" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-white/50 mt-1", children: [
-          event.deploymentStartTime?.replace(/:/g, ""),
-          " - ",
-          event.deploymentEndTime?.replace(/:/g, "")
-        ] })
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full w-full items-center justify-center px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate whitespace-nowrap text-center text-xs font-semibold text-white/80", children: [
+        "DEPLOYMENT ",
+        event.deploymentStartTime?.replace(/:/g, ""),
+        " - ",
+        event.deploymentEndTime?.replace(/:/g, "")
       ] }) });
     }
     if (event.type === "unavailability") {
@@ -5230,7 +5227,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     ] });
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
-  const stackClass = isDragging ? "opacity-80 z-50" : event.type === "deployment" ? "z-[6]" : "z-[12]";
+  const stackClass = isDragging ? "opacity-80 z-50" : event.type === "unavailability" ? "z-[4]" : event.type === "deployment" ? "z-[6]" : "z-[12]";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${stackClass} ${shadowClass}`;
   isHexColorEarly(event.color || "");
   const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : resolvedBgColor ? "" : event.color;
@@ -7753,7 +7750,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                       conflictedPersonnelName: personToHighlight,
                       personnelData,
                       seatConfigs,
-                      isDraggable: true,
+                      isDraggable: event.type !== "unavailability",
                       currentTime,
                       aircraftNumberSettings
                     },
@@ -8376,7 +8373,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                       conflictedPersonnelName: personToHighlight,
                       personnelData,
                       seatConfigs,
-                      isDraggable: true,
+                      isDraggable: event.type !== "unavailability",
                       currentTime,
                       aircraftNumberSettings
                     },
@@ -80722,6 +80719,10 @@ ${"=".repeat(60)}`);
         const person = personMap.get(name);
         if (!person || !person.unavailability || person.unavailability.length === 0) continue;
         for (const period of person.unavailability) {
+          const isOwnDeploymentPeriod = String(period.notes || "") === `__deploy__${event.id}`;
+          if (isOwnDeploymentPeriod) {
+            continue;
+          }
           const [startYear, startMonth, startDay] = period.startDate.split("-").map(Number);
           const unavailStartUTC = new Date(Date.UTC(startYear, startMonth - 1, startDay));
           const [endYear, endMonth, endDay] = period.endDate.split("-").map(Number);

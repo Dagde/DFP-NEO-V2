@@ -760,7 +760,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                     conflictedPersonnelName={personToHighlight}
                     personnelData={personnelData}
                     seatConfigs={seatConfigs}
-                    isDraggable={true}
+                    isDraggable={event.type !== 'unavailability'}
                     currentTime={currentTime}
                     aircraftNumberSettings={aircraftNumberSettings}
                   />

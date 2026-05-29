@@ -673,7 +673,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                     conflictedPersonnelName={personToHighlight}
                     personnelData={personnelData}
                     seatConfigs={seatConfigs}
-                    isDraggable={true}
+                    isDraggable={event.type !== 'unavailability'}
                     currentTime={currentTime}
                     aircraftNumberSettings={aircraftNumberSettings}
                   />

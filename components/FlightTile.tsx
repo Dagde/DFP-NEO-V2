@@ -500,17 +500,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     if (event.type === 'deployment') {
         // Render deployment tile with subtle styling
         return (
-            <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
-                <div className="overflow-hidden text-center">
-                    <div className="text-white/80 font-medium text-sm">
-                        DEPLOYMENT
-                    </div>
-                    <div className="font-mono text-white/60 truncate">
-                        deployed
-                    </div>
-                    <div className="text-xs text-white/50 mt-1">
-                        {event.deploymentStartTime?.replace(/:/g, '')} - {event.deploymentEndTime?.replace(/:/g, '')}
-                    </div>
+            <div className="flex h-full w-full items-center justify-center px-2" style={textStyle}>
+                <div className="truncate whitespace-nowrap text-center text-xs font-semibold text-white/80">
+                    DEPLOYMENT {event.deploymentStartTime?.replace(/:/g, '')} - {event.deploymentEndTime?.replace(/:/g, '')}
                 </div>
             </div>
         );
@@ -819,7 +811,13 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   };
 
   const shadowClass = isDragging ? 'shadow-xl' : 'shadow-md';
-  const stackClass = isDragging ? 'opacity-80 z-50' : event.type === 'deployment' ? 'z-[6]' : 'z-[12]';
+  const stackClass = isDragging
+    ? 'opacity-80 z-50'
+    : event.type === 'unavailability'
+    ? 'z-[4]'
+    : event.type === 'deployment'
+    ? 'z-[6]'
+    : 'z-[12]';
   const commonClasses = `absolute rounded-sm ${isDraggable ? 'cursor-grab' : 'cursor-pointer'} transition-all duration-200 ${stackClass} ${shadowClass}`;
 
   // Use isHexColorEarly (defined above) for hex color detection

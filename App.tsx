@@ -12628,6 +12628,11 @@ const App: React.FC = () => {
                 if (!person || !person.unavailability || person.unavailability.length === 0) continue;
 
                 for (const period of person.unavailability) {
+                    const isOwnDeploymentPeriod = String((period as any).notes || '') === `__deploy__${event.id}`;
+                    if (isOwnDeploymentPeriod) {
+                        continue;
+                    }
+
                     const [startYear, startMonth, startDay] = period.startDate.split('-').map(Number);
                     const unavailStartUTC = new Date(Date.UTC(startYear, startMonth - 1, startDay));
 
