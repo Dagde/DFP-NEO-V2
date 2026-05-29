@@ -281,6 +281,53 @@ const parseProgressionFull = (raw: any): { grades: number[]; labels: string[] } 
   };
 };
 
+const hasSustainedDecline = (grades: number[], count: number): boolean => {
+  const windowSize = Math.max(2, Math.round(count || 3));
+  if (grades.length < windowSize) return false;
+  const recent = grades.slice(-windowSize);
+  return recent.every((grade, index) => index === 0 || grade < recent[index - 1]);
+};
+
+const evaluateTraineeRisk = (
+  trainee: TIETraineeSummary,
+  thresholds: TIEThresholds
+): { riskLevel: string; reasons: string[] } => {
+  const grades = parseProgression(trainee.gradeProgression);
+  const avgGrade = safeN(trainee.avgOverallGrade);
+  const recentAvg = safeN(trainee.recentAvgGrade);
+  const weakElements = parseJ(trainee.recurringWeakElements, []) as unknown[];
+  const enoughData = Math.max(grades.length, safeN(trainee.totalPt051Count)) >= thresholds.minAssessmentsForRisk;
+  const reasons: string[] = [];
+
+  if (enoughData && thresholds.atRiskAverageEnabled && avgGrade < thresholds.atRiskAvgGrade) {
+    reasons.push(`Average grade ${avgGrade.toFixed(2)} below threshold of ${thresholds.atRiskAvgGrade.toFixed(1)}`);
+  }
+  if (enoughData && thresholds.atRiskSustainedDeclineEnabled && hasSustainedDecline(grades, thresholds.sustainedDeclineCount)) {
+    reasons.push(`Sustained decline across last ${thresholds.sustainedDeclineCount} assessments`);
+  }
+  if (enoughData && thresholds.atRiskRecentDropEnabled && avgGrade - recentAvg >= thresholds.recentDropThreshold) {
+    reasons.push(`Recent average ${recentAvg.toFixed(2)} is ${(avgGrade - recentAvg).toFixed(2)} below overall average`);
+  }
+  if (enoughData && thresholds.atRiskLowRecentEnabled && recentAvg < thresholds.lowRecentGrade) {
+    reasons.push(`Recent average ${recentAvg.toFixed(2)} below threshold of ${thresholds.lowRecentGrade.toFixed(1)}`);
+  }
+  if (enoughData && thresholds.atRiskRecurringWeakElementsEnabled && weakElements.length >= thresholds.recurringWeakElementCount) {
+    reasons.push(`${weakElements.length} weak elements recurring`);
+  }
+
+  if (!enoughData && (avgGrade < thresholds.atRiskAvgGrade || recentAvg < thresholds.lowRecentGrade || trainee.overallTrend === 'worsening')) {
+    return { riskLevel: 'monitor', reasons: [`Monitor until ${thresholds.minAssessmentsForRisk} assessments are available`] };
+  }
+  if (reasons.length > 0) return { riskLevel: 'at_risk', reasons };
+  if (avgGrade >= thresholds.exceedingAvgGrade && trainee.overallTrend !== 'worsening') {
+    return { riskLevel: 'exceeding', reasons: [] };
+  }
+  if (avgGrade >= thresholds.normalMinGrade && trainee.overallTrend !== 'worsening') {
+    return { riskLevel: 'normal', reasons: [] };
+  }
+  return { riskLevel: 'monitor', reasons: [] };
+};
+
 // ── SparkBar ────────────────────────────────────────────────────────────────────
 
 const SparkBar: React.FC<{ value: number; max?: number; colorClass?: string }> = ({ value, max = 5, colorClass }) => {
@@ -307,7 +354,8 @@ const SparkLine: React.FC<{
   interactive?: boolean;
   yMin?: number;
   yMax?: number;
-}> = ({ data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false, yMin = 0, yMax = 5 }) => {
+  showYAxisLabels?: boolean;
+}> = ({ data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false, yMin = 0, yMax = 5, showYAxisLabels = false }) => {
   const [tooltip, setTooltip] = React.useState<{ i: number; pageX: number; pageY: number } | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
@@ -347,8 +395,23 @@ const SparkLine: React.FC<{
         {gridLines.map(v => {
           const y = getY(v);
           return (
-            <line key={v} x1={0} y1={y} x2={width} y2={y}
-              stroke="#374151" strokeWidth="0.5" strokeDasharray="3,3" />
+            <g key={v}>
+              <line
+                x1={0}
+                y1={y}
+                x2={width}
+                y2={y}
+                stroke={Number.isInteger(v) && v >= 1 && v <= 5 ? '#64748b' : '#475569'}
+                strokeWidth={Number.isInteger(v) && v >= 1 && v <= 5 ? 0.9 : 0.55}
+                strokeDasharray="4,4"
+                opacity={Number.isInteger(v) && v >= 1 && v <= 5 ? 0.75 : 0.45}
+              />
+              {showYAxisLabels && Number.isInteger(v) && v >= 1 && v <= 5 && (
+                <text x={-12} y={y + 4} textAnchor="end" fontSize="11" fontWeight="600" fill="#cbd5e1">
+                  {v}
+                </text>
+              )}
+            </g>
           );
         })}
 
@@ -629,12 +692,7 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
 
         <div className="bg-gray-800 rounded-xl p-5">
           <div className="flex gap-3">
-            <div className="flex flex-col justify-between text-xs text-gray-500 py-1 flex-shrink-0 text-right" style={{ width: 28, height: 220 }}>
-              <span>{chartYMax.toFixed(scoreZoom > 0 ? 1 : 0)}</span>
-              <span>{((chartYMax + chartYMin) / 2).toFixed(scoreZoom > 0 ? 1 : 0)}</span>
-              <span>{chartYMin.toFixed(scoreZoom > 0 ? 1 : 0)}</span>
-            </div>
-            <div className="flex-1 overflow-x-auto">
+            <div className="ml-5 flex-1 overflow-x-auto">
               <SparkLine
                 data={data}
                 labels={labels}
@@ -644,6 +702,7 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
                 interactive={true}
                 yMin={chartYMin}
                 yMax={chartYMax}
+                showYAxisLabels={scoreZoom === 0}
               />
             </div>
           </div>
@@ -1237,9 +1296,10 @@ const CourseTab: React.FC<{
 }> = ({ summary, trainees, events }) => {
   const { thresholds } = useThresholds();
   const [eventAvgExpanded, setEventAvgExpanded] = useState(false);
-  const atRisk = trainees.filter(t => t.riskLevel === 'at_risk').length;
-  const exceeding = trainees.filter(t => t.riskLevel === 'exceeding').length;
-  const monitor = trainees.filter(t => t.riskLevel === 'monitor').length;
+  const evaluatedRisks = trainees.map(t => evaluateTraineeRisk(t, thresholds).riskLevel);
+  const atRisk = evaluatedRisks.filter(r => r === 'at_risk').length;
+  const exceeding = evaluatedRisks.filter(r => r === 'exceeding').length;
+  const monitor = evaluatedRisks.filter(r => r === 'monitor' || r === 'watch').length;
   const normal = trainees.length - atRisk - exceeding - monitor;
   const avgGrade = trainees.length > 0 ? trainees.reduce((s, t) => s + safeN(t.avgOverallGrade), 0) / trainees.length : 0;
   const passRate = trainees.length > 0
@@ -1481,7 +1541,6 @@ const CourseTab: React.FC<{
 // ── TRAINEE TAB ─────────────────────────────────────────────────────────────────
 
 const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) => {
-  const { thresholds: _thresholds } = useThresholds(); // available for future threshold-aware rendering
   const { thresholds } = useThresholds();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'at_risk' | 'monitor' | 'exceeding'>('all');
@@ -1490,12 +1549,21 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
   const [gradeByTraineeModal, setGradeByTraineeModal] = useState(false);
   const [detailTimelineZoom, setDetailTimelineZoom] = useState(0);
 
-  const atRiskCount = trainees.filter(t => t.riskLevel === 'at_risk').length;
-  const monitorCount = trainees.filter(t => t.riskLevel === 'monitor').length;
-  const exceedingCount = trainees.filter(t => t.riskLevel === 'exceeding').length;
+  const traineeRisk = useMemo(() => {
+    const map = new Map<string, { riskLevel: string; reasons: string[] }>();
+    trainees.forEach(t => map.set(t.id, evaluateTraineeRisk(t, thresholds)));
+    return map;
+  }, [trainees, thresholds]);
+
+  const getRisk = (t: TIETraineeSummary) => traineeRisk.get(t.id) || { riskLevel: t.riskLevel, reasons: parseJ(t.atRiskReasons, []) as string[] };
+
+  const atRiskCount = trainees.filter(t => getRisk(t).riskLevel === 'at_risk').length;
+  const monitorCount = trainees.filter(t => getRisk(t).riskLevel === 'monitor' || getRisk(t).riskLevel === 'watch').length;
+  const exceedingCount = trainees.filter(t => getRisk(t).riskLevel === 'exceeding').length;
 
   const filtered = trainees.filter(t => {
-    if (filter !== 'all' && t.riskLevel !== filter) return false;
+    const displayRisk = getRisk(t).riskLevel === 'watch' ? 'monitor' : getRisk(t).riskLevel;
+    if (filter !== 'all' && displayRisk !== filter) return false;
     if (search && !t.traineeFullName.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -1508,7 +1576,9 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
   const hasSkillScores = Object.values(selSkills).some(v => typeof v === 'number' && v > 0);
   const weakEls = selected ? parseJ(selected.recurringWeakElements, []) as string[] : [];
   const strongFams = selected ? parseJ(selected.strongestSkillFamilies, []) as string[] : [];
-  const atRiskReasons = selected ? parseJ(selected.atRiskReasons, []) as string[] : [];
+  const selectedRisk = selected ? getRisk(selected) : null;
+  const selectedRiskLevel = selectedRisk?.riskLevel === 'watch' ? 'monitor' : selectedRisk?.riskLevel;
+  const atRiskReasons = selectedRisk?.reasons || [];
 
   const filterButtons = [
     { k: 'all' as const, label: `All (${trainees.length})` },
@@ -1585,6 +1655,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                   const progFull = parseProgressionFull(t.gradeProgression);
                   const prog = progFull.grades;
                   const progLabels = progFull.labels;
+                  const displayRisk = getRisk(t).riskLevel === 'watch' ? 'monitor' : getRisk(t).riskLevel;
                   return (
                     <tr key={t.id} onClick={() => setSelected(selected?.id === t.id ? null : t)}
                       className={`border-b border-gray-700/50 cursor-pointer transition-colors ${selected?.id === t.id ? 'bg-blue-900/30' : 'hover:bg-gray-700/40'}`}>
@@ -1594,8 +1665,8 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                       <td className={`px-3 py-2.5 text-center font-bold ${trendColor(t.overallTrend)}`}>{trendIcon(t.overallTrend)}</td>
                       <td className="px-3 py-2.5 text-center text-gray-400">{t.totalPt051Count}</td>
                       <td className="px-3 py-2.5 text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${riskBadge(t.riskLevel)}`}>
-                          {t.riskLevel === 'at_risk' ? 'At Risk' : t.riskLevel === 'monitor' ? 'Monitor' : t.riskLevel === 'exceeding' ? 'Exceeding' : 'Normal'}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${riskBadge(displayRisk)}`}>
+                          {displayRisk === 'at_risk' ? 'At Risk' : displayRisk === 'monitor' ? 'Monitor' : displayRisk === 'exceeding' ? 'Exceeding' : 'Normal'}
                         </span>
                       </td>
                       <td className="px-3 py-2.5">
@@ -1700,8 +1771,8 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                   <span>Trend: <span className={trendColor(selected.overallTrend)}>{trendIcon(selected.overallTrend)} {selected.overallTrend || 'stable'}</span></span>
                 </div>
                 <div className="mt-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${riskBadge(selected.riskLevel)}`}>
-                    {selected.riskLevel === 'at_risk' ? 'At Risk' : selected.riskLevel === 'monitor' ? 'Monitor' : selected.riskLevel === 'exceeding' ? 'Exceeding' : 'Normal'}
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${riskBadge(selectedRiskLevel || selected.riskLevel)}`}>
+                    {selectedRiskLevel === 'at_risk' ? 'At Risk' : selectedRiskLevel === 'monitor' ? 'Monitor' : selectedRiskLevel === 'exceeding' ? 'Exceeding' : 'Normal'}
                   </span>
                 </div>
               </div>
@@ -1788,7 +1859,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
             )}
 
             {/* At-risk reasons */}
-            {selected.riskLevel === 'at_risk' && atRiskReasons.length > 0 && (
+            {selectedRiskLevel === 'at_risk' && atRiskReasons.length > 0 && (
               <SCard title="At-Risk Reasons">
                 <ul className="space-y-1">
                   {atRiskReasons.map((r, i) => (
@@ -2586,7 +2657,7 @@ const TrainingIntelligenceTab: React.FC = () => {
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  const atRiskBadge = trainees.filter(t => t.riskLevel === 'at_risk').length;
+  const atRiskBadge = trainees.filter(t => evaluateTraineeRisk(t, thresholds).riskLevel === 'at_risk').length;
   const bottleneckBadge = events.filter(e => safeN(e.bottleneckScore) > 0.5).length;
 
   const tabs = [
