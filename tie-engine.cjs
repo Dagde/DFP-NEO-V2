@@ -618,11 +618,31 @@ function detectTrend(gradeSequence) {
   return 'stable';
 }
 
+function normalizeSettingValue(value) {
+  if (value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'value')) {
+    return normalizeSettingValue(value.value);
+  }
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+function numberSetting(value, fallback) {
+  const n = Number(normalizeSettingValue(value));
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function settingBool(value, fallback) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
+  const normalizedValue = normalizeSettingValue(value);
+  if (typeof normalizedValue === 'boolean') return normalizedValue;
+  if (typeof normalizedValue === 'number') return normalizedValue !== 0;
+  if (typeof normalizedValue === 'string') {
+    const normalized = normalizedValue.trim().toLowerCase();
     if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
     if (['false', '0', 'no', 'off'].includes(normalized)) return false;
   }
@@ -836,26 +856,26 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     const settingsRows = await safeQuery(db, `SELECT key, value FROM "TIESettings"`);
     const settings = {};
     for (const row of settingsRows) {
-      settings[row.key] = typeof row.value === 'object' ? row.value : JSON.parse(row.value);
+      settings[row.key] = normalizeSettingValue(row.value);
     }
-    const CONCERN_THRESHOLD = Number(settings.concern_threshold_grade) || 3;
-    const MIN_OBS = Number(settings.min_observations_for_pattern) || 3;
-    const RECENCY_FACTOR = Number(settings.recency_weight_factor) || 1.5;
-    const BOTTLENECK_PCT = Number(settings.bottleneck_threshold_pct) || 40;
-    const OVER_SERVICE_AVG = Number(settings.over_service_threshold) || 4.3;
-    const AT_RISK_AVG = Number(settings.at_risk_avg_grade) || 3.2;
-    const EXCEEDING_AVG = Number(settings.exceeding_avg_grade) || 4.2;
-    const NORMAL_MIN_GRADE = Number(settings.normal_min_grade) || 3.5;
+    const CONCERN_THRESHOLD = numberSetting(settings.concern_threshold_grade, 3);
+    const MIN_OBS = numberSetting(settings.min_observations_for_pattern, 3);
+    const RECENCY_FACTOR = numberSetting(settings.recency_weight_factor, 1.5);
+    const BOTTLENECK_PCT = numberSetting(settings.bottleneck_threshold_pct, 40);
+    const OVER_SERVICE_AVG = numberSetting(settings.over_service_threshold, 4.3);
+    const AT_RISK_AVG = numberSetting(settings.at_risk_avg_grade, 3.2);
+    const EXCEEDING_AVG = numberSetting(settings.exceeding_avg_grade, 4.2);
+    const NORMAL_MIN_GRADE = numberSetting(settings.normal_min_grade, 3.5);
     const AT_RISK_AVERAGE_ENABLED = settingBool(settings.at_risk_average_enabled, true);
     const AT_RISK_SUSTAINED_DECLINE_ENABLED = settingBool(settings.at_risk_sustained_decline_enabled, true);
     const AT_RISK_RECENT_DROP_ENABLED = settingBool(settings.at_risk_recent_drop_enabled, true);
     const AT_RISK_LOW_RECENT_ENABLED = settingBool(settings.at_risk_low_recent_enabled, true);
     const AT_RISK_RECURRING_WEAK_ELEMENTS_ENABLED = settingBool(settings.at_risk_recurring_weak_elements_enabled, true);
-    const AT_RISK_SUSTAINED_DECLINE_COUNT = Number(settings.at_risk_sustained_decline_count) || 3;
-    const AT_RISK_RECENT_DROP_THRESHOLD = Number(settings.at_risk_recent_drop_threshold) || 0.4;
-    const AT_RISK_LOW_RECENT_GRADE = Number(settings.at_risk_low_recent_grade) || 3.2;
-    const AT_RISK_RECURRING_WEAK_ELEMENT_COUNT = Number(settings.at_risk_recurring_weak_element_count) || 3;
-    const AT_RISK_MIN_ASSESSMENTS = Number(settings.at_risk_min_assessments) || 3;
+    const AT_RISK_SUSTAINED_DECLINE_COUNT = numberSetting(settings.at_risk_sustained_decline_count, 3);
+    const AT_RISK_RECENT_DROP_THRESHOLD = numberSetting(settings.at_risk_recent_drop_threshold, 0.4);
+    const AT_RISK_LOW_RECENT_GRADE = numberSetting(settings.at_risk_low_recent_grade, 3.2);
+    const AT_RISK_RECURRING_WEAK_ELEMENT_COUNT = numberSetting(settings.at_risk_recurring_weak_element_count, 3);
+    const AT_RISK_MIN_ASSESSMENTS = numberSetting(settings.at_risk_min_assessments, 3);
 
     // ── Load comment dictionary ────────────────────────────────
     const dictionary = await safeQuery(db, `SELECT * FROM "TIECommentDictionary" WHERE "isActive" = TRUE`);
@@ -1115,7 +1135,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       const recentDrop = avgGrade - recentAvg;
 
       if (enoughDataForRisk && AT_RISK_AVERAGE_ENABLED && avgGrade < AT_RISK_AVG) {
-        atRiskReasons.push(`Average grade ${avgGrade.toFixed(2)} below threshold of ${AT_RISK_AVG}`);
+        atRiskReasons.push(`Course average ${avgGrade.toFixed(2)} below low-course-average threshold of ${AT_RISK_AVG.toFixed(1)}`);
       }
       if (enoughDataForRisk && AT_RISK_SUSTAINED_DECLINE_ENABLED && sustainedDecline) {
         atRiskReasons.push(`Sustained decline across last ${AT_RISK_SUSTAINED_DECLINE_COUNT} assessments`);
@@ -1124,7 +1144,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         atRiskReasons.push(`Recent average ${recentAvg.toFixed(2)} is ${recentDrop.toFixed(2)} below overall average`);
       }
       if (enoughDataForRisk && AT_RISK_LOW_RECENT_ENABLED && recentAvg < AT_RISK_LOW_RECENT_GRADE) {
-        atRiskReasons.push(`Recent average ${recentAvg.toFixed(2)} below threshold of ${AT_RISK_LOW_RECENT_GRADE}`);
+        atRiskReasons.push(`Recent average ${recentAvg.toFixed(2)} below low-recent-average threshold of ${AT_RISK_LOW_RECENT_GRADE.toFixed(1)}`);
       }
       if (enoughDataForRisk && AT_RISK_RECURRING_WEAK_ELEMENTS_ENABLED && weakElements.length >= AT_RISK_RECURRING_WEAK_ELEMENT_COUNT) {
         atRiskReasons.push(`${weakElements.length} weak elements recurring`);

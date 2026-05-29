@@ -23083,11 +23083,29 @@ const safeN = (n) => {
   if (n === void 0 || n === null || isNaN(Number(n))) return 0;
   return Number(n);
 };
+const normalizeSettingValue = (value) => {
+  if (value && typeof value === "object" && "value" in value) {
+    return normalizeSettingValue(value.value);
+  }
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+const numberSetting = (value, fallback) => {
+  const n = Number(normalizeSettingValue(value));
+  return Number.isFinite(n) ? n : fallback;
+};
 const boolSetting = (value, fallback) => {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
+  const normalizedValue = normalizeSettingValue(value);
+  if (typeof normalizedValue === "boolean") return normalizedValue;
+  if (typeof normalizedValue === "number") return normalizedValue !== 0;
+  if (typeof normalizedValue === "string") {
+    const normalized = normalizedValue.trim().toLowerCase();
     if (["true", "1", "yes", "on"].includes(normalized)) return true;
     if (["false", "0", "no", "off"].includes(normalized)) return false;
   }
@@ -23172,7 +23190,7 @@ const evaluateTraineeRisk = (trainee, thresholds) => {
   const enoughData = Math.max(grades.length, safeN(trainee.totalPt051Count)) >= thresholds.minAssessmentsForRisk;
   const reasons = [];
   if (enoughData && thresholds.atRiskAverageEnabled && avgGrade < thresholds.atRiskAvgGrade) {
-    reasons.push(`Average grade ${avgGrade.toFixed(2)} below threshold of ${thresholds.atRiskAvgGrade.toFixed(1)}`);
+    reasons.push(`Course average ${avgGrade.toFixed(2)} below low-course-average threshold of ${thresholds.atRiskAvgGrade.toFixed(1)}`);
   }
   if (enoughData && thresholds.atRiskSustainedDeclineEnabled && hasSustainedDecline(grades, thresholds.sustainedDeclineCount)) {
     reasons.push(`Sustained decline across last ${thresholds.sustainedDeclineCount} assessments`);
@@ -23181,7 +23199,7 @@ const evaluateTraineeRisk = (trainee, thresholds) => {
     reasons.push(`Recent average ${recentAvg.toFixed(2)} is ${(avgGrade - recentAvg).toFixed(2)} below overall average`);
   }
   if (enoughData && thresholds.atRiskLowRecentEnabled && recentAvg < thresholds.lowRecentGrade) {
-    reasons.push(`Recent average ${recentAvg.toFixed(2)} below threshold of ${thresholds.lowRecentGrade.toFixed(1)}`);
+    reasons.push(`Recent average ${recentAvg.toFixed(2)} below low-recent-average threshold of ${thresholds.lowRecentGrade.toFixed(1)}`);
   }
   if (enoughData && thresholds.atRiskRecurringWeakElementsEnabled && weakElements.length >= thresholds.recurringWeakElementCount) {
     reasons.push(`${weakElements.length} weak elements recurring`);
@@ -23744,6 +23762,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
   const [local, setLocal] = React.useState({ ...thresholds });
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
+  const [error, setError] = React.useState(null);
   const set = (key, val) => {
     const n = parseFloat(val);
     if (!isNaN(n)) setLocal((prev) => ({ ...prev, [key]: n }));
@@ -23753,6 +23772,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
   };
   const handleSave = async () => {
     setSaving(true);
+    setError(null);
     try {
       const mapping = {
         atRiskAvgGrade: "at_risk_avg_grade",
@@ -23773,21 +23793,26 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
         minAssessmentsForRisk: "at_risk_min_assessments"
       };
       await Promise.all(
-        Object.keys(local).map(
-          (k) => fetch("/api/tie/settings", {
+        Object.keys(local).map(async (k) => {
+          const response = await fetch("/api/tie/settings", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ key: mapping[k], value: local[k] })
-          })
-        )
+          });
+          if (!response.ok) {
+            const body = await response.text().catch(() => "");
+            throw new Error(`Failed to save ${mapping[k]}${body ? `: ${body}` : ""}`);
+          }
+        })
       );
-      onSave(local);
+      onSave({ ...local });
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
         onClose();
       }, 1200);
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save analytics thresholds.");
     } finally {
       setSaving(false);
     }
@@ -23889,6 +23914,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-2xl leading-none ml-4", children: "×" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto", children: [
+          error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200", children: error }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -25055,22 +25081,22 @@ const TrainingIntelligenceTab = () => {
       }
       if (Object.keys(map).length > 0) {
         setThresholds({
-          atRiskAvgGrade: Number(map["at_risk_avg_grade"] ?? DEFAULT_THRESHOLDS.atRiskAvgGrade),
-          exceedingAvgGrade: Number(map["exceeding_avg_grade"] ?? DEFAULT_THRESHOLDS.exceedingAvgGrade),
-          concernThresholdGrade: Number(map["concern_threshold_grade"] ?? DEFAULT_THRESHOLDS.concernThresholdGrade),
-          bottleneckThresholdPct: Number(map["bottleneck_threshold_pct"] ?? DEFAULT_THRESHOLDS.bottleneckThresholdPct),
-          highVarianceThreshold: Number(map["high_variance_threshold"] ?? DEFAULT_THRESHOLDS.highVarianceThreshold),
-          normalMinGrade: Number(map["normal_min_grade"] ?? DEFAULT_THRESHOLDS.normalMinGrade),
+          atRiskAvgGrade: numberSetting(map["at_risk_avg_grade"], DEFAULT_THRESHOLDS.atRiskAvgGrade),
+          exceedingAvgGrade: numberSetting(map["exceeding_avg_grade"], DEFAULT_THRESHOLDS.exceedingAvgGrade),
+          concernThresholdGrade: numberSetting(map["concern_threshold_grade"], DEFAULT_THRESHOLDS.concernThresholdGrade),
+          bottleneckThresholdPct: numberSetting(map["bottleneck_threshold_pct"], DEFAULT_THRESHOLDS.bottleneckThresholdPct),
+          highVarianceThreshold: numberSetting(map["high_variance_threshold"], DEFAULT_THRESHOLDS.highVarianceThreshold),
+          normalMinGrade: numberSetting(map["normal_min_grade"], DEFAULT_THRESHOLDS.normalMinGrade),
           atRiskAverageEnabled: boolSetting(map["at_risk_average_enabled"], DEFAULT_THRESHOLDS.atRiskAverageEnabled),
           atRiskSustainedDeclineEnabled: boolSetting(map["at_risk_sustained_decline_enabled"], DEFAULT_THRESHOLDS.atRiskSustainedDeclineEnabled),
           atRiskRecentDropEnabled: boolSetting(map["at_risk_recent_drop_enabled"], DEFAULT_THRESHOLDS.atRiskRecentDropEnabled),
           atRiskLowRecentEnabled: boolSetting(map["at_risk_low_recent_enabled"], DEFAULT_THRESHOLDS.atRiskLowRecentEnabled),
           atRiskRecurringWeakElementsEnabled: boolSetting(map["at_risk_recurring_weak_elements_enabled"], DEFAULT_THRESHOLDS.atRiskRecurringWeakElementsEnabled),
-          sustainedDeclineCount: Number(map["at_risk_sustained_decline_count"] ?? DEFAULT_THRESHOLDS.sustainedDeclineCount),
-          recentDropThreshold: Number(map["at_risk_recent_drop_threshold"] ?? DEFAULT_THRESHOLDS.recentDropThreshold),
-          lowRecentGrade: Number(map["at_risk_low_recent_grade"] ?? DEFAULT_THRESHOLDS.lowRecentGrade),
-          recurringWeakElementCount: Number(map["at_risk_recurring_weak_element_count"] ?? DEFAULT_THRESHOLDS.recurringWeakElementCount),
-          minAssessmentsForRisk: Number(map["at_risk_min_assessments"] ?? DEFAULT_THRESHOLDS.minAssessmentsForRisk)
+          sustainedDeclineCount: numberSetting(map["at_risk_sustained_decline_count"], DEFAULT_THRESHOLDS.sustainedDeclineCount),
+          recentDropThreshold: numberSetting(map["at_risk_recent_drop_threshold"], DEFAULT_THRESHOLDS.recentDropThreshold),
+          lowRecentGrade: numberSetting(map["at_risk_low_recent_grade"], DEFAULT_THRESHOLDS.lowRecentGrade),
+          recurringWeakElementCount: numberSetting(map["at_risk_recurring_weak_element_count"], DEFAULT_THRESHOLDS.recurringWeakElementCount),
+          minAssessmentsForRisk: numberSetting(map["at_risk_min_assessments"], DEFAULT_THRESHOLDS.minAssessmentsForRisk)
         });
       }
     } catch {
@@ -25201,7 +25227,8 @@ const TrainingIntelligenceTab = () => {
       {
         onClose: () => setShowThresholdPanel(false),
         onSave: (t) => {
-          setThresholds(t);
+          setThresholds({ ...t });
+          void fetchThresholds();
           setShowThresholdPanel(false);
         }
       }

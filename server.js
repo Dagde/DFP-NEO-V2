@@ -11097,6 +11097,20 @@ app.get('/api/tie/rootcauses/:course', async (req, res) => {
 });
 
 // GET /api/tie/settings - get TIE settings
+function normalizeTieSettingValue(value) {
+  if (value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'value')) {
+    return normalizeTieSettingValue(value.value);
+  }
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
 app.get('/api/tie/settings', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -11105,7 +11119,7 @@ app.get('/api/tie/settings', async (req, res) => {
       rows = await db.$queryRawUnsafe(`SELECT key, value, description FROM "TIESettings"`);
     } catch (e) { /* no table yet */ }
     const settings = {};
-    for (const r of rows) settings[r.key] = r.value;
+    for (const r of rows) settings[r.key] = normalizeTieSettingValue(r.value);
     res.json(settings);
   } catch (error) {
     console.error('❌ GET /api/tie/settings error:', error);
