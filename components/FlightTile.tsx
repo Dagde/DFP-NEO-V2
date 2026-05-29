@@ -42,6 +42,32 @@ const formatTime = (time: number): string => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+const formatDeploymentClock = (clock?: string, fallbackHours?: number): string => {
+    if (clock) return clock.replace(/:/g, '');
+    if (typeof fallbackHours === 'number') return formatTime(fallbackHours).replace(/:/g, '');
+    return '';
+};
+
+const formatDeploymentDate = (dateString?: string): string => {
+    if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return '';
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+    });
+};
+
+const formatDeploymentLabel = (event: ScheduleEvent | EventSegment): string => {
+    const startDate = formatDeploymentDate(event.deploymentStartDate || event.date);
+    const startTime = formatDeploymentClock(event.deploymentStartTime, event.startTime);
+    const endDate = formatDeploymentDate(event.deploymentEndDate || event.date);
+    const endTime = formatDeploymentClock(event.deploymentEndTime, event.startTime + event.duration);
+
+    return `DEPLOYMENT ${startTime}${startDate ? ` ${startDate}` : ''} - ${endTime}${endDate ? ` ${endDate}` : ''}`;
+};
+
 // Helper to get local date string from timezone-adjusted currentTime
 // IMPORTANT: Use this instead of new Date().toISOString() to ensure consistent timezone handling
 const getLocalDateStringFromAdjustedTime = (date: Date): string => {
@@ -502,7 +528,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return (
             <div className="flex h-full w-full items-center justify-center px-2" style={textStyle}>
                 <div className="truncate whitespace-nowrap text-center text-xs font-semibold text-white/80">
-                    DEPLOYMENT {event.deploymentStartTime?.replace(/:/g, '')} - {event.deploymentEndTime?.replace(/:/g, '')}
+                    {formatDeploymentLabel(event)}
                 </div>
             </div>
         );

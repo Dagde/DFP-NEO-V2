@@ -4608,6 +4608,28 @@ const formatTime$6 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
+const formatDeploymentClock = (clock, fallbackHours) => {
+  if (clock) return clock.replace(/:/g, "");
+  if (typeof fallbackHours === "number") return formatTime$6(fallbackHours).replace(/:/g, "");
+  return "";
+};
+const formatDeploymentDate = (dateString) => {
+  if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return "";
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC"
+  });
+};
+const formatDeploymentLabel = (event) => {
+  const startDate = formatDeploymentDate(event.deploymentStartDate || event.date);
+  const startTime = formatDeploymentClock(event.deploymentStartTime, event.startTime);
+  const endDate = formatDeploymentDate(event.deploymentEndDate || event.date);
+  const endTime = formatDeploymentClock(event.deploymentEndTime, event.startTime + event.duration);
+  return `DEPLOYMENT ${startTime}${startDate ? ` ${startDate}` : ""} - ${endTime}${endDate ? ` ${endDate}` : ""}`;
+};
 const getLocalDateStringFromAdjustedTime = (date) => {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -4920,12 +4942,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || "") : displayStudentNameForRender;
     const isGroundEventFromName = event.flightNumber.includes("CPT") || event.flightNumber.includes("MB") || event.flightNumber.includes("TUT") || event.flightNumber.includes("QUIZ");
     if (event.type === "deployment") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full w-full items-center justify-center px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate whitespace-nowrap text-center text-xs font-semibold text-white/80", children: [
-        "DEPLOYMENT ",
-        event.deploymentStartTime?.replace(/:/g, ""),
-        " - ",
-        event.deploymentEndTime?.replace(/:/g, "")
-      ] }) });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full w-full items-center justify-center px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate whitespace-nowrap text-center text-xs font-semibold text-white/80", children: formatDeploymentLabel(event) }) });
     }
     if (event.type === "unavailability") {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full w-full items-center justify-center px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate whitespace-nowrap text-center font-mono text-xs font-semibold text-red-300", children: (event.reason || "Other").toUpperCase() }) });
