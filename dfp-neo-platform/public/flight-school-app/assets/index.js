@@ -84565,12 +84565,30 @@ ${conflictLines.join("\n")}${moreText}`,
       }
       return;
     }
+    const parseDeploymentClock = (clock) => {
+      if (!clock) return null;
+      const match = clock.match(/^(\d{1,2}):?(\d{2})$/);
+      if (!match) return null;
+      return Number(match[1]) + Number(match[2]) / 60;
+    };
+    const dateTimeMs = (dateStr, hours) => (/* @__PURE__ */ new Date(`${dateStr}T00:00:00Z`)).getTime() + hours * 60 * 60 * 1e3;
     for (const flight of flightTiles) {
       const overlappingDeploy = deploymentTiles.find((dep) => {
-        const depStart = dep.deploymentStartDate || dep.date;
-        const depEnd = dep.deploymentEndDate || dep.date;
-        const matches = flight.date >= depStart && flight.date <= depEnd;
-        return matches;
+        if (!flight.resourceId?.startsWith("Deployed")) return false;
+        if (dep.resourceId && flight.resourceId !== dep.resourceId) return false;
+        const depStartDate = dep.deploymentStartDate || dep.date;
+        const depStartTime = parseDeploymentClock(dep.deploymentStartTime) ?? dep.startTime;
+        const depStartMs = dateTimeMs(depStartDate, depStartTime);
+        let depEndMs;
+        if (dep.deploymentEndDate && dep.deploymentEndTime) {
+          const depEndTime = parseDeploymentClock(dep.deploymentEndTime);
+          depEndMs = dateTimeMs(dep.deploymentEndDate, depEndTime ?? dep.startTime + dep.duration);
+        } else {
+          depEndMs = depStartMs + dep.duration * 60 * 60 * 1e3;
+        }
+        const flightStartMs = dateTimeMs(flight.date, flight.startTime);
+        const flightEndMs = dateTimeMs(flight.date, flight.startTime + flight.duration);
+        return flightStartMs < depEndMs && flightEndMs > depStartMs;
       });
       if (overlappingDeploy) {
         await upsertDeployedUnavailability(flight, overlappingDeploy);
