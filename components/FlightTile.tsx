@@ -511,19 +511,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     if (event.type === 'unavailability') {
         // Render unavailability tile
         return (
-            <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
-                <div className="overflow-hidden text-center">
-                    <div className="text-red-300 font-medium text-sm">
-                        UNAVAILABLE
-                    </div>
-                    <div className="font-mono text-red-400 truncate">
-                        {(event.reason || 'Other').toUpperCase()}
-                    </div>
-                    {event.notes && (
-                        <div className="text-xs text-red-500 mt-1 truncate">
-                            {event.notes}
-                        </div>
-                    )}
+            <div className="flex h-full w-full items-center justify-center px-2" style={textStyle}>
+                <div className="truncate whitespace-nowrap text-center font-mono text-xs font-semibold text-red-300">
+                    {(event.reason || 'Other').toUpperCase()}
                 </div>
             </div>
         );

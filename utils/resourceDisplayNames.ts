@@ -42,7 +42,10 @@ export const formatResourceLabel = (
   if (aircraftMatch) return `${names.aircraft}${aircraftMatch[1]}`;
 
   const deployedMatch = resourceId.match(/^Deployed(\s+\d+)$/);
-  if (deployedMatch) return `Deployed ${names.aircraft}${deployedMatch[1]}`;
+  if (deployedMatch) {
+    const deployedLabel = names.aircraft.length >= 5 ? 'Dep' : 'Deployed';
+    return `${deployedLabel} ${names.aircraft}${deployedMatch[1]}`;
+  }
 
   const ftdMatch = resourceId.match(/^FTD(\s+\d+)$/);
   if (ftdMatch) return `${names.ftd}${ftdMatch[1]}`;

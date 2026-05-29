@@ -11468,32 +11468,21 @@ const App: React.FC = () => {
         console.log('buildResources - Current view:', activeView, 'Current date:', date);
 
         if (activeView === 'Program Schedule' || activeView === 'DailyFlyingProgram' || activeView === 'InstructorSchedule' || activeView === 'TraineeSchedule') {
-            // Check all events across all dates for deployments that overlap with current date
-            const todayStart = new Date(`${date}T00:00:00Z`).getTime();
-            const todayEnd = new Date(todayStart);
-            todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
-            const todayEndTime = todayEnd.getTime();
-
-            const allEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
-            const overlappingDeployments = allEvents.filter(event => {
+            // Match the rendered schedule source: deployment rows come from the
+            // current date's saved events so stale/deleted deployments on other
+            // dates cannot leave phantom Deployed rows behind.
+            const currentDateEvents: ScheduleEvent[] = publishedSchedules[date] || [];
+            const deploymentIds = new Set<string>();
+            currentDateEvents.forEach(event => {
                 if (!event.date || typeof event.date !== 'string' || !event.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
                     console.warn('[DeploymentCount] Event has invalid date format, skipping:', event.id, event.date);
-                    return false;
+                    return;
                 }
-                if (event.type !== 'deployment') return false;
-
-                const eventDateObj = safeParseDate(event.date);
-                if (!eventDateObj) {
-                    console.warn('[DeploymentCount] Event has invalid date, skipping:', event.id, event.date);
-                    return false;
-                }
-                const eventStartMs = eventDateObj.getTime() + (event.startTime * 60 * 60 * 1000);
-                const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
-
-                return eventStartMs < todayEndTime && eventEndMs > todayStart;
+                if (event.type !== 'deployment' || event.isCancelled) return;
+                deploymentIds.add(event.id);
             });
 
-            deploymentCount = overlappingDeployments.length;
+            deploymentCount = deploymentIds.size;
         } else if (['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView)) {
             // For next day build, check if any deployment exists in nextDayBuildEvents
             const deploymentEvents = nextDayBuildEvents.filter(event => event.type === 'deployment');

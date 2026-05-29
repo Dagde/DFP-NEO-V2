@@ -1964,7 +1964,10 @@ const formatResourceLabel = (resourceId, names = DEFAULT_RESOURCE_DISPLAY_NAMES)
   const aircraftMatch = resourceId.match(/^PC-21(\s+\d+)$/);
   if (aircraftMatch) return `${names.aircraft}${aircraftMatch[1]}`;
   const deployedMatch = resourceId.match(/^Deployed(\s+\d+)$/);
-  if (deployedMatch) return `Deployed ${names.aircraft}${deployedMatch[1]}`;
+  if (deployedMatch) {
+    const deployedLabel = names.aircraft.length >= 5 ? "Dep" : "Deployed";
+    return `${deployedLabel} ${names.aircraft}${deployedMatch[1]}`;
+  }
   const ftdMatch = resourceId.match(/^FTD(\s+\d+)$/);
   if (ftdMatch) return `${names.ftd}${ftdMatch[1]}`;
   const cptMatch = resourceId.match(/^CPT(\s+\d+)$/);
@@ -4925,11 +4928,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       ] }) });
     }
     if (event.type === "unavailability") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden text-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-red-300 font-medium text-sm", children: "UNAVAILABLE" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-red-400 truncate", children: (event.reason || "Other").toUpperCase() }),
-        event.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-red-500 mt-1 truncate", children: event.notes })
-      ] }) });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full w-full items-center justify-center px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate whitespace-nowrap text-center font-mono text-xs font-semibold text-red-300", children: (event.reason || "Other").toUpperCase() }) });
     }
     if (event.isAcademic && event.academicTiles) {
       const acadEvent = event;
@@ -79911,27 +79910,17 @@ ${"=".repeat(60)}`);
     let deploymentCount = 0;
     console.log("buildResources - Current view:", activeView, "Current date:", date);
     if (activeView === "Program Schedule" || activeView === "DailyFlyingProgram" || activeView === "InstructorSchedule" || activeView === "TraineeSchedule") {
-      const todayStart = (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime();
-      const todayEnd = new Date(todayStart);
-      todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
-      const todayEndTime = todayEnd.getTime();
-      const allEvents = Object.values(publishedSchedules).flat();
-      const overlappingDeployments = allEvents.filter((event) => {
+      const currentDateEvents = publishedSchedules[date] || [];
+      const deploymentIds = /* @__PURE__ */ new Set();
+      currentDateEvents.forEach((event) => {
         if (!event.date || typeof event.date !== "string" || !event.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
           console.warn("[DeploymentCount] Event has invalid date format, skipping:", event.id, event.date);
-          return false;
+          return;
         }
-        if (event.type !== "deployment") return false;
-        const eventDateObj = safeParseDate(event.date);
-        if (!eventDateObj) {
-          console.warn("[DeploymentCount] Event has invalid date, skipping:", event.id, event.date);
-          return false;
-        }
-        const eventStartMs = eventDateObj.getTime() + event.startTime * 60 * 60 * 1e3;
-        const eventEndMs = eventStartMs + event.duration * 60 * 60 * 1e3;
-        return eventStartMs < todayEndTime && eventEndMs > todayStart;
+        if (event.type !== "deployment" || event.isCancelled) return;
+        deploymentIds.add(event.id);
       });
-      deploymentCount = overlappingDeployments.length;
+      deploymentCount = deploymentIds.size;
     } else if (["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView)) {
       const deploymentEvents = nextDayBuildEvents.filter((event) => event.type === "deployment");
       deploymentCount = deploymentEvents.length;
