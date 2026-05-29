@@ -2260,6 +2260,213 @@ const getInsertEventTypes = (config) => {
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes || null);
 };
+const DEG_TO_RAD = Math.PI / 180;
+const RAD_TO_DEG = 180 / Math.PI;
+const OFFICIAL_SUNRISE_ZENITH = 90.833;
+const MINUTES_PER_DAY = 1440;
+const DEFAULT_AIRFIELD_SOLAR_PROFILES = {
+  ESL: { code: "ESL", name: "East Sale", latitude: -38.0989, longitude: 147.1494, timezone: "Australia/Melbourne" },
+  PEA: { code: "PEA", name: "Pearce", latitude: -31.6678, longitude: 116.015, timezone: "Australia/Perth" },
+  WLM: { code: "WLM", name: "Williamtown", latitude: -32.794, longitude: 151.834, timezone: "Australia/Sydney" },
+  AMB: { code: "AMB", name: "Amberley", latitude: -27.6406, longitude: 152.712, timezone: "Australia/Brisbane" },
+  TIN: { code: "TIN", name: "Tindal", latitude: -14.521, longitude: 132.378, timezone: "Australia/Darwin" },
+  EDI: { code: "EDI", name: "Edinburgh", latitude: -34.7025, longitude: 138.6208, timezone: "Australia/Adelaide" }
+};
+const DEFAULT_AIRFIELD_LOOKUP = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES).reduce((acc, profile) => {
+  acc[normaliseKey(profile.code)] = profile;
+  acc[normaliseKey(profile.name)] = profile;
+  return acc;
+}, {});
+function normaliseKey(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+function toRadians(degrees) {
+  return degrees * DEG_TO_RAD;
+}
+function toDegrees(radians) {
+  return radians * RAD_TO_DEG;
+}
+function normaliseDegrees(degrees) {
+  return (degrees % 360 + 360) % 360;
+}
+function normaliseHours(hours) {
+  return (hours % 24 + 24) % 24;
+}
+function parseDateParts(date) {
+  if (date instanceof Date && Number.isFinite(date.getTime())) {
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate()
+    };
+  }
+  const match = String(date || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) {
+    throw new Error(`Invalid date for solar calculation: ${date}`);
+  }
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3])
+  };
+}
+function dayOfYear({ year, month, day }) {
+  const start = Date.UTC(year, 0, 1);
+  const current = Date.UTC(year, month - 1, day);
+  return Math.floor((current - start) / 864e5) + 1;
+}
+function isValidLatitude(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= -90 && number <= 90;
+}
+function isValidLongitude(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= -180 && number <= 180;
+}
+function isValidTimeZone(timezone) {
+  const value = String(timezone || "").trim();
+  if (!value) return false;
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: value }).format(/* @__PURE__ */ new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+function getDefaultAirfieldSolarProfile(identifier) {
+  return DEFAULT_AIRFIELD_LOOKUP[normaliseKey(identifier)] || null;
+}
+function timeStringToDecimalHours(value) {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours < 0 || hours > 24 || minutes < 0 || minutes > 59) return null;
+  return normaliseHours(hours + minutes / 60);
+}
+function formatTimeInZone(date, timezone) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(date);
+  const hour = parts.find((part) => part.type === "hour")?.value || "00";
+  const minute = parts.find((part) => part.type === "minute")?.value || "00";
+  return `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+}
+function formatDateInZone(date, timezone) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value || "0000";
+  const month = parts.find((part) => part.type === "month")?.value || "00";
+  const day = parts.find((part) => part.type === "day")?.value || "00";
+  return `${year}-${month}-${day}`;
+}
+function toDateKey({ year, month, day }) {
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+function buildUtcDateForLocalSolarDate(dateParts, utcMinutes, timezone) {
+  const targetDateKey = toDateKey(dateParts);
+  const candidates = [-1, 0, 1].map((dayOffset) => new Date(Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day + dayOffset, 0, utcMinutes)));
+  return candidates.find((candidate) => formatDateInZone(candidate, timezone) === targetDateKey) || candidates[1];
+}
+function calculateUtcMinutesForSolarEvent(dateParts, latitude, longitude, isSunrise, zenith) {
+  const n = dayOfYear(dateParts);
+  const longitudeHour = longitude / 15;
+  const approximateTime = n + ((isSunrise ? 6 : 18) - longitudeHour) / 24;
+  const meanAnomaly = 0.9856 * approximateTime - 3.289;
+  const trueLongitude = normaliseDegrees(
+    meanAnomaly + 1.916 * Math.sin(toRadians(meanAnomaly)) + 0.02 * Math.sin(toRadians(2 * meanAnomaly)) + 282.634
+  );
+  let rightAscension = toDegrees(Math.atan(0.91764 * Math.tan(toRadians(trueLongitude))));
+  rightAscension = normaliseDegrees(rightAscension);
+  const longitudeQuadrant = Math.floor(trueLongitude / 90) * 90;
+  const rightAscensionQuadrant = Math.floor(rightAscension / 90) * 90;
+  rightAscension = (rightAscension + longitudeQuadrant - rightAscensionQuadrant) / 15;
+  const sinDeclination = 0.39782 * Math.sin(toRadians(trueLongitude));
+  const cosDeclination = Math.cos(Math.asin(sinDeclination));
+  const cosLocalHourAngle = (Math.cos(toRadians(zenith)) - sinDeclination * Math.sin(toRadians(latitude))) / (cosDeclination * Math.cos(toRadians(latitude)));
+  if (cosLocalHourAngle > 1) {
+    return { utcMinutes: null, polarState: "sun_always_down" };
+  }
+  if (cosLocalHourAngle < -1) {
+    return { utcMinutes: null, polarState: "sun_always_up" };
+  }
+  let localHourAngle = isSunrise ? 360 - toDegrees(Math.acos(cosLocalHourAngle)) : toDegrees(Math.acos(cosLocalHourAngle));
+  localHourAngle /= 15;
+  const localMeanTime = localHourAngle + rightAscension - 0.06571 * approximateTime - 6.622;
+  const utcHours = normaliseHours(localMeanTime - longitudeHour);
+  return {
+    utcMinutes: Math.round(utcHours * 60),
+    polarState: null
+  };
+}
+function getSunTimes(date, latitude, longitude, timezone, options = {}) {
+  const lat = Number(latitude);
+  const lon = Number(longitude);
+  const tz = String(timezone || "").trim();
+  const zenith = Number(options.zenith ?? OFFICIAL_SUNRISE_ZENITH);
+  if (!isValidLatitude(lat)) {
+    throw new Error(`Invalid latitude for solar calculation: ${latitude}`);
+  }
+  if (!isValidLongitude(lon)) {
+    throw new Error(`Invalid longitude for solar calculation: ${longitude}`);
+  }
+  if (!isValidTimeZone(tz)) {
+    throw new Error(`Invalid IANA timezone for solar calculation: ${timezone}`);
+  }
+  const dateParts = parseDateParts(date);
+  const sunrise = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, true, zenith);
+  const sunset = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, false, zenith);
+  const polarState = sunrise.polarState || sunset.polarState || null;
+  if (polarState) {
+    return {
+      sunrise: null,
+      sunset: null,
+      sunriseDecimal: null,
+      sunsetDecimal: null,
+      sunriseUtc: null,
+      sunsetUtc: null,
+      dayLengthMinutes: polarState === "sun_always_up" ? MINUTES_PER_DAY : 0,
+      hasSunrise: false,
+      hasSunset: false,
+      polarState,
+      timezone: tz
+    };
+  }
+  const sunriseUtc = buildUtcDateForLocalSolarDate(dateParts, sunrise.utcMinutes, tz);
+  const sunsetUtc = buildUtcDateForLocalSolarDate(dateParts, sunset.utcMinutes, tz);
+  const sunriseLocal = formatTimeInZone(sunriseUtc, tz);
+  const sunsetLocal = formatTimeInZone(sunsetUtc, tz);
+  let dayLengthMinutes = Math.round((sunsetUtc.getTime() - sunriseUtc.getTime()) / 6e4);
+  if (dayLengthMinutes < 0) dayLengthMinutes += MINUTES_PER_DAY;
+  return {
+    sunrise: sunriseLocal,
+    sunset: sunsetLocal,
+    sunriseDecimal: timeStringToDecimalHours(sunriseLocal),
+    sunsetDecimal: timeStringToDecimalHours(sunsetLocal),
+    sunriseUtc: sunriseUtc.toISOString(),
+    sunsetUtc: sunsetUtc.toISOString(),
+    dayLengthMinutes,
+    hasSunrise: true,
+    hasSunset: true,
+    polarState: null,
+    timezone: tz
+  };
+}
+function classifyDayNightBySunTimes(decimalHour, sunTimes) {
+  if (!Number.isFinite(decimalHour) || !sunTimes) return null;
+  if (sunTimes.polarState === "sun_always_up") return "Day";
+  if (sunTimes.polarState === "sun_always_down") return "Night";
+  if (!sunTimes.hasSunrise || !sunTimes.hasSunset) return null;
+  if (!Number.isFinite(sunTimes.sunriseDecimal) || !Number.isFinite(sunTimes.sunsetDecimal)) return null;
+  return decimalHour >= sunTimes.sunriseDecimal && decimalHour < sunTimes.sunsetDecimal ? "Day" : "Night";
+}
 const CALLSIGN_LIMIT = 50;
 const norm = (value) => String(value || "").trim().toUpperCase();
 const personKey = (person) => String(person.id || person.idNumber || person.name || "").trim();
@@ -41684,6 +41891,17 @@ const BACKUP_FREQUENCY_OPTIONS = [
   "Weekly",
   "Manual"
 ];
+const COMMON_IANA_TIMEZONES = [
+  "Australia/Melbourne",
+  "Australia/Perth",
+  "Australia/Sydney",
+  "Australia/Brisbane",
+  "Australia/Darwin",
+  "Australia/Adelaide",
+  "Europe/London",
+  "America/Anchorage",
+  "UTC"
+];
 const ACCREDITATION_STATUS_OPTIONS = [
   "Not started",
   "In preparation",
@@ -41849,6 +42067,21 @@ const toNumber = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+const toNullableNumber = (value) => {
+  if (value === null || value === void 0 || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+const hasUsableSolarLocation = (location) => isValidLatitude(location?.latitude) && isValidLongitude(location?.longitude) && isValidTimeZone(location?.timezone);
+const validateSolarLocation = (location) => {
+  const label = location?.code || location?.name || "Location";
+  const hasAnySolarField = location?.latitude !== null && location?.latitude !== void 0 && location?.latitude !== "" || location?.longitude !== null && location?.longitude !== void 0 && location?.longitude !== "" || Boolean(String(location?.timezone || "").trim());
+  if (!hasAnySolarField) return null;
+  if (!isValidLatitude(location?.latitude)) return `${label}: latitude must be between -90 and 90.`;
+  if (!isValidLongitude(location?.longitude)) return `${label}: longitude must be between -180 and 180.`;
+  if (!isValidTimeZone(location?.timezone)) return `${label}: timezone must be a valid IANA timezone, for example Australia/Melbourne.`;
+  return null;
+};
 const uniqueValues = (values) => Array.from(new Set(values.filter(Boolean)));
 const getDefaultConfigurationHealthRemediation = (area, title) => {
   const lowerTitle = title.toLowerCase();
@@ -41944,6 +42177,16 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     const organisationCode = toIdentifier(location.organisationCode);
     if (organisationCode && !activeOrganisationCodes.has(organisationCode)) {
       add("WARNING", "Locations", `${locationCode} references inactive organisation`, `${locationCode} points to ${organisationCode}, which is not an active organisation.`, `location-${locationCode}-org`);
+    }
+    if (!hasUsableSolarLocation(location)) {
+      const defaultProfile = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
+      add(
+        "WARNING",
+        "Locations",
+        `${locationCode} daylight data incomplete`,
+        defaultProfile ? "The app can currently fall back to a built-in Australian base profile, but this location should store its own latitude, longitude and IANA timezone for offline daylight calculations." : "Offline FL/LL calculation needs latitude, longitude and an IANA timezone for this location.",
+        `location-${locationCode}-solar`
+      );
     }
     const unitsAtLocation = activeUnits.filter((unit) => toIdentifier(unit.locationCode) === locationCode);
     if (unitsAtLocation.length === 0) {
@@ -42640,6 +42883,11 @@ const PlatformConfigurationSettings = ({
   };
   const save = async () => {
     if (!canEdit) return;
+    const solarValidationError = config.locations.map(validateSolarLocation).find(Boolean);
+    if (solarValidationError) {
+      setError(solarValidationError);
+      return;
+    }
     setSaving(true);
     setError("");
     let shouldReload = false;
@@ -42843,12 +43091,32 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { name: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) })
         ] }, org.id || org.code || index)),
-        config.locations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
+        config.locations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2 xl:grid-cols-8", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Location Code", value: location.code, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { code: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Location Name", value: location.name, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { name: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TimeZoneField, { label: "IANA Timezone", value: location.timezone || "", disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezone: value }), info: "Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Training Areas", value: (location.trainingAreas || []).join(", "), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { trainingAreas: value.split(",").map((item) => item.trim()).filter(Boolean) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }),
+          canEdit && (getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name)) ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              className: "self-end rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-100 hover:bg-cyan-500/20",
+              onClick: () => {
+                const defaults = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
+                if (!defaults) return;
+                updateRow("locations", index, {
+                  latitude: defaults.latitude,
+                  longitude: defaults.longitude,
+                  timezone: defaults.timezone
+                });
+              },
+              children: "Use Known Base Defaults"
+            }
+          ) : null
         ] }, location.id || location.code || index))
       ] })
     ] }),
@@ -43977,6 +44245,21 @@ const ToggleField = ({ label, checked, disabled, onChange }) => /* @__PURE__ */ 
 const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = "None", info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option || emptyLabel }, option)) })
+] });
+const TimeZoneField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      className: fieldClass,
+      list: "platform-iana-timezones",
+      value: value || "",
+      disabled,
+      placeholder: "Australia/Melbourne",
+      onChange: (event) => onChange(event.target.value)
+    }
+  ),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "platform-iana-timezones", children: COMMON_IANA_TIMEZONES.map((timezone) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: timezone }, timezone)) })
 ] });
 const UserSearchSelect = ({
   label,
@@ -60624,6 +60907,51 @@ const App = () => {
     () => getLocationResourcePool(platformConfig, school),
     [platformConfig, school]
   );
+  const activeLocationSolarProfile = reactExports.useMemo(() => {
+    const configuredLocation = (platformConfig?.locations || []).find((location) => {
+      const code = String(location?.code || "").toUpperCase();
+      const name = String(location?.name || "");
+      return code === school || name === school;
+    });
+    const fallbackProfile = getDefaultAirfieldSolarProfile(configuredLocation?.code) || getDefaultAirfieldSolarProfile(configuredLocation?.name) || getDefaultAirfieldSolarProfile(school);
+    const latitude = configuredLocation?.latitude ?? configuredLocation?.settings?.latitude ?? fallbackProfile?.latitude ?? null;
+    const longitude = configuredLocation?.longitude ?? configuredLocation?.settings?.longitude ?? fallbackProfile?.longitude ?? null;
+    const timezone = configuredLocation?.timezone ?? configuredLocation?.timeZone ?? configuredLocation?.settings?.timezone ?? fallbackProfile?.timezone ?? null;
+    return {
+      code: configuredLocation?.code || fallbackProfile?.code || school,
+      name: configuredLocation?.name || fallbackProfile?.name || school,
+      latitude: latitude === null || latitude === "" ? null : Number(latitude),
+      longitude: longitude === null || longitude === "" ? null : Number(longitude),
+      timezone: timezone ? String(timezone) : null
+    };
+  }, [platformConfig, school]);
+  const getSunTimesForDate = reactExports.useCallback((targetDate) => {
+    const { latitude, longitude, timezone } = activeLocationSolarProfile;
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !timezone) {
+      return null;
+    }
+    try {
+      return getSunTimes(targetDate, latitude, longitude, timezone);
+    } catch (error) {
+      console.warn("[SunTimes] Could not calculate FL/LL for selected DFP date/location:", {
+        date: targetDate,
+        location: activeLocationSolarProfile,
+        error
+      });
+      return null;
+    }
+  }, [activeLocationSolarProfile]);
+  const selectedDfpSunTimes = reactExports.useMemo(() => getSunTimesForDate(date), [date, getSunTimesForDate]);
+  const selectedDfpDaylightTimes = reactExports.useMemo(() => ({
+    firstLight: selectedDfpSunTimes?.hasSunrise ? selectedDfpSunTimes.sunrise : null,
+    lastLight: selectedDfpSunTimes?.hasSunset ? selectedDfpSunTimes.sunset : null
+  }), [selectedDfpSunTimes]);
+  const classifyStartBySolarDaylight = reactExports.useCallback((startTime, targetDate = date) => {
+    const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
+    const solarClassification = classifyDayNightBySunTimes(startTime, sunTimes);
+    if (solarClassification === "Day" || solarClassification === "Night") return solarClassification;
+    return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
+  }, [ceaseNightFlying, commenceNightFlying, date, getSunTimesForDate, selectedDfpSunTimes]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     if (activePlatformResourcePool) {
@@ -61593,6 +61921,11 @@ const App = () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split("T")[0];
   });
+  const buildDfpSunTimes = reactExports.useMemo(() => getSunTimesForDate(buildDfpDate), [buildDfpDate, getSunTimesForDate]);
+  const buildDfpDaylightTimes = reactExports.useMemo(() => ({
+    firstLight: buildDfpSunTimes?.hasSunrise ? buildDfpSunTimes.sunrise : null,
+    lastLight: buildDfpSunTimes?.hasSunset ? buildDfpSunTimes.sunset : null
+  }), [buildDfpSunTimes]);
   const [lastBuildAnalysis, setLastBuildAnalysis] = reactExports.useState(null);
   const [availableAircraftCount, setAvailableAircraftCount] = reactExports.useState(15);
   const [neoAvailableAircraftCount, setNeoAvailableAircraftCount] = reactExports.useState(15);
@@ -62787,10 +63120,10 @@ ${"=".repeat(60)}`);
   }, [allInstructorsData, allTraineesData]);
   const getScheduleEventDayNightClassification = reactExports.useCallback((event) => {
     if (typeof event.startTime === "number") {
-      return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? "Night" : "Day";
+      return classifyStartBySolarDaylight(event.startTime, event.date || date);
     }
     return getEventDayNightClassification(event, syllabusDetails, sctEvents);
-  }, [commenceNightFlying, ceaseNightFlying, syllabusDetails, sctEvents]);
+  }, [classifyStartBySolarDaylight, date, syllabusDetails, sctEvents]);
   const checkTimeOverlap = reactExports.useCallback((event1, event2) => {
     const start1 = event1.startTime;
     const end1 = event1.startTime + event1.duration;
@@ -62984,13 +63317,14 @@ ${"=".repeat(60)}`);
       const proposedClassification = getScheduleEventDayNightClassification({
         flightNumber: proposedFlightNumber,
         startTime: proposedStartTime,
-        resourceId: proposedFlightNumber.includes("Duty Sup") ? "Duty Sup" : void 0
+        resourceId: proposedFlightNumber.includes("Duty Sup") ? "Duty Sup" : void 0,
+        date: analysisDate
       });
       proposedIsNight = proposedClassification === "Night";
       proposedIsDay = proposedClassification === "Day";
       proposedIsDayNight = proposedClassification === "Day/Night";
     } else {
-      proposedIsNight = proposedStartTime >= commenceNightFlying && proposedStartTime < ceaseNightFlying;
+      proposedIsNight = classifyStartBySolarDaylight(proposedStartTime, analysisDate) === "Night";
       proposedIsDay = !proposedIsNight;
     }
     if (proposedIsDayNight) {
@@ -68910,7 +69244,7 @@ ${conflictLines.join("\n")}${moreText}`,
       });
       const nextEventClassification = tr.nextSyllabusEvent ? getEventDayNightClassification({ flightNumber: tr.nextSyllabusEvent.code }, syllabusDetails, sctEvents) : "Unknown";
       if (tr.nextSyllabusEvent && nextEventClassification !== "Day/Night") {
-        const proposedIsNight = bookingWindow.start >= commenceNightFlying && bookingWindow.start < ceaseNightFlying;
+        const proposedIsNight = classifyStartBySolarDaylight(bookingWindow.start, analysisDate) === "Night";
         const proposedIsDay = !proposedIsNight;
         if (nextEventClassification === "Night" && proposedIsDay) {
           console.log(`Oracle: Excluding ${tr.trainee.fullName} - Next event is Night but proposed time is Day (${bookingWindow.start.toFixed(2)})`);
@@ -68957,7 +69291,7 @@ ${conflictLines.join("\n")}${moreText}`,
     setSelectedEvent(newEvent);
     setIsEditingDefault(true);
     setOraclePreviewEvent(null);
-  }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails]);
+  }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails, classifyStartBySolarDaylight]);
   const handleSelectMyProfile = () => {
     const user = instructorsData.find((i) => i.name === currentUserName);
     if (user) {
@@ -69018,7 +69352,7 @@ ${conflictLines.join("\n")}${moreText}`,
             syllabusDetails,
             personnelData,
             seatConfigs,
-            daylightTimes: { firstLight: "06:30", lastLight: "18:30" },
+            daylightTimes: selectedDfpDaylightTimes,
             personnelConflicts: [],
             personnelConflictIds: personnelAndResourceConflictIds,
             unavailabilityConflicts,
@@ -69105,7 +69439,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onSelectEvent: handleOpenModal,
             onUpdateEvent: handleScheduleUpdate,
             zoomLevel,
-            daylightTimes: { firstLight: "06:30", lastLight: "18:30" },
+            daylightTimes: selectedDfpDaylightTimes,
             personnelData,
             seatConfigs,
             syllabusDetails,
@@ -69156,7 +69490,7 @@ ${conflictLines.join("\n")}${moreText}`,
               onSelectEvent: handleOpenModal,
               onUpdateEvent: handleScheduleUpdate,
               zoomLevel,
-              daylightTimes: { firstLight: "06:30", lastLight: "18:30" },
+              daylightTimes: selectedDfpDaylightTimes,
               personnelData,
               seatConfigs,
               syllabusDetails,
@@ -69200,7 +69534,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onUpdateEvent: handleNextDayScheduleUpdate,
             zoomLevel,
-            daylightTimes: { firstLight: "06:30", lastLight: "18:30" },
+            daylightTimes: buildDfpDaylightTimes,
             personnelData,
             seatConfigs,
             syllabusDetails,
@@ -69236,7 +69570,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onUpdateEvent: handleNextDayScheduleUpdate,
             zoomLevel,
-            daylightTimes: { firstLight: "06:30", lastLight: "18:30" },
+            daylightTimes: buildDfpDaylightTimes,
             personnelData,
             seatConfigs,
             syllabusDetails,
@@ -69375,7 +69709,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onDateChange: handleDateChange,
             eventsForStaffTraineeSchedule,
             zoomLevel,
-            daylightTimes: { firstLight: "06:30", lastLight: "18:30" },
+            daylightTimes: selectedDfpDaylightTimes,
             seatConfigs,
             conflictingEventIds: personnelAndResourceConflictIds,
             showValidation,
@@ -69565,7 +69899,7 @@ ${conflictLines.join("\n")}${moreText}`,
             syllabusDetails,
             personnelData,
             seatConfigs,
-            daylightTimes: { firstLight: "06:30", lastLight: "18:30" },
+            daylightTimes: buildDfpDaylightTimes,
             personnelConflicts: [],
             personnelConflictIds: nextDayPersonnelAndResourceConflictIds,
             unavailabilityConflicts: nextDayUnavailabilityConflicts,
@@ -70109,7 +70443,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onDateChange: handleDateChange,
             eventSegmentsForDate,
             zoomLevel,
-            daylightTimes: { firstLight: "06:30", lastLight: "18:30" },
+            daylightTimes: selectedDfpDaylightTimes,
             seatConfigs,
             syllabusDetails,
             conflictingEventIds: personnelAndResourceConflictIds,

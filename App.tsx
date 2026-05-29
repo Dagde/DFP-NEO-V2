@@ -39,6 +39,11 @@ import {
 import { getTrainingReportTerminology } from './utils/trainingReportTerminology';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
+import {
+    classifyDayNightBySunTimes,
+    getDefaultAirfieldSolarProfile,
+    getSunTimes,
+} from './utils/sunTimes.js';
 import type { InsertLmpEventRequest } from './components/TraineeLmpView';
 import {
     getStaffCallsignAssignments,
@@ -9221,6 +9226,62 @@ const App: React.FC = () => {
         [platformConfig, school],
     );
 
+    const activeLocationSolarProfile = useMemo(() => {
+        const configuredLocation = (platformConfig?.locations || []).find((location: any) => {
+            const code = String(location?.code || '').toUpperCase();
+            const name = String(location?.name || '');
+            return code === school || name === school;
+        });
+        const fallbackProfile =
+            getDefaultAirfieldSolarProfile(configuredLocation?.code)
+            || getDefaultAirfieldSolarProfile(configuredLocation?.name)
+            || getDefaultAirfieldSolarProfile(school);
+
+        const latitude = configuredLocation?.latitude ?? configuredLocation?.settings?.latitude ?? fallbackProfile?.latitude ?? null;
+        const longitude = configuredLocation?.longitude ?? configuredLocation?.settings?.longitude ?? fallbackProfile?.longitude ?? null;
+        const timezone = configuredLocation?.timezone ?? configuredLocation?.timeZone ?? configuredLocation?.settings?.timezone ?? fallbackProfile?.timezone ?? null;
+
+        return {
+            code: configuredLocation?.code || fallbackProfile?.code || school,
+            name: configuredLocation?.name || fallbackProfile?.name || school,
+            latitude: latitude === null || latitude === '' ? null : Number(latitude),
+            longitude: longitude === null || longitude === '' ? null : Number(longitude),
+            timezone: timezone ? String(timezone) : null,
+        };
+    }, [platformConfig, school]);
+
+    const getSunTimesForDate = useCallback((targetDate: string) => {
+        const { latitude, longitude, timezone } = activeLocationSolarProfile;
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !timezone) {
+            return null;
+        }
+
+        try {
+            return getSunTimes(targetDate, latitude, longitude, timezone);
+        } catch (error) {
+            console.warn('[SunTimes] Could not calculate FL/LL for selected DFP date/location:', {
+                date: targetDate,
+                location: activeLocationSolarProfile,
+                error,
+            });
+            return null;
+        }
+    }, [activeLocationSolarProfile]);
+
+    const selectedDfpSunTimes = useMemo(() => getSunTimesForDate(date), [date, getSunTimesForDate]);
+
+    const selectedDfpDaylightTimes = useMemo(() => ({
+        firstLight: selectedDfpSunTimes?.hasSunrise ? selectedDfpSunTimes.sunrise : null,
+        lastLight: selectedDfpSunTimes?.hasSunset ? selectedDfpSunTimes.sunset : null,
+    }), [selectedDfpSunTimes]);
+
+    const classifyStartBySolarDaylight = useCallback((startTime: number, targetDate: string = date): 'Day' | 'Night' => {
+        const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
+        const solarClassification = classifyDayNightBySunTimes(startTime, sunTimes);
+        if (solarClassification === 'Day' || solarClassification === 'Night') return solarClassification;
+        return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
+    }, [ceaseNightFlying, commenceNightFlying, date, getSunTimesForDate, selectedDfpSunTimes]);
+
     useEffect(() => {
         if (!platformConfigLoaded) return;
         if (activePlatformResourcePool) {
@@ -10507,6 +10568,11 @@ const App: React.FC = () => {
         tomorrow.setDate(tomorrow.getDate() + 1);
         return tomorrow.toISOString().split('T')[0];
     });
+    const buildDfpSunTimes = useMemo(() => getSunTimesForDate(buildDfpDate), [buildDfpDate, getSunTimesForDate]);
+    const buildDfpDaylightTimes = useMemo(() => ({
+        firstLight: buildDfpSunTimes?.hasSunrise ? buildDfpSunTimes.sunrise : null,
+        lastLight: buildDfpSunTimes?.hasSunset ? buildDfpSunTimes.sunset : null,
+    }), [buildDfpSunTimes]);
     const [lastBuildAnalysis, setLastBuildAnalysis] = useState<BuildAnalysis | null>(null);
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
     const [neoAvailableAircraftCount, setNeoAvailableAircraftCount] = useState(15);
@@ -11990,15 +12056,13 @@ const App: React.FC = () => {
     // CONFLICT DETECTION SYSTEM
     // ============================================================================
     const getScheduleEventDayNightClassification = useCallback((
-        event: { flightNumber: string; startTime?: number; resourceId?: string }
+        event: { flightNumber: string; startTime?: number; resourceId?: string; date?: string }
     ): 'Day' | 'Night' | 'Day/Night' => {
         if (typeof event.startTime === 'number') {
-            return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying
-                ? 'Night'
-                : 'Day';
+            return classifyStartBySolarDaylight(event.startTime, event.date || date);
         }
         return getEventDayNightClassification(event, syllabusDetails, sctEvents);
-    }, [commenceNightFlying, ceaseNightFlying, syllabusDetails, sctEvents]);
+    }, [classifyStartBySolarDaylight, date, syllabusDetails, sctEvents]);
 
     // Detects three types of conflicts:
     // 1. Turnaround Conflicts - Insufficient gap between consecutive events on same resource
@@ -12285,14 +12349,15 @@ const App: React.FC = () => {
             const proposedClassification = getScheduleEventDayNightClassification({
                 flightNumber: proposedFlightNumber,
                 startTime: proposedStartTime,
-                resourceId: proposedFlightNumber.includes('Duty Sup') ? 'Duty Sup' : undefined
+                resourceId: proposedFlightNumber.includes('Duty Sup') ? 'Duty Sup' : undefined,
+                date: analysisDate,
             });
             proposedIsNight = proposedClassification === 'Night';
             proposedIsDay = proposedClassification === 'Day';
             proposedIsDayNight = proposedClassification === 'Day/Night';
         } else {
             // Fallback to time-based for Duty Sup and other non-syllabus events
-            proposedIsNight = proposedStartTime >= commenceNightFlying && proposedStartTime < ceaseNightFlying;
+            proposedIsNight = classifyStartBySolarDaylight(proposedStartTime, analysisDate) === 'Night';
             proposedIsDay = !proposedIsNight;
         }
 
@@ -19797,7 +19862,7 @@ updates.forEach(update => {
                // If next event is Night, only show trainee as available during night hours
                // If next event is Day, only show trainee as available during day hours
                if (tr.nextSyllabusEvent && nextEventClassification !== 'Day/Night') {
-                   const proposedIsNight = bookingWindow.start >= commenceNightFlying && bookingWindow.start < ceaseNightFlying;
+                   const proposedIsNight = classifyStartBySolarDaylight(bookingWindow.start, analysisDate) === 'Night';
                    const proposedIsDay = !proposedIsNight;
 
                    if (nextEventClassification === 'Night' && proposedIsDay) {
@@ -19856,7 +19921,7 @@ updates.forEach(update => {
         setIsEditingDefault(true);
         setOraclePreviewEvent(null);
 
-    }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails]);
+    }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails, classifyStartBySolarDaylight]);
 
     const handleSelectMyProfile = () => {
         const user = instructorsData.find(i => i.name === currentUserName);
@@ -19922,7 +19987,7 @@ updates.forEach(update => {
                            syllabusDetails={syllabusDetails}
                            personnelData={personnelData}
                            seatConfigs={seatConfigs}
-                           daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                           daylightTimes={selectedDfpDaylightTimes}
                            personnelConflicts={[]}
                            personnelConflictIds={personnelAndResourceConflictIds}
                            unavailabilityConflicts={unavailabilityConflicts}
@@ -20022,7 +20087,7 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             zoomLevel={zoomLevel}
-                            daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                            daylightTimes={selectedDfpDaylightTimes}
                             personnelData={personnelData}
                             seatConfigs={seatConfigs}
                             syllabusDetails={syllabusDetails}
@@ -20078,7 +20143,7 @@ updates.forEach(update => {
                       onSelectEvent={handleOpenModal}
                       onUpdateEvent={handleScheduleUpdate}
                       zoomLevel={zoomLevel}
-                      daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                      daylightTimes={selectedDfpDaylightTimes}
                       personnelData={personnelData}
                       seatConfigs={seatConfigs}
                       syllabusDetails={syllabusDetails}
@@ -20123,7 +20188,7 @@ updates.forEach(update => {
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
                     zoomLevel={zoomLevel}
-                    daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                    daylightTimes={buildDfpDaylightTimes}
                     personnelData={personnelData}
                     seatConfigs={seatConfigs}
                     syllabusDetails={syllabusDetails}
@@ -20162,7 +20227,7 @@ updates.forEach(update => {
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
                     zoomLevel={zoomLevel}
-                    daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                    daylightTimes={buildDfpDaylightTimes}
                     personnelData={personnelData}
                     seatConfigs={seatConfigs}
                     syllabusDetails={syllabusDetails}
@@ -20310,7 +20375,7 @@ updates.forEach(update => {
                             onDateChange={handleDateChange}
                             eventsForStaffTraineeSchedule={eventsForStaffTraineeSchedule}
                             zoomLevel={zoomLevel}
-                            daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                            daylightTimes={selectedDfpDaylightTimes}
                             seatConfigs={seatConfigs}
                             conflictingEventIds={personnelAndResourceConflictIds}
                             showValidation={showValidation}
@@ -20511,7 +20576,7 @@ updates.forEach(update => {
                             syllabusDetails={syllabusDetails}
                             personnelData={personnelData}
                             seatConfigs={seatConfigs}
-                            daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                            daylightTimes={buildDfpDaylightTimes}
                             personnelConflicts={[]}
                             personnelConflictIds={nextDayPersonnelAndResourceConflictIds}
                             unavailabilityConflicts={nextDayUnavailabilityConflicts}
@@ -21077,7 +21142,7 @@ updates.forEach(update => {
                             onDateChange={handleDateChange}
                             eventSegmentsForDate={eventSegmentsForDate}
                             zoomLevel={zoomLevel}
-                            daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                            daylightTimes={selectedDfpDaylightTimes}
                             seatConfigs={seatConfigs}
                             syllabusDetails={syllabusDetails}
                             conflictingEventIds={personnelAndResourceConflictIds}

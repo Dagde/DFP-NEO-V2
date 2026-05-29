@@ -25,6 +25,12 @@ import {
   type InsertEventDayNight,
   type InsertEventSyllabusType,
 } from '../utils/insertEventTypes';
+import {
+  getDefaultAirfieldSolarProfile,
+  isValidLatitude,
+  isValidLongitude,
+  isValidTimeZone,
+} from '../utils/sunTimes.js';
 import { showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 
 type PlatformConfig = {
@@ -134,6 +140,18 @@ const BACKUP_FREQUENCY_OPTIONS = [
   'Daily',
   'Weekly',
   'Manual',
+];
+
+const COMMON_IANA_TIMEZONES = [
+  'Australia/Melbourne',
+  'Australia/Perth',
+  'Australia/Sydney',
+  'Australia/Brisbane',
+  'Australia/Darwin',
+  'Australia/Adelaide',
+  'Europe/London',
+  'America/Anchorage',
+  'UTC',
 ];
 
 const ACCREDITATION_STATUS_OPTIONS = [
@@ -331,6 +349,31 @@ const toNumber = (value: any): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const toNullableNumber = (value: any): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const hasUsableSolarLocation = (location: any): boolean => (
+  isValidLatitude(location?.latitude)
+  && isValidLongitude(location?.longitude)
+  && isValidTimeZone(location?.timezone)
+);
+
+const validateSolarLocation = (location: any): string | null => {
+  const label = location?.code || location?.name || 'Location';
+  const hasAnySolarField = location?.latitude !== null && location?.latitude !== undefined && location?.latitude !== ''
+    || location?.longitude !== null && location?.longitude !== undefined && location?.longitude !== ''
+    || Boolean(String(location?.timezone || '').trim());
+
+  if (!hasAnySolarField) return null;
+  if (!isValidLatitude(location?.latitude)) return `${label}: latitude must be between -90 and 90.`;
+  if (!isValidLongitude(location?.longitude)) return `${label}: longitude must be between -180 and 180.`;
+  if (!isValidTimeZone(location?.timezone)) return `${label}: timezone must be a valid IANA timezone, for example Australia/Melbourne.`;
+  return null;
+};
+
 const uniqueValues = (values: string[]): string[] => Array.from(new Set(values.filter(Boolean)));
 
 const getDefaultConfigurationHealthRemediation = (area: string, title: string): string => {
@@ -445,6 +488,18 @@ const buildConfigurationHealth = (
     const organisationCode = toIdentifier(location.organisationCode);
     if (organisationCode && !activeOrganisationCodes.has(organisationCode)) {
       add('WARNING', 'Locations', `${locationCode} references inactive organisation`, `${locationCode} points to ${organisationCode}, which is not an active organisation.`, `location-${locationCode}-org`);
+    }
+    if (!hasUsableSolarLocation(location)) {
+      const defaultProfile = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
+      add(
+        'WARNING',
+        'Locations',
+        `${locationCode} daylight data incomplete`,
+        defaultProfile
+          ? 'The app can currently fall back to a built-in Australian base profile, but this location should store its own latitude, longitude and IANA timezone for offline daylight calculations.'
+          : 'Offline FL/LL calculation needs latitude, longitude and an IANA timezone for this location.',
+        `location-${locationCode}-solar`
+      );
     }
     const unitsAtLocation = activeUnits.filter((unit) => toIdentifier(unit.locationCode) === locationCode);
     if (unitsAtLocation.length === 0) {
@@ -1267,6 +1322,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const save = async () => {
     if (!canEdit) return;
+    const solarValidationError = config.locations.map(validateSolarLocation).find(Boolean);
+    if (solarValidationError) {
+      setError(solarValidationError);
+      return;
+    }
     setSaving(true);
     setError('');
     let shouldReload = false;
@@ -1533,12 +1593,32 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           ))}
           {config.locations.map((location, index) => (
-            <div key={location.id || location.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5">
+            <div key={location.id || location.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2 xl:grid-cols-8">
               <Field label="Location Code" value={location.code} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { code: value })} />
               <Field label="Location Name" value={location.name} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { name: value })} />
               <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
+              <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
+              <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
+              <TimeZoneField label="IANA Timezone" value={location.timezone || ''} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezone: value })} info="Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." />
               <Field label="Training Areas" value={(location.trainingAreas || []).join(', ')} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { trainingAreas: value.split(',').map((item) => item.trim()).filter(Boolean) })} />
               <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
+              {canEdit && (getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name)) ? (
+                <button
+                  type="button"
+                  className="self-end rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-100 hover:bg-cyan-500/20"
+                  onClick={() => {
+                    const defaults = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
+                    if (!defaults) return;
+                    updateRow('locations', index, {
+                      latitude: defaults.latitude,
+                      longitude: defaults.longitude,
+                      timezone: defaults.timezone,
+                    });
+                  }}
+                >
+                  Use Known Base Defaults
+                </button>
+              ) : null}
             </div>
           ))}
         </div>
@@ -2713,6 +2793,23 @@ const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = '
     <select className={fieldClass} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
       {options.map((option) => <option key={option} value={option}>{option || emptyLabel}</option>)}
     </select>
+  </label>
+);
+
+const TimeZoneField = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (
+  <label>
+    <FieldLabel label={label} info={info} />
+    <input
+      className={fieldClass}
+      list="platform-iana-timezones"
+      value={value || ''}
+      disabled={disabled}
+      placeholder="Australia/Melbourne"
+      onChange={(event) => onChange(event.target.value)}
+    />
+    <datalist id="platform-iana-timezones">
+      {COMMON_IANA_TIMEZONES.map((timezone) => <option key={timezone} value={timezone} />)}
+    </datalist>
   </label>
 );
 

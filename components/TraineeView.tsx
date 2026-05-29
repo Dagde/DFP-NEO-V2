@@ -66,7 +66,7 @@ interface TraineeViewProps {
   onDateChange: (date: string) => void;
   eventsForStaffTraineeSchedule: any[];
   zoomLevel: number;
-  daylightTimes: { firstLight: string; lastLight: string };
+  daylightTimes: { firstLight: string | null; lastLight: string | null };
   seatConfigs: any[];
   conflictingEventIds: Set<string>;
   showValidation: boolean;

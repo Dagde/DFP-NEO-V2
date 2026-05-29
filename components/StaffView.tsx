@@ -40,7 +40,7 @@ interface StaffViewProps {
   onDateChange: (date: string) => void;
   eventSegmentsForDate: any[];
   zoomLevel: number;
-  daylightTimes: { firstLight: string; lastLight: string };
+  daylightTimes: { firstLight: string | null; lastLight: string | null };
   seatConfigs: any[];
   syllabusDetails: any[];
   conflictingEventIds: Set<string>;

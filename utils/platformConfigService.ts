@@ -5,6 +5,9 @@ export interface PlatformLocation {
   name: string;
   organisationCode?: string;
   timezoneOffset?: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  timezone?: string | null;
   trainingAreas?: string[];
   status?: string;
   settings?: Record<string, any>;

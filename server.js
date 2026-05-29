@@ -11,6 +11,12 @@ import {
   signLicensePayload,
   verifySignedLicenseContent,
 } from './lib/licensing.js';
+import {
+  getDefaultAirfieldSolarProfile,
+  isValidLatitude,
+  isValidLongitude,
+  isValidTimeZone,
+} from './utils/sunTimes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -544,7 +550,7 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
   {
     collection: 'locations',
     entityType: 'CommercialLocation',
-    fields: ['organisationCode', 'code', 'name', 'timezoneOffset', 'trainingAreas', 'status', 'settings'],
+    fields: ['organisationCode', 'code', 'name', 'timezoneOffset', 'latitude', 'longitude', 'timezone', 'trainingAreas', 'status', 'settings'],
     isValid: (row) => Boolean(row.code && row.name),
     normalise: (row) => ({
       id: row.id || null,
@@ -552,6 +558,9 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
       code: row.code || '',
       name: row.name || '',
       timezoneOffset: Number(row.timezoneOffset ?? 10),
+      latitude: row.latitude === null || row.latitude === undefined || row.latitude === '' ? null : Number(row.latitude),
+      longitude: row.longitude === null || row.longitude === undefined || row.longitude === '' ? null : Number(row.longitude),
+      timezone: row.timezone || null,
       trainingAreas: Array.isArray(row.trainingAreas) ? row.trainingAreas : [],
       status: row.status || 'ACTIVE',
       settings: row.settings || {},
@@ -795,6 +804,9 @@ const PLATFORM_FIELD_LABELS = {
     code: 'Location code',
     name: 'Location name',
     timezoneOffset: 'UTC offset',
+    latitude: 'Latitude',
+    longitude: 'Longitude',
+    timezone: 'IANA timezone',
     trainingAreas: 'Training areas',
     status: 'Location status',
   },
@@ -1879,6 +1891,24 @@ app.post('/api/platform-config', async (req, res) => {
     const toNullableNumber = (value) => (
       value === null || value === undefined || value === '' ? null : Number(value)
     );
+    const normaliseLocationSolarFields = (location) => {
+      const fallback = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
+      const latitude = toNullableNumber(location.latitude ?? location.settings?.latitude ?? fallback?.latitude ?? null);
+      const longitude = toNullableNumber(location.longitude ?? location.settings?.longitude ?? fallback?.longitude ?? null);
+      const timezone = String(location.timezone || location.timeZone || location.settings?.timezone || fallback?.timezone || '').trim() || null;
+
+      if (latitude !== null && !isValidLatitude(latitude)) {
+        throw new Error(`${location.code || location.name}: latitude must be between -90 and 90.`);
+      }
+      if (longitude !== null && !isValidLongitude(longitude)) {
+        throw new Error(`${location.code || location.name}: longitude must be between -180 and 180.`);
+      }
+      if (timezone !== null && !isValidTimeZone(timezone)) {
+        throw new Error(`${location.code || location.name}: timezone must be a valid IANA timezone.`);
+      }
+
+      return { latitude, longitude, timezone };
+    };
     const beforeAuditSnapshot = await loadPlatformConfigAuditSnapshot(db);
 
     for (const org of organisations) {
@@ -1896,18 +1926,22 @@ app.post('/api/platform-config', async (req, res) => {
 
     for (const location of locations) {
       if (!location.code || !location.name) continue;
+      const solar = normaliseLocationSolarFields(location);
       await db.$executeRawUnsafe(`
-        INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "name", "timezoneOffset", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
-        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7::jsonb, $8::timestamp, $8::timestamp)
+        INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "name", "timezoneOffset", "latitude", "longitude", "timezone", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::timestamp, $11::timestamp)
         ON CONFLICT ("code") DO UPDATE SET
           "organisationCode" = $1,
           "name" = $3,
           "timezoneOffset" = $4,
-          "trainingAreas" = $5,
-          "status" = $6,
-          "settings" = $7::jsonb,
-          "updatedAt" = $8::timestamp
-      `, location.organisationCode || 'DEFAULT', location.code, location.name, Number(location.timezoneOffset ?? 10), toArray(location.trainingAreas), location.status || 'ACTIVE', toJson(location.settings), now);
+          "latitude" = $5,
+          "longitude" = $6,
+          "timezone" = $7,
+          "trainingAreas" = $8,
+          "status" = $9,
+          "settings" = $10::jsonb,
+          "updatedAt" = $11::timestamp
+      `, location.organisationCode || 'DEFAULT', location.code, location.name, Number(location.timezoneOffset ?? 10), solar.latitude, solar.longitude, solar.timezone, toArray(location.trainingAreas), location.status || 'ACTIVE', toJson(location.settings), now);
     }
 
     for (const unit of units) {
@@ -6943,7 +6977,10 @@ async function ensureCommercialConfigTables(db) {
         "organisationCode" TEXT NOT NULL,
         "code" TEXT NOT NULL,
         "name" TEXT NOT NULL,
-        "timezoneOffset" INTEGER NOT NULL DEFAULT 10,
+        "timezoneOffset" DOUBLE PRECISION NOT NULL DEFAULT 10,
+        "latitude" DOUBLE PRECISION,
+        "longitude" DOUBLE PRECISION,
+        "timezone" TEXT,
         "trainingAreas" TEXT[] NOT NULL DEFAULT '{}',
         "status" TEXT NOT NULL DEFAULT 'ACTIVE',
         "settings" JSONB NOT NULL DEFAULT '{}',
@@ -6952,8 +6989,25 @@ async function ensureCommercialConfigTables(db) {
         CONSTRAINT "CommercialLocation_pkey" PRIMARY KEY ("id")
       );
     `);
+    await db.$executeRawUnsafe(`ALTER TABLE "CommercialLocation" ALTER COLUMN "timezoneOffset" TYPE DOUBLE PRECISION USING "timezoneOffset"::DOUBLE PRECISION;`);
+    await db.$executeRawUnsafe(`ALTER TABLE "CommercialLocation" ADD COLUMN IF NOT EXISTS "latitude" DOUBLE PRECISION;`);
+    await db.$executeRawUnsafe(`ALTER TABLE "CommercialLocation" ADD COLUMN IF NOT EXISTS "longitude" DOUBLE PRECISION;`);
+    await db.$executeRawUnsafe(`ALTER TABLE "CommercialLocation" ADD COLUMN IF NOT EXISTS "timezone" TEXT;`);
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialLocation_code_key" ON "CommercialLocation"("code");`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialLocation_organisationCode_idx" ON "CommercialLocation"("organisationCode");`);
+    for (const code of ['ESL', 'PEA', 'WLM', 'AMB', 'TIN', 'EDI']) {
+      const profile = getDefaultAirfieldSolarProfile(code);
+      if (!profile) continue;
+      await db.$executeRawUnsafe(`
+        UPDATE "CommercialLocation"
+        SET
+          "latitude" = COALESCE("latitude", $2),
+          "longitude" = COALESCE("longitude", $3),
+          "timezone" = COALESCE(NULLIF("timezone", ''), $4),
+          "updatedAt" = "updatedAt"
+        WHERE "code" = $1
+      `, code, profile.latitude, profile.longitude, profile.timezone);
+    }
 
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "CommercialUnit" (
@@ -7224,11 +7278,12 @@ async function seedCommercialConfigIfEmpty(db) {
 
   for (const locationName of locationNames) {
     const code = locationCodeFor(locationName);
+    const solar = getDefaultAirfieldSolarProfile(code) || getDefaultAirfieldSolarProfile(locationName) || {};
     await db.$executeRawUnsafe(`
-      INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "name", "timezoneOffset", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, $2, $3, $4, 'ACTIVE', '{}'::jsonb, $5::timestamp, $5::timestamp)
+      INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "name", "timezoneOffset", "latitude", "longitude", "timezone", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, $2, $3, $4, $5, $6, $7, 'ACTIVE', '{}'::jsonb, $8::timestamp, $8::timestamp)
       ON CONFLICT ("code") DO NOTHING
-    `, code, locationName, timezoneOffset, Array.isArray(locationOpAreas[locationName]) ? locationOpAreas[locationName] : [], now);
+    `, code, locationName, timezoneOffset, solar.latitude ?? null, solar.longitude ?? null, solar.timezone ?? null, Array.isArray(locationOpAreas[locationName]) ? locationOpAreas[locationName] : [], now);
   }
 
   for (const unitName of units) {
