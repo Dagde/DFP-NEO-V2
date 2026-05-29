@@ -11120,8 +11120,11 @@ app.put('/api/tie/settings', async (req, res) => {
     const { key, value } = req.body;
     if (!key) return res.status(400).json({ error: 'key required' });
     await db.$executeRawUnsafe(`
-      UPDATE "TIESettings" SET value = $1::text WHERE key = $2::text
-    `, String(value), key);
+      INSERT INTO "TIESettings"("id","key","value","updatedAt")
+      VALUES(gen_random_uuid()::text,$1::text,$2::jsonb,NOW())
+      ON CONFLICT ("key")
+      DO UPDATE SET value = EXCLUDED.value, "updatedAt" = NOW()
+    `, key, JSON.stringify(value));
     res.json({ success: true });
   } catch (error) {
     console.error('❌ PUT /api/tie/settings error:', error);

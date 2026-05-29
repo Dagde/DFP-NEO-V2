@@ -96,6 +96,16 @@ interface TIEThresholds {
   concernThresholdGrade: number; // grade BELOW which an element is a concern (pass = >= this value)
   bottleneckThresholdPct: number;// % of trainees below concern threshold to flag event as bottleneck
   highVarianceThreshold: number; // grade std-dev ABOVE which event has high variance
+  atRiskAverageEnabled: boolean;
+  atRiskSustainedDeclineEnabled: boolean;
+  atRiskRecentDropEnabled: boolean;
+  atRiskLowRecentEnabled: boolean;
+  atRiskRecurringWeakElementsEnabled: boolean;
+  sustainedDeclineCount: number;
+  recentDropThreshold: number;
+  lowRecentGrade: number;
+  recurringWeakElementCount: number;
+  minAssessmentsForRisk: number;
 }
 
 const DEFAULT_THRESHOLDS: TIEThresholds = {
@@ -104,6 +114,16 @@ const DEFAULT_THRESHOLDS: TIEThresholds = {
   concernThresholdGrade: 3,
   bottleneckThresholdPct: 40,
   highVarianceThreshold: 1.0,
+  atRiskAverageEnabled: true,
+  atRiskSustainedDeclineEnabled: true,
+  atRiskRecentDropEnabled: true,
+  atRiskLowRecentEnabled: true,
+  atRiskRecurringWeakElementsEnabled: true,
+  sustainedDeclineCount: 3,
+  recentDropThreshold: 0.4,
+  lowRecentGrade: 3.2,
+  recurringWeakElementCount: 3,
+  minAssessmentsForRisk: 3,
 };
 
 const ThresholdContext = React.createContext<{
@@ -167,6 +187,35 @@ const safeN = (n: number | undefined | null): number => {
   return Number(n);
 };
 
+const boolSetting = (value: unknown, fallback: boolean): boolean => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  }
+  return fallback;
+};
+
+const riskCriteriaRows = (thresholds: TIEThresholds) => [
+  thresholds.atRiskAverageEnabled
+    ? `Course average below ${thresholds.atRiskAvgGrade.toFixed(1)}`
+    : null,
+  thresholds.atRiskSustainedDeclineEnabled
+    ? `Sustained decline across the last ${thresholds.sustainedDeclineCount} assessments`
+    : null,
+  thresholds.atRiskRecentDropEnabled
+    ? `Recent average ${thresholds.recentDropThreshold.toFixed(1)} or more below overall average`
+    : null,
+  thresholds.atRiskLowRecentEnabled
+    ? `Recent average below ${thresholds.lowRecentGrade.toFixed(1)}`
+    : null,
+  thresholds.atRiskRecurringWeakElementsEnabled
+    ? `${thresholds.recurringWeakElementCount}+ recurring weak elements`
+    : null,
+].filter(Boolean) as string[];
+
 const parseJ = (raw: any, fallback: any) => {
   if (!raw) return fallback;
   if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return fallback; } }
@@ -224,14 +273,16 @@ const SparkLine: React.FC<{
   height?: number;
   color?: string;
   interactive?: boolean;
-}> = ({ data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false }) => {
+  yMin?: number;
+  yMax?: number;
+}> = ({ data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false, yMin = 0, yMax = 5 }) => {
   const [tooltip, setTooltip] = React.useState<{ i: number; pageX: number; pageY: number } | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
   if (!data || data.length < 2) return <span className="text-gray-600 text-xs">&mdash;</span>;
 
-  // Fixed scale: always 0 → 5 on Y axis so labels align correctly
-  const YMIN = 0, YMAX = 5;
+  const YMIN = yMin;
+  const YMAX = Math.max(yMin + 0.1, yMax);
   const PAD_TOP = 8, PAD_BOT = 8;
   const usableH = height - PAD_TOP - PAD_BOT;
 
@@ -243,8 +294,14 @@ const SparkLine: React.FC<{
   const hoveredVal = tooltip !== null ? data[tooltip.i] : null;
   const gc = (v: number) => v >= 4.5 ? '#34d399' : v >= 3.5 ? '#4ade80' : v >= 3.0 ? '#facc15' : v >= 2.5 ? '#fb923c' : '#f87171';
 
-  // Fixed Y-axis reference lines at 0,1,2,3,4,5
-  const gridLines = interactive ? [0, 1, 2, 3, 4, 5] : [];
+  const gridSpan = YMAX - YMIN;
+  const gridStep = gridSpan <= 1 ? 0.2 : gridSpan <= 2 ? 0.5 : 1;
+  const gridLines = interactive
+    ? Array.from(
+        { length: Math.floor((YMAX - YMIN) / gridStep) + 1 },
+        (_, i) => Math.round((YMIN + i * gridStep) * 10) / 10
+      ).filter(v => v <= YMAX + 0.001)
+    : [];
 
   return (
     <div className="relative" style={{ display: 'inline-block', overflow: 'visible' }}>
@@ -503,11 +560,17 @@ const Tag: React.FC<{ text: string; type?: 'red' | 'green' | 'yellow' | 'blue' |
 // ── Grade Progression Modal (interactive, enlarged) ─────────────────────────────
 
 const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: string; trend: string; onClose: () => void }> = ({ data, labels: propLabels, name, trend, onClose }) => {
+  const [zoomMode, setZoomMode] = React.useState<'full' | 'focus'>('full');
   const color = trend === 'improving' ? '#10b981' : trend === 'worsening' ? '#ef4444' : '#60a5fa';
   const avgVal = data.reduce((s, v) => s + v, 0) / data.length;
   const minVal = Math.min(...data);
   const maxVal = Math.max(...data);
   const labels = propLabels && propLabels.length === data.length ? propLabels : data.map((_, i) => `#${i + 1}`);
+  const focusPad = Math.max(0.25, (maxVal - minVal) * 0.2);
+  const focusMin = Math.max(0, minVal - focusPad);
+  const focusMax = Math.min(5, maxVal + focusPad);
+  const chartYMin = zoomMode === 'focus' ? focusMin : 0;
+  const chartYMax = zoomMode === 'focus' ? focusMax : 5;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
@@ -515,15 +578,35 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-white font-bold text-lg">{name} &mdash; Grade Progression</h3>
-            <p className="text-gray-400 text-sm mt-0.5">{data.length} assessments &middot; hover over a point to see details</p>
+            <p className="text-gray-400 text-sm mt-0.5">{data.length} assessments across the course to date &middot; hover over a point to see details</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
+          <div className="flex items-center gap-3">
+            <div className="flex rounded-md border border-gray-700 bg-gray-950 p-1">
+              {([
+                { key: 'full' as const, label: 'Full 0-5' },
+                { key: 'focus' as const, label: 'Zoom' },
+              ]).map(option => (
+                <button
+                  key={option.key}
+                  onClick={() => setZoomMode(option.key)}
+                  className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                    zoomMode === option.key ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0">&times;</button>
+          </div>
         </div>
 
         <div className="bg-gray-800 rounded-xl p-5">
           <div className="flex gap-3">
             <div className="flex flex-col justify-between text-xs text-gray-500 py-1 flex-shrink-0 text-right" style={{ width: 28, height: 220 }}>
-              <span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span>
+              <span>{chartYMax.toFixed(zoomMode === 'focus' ? 1 : 0)}</span>
+              <span>{((chartYMax + chartYMin) / 2).toFixed(zoomMode === 'focus' ? 1 : 0)}</span>
+              <span>{chartYMin.toFixed(zoomMode === 'focus' ? 1 : 0)}</span>
             </div>
             <div className="flex-1 overflow-x-auto">
               <SparkLine
@@ -533,6 +616,8 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
                 height={220}
                 color={color}
                 interactive={true}
+                yMin={chartYMin}
+                yMax={chartYMax}
               />
             </div>
           </div>
@@ -567,8 +652,8 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
 
 // ── Grade by Trainee Modal ────────────────────────────────────────────────────────
 
-const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>; max?: number; height?: number }> = ({
-  data, max = 5, height = 240
+const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>; max?: number; height?: number; zoomY?: boolean }> = ({
+  data, max = 5, height = 240, zoomY = false
 }) => {
   if (!data || data.length === 0) return <p className="text-gray-500 text-sm">No data</p>;
   const bw = Math.max(20, Math.min(52, 800 / data.length));
@@ -576,13 +661,13 @@ const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>
   const leftPad = 36;
   const tw = leftPad + data.length * (bw + gap) + gap;
   const tp = 16, bp = 80, ch = height - tp - bp;
-  // Dynamic Y scale: zoom in on actual data range to exaggerate differences
+  // Default to full score range. Zoom mode is available as a deliberate manager action.
   const vals = data.map(d => safeN(d.value)).filter(v => v > 0);
   const dataMin = vals.length > 0 ? Math.min(...vals) : 0;
   const dataMax = vals.length > 0 ? Math.max(...vals) : max;
   const yPad = Math.max(0.2, (dataMax - dataMin) * 0.15);
-  const yMin = Math.max(0, dataMin - yPad);
-  const yMax = Math.min(max, dataMax + yPad);
+  const yMin = zoomY ? Math.max(0, dataMin - yPad) : 0;
+  const yMax = zoomY ? Math.min(max, dataMax + yPad) : max;
   const yRange = yMax - yMin || 1;
   // Grid lines at nice intervals within the data range
   const gridStep = yRange <= 0.5 ? 0.1 : yRange <= 1 ? 0.2 : yRange <= 2 ? 0.5 : 1;
@@ -641,7 +726,7 @@ const ColChartModal: React.FC<{
   height?: number;
   /** If true, Y-axis zooms into actual data range for exaggerated differences */
   zoomY?: boolean;
-}> = ({ data, max = 100, height = 380, zoomY = true }) => {
+}> = ({ data, max = 100, height = 380, zoomY = false }) => {
   if (!data || data.length === 0) return <p className="text-gray-500 text-sm">No data</p>;
 
   // Bar sizing — wider bars, readable at any count
@@ -736,18 +821,37 @@ const GradeByTraineeModal: React.FC<{
   trainees: Array<{ label: string; value: number }>;
   onClose: () => void;
 }> = ({ trainees, onClose }) => {
+  const [zoomMode, setZoomMode] = React.useState<'full' | 'focus'>('full');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-2" style={{ maxWidth: '1100px' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-white font-bold text-lg">Grade by Trainee (sorted low to high)</h3>
-            <p className="text-gray-400 text-sm mt-0.5">{trainees.length} trainees &middot; avg grade per trainee</p>
+            <p className="text-gray-400 text-sm mt-0.5">{trainees.length} trainees &middot; course-to-date average grade per trainee</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
+          <div className="flex items-center gap-3">
+            <div className="flex rounded-md border border-gray-700 bg-gray-950 p-1">
+              {([
+                { key: 'full' as const, label: 'Full 0-5' },
+                { key: 'focus' as const, label: 'Zoom' },
+              ]).map(option => (
+                <button
+                  key={option.key}
+                  onClick={() => setZoomMode(option.key)}
+                  className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                    zoomMode === option.key ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0">&times;</button>
+          </div>
         </div>
         <div className="bg-gray-800 rounded-xl p-5 overflow-x-auto">
-          <ColChartExpanded data={trainees} max={5} height={420} />
+          <ColChartExpanded data={trainees} max={5} height={420} zoomY={zoomMode === 'focus'} />
         </div>
         <div className="flex flex-wrap gap-4 mt-4 justify-center text-xs">
           {[
@@ -784,6 +888,10 @@ const ThresholdSettingsPanel: React.FC<{
     if (!isNaN(n)) setLocal(prev => ({ ...prev, [key]: n }));
   };
 
+  const setBool = (key: keyof TIEThresholds, val: boolean) => {
+    setLocal(prev => ({ ...prev, [key]: val }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -794,6 +902,16 @@ const ThresholdSettingsPanel: React.FC<{
         concernThresholdGrade: 'concern_threshold_grade',
         bottleneckThresholdPct: 'bottleneck_threshold_pct',
         highVarianceThreshold: 'high_variance_threshold',
+        atRiskAverageEnabled: 'at_risk_average_enabled',
+        atRiskSustainedDeclineEnabled: 'at_risk_sustained_decline_enabled',
+        atRiskRecentDropEnabled: 'at_risk_recent_drop_enabled',
+        atRiskLowRecentEnabled: 'at_risk_low_recent_enabled',
+        atRiskRecurringWeakElementsEnabled: 'at_risk_recurring_weak_elements_enabled',
+        sustainedDeclineCount: 'at_risk_sustained_decline_count',
+        recentDropThreshold: 'at_risk_recent_drop_threshold',
+        lowRecentGrade: 'at_risk_low_recent_grade',
+        recurringWeakElementCount: 'at_risk_recurring_weak_element_count',
+        minAssessmentsForRisk: 'at_risk_min_assessments',
       };
       await Promise.all(
         (Object.keys(local) as Array<keyof TIEThresholds>).map(k =>
@@ -844,11 +962,49 @@ const ThresholdSettingsPanel: React.FC<{
     },
   ];
 
+  const atRiskCriteria: Array<{
+    enabledKey: keyof TIEThresholds;
+    title: string;
+    detail: string;
+    control?: { key: keyof TIEThresholds; suffix: string; min: number; max: number; step: number };
+  }> = [
+    {
+      enabledKey: 'atRiskAverageEnabled',
+      title: 'Low course average',
+      detail: 'Flags trainees whose whole-course score average falls below the at-risk threshold.',
+      control: { key: 'atRiskAvgGrade', suffix: 'avg', min: 1, max: 4.5, step: 0.1 },
+    },
+    {
+      enabledKey: 'atRiskSustainedDeclineEnabled',
+      title: 'Sustained decline',
+      detail: 'Flags a trainee when each of the most recent assessments is lower than the previous one.',
+      control: { key: 'sustainedDeclineCount', suffix: 'events', min: 3, max: 6, step: 1 },
+    },
+    {
+      enabledKey: 'atRiskRecentDropEnabled',
+      title: 'Recent performance drop',
+      detail: 'Flags trainees whose recent average has fallen materially below their whole-course average.',
+      control: { key: 'recentDropThreshold', suffix: 'drop', min: 0.2, max: 1.5, step: 0.1 },
+    },
+    {
+      enabledKey: 'atRiskLowRecentEnabled',
+      title: 'Low recent average',
+      detail: 'Flags trainees whose most recent assessment window is below the configured recent score floor.',
+      control: { key: 'lowRecentGrade', suffix: 'recent avg', min: 1, max: 4.5, step: 0.1 },
+    },
+    {
+      enabledKey: 'atRiskRecurringWeakElementsEnabled',
+      title: 'Recurring weak elements',
+      detail: 'Flags repeated weak element patterns even when the overall average has not yet collapsed.',
+      control: { key: 'recurringWeakElementCount', suffix: 'elements', min: 2, max: 8, step: 1 },
+    },
+  ];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
       <div
         className="bg-gray-900 border border-gray-600 rounded-xl shadow-2xl w-full mx-4"
-        style={{ maxWidth: 600 }}
+        style={{ maxWidth: 860 }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -857,14 +1013,82 @@ const ThresholdSettingsPanel: React.FC<{
             <h3 className="text-white font-bold text-base">Analytics Thresholds</h3>
             <p className="text-gray-400 text-xs mt-0.5">
               Adjust the thresholds used for risk classification and event analysis.
-              Changes persist across sessions — re-run analytics after saving.
+              Changes persist across sessions. Re-run analytics after saving to reclassify trainees.
             </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none ml-4">&times;</button>
         </div>
 
         {/* Fields */}
-        <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+        <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto">
+          <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-semibold text-white">At-Risk Criteria</h4>
+                <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                  A trainee is classified as At Risk when the minimum assessment count is met and any enabled criterion below is triggered.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
+                <span className="text-xs text-slate-400">Minimum data</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={local.minAssessmentsForRisk}
+                  onChange={e => set('minAssessmentsForRisk', e.target.value)}
+                  className="w-14 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-center text-sm text-white focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+              {atRiskCriteria.map(criteria => {
+                const enabled = Boolean(local[criteria.enabledKey]);
+                return (
+                  <label
+                    key={criteria.enabledKey}
+                    className={`rounded-lg border p-3 transition-colors ${
+                      enabled ? 'border-cyan-500/35 bg-slate-900/80' : 'border-slate-700 bg-slate-950/60'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={e => setBool(criteria.enabledKey, e.target.checked)}
+                        className="mt-1 h-4 w-4 accent-cyan-500"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-semibold text-slate-100">{criteria.title}</span>
+                          {criteria.control && (
+                            <span className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={criteria.control.min}
+                                max={criteria.control.max}
+                                step={criteria.control.step}
+                                value={local[criteria.control.key] as number}
+                                disabled={!enabled}
+                                onChange={e => set(criteria.control!.key, e.target.value)}
+                                className="w-16 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-center text-xs text-white disabled:opacity-40 focus:outline-none focus:border-cyan-400"
+                              />
+                              <span className="text-[11px] text-slate-500">{criteria.control.suffix}</span>
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-500">{criteria.detail}</p>
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           {fields.map(f => (
             <div key={f.key}>
               <div className="flex items-center justify-between mb-1">
@@ -873,14 +1097,14 @@ const ThresholdSettingsPanel: React.FC<{
                   <input
                     type="range"
                     min={f.min} max={f.max} step={f.step}
-                    value={local[f.key]}
+                    value={local[f.key] as number}
                     onChange={e => set(f.key, e.target.value)}
                     className="w-32 accent-blue-500"
                   />
                   <input
                     type="number"
                     min={f.min} max={f.max} step={f.step}
-                    value={local[f.key]}
+                    value={local[f.key] as number}
                     onChange={e => set(f.key, e.target.value)}
                     className="w-16 bg-gray-800 border border-gray-600 text-white text-sm rounded px-2 py-0.5 text-center focus:outline-none focus:border-blue-500"
                   />
@@ -889,6 +1113,7 @@ const ThresholdSettingsPanel: React.FC<{
               <p className="text-gray-500 text-xs leading-relaxed">{f.desc}</p>
             </div>
           ))}
+          </div>
 
           {/* Status definition legend */}
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mt-2">
@@ -901,8 +1126,8 @@ const ThresholdSettingsPanel: React.FC<{
                 <div>
                   <span className="text-red-300 font-semibold">At Risk — </span>
                   <span className="text-gray-400">
-                    Avg grade &lt; {local.atRiskAvgGrade.toFixed(1)}, OR a worsening trend with recent avg &lt; 3.5.
-                    These trainees need immediate instructor attention.
+                    Any enabled at-risk criterion is triggered after {local.minAssessmentsForRisk} assessment(s).
+                    Active criteria: {riskCriteriaRows(local).join('; ') || 'none selected'}.
                   </span>
                 </div>
               </div>
@@ -1048,8 +1273,8 @@ const CourseTab: React.FC<{
                 <span className="w-2 h-2 rounded-full bg-red-500 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-400">
                   <span className="text-red-300 font-semibold">At Risk: </span>
-                  Avg grade &lt; <span className="text-white font-mono">{thresholds.atRiskAvgGrade.toFixed(1)}</span>
-                  {' '}or worsening trend with recent avg &lt; 3.5. Requires immediate attention.
+                  Any enabled criterion is met after <span className="text-white font-mono">{thresholds.minAssessmentsForRisk}</span>
+                  {' '}assessment(s): {riskCriteriaRows(thresholds).join('; ') || 'no criteria selected'}.
                 </span>
               </div>
               <div className="flex gap-2 items-start">
@@ -1564,6 +1789,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
   const [struggleSelected, setStruggleSelected] = useState<TIEEventSummary | null>(null);
   const [excelSelected, setExcelSelected] = useState<TIEEventSummary | null>(null);
   const [chartModal, setChartModal] = useState<{ title: string; data: { label: string; value: number; color: string }[]; max: number } | null>(null);
+  const [chartZoomMode, setChartZoomMode] = useState<'full' | 'focus'>('full');
 
   // Derive passRate when DB value is null (old rows pre-fix)
   // Grading scale: 1=Unsatisfactory, 2=Below Standard, 3=Satisfactory(Pass), 4=Above Avg, 5=Exceptional
@@ -1958,10 +2184,28 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                     <h3 className="text-white font-bold text-xl">{chartModal.title}</h3>
                     <p className="text-gray-400 text-sm mt-0.5">{chartModal.data.length} events &mdash; click outside to close</p>
                   </div>
-                  <button onClick={() => setChartModal(null)} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
+                  <div className="flex items-center gap-3">
+                    <div className="flex rounded-md border border-gray-700 bg-gray-950 p-1">
+                      {([
+                        { key: 'full' as const, label: 'Full scale' },
+                        { key: 'focus' as const, label: 'Zoom' },
+                      ]).map(option => (
+                        <button
+                          key={option.key}
+                          onClick={() => setChartZoomMode(option.key)}
+                          className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                            chartZoomMode === option.key ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => setChartModal(null)} className="text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0">&times;</button>
+                  </div>
                 </div>
                 <div className="bg-gray-800 rounded-xl p-4 overflow-x-auto mt-3">
-                  <ColChartModal data={chartModal.data} max={chartModal.max} height={420} zoomY={true} />
+                  <ColChartModal data={chartModal.data} max={chartModal.max} height={420} zoomY={chartZoomMode === 'focus'} />
                 </div>
               </div>
             </div>
@@ -1973,6 +2217,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
               className="cursor-pointer group"
               title="Click to expand"
               onClick={() => {
+                setChartZoomMode('full');
                 const data = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map(ev => ({
                   label: ev.eventCode,
                   value: getPassRate(ev),
@@ -2002,6 +2247,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
               className="cursor-pointer group"
               title="Click to expand"
               onClick={() => {
+                setChartZoomMode('full');
                 const data = [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map(ev => ({
                   label: ev.eventCode,
                   value: safeN(ev.gradeVariance),
@@ -2170,15 +2416,29 @@ const TrainingIntelligenceTab: React.FC = () => {
     try {
       const r = await fetch('/api/tie/settings');
       const data = await r.json();
+      const map: Record<string, any> = {};
       if (Array.isArray(data)) {
-        const map: Record<string, number> = {};
-        data.forEach((s: any) => { map[s.key] = parseFloat(s.value); });
+        data.forEach((s: any) => { map[s.key] = s.value; });
+      } else if (data && typeof data === 'object') {
+        Object.assign(map, data);
+      }
+      if (Object.keys(map).length > 0) {
         setThresholds({
-          atRiskAvgGrade: map['at_risk_avg_grade'] ?? DEFAULT_THRESHOLDS.atRiskAvgGrade,
-          exceedingAvgGrade: map['exceeding_avg_grade'] ?? DEFAULT_THRESHOLDS.exceedingAvgGrade,
-          concernThresholdGrade: map['concern_threshold_grade'] ?? DEFAULT_THRESHOLDS.concernThresholdGrade,
-          bottleneckThresholdPct: map['bottleneck_threshold_pct'] ?? DEFAULT_THRESHOLDS.bottleneckThresholdPct,
-          highVarianceThreshold: map['high_variance_threshold'] ?? DEFAULT_THRESHOLDS.highVarianceThreshold,
+          atRiskAvgGrade: Number(map['at_risk_avg_grade'] ?? DEFAULT_THRESHOLDS.atRiskAvgGrade),
+          exceedingAvgGrade: Number(map['exceeding_avg_grade'] ?? DEFAULT_THRESHOLDS.exceedingAvgGrade),
+          concernThresholdGrade: Number(map['concern_threshold_grade'] ?? DEFAULT_THRESHOLDS.concernThresholdGrade),
+          bottleneckThresholdPct: Number(map['bottleneck_threshold_pct'] ?? DEFAULT_THRESHOLDS.bottleneckThresholdPct),
+          highVarianceThreshold: Number(map['high_variance_threshold'] ?? DEFAULT_THRESHOLDS.highVarianceThreshold),
+          atRiskAverageEnabled: boolSetting(map['at_risk_average_enabled'], DEFAULT_THRESHOLDS.atRiskAverageEnabled),
+          atRiskSustainedDeclineEnabled: boolSetting(map['at_risk_sustained_decline_enabled'], DEFAULT_THRESHOLDS.atRiskSustainedDeclineEnabled),
+          atRiskRecentDropEnabled: boolSetting(map['at_risk_recent_drop_enabled'], DEFAULT_THRESHOLDS.atRiskRecentDropEnabled),
+          atRiskLowRecentEnabled: boolSetting(map['at_risk_low_recent_enabled'], DEFAULT_THRESHOLDS.atRiskLowRecentEnabled),
+          atRiskRecurringWeakElementsEnabled: boolSetting(map['at_risk_recurring_weak_elements_enabled'], DEFAULT_THRESHOLDS.atRiskRecurringWeakElementsEnabled),
+          sustainedDeclineCount: Number(map['at_risk_sustained_decline_count'] ?? DEFAULT_THRESHOLDS.sustainedDeclineCount),
+          recentDropThreshold: Number(map['at_risk_recent_drop_threshold'] ?? DEFAULT_THRESHOLDS.recentDropThreshold),
+          lowRecentGrade: Number(map['at_risk_low_recent_grade'] ?? DEFAULT_THRESHOLDS.lowRecentGrade),
+          recurringWeakElementCount: Number(map['at_risk_recurring_weak_element_count'] ?? DEFAULT_THRESHOLDS.recurringWeakElementCount),
+          minAssessmentsForRisk: Number(map['at_risk_min_assessments'] ?? DEFAULT_THRESHOLDS.minAssessmentsForRisk),
         });
       }
     } catch { /* use defaults */ }

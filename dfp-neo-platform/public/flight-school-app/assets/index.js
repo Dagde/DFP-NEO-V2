@@ -23025,7 +23025,17 @@ const DEFAULT_THRESHOLDS = {
   exceedingAvgGrade: 4.2,
   concernThresholdGrade: 3,
   bottleneckThresholdPct: 40,
-  highVarianceThreshold: 1
+  highVarianceThreshold: 1,
+  atRiskAverageEnabled: true,
+  atRiskSustainedDeclineEnabled: true,
+  atRiskRecentDropEnabled: true,
+  atRiskLowRecentEnabled: true,
+  atRiskRecurringWeakElementsEnabled: true,
+  sustainedDeclineCount: 3,
+  recentDropThreshold: 0.4,
+  lowRecentGrade: 3.2,
+  recurringWeakElementCount: 3,
+  minAssessmentsForRisk: 3
 };
 const ThresholdContext = React.createContext({ thresholds: DEFAULT_THRESHOLDS, setThresholds: () => {
 } });
@@ -23072,6 +23082,23 @@ const safeN = (n) => {
   if (n === void 0 || n === null || isNaN(Number(n))) return 0;
   return Number(n);
 };
+const boolSetting = (value, fallback) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "off"].includes(normalized)) return false;
+  }
+  return fallback;
+};
+const riskCriteriaRows = (thresholds) => [
+  thresholds.atRiskAverageEnabled ? `Course average below ${thresholds.atRiskAvgGrade.toFixed(1)}` : null,
+  thresholds.atRiskSustainedDeclineEnabled ? `Sustained decline across the last ${thresholds.sustainedDeclineCount} assessments` : null,
+  thresholds.atRiskRecentDropEnabled ? `Recent average ${thresholds.recentDropThreshold.toFixed(1)} or more below overall average` : null,
+  thresholds.atRiskLowRecentEnabled ? `Recent average below ${thresholds.lowRecentGrade.toFixed(1)}` : null,
+  thresholds.atRiskRecurringWeakElementsEnabled ? `${thresholds.recurringWeakElementCount}+ recurring weak elements` : null
+].filter(Boolean);
 const parseJ = (raw, fallback) => {
   if (!raw) return fallback;
   if (typeof raw === "string") {
@@ -23113,11 +23140,12 @@ const SparkBar = ({ value, max = 5, colorClass }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs font-mono w-8 text-right ${gradeColor(value)}`, children: safe(value, 1) })
   ] });
 };
-const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", interactive = false }) => {
+const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", interactive = false, yMin = 0, yMax = 5 }) => {
   const [tooltip, setTooltip] = React.useState(null);
   const svgRef = React.useRef(null);
   if (!data || data.length < 2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-xs", children: "—" });
-  const YMIN = 0, YMAX = 5;
+  const YMIN = yMin;
+  const YMAX = Math.max(yMin + 0.1, yMax);
   const PAD_TOP = 8, PAD_BOT = 8;
   const usableH = height - PAD_TOP - PAD_BOT;
   const getX = (i) => data.length === 1 ? width / 2 : i / (data.length - 1) * width;
@@ -23125,7 +23153,12 @@ const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", 
   const pts = data.map((v, i) => `${getX(i)},${getY(v)}`).join(" ");
   const hoveredVal = tooltip !== null ? data[tooltip.i] : null;
   const gc = (v) => v >= 4.5 ? "#34d399" : v >= 3.5 ? "#4ade80" : v >= 3 ? "#facc15" : v >= 2.5 ? "#fb923c" : "#f87171";
-  const gridLines = interactive ? [0, 1, 2, 3, 4, 5] : [];
+  const gridSpan = YMAX - YMIN;
+  const gridStep = gridSpan <= 1 ? 0.2 : gridSpan <= 2 ? 0.5 : 1;
+  const gridLines = interactive ? Array.from(
+    { length: Math.floor((YMAX - YMIN) / gridStep) + 1 },
+    (_, i) => Math.round((YMIN + i * gridStep) * 10) / 10
+  ).filter((v) => v <= YMAX + 1e-3) : [];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", style: { display: "inline-block", overflow: "visible" }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "svg",
@@ -23393,11 +23426,17 @@ const Tag = ({ text, type = "gray" }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `border text-xs px-2 py-0.5 rounded ${m[type]}`, children: text });
 };
 const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) => {
+  const [zoomMode, setZoomMode] = React.useState("full");
   const color = trend === "improving" ? "#10b981" : trend === "worsening" ? "#ef4444" : "#60a5fa";
   const avgVal = data.reduce((s, v) => s + v, 0) / data.length;
   const minVal = Math.min(...data);
   const maxVal = Math.max(...data);
   const labels = propLabels && propLabels.length === data.length ? propLabels : data.map((_, i) => `#${i + 1}`);
+  const focusPad = Math.max(0.25, (maxVal - minVal) * 0.2);
+  const focusMin = Math.max(0, minVal - focusPad);
+  const focusMax = Math.min(5, maxVal + focusPad);
+  const chartYMin = zoomMode === "focus" ? focusMin : 0;
+  const chartYMax = zoomMode === "focus" ? focusMax : 5;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-4", style: { maxWidth: "860px" }, onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -23407,20 +23446,31 @@ const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) =>
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm mt-0.5", children: [
           data.length,
-          " assessments · hover over a point to see details"
+          " assessments across the course to date · hover over a point to see details"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0", children: "×" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex rounded-md border border-gray-700 bg-gray-950 p-1", children: [
+          { key: "full", label: "Full 0-5" },
+          { key: "focus", label: "Zoom" }
+        ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setZoomMode(option.key),
+            className: `rounded px-3 py-1 text-xs font-semibold transition-colors ${zoomMode === option.key ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"}`,
+            children: option.label
+          },
+          option.key
+        )) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0", children: "×" })
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-xl p-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col justify-between text-xs text-gray-500 py-1 flex-shrink-0 text-right", style: { width: 28, height: 220 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "5" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "4" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "3" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "2" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "1" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "0" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: chartYMax.toFixed(zoomMode === "focus" ? 1 : 0) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: ((chartYMax + chartYMin) / 2).toFixed(zoomMode === "focus" ? 1 : 0) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: chartYMin.toFixed(zoomMode === "focus" ? 1 : 0) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           SparkLine,
@@ -23430,7 +23480,9 @@ const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) =>
             width: Math.max(760, data.length * 48),
             height: 220,
             color,
-            interactive: true
+            interactive: true,
+            yMin: chartYMin,
+            yMax: chartYMax
           }
         ) })
       ] }),
@@ -23466,7 +23518,8 @@ const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) =>
 const ColChartExpanded = ({
   data,
   max = 5,
-  height = 240
+  height = 240,
+  zoomY = false
 }) => {
   if (!data || data.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
   const bw = Math.max(20, Math.min(52, 800 / data.length));
@@ -23478,8 +23531,8 @@ const ColChartExpanded = ({
   const dataMin = vals.length > 0 ? Math.min(...vals) : 0;
   const dataMax = vals.length > 0 ? Math.max(...vals) : max;
   const yPad = Math.max(0.2, (dataMax - dataMin) * 0.15);
-  const yMin = Math.max(0, dataMin - yPad);
-  const yMax = Math.min(max, dataMax + yPad);
+  const yMin = zoomY ? Math.max(0, dataMin - yPad) : 0;
+  const yMax = zoomY ? Math.min(max, dataMax + yPad) : max;
   const yRange = yMax - yMin || 1;
   const gridStep = yRange <= 0.5 ? 0.1 : yRange <= 1 ? 0.2 : yRange <= 2 ? 0.5 : 1;
   const gridLines = [];
@@ -23522,7 +23575,7 @@ const ColChartExpanded = ({
     })
   ] });
 };
-const ColChartModal = ({ data, max = 100, height = 380, zoomY = true }) => {
+const ColChartModal = ({ data, max = 100, height = 380, zoomY = false }) => {
   if (!data || data.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
   const bw = Math.max(18, Math.min(48, 900 / data.length));
   const gap = Math.max(6, bw * 0.45);
@@ -23589,18 +23642,33 @@ const ColChartModal = ({ data, max = 100, height = 380, zoomY = true }) => {
   ] });
 };
 const GradeByTraineeModal = ({ trainees, onClose }) => {
+  const [zoomMode, setZoomMode] = React.useState("full");
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-2", style: { maxWidth: "1100px" }, onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-white font-bold text-lg", children: "Grade by Trainee (sorted low to high)" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm mt-0.5", children: [
           trainees.length,
-          " trainees · avg grade per trainee"
+          " trainees · course-to-date average grade per trainee"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0", children: "×" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex rounded-md border border-gray-700 bg-gray-950 p-1", children: [
+          { key: "full", label: "Full 0-5" },
+          { key: "focus", label: "Zoom" }
+        ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setZoomMode(option.key),
+            className: `rounded px-3 py-1 text-xs font-semibold transition-colors ${zoomMode === option.key ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"}`,
+            children: option.label
+          },
+          option.key
+        )) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0", children: "×" })
+      ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-xl p-5 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ColChartExpanded, { data: trainees, max: 5, height: 420 }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-xl p-5 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ColChartExpanded, { data: trainees, max: 5, height: 420, zoomY: zoomMode === "focus" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-4 mt-4 justify-center text-xs", children: [
       { color: "#ef4444", label: "Below 3.0 — unsatisfactory" },
       { color: "#eab308", label: "3.0–3.9 — satisfactory" },
@@ -23621,6 +23689,9 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
     const n = parseFloat(val);
     if (!isNaN(n)) setLocal((prev) => ({ ...prev, [key]: n }));
   };
+  const setBool = (key, val) => {
+    setLocal((prev) => ({ ...prev, [key]: val }));
+  };
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -23629,7 +23700,17 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
         exceedingAvgGrade: "exceeding_avg_grade",
         concernThresholdGrade: "concern_threshold_grade",
         bottleneckThresholdPct: "bottleneck_threshold_pct",
-        highVarianceThreshold: "high_variance_threshold"
+        highVarianceThreshold: "high_variance_threshold",
+        atRiskAverageEnabled: "at_risk_average_enabled",
+        atRiskSustainedDeclineEnabled: "at_risk_sustained_decline_enabled",
+        atRiskRecentDropEnabled: "at_risk_recent_drop_enabled",
+        atRiskLowRecentEnabled: "at_risk_low_recent_enabled",
+        atRiskRecurringWeakElementsEnabled: "at_risk_recurring_weak_elements_enabled",
+        sustainedDeclineCount: "at_risk_sustained_decline_count",
+        recentDropThreshold: "at_risk_recent_drop_threshold",
+        lowRecentGrade: "at_risk_low_recent_grade",
+        recurringWeakElementCount: "at_risk_recurring_weak_element_count",
+        minAssessmentsForRisk: "at_risk_min_assessments"
       };
       await Promise.all(
         Object.keys(local).map(
@@ -23693,22 +23774,120 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
       step: 0.1
     }
   ];
+  const atRiskCriteria = [
+    {
+      enabledKey: "atRiskAverageEnabled",
+      title: "Low course average",
+      detail: "Flags trainees whose whole-course score average falls below the at-risk threshold.",
+      control: { key: "atRiskAvgGrade", suffix: "avg", min: 1, max: 4.5, step: 0.1 }
+    },
+    {
+      enabledKey: "atRiskSustainedDeclineEnabled",
+      title: "Sustained decline",
+      detail: "Flags a trainee when each of the most recent assessments is lower than the previous one.",
+      control: { key: "sustainedDeclineCount", suffix: "events", min: 3, max: 6, step: 1 }
+    },
+    {
+      enabledKey: "atRiskRecentDropEnabled",
+      title: "Recent performance drop",
+      detail: "Flags trainees whose recent average has fallen materially below their whole-course average.",
+      control: { key: "recentDropThreshold", suffix: "drop", min: 0.2, max: 1.5, step: 0.1 }
+    },
+    {
+      enabledKey: "atRiskLowRecentEnabled",
+      title: "Low recent average",
+      detail: "Flags trainees whose most recent assessment window is below the configured recent score floor.",
+      control: { key: "lowRecentGrade", suffix: "recent avg", min: 1, max: 4.5, step: 0.1 }
+    },
+    {
+      enabledKey: "atRiskRecurringWeakElementsEnabled",
+      title: "Recurring weak elements",
+      detail: "Flags repeated weak element patterns even when the overall average has not yet collapsed.",
+      control: { key: "recurringWeakElementCount", suffix: "elements", min: 2, max: 8, step: 1 }
+    }
+  ];
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       className: "bg-gray-900 border border-gray-600 rounded-xl shadow-2xl w-full mx-4",
-      style: { maxWidth: 600 },
+      style: { maxWidth: 860 },
       onClick: (e) => e.stopPropagation(),
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-6 py-4 border-b border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-white font-bold text-base", children: "Analytics Thresholds" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs mt-0.5", children: "Adjust the thresholds used for risk classification and event analysis. Changes persist across sessions — re-run analytics after saving." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs mt-0.5", children: "Adjust the thresholds used for risk classification and event analysis. Changes persist across sessions. Re-run analytics after saving to reclassify trainees." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-2xl leading-none ml-4", children: "×" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto", children: [
-          fields.map((f) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "At-Risk Criteria" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-slate-400", children: "A trainee is classified as At Risk when the minimum assessment count is met and any enabled criterion below is triggered." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-slate-400", children: "Minimum data" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "number",
+                    min: 1,
+                    max: 10,
+                    step: 1,
+                    value: local.minAssessmentsForRisk,
+                    onChange: (e) => set("minAssessmentsForRisk", e.target.value),
+                    className: "w-14 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-center text-sm text-white focus:outline-none focus:border-cyan-400"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-2", children: atRiskCriteria.map((criteria) => {
+              const enabled = Boolean(local[criteria.enabledKey]);
+              return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "label",
+                {
+                  className: `rounded-lg border p-3 transition-colors ${enabled ? "border-cyan-500/35 bg-slate-900/80" : "border-slate-700 bg-slate-950/60"}`,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: enabled,
+                        onChange: (e) => setBool(criteria.enabledKey, e.target.checked),
+                        className: "mt-1 h-4 w-4 accent-cyan-500"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-slate-100", children: criteria.title }),
+                        criteria.control && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "number",
+                              min: criteria.control.min,
+                              max: criteria.control.max,
+                              step: criteria.control.step,
+                              value: local[criteria.control.key],
+                              disabled: !enabled,
+                              onChange: (e) => set(criteria.control.key, e.target.value),
+                              className: "w-16 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-center text-xs text-white disabled:opacity-40 focus:outline-none focus:border-cyan-400"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] text-slate-500", children: criteria.control.suffix })
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-slate-500", children: criteria.detail })
+                    ] })
+                  ] })
+                },
+                criteria.enabledKey
+              );
+            }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-5 md:grid-cols-2", children: fields.map((f) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-semibold text-gray-200", children: f.label }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
@@ -23739,7 +23918,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-xs leading-relaxed", children: f.desc })
-          ] }, f.key)),
+          ] }, f.key)) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-4 mt-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-gray-300 font-semibold text-xs uppercase tracking-wide mb-3", children: "How Status Levels Are Determined" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-xs", children: [
@@ -23748,9 +23927,11 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-300 font-semibold", children: "At Risk — " }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                    "Avg grade < ",
-                    local.atRiskAvgGrade.toFixed(1),
-                    ", OR a worsening trend with recent avg < 3.5. These trainees need immediate instructor attention."
+                    "Any enabled at-risk criterion is triggered after ",
+                    local.minAssessmentsForRisk,
+                    " assessment(s). Active criteria: ",
+                    riskCriteriaRows(local).join("; ") || "none selected",
+                    "."
                   ] })
                 ] })
               ] }),
@@ -23882,10 +24063,12 @@ const CourseTab = ({ summary, trainees, events }) => {
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-2 h-2 rounded-full bg-red-500 mt-0.5 flex-shrink-0" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-300 font-semibold", children: "At Risk: " }),
-                "Avg grade < ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: thresholds.atRiskAvgGrade.toFixed(1) }),
+                "Any enabled criterion is met after ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: thresholds.minAssessmentsForRisk }),
                 " ",
-                "or worsening trend with recent avg < 3.5. Requires immediate attention."
+                "assessment(s): ",
+                riskCriteriaRows(thresholds).join("; ") || "no criteria selected",
+                "."
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-start", children: [
@@ -24293,6 +24476,7 @@ const EventsTab = ({ events }) => {
   const [struggleSelected, setStruggleSelected] = reactExports.useState(null);
   const [excelSelected, setExcelSelected] = reactExports.useState(null);
   const [chartModal, setChartModal] = reactExports.useState(null);
+  const [chartZoomMode, setChartZoomMode] = reactExports.useState("full");
   const getPassRate = (ev) => {
     const stored = safeN(ev.passRate);
     if (stored > 0) return stored;
@@ -24589,9 +24773,23 @@ const EventsTab = ({ events }) => {
                 " events — click outside to close"
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setChartModal(null), className: "text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0", children: "×" })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex rounded-md border border-gray-700 bg-gray-950 p-1", children: [
+                { key: "full", label: "Full scale" },
+                { key: "focus", label: "Zoom" }
+              ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => setChartZoomMode(option.key),
+                  className: `rounded px-3 py-1 text-xs font-semibold transition-colors ${chartZoomMode === option.key ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"}`,
+                  children: option.label
+                },
+                option.key
+              )) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setChartModal(null), className: "text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0", children: "×" })
+            ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-xl p-4 overflow-x-auto mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ColChartModal, { data: chartModal.data, max: chartModal.max, height: 420, zoomY: true }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-xl p-4 overflow-x-auto mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ColChartModal, { data: chartModal.data, max: chartModal.max, height: 420, zoomY: chartZoomMode === "focus" }) })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4 mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24600,6 +24798,7 @@ const EventsTab = ({ events }) => {
               className: "cursor-pointer group",
               title: "Click to expand",
               onClick: () => {
+                setChartZoomMode("full");
                 const data = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
                   label: ev.eventCode,
                   value: getPassRate(ev),
@@ -24630,6 +24829,7 @@ const EventsTab = ({ events }) => {
               className: "cursor-pointer group",
               title: "Click to expand",
               onClick: () => {
+                setChartZoomMode("full");
                 const data = [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
                   label: ev.eventCode,
                   value: safeN(ev.gradeVariance),
@@ -24762,17 +24962,31 @@ const TrainingIntelligenceTab = () => {
     try {
       const r = await fetch("/api/tie/settings");
       const data = await r.json();
+      const map = {};
       if (Array.isArray(data)) {
-        const map = {};
         data.forEach((s) => {
-          map[s.key] = parseFloat(s.value);
+          map[s.key] = s.value;
         });
+      } else if (data && typeof data === "object") {
+        Object.assign(map, data);
+      }
+      if (Object.keys(map).length > 0) {
         setThresholds({
-          atRiskAvgGrade: map["at_risk_avg_grade"] ?? DEFAULT_THRESHOLDS.atRiskAvgGrade,
-          exceedingAvgGrade: map["exceeding_avg_grade"] ?? DEFAULT_THRESHOLDS.exceedingAvgGrade,
-          concernThresholdGrade: map["concern_threshold_grade"] ?? DEFAULT_THRESHOLDS.concernThresholdGrade,
-          bottleneckThresholdPct: map["bottleneck_threshold_pct"] ?? DEFAULT_THRESHOLDS.bottleneckThresholdPct,
-          highVarianceThreshold: map["high_variance_threshold"] ?? DEFAULT_THRESHOLDS.highVarianceThreshold
+          atRiskAvgGrade: Number(map["at_risk_avg_grade"] ?? DEFAULT_THRESHOLDS.atRiskAvgGrade),
+          exceedingAvgGrade: Number(map["exceeding_avg_grade"] ?? DEFAULT_THRESHOLDS.exceedingAvgGrade),
+          concernThresholdGrade: Number(map["concern_threshold_grade"] ?? DEFAULT_THRESHOLDS.concernThresholdGrade),
+          bottleneckThresholdPct: Number(map["bottleneck_threshold_pct"] ?? DEFAULT_THRESHOLDS.bottleneckThresholdPct),
+          highVarianceThreshold: Number(map["high_variance_threshold"] ?? DEFAULT_THRESHOLDS.highVarianceThreshold),
+          atRiskAverageEnabled: boolSetting(map["at_risk_average_enabled"], DEFAULT_THRESHOLDS.atRiskAverageEnabled),
+          atRiskSustainedDeclineEnabled: boolSetting(map["at_risk_sustained_decline_enabled"], DEFAULT_THRESHOLDS.atRiskSustainedDeclineEnabled),
+          atRiskRecentDropEnabled: boolSetting(map["at_risk_recent_drop_enabled"], DEFAULT_THRESHOLDS.atRiskRecentDropEnabled),
+          atRiskLowRecentEnabled: boolSetting(map["at_risk_low_recent_enabled"], DEFAULT_THRESHOLDS.atRiskLowRecentEnabled),
+          atRiskRecurringWeakElementsEnabled: boolSetting(map["at_risk_recurring_weak_elements_enabled"], DEFAULT_THRESHOLDS.atRiskRecurringWeakElementsEnabled),
+          sustainedDeclineCount: Number(map["at_risk_sustained_decline_count"] ?? DEFAULT_THRESHOLDS.sustainedDeclineCount),
+          recentDropThreshold: Number(map["at_risk_recent_drop_threshold"] ?? DEFAULT_THRESHOLDS.recentDropThreshold),
+          lowRecentGrade: Number(map["at_risk_low_recent_grade"] ?? DEFAULT_THRESHOLDS.lowRecentGrade),
+          recurringWeakElementCount: Number(map["at_risk_recurring_weak_element_count"] ?? DEFAULT_THRESHOLDS.recurringWeakElementCount),
+          minAssessmentsForRisk: Number(map["at_risk_min_assessments"] ?? DEFAULT_THRESHOLDS.minAssessmentsForRisk)
         });
       }
     } catch {

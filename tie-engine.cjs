@@ -302,6 +302,16 @@ async function seedTIEDefaults(db) {
     { key: 'at_risk_avg_grade', value: 3.2, description: 'Avg grade below which a trainee is at-risk' },
     { key: 'exceeding_avg_grade', value: 4.2, description: 'Avg grade above which a trainee is exceeding' },
     { key: 'high_variance_threshold', value: 1.0, description: 'Grade standard deviation above which event has high variance' },
+    { key: 'at_risk_average_enabled', value: true, description: 'At-risk criterion: whole-course average below threshold' },
+    { key: 'at_risk_sustained_decline_enabled', value: true, description: 'At-risk criterion: sustained decline across recent assessments' },
+    { key: 'at_risk_recent_drop_enabled', value: true, description: 'At-risk criterion: recent average materially below overall average' },
+    { key: 'at_risk_low_recent_enabled', value: true, description: 'At-risk criterion: recent average below threshold' },
+    { key: 'at_risk_recurring_weak_elements_enabled', value: true, description: 'At-risk criterion: recurring weak assessment elements' },
+    { key: 'at_risk_sustained_decline_count', value: 3, description: 'Number of recent assessments required for sustained decline' },
+    { key: 'at_risk_recent_drop_threshold', value: 0.4, description: 'Recent average drop from overall average required for at-risk' },
+    { key: 'at_risk_low_recent_grade', value: 3.2, description: 'Recent average below which trainee is at-risk' },
+    { key: 'at_risk_recurring_weak_element_count', value: 3, description: 'Recurring weak element count required for at-risk' },
+    { key: 'at_risk_min_assessments', value: 3, description: 'Minimum PT-051 records before at-risk criteria apply' },
   ];
 
   for (const d of defaults) {
@@ -607,6 +617,24 @@ function detectTrend(gradeSequence) {
   return 'stable';
 }
 
+function settingBool(value, fallback) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  }
+  return fallback;
+}
+
+function hasSustainedDecline(grades, count) {
+  const n = Math.max(2, Number(count) || 3);
+  if (!Array.isArray(grades) || grades.length < n) return false;
+  const recent = grades.slice(-n);
+  return recent.every((grade, index) => index === 0 || grade < recent[index - 1]);
+}
+
 // ============================================================
 // SECTION 8: NARRATIVE GENERATOR
 // ============================================================
@@ -816,6 +844,16 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     const OVER_SERVICE_AVG = Number(settings.over_service_threshold) || 4.3;
     const AT_RISK_AVG = Number(settings.at_risk_avg_grade) || 3.2;
     const EXCEEDING_AVG = Number(settings.exceeding_avg_grade) || 4.2;
+    const AT_RISK_AVERAGE_ENABLED = settingBool(settings.at_risk_average_enabled, true);
+    const AT_RISK_SUSTAINED_DECLINE_ENABLED = settingBool(settings.at_risk_sustained_decline_enabled, true);
+    const AT_RISK_RECENT_DROP_ENABLED = settingBool(settings.at_risk_recent_drop_enabled, true);
+    const AT_RISK_LOW_RECENT_ENABLED = settingBool(settings.at_risk_low_recent_enabled, true);
+    const AT_RISK_RECURRING_WEAK_ELEMENTS_ENABLED = settingBool(settings.at_risk_recurring_weak_elements_enabled, true);
+    const AT_RISK_SUSTAINED_DECLINE_COUNT = Number(settings.at_risk_sustained_decline_count) || 3;
+    const AT_RISK_RECENT_DROP_THRESHOLD = Number(settings.at_risk_recent_drop_threshold) || 0.4;
+    const AT_RISK_LOW_RECENT_GRADE = Number(settings.at_risk_low_recent_grade) || 3.2;
+    const AT_RISK_RECURRING_WEAK_ELEMENT_COUNT = Number(settings.at_risk_recurring_weak_element_count) || 3;
+    const AT_RISK_MIN_ASSESSMENTS = Number(settings.at_risk_min_assessments) || 3;
 
     // ── Load comment dictionary ────────────────────────────────
     const dictionary = await safeQuery(db, `SELECT * FROM "TIECommentDictionary" WHERE "isActive" = TRUE`);
@@ -1066,15 +1104,37 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         recencyWeight: r.recencyWeight
       }));
 
-      // Risk assessment
-      const atRisk = avgGrade < AT_RISK_AVG || (trend === 'worsening' && recentAvg < 3.5);
-      const exceeding = avgGrade >= EXCEEDING_AVG && trend !== 'worsening';
+      // Risk assessment. The criteria intentionally combine level, trajectory,
+      // recency, and repeated weak elements so managers can tune "At Risk"
+      // without relying on one blunt score threshold.
       const atRiskReasons = [];
-      if (avgGrade < AT_RISK_AVG) atRiskReasons.push(`Average grade ${avgGrade.toFixed(2)} below threshold of ${AT_RISK_AVG}`);
-      if (trend === 'worsening') atRiskReasons.push('Declining performance trend detected');
-      if (weakElements.length >= 3) atRiskReasons.push(`${weakElements.length} weak elements recurring`);
+      const enoughDataForRisk = grades.length >= AT_RISK_MIN_ASSESSMENTS;
+      const sustainedDecline = hasSustainedDecline(grades, AT_RISK_SUSTAINED_DECLINE_COUNT);
+      const recentDrop = avgGrade - recentAvg;
 
-      const riskLevel = atRisk ? 'at_risk' : exceeding ? 'exceeding' : avgGrade >= 3.5 ? 'normal' : 'watch';
+      if (enoughDataForRisk && AT_RISK_AVERAGE_ENABLED && avgGrade < AT_RISK_AVG) {
+        atRiskReasons.push(`Average grade ${avgGrade.toFixed(2)} below threshold of ${AT_RISK_AVG}`);
+      }
+      if (enoughDataForRisk && AT_RISK_SUSTAINED_DECLINE_ENABLED && sustainedDecline) {
+        atRiskReasons.push(`Sustained decline across last ${AT_RISK_SUSTAINED_DECLINE_COUNT} assessments`);
+      }
+      if (enoughDataForRisk && AT_RISK_RECENT_DROP_ENABLED && recentDrop >= AT_RISK_RECENT_DROP_THRESHOLD) {
+        atRiskReasons.push(`Recent average ${recentAvg.toFixed(2)} is ${recentDrop.toFixed(2)} below overall average`);
+      }
+      if (enoughDataForRisk && AT_RISK_LOW_RECENT_ENABLED && recentAvg < AT_RISK_LOW_RECENT_GRADE) {
+        atRiskReasons.push(`Recent average ${recentAvg.toFixed(2)} below threshold of ${AT_RISK_LOW_RECENT_GRADE}`);
+      }
+      if (enoughDataForRisk && AT_RISK_RECURRING_WEAK_ELEMENTS_ENABLED && weakElements.length >= AT_RISK_RECURRING_WEAK_ELEMENT_COUNT) {
+        atRiskReasons.push(`${weakElements.length} weak elements recurring`);
+      }
+      if (!enoughDataForRisk && (avgGrade < AT_RISK_AVG || recentAvg < AT_RISK_LOW_RECENT_GRADE || trend === 'worsening')) {
+        atRiskReasons.push(`Monitor until ${AT_RISK_MIN_ASSESSMENTS} assessments are available`);
+      }
+
+      const atRisk = enoughDataForRisk && atRiskReasons.length > 0;
+      const exceeding = avgGrade >= EXCEEDING_AVG && trend !== 'worsening';
+
+      const riskLevel = atRisk ? 'at_risk' : exceeding ? 'exceeding' : (avgGrade >= 3.5 && trend !== 'worsening') ? 'normal' : 'monitor';
       if (atRisk) atRiskTrainees.push(traineeFullName);
       if (exceeding) exceedingTrainees.push(traineeFullName);
 
