@@ -15669,12 +15669,6 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   ] });
 };
 const getApiBase$1 = () => {
-  if (typeof window !== "undefined") {
-    const port = window.location.port;
-    if (port === "5173" || port === "3001" || port === "3002") {
-      return "http://localhost:3000/api";
-    }
-  }
   return "/api";
 };
 const loadUserPreferences = async (userId) => {
@@ -18968,8 +18962,9 @@ const AddGroundEventFlyout = ({
     )
   ] });
 };
+const __vite_import_meta_env__ = {};
 const DEFAULT_LOCATIONS = ["YMES", "YMEN", "YMAY", "YSCB", "YLTV"];
-const AVWX_API_TOKEN = "STWJquK4I2XUtqN-Vpw1eCIpOqmq0CHpd4LChbc17MY";
+const AVWX_API_TOKEN = (__vite_import_meta_env__?.VITE_AVWX_API_TOKEN || "").trim();
 const REFRESH_INTERVAL = 30 * 60 * 1e3;
 const TafWeatherWidget = ({ onClose }) => {
   const [locations, setLocations] = reactExports.useState(() => {
@@ -19003,6 +18998,19 @@ const TafWeatherWidget = ({ onClose }) => {
   };
   const fetchTaf = async (icao) => {
     if (!isExternalDataAllowed("weatherDataEnabled")) return;
+    if (!AVWX_API_TOKEN) {
+      setTafData((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(icao, {
+          station: icao.toUpperCase(),
+          raw: "",
+          time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
+          error: "TAF provider token is not configured"
+        });
+        return newMap;
+      });
+      return;
+    }
     setLoading((prev) => new Set(prev).add(icao));
     try {
       const response = await fetch(
@@ -19156,6 +19164,9 @@ const TafWeatherWidget = ({ onClose }) => {
     !externalDataAllowed && !isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-700/50 bg-amber-900/20 p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "External weather disabled" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "TAF requests to AVWX are blocked by Settings - Data Sources." })
+    ] }) : !AVWX_API_TOKEN && !isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-700/50 bg-amber-900/20 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "Weather provider not configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "Set VITE_AVWX_API_TOKEN for deployments that are approved to request external TAF data." })
     ] }) : isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Enter ICAO codes (e.g., YMES, YMEN)" }),
       editLocations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [

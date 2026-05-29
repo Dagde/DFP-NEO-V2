@@ -120,10 +120,10 @@ Website: https://dfp-neo-website-production.up.railway.app
   ├─ Login
   └─ App Selection
 
-Flight School: https://dfp-neo-production.up.railway.app
+Flight School: <configured-dfp-neo-url>
   └─ Flight School App (direct access)
 
-Reconnaissance: https://dfp-neo-v2-production.up.railway.app
+Reconnaissance: <configured-dfp-neo-v2-url>
   └─ Reconnaissance App (direct access)
 ```
 

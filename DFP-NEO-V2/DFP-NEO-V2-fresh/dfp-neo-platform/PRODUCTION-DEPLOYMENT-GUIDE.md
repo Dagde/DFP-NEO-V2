@@ -59,11 +59,11 @@ After updating environment variables:
 
 Once deployed, test at:
 - Landing page: https://dfp-neo.com
-- Login page: https://dfp-neo.com/login
+- Login page: /login
 
 **Test credentials:**
 - Username: `admin`
-- Password: `admin123`
+- Password: `<admin-password>`
 
 ## Current Working Files
 
@@ -80,9 +80,9 @@ These files are confirmed working in the sandbox and ready for production:
    - `app/admin/page.tsx` - Admin panel
 
 3. **Mock Data:**
-   - Admin user: admin/admin123
-   - Pilot user: john.pilot/pilot123
-   - Instructor user: jane.instructor/instructor123
+   - Admin user: admin/<admin-password>
+   - Pilot user: john.pilot/<pilot-password>
+   - Instructor user: jane.instructor/<instructor-password>
 
 ## Troubleshooting
 

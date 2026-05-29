@@ -58,7 +58,7 @@ NEXTAUTH_SECRET
 NEXT_PUBLIC_FLIGHT_SCHOOL_URL
 ```
 **Value:** Your existing DFP-NEO production URL
-- This should be something like: `https://dfp-neo-production.up.railway.app`
+- This should be something like: `<configured-dfp-neo-url>`
 - If you don't know it, look for your original DFP-NEO service in Railway and copy its URL
 
 **Variable 5: NEXT_PUBLIC_RECONNAISSANCE_URL**
@@ -66,7 +66,7 @@ NEXT_PUBLIC_FLIGHT_SCHOOL_URL
 NEXT_PUBLIC_RECONNAISSANCE_URL
 ```
 **Value:** Your V2 production URL
-- This should be something like: `https://dfp-neo-v2-production.up.railway.app`
+- This should be something like: `<configured-dfp-neo-v2-url>`
 - Find your V2 service and copy its URL
 
 ### Step 1.5: Redeploy the Website

@@ -4,9 +4,14 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const db = prisma as any;
 
-// Simple security: require a secret key in the request header or query param
-// Set SEED_SECRET env var in Railway to secure this endpoint
-const SEED_SECRET = process.env.SEED_SECRET || 'dfp-seed-2026';
+// Simple security: require a secret key in the request header or query param.
+// SEED_SECRET must be explicitly configured outside local development.
+function getSeedSecret() {
+  const secret = process.env.SEED_SECRET?.trim();
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'production') return '';
+  return 'dfp-seed-development-only';
+}
 
 // ============================================================================
 // SYLLABUS ITEMS - Using correct codes that match PT-051 score records
@@ -309,7 +314,14 @@ const SYLLABUS_ITEMS: SyllabusItemSeed[] = [
 
 export async function GET(request: NextRequest) {
   // Check secret
+  const SEED_SECRET = getSeedSecret();
   const secret = request.nextUrl.searchParams.get('secret');
+  if (!SEED_SECRET) {
+    return NextResponse.json(
+      { error: 'SEED_SECRET is not configured' },
+      { status: 503 }
+    );
+  }
   if (secret !== SEED_SECRET) {
     return NextResponse.json(
       { error: 'Unauthorized. Provide ?secret=YOUR_SECRET' },

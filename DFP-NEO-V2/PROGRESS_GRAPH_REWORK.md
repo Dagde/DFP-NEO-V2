@@ -240,7 +240,7 @@ Located at top of each graph showing:
 ## Deployment Information
 
 **Build Command**: `npm run build`
-**Deployment URL**: https://sites.super.myninja.ai/d9db0e8f-9740-4599-bd24-0c029e49bfcf/d1f65cfa/index.html
+**Deployment URL**: <removed-external-preview-url>
 
 ## Conclusion
 

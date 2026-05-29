@@ -150,7 +150,7 @@ init(from decoder: Decoder) throws {
 
 2. **Verify network connectivity:**
    - Ensure device has internet connection
-   - Check if `app.dfp-neo.com` is accessible
+   - Check if the configured API host is accessible
 
 3. **Check token storage:**
    ```swift
@@ -161,7 +161,7 @@ init(from decoder: Decoder) throws {
 
 4. **Test API directly:**
    ```bash
-   curl -X POST https://app.dfp-neo.com/api/mobile/auth/login \
+   curl -X POST https://<configured-api-host>/api/mobile/auth/login \
      -H "Content-Type: application/json" \
      -d '{"userId":"alexander.burns","password":"Burns8201112"}'
    ```

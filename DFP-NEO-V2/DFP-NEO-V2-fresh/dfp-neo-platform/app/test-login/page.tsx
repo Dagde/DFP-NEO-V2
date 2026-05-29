@@ -4,8 +4,8 @@ import { useState } from "react";
 import { signIn } from 'next-auth/react';
 
 export default function TestLoginPage() {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [result, setResult] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -13,7 +13,7 @@ export default function TestLoginPage() {
     setResult("Processing...");
 
     try {
-      console.log("Sending login request with:", { username, password });
+      console.log("Sending login request with:", { username });
       
       const signInResult = await signIn('credentials', {
         username,
@@ -50,7 +50,7 @@ export default function TestLoginPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full p-2 text-black rounded"
-            placeholder="admin"
+            placeholder="User ID"
           />
         </div>
         
@@ -61,7 +61,7 @@ export default function TestLoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-2 text-black rounded"
-            placeholder="admin123"
+            placeholder="Password"
           />
         </div>
         
@@ -80,9 +80,7 @@ export default function TestLoginPage() {
       </form>
       
       <div className="mt-8 text-sm text-gray-400">
-        <p>Test credentials:</p>
-        <p>Username: admin</p>
-        <p>Password: admin123</p>
+        <p>Use credentials issued by an administrator.</p>
       </div>
     </div>
   );

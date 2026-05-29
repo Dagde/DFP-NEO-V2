@@ -20,8 +20,8 @@ NEXTAUTH_SECRET=your-secure-secret-here
 
 ### App URLs
 ```
-NEXT_PUBLIC_FLIGHT_SCHOOL_URL=https://dfp-neo-production.up.railway.app
-NEXT_PUBLIC_RECONNAISSANCE_URL=https://dfp-neo-v2-production.up.railway.app
+NEXT_PUBLIC_FLIGHT_SCHOOL_URL=<configured-dfp-neo-url>
+NEXT_PUBLIC_RECONNAISSANCE_URL=<configured-dfp-neo-v2-url>
 ```
 **Purpose:** URLs for app redirection from select page  
 **Note:** These are public URLs (NEXT_PUBLIC_ prefix makes them available in browser)

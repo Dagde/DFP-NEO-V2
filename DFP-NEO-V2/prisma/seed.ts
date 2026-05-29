@@ -3,6 +3,14 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+function requiredSeedPassword(envName: string) {
+  const value = process.env[envName]?.trim()
+  if (!value) {
+    throw new Error(`${envName} must be set before seeding users`)
+  }
+  return value
+}
+
 async function main() {
   console.log('Starting database seeding...')
 
@@ -76,7 +84,8 @@ async function main() {
   })
 
   // Create default admin user
-  const hashedPassword = await bcrypt.hash('admin123', 10)
+  const adminPassword = requiredSeedPassword('DFP_SEED_ADMIN_PASSWORD')
+  const hashedPassword = await bcrypt.hash(adminPassword, 10)
   const adminUser = await prisma.user.upsert({
     where: { userId: 'ADMIN001' },
     update: {},
@@ -93,7 +102,8 @@ async function main() {
   })
 
   // Create a test user
-  const testUserPassword = await bcrypt.hash('user123', 10)
+  const standardUserPassword = requiredSeedPassword('DFP_SEED_STANDARD_USER_PASSWORD')
+  const testUserPassword = await bcrypt.hash(standardUserPassword, 10)
   await prisma.user.upsert({
     where: { userId: 'USER001' },
     update: {},
@@ -112,10 +122,10 @@ async function main() {
   console.log('Database seeding completed!')
   console.log('Admin credentials:')
   console.log('  User ID: ADMIN001')
-  console.log('  Password: admin123')
+  console.log('  Password: set via DFP_SEED_ADMIN_PASSWORD')
   console.log('  User credentials:')
   console.log('  User ID: USER001')
-  console.log('  Password: user123')
+  console.log('  Password: set via DFP_SEED_STANDARD_USER_PASSWORD')
 }
 
 main()

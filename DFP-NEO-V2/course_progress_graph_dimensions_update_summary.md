@@ -69,7 +69,7 @@ edcab1cf Fix all escape sequence errors: Fix A (eventsToY) and Fix C (LMP sync) 
 ## Deployment Status
 
 ### Current Live Version
-- **Live URL**: https://dfp-neo-v2-production.up.railway.app/flight-school-app/
+- **Live URL**: <configured-dfp-neo-v2-url>/flight-school-app/
 - **Live MD5**: `6ac4edeaebabad11d0f850e062d84486`
 - **Status**: ⚠️ Still serving old version
 
@@ -95,7 +95,7 @@ edcab1cf Fix all escape sequence errors: Fix A (eventsToY) and Fix C (LMP sync) 
 ### Verify New Version is Deployed
 ```bash
 # Check for new stroke width in live file
-curl -s https://dfp-neo-v2-production.up.railway.app/flight-school-app/assets/index.js | grep -c 'strokeWidth="0\.25"'
+curl -s <configured-dfp-neo-v2-url>/flight-school-app/assets/index.js | grep -c 'strokeWidth="0\.25"'
 
 # Should return a positive number (at least 1) when deployed
 ```

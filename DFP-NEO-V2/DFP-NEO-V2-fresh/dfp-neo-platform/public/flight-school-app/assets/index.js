@@ -1400,12 +1400,7 @@ let saveDebounceTimer = null;
 let pendingSettings = null;
 let isSaving = false;
 const getApiBase$1 = () => {
-  const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
-  const currentOrigin = window.location.origin;
-  if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) {
-    return "/api";
-  }
-  return `${railwayBackend}/api`;
+  return "/api";
 };
 const loadSettingsFromDB = async () => {
   try {
@@ -13071,12 +13066,6 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   ] });
 };
 const getApiBase = () => {
-  if (typeof window !== "undefined") {
-    const port = window.location.port;
-    if (port === "5173" || port === "3001" || port === "3002") {
-      return "http://localhost:3000/api";
-    }
-  }
   return "/api";
 };
 const loadUserPreferences = async (userId) => {
@@ -16114,8 +16103,9 @@ const AddGroundEventFlyout = ({
     )
   ] });
 };
+const __vite_import_meta_env__ = {};
 const DEFAULT_LOCATIONS = ["YMES", "YMEN", "YMAY", "YSCB", "YLTV"];
-const AVWX_API_TOKEN = "STWJquK4I2XUtqN-Vpw1eCIpOqmq0CHpd4LChbc17MY";
+const AVWX_API_TOKEN = (__vite_import_meta_env__?.VITE_AVWX_API_TOKEN || "").trim();
 const REFRESH_INTERVAL = 30 * 60 * 1e3;
 const TafWeatherWidget = ({ onClose }) => {
   const [locations, setLocations] = reactExports.useState(() => {
@@ -16138,6 +16128,19 @@ const TafWeatherWidget = ({ onClose }) => {
     });
   };
   const fetchTaf = async (icao) => {
+    if (!AVWX_API_TOKEN) {
+      setTafData((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(icao, {
+          station: icao.toUpperCase(),
+          raw: "",
+          time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
+          error: "TAF provider token is not configured"
+        });
+        return newMap;
+      });
+      return;
+    }
     setLoading((prev) => new Set(prev).add(icao));
     try {
       const response = await fetch(
@@ -16281,7 +16284,10 @@ const TafWeatherWidget = ({ onClose }) => {
         ] })
       ] })
     ] }),
-    isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+    !AVWX_API_TOKEN && !isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-700/50 bg-amber-900/20 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "Weather provider not configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "Set VITE_AVWX_API_TOKEN for deployments that are approved to request external TAF data." })
+    ] }) : isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Enter ICAO codes (e.g., YMES, YMEN)" }),
       editLocations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400 text-sm w-8", children: [
@@ -37077,7 +37083,7 @@ const AppearanceSettings = () => {
     ] })
   ] });
 };
-const apiBase = () => window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+const apiBase = () => "/api";
 const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
   const [status, setStatus] = reactExports.useState("idle");
   const [metadata, setMetadata] = reactExports.useState(null);
@@ -48615,7 +48621,7 @@ const App = () => {
               "BPC+IPC": bpcIpcSyllabus,
               "FIC": ficSyllabus
             };
-            const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+            const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "/api";
             const pt051Completions = {};
             pt051Assessments.forEach((assessment, _key) => {
               if (assessment.isCompleted && assessment.flightNumber && assessment.traineeFullName) {
@@ -48847,7 +48853,7 @@ const App = () => {
   reactExports.useEffect(() => {
     const loadHistoricalData = async () => {
       try {
-        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "/api";
         try {
           const snapRes = await fetch(`${apiBase2}/daily-snapshot`);
           if (snapRes.ok) {
@@ -48929,7 +48935,7 @@ const App = () => {
   reactExports.useEffect(() => {
     const loadSnapshotDates = async () => {
       try {
-        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "/api";
         const res = await fetch(`${apiBase2}/daily-snapshot/dates`);
         if (!res.ok) return;
         const data = await res.json();
@@ -48947,7 +48953,7 @@ const App = () => {
     if (loadedSnapshotDates.current.has(targetDate)) return;
     loadedSnapshotDates.current.add(targetDate);
     try {
-      const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+      const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "/api";
       const res = await fetch(`${apiBase2}/daily-snapshot/${targetDate}`);
       if (!res.ok) return;
       const data = await res.json();
@@ -49311,12 +49317,7 @@ const App = () => {
     return `${h.toString().padStart(2, "0")}${m.toString().padStart(2, "0")}`;
   };
   const getApiBaseUrl = () => {
-    const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
-    const currentOrigin = window.location.origin;
-    if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) {
-      return "/api";
-    }
-    return `${railwayBackend}/api`;
+    return "/api";
   };
   const postAvailabilityEvent = async (availableCount, changeType, totalAircraftOverride, notesOverride, timestampOverride) => {
     const requestId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
@@ -52310,7 +52311,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     try {
       const activeTraineeNames = traineesData.filter((t) => !t.isPaused).map((t) => t.fullName).filter(Boolean);
       if (activeTraineeNames.length > 0) {
-        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "/api";
         const elceRes = await fetch(`${apiBase2}/event-completions/elce`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -53653,7 +53654,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     };
     const pollUnavailability = async () => {
       try {
-        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "/api";
         const [personnelRes, traineesRes] = await Promise.all([
           fetch(`${apiBase2}/personnel`, { credentials: "include" }),
           fetch(`${apiBase2}/trainees`, { credentials: "include" })
@@ -57098,7 +57099,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   ...item,
                   completedAt: completedSet.has(item.id || item.code) ? allScoresForTrainee.find((s) => s.event === (item.id || item.code))?.date || (/* @__PURE__ */ new Date()).toISOString() : null
                 }));
-                const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+                const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "/api";
                 const res = await fetch(`${apiBase2}/trainees/${trainee.id}/lmp`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },

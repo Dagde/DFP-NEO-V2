@@ -228,7 +228,7 @@ Display in Priority Analysis Page
 
 ✅ **Deployed and Available**
 - Server running on port 8080
-- URL: https://8080-09fc4bc3-ff71-460b-be90-3040f55254c9.sandbox-service.public.prod.myninja.ai
+- URL: <removed-external-preview-url>
 - Build successful with no errors
 - All UI changes visible in Priority Analysis page
 

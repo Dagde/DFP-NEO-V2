@@ -1,10 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-const DEFAULT_ALLOWED_ORIGINS = [
-  'https://dfp-neo-v2-production.up.railway.app',
-  'https://dfp-neo.com',
-];
+const DEFAULT_ALLOWED_ORIGINS: string[] = [];
 
 const DEVELOPMENT_ALLOWED_ORIGINS = [
   'http://localhost:3000',

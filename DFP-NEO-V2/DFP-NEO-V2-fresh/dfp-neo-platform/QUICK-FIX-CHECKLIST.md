@@ -39,10 +39,10 @@ After updating environment variables:
 3. Wait for deployment to complete (usually 2-3 minutes)
 
 ### Step 5: Test the Login
-1. Go to https://dfp-neo.com/login
+1. Go to /login
 2. Enter credentials:
    - Username: `admin`
-   - Password: `admin123`
+   - Password: `<admin-password>`
 3. Click Login
 
 ## Expected Result

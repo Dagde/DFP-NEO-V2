@@ -1,10 +1,22 @@
 import Foundation
 
 class AuthService {
-    private let baseURL = "https://app.dfp-neo.com/api/mobile"
+    private var baseURL: String {
+        let configured = APIService.shared.apiBaseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = configured.hasSuffix("/") ? String(configured.dropLast()) : configured
+        return "\(normalized)/api/mobile"
+    }
+
+    private func mobileURL(_ path: String) throws -> URL {
+        guard !APIService.shared.apiBaseURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let url = URL(string: "\(baseURL)\(path)") else {
+            throw NSError(domain: "AuthService", code: -1, userInfo: [NSLocalizedDescriptionKey: "API base URL is not configured"])
+        }
+        return url
+    }
     
     func login(userId: String, password: String) async throws -> LoginData {
-        let url = URL(string: "\(baseURL)/auth/login")!
+        let url = try mobileURL("/auth/login")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -68,7 +80,7 @@ class AuthService {
     }
     
     func refreshToken(refreshToken: String) async throws -> LoginData {
-        let url = URL(string: "\(baseURL)/auth/refresh")!
+        let url = try mobileURL("/auth/refresh")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

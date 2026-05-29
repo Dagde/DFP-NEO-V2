@@ -17,12 +17,12 @@ The DFP Scheduler is a web-based tool for managing flight school operations. It'
 
 ## 2. Project Setup & Structure
 
-**Prompt:** "Set up a new React project using Vite that uses an `index.html` file to import React and other dependencies via an `importmap`. The main application will be in an `index.tsx` file. Use Tailwind CSS via its CDN link in the `index.html`."
+**Prompt:** "Set up a new React project using Vite with local npm dependencies and same-origin static assets only. The main application will be in an `index.tsx` file. Do not use public CDNs or importmaps for production/offline deployment."
 
 ### `index.html`
 This is the entry point. It must include:
--   A link to the Tailwind CSS CDN.
--   An `importmap` to manage module dependencies (`react`, `uuid`). This avoids a `node_modules` folder.
+-   Same-origin script/style assets only; no public CDN links.
+-   Local npm dependencies for React, Tailwind-compatible styling, UUID, spreadsheet, and PDF tooling.
 -   A root div (`<div id="root"></div>`).
 -   A module script import for `/index.tsx`.
 -   Custom CSS for animations and button styling (`.btn-shape-fill`).

@@ -12,7 +12,7 @@ const apps = [
     description: 'Comprehensive Flight Training Scheduling and Training Management System (TMS)',
     image: '/images/trainer-aircraft.jpg',
     status: 'active',
-    href: process.env.NEXT_PUBLIC_FLIGHT_SCHOOL_URL || 'https://dfp-neo-production.up.railway.app',
+    href: process.env.NEXT_PUBLIC_FLIGHT_SCHOOL_URL || '/flight-school-app/',
   },
   {
     id: 'reconnaissance',
@@ -21,7 +21,7 @@ const apps = [
     description: 'Advanced reconnaissance mission planning and execution',
     image: '/images/p8-aircraft.jpg',
     status: 'active',
-    href: process.env.NEXT_PUBLIC_RECONNAISSANCE_URL || 'https://dfp-neo-v2-production.up.railway.app/sso.html',
+    href: process.env.NEXT_PUBLIC_RECONNAISSANCE_URL || '/sso.html',
   },
   {
     id: 'air-movements',

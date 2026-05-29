@@ -12,10 +12,10 @@ npx tsx scripts/add-user.ts <username> <email> <password> <role> <firstName> <la
 **Examples:**
 ```bash
 # Add a new pilot
-npx tsx scripts/add-user.ts "mike.pilot" "mike@dfp-neo.com" "Pilot2024!Secure" "PILOT" "Mike" "Johnson"
+npx tsx scripts/add-user.ts "mike.pilot" "mike@dfp-neo.com" "<pilot-password>" "PILOT" "Mike" "Johnson"
 
 # Add a new instructor
-npx tsx scripts/add-user.ts "sarah.instructor" "sarah@dfp-neo.com" "Instructor2024!Secure" "INSTRUCTOR" "Sarah" "Davis"
+npx tsx scripts/add-user.ts "sarah.instructor" "sarah@dfp-neo.com" "<instructor-password>" "INSTRUCTOR" "Sarah" "Davis"
 
 # Add another admin
 npx tsx scripts/add-user.ts "james.admin" "james@dfp-neo.com" "Admin2024!Secure" "ADMIN" "James" "Wilson"
@@ -29,7 +29,7 @@ npx tsx scripts/add-user.ts "james.admin" "james@dfp-neo.com" "Admin2024!Secure"
 {
   username: 'new.pilot',
   email: 'new.pilot@dfp-neo.com',
-  password: 'NewPilot2024!',
+  password: '<new-password>',
   role: 'PILOT',
   firstName: 'New',
   lastName: 'Pilot',
@@ -93,7 +93,7 @@ UPDATE users SET isActive = true WHERE username = 'user.to.activate';
 ### Password Requirements
 - Minimum 12 characters
 - Include uppercase, lowercase, numbers, and special characters
-- Example: `Pilot2024!Secure`
+- Example: `<pilot-password>`
 
 ### User Management
 - Use role-based access control

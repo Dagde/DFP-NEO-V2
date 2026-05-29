@@ -3,6 +3,14 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+function requiredSeedPassword(envName: string) {
+  const value = process.env[envName]?.trim();
+  if (!value) {
+    throw new Error(`${envName} must be set before running user migration`);
+  }
+  return value;
+}
+
 async function main() {
   console.log('🚀 Starting user migration...\n');
 
@@ -11,7 +19,7 @@ async function main() {
     {
       username: 'admin',
       email: 'admin@dfp-neo.com',
-      password: 'admin123',
+      password: requiredSeedPassword('DFP_SEED_ADMIN_PASSWORD'),
       role: 'SUPER_ADMIN',
       firstName: 'System',
       lastName: 'Administrator',
@@ -20,7 +28,7 @@ async function main() {
     {
       username: 'john.pilot',
       email: 'john.pilot@dfp-neo.com',
-      password: 'pilot123',
+      password: requiredSeedPassword('DFP_SEED_PILOT_PASSWORD'),
       role: 'PILOT',
       firstName: 'John',
       lastName: 'Smith',
@@ -29,7 +37,7 @@ async function main() {
     {
       username: 'jane.instructor',
       email: 'jane.instructor@dfp-neo.com',
-      password: 'instructor123',
+      password: requiredSeedPassword('DFP_SEED_INSTRUCTOR_PASSWORD'),
       role: 'INSTRUCTOR',
       firstName: 'Jane',
       lastName: 'Wilson',
@@ -38,7 +46,7 @@ async function main() {
     {
       username: 'mike.pilot',
       email: 'mike@dfp-neo.com',
-      password: 'Pilot2024!Secure',
+      password: requiredSeedPassword('DFP_SEED_SECOND_PILOT_PASSWORD'),
       role: 'PILOT',
       firstName: 'Mike',
       lastName: 'Johnson',
@@ -47,7 +55,7 @@ async function main() {
     {
       username: 'sarah.instructor',
       email: 'sarah@dfp-neo.com',
-      password: 'Instructor2024!Secure',
+      password: requiredSeedPassword('DFP_SEED_SECOND_INSTRUCTOR_PASSWORD'),
       role: 'INSTRUCTOR',
       firstName: 'Sarah',
       lastName: 'Davis',

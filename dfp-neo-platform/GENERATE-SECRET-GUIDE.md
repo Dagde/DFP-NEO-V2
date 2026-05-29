@@ -75,8 +75,8 @@ If you can't use the above methods, you can create a random string:
    - You'll see a "Deploying..." status
 
 7. **Test Your Login**
-   - Go to https://dfp-neo.com/login
-   - Try logging in with admin/admin123
+   - Go to /login
+   - Try logging in with admin/<admin-password>
 
 ## Example of What It Should Look Like
 

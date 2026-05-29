@@ -215,11 +215,11 @@ User Experience Flow:
       └─ Shows 4 App Tiles
 
 3. Clicking Flight School
-   └─ Redirects to: https://dfp-neo-production.up.railway.app
+   └─ Redirects to: <configured-dfp-neo-url>
       └─ Shows Flight School App (directly, no login)
 
 4. Clicking Reconnaissance
-   └─ Redirects to: https://dfp-neo-v2-production.up.railway.app
+   └─ Redirects to: <configured-dfp-neo-v2-url>
       └─ Shows Reconnaissance App (directly, no login)
 
 5. User can:

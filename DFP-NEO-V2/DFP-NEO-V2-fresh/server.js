@@ -33,8 +33,18 @@ const cookieParser = require('cookie-parser');
 // JWT for mobile API authentication
 import jwt from 'jsonwebtoken';
 
+function requireConfiguredSecret(name, developmentFallback) {
+  const value = process.env[name];
+  if (value && value.trim()) return value;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(`${name} must be configured in production`);
+  }
+  console.warn(`⚠️ ${name} is not configured; using development-only fallback.`);
+  return developmentFallback;
+}
+
 // JWT Configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'dfp-neo-secret-key-change-in-production';
+const JWT_SECRET = requireConfiguredSecret('JWT_SECRET', 'dfp-neo-development-jwt-secret');
 const JWT_ACCESS_EXPIRY = '1h';
 const JWT_REFRESH_EXPIRY = '7d';
 
@@ -42,10 +52,7 @@ const JWT_REFRESH_EXPIRY = '7d';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const DEFAULT_ALLOWED_ORIGINS = [
-  'https://dfp-neo-v2-production.up.railway.app',
-  'https://dfp-neo.com',
-];
+const DEFAULT_ALLOWED_ORIGINS = [];
 const DEVELOPMENT_ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -1753,6 +1760,12 @@ app.patch('/api/trainees/fix-lmp-type', async (req, res) => {
 // Rule 2: If BIF1 is complete, mark BIF FTD3 complete
 // Rule 3: Remove asterisk versions (BIF FTD1*, BIF FTD3*) from completedEventIds
 app.post('/api/fix-bif-ftd-dependencies', async (req, res) => {
+  const maintenanceSecret = requireConfiguredSecret('DFP_NEO_MAINTENANCE_SECRET', 'dfp-neo-maintenance-development-only');
+  const providedSecret = req.headers['x-maintenance-secret'] || req.query.secret;
+  if (providedSecret !== maintenanceSecret) {
+    return res.status(401).json({ error: 'Unauthorized maintenance request' });
+  }
+
   try {
     const db = await getPrisma();
     console.log('[BIF FTD Fix] Starting BIF FTD dependency fix...');
@@ -3503,7 +3516,7 @@ app.delete('/api/admin/purge-inactive', async (req, res) => {
 });
 
 app.get('/api/admin/seed-syllabus', async (req, res) => {
-  const SEED_SECRET = process.env.SEED_SECRET || 'dfp-seed-2026';
+  const SEED_SECRET = requireConfiguredSecret('SEED_SECRET', 'dfp-seed-development-only');
   const { secret, force } = req.query;
 
   if (secret !== SEED_SECRET) {

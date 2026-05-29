@@ -186,7 +186,7 @@ Renders validation errors in a user-friendly format with:
 4. "Today Only" quick selection
 
 ## Deployment
-- **Live URL**: https://sites.super.myninja.ai/d9db0e8f-9740-4599-bd24-0c029e49bfcf/d89706a5/index.html
+- **Live URL**: <removed-external-preview-url>
 - **Git Commit**: c8b220c - "Implement comprehensive unavailability validation system"
 - **Branch**: feature/comprehensive-build-algorithm
 

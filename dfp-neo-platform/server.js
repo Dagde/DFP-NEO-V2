@@ -10,10 +10,7 @@ const require = createRequire(import.meta.url);
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SERVER_VERSION = '2026-04-28-v1'; // fix UUID generation + missing routes
-const DEFAULT_ALLOWED_ORIGINS = [
-  'https://dfp-neo-v2-production.up.railway.app',
-  'https://dfp-neo.com',
-];
+const DEFAULT_ALLOWED_ORIGINS = [];
 const DEVELOPMENT_ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5173',

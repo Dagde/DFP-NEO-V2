@@ -5,12 +5,6 @@
  */
 
 const getApiBase = (): string => {
-  if (typeof window !== 'undefined') {
-    const port = window.location.port;
-    if (port === '5173' || port === '3001' || port === '3002') {
-      return 'http://localhost:3000/api';
-    }
-  }
   return '/api';
 };
 

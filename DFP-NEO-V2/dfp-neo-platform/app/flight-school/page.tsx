@@ -86,7 +86,7 @@ function FlightSchoolContent() {
       // No valid session - redirect to website login
       console.log('[SSO] No valid session found, redirecting to login');
       setIsLoading(false);
-      window.location.href = 'https://dfp-neo.com/login';
+      window.location.href = '/login';
     };
 
     checkAuthentication();

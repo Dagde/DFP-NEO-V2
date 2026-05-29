@@ -35,7 +35,20 @@ enum APIServiceError: LocalizedError {
 final class APIService {
     static let shared = APIService()
 
-    private let baseURLString = "https://app.dfp-neo.com"  // ✅ CORRECTED: Changed from "https://dfp-neo.com"
+    var apiBaseURLString: String {
+        if let override = UserDefaults.standard.string(forKey: "dfpneo_api_base_url"),
+           !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return override
+        }
+
+        if let configured = Bundle.main.object(forInfoDictionaryKey: "DFPNeoAPIBaseURL") as? String,
+           !configured.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return configured
+        }
+
+        return ""
+    }
+    private var baseURLString: String { apiBaseURLString }
     private let apiPrefix = "/api"
 
     private let session: URLSession

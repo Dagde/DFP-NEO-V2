@@ -55,8 +55,8 @@ NEXTAUTH_SECRET=your-production-secret-key-here
 
 ### App URLs
 ```
-NEXT_PUBLIC_FLIGHT_SCHOOL_URL=https://dfp-neo-production.up.railway.app
-NEXT_PUBLIC_RECONNAISSANCE_URL=https://dfp-neo-v2-production.up.railway.app
+NEXT_PUBLIC_FLIGHT_SCHOOL_URL=<configured-dfp-neo-url>
+NEXT_PUBLIC_RECONNAISSANCE_URL=<configured-dfp-neo-v2-url>
 ```
 
 ## Step 4: Deploy and Test
@@ -77,9 +77,9 @@ NEXT_PUBLIC_RECONNAISSANCE_URL=https://dfp-neo-v2-production.up.railway.app
 ### Test App Redirects
 1. Login successfully
 2. On the select page, click "Flight School Edition"
-3. Should redirect to: https://dfp-neo-production.up.railway.app
+3. Should redirect to: <configured-dfp-neo-url>
 4. Click "Reconnaissance Edition"
-5. Should redirect to: https://dfp-neo-v2-production.up.railway.app
+5. Should redirect to: <configured-dfp-neo-v2-url>
 
 ### Test Authentication
 1. Try accessing protected routes directly

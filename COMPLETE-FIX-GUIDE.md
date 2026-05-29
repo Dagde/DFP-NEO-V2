@@ -46,7 +46,7 @@ enum APIServiceError: LocalizedError {
 final class APIService {
     static let shared = APIService()
 
-    private let baseURLString = "https://app.dfp-neo.com"
+    private let baseURLString = "<configured-api-host>"
     private let apiPrefix = "/api"
 
     private let session: URLSession

@@ -257,7 +257,7 @@ Renders all sections with data
 
 ✅ **Server Running**
 - Port: 8080
-- URL: https://8080-b39c057e-4830-4abd-863f-fca73bb33c40.sandbox-service.public.prod.myninja.ai
+- URL: <removed-external-preview-url>
 - Serving latest build
 
 ✅ **Git Status**

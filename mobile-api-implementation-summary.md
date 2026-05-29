@@ -12,7 +12,7 @@ Successfully added mobile API endpoints to DFP-NEO backend to support the iPhone
 ### 2. Server Configuration (server.js - Line 15-23)
 ```javascript
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'dfp-neo-secret-key-change-in-production';
+const JWT_SECRET = requireConfiguredSecret('JWT_SECRET', 'dfp-neo-development-jwt-secret');
 const JWT_ACCESS_EXPIRY = '1h';
 const JWT_REFRESH_EXPIRY = '7d';
 ```

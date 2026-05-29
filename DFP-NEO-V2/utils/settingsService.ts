@@ -107,12 +107,7 @@ let isSaving = false;
  * Get the API base URL depending on environment
  */
 const getApiBase = (): string => {
-  const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
-  const currentOrigin = window.location.origin;
-  if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) {
-    return '/api';
-  }
-  return `${railwayBackend}/api`;
+  return '/api';
 };
 
 /**

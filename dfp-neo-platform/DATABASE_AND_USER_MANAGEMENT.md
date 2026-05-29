@@ -63,19 +63,19 @@ enum Role {
 ### **Current Mock Users (Development)**
 1. **Admin User**
    - Username: `admin`
-   - Password: `admin123`
+   - Password: `<admin-password>`
    - Email: `admin@dfp-neo.com`
    - Role: `ADMIN`
 
 2. **Pilot User**
    - Username: `john.pilot`
-   - Password: `pilot123`
+   - Password: `<pilot-password>`
    - Email: `john.pilot@dfp-neo.com`
    - Role: `PILOT`
 
 3. **Instructor User**
    - Username: `jane.instructor`
-   - Password: `instructor123`
+   - Password: `<instructor-password>`
    - Email: `jane.instructor@dfp-neo.com`
    - Role: `INSTRUCTOR`
 
@@ -88,13 +88,13 @@ enum Role {
 
 2. **Pilot User**
    - Username: `john.pilot`
-   - Password: `Pilot2024!Secure`
+   - Password: `<pilot-password>`
    - Email: `john.pilot@dfp-neo.com`
    - Role: `PILOT`
 
 3. **Instructor User**
    - Username: `jane.instructor`
-   - Password: `Instructor2024!Secure`
+   - Password: `<instructor-password>`
    - Email: `jane.instructor@dfp-neo.com`
    - Role: `INSTRUCTOR`
 

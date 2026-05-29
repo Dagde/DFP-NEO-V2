@@ -14,7 +14,7 @@ interface TafWeatherWidgetProps {
 }
 
 const DEFAULT_LOCATIONS = ['YMES', 'YMEN', 'YMAY', 'YSCB', 'YLTV'];
-const AVWX_API_TOKEN = 'STWJquK4I2XUtqN-Vpw1eCIpOqmq0CHpd4LChbc17MY';
+const AVWX_API_TOKEN = ((import.meta as any).env?.VITE_AVWX_API_TOKEN || '').trim();
 const REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
@@ -44,6 +44,19 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
 
     // Fetch TAF data for a specific location
     const fetchTaf = async (icao: string) => {
+        if (!AVWX_API_TOKEN) {
+            setTafData(prev => {
+                const newMap = new Map(prev);
+                newMap.set(icao, {
+                    station: icao.toUpperCase(),
+                    raw: '',
+                    time: new Date().toLocaleTimeString(),
+                    error: 'TAF provider token is not configured'
+                });
+                return newMap;
+            });
+            return;
+        }
         setLoading(prev => new Set(prev).add(icao));
         try {
             const response = await fetch(
@@ -211,7 +224,14 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
                 </div>
             </div>
 
-            {isEditing ? (
+            {!AVWX_API_TOKEN && !isEditing ? (
+                <div className="rounded-lg border border-amber-700/50 bg-amber-900/20 p-4">
+                    <p className="text-sm font-semibold text-amber-300">Weather provider not configured</p>
+                    <p className="mt-1 text-xs text-amber-200/80">
+                        Set VITE_AVWX_API_TOKEN for deployments that are approved to request external TAF data.
+                    </p>
+                </div>
+            ) : isEditing ? (
                 <div className="space-y-3">
                     <p className="text-sm text-gray-400">Enter ICAO codes (e.g., YMES, YMEN)</p>
                     {editLocations.map((location, index) => (

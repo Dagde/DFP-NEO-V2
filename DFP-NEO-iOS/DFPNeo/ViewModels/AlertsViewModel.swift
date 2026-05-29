@@ -41,7 +41,7 @@ class AlertsViewModel: ObservableObject {
     }
 
     // MARK: - Load Alerts
-    // NOTE: Alerts API is at https://app.dfp-neo.com/api/alerts/:userId
+    // NOTE: Alerts API is at the configured API base /api/alerts/:userId
     // This is OUTSIDE the /api/mobile/ prefix - uses getRoot() method
 
     func loadAlerts() async {
@@ -57,7 +57,7 @@ class AlertsViewModel: ObservableObject {
         ) ?? userId
 
         let endpoint = "/alerts/\(encodedUserId)"
-        print("🔔 [Alerts] Loading alerts from: https://app.dfp-neo.com/api\(endpoint)")
+        print("🔔 [Alerts] Loading alerts from: \(APIService.shared.apiBaseURLString)/api\(endpoint)")
 
         do {
             let response: AlertsListResponse = try await APIService.shared.getRoot(endpoint)

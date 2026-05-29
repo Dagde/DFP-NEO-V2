@@ -40,8 +40,8 @@ npx tsx scripts/setup-production-users.ts
 
 ### 4. Test Login
 - Username: `admin` / Password: `Admin2024!Secure`
-- Username: `john.pilot` / Password: `Pilot2024!Secure`
-- Username: `jane.instructor` / Password: `Instructor2024!Secure`
+- Username: `john.pilot` / Password: `<pilot-password>`
+- Username: `jane.instructor` / Password: `<instructor-password>`
 
 ## 🔐 Security Features Already Built
 

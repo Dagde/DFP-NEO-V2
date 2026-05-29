@@ -29,7 +29,6 @@
     .status { color: #aaa; font-size: 14px; }
     .error { color: #f87171; font-size: 14px; text-align: center; max-width: 400px; }
   </style>
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
 <body>
   <div class="spinner" id="spinner"></div>
@@ -49,7 +48,7 @@
       console.error('[SSO Error]', msg);
     }
     function redirectToLogin() {
-      setTimeout(() => { window.location.href = 'https://dfp-neo.com/login'; }, 2000);
+      setTimeout(() => { window.location.href = '/login'; }, 2000);
     }
 
     async function authenticate() {

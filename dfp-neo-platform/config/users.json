@@ -6,7 +6,7 @@
       "role": "PILOT",
       "firstName": "Mike",
       "lastName": "Johnson",
-      "temporaryPassword": "Pilot2024!Secure"
+      "temporaryPassword": ""
     },
     {
       "username": "sarah.instructor", 
@@ -14,7 +14,7 @@
       "role": "INSTRUCTOR",
       "firstName": "Sarah",
       "lastName": "Davis",
-      "temporaryPassword": "Instructor2024!Secure"
+      "temporaryPassword": ""
     }
   ]
 }

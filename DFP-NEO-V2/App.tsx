@@ -4691,7 +4691,7 @@ const App: React.FC = () => {
 
                         const apiBase = window.location.origin.includes('railway.app')
                             ? '/api'
-                            : 'https://dfp-neo-v2-production.up.railway.app/api';
+                            : '/api';
 
                         // Build pt051Completions map: traineeFullName → [completedFlightNumbers]
                         // This covers PT-051 assessments saved in DailySnapshot that may not yet
@@ -4986,7 +4986,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const loadHistoricalData = async () => {
             try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : '/api';
 
                 // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
                 try {
@@ -5111,7 +5111,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const loadSnapshotDates = async () => {
             try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : '/api';
                 const res = await fetch(`${apiBase}/daily-snapshot/dates`);
                 if (!res.ok) return;
                 const data = await res.json();
@@ -5132,7 +5132,7 @@ const App: React.FC = () => {
         if (loadedSnapshotDates.current.has(targetDate)) return; // already loaded
         loadedSnapshotDates.current.add(targetDate); // mark as attempted
         try {
-            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : '/api';
             const res = await fetch(`${apiBase}/daily-snapshot/${targetDate}`);
             if (!res.ok) return; // 404 = no snapshot for that date, that's fine
             const data = await res.json();
@@ -5580,16 +5580,7 @@ const App: React.FC = () => {
 
     // Helper: get the correct API base URL for cross-origin deployments
     const getApiBaseUrl = (): string => {
-        const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
-        const currentOrigin = window.location.origin;
-        
-        // If we're on the Railway backend, use relative URL
-        if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) {
-            return '/api';
-        }
-        
-        // Otherwise, use absolute URL to the Railway backend
-        return `${railwayBackend}/api`;
+        return '/api';
     };
 
     // Helper: post an aircraft availability event to the database
@@ -9645,7 +9636,7 @@ const App: React.FC = () => {
             if (activeTraineeNames.length > 0) {
                 const apiBase = window.location.origin.includes('railway.app')
                     ? '/api'
-                    : 'https://dfp-neo-v2-production.up.railway.app/api';
+                    : '/api';
 
                 const elceRes = await fetch(`${apiBase}/event-completions/elce`, {
                     method: 'POST',
@@ -11370,7 +11361,7 @@ updates.forEach(update => {
 
         const pollUnavailability = async () => {
             try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : '/api';
                 const [personnelRes, traineesRes] = await Promise.all([
                     fetch(`${apiBase}/personnel`, { credentials: 'include' }),
                     fetch(`${apiBase}/trainees`,  { credentials: 'include' }),
@@ -11443,7 +11434,7 @@ updates.forEach(update => {
     useEffect(() => {
         const pollAlerts = async () => {
             try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : '/api';
                 const res = await fetch(`${apiBase}/daily-snapshot/${date}`);
                 if (!res.ok) return;
                 const data = await res.json();
@@ -15409,7 +15400,7 @@ updates.forEach(update => {
 
                                 const apiBase = window.location.origin.includes('railway.app')
                                     ? '/api'
-                                    : 'https://dfp-neo-v2-production.up.railway.app/api';
+                                    : '/api';
 
                                 const res = await fetch(`${apiBase}/trainees/${(trainee as any).id}/lmp`, {
                                     method: 'PUT',

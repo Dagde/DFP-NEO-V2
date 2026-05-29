@@ -91,7 +91,7 @@ struct ProfileView: View {
                             ProfileInfoRow(
                                 icon: "server.rack",
                                 title: "Server",
-                                value: "app.dfp-neo.com"
+                                value: APIService.shared.apiBaseURLString.isEmpty ? "Not configured" : APIService.shared.apiBaseURLString
                             )
                         }
                         .background(Color.gray.opacity(0.15))

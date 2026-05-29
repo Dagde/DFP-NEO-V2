@@ -17,10 +17,7 @@ interface HistoricalDataSeederProps {
     onDataSeeded?: () => void;
 }
 
-const apiBase = () =>
-    window.location.origin.includes('railway.app')
-        ? '/api'
-        : 'https://dfp-neo-v2-production.up.railway.app/api';
+const apiBase = () => '/api';
 
 export const HistoricalDataSeeder: React.FC<HistoricalDataSeederProps> = ({ onClose, onDataSeeded }) => {
     const [status, setStatus] = useState<'idle' | 'loading' | 'seeding' | 'refreshing' | 'clearing' | 'done' | 'error'>('idle');

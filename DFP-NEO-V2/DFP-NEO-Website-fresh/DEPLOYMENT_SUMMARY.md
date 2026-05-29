@@ -198,7 +198,7 @@ And pushed to: https://github.com/Dagde/DFP-NEO-Website
 
 4. NEXT_PUBLIC_FLIGHT_SCHOOL_URL
    Where: Your existing DFP-NEO Railway URL
-   Format: https://dfp-neo-production.up.railway.app
+   Format: <configured-dfp-neo-url>
    Purpose: Redirect to Flight School app
 
 5. NEXT_PUBLIC_RECONNAISSANCE_URL
