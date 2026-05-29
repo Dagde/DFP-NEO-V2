@@ -33,18 +33,22 @@ const cookieParser = require('cookie-parser');
 // JWT for mobile API authentication
 import jwt from 'jsonwebtoken';
 
-function requireConfiguredSecret(name, developmentFallback) {
-  const value = process.env[name];
-  if (value && value.trim()) return value;
+function requireConfiguredSecret(name, developmentFallback, aliases = []) {
+  const candidates = [name, ...aliases];
+  for (const candidate of candidates) {
+    const value = process.env[candidate];
+    if (value && value.trim()) return value;
+  }
   if (process.env.NODE_ENV === 'production') {
-    throw new Error(`${name} must be configured in production`);
+    const alternatives = aliases.length ? ` or ${aliases.join(' / ')}` : '';
+    throw new Error(`${name}${alternatives} must be configured in production`);
   }
   console.warn(`⚠️ ${name} is not configured; using development-only fallback.`);
   return developmentFallback;
 }
 
 // JWT Configuration
-const JWT_SECRET = requireConfiguredSecret('JWT_SECRET', 'dfp-neo-development-jwt-secret');
+const JWT_SECRET = requireConfiguredSecret('JWT_SECRET', 'dfp-neo-development-jwt-secret', ['NEXTAUTH_SECRET', 'AUTH_SECRET']);
 const JWT_ACCESS_EXPIRY = '1h';
 const JWT_REFRESH_EXPIRY = '7d';
 
