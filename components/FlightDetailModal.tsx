@@ -1139,17 +1139,60 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     // Helper function to get current deployments
     const getCurrentDeployments = (): ScheduleEvent[] => {
         const deployments: ScheduleEvent[] = [];
+        const targetDate = event.date;
+
+        const parseClock = (clock?: string): number | null => {
+            if (!clock) return null;
+            const match = clock.match(/^(\d{1,2}):?(\d{2})$/);
+            if (!match) return null;
+            return Number(match[1]) + Number(match[2]) / 60;
+        };
+
+        const dateTimeMs = (dateStr: string, hours: number): number =>
+            new Date(`${dateStr}T00:00:00Z`).getTime() + hours * 60 * 60 * 1000;
+
+        const deploymentOverlapsTargetDate = (deployment: ScheduleEvent): boolean => {
+            if (!targetDate || deployment.isCancelled) return false;
+
+            const dayStart = new Date(`${targetDate}T00:00:00Z`).getTime();
+            const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+            const deploymentStartDate = deployment.deploymentStartDate || deployment.date;
+            const deploymentStartTime = parseClock(deployment.deploymentStartTime) ?? deployment.startTime ?? 0;
+            const deploymentStart = dateTimeMs(deploymentStartDate, deploymentStartTime);
+
+            let deploymentEnd: number;
+            if (deployment.deploymentEndDate && deployment.deploymentEndTime) {
+                deploymentEnd = dateTimeMs(
+                    deployment.deploymentEndDate,
+                    parseClock(deployment.deploymentEndTime) ?? ((deployment.startTime || 0) + (deployment.duration || 0))
+                );
+            } else {
+                deploymentEnd = deploymentStart + (deployment.duration || 0) * 60 * 60 * 1000;
+            }
+
+            return deploymentStart < dayEnd && deploymentEnd > dayStart;
+        };
         
         // Get deployments from published schedules for Program Schedule view
         if (['Program Schedule', 'DailyFlyingProgram', 'InstructorSchedule', 'TraineeSchedule'].includes(activeView)) {
-            Object.values(publishedSchedules).forEach(scheduleEvents => {
-                const todayDeployments = scheduleEvents.filter(e => e.type === 'deployment');
+            const relevantSchedules = targetDate
+                ? Object.values(publishedSchedules)
+                : [];
+            relevantSchedules.forEach(scheduleEvents => {
+                const todayDeployments = scheduleEvents.filter(e =>
+                    e.type === 'deployment' &&
+                    deploymentOverlapsTargetDate(e)
+                );
                 deployments.push(...todayDeployments);
             });
         } 
         // Get deployments from next day build for Next Day Build view
         else if (['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView)) {
-            const buildDeployments = nextDayBuildEvents.filter(e => e.type === 'deployment');
+            const buildDeployments = nextDayBuildEvents.filter(e =>
+                e.type === 'deployment' &&
+                !e.isCancelled &&
+                deploymentOverlapsTargetDate({ ...e, date: e.date || targetDate } as ScheduleEvent)
+            );
             deployments.push(...buildDeployments);
         }
         
@@ -1165,7 +1208,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             return false;
         });
         
-        return compatibleDeployments;
+        return Array.from(new Map(compatibleDeployments.map(deployment => [deployment.id, deployment])).values());
     };
 
     // Helper function to format deployment title

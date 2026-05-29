@@ -819,7 +819,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   };
 
   const shadowClass = isDragging ? 'shadow-xl' : 'shadow-md';
-  const commonClasses = `absolute rounded-sm ${isDraggable ? 'cursor-grab' : 'cursor-pointer'} transition-all duration-200 ${isDragging ? 'opacity-80 z-50' : 'z-10'} ${shadowClass}`;
+  const stackClass = isDragging ? 'opacity-80 z-50' : event.type === 'deployment' ? 'z-[6]' : 'z-[12]';
+  const commonClasses = `absolute rounded-sm ${isDraggable ? 'cursor-grab' : 'cursor-pointer'} transition-all duration-200 ${stackClass} ${shadowClass}`;
 
   // Use isHexColorEarly (defined above) for hex color detection
   const isHexColor = isHexColorEarly;

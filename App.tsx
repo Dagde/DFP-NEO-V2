@@ -14844,6 +14844,17 @@ const App: React.FC = () => {
                     const _newEventsForDate = eventsToSave.filter(e => e.date === d);
                     persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate]);
                 });
+
+                // Keep deployment assignment behaviour consistent whether the user
+                // ticks the Flight Details deployment box or drags a tile onto the
+                // Deployed row.
+                setTimeout(() => {
+                    setPublishedSchedules(currentSchedules => {
+                        const allEvents = Object.values(currentSchedules).flat();
+                        void handleDeploymentUnavailability(allEvents);
+                        return currentSchedules;
+                    });
+                }, 600);
             }
         }
 

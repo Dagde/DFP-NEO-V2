@@ -893,7 +893,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     // Render loop for events
     const renderEvents = () => {
         return resources.flatMap((resource, rowIndex) => {
-            const resourceEvents = events.filter(e => e.resourceId === resource);
+            const resourceEvents = events
+                .filter(e => e.resourceId === resource)
+                .sort((a, b) => {
+                    if (a.type === 'deployment' && b.type !== 'deployment') return -1;
+                    if (a.type !== 'deployment' && b.type === 'deployment') return 1;
+                    return a.startTime - b.startTime;
+                });
             return resourceEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;

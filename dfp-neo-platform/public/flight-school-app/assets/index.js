@@ -5230,7 +5230,8 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     ] });
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
-  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
+  const stackClass = isDragging ? "opacity-80 z-50" : event.type === "deployment" ? "z-[6]" : "z-[12]";
+  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${stackClass} ${shadowClass}`;
   isHexColorEarly(event.color || "");
   const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : resolvedBgColor ? "" : event.color;
   const ringClass = getDynamicRingClass();
@@ -6699,7 +6700,11 @@ const ScheduleView = ({
   };
   const renderEvents = () => {
     return resources.flatMap((resource, rowIndex) => {
-      const resourceEvents = events.filter((e) => e.resourceId === resource);
+      const resourceEvents = events.filter((e) => e.resourceId === resource).sort((a, b) => {
+        if (a.type === "deployment" && b.type !== "deployment") return -1;
+        if (a.type !== "deployment" && b.type === "deployment") return 1;
+        return a.startTime - b.startTime;
+      });
       return resourceEvents.map((event) => {
         const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
         const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
@@ -13987,13 +13992,44 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   }, [flightNumber, syllabusDetails]);
   const getCurrentDeployments = () => {
     const deployments = [];
+    const targetDate = event.date;
+    const parseClock = (clock) => {
+      if (!clock) return null;
+      const match = clock.match(/^(\d{1,2}):?(\d{2})$/);
+      if (!match) return null;
+      return Number(match[1]) + Number(match[2]) / 60;
+    };
+    const dateTimeMs = (dateStr, hours) => (/* @__PURE__ */ new Date(`${dateStr}T00:00:00Z`)).getTime() + hours * 60 * 60 * 1e3;
+    const deploymentOverlapsTargetDate = (deployment) => {
+      if (!targetDate || deployment.isCancelled) return false;
+      const dayStart = (/* @__PURE__ */ new Date(`${targetDate}T00:00:00Z`)).getTime();
+      const dayEnd = dayStart + 24 * 60 * 60 * 1e3;
+      const deploymentStartDate2 = deployment.deploymentStartDate || deployment.date;
+      const deploymentStartTime2 = parseClock(deployment.deploymentStartTime) ?? deployment.startTime ?? 0;
+      const deploymentStart = dateTimeMs(deploymentStartDate2, deploymentStartTime2);
+      let deploymentEnd;
+      if (deployment.deploymentEndDate && deployment.deploymentEndTime) {
+        deploymentEnd = dateTimeMs(
+          deployment.deploymentEndDate,
+          parseClock(deployment.deploymentEndTime) ?? (deployment.startTime || 0) + (deployment.duration || 0)
+        );
+      } else {
+        deploymentEnd = deploymentStart + (deployment.duration || 0) * 60 * 60 * 1e3;
+      }
+      return deploymentStart < dayEnd && deploymentEnd > dayStart;
+    };
     if (["Program Schedule", "DailyFlyingProgram", "InstructorSchedule", "TraineeSchedule"].includes(activeView)) {
-      Object.values(publishedSchedules).forEach((scheduleEvents) => {
-        const todayDeployments = scheduleEvents.filter((e) => e.type === "deployment");
+      const relevantSchedules = targetDate ? Object.values(publishedSchedules) : [];
+      relevantSchedules.forEach((scheduleEvents) => {
+        const todayDeployments = scheduleEvents.filter(
+          (e) => e.type === "deployment" && deploymentOverlapsTargetDate(e)
+        );
         deployments.push(...todayDeployments);
       });
     } else if (["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView)) {
-      const buildDeployments = nextDayBuildEvents.filter((e) => e.type === "deployment");
+      const buildDeployments = nextDayBuildEvents.filter(
+        (e) => e.type === "deployment" && !e.isCancelled && deploymentOverlapsTargetDate({ ...e, date: e.date || targetDate })
+      );
       deployments.push(...buildDeployments);
     }
     const compatibleDeployments = deployments.filter((deployment) => {
@@ -14006,7 +14042,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       }
       return false;
     });
-    return compatibleDeployments;
+    return Array.from(new Map(compatibleDeployments.map((deployment) => [deployment.id, deployment])).values());
   };
   const formatDeploymentTitle = (deployment) => {
     const formatTime2 = (time) => {
@@ -82492,6 +82528,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           const _newEventsForDate = eventsToSave.filter((e) => e.date === d);
           persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate]);
         });
+        setTimeout(() => {
+          setPublishedSchedules((currentSchedules) => {
+            const allEvents = Object.values(currentSchedules).flat();
+            void handleDeploymentUnavailability(allEvents);
+            return currentSchedules;
+          });
+        }, 600);
       }
     }
     eventsToSave.forEach((event) => {
