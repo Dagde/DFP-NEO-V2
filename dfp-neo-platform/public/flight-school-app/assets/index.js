@@ -24285,7 +24285,7 @@ const TraineeTab = ({ trainees }) => {
   const [progressionModal, setProgressionModal] = reactExports.useState(null);
   const [gradeByTraineeModal, setGradeByTraineeModal] = reactExports.useState(false);
   const [detailTimelineZoom, setDetailTimelineZoom] = reactExports.useState(0);
-  const traineeRisk = useMemo(() => {
+  const traineeRisk = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
     trainees.forEach((t) => map.set(t.id, evaluateTraineeRisk(t, thresholds)));
     return map;
