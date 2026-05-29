@@ -1250,6 +1250,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateRow('locations', index, changes);
   };
 
+  const addLocation = () => {
+    setConfig((prev) => {
+      const existingCodes = new Set(prev.locations.map((location) => String(location.code || '').toUpperCase()));
+      let nextIndex = prev.locations.length + 1;
+      let code = `LOC-${nextIndex}`;
+      while (existingCodes.has(code)) {
+        nextIndex += 1;
+        code = `LOC-${nextIndex}`;
+      }
+      const referenceLocation = prev.locations[0] || {};
+      return {
+        ...prev,
+        locations: [
+          ...prev.locations,
+          {
+            organisationCode: prev.organisations[0]?.code || 'DEFAULT',
+            code,
+            name: 'New Location',
+            timezoneOffset: referenceLocation.timezoneOffset ?? 10,
+            latitude: null,
+            longitude: null,
+            timezone: '',
+            trainingAreas: [],
+            status: 'ACTIVE',
+            settings: {},
+          },
+        ],
+      };
+    });
+  };
+
   const addUnit = () => {
     const defaultLocation = config.locations[0]?.code || 'ESL';
     setConfig((prev) => ({
@@ -1829,7 +1860,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       </section>
 
       <section id="platform-organisation-locations" className={getSectionClass('platform-organisation-locations')}>
-        <SectionHeader title="Organisation & Locations" subtitle="The top of the hierarchy: customer, base, timezone, and training areas." />
+        <SectionHeader
+          title="Organisation & Locations"
+          subtitle="The top of the hierarchy: customer, base, timezone, and training areas."
+          action={canEdit ? <button type="button" onClick={addLocation} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Location</button> : null}
+        />
         <div className="space-y-4 p-4">
           {config.organisations.map((org, index) => (
             <div key={org.id || org.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">

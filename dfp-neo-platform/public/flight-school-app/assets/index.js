@@ -42831,6 +42831,36 @@ const PlatformConfigurationSettings = ({
     }
     updateRow("locations", index, changes);
   };
+  const addLocation = () => {
+    setConfig((prev) => {
+      const existingCodes = new Set(prev.locations.map((location) => String(location.code || "").toUpperCase()));
+      let nextIndex = prev.locations.length + 1;
+      let code = `LOC-${nextIndex}`;
+      while (existingCodes.has(code)) {
+        nextIndex += 1;
+        code = `LOC-${nextIndex}`;
+      }
+      const referenceLocation = prev.locations[0] || {};
+      return {
+        ...prev,
+        locations: [
+          ...prev.locations,
+          {
+            organisationCode: prev.organisations[0]?.code || "DEFAULT",
+            code,
+            name: "New Location",
+            timezoneOffset: referenceLocation.timezoneOffset ?? 10,
+            latitude: null,
+            longitude: null,
+            timezone: "",
+            trainingAreas: [],
+            status: "ACTIVE",
+            settings: {}
+          }
+        ]
+      };
+    });
+  };
   const addUnit = () => {
     const defaultLocation = config.locations[0]?.code || "ESL";
     setConfig((prev) => ({
@@ -43290,7 +43320,14 @@ const PlatformConfigurationSettings = ({
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-organisation-locations", className: getSectionClass("platform-organisation-locations"), children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Organisation & Locations", subtitle: "The top of the hierarchy: customer, base, timezone, and training areas." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Organisation & Locations",
+          subtitle: "The top of the hierarchy: customer, base, timezone, and training areas.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLocation, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Location" }) : null
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         config.organisations.map((org, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { code: value }) }),
