@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const db = prisma as any;
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
 // Handle OPTIONS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // GET /api/syllabus - Fetch all active syllabus items (used at app startup)
@@ -32,19 +28,19 @@ export async function GET(request: NextRequest) {
 
     console.log('📚 [API] /api/syllabus - Querying database');
 
-    const syllabusItems = await prisma.syllabusItem.findMany({
+    const syllabusItems = await db.syllabusItem.findMany({
       where,
       orderBy: { sortOrder: 'asc' },
     });
 
     console.log(`📚 [API] /api/syllabus - Returning ${syllabusItems.length} items`);
     // Return as both 'syllabus' and 'syllabusItems' for compatibility
-    return NextResponse.json({ syllabus: syllabusItems, syllabusItems }, { headers: CORS_HEADERS });
+    return NextResponse.json({ syllabus: syllabusItems, syllabusItems }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('❌ Error fetching syllabus:', error);
     return NextResponse.json(
       { error: 'Failed to fetch syllabus configuration', retryAfter: 60 },
-      { status: 503, headers: CORS_HEADERS }
+      { status: 503, headers: getCorsHeaders(request) }
     );
   }
 }
@@ -57,15 +53,15 @@ export async function POST(request: NextRequest) {
     if (!body.code || !body.eventDescription || !body.type) {
       return NextResponse.json(
         { error: 'Missing required fields: code, eventDescription, type' },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400, headers: getCorsHeaders(request) }
       );
     }
 
-    const existing = await prisma.syllabusItem.findUnique({ where: { code: body.code } });
+    const existing = await db.syllabusItem.findUnique({ where: { code: body.code } });
     if (existing) {
       return NextResponse.json(
         { error: `Syllabus item with code "${body.code}" already exists` },
-        { status: 409, headers: CORS_HEADERS }
+        { status: 409, headers: getCorsHeaders(request) }
       );
     }
 
@@ -80,10 +76,10 @@ export async function POST(request: NextRequest) {
       else if (body.code.startsWith('OFI')) phase = 'OFI';
     }
 
-    const maxOrder = await prisma.syllabusItem.aggregate({ _max: { sortOrder: true } });
+    const maxOrder = await db.syllabusItem.aggregate({ _max: { sortOrder: true } });
     const nextSortOrder = (maxOrder._max.sortOrder ?? 0) + 1;
 
-    const newItem = await prisma.syllabusItem.create({
+    const newItem = await db.syllabusItem.create({
       data: {
         code: body.code,
         eventDescription: body.eventDescription,
@@ -120,7 +116,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await prisma.syllabusHistory.create({
+    await db.syllabusHistory.create({
       data: {
         syllabusItemId: newItem.id,
         changeType: 'CREATE',
@@ -131,9 +127,9 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(`✅ [API] Created syllabus item: ${newItem.code}`);
-    return NextResponse.json({ syllabusItem: newItem }, { status: 201, headers: CORS_HEADERS });
+    return NextResponse.json({ syllabusItem: newItem }, { status: 201, headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('❌ Error creating syllabus item:', error);
-    return NextResponse.json({ error: 'Failed to create syllabus item' }, { status: 500, headers: CORS_HEADERS });
+    return NextResponse.json({ error: 'Failed to create syllabus item' }, { status: 500, headers: getCorsHeaders(request) });
   }
 }

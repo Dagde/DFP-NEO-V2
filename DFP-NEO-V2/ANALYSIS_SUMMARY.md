@@ -18,7 +18,7 @@ DFP-NEO-V2 is a comprehensive **Daily Flying Program (DFP) management system** f
 | **Database** | PostgreSQL with Prisma ORM 6.0 |
 | **UI Libraries** | Bootstrap 5.3, Heroicons React |
 | **PDF Generation** | jsPDF, html2canvas |
-| **AI Integration** | Google Gemini AI (@google/genai) |
+| **AI Integration** | Removed |
 
 ---
 

@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // GET /api/aircraft - Get all aircraft with optional filtering
@@ -40,12 +35,12 @@ export async function GET(request: NextRequest) {
       orderBy: { aircraftNumber: 'asc' },
     });
 
-    return NextResponse.json({ aircraft }, { headers: CORS_HEADERS });
+    return NextResponse.json({ aircraft }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('Error fetching aircraft:', error);
     return NextResponse.json(
       { error: 'Failed to fetch aircraft' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   } finally {
     await prisma.$disconnect();

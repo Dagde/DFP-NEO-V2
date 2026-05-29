@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
 
 const getMasterEventId = (item: any): string => item?.masterEventId || item?.id || item?.code || '';
 const createLmpOrderKey = (index: number): string => String(index + 1).padStart(5, '0');
@@ -131,8 +127,8 @@ const mergeIndividualLmpWithMaster = (
   return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || ''))];
 };
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // GET /api/trainees/lmp-sync
@@ -156,12 +152,12 @@ export async function GET(request: NextRequest) {
       orderBy: { traineeFullName: 'asc' },
     });
 
-    return NextResponse.json({ lmps, count: lmps.length }, { headers: CORS_HEADERS });
+    return NextResponse.json({ lmps, count: lmps.length }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[LMP Sync GET] Error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch LMP completions' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }
@@ -182,7 +178,7 @@ export async function POST(request: NextRequest) {
     if (!syllabusData || Object.keys(syllabusData).length === 0) {
       return NextResponse.json(
         { error: 'Missing syllabusData in request body' },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400, headers: getCorsHeaders(request) }
       );
     }
 
@@ -305,13 +301,13 @@ export async function POST(request: NextRequest) {
         summary: { created, updated, unchanged, noSyllabus, total: trainees.length },
         results,
       },
-      { headers: CORS_HEADERS }
+      { headers: getCorsHeaders(request) }
     );
   } catch (error) {
     console.error('[LMP Sync POST] Error:', error);
     return NextResponse.json(
       { error: 'Failed to sync LMPs', details: error instanceof Error ? error.message : String(error) },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }

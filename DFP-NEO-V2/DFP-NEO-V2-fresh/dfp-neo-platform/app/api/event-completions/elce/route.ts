@@ -38,19 +38,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import {
   getElceForTrainee,
   getBulkElceForTrainees,
 } from '../../../../lib/eventCompletionService';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // ─── GET /api/event-completions/elce ─────────────────────────────────────────
@@ -80,7 +76,7 @@ export async function GET(request: NextRequest) {
     if (!traineeFullName || !buildDate) {
       return NextResponse.json(
         { error: 'Both traineeFullName and buildDate query parameters are required' },
-        { status: 400, headers: CORS_HEADERS },
+        { status: 400, headers: getCorsHeaders(request) },
       );
     }
 
@@ -88,7 +84,7 @@ export async function GET(request: NextRequest) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(buildDate)) {
       return NextResponse.json(
         { error: 'buildDate must be in YYYY-MM-DD format' },
-        { status: 400, headers: CORS_HEADERS },
+        { status: 400, headers: getCorsHeaders(request) },
       );
     }
 
@@ -96,13 +92,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       { elce, traineeFullName, buildDate },
-      { headers: CORS_HEADERS },
+      { headers: getCorsHeaders(request) },
     );
   } catch (error) {
     console.error('[ELCE GET] Error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch ELCE' },
-      { status: 500, headers: CORS_HEADERS },
+      { status: 500, headers: getCorsHeaders(request) },
     );
   }
 }
@@ -156,21 +152,21 @@ export async function POST(request: NextRequest) {
     if (!Array.isArray(traineeFullNames) || traineeFullNames.length === 0) {
       return NextResponse.json(
         { error: 'traineeFullNames must be a non-empty array of strings' },
-        { status: 400, headers: CORS_HEADERS },
+        { status: 400, headers: getCorsHeaders(request) },
       );
     }
 
     if (!buildDate || !/^\d{4}-\d{2}-\d{2}$/.test(buildDate)) {
       return NextResponse.json(
         { error: 'buildDate is required and must be in YYYY-MM-DD format' },
-        { status: 400, headers: CORS_HEADERS },
+        { status: 400, headers: getCorsHeaders(request) },
       );
     }
 
     if (traineeFullNames.length > 500) {
       return NextResponse.json(
         { error: 'traineeFullNames may contain at most 500 entries per request' },
-        { status: 400, headers: CORS_HEADERS },
+        { status: 400, headers: getCorsHeaders(request) },
       );
     }
 
@@ -187,13 +183,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { elceMap, buildDate, count },
-      { headers: CORS_HEADERS },
+      { headers: getCorsHeaders(request) },
     );
   } catch (error) {
     console.error('[ELCE POST] Error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch bulk ELCE data' },
-      { status: 500, headers: CORS_HEADERS },
+      { status: 500, headers: getCorsHeaders(request) },
     );
   }
 }

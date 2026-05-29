@@ -8,6 +8,7 @@
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const db = prisma as any;
 
 interface SyllabusItemSeed {
   code: string;
@@ -293,7 +294,7 @@ async function seedSyllabus() {
   console.log('📚 Starting SyllabusItem database seeding...');
   console.log(`   Found ${syllabusItems.length} syllabus items to seed`);
 
-  const existing = await prisma.syllabusItem.count();
+  const existing = await db.syllabusItem.count();
   if (existing > 0) {
     console.log(`⚠️  Database already has ${existing} syllabus items.`);
     if (!process.argv.includes('--force')) {
@@ -301,7 +302,7 @@ async function seedSyllabus() {
       return;
     }
     console.log('   --force flag detected. Clearing existing items...');
-    await prisma.syllabusItem.deleteMany();
+    await db.syllabusItem.deleteMany();
   }
 
   let created = 0;
@@ -309,7 +310,7 @@ async function seedSyllabus() {
 
   for (const item of syllabusItems) {
     try {
-      await prisma.syllabusItem.create({
+      await db.syllabusItem.create({
         data: {
           code: item.code,
           eventDescription: item.eventDescription,
@@ -356,9 +357,9 @@ async function seedSyllabus() {
   console.log(`\n\n✅ Seeding complete! Created: ${created} items${failed > 0 ? `, Failed: ${failed}` : ''}`);
 
   // Log to history
-  const seededItems = await prisma.syllabusItem.findMany({ select: { id: true, code: true } });
+  const seededItems = await db.syllabusItem.findMany({ select: { id: true, code: true } });
   for (const item of seededItems) {
-    await prisma.syllabusHistory.create({
+    await db.syllabusHistory.create({
       data: {
         syllabusItemId: item.id,
         changeType: 'CREATE',

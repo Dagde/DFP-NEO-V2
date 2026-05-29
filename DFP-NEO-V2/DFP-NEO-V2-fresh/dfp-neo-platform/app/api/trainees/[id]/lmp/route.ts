@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // GET /api/trainees/[id]/lmp
@@ -33,15 +29,15 @@ export async function GET(
     });
 
     if (!lmp) {
-      return NextResponse.json({ lmp: null }, { headers: CORS_HEADERS });
+      return NextResponse.json({ lmp: null }, { headers: getCorsHeaders(request) });
     }
 
-    return NextResponse.json({ lmp }, { headers: CORS_HEADERS });
+    return NextResponse.json({ lmp }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[LMP GET] Error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch LMP' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }
@@ -61,7 +57,7 @@ export async function PUT(
     if (!traineeFullName || !lmpType || !events) {
       return NextResponse.json(
         { error: 'Missing required fields: traineeFullName, lmpType, events' },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400, headers: getCorsHeaders(request) }
       );
     }
 
@@ -83,12 +79,12 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ success: true, lmp }, { headers: CORS_HEADERS });
+    return NextResponse.json({ success: true, lmp }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[LMP PUT] Error:', error);
     return NextResponse.json(
       { error: 'Failed to save LMP' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }

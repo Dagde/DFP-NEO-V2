@@ -35,8 +35,6 @@ export default defineConfig({
   plugins: [react()],
   define: {
     'process.env.API_KEY': JSON.stringify(''),
-    'process.env.GEMINI_API_KEY': JSON.stringify(''),
-    'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(''),
     '__DEFINES__': '{}',
     '__COMMIT_HASH__': JSON.stringify(commitHash)
   },

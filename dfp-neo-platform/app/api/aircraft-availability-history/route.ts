@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { prisma } from '../../../lib/db/prisma';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 /**
@@ -36,12 +31,12 @@ export async function GET(request: NextRequest) {
       orderBy: { date: 'asc' },
     });
 
-    return NextResponse.json({ records }, { headers: CORS_HEADERS });
+    return NextResponse.json({ records }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[AV-HISTORY] GET error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch history', details: String(error) },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   } finally {
     
@@ -63,7 +58,7 @@ export async function POST(request: NextRequest) {
     if (!date) {
       return NextResponse.json(
         { error: 'date is required' },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400, headers: getCorsHeaders(request) }
       );
     }
 
@@ -76,7 +71,7 @@ export async function POST(request: NextRequest) {
       console.log(`[AV-HISTORY] Summary for ${date} is recent, skipping recalculation`);
       return NextResponse.json(
         { skipped: true, reason: 'recent', record: existing },
-        { headers: CORS_HEADERS }
+        { headers: getCorsHeaders(request) }
       );
     }
 
@@ -90,7 +85,7 @@ export async function POST(request: NextRequest) {
       console.log(`[AV-HISTORY] No events for ${date}, cannot rebuild summary`);
       return NextResponse.json(
         { skipped: true, reason: 'no_events' },
-        { headers: CORS_HEADERS }
+        { headers: getCorsHeaders(request) }
       );
     }
 
@@ -185,13 +180,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { success: true, record },
-      { headers: CORS_HEADERS }
+      { headers: getCorsHeaders(request) }
     );
   } catch (error) {
     console.error('[AV-HISTORY] POST error:', error);
     return NextResponse.json(
       { error: 'Failed to recalculate summary', details: String(error) },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   } finally {
     

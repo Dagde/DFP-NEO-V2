@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { prisma } from '../../../lib/db/prisma';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // GET /api/settings - Load app settings
@@ -23,15 +18,15 @@ export async function GET(request: NextRequest) {
     });
 
     if (!settings) {
-      return NextResponse.json({ settings: null }, { headers: CORS_HEADERS });
+      return NextResponse.json({ settings: null }, { headers: getCorsHeaders(request) });
     }
 
-    return NextResponse.json({ settings: settings.data }, { headers: CORS_HEADERS });
+    return NextResponse.json({ settings: settings.data }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[Settings] GET error:', error);
     return NextResponse.json(
       { error: 'Failed to load settings' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }
@@ -45,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (!settings) {
       return NextResponse.json(
         { error: 'Missing settings data' },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400, headers: getCorsHeaders(request) }
       );
     }
 
@@ -65,13 +60,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { success: true, id: result.id },
-      { headers: CORS_HEADERS }
+      { headers: getCorsHeaders(request) }
     );
   } catch (error) {
     console.error('[Settings] POST error:', error);
     return NextResponse.json(
       { error: 'Failed to save settings' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }

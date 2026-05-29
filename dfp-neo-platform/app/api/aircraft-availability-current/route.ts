@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { prisma } from '../../../lib/db/prisma';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 /**
@@ -17,7 +12,7 @@ export async function OPTIONS() {
  * Returns the most recent aircraft availability event (any date).
  * Used on app startup to restore persisted availability across hard refreshes.
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const latest = await prisma.aircraftAvailabilityEvent.findFirst({
       orderBy: { timestamp: 'desc' },
@@ -26,7 +21,7 @@ export async function GET(_request: NextRequest) {
     if (!latest) {
       return NextResponse.json(
         { success: true, availableCount: 15, isDefault: true, message: 'No events found, using default' },
-        { headers: CORS_HEADERS }
+        { headers: getCorsHeaders(request) }
       );
     }
 
@@ -40,13 +35,13 @@ export async function GET(_request: NextRequest) {
         changeType: latest.changeType,
         isDefault: false,
       },
-      { headers: CORS_HEADERS }
+      { headers: getCorsHeaders(request) }
     );
   } catch (error) {
     console.error('[AV-CURRENT] GET error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch current availability', details: String(error) },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }

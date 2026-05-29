@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { prisma } from '../../../lib/db/prisma';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 /**
@@ -29,7 +24,7 @@ export async function POST(request: NextRequest) {
     const { date, flyingWindowStart, flyingWindowEnd, recordedBy, clientLocalHour, clientLocalMinute, clientTimezoneOffsetHours } = body;
 
     if (!date) {
-      return NextResponse.json({ error: 'date is required' }, { status: 400, headers: CORS_HEADERS });
+      return NextResponse.json({ error: 'date is required' }, { status: 400, headers: getCorsHeaders(request) });
     }
 
     // Determine if this date is "today" on the client.
@@ -59,7 +54,7 @@ export async function POST(request: NextRequest) {
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
     // Only skip for clearly past dates (not today or adjacent)
     if (!isToday && existing && existing.lastCalculatedAt > oneMinuteAgo) {
-      return NextResponse.json({ skipped: true, reason: 'recent', record: existing, summary: existing }, { headers: CORS_HEADERS });
+      return NextResponse.json({ skipped: true, reason: 'recent', record: existing, summary: existing }, { headers: getCorsHeaders(request) });
     }
 
     // Get all events for the date
@@ -69,7 +64,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (events.length === 0) {
-      return NextResponse.json({ skipped: true, reason: 'no_events' }, { headers: CORS_HEADERS });
+      return NextResponse.json({ skipped: true, reason: 'no_events' }, { headers: getCorsHeaders(request) });
     }
 
     const parseWindowTime = (s: string | undefined, defaultHour: number): number => {
@@ -116,7 +111,7 @@ export async function POST(request: NextRequest) {
     const effectiveWindowMinutes = effectiveEndMin - windowStartMin;
 
     if (effectiveWindowMinutes <= 0) {
-      return NextResponse.json({ skipped: true, reason: 'before_flying_window' }, { headers: CORS_HEADERS });
+      return NextResponse.json({ skipped: true, reason: 'before_flying_window' }, { headers: getCorsHeaders(request) });
     }
 
     const timeline = events
@@ -185,12 +180,12 @@ export async function POST(request: NextRequest) {
     const summary = { ...record, dailyAverage, effectiveEndTime };
 
     // Return both 'record' and 'summary' so both old and new callers work
-    return NextResponse.json({ success: true, record: summary, summary }, { headers: CORS_HEADERS });
+    return NextResponse.json({ success: true, record: summary, summary }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[AV-RECALC] POST error:', error);
     return NextResponse.json(
       { error: 'Failed to recalculate', details: String(error) },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }

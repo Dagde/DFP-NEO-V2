@@ -17,6 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import {
   getEventCompletionById,
   getEventCompletionByScheduleEventId,
@@ -28,14 +29,9 @@ import {
   DcoResult,
 } from '../../../../types/EventCompletion';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Methods': 'GET, PATCH, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // ─── Resolve record by id or scheduleEventId ─────────────────────────────────
@@ -60,16 +56,16 @@ export async function GET(
     if (!completion) {
       return NextResponse.json(
         { error: 'EventCompletion not found' },
-        { status: 404, headers: CORS_HEADERS },
+        { status: 404, headers: getCorsHeaders(request) },
       );
     }
 
-    return NextResponse.json({ completion }, { headers: CORS_HEADERS });
+    return NextResponse.json({ completion }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[EventCompletion GET /id] Error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch event completion' },
-      { status: 500, headers: CORS_HEADERS },
+      { status: 500, headers: getCorsHeaders(request) },
     );
   }
 }
@@ -95,7 +91,7 @@ export async function PATCH(
     if (!existing) {
       return NextResponse.json(
         { error: 'EventCompletion not found' },
-        { status: 404, headers: CORS_HEADERS },
+        { status: 404, headers: getCorsHeaders(request) },
       );
     }
 
@@ -109,7 +105,7 @@ export async function PATCH(
       if (!validDcoResults.includes(body.dcoResult)) {
         return NextResponse.json(
           { error: `Invalid dcoResult "${body.dcoResult}". Must be one of: DCO, DPCO, DNCO` },
-          { status: 400, headers: CORS_HEADERS },
+          { status: 400, headers: getCorsHeaders(request) },
         );
       }
     }
@@ -118,12 +114,12 @@ export async function PATCH(
     const { isCountedAsElce: _ignored, ...safePayload } = body as any;
     const completion = await updateEventCompletion(existing.id, safePayload);
 
-    return NextResponse.json({ completion }, { headers: CORS_HEADERS });
+    return NextResponse.json({ completion }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[EventCompletion PATCH] Error:', error);
     return NextResponse.json(
       { error: 'Failed to update event completion' },
-      { status: 500, headers: CORS_HEADERS },
+      { status: 500, headers: getCorsHeaders(request) },
     );
   }
 }
@@ -153,7 +149,7 @@ export async function DELETE(
     if (!confirm) {
       return NextResponse.json(
         { error: 'Deletion requires { "confirm": true } in request body' },
-        { status: 400, headers: CORS_HEADERS },
+        { status: 400, headers: getCorsHeaders(request) },
       );
     }
 
@@ -161,20 +157,20 @@ export async function DELETE(
     if (!existing) {
       return NextResponse.json(
         { error: 'EventCompletion not found' },
-        { status: 404, headers: CORS_HEADERS },
+        { status: 404, headers: getCorsHeaders(request) },
       );
     }
 
     const result = await deleteEventCompletion(existing.id);
     return NextResponse.json(
       { success: true, id: result.id },
-      { headers: CORS_HEADERS },
+      { headers: getCorsHeaders(request) },
     );
   } catch (error) {
     console.error('[EventCompletion DELETE] Error:', error);
     return NextResponse.json(
       { error: 'Failed to delete event completion' },
-      { status: 500, headers: CORS_HEADERS },
+      { status: 500, headers: getCorsHeaders(request) },
     );
   }
 }

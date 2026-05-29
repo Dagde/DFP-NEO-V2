@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { prisma } from '../../../lib/db/prisma';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 /**
@@ -204,7 +199,7 @@ export async function GET(request: NextRequest) {
   console.log(`[AV-DEBUG] 🔍 Diagnostic complete ${requestId}`);
   console.log(`${'='.repeat(80)}\n`);
   
-  return NextResponse.json(results, { headers: CORS_HEADERS });
+  return NextResponse.json(results, { headers: getCorsHeaders(request) });
 }
 
 /**
@@ -290,7 +285,7 @@ export async function POST(request: NextRequest) {
         eventExists: !!verifyEvent,
         historyExists: !!verifyHistory
       }
-    }, { headers: CORS_HEADERS });
+    }, { headers: getCorsHeaders(request) });
     
   } catch (error: any) {
     console.error(`[AV-DEBUG] ❌ Force insert failed:`, error);
@@ -305,6 +300,6 @@ export async function POST(request: NextRequest) {
         meta: error?.meta,
         stack: error?.stack
       }
-    }, { status: 500, headers: CORS_HEADERS });
+    }, { status: 500, headers: getCorsHeaders(request) });
   }
 }

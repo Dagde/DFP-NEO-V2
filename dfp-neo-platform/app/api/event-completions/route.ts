@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import {
   listEventCompletions,
   upsertEventCompletion,
@@ -27,14 +28,9 @@ import {
 } from '../../../types/EventCompletion';
 
 // ─── CORS headers (match existing pattern in the repo) ───────────────────────
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // ─── GET /api/event-completions ───────────────────────────────────────────────
@@ -86,13 +82,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       { completions, count: completions.length, total },
-      { headers: CORS_HEADERS },
+      { headers: getCorsHeaders(request) },
     );
   } catch (error) {
     console.error('[EventCompletion GET] Error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch event completions' },
-      { status: 500, headers: CORS_HEADERS },
+      { status: 500, headers: getCorsHeaders(request) },
     );
   }
 }
@@ -130,7 +126,7 @@ export async function POST(request: NextRequest) {
     if (missing.length > 0) {
       return NextResponse.json(
         { error: `Missing required fields: ${missing.join(', ')}` },
-        { status: 400, headers: CORS_HEADERS },
+        { status: 400, headers: getCorsHeaders(request) },
       );
     }
 
@@ -139,7 +135,7 @@ export async function POST(request: NextRequest) {
     if (!validDcoResults.includes(body.dcoResult)) {
       return NextResponse.json(
         { error: `Invalid dcoResult "${body.dcoResult}". Must be one of: DCO, DPCO, DNCO` },
-        { status: 400, headers: CORS_HEADERS },
+        { status: 400, headers: getCorsHeaders(request) },
       );
     }
 
@@ -149,7 +145,7 @@ export async function POST(request: NextRequest) {
       if (!validTypes.includes(body.eventType)) {
         return NextResponse.json(
           { error: `Invalid eventType "${body.eventType}". Must be one of: flight, ftd, cpt, ground` },
-          { status: 400, headers: CORS_HEADERS },
+          { status: 400, headers: getCorsHeaders(request) },
         );
       }
     }
@@ -161,7 +157,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { completion, created: !isUpdate, updated: isUpdate },
-      { status: isUpdate ? 200 : 201, headers: CORS_HEADERS },
+      { status: isUpdate ? 200 : 201, headers: getCorsHeaders(request) },
     );
   } catch (error) {
     console.error('[EventCompletion POST] Error:', error);
@@ -171,13 +167,13 @@ export async function POST(request: NextRequest) {
     if (errMsg.includes('Unique constraint') || errMsg.includes('unique constraint')) {
       return NextResponse.json(
         { error: 'An EventCompletion record already exists for this scheduleEventId' },
-        { status: 409, headers: CORS_HEADERS },
+        { status: 409, headers: getCorsHeaders(request) },
       );
     }
 
     return NextResponse.json(
       { error: 'Failed to save event completion', details: errMsg },
-      { status: 500, headers: CORS_HEADERS },
+      { status: 500, headers: getCorsHeaders(request) },
     );
   }
 }

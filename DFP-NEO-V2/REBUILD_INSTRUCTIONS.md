@@ -22,7 +22,7 @@ The DFP Scheduler is a web-based tool for managing flight school operations. It'
 ### `index.html`
 This is the entry point. It must include:
 -   A link to the Tailwind CSS CDN.
--   An `importmap` to manage module dependencies (`react`, `@google/genai`, `uuid`). This avoids a `node_modules` folder.
+-   An `importmap` to manage module dependencies (`react`, `uuid`). This avoids a `node_modules` folder.
 -   A root div (`<div id="root"></div>`).
 -   A module script import for `/index.tsx`.
 -   Custom CSS for animations and button styling (`.btn-shape-fill`).

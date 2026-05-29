@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { prisma } from '../../../lib/db/prisma';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 /**
@@ -50,14 +45,14 @@ export async function GET(request: NextRequest) {
     if (!userIdParam) {
       return NextResponse.json(
         { error: 'userId is required' },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400, headers: getCorsHeaders(request) }
       );
     }
 
     const userCuid = await resolveUserCuid(userIdParam);
     if (!userCuid) {
       console.warn('[UserPreferences] GET: could not resolve user for userId:', userIdParam);
-      return NextResponse.json({ preferences: {} }, { headers: CORS_HEADERS });
+      return NextResponse.json({ preferences: {} }, { headers: getCorsHeaders(request) });
     }
 
     const record = await (prisma as any).userSettings.findUnique({
@@ -65,12 +60,12 @@ export async function GET(request: NextRequest) {
     });
 
     const preferences = record?.settings ?? {};
-    return NextResponse.json({ preferences }, { headers: CORS_HEADERS });
+    return NextResponse.json({ preferences }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[UserPreferences] GET error:', error);
     return NextResponse.json(
       { error: 'Failed to load user preferences' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }
@@ -86,7 +81,7 @@ export async function PUT(request: NextRequest) {
     if (!userIdParam || !key) {
       return NextResponse.json(
         { error: 'userId and key are required' },
-        { status: 400, headers: CORS_HEADERS }
+        { status: 400, headers: getCorsHeaders(request) }
       );
     }
 
@@ -95,7 +90,7 @@ export async function PUT(request: NextRequest) {
       console.warn('[UserPreferences] PUT: could not resolve user for userId:', userIdParam);
       return NextResponse.json(
         { error: 'User not found' },
-        { status: 404, headers: CORS_HEADERS }
+        { status: 404, headers: getCorsHeaders(request) }
       );
     }
 
@@ -118,12 +113,12 @@ export async function PUT(request: NextRequest) {
     });
 
     console.log('[UserPreferences] Saved key:', key, 'for userCuid:', userCuid);
-    return NextResponse.json({ success: true }, { headers: CORS_HEADERS });
+    return NextResponse.json({ success: true }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('[UserPreferences] PUT error:', error);
     return NextResponse.json(
       { error: 'Failed to save user preferences' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }

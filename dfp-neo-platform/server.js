@@ -10,6 +10,47 @@ const require = createRequire(import.meta.url);
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SERVER_VERSION = '2026-04-28-v1'; // fix UUID generation + missing routes
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://dfp-neo-v2-production.up.railway.app',
+  'https://dfp-neo.com',
+];
+const DEVELOPMENT_ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:8080',
+];
+
+app.set('trust proxy', true);
+
+function parseOrigins(value) {
+  return (value || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function getAllowedOrigins() {
+  const configured = parseOrigins(process.env.DFP_NEO_ALLOWED_ORIGINS || process.env.ALLOWED_ORIGINS);
+  const origins = configured.length > 0 ? [...configured] : [...DEFAULT_ALLOWED_ORIGINS];
+  if (process.env.NODE_ENV !== 'production') {
+    origins.push(...DEVELOPMENT_ALLOWED_ORIGINS);
+  }
+  return new Set(origins);
+}
+
+function getRequestOrigin(req) {
+  return `${req.protocol}://${req.get('host')}`;
+}
+
+function isOriginAllowed(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  if (origin === getRequestOrigin(req)) return true;
+  return getAllowedOrigins().has(origin);
+}
 
 // Robust UUID generator - works on all Node versions
 import crypto from 'crypto';
@@ -33,11 +74,22 @@ function generateUUID() {
 // Parse JSON bodies
 app.use(express.json());
 
-// CORS headers for all requests
+// CORS headers for all requests. Never use a wildcard origin; browser callers
+// must be same-origin or listed in DFP_NEO_ALLOWED_ORIGINS / ALLOWED_ORIGINS.
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (!isOriginAllowed(req)) {
+    return res.status(403).json({ error: 'CORS origin not allowed' });
+  }
+
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Vary', 'Origin');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, Cookie, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }

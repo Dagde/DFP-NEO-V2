@@ -16,15 +16,15 @@ The compiled JavaScript files in `dfp-neo-platform/public/flight-school-app/` we
 - Copied all files from `dist/` to `dfp-neo-platform/public/flight-school-app/`
 - This includes:
   - `index.html`
-  - `assets/index-uPhlgI5U.js` (main application bundle)
+  - `assets/index.js` (main application bundle)
   - `assets/index.es-DVbKqt2L.js` (ES module)
   - `assets/html2canvas.esm-QH1iLAAe.js` (PDF generation)
   - `assets/purify.es-B9ZVCkUG.js` (sanitization)
 
 ### 3. Added Cache-Busting
 - Modified `index.html` to include a timestamp parameter on the JavaScript file
-- Changed from: `./assets/index-uPhlgI5U.js`
-- Changed to: `./assets/index-uPhlgI5U.js?v=1767499483`
+- Changed from: the generated main bundle path
+- Changed to: the generated main bundle path with a cache-busting query string
 - This forces browsers to download the new version instead of using cached files
 
 ## SOLO Detection Logic

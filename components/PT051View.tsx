@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051OverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
 import AuditButton from './AuditButton';
-import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
 import {
@@ -94,16 +93,6 @@ const parseComments = (raw: string | undefined) => {
     
     return result;
 };
-
-// Base64 encoder for AudioBuffer
-function encode(bytes: Uint8Array) {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
 
 interface PhraseSelectorProps {
     element: string;
@@ -203,9 +192,6 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
     );
 };
 
-// FIX: Moved GoogleGenAI instance creation outside the component to prevent re-initialization on re-renders.
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
-
 const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
     const trainingReportName = (trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name;
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
@@ -214,14 +200,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Unsaved'>('Saved');
     const isFirstRender = useRef(true);
     const isInitialCommentHydration = useRef(true);
-
-    // --- Speech to Text State & Refs ---
-    const [listeningField, setListeningField] = useState<string | null>(null);
-    const sessionPromiseRef = useRef<Promise<any> | null>(null);
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const streamRef = useRef<MediaStream | null>(null);
-    const processorRef = useRef<ScriptProcessorNode | null>(null);
-    const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
     // --- Phrase Picker State ---
     const [showPhraseModal, setShowPhraseModal] = useState(false);
@@ -487,123 +465,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             }
         }
     };
-
-    const stopVoiceInput = () => {
-        if (sessionPromiseRef.current) {
-            sessionPromiseRef.current.then(session => session.close());
-            sessionPromiseRef.current = null;
-        }
-        if (sourceRef.current) {
-            sourceRef.current.disconnect();
-            sourceRef.current = null;
-        }
-        if (processorRef.current) {
-            processorRef.current.disconnect();
-            processorRef.current = null;
-        }
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-        }
-        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-            audioContextRef.current.close();
-            audioContextRef.current = null;
-        }
-        setListeningField(null);
-    };
-
-    const handleVoiceInput = async (target: string, type: 'section' | 'element') => {
-        if (listeningField === target) {
-            stopVoiceInput();
-            return;
-        }
-        if (listeningField) {
-            stopVoiceInput();
-        }
-        setListeningField(target);
-
-        try {
-            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-            audioContextRef.current = audioCtx;
-
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
-
-            const source = audioCtx.createMediaStreamSource(stream);
-            sourceRef.current = source;
-
-            const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-            processorRef.current = processor;
-
-            const sessionPromise = ai.live.connect({
-                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-                config: {
-                    responseModalities: [Modality.AUDIO], 
-                    inputAudioTranscription: {},
-                },
-                callbacks: {
-                    onopen: () => console.log('Gemini Live Connected'),
-                    onmessage: (message: LiveServerMessage) => {
-                        if (message.serverContent?.inputTranscription) {
-                            const text = message.serverContent.inputTranscription.text;
-                            if (text) {
-                                if (type === 'section') {
-                                    const sectionKey = target as typeof COMMENT_SECTIONS[number];
-                                    setCommentFields(prev => ({
-                                        ...prev,
-                                        [sectionKey]: (prev[sectionKey] || '') + text
-                                    }));
-                                } else {
-                                    handleCommentChange(target, (assessment.scores.find(s => s.element === target)?.comment || '') + text);
-                                }
-                            }
-                        }
-                    },
-                    onclose: () => { if (listeningField === target) stopVoiceInput(); },
-                    onerror: () => stopVoiceInput()
-                }
-            });
-            sessionPromiseRef.current = sessionPromise;
-
-            processor.onaudioprocess = (e) => {
-                const inputData = e.inputBuffer.getChannelData(0);
-                const pcmBlob = createBlob(inputData);
-                // FIX: Use sessionPromise.then() within the audio process callback to ensure the session is ready and to prevent stale closures.
-                if (sessionPromiseRef.current) {
-                    sessionPromiseRef.current.then(session => {
-                        if (session) {
-                             session.sendRealtimeInput({ media: pcmBlob });
-                        }
-                    });
-                }
-            };
-
-            source.connect(processor);
-            processor.connect(audioCtx.destination);
-
-        } catch (error) {
-            console.error("Failed to start voice input:", error);
-            stopVoiceInput();
-        }
-    };
-
-    function createBlob(data: Float32Array) {
-        const l = data.length;
-        const int16 = new Int16Array(l);
-        for (let i = 0; i < l; i++) {
-            int16[i] = data[i] * 32768;
-        }
-        return {
-            data: encode(new Uint8Array(int16.buffer)),
-            mimeType: 'audio/pcm;rate=16000',
-        };
-    }
-
-    useEffect(() => {
-        return () => {
-            stopVoiceInput();
-        };
-    }, []);
 
     const handleOpenPhraseSelector = (element: string) => {
         setCurrentPhraseElement(element);
@@ -1120,12 +981,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     ))}
                                 </select>
                             </div>
-                            <button
-                                onClick={() => handleVoiceInput('QFI', 'section')}
-                                className={`absolute top-10 right-2 p-1 rounded-full transition-colors ${listeningField === 'QFI' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-600'}`}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" /><path d="M5.5 13a.5.5 0 01.5.5v1a4 4 0 004 4h1a4 4 0 004-4v-1a.5.5 0 011 0v1a5 5 0 01-5 5h-1a5 5 0 01-5-5v-1a.5.5 0 01.5-.5z" /></svg>
-                            </button>
                         </div>
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-400">Weather</label>
@@ -1146,12 +1001,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     }
                                 }}
                             />
-                            <button
-                                onClick={() => handleVoiceInput('Weather', 'section')}
-                                className={`absolute top-8 right-2 p-1 rounded-full transition-colors ${listeningField === 'Weather' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-600'}`}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" /><path d="M5.5 13a.5.5 0 01.5.5v1a4 4 0 004 4h1a4 4 0 004-4v-1a.5.5 0 011 0v1a5 5 0 01-5 5h-1a5 5 0 01-5-5v-1a.5.5 0 01.5-.5z" /></svg>
-                            </button>
                         </div>
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-400">NEST</label>
@@ -1162,12 +1011,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                 maxLength={8}
                                 className="mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
                             />
-                            <button
-                                onClick={() => handleVoiceInput('NEST', 'section')}
-                                className={`absolute top-8 right-2 p-1 rounded-full transition-colors ${listeningField === 'NEST' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-600'}`}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" /><path d="M5.5 13a.5.5 0 01.5.5v1a4 4 0 004 4h1a4 4 0 004-4v-1a.5.5 0 011 0v1a5 5 0 01-5 5h-1a5 5 0 01-5-5v-1a.5.5 0 01.5-.5z" /></svg>
-                            </button>
                         </div>
                     </div>
 
@@ -1191,15 +1034,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     }
                                 }}
                             />
-                             <button
-                                onClick={() => handleVoiceInput('Profile', 'section')}
-                                className={`absolute top-8 right-2 p-1 rounded-full transition-colors ${listeningField === 'Profile' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-600'}`}
-                            >
-                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                     <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-                                     <path d="M5.5 13a.5.5 0 01.5.5v1a4 4 0 004 4h1a4 4 0 004-4v-1a.5.5 0 011 0v1a5 5 0 01-5 5h-1a5 5 0 01-5-5v-1a.5.5 0 01.5-.5z" />
-                                 </svg>
-                             </button>
                         </div>
                          <div key={'Overall'} className="relative">
                             <label className="block text-sm font-medium text-gray-400">Overall</label>
@@ -1220,15 +1054,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     }
                                 }}
                             />
-                             <button
-                                onClick={() => handleVoiceInput('Overall', 'section')}
-                                className={`absolute top-8 right-2 p-1 rounded-full transition-colors ${listeningField === 'Overall' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-600'}`}
-                            >
-                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                     <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-                                     <path d="M5.5 13a.5.5 0 01.5.5v1a4 4 0 004 4h1a4 4 0 004-4v-1a.5.5 0 011 0v1a5 5 0 01-5 5h-1a5 5 0 01-5-5v-1a.5.5 0 01.5-.5z" />
-                                 </svg>
-                             </button>
                         </div>
                     </div>
                 </div>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
@@ -6,15 +7,9 @@ import { setSession, deleteSession, getSession, isSessionExpired } from '@/lib/a
 
 const prisma = new PrismaClient();
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 /**
@@ -32,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (!userId || !password) {
       return NextResponse.json(
         { error: 'Missing credentials', message: 'User ID and password are required' },
-        { status: 400 }
+        { status: 400, headers: getCorsHeaders(request) }
       );
     }
 
@@ -44,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (!user || !user.password) {
       return NextResponse.json(
         { error: 'Invalid credentials', message: 'Invalid User ID or password' },
-        { status: 401 }
+        { status: 401, headers: getCorsHeaders(request) }
       );
     }
 
@@ -54,7 +49,7 @@ export async function POST(request: NextRequest) {
     if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Invalid credentials', message: 'Invalid User ID or password' },
-        { status: 401 }
+        { status: 401, headers: getCorsHeaders(request) }
       );
     }
 
@@ -62,7 +57,7 @@ export async function POST(request: NextRequest) {
     if (!user.isActive) {
       return NextResponse.json(
         { error: 'Account inactive', message: 'Your account has been deactivated' },
-        { status: 403 }
+        { status: 403, headers: getCorsHeaders(request) }
       );
     }
 
@@ -122,12 +117,12 @@ export async function POST(request: NextRequest) {
         role: user.role,
         isActive: user.isActive,
       },
-    }, { headers: CORS_HEADERS });
+    }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
       { error: 'Internal server error', message: 'An error occurred during login' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }
@@ -145,7 +140,7 @@ export async function GET(request: NextRequest) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'No token provided' },
-        { status: 401 }
+        { status: 401, headers: getCorsHeaders(request) }
       );
     }
 
@@ -155,7 +150,7 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json(
         { error: 'Invalid token', message: 'Session not found' },
-        { status: 401 }
+        { status: 401, headers: getCorsHeaders(request) }
       );
     }
 
@@ -164,16 +159,16 @@ export async function GET(request: NextRequest) {
       deleteSession(token);
       return NextResponse.json(
         { error: 'Token expired', message: 'Session has expired' },
-        { status: 401 }
+        { status: 401, headers: getCorsHeaders(request) }
       );
     }
 
-    return NextResponse.json({ user: session.user }, { headers: CORS_HEADERS });
+    return NextResponse.json({ user: session.user }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('Session error:', error);
     return NextResponse.json(
       { error: 'Internal server error', message: 'Failed to get session' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }
@@ -190,7 +185,7 @@ export async function DELETE(request: NextRequest) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'No token provided' },
-        { status: 401 }
+        { status: 401, headers: getCorsHeaders(request) }
       );
     }
 
@@ -213,12 +208,12 @@ export async function DELETE(request: NextRequest) {
       deleteSession(token);
     }
 
-    return NextResponse.json({ message: 'Logged out successfully' });
+    return NextResponse.json({ message: 'Logged out successfully' }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('Logout error:', error);
     return NextResponse.json(
       { error: 'Internal server error', message: 'Failed to logout' },
-      { status: 500 }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   }
 }

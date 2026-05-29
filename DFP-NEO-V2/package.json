@@ -13,7 +13,6 @@
     "git-status": "node git-status.js"
   },
   "dependencies": {
-    "@google/genai": "^1.28.0",
     "@heroicons/react": "^2.2.0",
     "@popperjs/core": "^2.11.8",
     "@prisma/client": "^6.0.0",

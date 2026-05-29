@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const db = prisma as any;
 
 // Simple security: require a secret key in the request header or query param
 // Set SEED_SECRET env var in Railway to secure this endpoint
@@ -320,10 +321,10 @@ export async function GET(request: NextRequest) {
 
   try {
     // Check if already seeded
-    const existingCount = await prisma.syllabusItem.count();
+    const existingCount = await db.syllabusItem.count();
     if (existingCount > 0 && !force) {
       // Check if existing items use wrong codes
-      const firstItem = await prisma.syllabusItem.findFirst({ orderBy: { sortOrder: 'asc' } });
+      const firstItem = await db.syllabusItem.findFirst({ orderBy: { sortOrder: 'asc' } });
       const usesWrongCodes = firstItem && firstItem.code.includes('_');
       return NextResponse.json({
         success: true,
@@ -339,8 +340,8 @@ export async function GET(request: NextRequest) {
 
     // If force, delete existing items first
     if (existingCount > 0) {
-      await prisma.syllabusItem.deleteMany({});
-      try { await prisma.syllabusHistory.deleteMany({}); } catch (e) {}
+      await db.syllabusItem.deleteMany({});
+      try { await db.syllabusHistory.deleteMany({}); } catch (e) {}
     }
 
     // Create all items
@@ -349,7 +350,7 @@ export async function GET(request: NextRequest) {
 
     for (const item of SYLLABUS_ITEMS) {
       try {
-        await prisma.syllabusItem.create({ data: item as any });
+        await db.syllabusItem.create({ data: item as any });
         created++;
       } catch (err: any) {
         errors.push(`${item.code}: ${err.message}`);
@@ -359,7 +360,7 @@ export async function GET(request: NextRequest) {
     // Log to history
     if (created > 0) {
       try {
-        await prisma.syllabusHistory.create({
+        await db.syllabusHistory.create({
           data: {
             syllabusItemId: 'bulk-seed',
             changeType: 'SEED',

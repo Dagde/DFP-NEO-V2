@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // GET /api/schedule - Get schedules with optional filtering
@@ -55,12 +50,12 @@ export async function GET(request: NextRequest) {
       orderBy: { date: 'asc' },
     });
 
-    return NextResponse.json({ schedules }, { headers: CORS_HEADERS });
+    return NextResponse.json({ schedules }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('Error fetching schedules:', error);
     return NextResponse.json(
       { error: 'Failed to fetch schedules' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   } finally {
     await prisma.$disconnect();
@@ -113,12 +108,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true,
       schedule 
-    }, { headers: CORS_HEADERS });
+    }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('Error saving schedule:', error);
     return NextResponse.json(
       { error: 'Failed to save schedule' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   } finally {
     await prisma.$disconnect();

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import * as crypto from 'crypto';
 
 /**
@@ -20,11 +21,7 @@ export async function GET(request: NextRequest) {
         { error: 'Bad request', message: 'Missing authToken or userId' },
         { 
           status: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          }
+          headers: getCorsHeaders(request)
         }
       );
     }
@@ -36,7 +33,7 @@ export async function GET(request: NextRequest) {
         { error: 'Invalid token', message: 'Token format is invalid' },
         { 
           status: 401,
-          headers: { 'Access-Control-Allow-Origin': '*' }
+          headers: getCorsHeaders(request)
         }
       );
     }
@@ -49,7 +46,7 @@ export async function GET(request: NextRequest) {
         { error: 'Invalid token', message: 'Token format is invalid' },
         { 
           status: 401,
-          headers: { 'Access-Control-Allow-Origin': '*' }
+          headers: getCorsHeaders(request)
         }
       );
     }
@@ -66,7 +63,7 @@ export async function GET(request: NextRequest) {
         { error: 'Invalid token', message: 'Token signature is invalid' },
         { 
           status: 401,
-          headers: { 'Access-Control-Allow-Origin': '*' }
+          headers: getCorsHeaders(request)
         }
       );
     }
@@ -81,7 +78,7 @@ export async function GET(request: NextRequest) {
         { error: 'Invalid token', message: 'Failed to decode token' },
         { 
           status: 401,
-          headers: { 'Access-Control-Allow-Origin': '*' }
+          headers: getCorsHeaders(request)
         }
       );
     }
@@ -92,7 +89,7 @@ export async function GET(request: NextRequest) {
         { error: 'Expired token', message: 'Token has expired' },
         { 
           status: 401,
-          headers: { 'Access-Control-Allow-Origin': '*' }
+          headers: getCorsHeaders(request)
         }
       );
     }
@@ -103,7 +100,7 @@ export async function GET(request: NextRequest) {
         { error: 'Invalid token', message: 'User ID does not match' },
         { 
           status: 401,
-          headers: { 'Access-Control-Allow-Origin': '*' }
+          headers: getCorsHeaders(request)
         }
       );
     }
@@ -123,11 +120,7 @@ export async function GET(request: NextRequest) {
         }
       },
       {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        }
+        headers: getCorsHeaders(request)
       }
     );
   } catch (error) {
@@ -136,22 +129,18 @@ export async function GET(request: NextRequest) {
       { error: 'Internal server error', message: 'Failed to validate token' },
       { 
         status: 500,
-        headers: { 'Access-Control-Allow-Origin': '*' }
+        headers: getCorsHeaders(request)
       }
     );
   }
 }
 
 // Handle CORS preflight requests
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
   return NextResponse.json(
     {},
     {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      }
+      headers: getCorsHeaders(request)
     }
   );
 }

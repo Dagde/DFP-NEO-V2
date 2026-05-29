@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-  'Access-Control-Allow-Credentials': 'true',
-};
 
 // Handle OPTIONS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 // GET /api/personnel - Get all personnel with optional filtering
@@ -54,12 +49,12 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 [API TRACKING] /api/personnel - Returning', personnel.length, 'records');
 
-    return NextResponse.json({ personnel }, { headers: CORS_HEADERS });
+    return NextResponse.json({ personnel }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('Error fetching personnel:', error);
     return NextResponse.json(
       { error: 'Failed to fetch personnel' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   } finally {
     await prisma.$disconnect();
@@ -128,12 +123,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true,
       personnel: newPersonnel 
-    }, { headers: CORS_HEADERS });
+    }, { headers: getCorsHeaders(request) });
   } catch (error) {
     console.error('❌ [API POST] Error creating personnel:', error);
     return NextResponse.json(
       { error: 'Failed to create personnel', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500, headers: CORS_HEADERS }
+      { status: 500, headers: getCorsHeaders(request) }
     );
   } finally {
     await prisma.$disconnect();
