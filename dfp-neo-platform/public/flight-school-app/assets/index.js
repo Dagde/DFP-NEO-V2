@@ -60946,12 +60946,6 @@ const App = () => {
     firstLight: selectedDfpSunTimes?.hasSunrise ? selectedDfpSunTimes.sunrise : null,
     lastLight: selectedDfpSunTimes?.hasSunset ? selectedDfpSunTimes.sunset : null
   }), [selectedDfpSunTimes]);
-  const classifyStartBySolarDaylight = reactExports.useCallback((startTime, targetDate = date) => {
-    const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
-    const solarClassification = classifyDayNightBySunTimes(startTime, sunTimes);
-    if (solarClassification === "Day" || solarClassification === "Night") return solarClassification;
-    return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
-  }, [ceaseNightFlying, commenceNightFlying, date, getSunTimesForDate, selectedDfpSunTimes]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     if (activePlatformResourcePool) {
@@ -61968,6 +61962,12 @@ const App = () => {
   const [allowNightFlying, setAllowNightFlying] = reactExports.useState(true);
   const [commenceNightFlying, setCommenceNightFlying] = reactExports.useState(18.5);
   const [ceaseNightFlying, setCeaseNightFlying] = reactExports.useState(23.5);
+  const classifyStartBySolarDaylight = reactExports.useCallback((startTime, targetDate = date) => {
+    const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
+    const solarClassification = classifyDayNightBySunTimes(startTime, sunTimes);
+    if (solarClassification === "Day" || solarClassification === "Night") return solarClassification;
+    return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
+  }, [ceaseNightFlying, commenceNightFlying, date, getSunTimesForDate, selectedDfpSunTimes]);
   const [preferredDutyPeriod, setPreferredDutyPeriod] = reactExports.useState(8);
   const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = reactExports.useState(10);
   const [maxDispatchPerHour, setMaxDispatchPerHour] = reactExports.useState(8);

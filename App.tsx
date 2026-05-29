@@ -9275,13 +9275,6 @@ const App: React.FC = () => {
         lastLight: selectedDfpSunTimes?.hasSunset ? selectedDfpSunTimes.sunset : null,
     }), [selectedDfpSunTimes]);
 
-    const classifyStartBySolarDaylight = useCallback((startTime: number, targetDate: string = date): 'Day' | 'Night' => {
-        const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
-        const solarClassification = classifyDayNightBySunTimes(startTime, sunTimes);
-        if (solarClassification === 'Day' || solarClassification === 'Night') return solarClassification;
-        return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
-    }, [ceaseNightFlying, commenceNightFlying, date, getSunTimesForDate, selectedDfpSunTimes]);
-
     useEffect(() => {
         if (!platformConfigLoaded) return;
         if (activePlatformResourcePool) {
@@ -10616,6 +10609,13 @@ const App: React.FC = () => {
     const [allowNightFlying, setAllowNightFlying] = useState(true);
     const [commenceNightFlying, setCommenceNightFlying] = useState(18.5); // 18:30
     const [ceaseNightFlying, setCeaseNightFlying] = useState(23.5); // 23:30
+
+    const classifyStartBySolarDaylight = useCallback((startTime: number, targetDate: string = date): 'Day' | 'Night' => {
+        const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
+        const solarClassification = classifyDayNightBySunTimes(startTime, sunTimes);
+        if (solarClassification === 'Day' || solarClassification === 'Night') return solarClassification;
+        return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
+    }, [ceaseNightFlying, commenceNightFlying, date, getSunTimesForDate, selectedDfpSunTimes]);
 
     // Wrapper function to update aircraft count AND save to database
     const handleUpdateAircraftCount = async (count: number) => {
