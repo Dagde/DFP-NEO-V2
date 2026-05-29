@@ -10227,12 +10227,15 @@ const App: React.FC = () => {
         if (loadingSnapshotDates.current.has(snapshotKey)) return;
         loadingSnapshotDates.current.add(snapshotKey);
 
+        let cachedEventsSignature: string | null = null;
         if (useCache && !replace) {
             try {
                 const cachedSnapshot = localStorage.getItem(cacheKey);
                 if (cachedSnapshot) {
-                    const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, JSON.parse(cachedSnapshot), false, 'cache');
+                    const parsedCachedSnapshot = JSON.parse(cachedSnapshot);
+                    const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, parsedCachedSnapshot, false, 'cache');
                     if (cachedEvents > 0) {
+                        cachedEventsSignature = getSnapshotEventsSignature(parsedCachedSnapshot.scheduleEvents || []);
                         setDfpSnapshotLoadState({
                             status: 'cached',
                             date: targetDate,
@@ -10300,12 +10303,10 @@ const App: React.FC = () => {
                         continue;
                     }
 
-                    const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snap, replace, 'network');
-                    try {
-                        localStorage.setItem(cacheKey, JSON.stringify(snap));
-                    } catch (cacheErr) {
-                        console.warn(`[Snapshot] Could not cache snapshot for ${targetDate}:`, cacheErr);
-                    }
+                    const currentEventsSignature = getSnapshotEventsSignature(publishedSchedulesRef.current[targetDate] || []);
+                    const shouldReplaceCachedEvents = !!cachedEventsSignature && currentEventsSignature === cachedEventsSignature;
+                    const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snap, replace || shouldReplaceCachedEvents, 'network');
+                    cacheDailySnapshot(snapshotKey, snap, targetDate);
                     loadedSnapshotDates.current.add(snapshotKey);
                     setDfpSnapshotLoadState({
                         status: 'loaded',
@@ -10461,6 +10462,10 @@ const App: React.FC = () => {
 
     // Published Schedules State (must be declared before buildResources)
     const [publishedSchedules, setPublishedSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+    const publishedSchedulesRef = React.useRef<Record<string, ScheduleEvent[]>>({});
+    useEffect(() => {
+        publishedSchedulesRef.current = publishedSchedules;
+    }, [publishedSchedules]);
     // Snapshot dates available in DB (for calendar dropdown on date selector)
     const [snapshotDates, setSnapshotDates] = useState<string[]>([]);
     // Track which snapshot dates have already been loaded to avoid redundant fetches
@@ -10479,6 +10484,31 @@ const App: React.FC = () => {
 
     function getDailySnapshotDate(snapshotDate: string): string {
         return String(snapshotDate || '').replace(/__(ESL|PEA)$/i, '');
+    }
+
+    function getSnapshotEventsSignature(events: ScheduleEvent[] = []): string {
+        return events
+            .map(e => [
+                e.id,
+                e.type || '',
+                e.resourceId || '',
+                e.startTime ?? '',
+                e.duration ?? '',
+                e.flightNumber || '',
+                e.instructor || '',
+                e.student || '',
+                e.pilot || '',
+            ].join('|'))
+            .sort()
+            .join('||');
+    }
+
+    function cacheDailySnapshot(snapshotKey: string, snapshotPayload: Record<string, any>, labelDate: string): void {
+        try {
+            localStorage.setItem(`dfp_snapshot_cache_${snapshotKey}`, JSON.stringify(snapshotPayload));
+        } catch (cacheErr) {
+            console.warn(`[Snapshot] Could not update cached snapshot for ${labelDate}:`, cacheErr);
+        }
     }
 
     // NDB state
@@ -14529,6 +14559,7 @@ const App: React.FC = () => {
         }
 
         console.log(`[Persist] Saving snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events...`);
+        cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
         fetch(`${apiBase}/daily-snapshot/save`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -14538,6 +14569,7 @@ const App: React.FC = () => {
         .then(result => {
             if (result.success) {
                 loadedSnapshotDates.current.add(snapshotKey);
+                cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
                 console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events`);
             } else {
                 console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
@@ -17378,6 +17410,7 @@ const App: React.FC = () => {
             };
 
             const apiBase = getApiBaseUrl();
+            cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
             fetch(`${apiBase}/daily-snapshot/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -17389,6 +17422,7 @@ const App: React.FC = () => {
                     console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school}), ${newEventsForDate.length} events`);
                     // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
                     loadedSnapshotDates.current.add(snapshotKey);
+                    cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
                 } else {
                     console.warn(`\u26A0\uFE0F [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
                 }
