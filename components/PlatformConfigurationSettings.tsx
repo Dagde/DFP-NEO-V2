@@ -453,14 +453,6 @@ const emptyAirfieldCatalogueLookup: AirfieldCatalogueLookup = {
   searchable: [],
 };
 
-const findAirfieldCatalogueExact = (
-  value: any,
-  lookup: AirfieldCatalogueLookup,
-): AirfieldCatalogueEntry | null => {
-  const token = normaliseAirfieldLookupToken(value);
-  return token ? lookup.exact.get(token) || null : null;
-};
-
 const getAirfieldCatalogueSuggestionsForQuery = (
   value: any,
   lookup: AirfieldCatalogueLookup,
@@ -1242,23 +1234,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateLocationIdentity = (index: number, field: 'code' | 'name', value: string) => {
-    const currentLocation = config.locations[index] || {};
-    const nextLocation = { ...currentLocation, [field]: value };
-    const changes: Record<string, any> = { [field]: value };
-    const defaultProfile = getDefaultAirfieldSolarProfile(value);
-    if (defaultProfile) {
-      changes.latitude = defaultProfile.latitude;
-      changes.longitude = defaultProfile.longitude;
-      changes.timezone = defaultProfile.timezone;
-      const offset = getCurrentTimezoneOffsetHours(defaultProfile.timezone);
-      if (offset !== null) changes.timezoneOffset = offset;
-    } else {
-      const catalogueMatch = findAirfieldCatalogueExact(value, airfieldCatalogueLookup);
-      if (catalogueMatch) {
-        Object.assign(changes, getAirfieldCatalogueLocationChanges(catalogueMatch, nextLocation, true));
-      }
-    }
-    updateRow('locations', index, changes);
+    updateRow('locations', index, { [field]: value });
   };
 
   const addLocation = () => {
@@ -1967,9 +1943,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   : 'preparing lookup.'}
           </div>
           {config.locations.map((location, index) => {
-            const defaultProfile = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
-            const exactCatalogueMatch = findAirfieldCatalogueExact(location.code, airfieldCatalogueLookup)
-              || findAirfieldCatalogueExact(location.name, airfieldCatalogueLookup);
             const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
             const nameSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.name, airfieldCatalogueLookup);
             return (
@@ -1979,7 +1952,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   value={location.code}
                   disabled={!canEdit}
                   suggestions={codeSuggestions}
-                  onChange={(value) => updateLocationIdentity(index, 'code', value.toUpperCase())}
+                  onChange={(value) => updateLocationIdentity(index, 'code', value)}
                   onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
                 />
                 <AirfieldLookupField
@@ -2007,32 +1980,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </button>
                   ) : null}
                 </div>
-                {canEdit && defaultProfile ? (
-                  <button
-                    type="button"
-                    className="self-end rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-100 hover:bg-cyan-500/20"
-                    onClick={() => {
-                      const offset = getCurrentTimezoneOffsetHours(defaultProfile.timezone);
-                      updateRow('locations', index, {
-                        latitude: defaultProfile.latitude,
-                        longitude: defaultProfile.longitude,
-                        timezone: defaultProfile.timezone,
-                        ...(offset !== null ? { timezoneOffset: offset } : {}),
-                      });
-                    }}
-                  >
-                    Use Known Base Defaults
-                  </button>
-                ) : null}
-                {canEdit && exactCatalogueMatch ? (
-                  <button
-                    type="button"
-                    className="self-end rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-100 hover:bg-emerald-500/20"
-                    onClick={() => applyKnownAirfieldToLocation(index, exactCatalogueMatch, location)}
-                  >
-                    Apply Catalogue Match
-                  </button>
-                ) : null}
               </div>
             );
           })}

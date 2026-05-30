@@ -42345,10 +42345,6 @@ const emptyAirfieldCatalogueLookup = {
   exact: /* @__PURE__ */ new Map(),
   searchable: []
 };
-const findAirfieldCatalogueExact = (value, lookup) => {
-  const token = normaliseAirfieldLookupToken(value);
-  return token ? lookup.exact.get(token) || null : null;
-};
 const getAirfieldCatalogueSuggestionsForQuery = (value, lookup) => {
   const query = normaliseAirfieldLookupToken(value);
   if (query.length < 2 || lookup.searchable.length === 0) return [];
@@ -43008,23 +43004,7 @@ const PlatformConfigurationSettings = ({
     updateRow("locations", index, getAirfieldCatalogueLocationChanges(entry, currentLocation, true));
   };
   const updateLocationIdentity = (index, field, value) => {
-    const currentLocation = config.locations[index] || {};
-    const nextLocation = { ...currentLocation };
-    const changes = { [field]: value };
-    const defaultProfile = getDefaultAirfieldSolarProfile(value);
-    if (defaultProfile) {
-      changes.latitude = defaultProfile.latitude;
-      changes.longitude = defaultProfile.longitude;
-      changes.timezone = defaultProfile.timezone;
-      const offset = getCurrentTimezoneOffsetHours(defaultProfile.timezone);
-      if (offset !== null) changes.timezoneOffset = offset;
-    } else {
-      const catalogueMatch = findAirfieldCatalogueExact(value, airfieldCatalogueLookup);
-      if (catalogueMatch) {
-        Object.assign(changes, getAirfieldCatalogueLocationChanges(catalogueMatch, nextLocation, true));
-      }
-    }
-    updateRow("locations", index, changes);
+    updateRow("locations", index, { [field]: value });
   };
   const addLocation = () => {
     setConfig((prev) => {
@@ -43598,8 +43578,6 @@ const PlatformConfigurationSettings = ({
           airfieldCatalogueStatus === "loaded" ? `${airfieldCatalogue.length.toLocaleString()} local entries available for code or name lookup.` : airfieldCatalogueStatus === "loading" ? "loading local catalogue..." : airfieldCatalogueStatus === "error" ? `local catalogue unavailable (${airfieldCatalogueError}). Manual latitude, longitude and timezone entry still works.` : "preparing lookup."
         ] }),
         config.locations.map((location, index) => {
-          const defaultProfile = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
-          const exactCatalogueMatch = findAirfieldCatalogueExact(location.code, airfieldCatalogueLookup) || findAirfieldCatalogueExact(location.name, airfieldCatalogueLookup);
           const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
           const nameSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.name, airfieldCatalogueLookup);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2 xl:grid-cols-8", children: [
@@ -43610,7 +43588,7 @@ const PlatformConfigurationSettings = ({
                 value: location.code,
                 disabled: !canEdit,
                 suggestions: codeSuggestions,
-                onChange: (value) => updateLocationIdentity(index, "code", value.toUpperCase()),
+                onChange: (value) => updateLocationIdentity(index, "code", value),
                 onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
               }
             ),
@@ -43641,33 +43619,7 @@ const PlatformConfigurationSettings = ({
                   children: "Remove Location"
                 }
               ) : null
-            ] }),
-            canEdit && defaultProfile ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                className: "self-end rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-100 hover:bg-cyan-500/20",
-                onClick: () => {
-                  const offset = getCurrentTimezoneOffsetHours(defaultProfile.timezone);
-                  updateRow("locations", index, {
-                    latitude: defaultProfile.latitude,
-                    longitude: defaultProfile.longitude,
-                    timezone: defaultProfile.timezone,
-                    ...offset !== null ? { timezoneOffset: offset } : {}
-                  });
-                },
-                children: "Use Known Base Defaults"
-              }
-            ) : null,
-            canEdit && exactCatalogueMatch ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                className: "self-end rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-100 hover:bg-emerald-500/20",
-                onClick: () => applyKnownAirfieldToLocation(index, exactCatalogueMatch, location),
-                children: "Apply Catalogue Match"
-              }
-            ) : null
+            ] })
           ] }, location.id || `platform-location-${index}`);
         })
       ] })
