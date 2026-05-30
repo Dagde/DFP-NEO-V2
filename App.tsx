@@ -879,7 +879,7 @@ interface DfpConfig {
   ftdCount: number;
   cptCount: number;
   courseColors: { [key: string]: string };
-  school: 'ESL' | 'PEA';
+  school: string;
   dayStart: number;
   dayEnd: number;
   ftdStart: number;
@@ -9196,7 +9196,7 @@ const App: React.FC = () => {
     });
 
     // Data state
-    const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
+    const [school, setSchool] = useState<string>('ESL');
     const [activeUnitCode, setActiveUnitCode] = useState<string>('1FTS');
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
     const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
@@ -9232,10 +9232,25 @@ const App: React.FC = () => {
         return () => { cancelled = true; };
     }, []);
 
-    const baseSelectableLocationCodes = useMemo(
-        () => getLocationCodesForCurrentRuntime(platformConfig, ['ESL', 'PEA']),
-        [platformConfig],
-    );
+    const baseSelectableLocationCodes = useMemo(() => {
+        const activeLocationCodes = new Set(
+            (platformConfig?.locations || [])
+                .filter((location: any) => location.status !== 'INACTIVE')
+                .map((location: any) => String(location.code || '').trim())
+                .filter(Boolean)
+        );
+        const activeUnitLocationCodes = new Set(
+            (platformConfig?.units || [])
+                .filter((unit: any) => unit.status !== 'INACTIVE')
+                .map((unit: any) => String(unit.locationCode || '').trim().toUpperCase())
+                .filter(Boolean)
+        );
+        const configuredLocationsWithUnits = [...activeLocationCodes]
+            .filter(code => activeUnitLocationCodes.has(code.toUpperCase()));
+        return configuredLocationsWithUnits.length > 0
+            ? configuredLocationsWithUnits
+            : getLocationCodesForCurrentRuntime(platformConfig, ['ESL', 'PEA']);
+    }, [platformConfig]);
 
     const getUnitOptionsForLocation = useCallback((locationCode: string) => {
         const normalisedLocationCode = String(locationCode || '').trim().toUpperCase();
@@ -9250,6 +9265,9 @@ const App: React.FC = () => {
             .filter(unit => unit.code);
 
         if (configuredUnits.length > 0) return configuredUnits;
+        const hasConfiguredPlatformUnits = (platformConfig?.units || [])
+            .some((unit: any) => unit.status !== 'INACTIVE');
+        if (hasConfiguredPlatformUnits) return [];
 
         const fallbackCodes = normalisedLocationCode === 'PEA' ? ['2FTS'] : ['1FTS', 'CFS'];
         return fallbackCodes.map(code => ({
@@ -9654,7 +9672,7 @@ const App: React.FC = () => {
     useEffect(() => {
         if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
         if (!selectableLocationCodes.includes(school)) {
-            changeSchool(selectableLocationCodes[0] as 'ESL' | 'PEA');
+            changeSchool(selectableLocationCodes[0]);
             setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
         }
     }, [platformConfigLoaded, selectableLocationCodes, school]);
@@ -10300,7 +10318,7 @@ const App: React.FC = () => {
 
     const applyDailySnapshot = React.useCallback((
         targetDate: string,
-        snapshotSchool: 'ESL' | 'PEA',
+        snapshotSchool: string,
         snapshotUnit: string,
         snap: any,
         replace: boolean,
@@ -10341,7 +10359,7 @@ const App: React.FC = () => {
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
     const loadSnapshotForDate = React.useCallback(async (
         targetDate: string,
-        options: { force?: boolean; replace?: boolean; schoolOverride?: 'ESL' | 'PEA'; unitOverride?: string; useCache?: boolean } = {}
+        options: { force?: boolean; replace?: boolean; schoolOverride?: string; unitOverride?: string; useCache?: boolean } = {}
     ) => {
         const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
         const snapshotSchool = schoolOverride ?? school;
@@ -10608,13 +10626,14 @@ const App: React.FC = () => {
         message: string;
     }>({ status: 'idle', date: '', message: '' });
 
-    function getDailySnapshotKey(targetDate: string, targetSchool: 'ESL' | 'PEA' = school, targetUnit: string = activeUnitCode): string {
+    function getDailySnapshotKey(targetDate: string, targetSchool: string = school, targetUnit: string = activeUnitCode): string {
         const safeUnit = String(targetUnit || '').trim().replace(/[^A-Za-z0-9_-]/g, '-');
-        return safeUnit ? `${targetDate}__${targetSchool}__${safeUnit}` : `${targetDate}__${targetSchool}`;
+        const safeSchool = String(targetSchool || '').trim().replace(/[^A-Za-z0-9_-]/g, '-');
+        return safeUnit ? `${targetDate}__${safeSchool}__${safeUnit}` : `${targetDate}__${safeSchool}`;
     }
 
     function getDailySnapshotDate(snapshotDate: string): string {
-        return String(snapshotDate || '').replace(/__(ESL|PEA)(?:__[A-Za-z0-9_-]+)?$/i, '');
+        return String(snapshotDate || '').replace(/__[A-Za-z0-9_-]+(?:__[A-Za-z0-9_-]+)?$/i, '');
     }
 
     function getSnapshotEventsSignature(events: ScheduleEvent[] = []): string {
@@ -14043,11 +14062,11 @@ const App: React.FC = () => {
     };
 
 
-    const getDefaultUnitForSchool = (targetSchool: 'ESL' | 'PEA'): string => {
+    const getDefaultUnitForSchool = (targetSchool: string): string => {
         return getUnitOptionsForLocation(targetSchool)[0]?.code || (targetSchool === 'PEA' ? '2FTS' : '1FTS');
     };
 
-    const changeSchool = (newSchool: 'ESL' | 'PEA') => {
+    const changeSchool = (newSchool: string) => {
         const nextUnit = getDefaultUnitForSchool(newSchool);
         setSchool(newSchool);
         setActiveUnitCode(nextUnit);
@@ -14062,7 +14081,7 @@ const App: React.FC = () => {
         void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: nextUnit });
     };
 
-    const changeOperationalContext = (newSchool: 'ESL' | 'PEA', newUnit: string) => {
+    const changeOperationalContext = (newSchool: string, newUnit: string) => {
         setSchool(newSchool);
         setActiveUnitCode(newUnit);
         setIsLocalityChangeVisible(true);
@@ -22401,7 +22420,7 @@ updates.forEach(update => {
                     contextOptions={operationalContextOptions}
                     activeLocation={school}
                     activeUnit={activeUnitCode}
-                    onContextChange={(loc, unit) => changeOperationalContext(loc as 'ESL' | 'PEA', unit)}
+                    onContextChange={(loc, unit) => changeOperationalContext(loc, unit)}
                     activeModelLabel={activeOperationalModelLabel}
                     isMagnifierEnabled={isMagnifierEnabled}
                     setIsMagnifierEnabled={setIsMagnifierEnabled}

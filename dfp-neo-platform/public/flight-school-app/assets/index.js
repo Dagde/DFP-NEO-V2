@@ -63008,10 +63008,16 @@ const App = () => {
       cancelled = true;
     };
   }, []);
-  const baseSelectableLocationCodes = reactExports.useMemo(
-    () => getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]),
-    [platformConfig]
-  );
+  const baseSelectableLocationCodes = reactExports.useMemo(() => {
+    const activeLocationCodes = new Set(
+      (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").map((location) => String(location.code || "").trim()).filter(Boolean)
+    );
+    const activeUnitLocationCodes = new Set(
+      (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim().toUpperCase()).filter(Boolean)
+    );
+    const configuredLocationsWithUnits = [...activeLocationCodes].filter((code) => activeUnitLocationCodes.has(code.toUpperCase()));
+    return configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]);
+  }, [platformConfig]);
   const getUnitOptionsForLocation = reactExports.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
     const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => String(unit.locationCode || "").trim().toUpperCase() === normalisedLocationCode).map((unit) => ({
@@ -63020,6 +63026,8 @@ const App = () => {
       model: getUnitOperationalModel(unit)
     })).filter((unit) => unit.code);
     if (configuredUnits.length > 0) return configuredUnits;
+    const hasConfiguredPlatformUnits = (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE");
+    if (hasConfiguredPlatformUnits) return [];
     const fallbackCodes = normalisedLocationCode === "PEA" ? ["2FTS"] : ["1FTS", "CFS"];
     return fallbackCodes.map((code) => ({
       code,
@@ -64045,10 +64053,11 @@ const App = () => {
   const [dfpSnapshotLoadState, setDfpSnapshotLoadState] = reactExports.useState({ status: "idle", date: "", message: "" });
   function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode) {
     const safeUnit = String(targetUnit || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
-    return safeUnit ? `${targetDate}__${targetSchool}__${safeUnit}` : `${targetDate}__${targetSchool}`;
+    const safeSchool = String(targetSchool || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
+    return safeUnit ? `${targetDate}__${safeSchool}__${safeUnit}` : `${targetDate}__${safeSchool}`;
   }
   function getDailySnapshotDate(snapshotDate) {
-    return String(snapshotDate || "").replace(/__(ESL|PEA)(?:__[A-Za-z0-9_-]+)?$/i, "");
+    return String(snapshotDate || "").replace(/__[A-Za-z0-9_-]+(?:__[A-Za-z0-9_-]+)?$/i, "");
   }
   function getSnapshotEventsSignature(events2 = []) {
     return events2.map((e) => [
