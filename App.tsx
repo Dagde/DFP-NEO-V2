@@ -9071,8 +9071,6 @@ const App: React.FC = () => {
         Boolean(targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) && targetDate < getLocalDateString())
     );
 
-    const isViewingPastDfp = isPastDfpDate(date);
-
     const denyPastDfpEdit = (action: string = 'modify this DFP') => {
         showDarkAlert(
             `Past DFPs are locked. You cannot ${action} for ${date}.`,
@@ -9158,6 +9156,7 @@ const App: React.FC = () => {
         } catch (e) { /* ignore */ }
         return getLocalDateString();
     });
+    const isViewingPastDfp = isPastDfpDate(date);
     const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
