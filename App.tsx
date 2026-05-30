@@ -9760,11 +9760,29 @@ const App: React.FC = () => {
 
     useEffect(() => {
         if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
-        if (!selectableLocationCodes.includes(school)) {
+        if (selectableLocationCodes.includes(school)) return;
+
+        const normalisedSchool = String(school || '').trim().toUpperCase();
+        const aliasMatchedLocation = selectableLocationCodes.find((locationCode) => {
+            const normalisedLocationCode = String(locationCode || '').trim().toUpperCase();
+            const configuredLocation = (platformConfig?.locations || [])
+                .filter((location: any) => location.status !== 'INACTIVE')
+                .find((location: any) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+            const aliases = configuredLocation ? getLocationSelectorAliases(configuredLocation) : [normalisedLocationCode];
+            return aliases.includes(normalisedSchool);
+        });
+
+        if (aliasMatchedLocation) {
+            const nextUnits = getUnitOptionsForLocation(aliasMatchedLocation);
+            setSchool(aliasMatchedLocation);
+            if (nextUnits.length > 0 && !nextUnits.some(unit => unit.code === activeUnitCode)) {
+                setActiveUnitCode(nextUnits[0].code);
+            }
+        } else {
             changeSchool(selectableLocationCodes[0]);
             setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
         }
-    }, [platformConfigLoaded, selectableLocationCodes, school]);
+    }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformConfig, platformConfigLoaded, selectableLocationCodes, school]);
 //     useEffect(() => {
 //         const fetchCurrentUser = async () => {
 //            console.log('🔍 [SESSION DEBUG] useEffect hook running');
@@ -13399,8 +13417,10 @@ const App: React.FC = () => {
         }
         const moduleCode = getPlatformModuleForView(view);
         if (!moduleCode) return true;
-        return hasPlatformModuleAccess(platformAccessContext, school, moduleCode);
-    }, [platformAccessContext, school]);
+        return getDailySnapshotLocationAliases(school).some(locationAlias => (
+            hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode)
+        ));
+    }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
 
     const navigateToView = (view: string) => {
         if (!canAccessView(view)) {

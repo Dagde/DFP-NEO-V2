@@ -63427,11 +63427,25 @@ const App = () => {
   ]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
-    if (!selectableLocationCodes.includes(school)) {
+    if (selectableLocationCodes.includes(school)) return;
+    const normalisedSchool = String(school || "").trim().toUpperCase();
+    const aliasMatchedLocation = selectableLocationCodes.find((locationCode) => {
+      const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
+      const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+      const aliases = configuredLocation ? getLocationSelectorAliases(configuredLocation) : [normalisedLocationCode];
+      return aliases.includes(normalisedSchool);
+    });
+    if (aliasMatchedLocation) {
+      const nextUnits = getUnitOptionsForLocation(aliasMatchedLocation);
+      setSchool(aliasMatchedLocation);
+      if (nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode)) {
+        setActiveUnitCode(nextUnits[0].code);
+      }
+    } else {
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [platformConfigLoaded, selectableLocationCodes, school]);
+  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformConfig, platformConfigLoaded, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
@@ -66231,8 +66245,8 @@ ${"=".repeat(60)}`);
     }
     const moduleCode = getPlatformModuleForView(view2);
     if (!moduleCode) return true;
-    return hasPlatformModuleAccess(platformAccessContext, school, moduleCode);
-  }, [platformAccessContext, school]);
+    return getDailySnapshotLocationAliases(school).some((locationAlias) => hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode));
+  }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
   const navigateToView = (view2) => {
     if (!canAccessView(view2)) {
       setShowInfoNotification("Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.");
