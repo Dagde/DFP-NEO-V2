@@ -35749,6 +35749,20 @@ const EmergencyPage = ({
     ] }) })
   ] });
 };
+const verifyCurrentUserPassword = async (password) => {
+  const sessionToken = localStorage.getItem("dfp_session_token") || "";
+  const response = await fetch("/api/auth/verify-password", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+    },
+    body: JSON.stringify({ password })
+  });
+  const data = await response.json().catch(() => ({}));
+  return response.ok && data.valid === true;
+};
 const INITIAL_ELEMENTS_LIST_INLINE = [
   "Generic Flying Elements",
   "Pre-Post Flight",
@@ -36223,17 +36237,34 @@ const SettingsView = ({
     setIsEditingLocations(true);
   };
   const handleSaveLocations = () => {
-    const oldLocations = locations.join(", ");
-    const newLocations = tempLocations.join(", ");
-    onUpdateLocations(tempLocations);
-    if (onUpdateLocationAbbreviations) onUpdateLocationAbbreviations(tempLocationAbbreviations);
+    const previousLocations = Array.from(new Set(locations.map((location) => location.trim()).filter(Boolean)));
+    const cleanLocations = Array.from(new Set(tempLocations.map((location) => location.trim()).filter(Boolean)));
+    const cleanAbbreviations = Object.fromEntries(
+      cleanLocations.map((location) => [location, (tempLocationAbbreviations[location] || "").trim().toUpperCase()])
+    );
+    const oldLocations = previousLocations.join(", ");
+    const newLocations = cleanLocations.join(", ");
+    onUpdateLocations(cleanLocations);
+    if (onUpdateLocationAbbreviations) onUpdateLocationAbbreviations(cleanAbbreviations);
     setIsEditingLocations(false);
     logAudit({
       page: "Settings - Location",
-      action: "update",
+      action: "Edit",
       description: "Updated operating locations",
       changes: `From: [${oldLocations}] To: [${newLocations}]`
     });
+    cleanLocations.filter((location) => !previousLocations.includes(location)).forEach((location) => logAudit({
+      page: "Settings - Location",
+      action: "Add",
+      description: `Added location ${location}`,
+      changes: `Location: ${location}; code: ${cleanAbbreviations[location] || "none"}`
+    }));
+    previousLocations.filter((location) => !cleanLocations.includes(location)).forEach((location) => logAudit({
+      page: "Settings - Location",
+      action: "Delete",
+      description: `Removed location ${location}`,
+      changes: `Remaining locations: ${cleanLocations.join(", ") || "none"}`
+    }));
   };
   const handleCancelLocations = () => {
     setNewLocation("");
@@ -36276,8 +36307,38 @@ const SettingsView = ({
       setNewLocation("");
     }
   };
-  const handleRemoveLocation = (locationToRemove) => {
+  const handleRemoveLocation = async (locationToRemove) => {
+    if (tempLocations.length <= 1) {
+      await showDarkAlert("At least one location must remain configured.", "Cannot Remove Location", "warning");
+      return;
+    }
+    const password = await showDarkPrompt({
+      title: "Remove Location",
+      message: `Enter your password to remove ${locationToRemove}.`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted. The location was not removed.", "Password Required", "warning");
+        return;
+      }
+    } catch {
+      await showDarkAlert("The app could not verify your password. The location was not removed.", "Password Check Failed", "error");
+      return;
+    }
     setTempLocations(tempLocations.filter((loc) => loc !== locationToRemove));
+    setTempLocationAbbreviations((prev) => {
+      const next = { ...prev };
+      delete next[locationToRemove];
+      return next;
+    });
   };
   const handleEditUnits = () => {
     setTempUnits([...units]);
@@ -37160,7 +37221,15 @@ const SettingsView = ({
                 className: "w-16 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-yellow-300 text-xs font-mono font-bold uppercase text-center focus:outline-none focus:ring-1 focus:ring-sky-500"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveLocation(loc), className: "p-1 text-gray-400 hover:text-red-400 flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => handleRemoveLocation(loc),
+                title: "Remove location",
+                className: "px-2 py-1 text-xs font-semibold text-red-300 hover:text-red-200 flex-shrink-0",
+                children: "Remove"
+              }
+            )
           ] }, loc)) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "text", value: newLocation, onChange: (e) => setNewLocation(e.target.value), placeholder: "New location name", className: "flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" }),
@@ -45627,7 +45696,32 @@ const LocaleSettingsSection = ({
     setTempOpAreas((prev) => ({ ...prev, [name]: [] }));
     setNewLocation("");
   };
-  const removeLocation = (location) => {
+  const removeLocation = async (location) => {
+    if (tempLocations.length <= 1) {
+      await showDarkAlert("At least one location must remain configured.", "Cannot Remove Location", "warning");
+      return;
+    }
+    const password = await showDarkPrompt({
+      title: "Remove Location",
+      message: `Enter your password to remove ${location}. Assigned units will be moved to the first remaining location when you save.`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted. The location was not removed.", "Password Required", "warning");
+        return;
+      }
+    } catch {
+      await showDarkAlert("The app could not verify your password. The location was not removed.", "Password Check Failed", "error");
+      return;
+    }
     const nextLocations = tempLocations.filter((loc) => loc !== location);
     const fallbackLocation = nextLocations[0] || "";
     setTempLocations(nextLocations);
@@ -45702,6 +45796,7 @@ const LocaleSettingsSection = ({
     setTempServiceDefinitions((prev) => prev.filter((service) => service.shortName !== shortName));
   };
   const saveLocaleSettings = () => {
+    const previousLocations = Array.from(new Set(locations.map((location) => location.trim()).filter(Boolean)));
     const cleanLocations = tempLocations.map((location) => location.trim()).filter(Boolean);
     const uniqueLocations = Array.from(new Set(cleanLocations));
     const fallbackLocation = uniqueLocations[0] || "";
@@ -45726,10 +45821,22 @@ const LocaleSettingsSection = ({
     onShowSuccess("Locale settings updated");
     logAudit({
       page: "Settings - Locale Settings",
-      action: "update",
+      action: "Edit",
       description: "Updated location-led locale settings",
       changes: `${uniqueLocations.length} locations, ${cleanUnits.length} units, timezone ${formatTimezoneLabel(tempTimezoneOffset)}`
     });
+    uniqueLocations.filter((location) => !previousLocations.includes(location)).forEach((location) => logAudit({
+      page: "Settings - Locale Settings",
+      action: "Add",
+      description: `Added location ${location}`,
+      changes: `Location: ${location}; code: ${cleanAbbreviations[location] || "none"}; timezone: ${formatTimezoneLabel(tempTimezoneOffset)}`
+    }));
+    previousLocations.filter((location) => !uniqueLocations.includes(location)).forEach((location) => logAudit({
+      page: "Settings - Locale Settings",
+      action: "Delete",
+      description: `Removed location ${location}`,
+      changes: `Remaining locations: ${uniqueLocations.join(", ") || "none"}`
+    }));
   };
   const displayedLocations = isEditing ? tempLocations : locations;
   const displayedUnits = isEditing ? tempUnits : units;
@@ -45800,7 +45907,7 @@ const LocaleSettingsSection = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "truncate text-xl font-bold text-white", children: location }),
             displayedAbbreviations[location] && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 font-mono text-xs font-bold uppercase tracking-widest text-yellow-300", children: displayedAbbreviations[location] })
           ] }) }),
-          isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeLocation(location), className: "rounded-md border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10", children: "Remove" })
+          isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeLocation(location), className: "rounded-md border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10", children: "Remove Location" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [

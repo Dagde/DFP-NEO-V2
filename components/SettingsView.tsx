@@ -14,6 +14,7 @@ import UpdateSummaryFlyout from './UpdateSummaryFlyout';
 import ScoringMatrixFlyout from './ScoringMatrixFlyout';
 import CourseSelectionFlyout from './CourseSelectionFlyout';
 import { CourseSelectionDialog } from './CourseSelectionDialog';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import { Instructor, Trainee, SyllabusItemDetail, InstructorRank, InstructorCategory, SeatConfig, TraineeRank, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 import ACHistoryPage from './ACHistoryPage';
 import FormationCallsignsSection from './FormationCallsignsSection';
@@ -30,6 +31,7 @@ import {
     normaliseTileStatusSettings,
     type TileStatusSettings,
 } from '../utils/tileStatusSettings';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 
 declare var XLSX: any;
@@ -678,17 +680,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const handleSaveLocations = () => {
-        const oldLocations = locations.join(', ');
-        const newLocations = tempLocations.join(', ');
-        onUpdateLocations(tempLocations);
-        if (onUpdateLocationAbbreviations) onUpdateLocationAbbreviations(tempLocationAbbreviations);
+        const previousLocations = Array.from(new Set(locations.map(location => location.trim()).filter(Boolean)));
+        const cleanLocations = Array.from(new Set(tempLocations.map(location => location.trim()).filter(Boolean)));
+        const cleanAbbreviations = Object.fromEntries(
+            cleanLocations.map(location => [location, (tempLocationAbbreviations[location] || '').trim().toUpperCase()])
+        );
+        const oldLocations = previousLocations.join(', ');
+        const newLocations = cleanLocations.join(', ');
+        onUpdateLocations(cleanLocations);
+        if (onUpdateLocationAbbreviations) onUpdateLocationAbbreviations(cleanAbbreviations);
         setIsEditingLocations(false);
         logAudit({
             page: 'Settings - Location',
-            action: 'update',
+            action: 'Edit',
             description: 'Updated operating locations',
             changes: `From: [${oldLocations}] To: [${newLocations}]`
         });
+        cleanLocations
+            .filter(location => !previousLocations.includes(location))
+            .forEach(location => logAudit({
+                page: 'Settings - Location',
+                action: 'Add',
+                description: `Added location ${location}`,
+                changes: `Location: ${location}; code: ${cleanAbbreviations[location] || 'none'}`,
+            }));
+        previousLocations
+            .filter(location => !cleanLocations.includes(location))
+            .forEach(location => logAudit({
+                page: 'Settings - Location',
+                action: 'Delete',
+                description: `Removed location ${location}`,
+                changes: `Remaining locations: ${cleanLocations.join(', ') || 'none'}`,
+            }));
     };
 
     const handleCancelLocations = () => {
@@ -740,8 +763,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         }
     };
 
-    const handleRemoveLocation = (locationToRemove: string) => {
+    const handleRemoveLocation = async (locationToRemove: string) => {
+        if (tempLocations.length <= 1) {
+            await showDarkAlert('At least one location must remain configured.', 'Cannot Remove Location', 'warning');
+            return;
+        }
+
+        const password = await showDarkPrompt({
+            title: 'Remove Location',
+            message: `Enter your password to remove ${locationToRemove}.`,
+            inputLabel: 'Password',
+            inputType: 'password',
+            inputPlaceholder: 'Enter password',
+            confirmText: 'Remove',
+            cancelText: 'Cancel',
+            variant: 'warning',
+        });
+        if (!password) return;
+
+        try {
+            const isValid = await verifyCurrentUserPassword(password);
+            if (!isValid) {
+                await showDarkAlert('The password was not accepted. The location was not removed.', 'Password Required', 'warning');
+                return;
+            }
+        } catch {
+            await showDarkAlert('The app could not verify your password. The location was not removed.', 'Password Check Failed', 'error');
+            return;
+        }
+
         setTempLocations(tempLocations.filter(loc => loc !== locationToRemove));
+        setTempLocationAbbreviations(prev => {
+            const next = { ...prev };
+            delete next[locationToRemove];
+            return next;
+        });
     };
 
     // Unit Handlers
@@ -1832,7 +1888,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     title="Short code (e.g. ESL)"
                                                     className="w-16 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-yellow-300 text-xs font-mono font-bold uppercase text-center focus:outline-none focus:ring-1 focus:ring-sky-500"
                                                 />
-                                                <button onClick={() => handleRemoveLocation(loc)} className="p-1 text-gray-400 hover:text-red-400 flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
+                                                <button
+                                                    onClick={() => handleRemoveLocation(loc)}
+                                                    title="Remove location"
+                                                    className="px-2 py-1 text-xs font-semibold text-red-300 hover:text-red-200 flex-shrink-0"
+                                                >
+                                                    Remove
+                                                </button>
                                             </li>
                                         ))}
                                     </ul>

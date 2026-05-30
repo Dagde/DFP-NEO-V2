@@ -9,6 +9,7 @@ import TraineeDatabaseTable from "./TraineeDatabaseTable";
 import TraineeMockDataTable from "./TraineeMockDataTable";
 import DataSourcesSettings from "./DataSourcesSettings";
 import AuditButton from './AuditButton';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import OrganisationSettings from './OrganisationSettings';
 import AppearanceSettings from './AppearanceSettings';
 import PlatformConfigurationSettings from './PlatformConfigurationSettings';
@@ -20,6 +21,7 @@ import { logAudit } from '../utils/auditLogger';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TileStatusSettings } from '../utils/tileStatusSettings';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -780,7 +782,35 @@ const LocaleSettingsSection: React.FC<{
         setNewLocation('');
     };
 
-    const removeLocation = (location: string) => {
+    const removeLocation = async (location: string) => {
+        if (tempLocations.length <= 1) {
+            await showDarkAlert('At least one location must remain configured.', 'Cannot Remove Location', 'warning');
+            return;
+        }
+
+        const password = await showDarkPrompt({
+            title: 'Remove Location',
+            message: `Enter your password to remove ${location}. Assigned units will be moved to the first remaining location when you save.`,
+            inputLabel: 'Password',
+            inputType: 'password',
+            inputPlaceholder: 'Enter password',
+            confirmText: 'Remove',
+            cancelText: 'Cancel',
+            variant: 'warning',
+        });
+        if (!password) return;
+
+        try {
+            const isValid = await verifyCurrentUserPassword(password);
+            if (!isValid) {
+                await showDarkAlert('The password was not accepted. The location was not removed.', 'Password Required', 'warning');
+                return;
+            }
+        } catch {
+            await showDarkAlert('The app could not verify your password. The location was not removed.', 'Password Check Failed', 'error');
+            return;
+        }
+
         const nextLocations = tempLocations.filter(loc => loc !== location);
         const fallbackLocation = nextLocations[0] || '';
         setTempLocations(nextLocations);
@@ -863,6 +893,7 @@ const LocaleSettingsSection: React.FC<{
     };
 
     const saveLocaleSettings = () => {
+        const previousLocations = Array.from(new Set(locations.map(location => location.trim()).filter(Boolean)));
         const cleanLocations = tempLocations.map(location => location.trim()).filter(Boolean);
         const uniqueLocations = Array.from(new Set(cleanLocations));
         const fallbackLocation = uniqueLocations[0] || '';
@@ -888,10 +919,26 @@ const LocaleSettingsSection: React.FC<{
         onShowSuccess('Locale settings updated');
         logAudit({
             page: 'Settings - Locale Settings',
-            action: 'update',
+            action: 'Edit',
             description: 'Updated location-led locale settings',
             changes: `${uniqueLocations.length} locations, ${cleanUnits.length} units, timezone ${formatTimezoneLabel(tempTimezoneOffset)}`,
         });
+        uniqueLocations
+            .filter(location => !previousLocations.includes(location))
+            .forEach(location => logAudit({
+                page: 'Settings - Locale Settings',
+                action: 'Add',
+                description: `Added location ${location}`,
+                changes: `Location: ${location}; code: ${cleanAbbreviations[location] || 'none'}; timezone: ${formatTimezoneLabel(tempTimezoneOffset)}`,
+            }));
+        previousLocations
+            .filter(location => !uniqueLocations.includes(location))
+            .forEach(location => logAudit({
+                page: 'Settings - Locale Settings',
+                action: 'Delete',
+                description: `Removed location ${location}`,
+                changes: `Remaining locations: ${uniqueLocations.join(', ') || 'none'}`,
+            }));
     };
 
     const displayedLocations = isEditing ? tempLocations : locations;
@@ -978,7 +1025,7 @@ const LocaleSettingsSection: React.FC<{
                                         )}
                                     </div>
                                     {isEditing && (
-                                        <button onClick={() => removeLocation(location)} className="rounded-md border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10">Remove</button>
+                                        <button onClick={() => removeLocation(location)} className="rounded-md border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10">Remove Location</button>
                                     )}
                                 </div>
                             </div>
