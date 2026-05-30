@@ -125,14 +125,14 @@ const Header: React.FC<HeaderProps> = ({
                 LAYOUT:
                 The header sits between left sidebar (110px) and right sidebar (110px).
                 Header uses a 3-column flex layout:
-                  [125px context selector] [flex-1 centered buttons] [125px spacer]
-                The 125px spacer on the right balances the context controls on the left,
+                  [140px context selector] [flex-1 centered buttons] [140px spacer]
+                The 140px spacer on the right balances the context controls on the left,
                 so the button group is perfectly centered in the header.
             */}
             <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative">
 
                 {/* LEFT: Operational context - Location and Unit */}
-                <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '125px', paddingLeft: '8px', paddingRight: '8px' }}>
+                <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '140px', paddingLeft: '8px', paddingRight: '8px' }}>
                   <div ref={contextSelectorRef} className="relative w-full">
                     <button
                         type="button"
@@ -321,7 +321,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* RIGHT: spacer to balance the operational context selector on the left,
                     ensuring the button group is perfectly centered in the header */}
-                <div className="flex-shrink-0" style={{ width: '125px' }}></div>
+                <div className="flex-shrink-0" style={{ width: '140px' }}></div>
 
             </header>
             
