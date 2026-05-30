@@ -68696,6 +68696,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const newAssessments = new Map(assessments);
     let created = 0;
     let deleted = 0;
+    const processedPt051LogicalKeys = /* @__PURE__ */ new Set();
     activeDfpEvents.forEach((event) => {
       const isDutySup = event?.flightNumber?.includes("Duty Sup");
       const isStbyFlightNumber = event?.flightNumber?.toUpperCase().includes("STBY");
@@ -68727,13 +68728,18 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         });
       }
       trainees.forEach((traineeFullName) => {
+        const logicalAssessmentKey = `${event.date}|||${event.flightNumber}|||${traineeFullName}`;
+        if (processedPt051LogicalKeys.has(logicalAssessmentKey)) {
+          return;
+        }
+        processedPt051LogicalKeys.add(logicalAssessmentKey);
         const assessmentKey = `${event.id}-${traineeFullName}`;
         const existingAssessment = Array.from(newAssessments.values()).find(
           (a) => a.eventId === event.id && a.traineeFullName === traineeFullName
         );
         if (!existingAssessment) {
           const existingUnassessedForFlight = Array.from(newAssessments.values()).find(
-            (a) => a.traineeFullName === traineeFullName && a.flightNumber === event.flightNumber && (a.overallResult === null || a.overallResult === void 0 || a.overallResult === "")
+            (a) => a.traineeFullName === traineeFullName && a.flightNumber === event.flightNumber && a.date === event.date && (a.overallResult === null || a.overallResult === void 0 || a.overallResult === "")
           );
           if (existingUnassessedForFlight) {
             newAssessments.delete(existingUnassessedForFlight.id);
@@ -68806,7 +68812,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const dupCleanupMap = /* @__PURE__ */ new Map();
     newAssessments.forEach((assessment) => {
       if (assessment.overallResult === null || assessment.overallResult === void 0 || assessment.overallResult === "") {
-        const dupKey = `${assessment.flightNumber}|||${assessment.traineeFullName}`;
+        const dupKey = `${assessment.date}|||${assessment.flightNumber}|||${assessment.traineeFullName}`;
         if (!dupCleanupMap.has(dupKey)) {
           dupCleanupMap.set(dupKey, []);
         }

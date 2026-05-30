@@ -16391,6 +16391,7 @@ const App: React.FC = () => {
         const newAssessments = new Map(assessments);
         let created = 0;
         let deleted = 0;
+        const processedPt051LogicalKeys = new Set<string>();
 
         // FORWARD CHECK: Create PT-051s for events that don't have them
         activeDfpEvents.forEach(event => {
@@ -16444,6 +16445,11 @@ const App: React.FC = () => {
 
             // For each trainee, check if PT-051 exists
             trainees.forEach(traineeFullName => {
+                const logicalAssessmentKey = `${event.date}|||${event.flightNumber}|||${traineeFullName}`;
+                if (processedPt051LogicalKeys.has(logicalAssessmentKey)) {
+                    return;
+                }
+                processedPt051LogicalKeys.add(logicalAssessmentKey);
                 const assessmentKey = `${event.id}-${traineeFullName}`;
 
                 // Check if PT-051 already exists for this event-trainee combination
@@ -16452,12 +16458,15 @@ const App: React.FC = () => {
                 );
 
                 if (!existingAssessment) {
-                    // DEDUP CHECK: If same flightNumber + trainee already has an unassessed PT-051
+                    // DEDUP CHECK: If same date + flightNumber + trainee already has an unassessed PT-051
                     // (none of DCO/DNCO/DPCO result checked, i.e. overallResult is null/empty)
                     // → remove the old placeholder and replace with new event details
+                    // Historical events can legitimately repeat the same flightNumber for the same trainee
+                    // on different dates, so date must be part of this check.
                     const existingUnassessedForFlight = Array.from(newAssessments.values()).find(
                         (a: Pt051Assessment) => a.traineeFullName === traineeFullName &&
                             a.flightNumber === event.flightNumber &&
+                            a.date === event.date &&
                             (a.overallResult === null || a.overallResult === undefined || a.overallResult === '')
                     );
                     if (existingUnassessedForFlight) {
@@ -16545,13 +16554,14 @@ const App: React.FC = () => {
             deleted++;
         });
 
-        // DUPLICATE CLEANUP: Remove duplicate unassessed PT-051s for same flightNumber + trainee
-        // keeping only the most recently dated one. Handles existing duplicates from
+        // DUPLICATE CLEANUP: Remove duplicate unassessed PT-051s for same date + flightNumber + trainee,
+        // while preserving legitimate repeats of the same event code on different dates.
+        // Handles existing duplicates from
         // rescheduled events created before the dedup logic was added.
         const dupCleanupMap = new Map<string, Pt051Assessment[]>();
         newAssessments.forEach((assessment) => {
             if (assessment.overallResult === null || assessment.overallResult === undefined || assessment.overallResult === '') {
-                const dupKey = `${assessment.flightNumber}|||${assessment.traineeFullName}`;
+                const dupKey = `${assessment.date}|||${assessment.flightNumber}|||${assessment.traineeFullName}`;
                 if (!dupCleanupMap.has(dupKey)) {
                     dupCleanupMap.set(dupKey, []);
                 }
