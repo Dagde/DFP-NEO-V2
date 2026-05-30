@@ -9696,6 +9696,62 @@ const App: React.FC = () => {
         return query ? `${path}${joiner}${query}` : path;
     }, [platformDataScopeQuery]);
 
+    function pushDfpDataDiag(stage: string, details: Record<string, any> = {}): void {
+        const entry = {
+            ts: new Date().toISOString(),
+            stage,
+            date,
+            school,
+            unit: activeUnitCode,
+            activeView,
+            details,
+        };
+        try {
+            console.log(`[DFP-DIAG] ${stage}`, entry);
+            const existing = JSON.parse(localStorage.getItem('neo_dfp_data_diag') || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-200);
+            localStorage.setItem('neo_dfp_data_diag', JSON.stringify(next));
+            (window as any).neoDfpDataDiag = next;
+        } catch (error) {
+            console.log(`[DFP-DIAG] ${stage}`, entry, error);
+        }
+    }
+
+    useEffect(() => {
+        pushDfpDataDiag('context:resolved', {
+            platformLocations: (platformConfig?.locations || []).map((location: any) => ({
+                code: location.code,
+                iataCode: location.iataCode,
+                name: location.name,
+                status: location.status,
+                aliases: getLocationSelectorAliases(location),
+            })),
+            platformUnits: (platformConfig?.units || []).map((unit: any) => ({
+                code: unit.code,
+                locationCode: unit.locationCode,
+                status: unit.status,
+                model: getUnitOperationalModel(unit),
+            })),
+            baseSelectableLocationCodes,
+            accessLocations: platformAccessContext.accessibleLocations,
+            hasRuntimePlatformWideAccess,
+            selectableLocationCodes,
+            operationalContextOptions,
+            activeLocationUnitOptions,
+            platformDataScopeQuery,
+        });
+    }, [
+        activeLocationUnitOptions,
+        baseSelectableLocationCodes,
+        getLocationSelectorAliases,
+        hasRuntimePlatformWideAccess,
+        operationalContextOptions,
+        platformAccessContext,
+        platformConfig,
+        platformDataScopeQuery,
+        selectableLocationCodes,
+    ]);
+
     useEffect(() => {
         if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
         if (!selectableLocationCodes.includes(school)) {
@@ -10171,15 +10227,39 @@ const App: React.FC = () => {
         const loadHistoricalData = async () => {
             try {
                 const apiBase = getAppApiBase();
+                pushDfpDataDiag('history:load-start', {
+                    requestedSchool,
+                    requestedUnit,
+                    apiBase,
+                    platformDataScopeQuery,
+                    existingPublishedDates: Object.keys(publishedSchedulesRef.current || {}),
+                });
 
                 // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
                 try {
-                    const snapRes = await fetch(`${apiBase}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`);
+                    const dailySnapshotUrl = `${apiBase}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`;
+                    const snapRes = await fetch(dailySnapshotUrl);
                     if (cancelled) return;
+                    pushDfpDataDiag('history:daily-snapshot-response', {
+                        url: dailySnapshotUrl,
+                        status: snapRes.status,
+                        ok: snapRes.ok,
+                    });
                     if (snapRes.ok) {
                         const snapData = await snapRes.json();
                         if (cancelled) return;
                         const snapshots: any[] = snapData.snapshots || [];
+                        pushDfpDataDiag('history:daily-snapshot-json', {
+                            snapshotCount: snapshots.length,
+                            snapshots: snapshots.slice(0, 20).map((snap) => ({
+                                key: snap.date,
+                                parsedDate: getDailySnapshotDate(snap.date),
+                                eventCount: Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents.length : 0,
+                                baselineCount: Array.isArray(snap.baselineEvents) ? snap.baselineEvents.length : 0,
+                                snapshotSchool: snap.snapshotSchool,
+                                snapshotUnit: snap.snapshotUnit,
+                            })),
+                        });
                         if (snapshots.length > 0) {
                             console.log(`[Snapshot] ✅ Loaded ${snapshots.length} daily snapshots`);
                             setPublishedSchedules(prev => {
@@ -10240,8 +10320,14 @@ const App: React.FC = () => {
                 }
 
                 // ── SECONDARY: Legacy DataBackup historical-data (seed data, fallback) ──
-                const res = await fetch(`${apiBase}/historical-data`);
+                const historicalUrl = `${apiBase}/historical-data`;
+                const res = await fetch(historicalUrl);
                 if (cancelled) return;
+                pushDfpDataDiag('history:legacy-response', {
+                    url: historicalUrl,
+                    status: res.status,
+                    ok: res.ok,
+                });
                 if (!res.ok) return;
                 const data = await res.json();
                 if (cancelled) return;
@@ -10249,6 +10335,15 @@ const App: React.FC = () => {
                 if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
                     const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
                     const eventCount = Object.values(seedSchedules).flat().length;
+                    pushDfpDataDiag('history:legacy-json', {
+                        dateCount: Object.keys(seedSchedules).length,
+                        eventCount,
+                        dates: Object.entries(seedSchedules).slice(0, 60).map(([dateKey, seedEvents]) => ({
+                            date: dateKey,
+                            eventCount: Array.isArray(seedEvents) ? seedEvents.length : 0,
+                        })),
+                        seedingMetadata: data.seedingMetadata || null,
+                    });
                     console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
                     setSnapshotDates(prev => (
                         [...new Set([...prev, ...Object.keys(seedSchedules)])]
@@ -10334,10 +10429,21 @@ const App: React.FC = () => {
         const loadSnapshotDates = async () => {
             try {
                 const apiBase = getAppApiBase();
-                const res = await fetch(`${apiBase}/daily-snapshot/dates`);
+                const snapshotDatesUrl = `${apiBase}/daily-snapshot/dates`;
+                const res = await fetch(snapshotDatesUrl);
+                pushDfpDataDiag('snapshot-dates:response', {
+                    url: snapshotDatesUrl,
+                    status: res.status,
+                    ok: res.ok,
+                });
                 if (!res.ok) return;
                 const data = await res.json();
                 const dates: string[] = [...new Set((data.dates || []).map((d: any) => d.date))] as string[];
+                pushDfpDataDiag('snapshot-dates:json', {
+                    count: dates.length,
+                    dates: dates.slice(0, 80),
+                    rawRows: (data.dates || []).slice(0, 30),
+                });
                 console.log(`[Snapshot] ✅ Loaded ${dates.length} snapshot dates for calendar`);
                 setSnapshotDates(prev => (
                     [...new Set([...prev, ...dates])]
@@ -10361,6 +10467,26 @@ const App: React.FC = () => {
         if (!snap) return 0;
 
         const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
+        pushDfpDataDiag('snapshot:apply', {
+            targetDate,
+            snapshotSchool,
+            snapshotUnit,
+            source,
+            replace,
+            eventCount: events.length,
+            existingCount: (publishedSchedulesRef.current[targetDate] || []).length,
+            snapKey: snap.date,
+            sampleEvents: events.slice(0, 8).map((event) => ({
+                id: event.id,
+                date: event.date,
+                type: event.type,
+                resourceId: event.resourceId,
+                startTime: event.startTime,
+                flightNumber: event.flightNumber,
+                instructor: event.instructor,
+                student: event.student,
+            })),
+        });
         if (events.length > 0) {
             setPublishedSchedules(prev => {
                 const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
@@ -10400,15 +10526,41 @@ const App: React.FC = () => {
         const snapshotUnit = unitOverride ?? activeUnitCode;
         const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
         const cacheKey = `dfp_snapshot_cache_${snapshotKey}`;
+        pushDfpDataDiag('snapshot:load-start', {
+            targetDate,
+            snapshotSchool,
+            snapshotUnit,
+            snapshotKey,
+            cacheKey,
+            force,
+            replace,
+            useCache,
+            loaded: loadedSnapshotDates.current.has(snapshotKey),
+            loading: loadingSnapshotDates.current.has(snapshotKey),
+            existingEventsForTarget: (publishedSchedulesRef.current[targetDate] || []).length,
+        });
 
-        if (!force && loadedSnapshotDates.current.has(snapshotKey)) return;
-        if (loadingSnapshotDates.current.has(snapshotKey)) return;
+        if (!force && loadedSnapshotDates.current.has(snapshotKey)) {
+            pushDfpDataDiag('snapshot:load-skip-loaded', { targetDate, snapshotKey });
+            return;
+        }
+        if (loadingSnapshotDates.current.has(snapshotKey)) {
+            pushDfpDataDiag('snapshot:load-skip-loading', { targetDate, snapshotKey });
+            return;
+        }
         loadingSnapshotDates.current.add(snapshotKey);
 
         let cachedEventsSignature: string | null = null;
         if (useCache && !replace) {
             try {
                 const cachedSnapshot = localStorage.getItem(cacheKey);
+                pushDfpDataDiag('snapshot:cache-check', {
+                    targetDate,
+                    snapshotKey,
+                    cacheKey,
+                    hit: Boolean(cachedSnapshot),
+                    byteLength: cachedSnapshot?.length || 0,
+                });
                 if (cachedSnapshot) {
                     const parsedCachedSnapshot = JSON.parse(cachedSnapshot);
                     const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, parsedCachedSnapshot, false, 'cache');
@@ -10450,13 +10602,35 @@ const App: React.FC = () => {
                 }
 
                 try {
-                    let res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(snapshotKey)}`);
+                    const scopedUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(snapshotKey)}`;
+                    let res = await fetch(scopedUrl);
+                    pushDfpDataDiag('snapshot:fetch-response', {
+                        kind: 'unit-scoped',
+                        url: scopedUrl,
+                        status: res.status,
+                        ok: res.ok,
+                    });
                     if (!res.ok && res.status === 404) {
                         const locationFallbackKey = getDailySnapshotKey(targetDate, snapshotSchool, '');
-                        res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(locationFallbackKey)}`);
+                        const locationUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(locationFallbackKey)}`;
+                        res = await fetch(locationUrl);
+                        pushDfpDataDiag('snapshot:fetch-response', {
+                            kind: 'location-scoped',
+                            url: locationUrl,
+                            status: res.status,
+                            ok: res.ok,
+                            locationFallbackKey,
+                        });
                     }
                     if (!res.ok && res.status === 404) {
-                        res = await fetch(`${apiBase}/daily-snapshot/${targetDate}`);
+                        const legacyUrl = `${apiBase}/daily-snapshot/${targetDate}`;
+                        res = await fetch(legacyUrl);
+                        pushDfpDataDiag('snapshot:fetch-response', {
+                            kind: 'legacy-date',
+                            url: legacyUrl,
+                            status: res.status,
+                            ok: res.ok,
+                        });
                     }
 
                     if (res.status === 404) {
@@ -10465,6 +10639,11 @@ const App: React.FC = () => {
                             setBaselineSchedules(prev => ({ ...prev, [snapshotKey]: [] }));
                         }
                         loadedSnapshotDates.current.add(snapshotKey);
+                        pushDfpDataDiag('snapshot:load-empty', {
+                            targetDate,
+                            snapshotKey,
+                            replace,
+                        });
                         setDfpSnapshotLoadState({
                             status: 'empty',
                             date: targetDate,
@@ -10480,6 +10659,13 @@ const App: React.FC = () => {
 
                     const data = await res.json();
                     const snap = data.snapshot;
+                    pushDfpDataDiag('snapshot:network-json', {
+                        targetDate,
+                        snapshotKey,
+                        snapKey: snap?.date,
+                        eventCount: Array.isArray(snap?.scheduleEvents) ? snap.scheduleEvents.length : 0,
+                        baselineCount: Array.isArray(snap?.baselineEvents) ? snap.baselineEvents.length : 0,
+                    });
                     if (!snap) {
                         lastError = new Error('Snapshot response did not include snapshot data');
                         continue;
@@ -10650,6 +10836,14 @@ const App: React.FC = () => {
     }, [publishedSchedules]);
     // Snapshot dates available in DB (for calendar dropdown on date selector)
     const [snapshotDates, setSnapshotDates] = useState<string[]>([]);
+    useEffect(() => {
+        pushDfpDataDiag('snapshot-dates:state', {
+            count: snapshotDates.length,
+            dates: snapshotDates.slice(0, 100),
+            publishedScheduleDateCount: Object.keys(publishedSchedules).length,
+            publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 100),
+        });
+    }, [snapshotDates, publishedSchedules]);
     // Track which snapshot dates have already been loaded to avoid redundant fetches
     const loadedSnapshotDates = React.useRef<Set<string>>(new Set());
     const loadingSnapshotDates = React.useRef<Set<string>>(new Set());
@@ -11535,6 +11729,14 @@ const App: React.FC = () => {
                         };
                     })
                     .filter((unit) => unit.code && unit.locationCode);
+                pushDfpDataDiag('settings:legacy-platform-merge', {
+                    savedLocations,
+                    savedLocationAbbreviations,
+                    savedUnits,
+                    savedUnitLocations,
+                    legacyPlatformLocations,
+                    legacyPlatformUnits,
+                });
                 setPlatformConfig(prev => {
                     const base = prev || {
                         organisations: [],
@@ -12021,6 +12223,24 @@ const App: React.FC = () => {
         console.log('🟡 publishedSchedules keys:', Object.keys(publishedSchedules));
         const events = publishedSchedules[date] || [];
         console.log('🟡 eventsForDate count:', events.length);
+        pushDfpDataDiag('render:events-for-date', {
+            renderedDate: date,
+            eventCount: events.length,
+            publishedScheduleDateCount: Object.keys(publishedSchedules).length,
+            publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 80),
+            snapshotDateCount: snapshotDates.length,
+            snapshotDates: snapshotDates.slice(0, 80),
+            sampleEvents: events.slice(0, 8).map((event) => ({
+                id: event.id,
+                date: event.date,
+                type: event.type,
+                resourceId: event.resourceId,
+                startTime: event.startTime,
+                flightNumber: event.flightNumber,
+                instructor: event.instructor,
+                student: event.student,
+            })),
+        });
 
         // Log SCT FORM events
         const sctEvents = events.filter(e => e.flightNumber === 'SCT FORM');
@@ -12033,7 +12253,7 @@ const App: React.FC = () => {
         }
 
         return events;
-    }, [date, publishedSchedules]);
+    }, [date, publishedSchedules, snapshotDates]);
 
     // Filter out STBY events for Staff and Trainee schedule views
     const eventsForStaffTraineeSchedule = useMemo(() => {
@@ -12067,6 +12287,22 @@ const App: React.FC = () => {
             }
             seenEIds.add(e.id);
             return true;
+        });
+        pushDfpDataDiag('render:event-segments-input', {
+            renderedDate: date,
+            rawEventCount: rawEvents.length,
+            validDedupedEventCount: allEvents.length,
+            duplicateOrInvalidCount: rawEvents.length - allEvents.length,
+            sampleEvents: allEvents.slice(0, 8).map((event) => ({
+                id: event.id,
+                date: event.date,
+                type: event.type,
+                resourceId: event.resourceId,
+                startTime: event.startTime,
+                flightNumber: event.flightNumber,
+                instructor: event.instructor,
+                student: event.student,
+            })),
         });
 
         for (const event of allEvents) {
