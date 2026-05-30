@@ -9709,10 +9709,16 @@ const App: React.FC = () => {
         try {
             console.log(`[DFP-DIAG] ${stage}`, entry);
             const existing = JSON.parse(localStorage.getItem('neo_dfp_data_diag') || '[]');
-            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-200);
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-50);
             localStorage.setItem('neo_dfp_data_diag', JSON.stringify(next));
             (window as any).neoDfpDataDiag = next;
         } catch (error) {
+            try {
+                localStorage.removeItem('neo_dfp_data_diag');
+                (window as any).neoDfpDataDiag = [entry];
+            } catch {
+                // ignore diagnostic storage failures
+            }
             console.log(`[DFP-DIAG] ${stage}`, entry, error);
         }
     }
@@ -10897,13 +10903,44 @@ const App: React.FC = () => {
             .join('||');
     }
 
-    function cacheDailySnapshot(snapshotKey: string, snapshotPayload: Record<string, any>, labelDate: string): void {
+    function pruneDailySnapshotCache(maxEntries = 3): void {
         try {
-            localStorage.setItem(`dfp_snapshot_cache_${snapshotKey}`, JSON.stringify(snapshotPayload));
-        } catch (cacheErr) {
-            console.warn(`[Snapshot] Could not update cached snapshot for ${labelDate}:`, cacheErr);
+            const cacheEntries = Object.keys(localStorage)
+                .filter(key => key.startsWith('dfp_snapshot_cache_'))
+                .map(key => ({
+                    key,
+                    snapshotDate: getDailySnapshotDate(key.replace(/^dfp_snapshot_cache_/, '')),
+                }))
+                .sort((a, b) => b.snapshotDate.localeCompare(a.snapshotDate));
+
+            cacheEntries.slice(maxEntries).forEach(entry => localStorage.removeItem(entry.key));
+        } catch (error) {
+            console.warn('[Snapshot] Could not prune cached DFP snapshots:', error);
         }
     }
+
+    function cacheDailySnapshot(snapshotKey: string, snapshotPayload: Record<string, any>, labelDate: string): void {
+        try {
+            pruneDailySnapshotCache();
+            const serialisedSnapshot = JSON.stringify(snapshotPayload);
+            if (serialisedSnapshot.length > 1_500_000) {
+                console.warn(`[Snapshot] Skipped local cache for ${labelDate}; snapshot is too large (${serialisedSnapshot.length} bytes)`);
+                return;
+            }
+            localStorage.setItem(`dfp_snapshot_cache_${snapshotKey}`, serialisedSnapshot);
+        } catch (cacheErr) {
+            try {
+                pruneDailySnapshotCache(0);
+            } catch {
+                // ignore cleanup failures
+            }
+            console.warn(`[Snapshot] Could not update cached snapshot for ${labelDate}; cache was pruned:`, cacheErr);
+        }
+    }
+
+    useEffect(() => {
+        pruneDailySnapshotCache();
+    }, []);
 
     // NDB state
     const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
