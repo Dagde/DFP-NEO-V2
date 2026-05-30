@@ -77,6 +77,22 @@ interface MetricDefinition {
   footer: string;
 }
 
+const isStaffMetricKey = (key: MetricKey): boolean => (
+  key === 'staffFlight' || key === 'staffSimulator' || key === 'staffTotal'
+);
+
+const metricStrokeColor = (color: string): string => {
+  if (color.includes('cyan')) return '#22d3ee';
+  if (color.includes('blue')) return '#60a5fa';
+  if (color.includes('emerald')) return '#34d399';
+  if (color.includes('amber')) return '#fbbf24';
+  if (color.includes('rose')) return '#fb7185';
+  if (color.includes('sky')) return '#38bdf8';
+  if (color.includes('violet')) return '#a78bfa';
+  if (color.includes('fuchsia')) return '#f472b6';
+  return '#f472b6';
+};
+
 const TIMELINE_OPTIONS: { key: TimelineKey; label: string }[] = [
   { key: '7d', label: 'Last 7 days' },
   { key: '1m', label: 'Last month' },
@@ -244,6 +260,119 @@ const staffSort = (a: Instructor, b: Instructor): number => {
 const makeSeries = (dates: string[], values: Record<string, number | null>): ChartPoint[] =>
   dates.map(date => ({ date, value: values[date] ?? 0 }));
 
+const buildMetricDefinitions = (
+  metrics: BliMetricsResponse,
+  date: string,
+  events: ScheduleEvent[],
+  currentAircraftAvailable: number | undefined,
+  totalAircraft: number | undefined,
+  selectedStaff: string,
+): MetricDefinition[] => {
+  const dates = metrics.dates.length > 0 ? metrics.dates : [date];
+  const fallback = buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft);
+  const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : fallback.eventSeries;
+  const staffDays = selectedStaff
+    ? (metrics.staffSeries?.[selectedStaff] || dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 })))
+    : dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 }));
+  const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
+
+  const availabilityPoints = availabilitySeries.map(point => ({
+    date: point.date,
+    value: point.availabilityPct,
+  }));
+  const flightPoints = eventSeries.map(point => ({ date: point.date, value: point.flightEvents }));
+  const simPoints = eventSeries.map(point => ({ date: point.date, value: point.simulatorEvents }));
+  const totalPoints = eventSeries.map(point => ({ date: point.date, value: point.totalEvents }));
+  const staffFlightPoints = staffDays.map(point => ({ date: point.date, value: point.flightEvents }));
+  const staffSimPoints = staffDays.map(point => ({ date: point.date, value: point.simulatorEvents }));
+  const staffTotalPoints = staffDays.map(point => ({ date: point.date, value: point.totalEvents }));
+  const cancellationTotal = metrics.cancellationsByCategory.reduce((sum, category) => sum + category.total, 0);
+
+  return [
+    {
+      key: 'availability',
+      title: 'Aircraft availability',
+      subtitle: 'Average daily availability across the selected timeline.',
+      icon: PaperAirplaneIcon,
+      color: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-200',
+      unit: '%',
+      series: availabilityPoints,
+      summary: `${compactNumber(valueAvg(availabilityPoints), 1)}%`,
+      footer: `${metrics.snapshotCount} published DFP snapshots`,
+    },
+    {
+      key: 'flight',
+      title: 'Flight events per day',
+      subtitle: 'Scheduled flying events counted from published DFP snapshots.',
+      icon: ChartBarIcon,
+      color: 'border-blue-400/40 bg-blue-400/10 text-blue-200',
+      series: flightPoints,
+      summary: compactNumber(valueSum(flightPoints)),
+      footer: 'total flights in range',
+    },
+    {
+      key: 'simulator',
+      title: 'Simulator events per day',
+      subtitle: 'FTD and simulator events counted by published DFP day.',
+      icon: ComputerDesktopIcon,
+      color: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200',
+      series: simPoints,
+      summary: compactNumber(valueSum(simPoints)),
+      footer: 'total simulator events',
+    },
+    {
+      key: 'total',
+      title: 'Total events per day',
+      subtitle: 'All scheduled events in the selected operational timeline.',
+      icon: Squares2X2Icon,
+      color: 'border-amber-400/40 bg-amber-400/10 text-amber-200',
+      series: totalPoints,
+      summary: compactNumber(valueSum(totalPoints)),
+      footer: 'all scheduled events',
+    },
+    {
+      key: 'cancellations',
+      title: 'Cancellation codes',
+      subtitle: 'Cancellation codes grouped by event category.',
+      icon: ExclamationTriangleIcon,
+      color: 'border-rose-400/40 bg-rose-400/10 text-rose-200',
+      series: makeSeries(dates, {}),
+      summary: compactNumber(cancellationTotal),
+      footer: 'cancellations in range',
+    },
+    {
+      key: 'staffFlight',
+      title: 'Staff flight events',
+      subtitle: selectedStaff ? `${selectedStaff} flight events per day.` : 'Open to select staff and inspect flying load.',
+      icon: UserGroupIcon,
+      color: 'border-sky-400/40 bg-sky-400/10 text-sky-200',
+      series: staffFlightPoints,
+      summary: compactNumber(valueSum(staffFlightPoints)),
+      footer: 'selected staff flights',
+    },
+    {
+      key: 'staffSimulator',
+      title: 'Staff simulator events',
+      subtitle: selectedStaff ? `${selectedStaff} simulator events per day.` : 'Open to select staff and inspect simulator load.',
+      icon: ComputerDesktopIcon,
+      color: 'border-violet-400/40 bg-violet-400/10 text-violet-200',
+      series: staffSimPoints,
+      summary: compactNumber(valueSum(staffSimPoints)),
+      footer: 'selected staff simulator events',
+    },
+    {
+      key: 'staffTotal',
+      title: 'Staff total events',
+      subtitle: selectedStaff ? `${selectedStaff} all scheduled events per day.` : 'Open to select staff and inspect total load.',
+      icon: ClockIcon,
+      color: 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200',
+      series: staffTotalPoints,
+      summary: compactNumber(valueSum(staffTotalPoints)),
+      footer: 'selected staff total events',
+    },
+  ];
+};
+
 const MiniLine: React.FC<{ series: ChartPoint[]; color: string; height?: number }> = ({ series, color, height = 54 }) => {
   const width = 180;
   const values = series.map(point => Number(point.value) || 0);
@@ -358,7 +487,7 @@ const MetricTile: React.FC<{
       <div className="mt-4 flex-1">
         {metric.key === 'cancellations'
           ? <CancellationPreview categories={cancellationCategories} />
-          : <MiniLine series={metric.series} color={metric.color.includes('cyan') ? '#22d3ee' : metric.color.includes('blue') ? '#60a5fa' : metric.color.includes('emerald') ? '#34d399' : metric.color.includes('amber') ? '#fbbf24' : '#f472b6'} />}
+          : <MiniLine series={metric.series} color={metricStrokeColor(metric.color)} />}
       </div>
       <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-slate-500">{metric.footer}</p>
     </button>
@@ -368,37 +497,125 @@ const MetricTile: React.FC<{
 const MetricModal: React.FC<{
   metric: MetricDefinition;
   onClose: () => void;
-  cancellationCategories: CancellationCategory[];
-  dateRangeLabel: string;
-}> = ({ metric, onClose, cancellationCategories, dateRangeLabel }) => {
+  date: string;
+  events: ScheduleEvent[];
+  currentAircraftAvailable?: number;
+  totalAircraft?: number;
+  initialMetrics: BliMetricsResponse;
+  staffGroups: [string, Instructor[]][];
+  initialStaff: string;
+}> = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff }) => {
+  const [timeline, setTimeline] = useState<TimelineKey>('7d');
+  const [modalMetrics, setModalMetrics] = useState<BliMetricsResponse>(initialMetrics);
+  const [selectedStaff, setSelectedStaff] = useState(initialStaff);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const range = useMemo(() => getTimelineRange(date, timeline), [date, timeline]);
+  const dateRangeLabel = useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
+  const showStaffSelector = isStaffMetricKey(metric.key);
+
+  useEffect(() => {
+    setSelectedStaff(initialStaff);
+  }, [initialStaff, metric.key]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(range.startDate)}&endDate=${encodeURIComponent(range.endDate)}`, {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then(async response => {
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+      })
+      .then((data: BliMetricsResponse) => {
+        setModalMetrics(data);
+      })
+      .catch(fetchError => {
+        if (fetchError.name === 'AbortError') return;
+        console.error('Failed to load expanded BLI metrics:', fetchError);
+        setError('Published metrics could not be loaded for this graph. Showing the current DFP day only.');
+        setModalMetrics(buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [currentAircraftAvailable, date, events, range.endDate, range.startDate, totalAircraft]);
+
+  const activeMetric = useMemo(() => {
+    return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff)
+      .find(candidate => candidate.key === metric.key) || metric;
+  }, [currentAircraftAvailable, date, events, metric, modalMetrics, selectedStaff, totalAircraft]);
+
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8" onMouseDown={onClose}>
       <div
         className="max-h-[88vh] w-full max-w-6xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl"
         onMouseDown={event => event.stopPropagation()}
       >
-        <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">BLI</p>
-            <h2 className="mt-1 text-2xl font-bold text-white">{metric.title}</h2>
-            <p className="mt-1 text-sm text-slate-400">{metric.subtitle} · {dateRangeLabel}</p>
+            <h2 className="mt-1 text-2xl font-bold text-white">{activeMetric.title}</h2>
+            <p className="mt-1 text-sm text-slate-400">{activeMetric.subtitle} · {dateRangeLabel}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-md border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300 hover:border-cyan-400 hover:text-white"
-          >
-            Close
-          </button>
+          <div className="flex flex-wrap items-end justify-end gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Timeline</span>
+              <select
+                value={timeline}
+                onChange={event => setTimeline(event.target.value as TimelineKey)}
+                className="h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
+              >
+                {TIMELINE_OPTIONS.map(option => (
+                  <option key={option.key} value={option.key}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            {showStaffSelector && (
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Staff</span>
+                <select
+                  value={selectedStaff}
+                  onChange={event => setSelectedStaff(event.target.value)}
+                  className="h-10 min-w-[260px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
+                >
+                  {staffGroups.map(([unit, staff]) => (
+                    <optgroup key={unit} label={unit}>
+                      {staff.map(person => (
+                        <option key={person.name} value={person.name}>{person.rank} · {person.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+            )}
+            <button
+              onClick={onClose}
+              className="h-10 rounded-md border border-slate-700 px-3 text-sm font-semibold text-slate-300 hover:border-cyan-400 hover:text-white"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+        <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+          <span>{loading ? 'Loading this graph...' : `${modalMetrics.snapshotCount} published snapshots in this graph`}</span>
+          {error && <span className="text-amber-300">{error}</span>}
         </div>
 
-        {metric.key === 'cancellations' ? (
+        {activeMetric.key === 'cancellations' ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {cancellationCategories.length === 0 && (
+            {modalMetrics.cancellationsByCategory.length === 0 && (
               <div className="rounded-lg border border-slate-700 bg-slate-950/45 p-5 text-sm text-slate-400">
                 No cancellation codes were recorded in this timeline.
               </div>
             )}
-            {cancellationCategories.map(category => (
+            {modalMetrics.cancellationsByCategory.map(category => (
               <div key={category.category} className="rounded-lg border border-slate-700 bg-slate-950/45 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold text-white">{category.category}</h3>
@@ -423,10 +640,10 @@ const MetricModal: React.FC<{
           </div>
         ) : (
           <FullLineChart
-            series={metric.series}
-            color={metric.color.includes('cyan') ? '#22d3ee' : metric.color.includes('blue') ? '#60a5fa' : metric.color.includes('emerald') ? '#34d399' : metric.color.includes('amber') ? '#fbbf24' : '#f472b6'}
-            label={metric.title}
-            unit={metric.unit}
+            series={activeMetric.series}
+            color={metricStrokeColor(activeMetric.color)}
+            label={activeMetric.title}
+            unit={activeMetric.unit}
           />
         )}
       </div>
@@ -435,15 +652,16 @@ const MetricModal: React.FC<{
 };
 
 const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft }) => {
-  const [timeline, setTimeline] = useState<TimelineKey>('7d');
   const [metrics, setMetrics] = useState<BliMetricsResponse>(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
-  const [selectedStaff, setSelectedStaff] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openMetric, setOpenMetric] = useState<MetricDefinition | null>(null);
 
-  const range = useMemo(() => getTimelineRange(date, timeline), [date, timeline]);
-  const dateRangeLabel = useMemo(() => formatDateRange(range.startDate, range.endDate), [range.startDate, range.endDate]);
+  const previewRange = useMemo(() => getTimelineRange(date, '7d'), [date]);
+  const previewDateRangeLabel = useMemo(
+    () => formatDateRange(previewRange.startDate, previewRange.endDate),
+    [previewRange.endDate, previewRange.startDate],
+  );
 
   const sortedStaff = useMemo(() => {
     const deduped = new Map<string, Instructor>();
@@ -454,18 +672,11 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
   }, [instructorsData]);
 
   useEffect(() => {
-    if (!selectedStaff && sortedStaff.length > 0) {
-      const activeStaff = sortedStaff.find(staff => metrics.staffSeries?.[staff.name]?.some(day => day.totalEvents > 0));
-      setSelectedStaff(activeStaff?.name || sortedStaff[0].name);
-    }
-  }, [metrics.staffSeries, selectedStaff, sortedStaff]);
-
-  useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
 
-    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(range.startDate)}&endDate=${encodeURIComponent(range.endDate)}`, {
+    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(previewRange.startDate)}&endDate=${encodeURIComponent(previewRange.endDate)}`, {
       credentials: 'include',
       signal: controller.signal,
     })
@@ -487,7 +698,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
       });
 
     return () => controller.abort();
-  }, [date, events, range.endDate, range.startDate, currentAircraftAvailable, totalAircraft]);
+  }, [date, events, previewRange.endDate, previewRange.startDate, currentAircraftAvailable, totalAircraft]);
 
   const staffGroups = useMemo(() => {
     const groups = new Map<string, Instructor[]>();
@@ -499,108 +710,14 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
     return [...groups.entries()];
   }, [sortedStaff]);
 
-  const metricsList = useMemo<MetricDefinition[]>(() => {
-    const dates = metrics.dates.length > 0 ? metrics.dates : [date];
-    const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft).eventSeries;
-    const staffDays = metrics.staffSeries?.[selectedStaff] || dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 }));
-    const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
+  const previewStaff = useMemo(() => {
+    const activeStaff = sortedStaff.find(staff => metrics.staffSeries?.[staff.name]?.some(day => day.totalEvents > 0));
+    return activeStaff?.name || sortedStaff[0]?.name || '';
+  }, [metrics.staffSeries, sortedStaff]);
 
-    const availabilityPoints = availabilitySeries.map(point => ({
-      date: point.date,
-      value: point.availabilityPct,
-    }));
-    const flightPoints = eventSeries.map(point => ({ date: point.date, value: point.flightEvents }));
-    const simPoints = eventSeries.map(point => ({ date: point.date, value: point.simulatorEvents }));
-    const totalPoints = eventSeries.map(point => ({ date: point.date, value: point.totalEvents }));
-    const staffFlightPoints = staffDays.map(point => ({ date: point.date, value: point.flightEvents }));
-    const staffSimPoints = staffDays.map(point => ({ date: point.date, value: point.simulatorEvents }));
-    const staffTotalPoints = staffDays.map(point => ({ date: point.date, value: point.totalEvents }));
-    const cancellationTotal = metrics.cancellationsByCategory.reduce((sum, category) => sum + category.total, 0);
-
-    return [
-      {
-        key: 'availability',
-        title: 'Aircraft availability',
-        subtitle: 'Average daily availability across the selected timeline.',
-        icon: PaperAirplaneIcon,
-        color: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-200',
-        unit: '%',
-        series: availabilityPoints,
-        summary: `${compactNumber(valueAvg(availabilityPoints), 1)}%`,
-        footer: `${metrics.snapshotCount} published DFP snapshots`,
-      },
-      {
-        key: 'flight',
-        title: 'Flight events per day',
-        subtitle: 'Scheduled flying events counted from published DFP snapshots.',
-        icon: ChartBarIcon,
-        color: 'border-blue-400/40 bg-blue-400/10 text-blue-200',
-        series: flightPoints,
-        summary: compactNumber(valueSum(flightPoints)),
-        footer: 'total flights in range',
-      },
-      {
-        key: 'simulator',
-        title: 'Simulator events per day',
-        subtitle: 'FTD and simulator events counted by published DFP day.',
-        icon: ComputerDesktopIcon,
-        color: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200',
-        series: simPoints,
-        summary: compactNumber(valueSum(simPoints)),
-        footer: 'total simulator events',
-      },
-      {
-        key: 'total',
-        title: 'Total events per day',
-        subtitle: 'All scheduled events in the selected operational timeline.',
-        icon: Squares2X2Icon,
-        color: 'border-amber-400/40 bg-amber-400/10 text-amber-200',
-        series: totalPoints,
-        summary: compactNumber(valueSum(totalPoints)),
-        footer: 'all scheduled events',
-      },
-      {
-        key: 'cancellations',
-        title: 'Cancellation codes',
-        subtitle: 'Cancellation codes grouped by event category.',
-        icon: ExclamationTriangleIcon,
-        color: 'border-rose-400/40 bg-rose-400/10 text-rose-200',
-        series: makeSeries(dates, {}),
-        summary: compactNumber(cancellationTotal),
-        footer: 'cancellations in range',
-      },
-      {
-        key: 'staffFlight',
-        title: 'Staff flight events',
-        subtitle: selectedStaff ? `${selectedStaff} flight events per day.` : 'Select a staff member to inspect flying load.',
-        icon: UserGroupIcon,
-        color: 'border-sky-400/40 bg-sky-400/10 text-sky-200',
-        series: staffFlightPoints,
-        summary: compactNumber(valueSum(staffFlightPoints)),
-        footer: 'selected staff flights',
-      },
-      {
-        key: 'staffSimulator',
-        title: 'Staff simulator events',
-        subtitle: selectedStaff ? `${selectedStaff} simulator events per day.` : 'Select a staff member to inspect simulator load.',
-        icon: ComputerDesktopIcon,
-        color: 'border-violet-400/40 bg-violet-400/10 text-violet-200',
-        series: staffSimPoints,
-        summary: compactNumber(valueSum(staffSimPoints)),
-        footer: 'selected staff simulator events',
-      },
-      {
-        key: 'staffTotal',
-        title: 'Staff total events',
-        subtitle: selectedStaff ? `${selectedStaff} all scheduled events per day.` : 'Select a staff member to inspect total load.',
-        icon: ClockIcon,
-        color: 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200',
-        series: staffTotalPoints,
-        summary: compactNumber(valueSum(staffTotalPoints)),
-        footer: 'selected staff total events',
-      },
-    ];
-  }, [currentAircraftAvailable, date, events, metrics, selectedStaff, totalAircraft]);
+  const metricsList = useMemo<MetricDefinition[]>(() => (
+    buildMetricDefinitions(metrics, date, events, currentAircraftAvailable, totalAircraft, previewStaff)
+  ), [currentAircraftAvailable, date, events, metrics, previewStaff, totalAircraft]);
 
   return (
     <div className="space-y-5">
@@ -608,8 +725,13 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
         <MetricModal
           metric={openMetric}
           onClose={() => setOpenMetric(null)}
-          cancellationCategories={metrics.cancellationsByCategory}
-          dateRangeLabel={dateRangeLabel}
+          date={date}
+          events={events}
+          currentAircraftAvailable={currentAircraftAvailable}
+          totalAircraft={totalAircraft}
+          initialMetrics={metrics}
+          staffGroups={staffGroups}
+          initialStaff={previewStaff}
         />
       )}
 
@@ -618,37 +740,9 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">BLI</p>
             <h2 className="mt-1 text-2xl font-bold text-white">Business-Level Intelligence</h2>
-            <p className="mt-1 text-sm text-slate-400">Operational schedule, cancellation and utilisation signals for {dateRangeLabel}.</p>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Timeline</span>
-              <select
-                value={timeline}
-                onChange={event => setTimeline(event.target.value as TimelineKey)}
-                className="h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
-              >
-                {TIMELINE_OPTIONS.map(option => (
-                  <option key={option.key} value={option.key}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Staff</span>
-              <select
-                value={selectedStaff}
-                onChange={event => setSelectedStaff(event.target.value)}
-                className="h-10 min-w-[260px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
-              >
-                {staffGroups.map(([unit, staff]) => (
-                  <optgroup key={unit} label={unit}>
-                    {staff.map(person => (
-                      <option key={person.name} value={person.name}>{person.rank} · {person.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
+            <p className="mt-1 text-sm text-slate-400">
+              Operational schedule, cancellation and utilisation signals. Preview cards show {previewDateRangeLabel}; each expanded graph has its own timeline control.
+            </p>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">

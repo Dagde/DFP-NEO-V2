@@ -26031,6 +26031,18 @@ function UserGroupIcon({
   }));
 }
 const ForwardRef = /* @__PURE__ */ reactExports.forwardRef(UserGroupIcon);
+const isStaffMetricKey = (key) => key === "staffFlight" || key === "staffSimulator" || key === "staffTotal";
+const metricStrokeColor = (color) => {
+  if (color.includes("cyan")) return "#22d3ee";
+  if (color.includes("blue")) return "#60a5fa";
+  if (color.includes("emerald")) return "#34d399";
+  if (color.includes("amber")) return "#fbbf24";
+  if (color.includes("rose")) return "#fb7185";
+  if (color.includes("sky")) return "#38bdf8";
+  if (color.includes("violet")) return "#a78bfa";
+  if (color.includes("fuchsia")) return "#f472b6";
+  return "#f472b6";
+};
 const TIMELINE_OPTIONS = [
   { key: "7d", label: "Last 7 days" },
   { key: "1m", label: "Last month" },
@@ -26159,6 +26171,107 @@ const staffSort = (a, b) => {
   return String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" });
 };
 const makeSeries = (dates, values) => dates.map((date) => ({ date, value: values[date] ?? 0 }));
+const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff) => {
+  const dates = metrics.dates.length > 0 ? metrics.dates : [date];
+  const fallback = buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft);
+  const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : fallback.eventSeries;
+  const staffDays = selectedStaff ? metrics.staffSeries?.[selectedStaff] || dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 })) : dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 }));
+  const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
+  const availabilityPoints = availabilitySeries.map((point) => ({
+    date: point.date,
+    value: point.availabilityPct
+  }));
+  const flightPoints = eventSeries.map((point) => ({ date: point.date, value: point.flightEvents }));
+  const simPoints = eventSeries.map((point) => ({ date: point.date, value: point.simulatorEvents }));
+  const totalPoints = eventSeries.map((point) => ({ date: point.date, value: point.totalEvents }));
+  const staffFlightPoints = staffDays.map((point) => ({ date: point.date, value: point.flightEvents }));
+  const staffSimPoints = staffDays.map((point) => ({ date: point.date, value: point.simulatorEvents }));
+  const staffTotalPoints = staffDays.map((point) => ({ date: point.date, value: point.totalEvents }));
+  const cancellationTotal = metrics.cancellationsByCategory.reduce((sum, category) => sum + category.total, 0);
+  return [
+    {
+      key: "availability",
+      title: "Aircraft availability",
+      subtitle: "Average daily availability across the selected timeline.",
+      icon: ForwardRef$4,
+      color: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
+      unit: "%",
+      series: availabilityPoints,
+      summary: `${compactNumber(valueAvg(availabilityPoints), 1)}%`,
+      footer: `${metrics.snapshotCount} published DFP snapshots`
+    },
+    {
+      key: "flight",
+      title: "Flight events per day",
+      subtitle: "Scheduled flying events counted from published DFP snapshots.",
+      icon: ForwardRef$9,
+      color: "border-blue-400/40 bg-blue-400/10 text-blue-200",
+      series: flightPoints,
+      summary: compactNumber(valueSum(flightPoints)),
+      footer: "total flights in range"
+    },
+    {
+      key: "simulator",
+      title: "Simulator events per day",
+      subtitle: "FTD and simulator events counted by published DFP day.",
+      icon: ForwardRef$7,
+      color: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
+      series: simPoints,
+      summary: compactNumber(valueSum(simPoints)),
+      footer: "total simulator events"
+    },
+    {
+      key: "total",
+      title: "Total events per day",
+      subtitle: "All scheduled events in the selected operational timeline.",
+      icon: ForwardRef$2,
+      color: "border-amber-400/40 bg-amber-400/10 text-amber-200",
+      series: totalPoints,
+      summary: compactNumber(valueSum(totalPoints)),
+      footer: "all scheduled events"
+    },
+    {
+      key: "cancellations",
+      title: "Cancellation codes",
+      subtitle: "Cancellation codes grouped by event category.",
+      icon: ForwardRef$6,
+      color: "border-rose-400/40 bg-rose-400/10 text-rose-200",
+      series: makeSeries(dates, {}),
+      summary: compactNumber(cancellationTotal),
+      footer: "cancellations in range"
+    },
+    {
+      key: "staffFlight",
+      title: "Staff flight events",
+      subtitle: selectedStaff ? `${selectedStaff} flight events per day.` : "Open to select staff and inspect flying load.",
+      icon: ForwardRef,
+      color: "border-sky-400/40 bg-sky-400/10 text-sky-200",
+      series: staffFlightPoints,
+      summary: compactNumber(valueSum(staffFlightPoints)),
+      footer: "selected staff flights"
+    },
+    {
+      key: "staffSimulator",
+      title: "Staff simulator events",
+      subtitle: selectedStaff ? `${selectedStaff} simulator events per day.` : "Open to select staff and inspect simulator load.",
+      icon: ForwardRef$7,
+      color: "border-violet-400/40 bg-violet-400/10 text-violet-200",
+      series: staffSimPoints,
+      summary: compactNumber(valueSum(staffSimPoints)),
+      footer: "selected staff simulator events"
+    },
+    {
+      key: "staffTotal",
+      title: "Staff total events",
+      subtitle: selectedStaff ? `${selectedStaff} all scheduled events per day.` : "Open to select staff and inspect total load.",
+      icon: ForwardRef$8,
+      color: "border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200",
+      series: staffTotalPoints,
+      summary: compactNumber(valueSum(staffTotalPoints)),
+      footer: "selected staff total events"
+    }
+  ];
+};
 const MiniLine = ({ series, color, height = 54 }) => {
   const width = 180;
   const values = series.map((point) => Number(point.value) || 0);
@@ -26246,41 +26359,111 @@ const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 min-h-[34px] text-xs leading-5 text-slate-400", children: metric.subtitle })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-2xl font-bold tracking-normal text-white", children: metric.summary }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex-1", children: metric.key === "cancellations" ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancellationPreview, { categories: cancellationCategories }) : /* @__PURE__ */ jsxRuntimeExports.jsx(MiniLine, { series: metric.series, color: metric.color.includes("cyan") ? "#22d3ee" : metric.color.includes("blue") ? "#60a5fa" : metric.color.includes("emerald") ? "#34d399" : metric.color.includes("amber") ? "#fbbf24" : "#f472b6" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex-1", children: metric.key === "cancellations" ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancellationPreview, { categories: cancellationCategories }) : /* @__PURE__ */ jsxRuntimeExports.jsx(MiniLine, { series: metric.series, color: metricStrokeColor(metric.color) }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-[11px] uppercase tracking-[0.18em] text-slate-500", children: metric.footer })
       ]
     }
   );
 };
-const MetricModal = ({ metric, onClose, cancellationCategories, dateRangeLabel }) => {
+const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff }) => {
+  const [timeline, setTimeline] = reactExports.useState("7d");
+  const [modalMetrics, setModalMetrics] = reactExports.useState(initialMetrics);
+  const [selectedStaff, setSelectedStaff] = reactExports.useState(initialStaff);
+  const [loading, setLoading] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState(null);
+  const range = reactExports.useMemo(() => getTimelineRange(date, timeline), [date, timeline]);
+  const dateRangeLabel = reactExports.useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
+  const showStaffSelector = isStaffMetricKey(metric.key);
+  reactExports.useEffect(() => {
+    setSelectedStaff(initialStaff);
+  }, [initialStaff, metric.key]);
+  reactExports.useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(range.startDate)}&endDate=${encodeURIComponent(range.endDate)}`, {
+      credentials: "include",
+      signal: controller.signal
+    }).then(async (response) => {
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    }).then((data) => {
+      setModalMetrics(data);
+    }).catch((fetchError) => {
+      if (fetchError.name === "AbortError") return;
+      console.error("Failed to load expanded BLI metrics:", fetchError);
+      setError("Published metrics could not be loaded for this graph. Showing the current DFP day only.");
+      setModalMetrics(buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
+    return () => controller.abort();
+  }, [currentAircraftAvailable, date, events, range.endDate, range.startDate, totalAircraft]);
+  const activeMetric = reactExports.useMemo(() => {
+    return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff).find((candidate) => candidate.key === metric.key) || metric;
+  }, [currentAircraftAvailable, date, events, metric, modalMetrics, selectedStaff, totalAircraft]);
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8", onMouseDown: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       className: "max-h-[88vh] w-full max-w-6xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl",
       onMouseDown: (event) => event.stopPropagation(),
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex items-start justify-between gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex flex-wrap items-start justify-between gap-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: metric.title }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: activeMetric.title }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
-              metric.subtitle,
+              activeMetric.subtitle,
               " · ",
               dateRangeLabel
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: onClose,
-              className: "rounded-md border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300 hover:border-cyan-400 hover:text-white",
-              children: "Close"
-            }
-          )
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-end gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Timeline" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: timeline,
+                  onChange: (event) => setTimeline(event.target.value),
+                  className: "h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
+                  children: TIMELINE_OPTIONS.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
+                }
+              )
+            ] }),
+            showStaffSelector && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Staff" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: selectedStaff,
+                  onChange: (event) => setSelectedStaff(event.target.value),
+                  className: "h-10 min-w-[260px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
+                  children: staffGroups.map(([unit, staff]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staff.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: person.name, children: [
+                    person.rank,
+                    " · ",
+                    person.name
+                  ] }, person.name)) }, unit))
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: onClose,
+                className: "h-10 rounded-md border border-slate-700 px-3 text-sm font-semibold text-slate-300 hover:border-cyan-400 hover:text-white",
+                children: "Close"
+              }
+            )
+          ] })
         ] }),
-        metric.key === "cancellations" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
-          cancellationCategories.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-5 text-sm text-slate-400", children: "No cancellation codes were recorded in this timeline." }),
-          cancellationCategories.map((category) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-500", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading this graph..." : `${modalMetrics.snapshotCount} published snapshots in this graph` }),
+          error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })
+        ] }),
+        activeMetric.key === "cancellations" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+          modalMetrics.cancellationsByCategory.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-5 text-sm text-slate-400", children: "No cancellation codes were recorded in this timeline." }),
+          modalMetrics.cancellationsByCategory.map((category) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: category.category }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full bg-rose-500/15 px-3 py-1 text-sm font-semibold text-rose-200", children: category.total })
@@ -26300,10 +26483,10 @@ const MetricModal = ({ metric, onClose, cancellationCategories, dateRangeLabel }
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
           FullLineChart,
           {
-            series: metric.series,
-            color: metric.color.includes("cyan") ? "#22d3ee" : metric.color.includes("blue") ? "#60a5fa" : metric.color.includes("emerald") ? "#34d399" : metric.color.includes("amber") ? "#fbbf24" : "#f472b6",
-            label: metric.title,
-            unit: metric.unit
+            series: activeMetric.series,
+            color: metricStrokeColor(activeMetric.color),
+            label: activeMetric.title,
+            unit: activeMetric.unit
           }
         )
       ]
@@ -26311,14 +26494,15 @@ const MetricModal = ({ metric, onClose, cancellationCategories, dateRangeLabel }
   ) });
 };
 const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft }) => {
-  const [timeline, setTimeline] = reactExports.useState("7d");
   const [metrics, setMetrics] = reactExports.useState(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
-  const [selectedStaff, setSelectedStaff] = reactExports.useState("");
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
   const [openMetric, setOpenMetric] = reactExports.useState(null);
-  const range = reactExports.useMemo(() => getTimelineRange(date, timeline), [date, timeline]);
-  const dateRangeLabel = reactExports.useMemo(() => formatDateRange(range.startDate, range.endDate), [range.startDate, range.endDate]);
+  const previewRange = reactExports.useMemo(() => getTimelineRange(date, "7d"), [date]);
+  const previewDateRangeLabel = reactExports.useMemo(
+    () => formatDateRange(previewRange.startDate, previewRange.endDate),
+    [previewRange.endDate, previewRange.startDate]
+  );
   const sortedStaff2 = reactExports.useMemo(() => {
     const deduped = /* @__PURE__ */ new Map();
     instructorsData.forEach((person) => {
@@ -26327,16 +26511,10 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
     return [...deduped.values()].sort(staffSort);
   }, [instructorsData]);
   reactExports.useEffect(() => {
-    if (!selectedStaff && sortedStaff2.length > 0) {
-      const activeStaff = sortedStaff2.find((staff) => metrics.staffSeries?.[staff.name]?.some((day) => day.totalEvents > 0));
-      setSelectedStaff(activeStaff?.name || sortedStaff2[0].name);
-    }
-  }, [metrics.staffSeries, selectedStaff, sortedStaff2]);
-  reactExports.useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(range.startDate)}&endDate=${encodeURIComponent(range.endDate)}`, {
+    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(previewRange.startDate)}&endDate=${encodeURIComponent(previewRange.endDate)}`, {
       credentials: "include",
       signal: controller.signal
     }).then(async (response) => {
@@ -26353,7 +26531,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [date, events, range.endDate, range.startDate, currentAircraftAvailable, totalAircraft]);
+  }, [date, events, previewRange.endDate, previewRange.startDate, currentAircraftAvailable, totalAircraft]);
   const staffGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     sortedStaff2.forEach((staff) => {
@@ -26363,158 +26541,36 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
     });
     return [...groups.entries()];
   }, [sortedStaff2]);
-  const metricsList = reactExports.useMemo(() => {
-    const dates = metrics.dates.length > 0 ? metrics.dates : [date];
-    const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft).eventSeries;
-    const staffDays = metrics.staffSeries?.[selectedStaff] || dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 }));
-    const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
-    const availabilityPoints = availabilitySeries.map((point) => ({
-      date: point.date,
-      value: point.availabilityPct
-    }));
-    const flightPoints = eventSeries.map((point) => ({ date: point.date, value: point.flightEvents }));
-    const simPoints = eventSeries.map((point) => ({ date: point.date, value: point.simulatorEvents }));
-    const totalPoints = eventSeries.map((point) => ({ date: point.date, value: point.totalEvents }));
-    const staffFlightPoints = staffDays.map((point) => ({ date: point.date, value: point.flightEvents }));
-    const staffSimPoints = staffDays.map((point) => ({ date: point.date, value: point.simulatorEvents }));
-    const staffTotalPoints = staffDays.map((point) => ({ date: point.date, value: point.totalEvents }));
-    const cancellationTotal = metrics.cancellationsByCategory.reduce((sum, category) => sum + category.total, 0);
-    return [
-      {
-        key: "availability",
-        title: "Aircraft availability",
-        subtitle: "Average daily availability across the selected timeline.",
-        icon: ForwardRef$4,
-        color: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
-        unit: "%",
-        series: availabilityPoints,
-        summary: `${compactNumber(valueAvg(availabilityPoints), 1)}%`,
-        footer: `${metrics.snapshotCount} published DFP snapshots`
-      },
-      {
-        key: "flight",
-        title: "Flight events per day",
-        subtitle: "Scheduled flying events counted from published DFP snapshots.",
-        icon: ForwardRef$9,
-        color: "border-blue-400/40 bg-blue-400/10 text-blue-200",
-        series: flightPoints,
-        summary: compactNumber(valueSum(flightPoints)),
-        footer: "total flights in range"
-      },
-      {
-        key: "simulator",
-        title: "Simulator events per day",
-        subtitle: "FTD and simulator events counted by published DFP day.",
-        icon: ForwardRef$7,
-        color: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
-        series: simPoints,
-        summary: compactNumber(valueSum(simPoints)),
-        footer: "total simulator events"
-      },
-      {
-        key: "total",
-        title: "Total events per day",
-        subtitle: "All scheduled events in the selected operational timeline.",
-        icon: ForwardRef$2,
-        color: "border-amber-400/40 bg-amber-400/10 text-amber-200",
-        series: totalPoints,
-        summary: compactNumber(valueSum(totalPoints)),
-        footer: "all scheduled events"
-      },
-      {
-        key: "cancellations",
-        title: "Cancellation codes",
-        subtitle: "Cancellation codes grouped by event category.",
-        icon: ForwardRef$6,
-        color: "border-rose-400/40 bg-rose-400/10 text-rose-200",
-        series: makeSeries(dates, {}),
-        summary: compactNumber(cancellationTotal),
-        footer: "cancellations in range"
-      },
-      {
-        key: "staffFlight",
-        title: "Staff flight events",
-        subtitle: selectedStaff ? `${selectedStaff} flight events per day.` : "Select a staff member to inspect flying load.",
-        icon: ForwardRef,
-        color: "border-sky-400/40 bg-sky-400/10 text-sky-200",
-        series: staffFlightPoints,
-        summary: compactNumber(valueSum(staffFlightPoints)),
-        footer: "selected staff flights"
-      },
-      {
-        key: "staffSimulator",
-        title: "Staff simulator events",
-        subtitle: selectedStaff ? `${selectedStaff} simulator events per day.` : "Select a staff member to inspect simulator load.",
-        icon: ForwardRef$7,
-        color: "border-violet-400/40 bg-violet-400/10 text-violet-200",
-        series: staffSimPoints,
-        summary: compactNumber(valueSum(staffSimPoints)),
-        footer: "selected staff simulator events"
-      },
-      {
-        key: "staffTotal",
-        title: "Staff total events",
-        subtitle: selectedStaff ? `${selectedStaff} all scheduled events per day.` : "Select a staff member to inspect total load.",
-        icon: ForwardRef$8,
-        color: "border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200",
-        series: staffTotalPoints,
-        summary: compactNumber(valueSum(staffTotalPoints)),
-        footer: "selected staff total events"
-      }
-    ];
-  }, [currentAircraftAvailable, date, events, metrics, selectedStaff, totalAircraft]);
+  const previewStaff = reactExports.useMemo(() => {
+    const activeStaff = sortedStaff2.find((staff) => metrics.staffSeries?.[staff.name]?.some((day) => day.totalEvents > 0));
+    return activeStaff?.name || sortedStaff2[0]?.name || "";
+  }, [metrics.staffSeries, sortedStaff2]);
+  const metricsList = reactExports.useMemo(() => buildMetricDefinitions(metrics, date, events, currentAircraftAvailable, totalAircraft, previewStaff), [currentAircraftAvailable, date, events, metrics, previewStaff, totalAircraft]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     openMetric && /* @__PURE__ */ jsxRuntimeExports.jsx(
       MetricModal,
       {
         metric: openMetric,
         onClose: () => setOpenMetric(null),
-        cancellationCategories: metrics.cancellationsByCategory,
-        dateRangeLabel
+        date,
+        events,
+        currentAircraftAvailable,
+        totalAircraft,
+        initialMetrics: metrics,
+        staffGroups,
+        initialStaff: previewStaff
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-between gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Business-Level Intelligence" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
-            "Operational schedule, cancellation and utilisation signals for ",
-            dateRangeLabel,
-            "."
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Timeline" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: timeline,
-                onChange: (event) => setTimeline(event.target.value),
-                className: "h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
-                children: TIMELINE_OPTIONS.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Staff" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: selectedStaff,
-                onChange: (event) => setSelectedStaff(event.target.value),
-                className: "h-10 min-w-[260px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
-                children: staffGroups.map(([unit, staff]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staff.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: person.name, children: [
-                  person.rank,
-                  " · ",
-                  person.name
-                ] }, person.name)) }, unit))
-              }
-            )
-          ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-end justify-between gap-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Business-Level Intelligence" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
+          "Operational schedule, cancellation and utilisation signals. Preview cards show ",
+          previewDateRangeLabel,
+          "; each expanded graph has its own timeline control."
         ] })
-      ] }),
+      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading published metrics..." : `${metrics.snapshotCount} published snapshots in range` }),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })
