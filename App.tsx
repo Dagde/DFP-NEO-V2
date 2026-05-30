@@ -9649,9 +9649,15 @@ const App: React.FC = () => {
         currentUserName,
     ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
 
+    const hasRuntimePlatformWideAccess = (
+        ['ADMIN', 'SUPER_ADMIN'].includes(String(authUser?.role || '').toUpperCase())
+        || platformAccessContext.isSuperAdmin
+        || platformAccessContext.isPlatformAdmin
+    );
+
     const selectableLocationCodes = useMemo(
-        () => platformAccessContext.accessibleLocations,
-        [platformAccessContext],
+        () => hasRuntimePlatformWideAccess ? baseSelectableLocationCodes : platformAccessContext.accessibleLocations,
+        [baseSelectableLocationCodes, hasRuntimePlatformWideAccess, platformAccessContext],
     );
 
     const operationalContextOptions = useMemo(
@@ -9663,7 +9669,9 @@ const App: React.FC = () => {
     );
 
     const platformDataScopeQuery = useMemo(() => {
-        const scope = getPlatformDataScopeForLocation(platformAccessContext, school);
+        const scope = hasRuntimePlatformWideAccess
+            ? { organisationCodes: [], locationCode: school, unitCodes: [], allUnits: true }
+            : getPlatformDataScopeForLocation(platformAccessContext, school);
         const scopedUnitCodes = activeUnitCode
             ? (scope.allUnits || scope.unitCodes.length === 0
                 ? [activeUnitCode]
@@ -9674,7 +9682,7 @@ const App: React.FC = () => {
             unitCodes: scopedUnitCodes,
             allUnits: !activeUnitCode && scope.allUnits,
         });
-    }, [activeUnitCode, platformAccessContext, school]);
+    }, [activeUnitCode, hasRuntimePlatformWideAccess, platformAccessContext, school]);
 
     const scopedApiPath = useCallback((path: string, extraParams?: Record<string, string | number | boolean | undefined | null>) => {
         const params = new URLSearchParams(platformDataScopeQuery);
@@ -10238,10 +10246,14 @@ const App: React.FC = () => {
                 const data = await res.json();
                 if (cancelled) return;
 
-                if (requestedSchool === 'ESL' && data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
+                if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
                     const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
                     const eventCount = Object.values(seedSchedules).flat().length;
                     console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
+                    setSnapshotDates(prev => (
+                        [...new Set([...prev, ...Object.keys(seedSchedules)])]
+                            .sort((a, b) => b.localeCompare(a))
+                    ));
                     setPublishedSchedules(prev => {
                         if (cancelled) return prev;
                         // FIX: Use prev as the base (not seed schedules) so real snapshots already
