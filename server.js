@@ -802,7 +802,7 @@ const PLATFORM_FIELD_LABELS = {
   },
   CommercialLocation: {
     organisationCode: 'Organisation',
-    code: 'Location code',
+    code: 'ICAO code',
     iataCode: 'IATA code',
     name: 'Location name',
     timezoneOffset: 'UTC offset',

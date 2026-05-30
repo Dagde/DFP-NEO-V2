@@ -28,6 +28,7 @@ import {
   type InsertEventSyllabusType,
 } from '../utils/insertEventTypes';
 import {
+  DEFAULT_AIRFIELD_SOLAR_PROFILES,
   getDefaultAirfieldSolarProfile,
   isValidLatitude,
   isValidLongitude,
@@ -453,6 +454,32 @@ const emptyAirfieldCatalogueLookup: AirfieldCatalogueLookup = {
   searchable: [],
 };
 
+const defaultAirfieldProfiles = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {});
+
+const getDefaultAirfieldProfileForCatalogueEntry = (entry: AirfieldCatalogueEntry): any | null => {
+  const entryIcao = normaliseAirfieldLookupToken(entry.c);
+  const entryName = normaliseAirfieldLookupToken(entry.n);
+  const entryCity = normaliseAirfieldLookupToken(entry.m);
+  return defaultAirfieldProfiles.find((profile: any) => {
+    const profileIcao = normaliseAirfieldLookupToken(profile.icao);
+    const profileName = normaliseAirfieldLookupToken(profile.name);
+    const closeLatitude = Math.abs(Number(profile.latitude) - Number(entry.a)) < 0.02;
+    const closeLongitude = Math.abs(Number(profile.longitude) - Number(entry.o)) < 0.02;
+    return (entryIcao && profileIcao === entryIcao)
+      || ((entryName === profileName || entryCity === profileName) && closeLatitude && closeLongitude);
+  }) || null;
+};
+
+const getAirfieldCatalogueIcaoCode = (entry: AirfieldCatalogueEntry): string => {
+  const profile = getDefaultAirfieldProfileForCatalogueEntry(entry);
+  return entry.c || profile?.icao || entry.l || '';
+};
+
+const getAirfieldCatalogueIataCode = (entry: AirfieldCatalogueEntry): string => {
+  const profile = getDefaultAirfieldProfileForCatalogueEntry(entry);
+  return entry.i || profile?.iataCode || profile?.code || '';
+};
+
 const getAirfieldCatalogueSuggestionsForQuery = (
   value: any,
   lookup: AirfieldCatalogueLookup,
@@ -521,17 +548,19 @@ const getAirfieldCatalogueLocationChanges = (
   currentLocation: any,
   fillIdentity = true,
 ): Record<string, any> => {
+  const defaultProfile = getDefaultAirfieldProfileForCatalogueEntry(entry);
+  const timezone = defaultProfile?.timezone || entry.t;
   const changes: Record<string, any> = {
-    iataCode: entry.i || '',
-    latitude: entry.a,
-    longitude: entry.o,
-    timezone: entry.t,
+    iataCode: getAirfieldCatalogueIataCode(entry),
+    latitude: defaultProfile?.latitude ?? entry.a,
+    longitude: defaultProfile?.longitude ?? entry.o,
+    timezone,
   };
-  const currentOffset = getCurrentTimezoneOffsetHours(entry.t);
+  const currentOffset = getCurrentTimezoneOffsetHours(timezone);
   if (currentOffset !== null) changes.timezoneOffset = currentOffset;
   if (fillIdentity) {
-    const primaryCode = entry.c || entry.l || entry.i || '';
-    if (primaryCode) changes.code = primaryCode;
+    const icaoCode = getAirfieldCatalogueIcaoCode(entry);
+    if (icaoCode) changes.code = icaoCode;
     changes.name = entry.n;
   }
   return changes;
@@ -1968,13 +1997,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div
                 key={rowKey}
                 ref={(node) => { locationRowRefs.current[rowKey] = node; }}
-                className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12"
+                className="relative grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 pr-11 md:grid-cols-12"
               >
+                {canEdit ? (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded border border-gray-600/70 bg-gray-950/60 text-xs font-bold text-gray-400 transition-colors hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-100"
+                    onClick={() => removeLocation(index)}
+                    aria-label={`Remove ${getPlatformLocationAuditLabel(location)}`}
+                    title={`Remove ${getPlatformLocationAuditLabel(location)}`}
+                  >
+                    X
+                  </button>
+                ) : null}
                 <div className="md:col-span-2">
                   <AirfieldLookupField
                     label="ICAO Code"
                     value={location.code}
                     disabled={!canEdit}
+                    maxLength={4}
                     suggestions={codeSuggestions}
                     onChange={(value) => updateLocationIdentity(index, 'code', value)}
                     onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
@@ -1985,6 +2026,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     label="IATA Code"
                     value={location.iataCode || ''}
                     disabled={!canEdit}
+                    maxLength={3}
                     suggestions={iataSuggestions}
                     onChange={(value) => updateLocationIdentity(index, 'iataCode', value)}
                     onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
@@ -2003,17 +2045,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="md:col-span-1">
                   <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
                 </div>
-                <div className="grid gap-2 md:col-span-2">
+                <div className="md:col-span-2">
                   <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
-                  {canEdit ? (
-                    <button
-                      type="button"
-                      className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-100 hover:bg-red-500/20"
-                      onClick={() => removeLocation(index)}
-                    >
-                      Remove Location
-                    </button>
-                  ) : null}
                 </div>
                 <div className="md:col-span-2">
                   <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
@@ -3112,17 +3145,17 @@ const InfoHint = ({ text }: { text: string }) => (
     role="button"
     tabIndex={0}
     aria-label="More information"
-    className="group relative inline-flex h-7 w-7 shrink-0 cursor-help items-center justify-center rounded-full border-[3px] border-cyan-300 bg-transparent text-cyan-100 normal-case outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white"
+    className="group relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 normal-case outline-none transition-colors hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50"
   >
-    <span aria-hidden="true" className="font-serif text-[21px] font-bold italic leading-none normal-case">i</span>
-    <span className="pointer-events-none absolute left-0 top-8 z-50 hidden w-96 max-w-[min(24rem,calc(100vw-2rem))] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block">
+    <span aria-hidden="true" className="font-serif text-[11px] font-bold italic leading-none normal-case">i</span>
+    <span className="pointer-events-none absolute left-0 top-5 z-50 hidden w-96 max-w-[min(24rem,calc(100vw-2rem))] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block">
       {text}
     </span>
   </span>
 );
 
 const FieldLabel = ({ label, info }: { label: string; info?: string }) => (
-  <span className="mb-1 flex min-h-7 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+  <span className="mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
     <span>{label}</span>
     {info ? <InfoHint text={info} /> : null}
   </span>
@@ -3153,6 +3186,7 @@ const AirfieldLookupField = ({
   suggestions,
   onChange,
   onSelect,
+  maxLength,
 }: {
   label: string;
   value: string;
@@ -3160,6 +3194,7 @@ const AirfieldLookupField = ({
   suggestions: AirfieldCatalogueEntry[];
   onChange: (value: string) => void;
   onSelect: (entry: AirfieldCatalogueEntry) => void;
+  maxLength?: number;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const showSuggestions = isOpen && !disabled && suggestions.length > 0 && String(value || '').trim().length >= 2;
@@ -3172,8 +3207,9 @@ const AirfieldLookupField = ({
         value={value || ''}
         disabled={disabled}
         autoComplete="off"
+        maxLength={maxLength}
         onChange={(event) => {
-          onChange(event.target.value);
+          onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value);
           setIsOpen(true);
         }}
         onFocus={() => setIsOpen(true)}

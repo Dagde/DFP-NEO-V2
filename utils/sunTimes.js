@@ -5,16 +5,18 @@ const CIVIL_TWILIGHT_ZENITH = 96;
 const MINUTES_PER_DAY = 1440;
 
 export const DEFAULT_AIRFIELD_SOLAR_PROFILES = {
-  ESL: { code: 'ESL', name: 'East Sale', latitude: -38.0989, longitude: 147.1494, timezone: 'Australia/Melbourne' },
-  PEA: { code: 'PEA', name: 'Pearce', latitude: -31.6678, longitude: 116.015, timezone: 'Australia/Perth' },
-  WLM: { code: 'WLM', name: 'Williamtown', latitude: -32.794, longitude: 151.834, timezone: 'Australia/Sydney' },
-  AMB: { code: 'AMB', name: 'Amberley', latitude: -27.6406, longitude: 152.712, timezone: 'Australia/Brisbane' },
-  TIN: { code: 'TIN', name: 'Tindal', latitude: -14.521, longitude: 132.378, timezone: 'Australia/Darwin' },
-  EDI: { code: 'EDI', name: 'Edinburgh', latitude: -34.7025, longitude: 138.6208, timezone: 'Australia/Adelaide' },
+  ESL: { code: 'ESL', iataCode: 'ESL', icao: 'YMES', name: 'East Sale', latitude: -38.0989, longitude: 147.1494, timezone: 'Australia/Melbourne' },
+  PEA: { code: 'PEA', iataCode: 'PEA', icao: 'YPEA', name: 'Pearce', latitude: -31.6678, longitude: 116.015, timezone: 'Australia/Perth' },
+  WLM: { code: 'WLM', iataCode: 'WLM', icao: 'YWLM', name: 'Williamtown', latitude: -32.794, longitude: 151.834, timezone: 'Australia/Sydney' },
+  AMB: { code: 'AMB', iataCode: 'AMB', icao: 'YAMB', name: 'Amberley', latitude: -27.6406, longitude: 152.712, timezone: 'Australia/Brisbane' },
+  TIN: { code: 'TIN', iataCode: 'TIN', icao: 'YPTN', name: 'Tindal', latitude: -14.521, longitude: 132.378, timezone: 'Australia/Darwin' },
+  EDI: { code: 'EDI', iataCode: 'EDI', icao: 'YPED', name: 'Edinburgh', latitude: -34.7025, longitude: 138.6208, timezone: 'Australia/Adelaide' },
 };
 
 const DEFAULT_AIRFIELD_LOOKUP = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES).reduce((acc, profile) => {
   acc[normaliseKey(profile.code)] = profile;
+  acc[normaliseKey(profile.iataCode)] = profile;
+  acc[normaliseKey(profile.icao)] = profile;
   acc[normaliseKey(profile.name)] = profile;
   return acc;
 }, {});

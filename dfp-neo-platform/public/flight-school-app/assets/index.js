@@ -2311,15 +2311,17 @@ const OFFICIAL_SUNRISE_ZENITH = 90.833;
 const CIVIL_TWILIGHT_ZENITH = 96;
 const MINUTES_PER_DAY = 1440;
 const DEFAULT_AIRFIELD_SOLAR_PROFILES = {
-  ESL: { code: "ESL", name: "East Sale", latitude: -38.0989, longitude: 147.1494, timezone: "Australia/Melbourne" },
-  PEA: { code: "PEA", name: "Pearce", latitude: -31.6678, longitude: 116.015, timezone: "Australia/Perth" },
-  WLM: { code: "WLM", name: "Williamtown", latitude: -32.794, longitude: 151.834, timezone: "Australia/Sydney" },
-  AMB: { code: "AMB", name: "Amberley", latitude: -27.6406, longitude: 152.712, timezone: "Australia/Brisbane" },
-  TIN: { code: "TIN", name: "Tindal", latitude: -14.521, longitude: 132.378, timezone: "Australia/Darwin" },
-  EDI: { code: "EDI", name: "Edinburgh", latitude: -34.7025, longitude: 138.6208, timezone: "Australia/Adelaide" }
+  ESL: { code: "ESL", iataCode: "ESL", icao: "YMES", name: "East Sale", latitude: -38.0989, longitude: 147.1494, timezone: "Australia/Melbourne" },
+  PEA: { code: "PEA", iataCode: "PEA", icao: "YPEA", name: "Pearce", latitude: -31.6678, longitude: 116.015, timezone: "Australia/Perth" },
+  WLM: { code: "WLM", iataCode: "WLM", icao: "YWLM", name: "Williamtown", latitude: -32.794, longitude: 151.834, timezone: "Australia/Sydney" },
+  AMB: { code: "AMB", iataCode: "AMB", icao: "YAMB", name: "Amberley", latitude: -27.6406, longitude: 152.712, timezone: "Australia/Brisbane" },
+  TIN: { code: "TIN", iataCode: "TIN", icao: "YPTN", name: "Tindal", latitude: -14.521, longitude: 132.378, timezone: "Australia/Darwin" },
+  EDI: { code: "EDI", iataCode: "EDI", icao: "YPED", name: "Edinburgh", latitude: -34.7025, longitude: 138.6208, timezone: "Australia/Adelaide" }
 };
 const DEFAULT_AIRFIELD_LOOKUP = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES).reduce((acc, profile) => {
   acc[normaliseKey(profile.code)] = profile;
+  acc[normaliseKey(profile.iataCode)] = profile;
+  acc[normaliseKey(profile.icao)] = profile;
   acc[normaliseKey(profile.name)] = profile;
   return acc;
 }, {});
@@ -42345,6 +42347,27 @@ const emptyAirfieldCatalogueLookup = {
   exact: /* @__PURE__ */ new Map(),
   searchable: []
 };
+const defaultAirfieldProfiles = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {});
+const getDefaultAirfieldProfileForCatalogueEntry = (entry) => {
+  const entryIcao = normaliseAirfieldLookupToken(entry.c);
+  const entryName = normaliseAirfieldLookupToken(entry.n);
+  const entryCity = normaliseAirfieldLookupToken(entry.m);
+  return defaultAirfieldProfiles.find((profile) => {
+    const profileIcao = normaliseAirfieldLookupToken(profile.icao);
+    const profileName = normaliseAirfieldLookupToken(profile.name);
+    const closeLatitude = Math.abs(Number(profile.latitude) - Number(entry.a)) < 0.02;
+    const closeLongitude = Math.abs(Number(profile.longitude) - Number(entry.o)) < 0.02;
+    return entryIcao && profileIcao === entryIcao || (entryName === profileName || entryCity === profileName) && closeLatitude && closeLongitude;
+  }) || null;
+};
+const getAirfieldCatalogueIcaoCode = (entry) => {
+  const profile = getDefaultAirfieldProfileForCatalogueEntry(entry);
+  return entry.c || profile?.icao || entry.l || "";
+};
+const getAirfieldCatalogueIataCode = (entry) => {
+  const profile = getDefaultAirfieldProfileForCatalogueEntry(entry);
+  return entry.i || profile?.iataCode || profile?.code || "";
+};
 const getAirfieldCatalogueSuggestionsForQuery = (value, lookup) => {
   const query = normaliseAirfieldLookupToken(value);
   if (query.length < 2 || lookup.searchable.length === 0) return [];
@@ -42395,17 +42418,19 @@ const getCurrentTimezoneOffsetHours = (timezone) => {
   }
 };
 const getAirfieldCatalogueLocationChanges = (entry, currentLocation, fillIdentity = true) => {
+  const defaultProfile = getDefaultAirfieldProfileForCatalogueEntry(entry);
+  const timezone = defaultProfile?.timezone || entry.t;
   const changes = {
-    iataCode: entry.i || "",
-    latitude: entry.a,
-    longitude: entry.o,
-    timezone: entry.t
+    iataCode: getAirfieldCatalogueIataCode(entry),
+    latitude: defaultProfile?.latitude ?? entry.a,
+    longitude: defaultProfile?.longitude ?? entry.o,
+    timezone
   };
-  const currentOffset = getCurrentTimezoneOffsetHours(entry.t);
+  const currentOffset = getCurrentTimezoneOffsetHours(timezone);
   if (currentOffset !== null) changes.timezoneOffset = currentOffset;
   if (fillIdentity) {
-    const primaryCode = entry.c || entry.l || entry.i || "";
-    if (primaryCode) changes.code = primaryCode;
+    const icaoCode = getAirfieldCatalogueIcaoCode(entry);
+    if (icaoCode) changes.code = icaoCode;
     changes.name = entry.n;
   }
   return changes;
@@ -43604,14 +43629,26 @@ const PlatformConfigurationSettings = ({
               ref: (node) => {
                 locationRowRefs.current[rowKey] = node;
               },
-              className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12",
+              className: "relative grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 pr-11 md:grid-cols-12",
               children: [
+                canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: "absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded border border-gray-600/70 bg-gray-950/60 text-xs font-bold text-gray-400 transition-colors hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-100",
+                    onClick: () => removeLocation(index),
+                    "aria-label": `Remove ${getPlatformLocationAuditLabel(location)}`,
+                    title: `Remove ${getPlatformLocationAuditLabel(location)}`,
+                    children: "X"
+                  }
+                ) : null,
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   AirfieldLookupField,
                   {
                     label: "ICAO Code",
                     value: location.code,
                     disabled: !canEdit,
+                    maxLength: 4,
                     suggestions: codeSuggestions,
                     onChange: (value) => updateLocationIdentity(index, "code", value),
                     onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
@@ -43623,6 +43660,7 @@ const PlatformConfigurationSettings = ({
                     label: "IATA Code",
                     value: location.iataCode || "",
                     disabled: !canEdit,
+                    maxLength: 3,
                     suggestions: iataSuggestions,
                     onChange: (value) => updateLocationIdentity(index, "iataCode", value),
                     onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
@@ -43640,18 +43678,7 @@ const PlatformConfigurationSettings = ({
                   }
                 ) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:col-span-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }),
-                  canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-100 hover:bg-red-500/20",
-                      onClick: () => removeLocation(index),
-                      children: "Remove Location"
-                    }
-                  ) : null
-                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TimeZoneField, { label: "IANA Timezone", value: location.timezone || "", disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezone: value }), info: "Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." }) }),
@@ -44716,14 +44743,14 @@ const InfoHint = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     role: "button",
     tabIndex: 0,
     "aria-label": "More information",
-    className: "group relative inline-flex h-7 w-7 shrink-0 cursor-help items-center justify-center rounded-full border-[3px] border-cyan-300 bg-transparent text-cyan-100 normal-case outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white",
+    className: "group relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 normal-case outline-none transition-colors hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50",
     children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[21px] font-bold italic leading-none normal-case", children: "i" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-0 top-8 z-50 hidden w-96 max-w-[min(24rem,calc(100vw-2rem))] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[11px] font-bold italic leading-none normal-case", children: "i" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-0 top-5 z-50 hidden w-96 max-w-[min(24rem,calc(100vw-2rem))] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
     ]
   }
 );
-const FieldLabel = ({ label, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex min-h-7 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
+const FieldLabel = ({ label, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
   info ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: info }) : null
 ] });
@@ -44751,7 +44778,8 @@ const AirfieldLookupField = ({
   disabled,
   suggestions,
   onChange,
-  onSelect
+  onSelect,
+  maxLength
 }) => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
   const showSuggestions = isOpen && !disabled && suggestions.length > 0 && String(value || "").trim().length >= 2;
@@ -44764,8 +44792,9 @@ const AirfieldLookupField = ({
         value: value || "",
         disabled,
         autoComplete: "off",
+        maxLength,
         onChange: (event) => {
-          onChange(event.target.value);
+          onChange(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value);
           setIsOpen(true);
         },
         onFocus: () => setIsOpen(true),
