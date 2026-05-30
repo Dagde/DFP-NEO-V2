@@ -6,6 +6,11 @@ import {
   DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
   parseAircraftNumber,
 } from '../utils/aircraftNumberFormat';
+import {
+  readTileStatusSettingsFromLocalStorage,
+  normaliseTileStatusSettings,
+  type TileStatusSettings,
+} from '../utils/tileStatusSettings';
 
 interface FlightTileProps {
   event: ScheduleEvent | EventSegment;
@@ -78,10 +83,32 @@ const getLocalDateStringFromAdjustedTime = (date: Date): string => {
     return `${year}-${month}-${day}`;
 };
 
-const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date): string => {
+const isAuthorisationWarningExempt = (event: ScheduleEvent | EventSegment): boolean => {
+    const resourceId = String(event.resourceId || '').trim().toUpperCase();
+    const flightNumber = String(event.flightNumber || '').trim().toUpperCase();
+    const eventCategory = String((event as any).eventCategory || '').trim().toUpperCase();
+    const exemptOperationalRows = new Set(['DUTY SUP', 'TWR DI', 'RUNWAY DI', 'RWY DI']);
+
+    return event.type === 'deployment'
+        || exemptOperationalRows.has(resourceId)
+        || exemptOperationalRows.has(flightNumber)
+        || exemptOperationalRows.has(eventCategory);
+};
+
+const getAuthorizationTextColorClass = (
+    event: ScheduleEvent | EventSegment,
+    currentTime: Date,
+    settings: TileStatusSettings
+): string => {
     if (event.type !== 'flight') {
         return '';
     }
+
+    if (isAuthorisationWarningExempt(event)) {
+        return '';
+    }
+
+    const resolvedSettings = normaliseTileStatusSettings(settings);
     
     // Use currentTime (timezone-adjusted) instead of new Date() to match the current time indicator
     const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
@@ -113,12 +140,14 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
 
     if (isUnsigned) {
         const timeUntilStart = event.startTime - nowInHours;
+        const urgentWindowHours = resolvedSettings.authorizationUrgentMinutes / 60;
+        const warningWindowHours = resolvedSettings.authorizationWarningMinutes / 60;
         
-        if (timeUntilStart <= 0.25) {
+        if (timeUntilStart <= urgentWindowHours) {
             return 'text-red-500';
         }
 
-        if (timeUntilStart <= 2) {
+        if (timeUntilStart <= warningWindowHours) {
             return 'text-amber-400';
         }
     }
@@ -144,6 +173,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   
   const tileWidth = (effectiveDuration || 0) * pixelsPerHour;
   const isDutySup = event.resourceId === 'Duty Sup';
+  const tileStatusSettings = readTileStatusSettingsFromLocalStorage();
   
   // Check if tile is too small for content (threshold e.g. 60px ~ 18 mins)
   const isSmallTile = tileWidth < 60;
@@ -255,6 +285,12 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     if (isConflicting || isUnavailabilityConflict) {
         return 'ring-red-400'; // Highest priority
     }
+
+    if (event.type !== 'flight' || isAuthorisationWarningExempt(event)) {
+        return 'ring-transparent';
+    }
+
+    const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     
     // Use currentTime (timezone-adjusted) instead of new Date() to match the current time indicator
     const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
@@ -287,10 +323,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
     // Time-based warnings for upcoming unsigned events
     const timeUntilStart = event.startTime - nowInHours;
-    if (timeUntilStart <= 0.25) {
+    if (timeUntilStart <= resolvedTileStatusSettings.authorizationUrgentMinutes / 60) {
         return 'ring-red-500'; // Needs auth urgently
     }
-    if (timeUntilStart <= 2) {
+    if (timeUntilStart <= resolvedTileStatusSettings.authorizationWarningMinutes / 60) {
         return 'ring-amber-400'; // Needs auth soon
     }
 
@@ -369,7 +405,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
           studentClasses = 'font-bold truncate text-red-500';
       }
   } else {
-      const textColorClass = getAuthorizationTextColorClass(event, currentTime);
+      const textColorClass = getAuthorizationTextColorClass(event, currentTime, tileStatusSettings);
       const picHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(picName || '');
       const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || '');
       

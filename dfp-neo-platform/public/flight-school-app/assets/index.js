@@ -1424,6 +1424,50 @@ const getAppApiBase = () => {
   if (currentOrigin === PRODUCTION_API_ORIGIN || currentOrigin.includes("railway.app")) return "/api";
   return isExternalDataAllowed("productionApiFallbackEnabled") ? `${PRODUCTION_API_ORIGIN}/api` : "/api";
 };
+const DEFAULT_TILE_STATUS_SETTINGS = {
+  authorizationUrgentMinutes: 15,
+  authorizationWarningMinutes: 120
+};
+const TILE_STATUS_SETTINGS_STORAGE_KEY = "dfp_tile_status_settings";
+const clampMinutes = (value, fallback) => {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(720, Math.max(0, Math.round(numeric)));
+};
+const normaliseTileStatusSettings = (settings) => {
+  const urgent = clampMinutes(
+    settings?.authorizationUrgentMinutes,
+    DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes
+  );
+  const warning = clampMinutes(
+    settings?.authorizationWarningMinutes,
+    DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes
+  );
+  return {
+    authorizationUrgentMinutes: Math.min(urgent, warning),
+    authorizationWarningMinutes: Math.max(warning, urgent)
+  };
+};
+const readTileStatusSettingsFromLocalStorage = () => {
+  if (typeof window === "undefined") return DEFAULT_TILE_STATUS_SETTINGS;
+  try {
+    const raw = window.localStorage.getItem(TILE_STATUS_SETTINGS_STORAGE_KEY);
+    if (!raw) return DEFAULT_TILE_STATUS_SETTINGS;
+    return normaliseTileStatusSettings(JSON.parse(raw));
+  } catch {
+    return DEFAULT_TILE_STATUS_SETTINGS;
+  }
+};
+const writeTileStatusSettingsToLocalStorage = (settings) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      TILE_STATUS_SETTINGS_STORAGE_KEY,
+      JSON.stringify(normaliseTileStatusSettings(settings))
+    );
+  } catch {
+  }
+};
 const SETTINGS_VERSION = "1.0";
 const ORG_ID = "default";
 let saveDebounceTimer = null;
@@ -1558,6 +1602,7 @@ const buildSettingsSnapshot = (state) => {
     availableCptCount: state.availableCptCount ?? 4,
     timezoneOffset: state.timezoneOffset ?? 0,
     showDepartureDensityOverlay: state.showDepartureDensityOverlay ?? false,
+    tileStatusSettings: normaliseTileStatusSettings(state.tileStatusSettings || DEFAULT_TILE_STATUS_SETTINGS),
     sctEvents: state.sctEvents || [],
     formationCallsigns: state.formationCallsigns || [],
     courseColors: state.courseColors || {},
@@ -4906,10 +4951,21 @@ const getLocalDateStringFromAdjustedTime = (date) => {
   const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
-const getAuthorizationTextColorClass = (event, currentTime) => {
+const isAuthorisationWarningExempt = (event) => {
+  const resourceId = String(event.resourceId || "").trim().toUpperCase();
+  const flightNumber = String(event.flightNumber || "").trim().toUpperCase();
+  const eventCategory = String(event.eventCategory || "").trim().toUpperCase();
+  const exemptOperationalRows = /* @__PURE__ */ new Set(["DUTY SUP", "TWR DI", "RUNWAY DI", "RWY DI"]);
+  return event.type === "deployment" || exemptOperationalRows.has(resourceId) || exemptOperationalRows.has(flightNumber) || exemptOperationalRows.has(eventCategory);
+};
+const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   if (event.type !== "flight") {
     return "";
   }
+  if (isAuthorisationWarningExempt(event)) {
+    return "";
+  }
+  const resolvedSettings = normaliseTileStatusSettings(settings);
   const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
   if (event.date !== todayStr) {
     return "";
@@ -4930,10 +4986,12 @@ const getAuthorizationTextColorClass = (event, currentTime) => {
   }
   if (isUnsigned) {
     const timeUntilStart = event.startTime - nowInHours;
-    if (timeUntilStart <= 0.25) {
+    const urgentWindowHours = resolvedSettings.authorizationUrgentMinutes / 60;
+    const warningWindowHours = resolvedSettings.authorizationWarningMinutes / 60;
+    if (timeUntilStart <= urgentWindowHours) {
       return "text-red-500";
     }
-    if (timeUntilStart <= 2) {
+    if (timeUntilStart <= warningWindowHours) {
       return "text-amber-400";
     }
   }
@@ -4949,6 +5007,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const effectiveDuration = segment.segmentDuration !== void 0 ? segment.segmentDuration : event.duration;
   const tileWidth = (effectiveDuration || 0) * pixelsPerHour;
   const isDutySup = event.resourceId === "Duty Sup";
+  const tileStatusSettings = readTileStatusSettingsFromLocalStorage();
   const isSmallTile = tileWidth < 60;
   const isEndSegment = segment.segmentType === "start";
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
@@ -5041,6 +5100,10 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if (isConflicting || isUnavailabilityConflict) {
       return "ring-red-400";
     }
+    if (event.type !== "flight" || isAuthorisationWarningExempt(event)) {
+      return "ring-transparent";
+    }
+    const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
     if (event.date !== todayStr) {
       return "ring-transparent";
@@ -5059,10 +5122,10 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       return "ring-transparent";
     }
     const timeUntilStart = event.startTime - nowInHours;
-    if (timeUntilStart <= 0.25) {
+    if (timeUntilStart <= resolvedTileStatusSettings.authorizationUrgentMinutes / 60) {
       return "ring-red-500";
     }
-    if (timeUntilStart <= 2) {
+    if (timeUntilStart <= resolvedTileStatusSettings.authorizationWarningMinutes / 60) {
       return "ring-amber-400";
     }
     return "ring-transparent";
@@ -5111,7 +5174,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       studentClasses = "font-bold truncate text-red-500";
     }
   } else {
-    const textColorClass = getAuthorizationTextColorClass(event, currentTime);
+    const textColorClass = getAuthorizationTextColorClass(event, currentTime, tileStatusSettings);
     const picHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(picName || "");
     const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || "");
     const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
@@ -36004,6 +36067,8 @@ const SettingsView = ({
   scoringMatrixReadOnly = false,
   maxDispatchPerHour,
   onUpdateMaxDispatchPerHour,
+  tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
+  onUpdateTileStatusSettings,
   timezoneOffset,
   onUpdateTimezoneOffset,
   formationCallsigns,
@@ -36020,6 +36085,14 @@ const SettingsView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
+  const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
+  const handleTileStatusMinutesChange = (key, value) => {
+    if (!onUpdateTileStatusSettings) return;
+    onUpdateTileStatusSettings(normaliseTileStatusSettings({
+      ...resolvedTileStatusSettings,
+      [key]: value
+    }));
+  };
   const [isEditingLocations, setIsEditingLocations] = reactExports.useState(false);
   const [tempLocations, setTempLocations] = reactExports.useState([]);
   const [newLocation, setNewLocation] = reactExports.useState("");
@@ -37429,20 +37502,69 @@ const SettingsView = ({
       ] }),
       shouldShowSection("business-rules") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Business Rules" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Max dispatch / hr" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "select",
-            {
-              value: maxDispatchPerHour,
-              onChange: (e) => onUpdateMaxDispatchPerHour(parseInt(e.target.value)),
-              disabled: !canEditSettings,
-              className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
-              children: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((value) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: value }, value))
-            }
-          ),
-          canEditSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Maximum number of dispatches allowed per hour" })
-        ] }) }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Max dispatch / hr" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: maxDispatchPerHour,
+                onChange: (e) => onUpdateMaxDispatchPerHour(parseInt(e.target.value)),
+                disabled: !canEditSettings,
+                className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
+                children: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((value) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: value }, value))
+              }
+            ),
+            canEditSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Maximum number of dispatches allowed per hour" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-4 border-t border-gray-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-between gap-4 mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-200", children: "Flight tile authorisation warnings" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Controls when unsigned flight tiles change border and crew-name colour on the current day's DFP." })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-medium text-gray-400 mb-1", children: "Amber warning before start" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 0,
+                      max: 720,
+                      step: 5,
+                      value: resolvedTileStatusSettings.authorizationWarningMinutes,
+                      onChange: (e) => handleTileStatusMinutesChange("authorizationWarningMinutes", Number(e.target.value)),
+                      disabled: !canEditSettings,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-medium text-gray-400 mb-1", children: "Red urgent before start" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 0,
+                      max: 720,
+                      step: 5,
+                      value: resolvedTileStatusSettings.authorizationUrgentMinutes,
+                      onChange: (e) => handleTileStatusMinutesChange("authorizationUrgentMinutes", Number(e.target.value)),
+                      disabled: !canEditSettings,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
+                ] })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "Deployment tiles, Runway DI/TWR DI and Duty Sup events are exempt from these authorisation warning colours." })
+          ] })
+        ] }) })
       ] }),
       shouldShowSection("data-loaders") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[30rem] h-fit", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Data Loaders" }) }),
@@ -61033,6 +61155,10 @@ const App = () => {
   reactExports.useEffect(() => {
     localStorage.setItem("showDepartureDensityOverlay", JSON.stringify(showDepartureDensityOverlay));
   }, [showDepartureDensityOverlay]);
+  const [tileStatusSettings, setTileStatusSettings] = reactExports.useState(() => readTileStatusSettingsFromLocalStorage());
+  reactExports.useEffect(() => {
+    writeTileStatusSettingsToLocalStorage(tileStatusSettings);
+  }, [tileStatusSettings]);
   const getLocalDateString = (date2 = /* @__PURE__ */ new Date()) => {
     const offsetMs = timezoneOffset * 60 * 60 * 1e3;
     const adjustedDate = new Date(date2.getTime() + offsetMs);
@@ -62866,6 +62992,7 @@ ${"=".repeat(60)}`);
         if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
         if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
         if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
+        if (saved.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved.tileStatusSettings));
         if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
         if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
         if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
@@ -62955,6 +63082,7 @@ ${"=".repeat(60)}`);
       availableCptCount,
       timezoneOffset,
       showDepartureDensityOverlay,
+      tileStatusSettings,
       sctEvents,
       formationCallsigns,
       courseColors,
@@ -62998,6 +63126,7 @@ ${"=".repeat(60)}`);
     availableCptCount,
     timezoneOffset,
     showDepartureDensityOverlay,
+    tileStatusSettings,
     sctEvents,
     formationCallsigns,
     courseColors,
@@ -70973,6 +71102,8 @@ ${conflictLines.join("\n")}${moreText}`,
             onUpdateTimezoneOffset: setTimezoneOffset,
             showDepartureDensityOverlay,
             onUpdateShowDepartureDensityOverlay: setShowDepartureDensityOverlay,
+            tileStatusSettings,
+            onUpdateTileStatusSettings: (settings) => setTileStatusSettings(normaliseTileStatusSettings(settings)),
             formationCallsigns,
             onUpdateFormationCallsigns: setFormationCallsigns,
             courseColors,

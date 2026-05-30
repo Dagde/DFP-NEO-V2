@@ -5,6 +5,7 @@
  */
 
 import { getAppApiBase } from './externalDataControls';
+import { DEFAULT_TILE_STATUS_SETTINGS, normaliseTileStatusSettings, type TileStatusSettings } from './tileStatusSettings';
 
 export interface ServiceDefinition {
   longName: string;   // e.g. "Air Force"
@@ -55,6 +56,7 @@ export interface AppSettingsData {
   // Timezone & Display
   timezoneOffset: number;
   showDepartureDensityOverlay: boolean;
+  tileStatusSettings: TileStatusSettings;
 
   // SCT Events
   sctEvents: string[];
@@ -287,6 +289,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     availableCptCount: state.availableCptCount ?? 4,
     timezoneOffset: state.timezoneOffset ?? 0,
     showDepartureDensityOverlay: state.showDepartureDensityOverlay ?? false,
+    tileStatusSettings: normaliseTileStatusSettings(state.tileStatusSettings || DEFAULT_TILE_STATUS_SETTINGS),
     sctEvents: state.sctEvents || [],
     formationCallsigns: state.formationCallsigns || [],
     courseColors: state.courseColors || {},

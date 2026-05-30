@@ -33,6 +33,12 @@ import {
 } from './utils/resourceDisplayNames';
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
 import {
+    readTileStatusSettingsFromLocalStorage,
+    normaliseTileStatusSettings,
+    writeTileStatusSettingsToLocalStorage,
+    type TileStatusSettings,
+} from './utils/tileStatusSettings';
+import {
     comparePeopleByConfiguredRank,
     getPersonnelDisplaySettings,
 } from './utils/personnelDisplaySettings';
@@ -9040,6 +9046,12 @@ const App: React.FC = () => {
         localStorage.setItem('showDepartureDensityOverlay', JSON.stringify(showDepartureDensityOverlay));
     }, [showDepartureDensityOverlay]);
 
+    const [tileStatusSettings, setTileStatusSettings] = useState<TileStatusSettings>(() => readTileStatusSettingsFromLocalStorage());
+
+    useEffect(() => {
+        writeTileStatusSettingsToLocalStorage(tileStatusSettings);
+    }, [tileStatusSettings]);
+
     // Helper function to get local date string with timezone offset
     const getLocalDateString = (date: Date = new Date()): string => {
         // Apply timezone offset
@@ -11364,6 +11376,7 @@ const App: React.FC = () => {
                 if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
                 if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
                 if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
+                if (saved.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved.tileStatusSettings));
                 if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
                 if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
                 if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
@@ -11466,6 +11479,7 @@ const App: React.FC = () => {
             availableCptCount,
             timezoneOffset,
             showDepartureDensityOverlay,
+            tileStatusSettings,
             sctEvents,
             formationCallsigns,
             courseColors,
@@ -11491,7 +11505,7 @@ const App: React.FC = () => {
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
         availableAircraftCount, neoAvailableAircraftCount, availableFtdCount, availableCptCount,
-        timezoneOffset, showDepartureDensityOverlay,
+        timezoneOffset, showDepartureDensityOverlay, tileStatusSettings,
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements,
@@ -21389,6 +21403,8 @@ updates.forEach(update => {
                     onUpdateTimezoneOffset={setTimezoneOffset}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onUpdateShowDepartureDensityOverlay={setShowDepartureDensityOverlay}
+                    tileStatusSettings={tileStatusSettings}
+                    onUpdateTileStatusSettings={(settings) => setTileStatusSettings(normaliseTileStatusSettings(settings))}
 
                        formationCallsigns={formationCallsigns}
                           onUpdateFormationCallsigns={setFormationCallsigns}

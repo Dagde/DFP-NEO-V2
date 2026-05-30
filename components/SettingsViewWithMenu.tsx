@@ -19,6 +19,7 @@ import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, Maste
 import { logAudit } from '../utils/auditLogger';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import type { TileStatusSettings } from '../utils/tileStatusSettings';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -65,6 +66,8 @@ interface SettingsViewWithMenuProps {
     currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
+    tileStatusSettings?: TileStatusSettings;
+    onUpdateTileStatusSettings?: (settings: TileStatusSettings) => void;
     timezoneOffset: number;
     onUpdateTimezoneOffset: (offset: number) => void;
     showDepartureDensityOverlay: boolean;

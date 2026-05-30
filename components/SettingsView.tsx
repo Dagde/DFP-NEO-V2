@@ -25,6 +25,11 @@ import DutyTurnaroundSection from './DutyTurnaroundSection';
 import AircraftAvailabilitySettings from './AircraftAvailabilitySettings';
 import EmergencyPage from './EmergencyPage';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import {
+    DEFAULT_TILE_STATUS_SETTINGS,
+    normaliseTileStatusSettings,
+    type TileStatusSettings,
+} from '../utils/tileStatusSettings';
 
 
 declare var XLSX: any;
@@ -80,6 +85,8 @@ interface SettingsViewProps {
     scoringMatrixReadOnly?: boolean;
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
+    tileStatusSettings?: TileStatusSettings;
+    onUpdateTileStatusSettings?: (settings: TileStatusSettings) => void;
     formationCallsigns: FormationCallsign[];
     onUpdateFormationCallsigns: (callsigns: FormationCallsign[]) => void;
     courseColors: { [key: string]: string };
@@ -460,6 +467,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     scoringMatrixReadOnly = false,
     maxDispatchPerHour,
     onUpdateMaxDispatchPerHour,
+    tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
+    onUpdateTileStatusSettings,
     timezoneOffset,
     onUpdateTimezoneOffset,
     
@@ -480,6 +489,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     
     // Permission Check - Only Super Admin, Admin, and Scheduler can edit Settings
     const canEditSettings = ['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission);
+    const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
+    const handleTileStatusMinutesChange = (key: keyof TileStatusSettings, value: number) => {
+        if (!onUpdateTileStatusSettings) return;
+        onUpdateTileStatusSettings(normaliseTileStatusSettings({
+            ...resolvedTileStatusSettings,
+            [key]: value,
+        }));
+    };
     
     // Location State
     const [isEditingLocations, setIsEditingLocations] = useState(false);
@@ -2316,6 +2333,61 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                             Maximum number of dispatches allowed per hour
                                         </p>
                                     )}
+                                </div>
+                                <div className="pt-4 border-t border-gray-700">
+                                    <div className="flex items-start justify-between gap-4 mb-3">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-gray-200">Flight tile authorisation warnings</h3>
+                                            <p className="mt-1 text-xs text-gray-400">
+                                                Controls when unsigned flight tiles change border and crew-name colour on the current day's DFP.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <label className="block">
+                                            <span className="block text-xs font-medium text-gray-400 mb-1">Amber warning before start</span>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={720}
+                                                    step={5}
+                                                    value={resolvedTileStatusSettings.authorizationWarningMinutes}
+                                                    onChange={(e) => handleTileStatusMinutesChange('authorizationWarningMinutes', Number(e.target.value))}
+                                                    disabled={!canEditSettings}
+                                                    className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
+                                                        canEditSettings
+                                                            ? 'bg-gray-700 border-gray-600 text-white'
+                                                            : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                                                    }`}
+                                                />
+                                                <span className="text-xs text-gray-400">min</span>
+                                            </div>
+                                        </label>
+                                        <label className="block">
+                                            <span className="block text-xs font-medium text-gray-400 mb-1">Red urgent before start</span>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={720}
+                                                    step={5}
+                                                    value={resolvedTileStatusSettings.authorizationUrgentMinutes}
+                                                    onChange={(e) => handleTileStatusMinutesChange('authorizationUrgentMinutes', Number(e.target.value))}
+                                                    disabled={!canEditSettings}
+                                                    className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
+                                                        canEditSettings
+                                                            ? 'bg-gray-700 border-gray-600 text-white'
+                                                            : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                                                    }`}
+                                                />
+                                                <span className="text-xs text-gray-400">min</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <p className="mt-2 text-xs text-gray-500">
+                                        Deployment tiles, Runway DI/TWR DI and Duty Sup events are exempt from these authorisation warning colours.
+                                    </p>
                                 </div>
                             </div>
                         </div>
