@@ -6122,17 +6122,23 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
          WHERE date = $1::text
             OR date = $2::text
             OR date = $3::text
+            OR date LIKE $4::text
+            OR date LIKE $5::text
          ORDER BY
            CASE
              WHEN date = $1::text THEN 0
              WHEN date = $2::text THEN 1
              WHEN date = $3::text THEN 2
-             ELSE 3
+             WHEN date LIKE $4::text THEN 3
+             WHEN date LIKE $5::text THEN 4
+             ELSE 5
            END
          LIMIT 1`,
         date,
         `${date}__ESL`,
-        `${date}__PEA`
+        `${date}__PEA`,
+        `${date}__ESL__%`,
+        `${date}__PEA__%`
       );
 
       if (snapRows && snapRows.length > 0) {
@@ -10049,9 +10055,10 @@ app.get('/api/daily-snapshot/dates', async (req, res) => {
       `SELECT date, "savedAt", "savedBy" FROM "DailySnapshot" ORDER BY date DESC`
     );
     const dates = (rows || []).map(r => ({
-      date: String(r.date || '').replace(/__(ESL|PEA)$/i, ''),
+      date: String(r.date || '').replace(/__([A-Z0-9_-]+)(?:__([A-Za-z0-9_-]+))?$/i, ''),
       snapshotKey: r.date,
-      school: (String(r.date || '').match(/__(ESL|PEA)$/i) || [])[1] || null,
+      school: (String(r.date || '').match(/__([A-Z0-9_-]+)(?:__([A-Za-z0-9_-]+))?$/i) || [])[1] || null,
+      unit: (String(r.date || '').match(/__([A-Z0-9_-]+)(?:__([A-Za-z0-9_-]+))?$/i) || [])[2] || null,
       savedAt: r.savedAt,
       savedBy: r.savedBy
     }));
@@ -10068,15 +10075,28 @@ app.get('/api/daily-snapshot', async (req, res) => {
   try {
     const db = await getPrisma();
     const school = String(req.query.school || '').toUpperCase();
-    const rows = (school === 'ESL')
+    const unit = String(req.query.unit || '').replace(/[^A-Za-z0-9_-]/g, '-');
+    const rows = school && unit
       ? await db.$queryRawUnsafe(
-          `SELECT * FROM "DailySnapshot" WHERE date LIKE $1::text OR date !~ '__(ESL|PEA)$' ORDER BY date DESC LIMIT 5`,
-          `%__${school}`
+          `SELECT * FROM "DailySnapshot"
+           WHERE date LIKE $1::text
+              OR date LIKE $2::text
+              OR ($3::boolean AND date !~ '__[A-Za-z0-9_-]+(__[A-Za-z0-9_-]+)?$')
+           ORDER BY date DESC LIMIT 5`,
+          `%__${school}__${unit}`,
+          `%__${school}`,
+          school === 'ESL'
         )
-      : (school === 'PEA')
+      : school
       ? await db.$queryRawUnsafe(
-          `SELECT * FROM "DailySnapshot" WHERE date LIKE $1::text ORDER BY date DESC LIMIT 5`,
-          `%__${school}`
+          `SELECT * FROM "DailySnapshot"
+           WHERE date LIKE $1::text
+              OR date LIKE $2::text
+              OR ($3::boolean AND date !~ '__[A-Za-z0-9_-]+(__[A-Za-z0-9_-]+)?$')
+           ORDER BY date DESC LIMIT 5`,
+          `%__${school}`,
+          `%__${school}__%`,
+          school === 'ESL'
         )
       : await db.$queryRawUnsafe(
           `SELECT * FROM "DailySnapshot" ORDER BY date DESC LIMIT 5`
@@ -10094,9 +10114,9 @@ app.get('/api/daily-snapshot/:date', async (req, res) => {
   try {
     const db = await getPrisma();
     const { date } = req.params;
-    // Validate date format. Location-aware snapshots use YYYY-MM-DD__ESL/PEA.
-    if (!/^\d{4}-\d{2}-\d{2}(?:__(?:ESL|PEA))?$/i.test(date)) {
-      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD or YYYY-MM-DD__ESL/PEA' });
+    // Validate date format. Context-aware snapshots use YYYY-MM-DD__LOCATION__UNIT.
+    if (!/^\d{4}-\d{2}-\d{2}(?:__[A-Za-z0-9_-]+(?:__[A-Za-z0-9_-]+)?)?$/i.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD, YYYY-MM-DD__LOCATION, or YYYY-MM-DD__LOCATION__UNIT' });
     }
     const rows = await db.$queryRawUnsafe(
       `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
@@ -10638,7 +10658,7 @@ const getAlertRecipientStatus = (alert, aliases) => {
 app.post('/api/alerts/send', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { eventId, date, eventDate, school, sentBy, recipients, description, eventDetails } = req.body;
+    const { eventId, date, eventDate, school, unit, sentBy, recipients, description, eventDetails } = req.body;
 
     if (!eventId || !date || !sentBy || !recipients || recipients.length === 0) {
       return res.status(400).json({ error: 'eventId, date, sentBy, and recipients are required' });
@@ -10652,7 +10672,10 @@ app.post('/api/alerts/send', async (req, res) => {
     );
     if ((!rows || rows.length === 0) && !String(date).includes('__')) {
       const candidateDates = school
-        ? [`${date}__${String(school).toUpperCase()}`]
+        ? [
+            ...(unit ? [`${date}__${String(school).toUpperCase()}__${String(unit).replace(/[^A-Za-z0-9_-]/g, '-')}`] : []),
+            `${date}__${String(school).toUpperCase()}`
+          ]
         : [`${date}__ESL`, `${date}__PEA`];
       for (const candidateDate of candidateDates) {
         rows = await db.$queryRawUnsafe(
@@ -10663,6 +10686,13 @@ app.post('/api/alerts/send', async (req, res) => {
           snapshotDate = candidateDate;
           break;
         }
+      }
+      if ((!rows || rows.length === 0) && school) {
+        rows = await db.$queryRawUnsafe(
+          `SELECT "alertsData", date FROM "DailySnapshot" WHERE date LIKE $1::text ORDER BY date DESC LIMIT 1`,
+          `${date}__${String(school).toUpperCase()}__%`
+        );
+        if (rows && rows.length > 0) snapshotDate = rows[0].date;
       }
     }
     if (!rows || rows.length === 0) {

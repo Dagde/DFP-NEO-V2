@@ -1893,6 +1893,23 @@ function classifyDayNightBySunTimes(decimalHour, sunTimes) {
   if (!Number.isFinite(dayStart) || !Number.isFinite(dayEnd)) return null;
   return decimalHour >= dayStart && decimalHour < dayEnd ? "Day" : "Night";
 }
+const DEFAULT_OPERATIONAL_MODEL = "flight_school";
+const OPERATIONAL_MODEL_OPTIONS = [
+  { value: "flight_school", label: "Flight School Model" },
+  { value: "air_combat", label: "Air Combat Model" },
+  { value: "fixed_crew", label: "Fixed Crew Model" },
+  { value: "air_mobility", label: "Air Mobility Model" }
+];
+const operationalModelLabels = new Map(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
+const normaliseOperationalModel = (value) => {
+  const token = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (token === "air_combat" || token === "fighter" || token === "fighter_model") return "air_combat";
+  if (token === "fixed_crew" || token === "crewed" || token === "crewed_model") return "fixed_crew";
+  if (token === "air_mobility" || token === "airlift" || token === "mobility") return "air_mobility";
+  return DEFAULT_OPERATIONAL_MODEL;
+};
+const getUnitOperationalModel = (unit) => normaliseOperationalModel(unit?.operationalModel || unit?.settings?.operationalModel);
+const getOperationalModelLabel = (value) => operationalModelLabels.get(normaliseOperationalModel(value)) || operationalModelLabels.get(DEFAULT_OPERATIONAL_MODEL);
 const PLATFORM_PERMISSION_CATALOG = [
   {
     group: "Daily Flying Program",
@@ -2301,13 +2318,22 @@ const getPlatformModuleForView = (view2) => {
   };
   return viewToModule[view2] || null;
 };
-const getLocationResourcePool = (config, locationCode) => {
+const getLocationResourcePool = (config, locationCode, unitCode) => {
   const matchingLocation = (config?.locations || []).find((location) => getConfiguredLocationAliases(location).some((alias) => locationCodesAreEquivalent(alias, locationCode)));
   const locationAliases = new Set(
     (matchingLocation ? getConfiguredLocationAliases(matchingLocation) : getKnownLocationAliases(locationCode)).map(normaliseLocationIdentifier)
   );
-  const pools = (config?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE" && locationAliases.has(normaliseLocationIdentifier(pool.locationCode)) && pool.poolType === "Shared");
-  return pools[0] || null;
+  const pools = (config?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE" && locationAliases.has(normaliseLocationIdentifier(pool.locationCode)));
+  const targetUnit = normaliseLocationIdentifier(unitCode);
+  if (targetUnit) {
+    const unitPools = pools.filter((pool) => normaliseLocationIdentifier(pool.unitCode) === targetUnit);
+    const runtimeUnitPool = unitPools.find(isResourcePoolRuntimeEnabled);
+    if (runtimeUnitPool) return runtimeUnitPool;
+    if (unitPools.length > 0) return unitPools[0];
+  }
+  const sharedPools = pools.filter((pool) => pool.poolType === "Shared");
+  const runtimeSharedPool = sharedPools.find(isResourcePoolRuntimeEnabled);
+  return runtimeSharedPool || sharedPools[0] || null;
 };
 const isResourcePoolRuntimeEnabled = (pool) => pool?.settings?.applyToV2Runtime === true;
 const getResourcePoolCount = (pool, key, fallback) => {
@@ -4703,6 +4729,10 @@ const Header = ({
   locations,
   activeLocation,
   onLocationChange,
+  units,
+  activeUnit,
+  onUnitChange,
+  activeModelLabel,
   isMagnifierEnabled,
   setIsMagnifierEnabled,
   isMultiSelectMode,
@@ -4751,15 +4781,28 @@ const Header = ({
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 flex items-center justify-center", style: { width: "144px", paddingLeft: "8px", paddingRight: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "select",
-        {
-          value: activeLocation,
-          onChange: (e) => onLocationChange(e.target.value),
-          className: "bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-2 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none w-full text-center",
-          children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
-        }
-      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 flex items-center justify-center", style: { width: "230px", paddingLeft: "8px", paddingRight: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-full items-center gap-1", title: `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}${activeModelLabel ? ` | ${activeModelLabel}` : ""}`, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "select",
+          {
+            value: activeLocation,
+            onChange: (e) => onLocationChange(e.target.value),
+            className: "w-[78px] bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-1 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none text-center",
+            children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs font-bold", children: "-" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "select",
+          {
+            value: activeUnit,
+            onChange: (e) => onUnitChange(e.target.value),
+            disabled: units.length <= 1,
+            className: "min-w-0 flex-1 bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-1 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none text-center disabled:opacity-80",
+            children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+          }
+        )
+      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", style: { gap: "1px" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -4895,7 +4938,7 @@ const Header = ({
           }
         ) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", style: { width: "144px" } })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", style: { width: "230px" } })
     ] }),
     showUserMenu && authUser && userButtonRef.current && ReactDOM.createPortal(
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -44537,7 +44580,7 @@ const PlatformConfigurationSettings = ({
           locationCode: defaultLocation,
           unitType: "Training",
           status: "ACTIVE",
-          settings: {}
+          settings: { operationalModel: DEFAULT_OPERATIONAL_MODEL }
         }
       ]
     }));
@@ -45106,17 +45149,36 @@ const PlatformConfigurationSettings = ({
         SectionHeader,
         {
           title: "Units",
-          subtitle: "Unit is the centre of configuration: type, location, enabled modules and future UI behaviour.",
+          subtitle: "Unit is the centre of configuration: model, type, location, enabled modules and future UI behaviour.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUnit, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Unit" }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-4", children: config.units.map((unit, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Code", value: unit.code, disabled: !canEdit, onChange: (value) => updateRow("units", index, { code: value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !canEdit, onChange: (value) => updateRow("units", index, { name: value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !canEdit, options: config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateRow("units", index, { unitType: value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) })
-      ] }, unit.id || unit.code || index)) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-4", children: config.units.map((unit, index) => {
+        const unitSettings = unit.settings || {};
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit", value: unit.code, disabled: !canEdit, onChange: (value) => updateRow("units", index, { code: value }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !canEdit, onChange: (value) => updateRow("units", index, { name: value }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !canEdit, options: config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectField,
+            {
+              label: "Model",
+              value: getUnitOperationalModel(unit),
+              disabled: !canEdit,
+              options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
+              optionLabels: Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label])),
+              onChange: (value) => updateRow("units", index, {
+                settings: {
+                  ...unitSettings,
+                  operationalModel: value || DEFAULT_OPERATIONAL_MODEL
+                }
+              })
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) }) })
+        ] }, unit.id || unit.code || index);
+      }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-resource-pools", className: getSectionClass("platform-resource-pools"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Aircraft Types & Resource Pools", subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources.", action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }) : null }),
@@ -46278,9 +46340,9 @@ const ToggleField = ({ label, checked, disabled, onChange }) => /* @__PURE__ */ 
     }
   )
 ] });
-const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = "None", info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = "None", info, optionLabels = {} }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option || emptyLabel }, option)) })
+  /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: optionLabels[option] || option || emptyLabel }, option)) })
 ] });
 const TimeZoneField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
@@ -62861,6 +62923,7 @@ const App = () => {
     return { staff: false, trainee: false, staffDb: true, traineeDb: true };
   });
   const [school, setSchool] = reactExports.useState("ESL");
+  const [activeUnitCode, setActiveUnitCode] = reactExports.useState("1FTS");
   const [platformConfig, setPlatformConfig] = reactExports.useState(null);
   const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
   const [allInstructorsData, setInstructorsData] = reactExports.useState([]);
@@ -62899,9 +62962,42 @@ const App = () => {
     () => getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]),
     [platformConfig]
   );
+  const activeLocationUnitOptions = reactExports.useMemo(() => {
+    const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => String(unit.locationCode || "").trim().toUpperCase() === school).map((unit) => ({
+      code: String(unit.code || "").trim(),
+      name: String(unit.name || unit.code || "").trim(),
+      model: getUnitOperationalModel(unit)
+    })).filter((unit) => unit.code);
+    if (configuredUnits.length > 0) return configuredUnits;
+    const fallbackCodes = school === "PEA" ? ["2FTS"] : ["1FTS", "CFS"];
+    return fallbackCodes.map((code) => ({
+      code,
+      name: code,
+      model: normaliseOperationalModel("flight_school")
+    }));
+  }, [platformConfig, school]);
+  reactExports.useEffect(() => {
+    if (activeLocationUnitOptions.length === 0) return;
+    if (!activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode)) {
+      setActiveUnitCode(activeLocationUnitOptions[0].code);
+    }
+  }, [activeLocationUnitOptions, activeUnitCode]);
+  const activeUnitContext = reactExports.useMemo(
+    () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
+    [activeLocationUnitOptions, activeUnitCode]
+  );
+  const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
+  const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
+  reactExports.useMemo(() => ({
+    locationCode: school,
+    unitCode: activeUnitCode,
+    unitName: activeUnitContext?.name || activeUnitCode,
+    operationalModel: activeOperationalModel,
+    operationalModelLabel: activeOperationalModelLabel
+  }), [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, school]);
   const activePlatformResourcePool = reactExports.useMemo(
-    () => getLocationResourcePool(platformConfig, school),
-    [platformConfig, school]
+    () => getLocationResourcePool(platformConfig, school, activeUnitCode),
+    [platformConfig, school, activeUnitCode]
   );
   const activeLocationSolarProfile = reactExports.useMemo(() => {
     const configuredLocation = (platformConfig?.locations || []).find((location) => {
@@ -62947,6 +63043,8 @@ const App = () => {
     if (activePlatformResourcePool) {
       console.log("[PlatformConfig] Active location resource context:", {
         school,
+        unit: activeUnitCode,
+        operationalModel: activeOperationalModel,
         pool: activePlatformResourcePool.code,
         poolType: activePlatformResourcePool.poolType,
         aircraftType: activePlatformResourcePool.aircraftTypeCode,
@@ -62954,9 +63052,9 @@ const App = () => {
         settings: activePlatformResourcePool.settings
       });
     } else {
-      console.log("[PlatformConfig] No platform resource pool found for active location; V2 settings remain authoritative.", { school });
+      console.log("[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.", { school, unit: activeUnitCode, operationalModel: activeOperationalModel });
     }
-  }, [activePlatformResourcePool, platformConfigLoaded, school]);
+  }, [activePlatformResourcePool, activeOperationalModel, activeUnitCode, platformConfigLoaded, school]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
@@ -62970,11 +63068,12 @@ const App = () => {
       }
       return true;
     });
+    const contextFiltered = activeUnitCode ? locationFiltered.filter((i) => !i.unit || String(i.unit || "").split("/")[0] === activeUnitCode) : locationFiltered;
     if (!mockOn && !dbOn) return [];
-    if (mockOn && dbOn) return locationFiltered;
-    if (mockOn && !dbOn) return locationFiltered.filter((i) => i._dataSource !== "database");
-    return locationFiltered.filter((i) => i._dataSource === "database");
-  }, [allInstructorsData, dataSourceSettings, school]);
+    if (mockOn && dbOn) return contextFiltered;
+    if (mockOn && !dbOn) return contextFiltered.filter((i) => i._dataSource !== "database");
+    return contextFiltered.filter((i) => i._dataSource === "database");
+  }, [activeUnitCode, allInstructorsData, dataSourceSettings, school]);
   const traineesData = reactExports.useMemo(() => {
     const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
     const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
@@ -62987,14 +63086,15 @@ const App = () => {
       }
       return true;
     });
+    const contextFilteredTrainees = activeUnitCode ? locationFilteredTrainees.filter((t) => !t.unit || String(t.unit || "").split("/")[0] === activeUnitCode) : locationFilteredTrainees;
     if (!mockOn && !dbOn) return [];
-    if (mockOn && !dbOn) return locationFilteredTrainees.filter((t) => t._dataSource === "mockdata");
-    if (!mockOn && dbOn) return locationFilteredTrainees.filter((t) => t._dataSource === "database");
-    const dbTrainees = locationFilteredTrainees.filter((t) => t._dataSource === "database");
+    if (mockOn && !dbOn) return contextFilteredTrainees.filter((t) => t._dataSource === "mockdata");
+    if (!mockOn && dbOn) return contextFilteredTrainees.filter((t) => t._dataSource === "database");
+    const dbTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "database");
     const dbCourses = new Set(dbTrainees.map((t) => t.course));
-    const mockTrainees = locationFilteredTrainees.filter((t) => t._dataSource === "mockdata" && !dbCourses.has(t.course));
+    const mockTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "mockdata" && !dbCourses.has(t.course));
     return [...mockTrainees, ...dbTrainees];
-  }, [allTraineesData, dataSourceSettings, school]);
+  }, [activeUnitCode, allTraineesData, dataSourceSettings, school]);
   const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
   const [authUser, setAuthUser] = reactExports.useState(null);
   const [authSessionToken, setAuthSessionToken] = reactExports.useState("");
@@ -63164,8 +63264,13 @@ const App = () => {
   );
   const platformDataScopeQuery = reactExports.useMemo(() => {
     const scope = getPlatformDataScopeForLocation(platformAccessContext, school);
-    return buildPlatformDataScopeQuery(scope);
-  }, [platformAccessContext, school]);
+    const scopedUnitCodes = activeUnitCode ? scope.allUnits || scope.unitCodes.length === 0 ? [activeUnitCode] : scope.unitCodes.filter((unitCode) => unitCode === activeUnitCode) : scope.unitCodes;
+    return buildPlatformDataScopeQuery({
+      ...scope,
+      unitCodes: scopedUnitCodes,
+      allUnits: !activeUnitCode && scope.allUnits
+    });
+  }, [activeUnitCode, platformAccessContext, school]);
   const scopedApiPath = reactExports.useCallback((path, extraParams) => {
     const params = new URLSearchParams(platformDataScopeQuery);
     Object.entries(extraParams || {}).forEach(([key, value]) => {
@@ -63499,11 +63604,12 @@ const App = () => {
   reactExports.useEffect(() => {
     let cancelled = false;
     const requestedSchool = school;
+    const requestedUnit = activeUnitCode;
     const loadHistoricalData = async () => {
       try {
         const apiBase2 = getAppApiBase();
         try {
-          const snapRes = await fetch(`${apiBase2}/daily-snapshot?school=${requestedSchool}`);
+          const snapRes = await fetch(`${apiBase2}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`);
           if (cancelled) return;
           if (snapRes.ok) {
             const snapData = await snapRes.json();
@@ -63626,7 +63732,7 @@ const App = () => {
     return () => {
       cancelled = true;
     };
-  }, [school]);
+  }, [activeUnitCode, school]);
   reactExports.useEffect(() => {
     const loadSnapshotDates = async () => {
       try {
@@ -63643,7 +63749,7 @@ const App = () => {
     };
     loadSnapshotDates();
   }, []);
-  const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snap2, replace, source) => {
+  const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
     if (events2.length > 0) {
@@ -63654,11 +63760,11 @@ const App = () => {
       });
       const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
       setBaselineSchedules((prev) => {
-        const baselineKey = `${snapshotSchool}:${targetDate}`;
+        const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
         if (!replace && prev[baselineKey]) return prev;
         return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
       });
-      console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool}), ${events2.length} events`);
+      console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events2.length} events`);
     }
     if (snap2.pt051Assessments && Object.keys(snap2.pt051Assessments).length > 0) {
       console.log(`[Snapshot] Ignored ${Object.keys(snap2.pt051Assessments).length} PT-051 snapshot records for ${targetDate}; TraineePerformance is authoritative`);
@@ -63667,11 +63773,12 @@ const App = () => {
       setAlertsDataByDate((prev) => ({ ...prev, [targetDate]: snap2.alertsData }));
     }
     return events2.length;
-  }, []);
+  }, [activeUnitCode]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
-    const { force = false, replace = false, schoolOverride, useCache = true } = options;
+    const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
     const snapshotSchool = schoolOverride ?? school;
-    const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool);
+    const snapshotUnit = unitOverride ?? activeUnitCode;
+    const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
     const cacheKey = `dfp_snapshot_cache_${snapshotKey}`;
     if (!force && loadedSnapshotDates.current.has(snapshotKey)) return;
     if (loadingSnapshotDates.current.has(snapshotKey)) return;
@@ -63682,7 +63789,7 @@ const App = () => {
         const cachedSnapshot = localStorage.getItem(cacheKey);
         if (cachedSnapshot) {
           const parsedCachedSnapshot = JSON.parse(cachedSnapshot);
-          const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, parsedCachedSnapshot, false, "cache");
+          const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, parsedCachedSnapshot, false, "cache");
           if (cachedEvents > 0) {
             cachedEventsSignature = getSnapshotEventsSignature(parsedCachedSnapshot.scheduleEvents || []);
             setDfpSnapshotLoadState({
@@ -63718,13 +63825,17 @@ const App = () => {
         }
         try {
           let res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(snapshotKey)}`);
+          if (!res.ok && res.status === 404) {
+            const locationFallbackKey = getDailySnapshotKey(targetDate, snapshotSchool, "");
+            res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(locationFallbackKey)}`);
+          }
           if (!res.ok && res.status === 404 && snapshotSchool === "ESL") {
             res = await fetch(`${apiBase2}/daily-snapshot/${targetDate}`);
           }
           if (res.status === 404) {
             if (replace) {
               setPublishedSchedules((prev) => ({ ...prev, [targetDate]: [] }));
-              setBaselineSchedules((prev) => ({ ...prev, [`${snapshotSchool}:${targetDate}`]: [] }));
+              setBaselineSchedules((prev) => ({ ...prev, [snapshotKey]: [] }));
             }
             loadedSnapshotDates.current.add(snapshotKey);
             setDfpSnapshotLoadState({
@@ -63746,7 +63857,7 @@ const App = () => {
           }
           const currentEventsSignature = getSnapshotEventsSignature(publishedSchedulesRef.current[targetDate] || []);
           const shouldReplaceCachedEvents = !!cachedEventsSignature && currentEventsSignature === cachedEventsSignature;
-          const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snap2, replace || shouldReplaceCachedEvents, "network");
+          const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, snap2, replace || shouldReplaceCachedEvents, "network");
           cacheDailySnapshot(snapshotKey, snap2, targetDate);
           loadedSnapshotDates.current.add(snapshotKey);
           setDfpSnapshotLoadState({
@@ -63770,11 +63881,11 @@ const App = () => {
     } finally {
       loadingSnapshotDates.current.delete(snapshotKey);
     }
-  }, [applyDailySnapshot, school]);
+  }, [activeUnitCode, applyDailySnapshot, school]);
   reactExports.useEffect(() => {
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true });
-  }, [date, school, loadSnapshotForDate]);
+  }, [activeUnitCode, date, school, loadSnapshotForDate]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -63870,11 +63981,12 @@ const App = () => {
   const loadedSnapshotDates = React.useRef(/* @__PURE__ */ new Set());
   const loadingSnapshotDates = React.useRef(/* @__PURE__ */ new Set());
   const [dfpSnapshotLoadState, setDfpSnapshotLoadState] = reactExports.useState({ status: "idle", date: "", message: "" });
-  function getDailySnapshotKey(targetDate, targetSchool = school) {
-    return `${targetDate}__${targetSchool}`;
+  function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode) {
+    const safeUnit = String(targetUnit || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
+    return safeUnit ? `${targetDate}__${targetSchool}__${safeUnit}` : `${targetDate}__${targetSchool}`;
   }
   function getDailySnapshotDate(snapshotDate) {
-    return String(snapshotDate || "").replace(/__(ESL|PEA)$/i, "");
+    return String(snapshotDate || "").replace(/__(ESL|PEA)(?:__[A-Za-z0-9_-]+)?$/i, "");
   }
   function getSnapshotEventsSignature(events2 = []) {
     return events2.map((e) => [
@@ -64730,7 +64842,7 @@ ${"=".repeat(60)}`);
     coursePercentages
   ]);
   const [baselineSchedules, setBaselineSchedules] = reactExports.useState({});
-  const activeBaselineKey = `${school}:${date}`;
+  const activeBaselineKey = getDailySnapshotKey(date);
   const [alertsDataByDate, setAlertsDataByDate] = reactExports.useState({});
   const isDirtyRef = reactExports.useRef(() => false);
   const onSaveRef = reactExports.useRef(() => {
@@ -65647,6 +65759,7 @@ ${"=".repeat(60)}`);
   const canRunValidation = canUsePlatformPermission("dfp.validation");
   const canPublishDfp = canUsePlatformPermission("dfp.publish");
   const canRunNeoBuild = canUsePlatformPermission("neo.run");
+  const canRunNeoBuildForActiveModel = canRunNeoBuild && activeOperationalModel === "flight_school";
   const canViewOwnTraineeProfile = canUsePlatformPermission("trainee.profile.own");
   const canViewOtherTraineeProfiles = canUsePlatformPermission("trainee.profile.others");
   const canViewOwnPt051 = canUsePlatformPermission("trainee.pt051.own");
@@ -66622,13 +66735,25 @@ ${error instanceof Error ? error.message : String(error)}`,
     setShowUnsavedWarning(false);
     setPendingNavigation(null);
   };
+  const getDefaultUnitForSchool = (targetSchool) => {
+    const configuredUnit = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => String(unit.locationCode || "").trim().toUpperCase() === targetSchool);
+    return String(configuredUnit?.code || "").trim() || (targetSchool === "PEA" ? "2FTS" : "1FTS");
+  };
   const changeSchool = (newSchool) => {
+    const nextUnit = getDefaultUnitForSchool(newSchool);
     setSchool(newSchool);
+    setActiveUnitCode(nextUnit);
     setIsLocalityChangeVisible(true);
     setTimeout(() => setIsLocalityChangeVisible(false), 2e3);
     setNextDayBuildEvents([]);
     setPublishedSchedules({});
-    void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool });
+    void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: nextUnit });
+  };
+  const changeOperationalUnit = (newUnit) => {
+    setActiveUnitCode(newUnit);
+    setNextDayBuildEvents([]);
+    setPublishedSchedules({});
+    void loadSnapshotForDate(date, { force: true, replace: true, unitOverride: newUnit });
   };
   const handleAddCourseFromTrainingRecords = async (data) => {
     setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));
@@ -67083,6 +67208,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       isPaused: !!inst.isPaused,
       currencyStatus: inst.currencyStatus || [],
       snapshotSchool: school,
+      snapshotUnit: activeUnitCode,
+      operationalModel: activeOperationalModel,
       snapshotDate: targetDate
     }));
     const lmpCompletedIdsMap = {};
@@ -67097,6 +67224,9 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     const snapshotPayload = {
       date: snapshotKey,
+      locationCode: school,
+      unitCode: activeUnitCode,
+      operationalModel: activeOperationalModel,
       scheduleEvents: allEventsForDate,
       staffEvents: staffEventsForDate,
       traineeEvents: traineeEventsForDate,
@@ -67107,7 +67237,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       staffLogbook: {},
       savedBy
     };
-    console.log(`[Persist] Saving snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events...`);
+    console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
     fetch(`${apiBase2}/daily-snapshot/save`, {
       method: "POST",
@@ -67117,7 +67247,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (result.success) {
         loadedSnapshotDates.current.add(snapshotKey);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events`);
+        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events`);
       } else {
         console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
       }
@@ -67621,6 +67751,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         date: snapshotDate,
         eventDate: date,
         school,
+        unit: activeUnitCode,
+        operationalModel: activeOperationalModel,
         eventId,
         sentBy: userId,
         recipients,
@@ -68406,6 +68538,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   const handleBuildDfp = async () => {
     if (!canRunNeoBuild) {
       denyPlatformAction("Run NEO Build is not permitted for your assigned permission profile");
+      return;
+    }
+    if (activeOperationalModel !== "flight_school") {
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build currently runs the Flight School Model only.`);
       return;
     }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
@@ -69369,6 +69505,8 @@ ${conflictLines.join("\n")}${moreText}`,
         isPaused: !!inst.isPaused,
         currencyStatus: inst.currencyStatus || [],
         snapshotSchool: school,
+        snapshotUnit: activeUnitCode,
+        operationalModel: activeOperationalModel,
         snapshotDate: buildDfpDate
       }));
       const lmpCompletedIdsMap = {};
@@ -69384,6 +69522,9 @@ ${conflictLines.join("\n")}${moreText}`,
       const snapshotKey = getDailySnapshotKey(buildDfpDate);
       const snapshotPayload = {
         date: snapshotKey,
+        locationCode: school,
+        unitCode: activeUnitCode,
+        operationalModel: activeOperationalModel,
         scheduleEvents: newEventsForDate,
         staffEvents: staffEventsForDate,
         traineeEvents: traineeEventsForDate,
@@ -69404,7 +69545,7 @@ ${conflictLines.join("\n")}${moreText}`,
         body: JSON.stringify(snapshotPayload)
       }).then((res) => res.json()).then((result) => {
         if (result.success) {
-          console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school}), ${newEventsForDate.length} events`);
+          console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
           loadedSnapshotDates.current.add(snapshotKey);
           cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
         } else {
@@ -71133,6 +71274,10 @@ ${conflictLines.join("\n")}${moreText}`,
       denyPlatformAction("NEO tile assistance is not permitted for your assigned permission profile");
       return;
     }
+    if (activeOperationalModel !== "flight_school") {
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. Flight School NEO tile assistance is not available for this model.`);
+      return;
+    }
     const isNextDay = ["NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "Priorities", "ProgramData"].includes(activeView);
     setOracleContext(isNextDay ? "nextDayBuild" : "program");
     if (!isOracleMode) ;
@@ -71141,7 +71286,7 @@ ${conflictLines.join("\n")}${moreText}`,
       setOraclePreviewEvent(null);
     }
     setIsOracleMode((prev) => !prev);
-  }, [isOracleMode, activeView, canRunNeoBuild, denyPlatformAction]);
+  }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
   reactExports.useEffect(() => {
     if (isOracleMode) {
       runOracleAnalysis();
@@ -73442,6 +73587,10 @@ Do you want to replace the existing entry?`,
             locations: selectableLocationCodes,
             activeLocation: school,
             onLocationChange: (loc) => changeSchool(loc),
+            units: activeLocationUnitOptions.map((unit) => unit.code),
+            activeUnit: activeUnitCode,
+            onUnitChange: changeOperationalUnit,
+            activeModelLabel: activeOperationalModelLabel,
             isMagnifierEnabled,
             setIsMagnifierEnabled,
             isMultiSelectMode,
@@ -73452,12 +73601,12 @@ Do you want to replace the existing entry?`,
             onToggleDepartureDensityOverlay: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay),
             canEditDfpTiles,
             canRunValidation,
-            canRunNeoBuild,
+            canRunNeoBuild: canRunNeoBuildForActiveModel,
             showAircraftAvailability,
             onToggleAircraftAvailability: activeView === "Program Schedule" ? () => setShowAircraftAvailability(!showAircraftAvailability) : void 0,
             onPauseFlightOps: activeView === "Program Schedule" ? () => {
-              if (!canEditDfpTiles || !canRunNeoBuild) {
-                denyPlatformAction("Pause Flight Ops requires DFP tile edit and NEO Build permissions");
+              if (!canEditDfpTiles || !canRunNeoBuildForActiveModel) {
+                denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a Flight School model NEO context`);
                 return;
               }
               const pauseDate = date;
@@ -73571,9 +73720,9 @@ Do you want to replace the existing entry?`,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "FLTLT",
           currentUserName,
           currentUserLocation: school,
-          currentUserUnit: currentUser2?.unit || "1FTS",
+          currentUserUnit: activeUnitCode || currentUser2?.unit || "1FTS",
           canAccessView,
-          canRunNeoBuild,
+          canRunNeoBuild: canRunNeoBuildForActiveModel,
           canPublishDfp
         }
       ),

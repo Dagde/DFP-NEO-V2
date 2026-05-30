@@ -21,6 +21,7 @@ export interface PlatformUnit {
   organisationCode?: string;
   locationCode: string;
   unitType?: string;
+  operationalModel?: OperationalModelCode;
   status?: string;
   settings?: Record<string, any>;
 }
@@ -65,6 +66,35 @@ export interface PlatformConfig {
 }
 
 export type PlatformPermissionId = string;
+
+export type OperationalModelCode = 'flight_school' | 'air_combat' | 'fixed_crew' | 'air_mobility';
+
+export const DEFAULT_OPERATIONAL_MODEL: OperationalModelCode = 'flight_school';
+
+export const OPERATIONAL_MODEL_OPTIONS: Array<{ value: OperationalModelCode; label: string }> = [
+  { value: 'flight_school', label: 'Flight School Model' },
+  { value: 'air_combat', label: 'Air Combat Model' },
+  { value: 'fixed_crew', label: 'Fixed Crew Model' },
+  { value: 'air_mobility', label: 'Air Mobility Model' },
+];
+
+const operationalModelLabels = new Map(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
+
+export const normaliseOperationalModel = (value: unknown): OperationalModelCode => {
+  const token = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (token === 'air_combat' || token === 'fighter' || token === 'fighter_model') return 'air_combat';
+  if (token === 'fixed_crew' || token === 'crewed' || token === 'crewed_model') return 'fixed_crew';
+  if (token === 'air_mobility' || token === 'airlift' || token === 'mobility') return 'air_mobility';
+  return DEFAULT_OPERATIONAL_MODEL;
+};
+
+export const getUnitOperationalModel = (unit?: Partial<PlatformUnit> | null): OperationalModelCode => (
+  normaliseOperationalModel(unit?.operationalModel || unit?.settings?.operationalModel)
+);
+
+export const getOperationalModelLabel = (value: unknown): string => (
+  operationalModelLabels.get(normaliseOperationalModel(value)) || operationalModelLabels.get(DEFAULT_OPERATIONAL_MODEL)!
+);
 
 export interface PlatformPermissionProfile {
   id: string;
@@ -653,6 +683,7 @@ export const getPlatformModuleForView = (view: string): string | null => {
 export const getLocationResourcePool = (
   config: PlatformConfig | null,
   locationCode: string,
+  unitCode?: string | null,
 ): PlatformResourcePool | null => {
   const matchingLocation = (config?.locations || []).find((location) => (
     getConfiguredLocationAliases(location).some((alias) => locationCodesAreEquivalent(alias, locationCode))
@@ -663,11 +694,20 @@ export const getLocationResourcePool = (
   );
   const pools = (config?.resourcePools || []).filter((pool) => (
     pool.status !== 'INACTIVE' &&
-    locationAliases.has(normaliseLocationIdentifier(pool.locationCode)) &&
-    pool.poolType === 'Shared'
+    locationAliases.has(normaliseLocationIdentifier(pool.locationCode))
   ));
 
-  return pools[0] || null;
+  const targetUnit = normaliseLocationIdentifier(unitCode);
+  if (targetUnit) {
+    const unitPools = pools.filter((pool) => normaliseLocationIdentifier(pool.unitCode) === targetUnit);
+    const runtimeUnitPool = unitPools.find(isResourcePoolRuntimeEnabled);
+    if (runtimeUnitPool) return runtimeUnitPool;
+    if (unitPools.length > 0) return unitPools[0];
+  }
+
+  const sharedPools = pools.filter((pool) => pool.poolType === 'Shared');
+  const runtimeSharedPool = sharedPools.find(isResourcePoolRuntimeEnabled);
+  return runtimeSharedPool || sharedPools[0] || null;
 };
 
 export const isResourcePoolRuntimeEnabled = (

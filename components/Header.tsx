@@ -11,6 +11,10 @@ interface HeaderProps {
     locations: string[];
     activeLocation: string;
     onLocationChange: (location: string) => void;
+    units: string[];
+    activeUnit: string;
+    onUnitChange: (unit: string) => void;
+    activeModelLabel?: string;
     isMagnifierEnabled: boolean;
     setIsMagnifierEnabled: (enabled: boolean) => void;
     isMultiSelectMode: boolean;
@@ -40,6 +44,10 @@ const Header: React.FC<HeaderProps> = ({
     locations,
     activeLocation,
     onLocationChange,
+    units,
+    activeUnit,
+    onUnitChange,
+    activeModelLabel,
     isMagnifierEnabled, 
     setIsMagnifierEnabled, 
     isMultiSelectMode, 
@@ -104,23 +112,36 @@ const Header: React.FC<HeaderProps> = ({
                 LAYOUT:
                 The header sits between left sidebar (110px) and right sidebar (110px).
                 Header uses a 3-column flex layout:
-                  [144px location dropdown] [flex-1 centered buttons] [144px spacer]
-                The 144px spacer on the right balances the 144px location dropdown on the left,
+                  [230px context dropdowns] [flex-1 centered buttons] [230px spacer]
+                The 230px spacer on the right balances the context controls on the left,
                 so the button group is perfectly centered in the header.
             */}
             <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative">
 
-                {/* LEFT: Location Dropdown - 144px, inline (not absolute) */}
-                <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '144px', paddingLeft: '8px', paddingRight: '8px' }}>
+                {/* LEFT: Operational context - Location then Unit */}
+                <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '230px', paddingLeft: '8px', paddingRight: '8px' }}>
+                  <div className="flex w-full items-center gap-1" title={`${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}${activeModelLabel ? ` | ${activeModelLabel}` : ''}`}>
                     <select
                         value={activeLocation}
                         onChange={(e) => onLocationChange(e.target.value)}
-                        className="bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-2 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none w-full text-center"
+                        className="w-[78px] bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-1 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none text-center"
                     >
                         {locations.map(loc => (
                             <option key={loc} value={loc}>{loc}</option>
                         ))}
                     </select>
+                    <span className="text-gray-400 text-xs font-bold">-</span>
+                    <select
+                        value={activeUnit}
+                        onChange={(e) => onUnitChange(e.target.value)}
+                        disabled={units.length <= 1}
+                        className="min-w-0 flex-1 bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-1 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none text-center disabled:opacity-80"
+                    >
+                        {units.map(unit => (
+                            <option key={unit} value={unit}>{unit}</option>
+                        ))}
+                    </select>
+                  </div>
                 </div>
 
                 {/* CENTER: ALL BUTTONS - flex-1 centers them between the two 144px ends */}
@@ -251,9 +272,9 @@ const Header: React.FC<HeaderProps> = ({
                     </div>
                 </div>
 
-                {/* RIGHT: 144px spacer to balance the location dropdown on the left,
+                {/* RIGHT: spacer to balance the operational context selector on the left,
                     ensuring the button group is perfectly centered in the header */}
-                <div className="flex-shrink-0" style={{ width: '144px' }}></div>
+                <div className="flex-shrink-0" style={{ width: '230px' }}></div>
 
             </header>
             

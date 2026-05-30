@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_PLATFORM_PERMISSION_PROFILES,
+  DEFAULT_OPERATIONAL_MODEL,
+  OPERATIONAL_MODEL_OPTIONS,
   PLATFORM_PERMISSION_CATALOG,
+  getUnitOperationalModel,
   type PlatformPermissionProfile,
 } from '../utils/platformConfigService';
 import {
@@ -1372,7 +1375,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           locationCode: defaultLocation,
           unitType: 'Training',
           status: 'ACTIVE',
-          settings: {},
+          settings: { operationalModel: DEFAULT_OPERATIONAL_MODEL },
         },
       ],
     }));
@@ -2069,19 +2072,47 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-units" className={getSectionClass('platform-units')}>
         <SectionHeader
           title="Units"
-          subtitle="Unit is the centre of configuration: type, location, enabled modules and future UI behaviour."
+          subtitle="Unit is the centre of configuration: model, type, location, enabled modules and future UI behaviour."
           action={canEdit ? <button type="button" onClick={addUnit} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Unit</button> : null}
         />
         <div className="space-y-3 p-4">
-          {config.units.map((unit, index) => (
-            <div key={unit.id || unit.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5">
-              <Field label="Unit Code" value={unit.code} disabled={!canEdit} onChange={(value) => updateRow('units', index, { code: value })} />
-              <Field label="Unit Name" value={unit.name} disabled={!canEdit} onChange={(value) => updateRow('units', index, { name: value })} />
-              <SelectField label="Location" value={unit.locationCode || ''} disabled={!canEdit} options={config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
-              <SelectField label="Unit Type" value={unit.unitType || 'Training'} disabled={!canEdit} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateRow('units', index, { unitType: value })} />
-              <SelectField label="Status" value={unit.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('units', index, { status: value })} />
-            </div>
-          ))}
+          {config.units.map((unit, index) => {
+            const unitSettings = unit.settings || {};
+            return (
+              <div key={unit.id || unit.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12">
+                <div className="md:col-span-1">
+                  <Field label="Unit" value={unit.code} disabled={!canEdit} onChange={(value) => updateRow('units', index, { code: value })} />
+                </div>
+                <div className="md:col-span-3">
+                  <Field label="Unit Name" value={unit.name} disabled={!canEdit} onChange={(value) => updateRow('units', index, { name: value })} />
+                </div>
+                <div className="md:col-span-2">
+                  <SelectField label="Location" value={unit.locationCode || ''} disabled={!canEdit} options={config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
+                </div>
+                <div className="md:col-span-2">
+                  <SelectField label="Unit Type" value={unit.unitType || 'Training'} disabled={!canEdit} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateRow('units', index, { unitType: value })} />
+                </div>
+                <div className="md:col-span-3">
+                  <SelectField
+                    label="Model"
+                    value={getUnitOperationalModel(unit)}
+                    disabled={!canEdit}
+                    options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)}
+                    optionLabels={Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]))}
+                    onChange={(value) => updateRow('units', index, {
+                      settings: {
+                        ...unitSettings,
+                        operationalModel: value || DEFAULT_OPERATIONAL_MODEL,
+                      },
+                    })}
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <SelectField label="Status" value={unit.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('units', index, { status: value })} />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -3293,11 +3324,11 @@ const ToggleField = ({ label, checked, disabled, onChange }: { label: string; ch
   </label>
 );
 
-const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = 'None', info }: { label: string; value: string; disabled: boolean; options: string[]; onChange: (value: string) => void; emptyLabel?: string; info?: string }) => (
+const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = 'None', info, optionLabels = {} }: { label: string; value: string; disabled: boolean; options: string[]; onChange: (value: string) => void; emptyLabel?: string; info?: string; optionLabels?: Record<string, string> }) => (
   <label>
     <FieldLabel label={label} info={info} />
     <select className={fieldClass} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
-      {options.map((option) => <option key={option} value={option}>{option || emptyLabel}</option>)}
+      {options.map((option) => <option key={option} value={option}>{optionLabels[option] || option || emptyLabel}</option>)}
     </select>
   </label>
 );

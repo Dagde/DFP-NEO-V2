@@ -16,13 +16,16 @@ import {
     getPlatformDataScopeForLocation,
     getLocationCodesForCurrentRuntime,
     getLocationResourcePool,
+    getOperationalModelLabel,
     getPlatformAccessContext,
     getPlatformModuleForView,
     getPlatformPermissionProfiles,
     getResourcePoolCount,
+    getUnitOperationalModel,
     hasPlatformPermission,
     hasPlatformModuleAccess,
     loadPlatformConfigFromDB,
+    normaliseOperationalModel,
     PlatformConfig,
 } from './utils/platformConfigService';
 import {
@@ -9194,6 +9197,7 @@ const App: React.FC = () => {
 
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
+    const [activeUnitCode, setActiveUnitCode] = useState<string>('1FTS');
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
     const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
     const [allInstructorsData, setInstructorsData] = useState<Instructor[]>([]);
@@ -9233,9 +9237,52 @@ const App: React.FC = () => {
         [platformConfig],
     );
 
+    const activeLocationUnitOptions = useMemo(() => {
+        const configuredUnits = (platformConfig?.units || [])
+            .filter((unit: any) => unit.status !== 'INACTIVE')
+            .filter((unit: any) => String(unit.locationCode || '').trim().toUpperCase() === school)
+            .map((unit: any) => ({
+                code: String(unit.code || '').trim(),
+                name: String(unit.name || unit.code || '').trim(),
+                model: getUnitOperationalModel(unit),
+            }))
+            .filter(unit => unit.code);
+
+        if (configuredUnits.length > 0) return configuredUnits;
+
+        const fallbackCodes = school === 'PEA' ? ['2FTS'] : ['1FTS', 'CFS'];
+        return fallbackCodes.map(code => ({
+            code,
+            name: code,
+            model: normaliseOperationalModel('flight_school'),
+        }));
+    }, [platformConfig, school]);
+
+    useEffect(() => {
+        if (activeLocationUnitOptions.length === 0) return;
+        if (!activeLocationUnitOptions.some(unit => unit.code === activeUnitCode)) {
+            setActiveUnitCode(activeLocationUnitOptions[0].code);
+        }
+    }, [activeLocationUnitOptions, activeUnitCode]);
+
+    const activeUnitContext = useMemo(
+        () => activeLocationUnitOptions.find(unit => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
+        [activeLocationUnitOptions, activeUnitCode],
+    );
+
+    const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel('flight_school');
+    const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
+    const activeOperationalContext = useMemo(() => ({
+        locationCode: school,
+        unitCode: activeUnitCode,
+        unitName: activeUnitContext?.name || activeUnitCode,
+        operationalModel: activeOperationalModel,
+        operationalModelLabel: activeOperationalModelLabel,
+    }), [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, school]);
+
     const activePlatformResourcePool = useMemo(
-        () => getLocationResourcePool(platformConfig, school),
-        [platformConfig, school],
+        () => getLocationResourcePool(platformConfig, school, activeUnitCode),
+        [platformConfig, school, activeUnitCode],
     );
 
     const activeLocationSolarProfile = useMemo(() => {
@@ -9292,6 +9339,8 @@ const App: React.FC = () => {
         if (activePlatformResourcePool) {
             console.log('[PlatformConfig] Active location resource context:', {
                 school,
+                unit: activeUnitCode,
+                operationalModel: activeOperationalModel,
                 pool: activePlatformResourcePool.code,
                 poolType: activePlatformResourcePool.poolType,
                 aircraftType: activePlatformResourcePool.aircraftTypeCode,
@@ -9299,9 +9348,9 @@ const App: React.FC = () => {
                 settings: activePlatformResourcePool.settings,
             });
         } else {
-            console.log('[PlatformConfig] No platform resource pool found for active location; V2 settings remain authoritative.', { school });
+            console.log('[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.', { school, unit: activeUnitCode, operationalModel: activeOperationalModel });
         }
-    }, [activePlatformResourcePool, platformConfigLoaded, school]);
+    }, [activePlatformResourcePool, activeOperationalModel, activeUnitCode, platformConfigLoaded, school]);
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
@@ -9322,12 +9371,15 @@ const App: React.FC = () => {
             }
             return true;
         });
+        const contextFiltered = activeUnitCode
+            ? locationFiltered.filter((i: any) => !i.unit || String(i.unit || '').split('/')[0] === activeUnitCode)
+            : locationFiltered;
 
         if (!mockOn && !dbOn) return [];
-        if (mockOn && dbOn) return locationFiltered;
-        if (mockOn && !dbOn) return locationFiltered.filter((i: any) => (i as any)._dataSource !== 'database');
-        return locationFiltered.filter((i: any) => (i as any)._dataSource === 'database');
-    }, [allInstructorsData, dataSourceSettings, school]);
+        if (mockOn && dbOn) return contextFiltered;
+        if (mockOn && !dbOn) return contextFiltered.filter((i: any) => (i as any)._dataSource !== 'database');
+        return contextFiltered.filter((i: any) => (i as any)._dataSource === 'database');
+    }, [activeUnitCode, allInstructorsData, dataSourceSettings, school]);
 
     const traineesData = useMemo(() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
@@ -9343,17 +9395,20 @@ const App: React.FC = () => {
             }
             return true;
         });
+        const contextFilteredTrainees = activeUnitCode
+            ? locationFilteredTrainees.filter((t: any) => !t.unit || String(t.unit || '').split('/')[0] === activeUnitCode)
+            : locationFilteredTrainees;
 
         if (!mockOn && !dbOn) return [];
-        if (mockOn && !dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata');
-        if (!mockOn && dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
+        if (mockOn && !dbOn) return contextFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata');
+        if (!mockOn && dbOn) return contextFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
 
         // Both ON → DB records take precedence
-        const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
+        const dbTrainees = contextFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
         const dbCourses = new Set(dbTrainees.map(t => t.course));
-        const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
+        const mockTrainees = contextFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
         return [...mockTrainees, ...dbTrainees];
-    }, [allTraineesData, dataSourceSettings, school]);
+    }, [activeUnitCode, allTraineesData, dataSourceSettings, school]);
 
     // ============================================================
     // AUTHENTICATION STATE
@@ -9558,8 +9613,17 @@ const App: React.FC = () => {
 
     const platformDataScopeQuery = useMemo(() => {
         const scope = getPlatformDataScopeForLocation(platformAccessContext, school);
-        return buildPlatformDataScopeQuery(scope);
-    }, [platformAccessContext, school]);
+        const scopedUnitCodes = activeUnitCode
+            ? (scope.allUnits || scope.unitCodes.length === 0
+                ? [activeUnitCode]
+                : scope.unitCodes.filter(unitCode => unitCode === activeUnitCode))
+            : scope.unitCodes;
+        return buildPlatformDataScopeQuery({
+            ...scope,
+            unitCodes: scopedUnitCodes,
+            allUnits: !activeUnitCode && scope.allUnits,
+        });
+    }, [activeUnitCode, platformAccessContext, school]);
 
     const scopedApiPath = useCallback((path: string, extraParams?: Record<string, string | number | boolean | undefined | null>) => {
         const params = new URLSearchParams(platformDataScopeQuery);
@@ -10044,13 +10108,14 @@ const App: React.FC = () => {
     useEffect(() => {
         let cancelled = false;
         const requestedSchool = school;
+        const requestedUnit = activeUnitCode;
         const loadHistoricalData = async () => {
             try {
                 const apiBase = getAppApiBase();
 
                 // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
                 try {
-                    const snapRes = await fetch(`${apiBase}/daily-snapshot?school=${requestedSchool}`);
+                    const snapRes = await fetch(`${apiBase}/daily-snapshot?school=${requestedSchool}&unit=${encodeURIComponent(requestedUnit)}`);
                     if (cancelled) return;
                     if (snapRes.ok) {
                         const snapData = await snapRes.json();
@@ -10199,7 +10264,7 @@ const App: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [school]);
+    }, [activeUnitCode, school]);
 
     // Load snapshot dates for calendar dropdown
     useEffect(() => {
@@ -10222,6 +10287,7 @@ const App: React.FC = () => {
     const applyDailySnapshot = React.useCallback((
         targetDate: string,
         snapshotSchool: 'ESL' | 'PEA',
+        snapshotUnit: string,
         snap: any,
         replace: boolean,
         source: 'cache' | 'network'
@@ -10240,11 +10306,11 @@ const App: React.FC = () => {
                 ? snap.baselineEvents
                 : events;
             setBaselineSchedules(prev => {
-                const baselineKey = `${snapshotSchool}:${targetDate}`;
+                const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
                 if (!replace && prev[baselineKey]) return prev;
                 return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
             });
-            console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool}), ${events.length} events`);
+            console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || 'unit not set'}), ${events.length} events`);
         }
 
         if (snap.pt051Assessments && Object.keys(snap.pt051Assessments).length > 0) {
@@ -10256,16 +10322,17 @@ const App: React.FC = () => {
         }
 
         return events.length;
-    }, []);
+    }, [activeUnitCode]);
 
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
     const loadSnapshotForDate = React.useCallback(async (
         targetDate: string,
-        options: { force?: boolean; replace?: boolean; schoolOverride?: 'ESL' | 'PEA'; useCache?: boolean } = {}
+        options: { force?: boolean; replace?: boolean; schoolOverride?: 'ESL' | 'PEA'; unitOverride?: string; useCache?: boolean } = {}
     ) => {
-        const { force = false, replace = false, schoolOverride, useCache = true } = options;
+        const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
         const snapshotSchool = schoolOverride ?? school;
-        const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool);
+        const snapshotUnit = unitOverride ?? activeUnitCode;
+        const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
         const cacheKey = `dfp_snapshot_cache_${snapshotKey}`;
 
         if (!force && loadedSnapshotDates.current.has(snapshotKey)) return;
@@ -10278,7 +10345,7 @@ const App: React.FC = () => {
                 const cachedSnapshot = localStorage.getItem(cacheKey);
                 if (cachedSnapshot) {
                     const parsedCachedSnapshot = JSON.parse(cachedSnapshot);
-                    const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, parsedCachedSnapshot, false, 'cache');
+                    const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, parsedCachedSnapshot, false, 'cache');
                     if (cachedEvents > 0) {
                         cachedEventsSignature = getSnapshotEventsSignature(parsedCachedSnapshot.scheduleEvents || []);
                         setDfpSnapshotLoadState({
@@ -10318,6 +10385,10 @@ const App: React.FC = () => {
 
                 try {
                     let res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(snapshotKey)}`);
+                    if (!res.ok && res.status === 404) {
+                        const locationFallbackKey = getDailySnapshotKey(targetDate, snapshotSchool, '');
+                        res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(locationFallbackKey)}`);
+                    }
                     if (!res.ok && res.status === 404 && snapshotSchool === 'ESL') {
                         res = await fetch(`${apiBase}/daily-snapshot/${targetDate}`);
                     }
@@ -10325,7 +10396,7 @@ const App: React.FC = () => {
                     if (res.status === 404) {
                         if (replace) {
                             setPublishedSchedules(prev => ({ ...prev, [targetDate]: [] }));
-                            setBaselineSchedules(prev => ({ ...prev, [`${snapshotSchool}:${targetDate}`]: [] }));
+                            setBaselineSchedules(prev => ({ ...prev, [snapshotKey]: [] }));
                         }
                         loadedSnapshotDates.current.add(snapshotKey);
                         setDfpSnapshotLoadState({
@@ -10350,7 +10421,7 @@ const App: React.FC = () => {
 
                     const currentEventsSignature = getSnapshotEventsSignature(publishedSchedulesRef.current[targetDate] || []);
                     const shouldReplaceCachedEvents = !!cachedEventsSignature && currentEventsSignature === cachedEventsSignature;
-                    const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snap, replace || shouldReplaceCachedEvents, 'network');
+                    const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, snap, replace || shouldReplaceCachedEvents, 'network');
                     cacheDailySnapshot(snapshotKey, snap, targetDate);
                     loadedSnapshotDates.current.add(snapshotKey);
                     setDfpSnapshotLoadState({
@@ -10375,12 +10446,12 @@ const App: React.FC = () => {
         } finally {
             loadingSnapshotDates.current.delete(snapshotKey);
         }
-    }, [applyDailySnapshot, school]);
+    }, [activeUnitCode, applyDailySnapshot, school]);
 
     useEffect(() => {
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
         void loadSnapshotForDate(date, { useCache: true });
-    }, [date, school, loadSnapshotForDate]);
+    }, [activeUnitCode, date, school, loadSnapshotForDate]);
 
        // Show commit alert on app mount - DISABLED
        // useEffect(() => {
@@ -10523,12 +10594,13 @@ const App: React.FC = () => {
         message: string;
     }>({ status: 'idle', date: '', message: '' });
 
-    function getDailySnapshotKey(targetDate: string, targetSchool: 'ESL' | 'PEA' = school): string {
-        return `${targetDate}__${targetSchool}`;
+    function getDailySnapshotKey(targetDate: string, targetSchool: 'ESL' | 'PEA' = school, targetUnit: string = activeUnitCode): string {
+        const safeUnit = String(targetUnit || '').trim().replace(/[^A-Za-z0-9_-]/g, '-');
+        return safeUnit ? `${targetDate}__${targetSchool}__${safeUnit}` : `${targetDate}__${targetSchool}`;
     }
 
     function getDailySnapshotDate(snapshotDate: string): string {
-        return String(snapshotDate || '').replace(/__(ESL|PEA)$/i, '');
+        return String(snapshotDate || '').replace(/__(ESL|PEA)(?:__[A-Za-z0-9_-]+)?$/i, '');
     }
 
     function getSnapshotEventsSignature(events: ScheduleEvent[] = []): string {
@@ -11515,7 +11587,7 @@ const App: React.FC = () => {
 
     // Baseline schedule state
     const [baselineSchedules, setBaselineSchedules] = useState<Record<string, ScheduleEvent[]>>({});
-    const activeBaselineKey = `${school}:${date}`;
+    const activeBaselineKey = getDailySnapshotKey(date);
 
     // Alerts data state: { [date]: { [eventId]: alertEntry } }
     const [alertsDataByDate, setAlertsDataByDate] = useState<Record<string, Record<string, any>>>({});
@@ -12826,6 +12898,7 @@ const App: React.FC = () => {
     const canRunValidation = canUsePlatformPermission('dfp.validation');
     const canPublishDfp = canUsePlatformPermission('dfp.publish');
     const canRunNeoBuild = canUsePlatformPermission('neo.run');
+    const canRunNeoBuildForActiveModel = canRunNeoBuild && activeOperationalModel === 'flight_school';
     const canViewOwnTraineeProfile = canUsePlatformPermission('trainee.profile.own');
     const canViewOtherTraineeProfiles = canUsePlatformPermission('trainee.profile.others');
     const canViewOwnPt051 = canUsePlatformPermission('trainee.pt051.own');
@@ -13956,8 +14029,17 @@ const App: React.FC = () => {
     };
 
 
+    const getDefaultUnitForSchool = (targetSchool: 'ESL' | 'PEA'): string => {
+        const configuredUnit = (platformConfig?.units || [])
+            .filter((unit: any) => unit.status !== 'INACTIVE')
+            .find((unit: any) => String(unit.locationCode || '').trim().toUpperCase() === targetSchool);
+        return String(configuredUnit?.code || '').trim() || (targetSchool === 'PEA' ? '2FTS' : '1FTS');
+    };
+
     const changeSchool = (newSchool: 'ESL' | 'PEA') => {
+        const nextUnit = getDefaultUnitForSchool(newSchool);
         setSchool(newSchool);
+        setActiveUnitCode(nextUnit);
         setIsLocalityChangeVisible(true);
         setTimeout(() => setIsLocalityChangeVisible(false), 2000);
 
@@ -13966,7 +14048,14 @@ const App: React.FC = () => {
         // Only reset UI state that is specific to each school
         setNextDayBuildEvents([]); // Clear the build when changing schools
         setPublishedSchedules({}); // Clear published schedules on school change
-        void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool });
+        void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: nextUnit });
+    };
+
+    const changeOperationalUnit = (newUnit: string) => {
+        setActiveUnitCode(newUnit);
+        setNextDayBuildEvents([]);
+        setPublishedSchedules({});
+        void loadSnapshotForDate(date, { force: true, replace: true, unitOverride: newUnit });
     };
 
     // NOTE: School switch no longer resets events/courses to mock data.
@@ -14564,6 +14653,8 @@ const App: React.FC = () => {
             isPaused: !!inst.isPaused,
             currencyStatus: inst.currencyStatus || [],
             snapshotSchool: school,
+            snapshotUnit: activeUnitCode,
+            operationalModel: activeOperationalModel,
             snapshotDate: targetDate,
         }));
 
@@ -14583,6 +14674,9 @@ const App: React.FC = () => {
 
         const snapshotPayload: Record<string, any> = {
             date: snapshotKey,
+            locationCode: school,
+            unitCode: activeUnitCode,
+            operationalModel: activeOperationalModel,
             scheduleEvents: allEventsForDate,
             staffEvents: staffEventsForDate,
             traineeEvents: traineeEventsForDate,
@@ -14599,7 +14693,7 @@ const App: React.FC = () => {
             snapshotPayload.baselineEvents = baselineEventsForDate;
         }
 
-        console.log(`[Persist] Saving snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events...`);
+        console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
         fetch(`${apiBase}/daily-snapshot/save`, {
             method: 'POST',
@@ -14611,7 +14705,7 @@ const App: React.FC = () => {
             if (result.success) {
                 loadedSnapshotDates.current.add(snapshotKey);
                 cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-                console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events`);
+                console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events`);
             } else {
                 console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
             }
@@ -15277,6 +15371,8 @@ const App: React.FC = () => {
                 date: snapshotDate,
                 eventDate: date,
                 school,
+                unit: activeUnitCode,
+                operationalModel: activeOperationalModel,
                 eventId,
                 sentBy: userId,
                 recipients,
@@ -16230,6 +16326,10 @@ const App: React.FC = () => {
     const handleBuildDfp = async () => {
         if (!canRunNeoBuild) {
             denyPlatformAction('Run NEO Build is not permitted for your assigned permission profile');
+            return;
+        }
+        if (activeOperationalModel !== 'flight_school') {
+            setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build currently runs the Flight School Model only.`);
             return;
         }
         // System freeze check - prevent NEO Build when frozen
@@ -17435,6 +17535,8 @@ const App: React.FC = () => {
                 isPaused: !!inst.isPaused,
                 currencyStatus: inst.currencyStatus || [],
                 snapshotSchool: school,
+                snapshotUnit: activeUnitCode,
+                operationalModel: activeOperationalModel,
                 snapshotDate: buildDfpDate,
             }));
 
@@ -17455,6 +17557,9 @@ const App: React.FC = () => {
             const snapshotKey = getDailySnapshotKey(buildDfpDate);
             const snapshotPayload = {
                 date: snapshotKey,
+                locationCode: school,
+                unitCode: activeUnitCode,
+                operationalModel: activeOperationalModel,
                 scheduleEvents: newEventsForDate,
                 staffEvents: staffEventsForDate,
                 traineeEvents: traineeEventsForDate,
@@ -17478,7 +17583,7 @@ const App: React.FC = () => {
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
-                    console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school}), ${newEventsForDate.length} events`);
+                    console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
                     // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
                     loadedSnapshotDates.current.add(snapshotKey);
                     cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
@@ -19736,6 +19841,10 @@ updates.forEach(update => {
             denyPlatformAction('NEO tile assistance is not permitted for your assigned permission profile');
             return;
         }
+        if (activeOperationalModel !== 'flight_school') {
+            setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. Flight School NEO tile assistance is not available for this model.`);
+            return;
+        }
         const isNextDay = ['NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'Priorities', 'ProgramData'].includes(activeView);
         setOracleContext(isNextDay ? 'nextDayBuild' : 'program');
 
@@ -19746,7 +19855,7 @@ updates.forEach(update => {
             setOraclePreviewEvent(null);
         }
         setIsOracleMode(prev => !prev);
-    }, [isOracleMode, activeView, canRunNeoBuild, denyPlatformAction]);
+    }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
 
     useEffect(() => {
         if (isOracleMode) {
@@ -22278,6 +22387,10 @@ updates.forEach(update => {
                     locations={selectableLocationCodes}
                     activeLocation={school}
                     onLocationChange={(loc) => changeSchool(loc as 'ESL' | 'PEA')}
+                    units={activeLocationUnitOptions.map(unit => unit.code)}
+                    activeUnit={activeUnitCode}
+                    onUnitChange={changeOperationalUnit}
+                    activeModelLabel={activeOperationalModelLabel}
                     isMagnifierEnabled={isMagnifierEnabled}
                     setIsMagnifierEnabled={setIsMagnifierEnabled}
                     isMultiSelectMode={isMultiSelectMode}
@@ -22288,13 +22401,13 @@ updates.forEach(update => {
                     onToggleDepartureDensityOverlay={() => setShowDepartureDensityOverlay(!showDepartureDensityOverlay)}
                     canEditDfpTiles={canEditDfpTiles}
                     canRunValidation={canRunValidation}
-                    canRunNeoBuild={canRunNeoBuild}
+                    canRunNeoBuild={canRunNeoBuildForActiveModel}
 
                        showAircraftAvailability={showAircraftAvailability}
                        onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
                        onPauseFlightOps={activeView === 'Program Schedule' ? () => {
-                           if (!canEditDfpTiles || !canRunNeoBuild) {
-                               denyPlatformAction('Pause Flight Ops requires DFP tile edit and NEO Build permissions');
+                           if (!canEditDfpTiles || !canRunNeoBuildForActiveModel) {
+                               denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a Flight School model NEO context`);
                                return;
                            }
                            // Pause Flight Ops: navigate to NEO Build for the active DFP date,
@@ -22408,9 +22521,9 @@ updates.forEach(update => {
                 currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || 'FLTLT'}
                 currentUserName={currentUserName}
                 currentUserLocation={school}
-                currentUserUnit={currentUser?.unit || '1FTS'}
+                currentUserUnit={activeUnitCode || currentUser?.unit || '1FTS'}
                 canAccessView={canAccessView}
-                canRunNeoBuild={canRunNeoBuild}
+                canRunNeoBuild={canRunNeoBuildForActiveModel}
                 canPublishDfp={canPublishDfp}
             />
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
