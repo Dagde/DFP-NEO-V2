@@ -1100,7 +1100,7 @@ const MetricModal: React.FC<{
       });
 
     return () => controller.abort();
-  }, [currentAircraftAvailable, date, events, range.endDate, range.startDate, totalAircraft]);
+  }, [date, range.endDate, range.startDate]);
 
   const activeMetric = useMemo(() => {
     return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff)
@@ -1292,7 +1292,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
       });
 
     return () => controller.abort();
-  }, [date, events, previewRange.endDate, previewRange.startDate, currentAircraftAvailable, totalAircraft]);
+  }, [date, previewRange.endDate, previewRange.startDate]);
 
   const staffGroups = useMemo(() => {
     const groups = new Map<string, Instructor[]>();
@@ -1331,7 +1331,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
       )}
 
       <div className="relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4">
-        <div className="mb-3 flex flex-wrap justify-end gap-2 lg:absolute lg:right-3 lg:top-3 lg:mb-0">
+        <div className="mb-3 flex flex-col items-end gap-2 lg:absolute lg:right-3 lg:top-3 lg:mb-0">
           <BliPeriodWindow
             title="CY"
             periodKey="cy"
@@ -1355,7 +1355,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
             onCancel={cancelPeriodEdit}
           />
         </div>
-        <div className="lg:pr-[310px]">
+        <div className="lg:pr-[250px]">
           <div className="max-w-4xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">BLI</p>
             <h2 className="mt-1 text-2xl font-bold text-white">Business-Level Intelligence</h2>

@@ -26935,7 +26935,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [currentAircraftAvailable, date, events, range.endDate, range.startDate, totalAircraft]);
+  }, [date, range.endDate, range.startDate]);
   const activeMetric = reactExports.useMemo(() => {
     return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff).find((candidate) => candidate.key === metric.key) || metric;
   }, [currentAircraftAvailable, date, events, metric, modalMetrics, selectedStaff, totalAircraft]);
@@ -27111,7 +27111,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [date, events, previewRange.endDate, previewRange.startDate, currentAircraftAvailable, totalAircraft]);
+  }, [date, previewRange.endDate, previewRange.startDate]);
   const staffGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     sortedStaff2.forEach((staff) => {
@@ -27143,7 +27143,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap justify-end gap-2 lg:absolute lg:right-3 lg:top-3 lg:mb-0", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-col items-end gap-2 lg:absolute lg:right-3 lg:top-3 lg:mb-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           BliPeriodWindow,
           {
@@ -27173,7 +27173,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:pr-[310px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-4xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:pr-[250px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-4xl", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Business-Level Intelligence" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
