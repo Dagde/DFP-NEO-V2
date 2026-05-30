@@ -26101,6 +26101,51 @@ const getTimelineRange = (anchorIso, timeline) => {
   if (timeline === "5y") start = addUtcYears(end, -5);
   return { startDate: toIsoDate(start), endDate: toIsoDate(end) };
 };
+const normalizeAvailabilityDate = (value) => String(value || "").slice(0, 10);
+const numberOrNull = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+const availabilityFromHistory = (record) => {
+  const availableAverage = numberOrNull(record.dailyAverage);
+  const totalAircraft = numberOrNull(record.totalAircraft ?? record.totalFleet);
+  const availabilityPct = numberOrNull(record.availabilityPct);
+  return {
+    date: normalizeAvailabilityDate(record.date),
+    availableAverage,
+    totalAircraft,
+    availabilityPct: availabilityPct ?? (availableAverage !== null && totalAircraft && totalAircraft > 0 ? availableAverage / totalAircraft * 100 : null)
+  };
+};
+const mergeAvailabilityHistory = (metrics, records) => {
+  const byDate = /* @__PURE__ */ new Map();
+  records.forEach((record) => {
+    const normalized = availabilityFromHistory(record);
+    if (normalized.date) byDate.set(normalized.date, normalized);
+  });
+  const existingByDate = new Map(metrics.availabilitySeries.map((point) => [normalizeAvailabilityDate(point.date), point]));
+  return {
+    ...metrics,
+    availabilitySeries: metrics.dates.map((date) => byDate.get(date) || existingByDate.get(date) || {
+      date,
+      availableAverage: null,
+      totalAircraft: null,
+      availabilityPct: null
+    })
+  };
+};
+const fetchBliMetrics = async (startDate, endDate, signal) => {
+  const query = `startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+  const [bliResponse, availabilityResponse] = await Promise.all([
+    fetch(`/api/bli/metrics?${query}`, { credentials: "include", signal }),
+    fetch(`/api/aircraft-availability-history?${query}`, { credentials: "include", signal }).catch(() => null)
+  ]);
+  if (!bliResponse.ok) throw new Error(await bliResponse.text());
+  const metrics = await bliResponse.json();
+  if (!availabilityResponse || !availabilityResponse.ok) return metrics;
+  const availabilityData = await availabilityResponse.json();
+  return mergeAvailabilityHistory(metrics, availabilityData.records || availabilityData.history || []);
+};
 const valueSum = (series) => series.reduce((sum, point) => sum + (Number(point.value) || 0), 0);
 const valueAvg = (series) => {
   const values = series.map((point) => point.value).filter((value) => value !== null && Number.isFinite(value));
@@ -26634,13 +26679,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(range.startDate)}&endDate=${encodeURIComponent(range.endDate)}`, {
-      credentials: "include",
-      signal: controller.signal
-    }).then(async (response) => {
-      if (!response.ok) throw new Error(await response.text());
-      return response.json();
-    }).then((data) => {
+    fetchBliMetrics(range.startDate, range.endDate, controller.signal).then((data) => {
       setModalMetrics(data);
     }).catch((fetchError) => {
       if (fetchError.name === "AbortError") return;
@@ -26759,13 +26798,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(previewRange.startDate)}&endDate=${encodeURIComponent(previewRange.endDate)}`, {
-      credentials: "include",
-      signal: controller.signal
-    }).then(async (response) => {
-      if (!response.ok) throw new Error(await response.text());
-      return response.json();
-    }).then((data) => {
+    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal).then((data) => {
       setMetrics(data);
     }).catch((fetchError) => {
       if (fetchError.name === "AbortError") return;

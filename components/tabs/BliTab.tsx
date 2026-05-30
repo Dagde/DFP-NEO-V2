@@ -33,6 +33,14 @@ interface AvailabilityMetrics {
   availabilityPct: number | null;
 }
 
+interface AvailabilityHistoryRecord {
+  date: string;
+  dailyAverage?: number | string | null;
+  totalAircraft?: number | string | null;
+  totalFleet?: number | string | null;
+  availabilityPct?: number | string | null;
+}
+
 interface CancellationCodeCount {
   code: string;
   count: number;
@@ -172,6 +180,72 @@ const getTimelineRange = (anchorIso: string, timeline: TimelineKey): { startDate
   if (timeline === '5y') start = addUtcYears(end, -5);
 
   return { startDate: toIsoDate(start), endDate: toIsoDate(end) };
+};
+
+const normalizeAvailabilityDate = (value: string): string => String(value || '').slice(0, 10);
+
+const numberOrNull = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const availabilityFromHistory = (record: AvailabilityHistoryRecord): AvailabilityMetrics => {
+  const availableAverage = numberOrNull(record.dailyAverage);
+  const totalAircraft = numberOrNull(record.totalAircraft ?? record.totalFleet);
+  const availabilityPct = numberOrNull(record.availabilityPct);
+  return {
+    date: normalizeAvailabilityDate(record.date),
+    availableAverage,
+    totalAircraft,
+    availabilityPct: availabilityPct ?? (
+      availableAverage !== null && totalAircraft && totalAircraft > 0
+        ? (availableAverage / totalAircraft) * 100
+        : null
+    ),
+  };
+};
+
+const mergeAvailabilityHistory = (
+  metrics: BliMetricsResponse,
+  records: AvailabilityHistoryRecord[],
+): BliMetricsResponse => {
+  const byDate = new Map<string, AvailabilityMetrics>();
+  records.forEach(record => {
+    const normalized = availabilityFromHistory(record);
+    if (normalized.date) byDate.set(normalized.date, normalized);
+  });
+
+  const existingByDate = new Map(metrics.availabilitySeries.map(point => [normalizeAvailabilityDate(point.date), point]));
+  return {
+    ...metrics,
+    availabilitySeries: metrics.dates.map(date => (
+      byDate.get(date) || existingByDate.get(date) || {
+        date,
+        availableAverage: null,
+        totalAircraft: null,
+        availabilityPct: null,
+      }
+    )),
+  };
+};
+
+const fetchBliMetrics = async (
+  startDate: string,
+  endDate: string,
+  signal: AbortSignal,
+): Promise<BliMetricsResponse> => {
+  const query = `startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+  const [bliResponse, availabilityResponse] = await Promise.all([
+    fetch(`/api/bli/metrics?${query}`, { credentials: 'include', signal }),
+    fetch(`/api/aircraft-availability-history?${query}`, { credentials: 'include', signal }).catch(() => null),
+  ]);
+
+  if (!bliResponse.ok) throw new Error(await bliResponse.text());
+  const metrics = await bliResponse.json() as BliMetricsResponse;
+
+  if (!availabilityResponse || !availabilityResponse.ok) return metrics;
+  const availabilityData = await availabilityResponse.json();
+  return mergeAvailabilityHistory(metrics, availabilityData.records || availabilityData.history || []);
 };
 
 const valueSum = (series: ChartPoint[]): number => series.reduce((sum, point) => sum + (Number(point.value) || 0), 0);
@@ -801,14 +875,7 @@ const MetricModal: React.FC<{
     setLoading(true);
     setError(null);
 
-    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(range.startDate)}&endDate=${encodeURIComponent(range.endDate)}`, {
-      credentials: 'include',
-      signal: controller.signal,
-    })
-      .then(async response => {
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-      })
+    fetchBliMetrics(range.startDate, range.endDate, controller.signal)
       .then((data: BliMetricsResponse) => {
         setModalMetrics(data);
       })
@@ -934,14 +1001,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
     setLoading(true);
     setError(null);
 
-    fetch(`/api/bli/metrics?startDate=${encodeURIComponent(previewRange.startDate)}&endDate=${encodeURIComponent(previewRange.endDate)}`, {
-      credentials: 'include',
-      signal: controller.signal,
-    })
-      .then(async response => {
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-      })
+    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal)
       .then((data: BliMetricsResponse) => {
         setMetrics(data);
       })
