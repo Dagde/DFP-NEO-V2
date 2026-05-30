@@ -12,6 +12,7 @@ import {
   verifySignedLicenseContent,
 } from './lib/licensing.js';
 import {
+  DEFAULT_AIRFIELD_SOLAR_PROFILES,
   getDefaultAirfieldSolarProfile,
   isValidLatitude,
   isValidLongitude,
@@ -30,6 +31,19 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const KNOWN_AIRFIELD_IDENTITIES = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {})
+  .filter((profile) => profile?.icao && profile?.iataCode)
+  .map((profile) => ({
+    legacyCode: String(profile.code || profile.iataCode || '').trim().toUpperCase(),
+    iataCode: String(profile.iataCode || profile.code || '').trim().toUpperCase(),
+    icaoCode: String(profile.icao || '').trim().toUpperCase(),
+    name: profile.name,
+    latitude: profile.latitude,
+    longitude: profile.longitude,
+    timezone: profile.timezone,
+  }))
+  .filter((profile) => profile.legacyCode && profile.icaoCode);
 
 const DEFAULT_ALLOWED_ORIGINS = [];
 const DEVELOPMENT_ALLOWED_ORIGINS = [
@@ -7001,20 +7015,6 @@ async function ensureCommercialConfigTables(db) {
     await db.$executeRawUnsafe(`ALTER TABLE "CommercialLocation" ADD COLUMN IF NOT EXISTS "iataCode" TEXT;`);
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialLocation_code_key" ON "CommercialLocation"("code");`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialLocation_organisationCode_idx" ON "CommercialLocation"("organisationCode");`);
-    for (const code of ['ESL', 'PEA', 'WLM', 'AMB', 'TIN', 'EDI']) {
-      const profile = getDefaultAirfieldSolarProfile(code);
-      if (!profile) continue;
-      await db.$executeRawUnsafe(`
-        UPDATE "CommercialLocation"
-        SET
-          "latitude" = COALESCE("latitude", $2),
-          "longitude" = COALESCE("longitude", $3),
-          "timezone" = COALESCE(NULLIF("timezone", ''), $4),
-          "updatedAt" = "updatedAt"
-        WHERE "code" = $1
-      `, code, profile.latitude, profile.longitude, profile.timezone);
-    }
-
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "CommercialUnit" (
         "id" TEXT NOT NULL,
@@ -7173,12 +7173,72 @@ async function ensureCommercialConfigTables(db) {
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialSchedulingRuleSet_aircraftTypeCode_idx" ON "CommercialSchedulingRuleSet"("aircraftTypeCode");`);
 
     await seedCommercialConfigIfEmpty(db);
+    await migrateKnownCommercialLocationCodes(db);
     await seedCommercialLicenseIfEmpty(db);
     await seedCommercialUserAccessIfEmpty(db);
     console.log('✅ Commercial platform configuration tables ready');
   } catch (err) {
     console.error('❌ Failed to ensure commercial platform configuration tables:', err.message);
   }
+}
+
+async function migrateKnownCommercialLocationCodes(db) {
+  for (const profile of KNOWN_AIRFIELD_IDENTITIES) {
+    if (profile.legacyCode === profile.icaoCode) continue;
+
+    const existingIcaoRows = await db.$queryRawUnsafe(
+      `SELECT "code" FROM "CommercialLocation" WHERE "code" = $1 LIMIT 1`,
+      profile.icaoCode,
+    );
+
+    if (existingIcaoRows.length === 0) {
+      await db.$executeRawUnsafe(`
+        UPDATE "CommercialLocation"
+        SET
+          "code" = $2,
+          "iataCode" = COALESCE(NULLIF("iataCode", ''), $3),
+          "latitude" = COALESCE("latitude", $4),
+          "longitude" = COALESCE("longitude", $5),
+          "timezone" = COALESCE(NULLIF("timezone", ''), $6),
+          "updatedAt" = "updatedAt"
+        WHERE "code" = $1
+      `, profile.legacyCode, profile.icaoCode, profile.iataCode, profile.latitude, profile.longitude, profile.timezone);
+    } else {
+      await db.$executeRawUnsafe(`
+        UPDATE "CommercialLocation"
+        SET
+          "iataCode" = COALESCE(NULLIF("iataCode", ''), $2),
+          "latitude" = COALESCE("latitude", $3),
+          "longitude" = COALESCE("longitude", $4),
+          "timezone" = COALESCE(NULLIF("timezone", ''), $5),
+          "updatedAt" = "updatedAt"
+        WHERE "code" = $1
+      `, profile.icaoCode, profile.iataCode, profile.latitude, profile.longitude, profile.timezone);
+
+      await db.$executeRawUnsafe(`
+        UPDATE "CommercialLocation"
+        SET
+          "iataCode" = COALESCE(NULLIF("iataCode", ''), $2),
+          "status" = CASE WHEN "status" = 'ACTIVE' THEN 'INACTIVE' ELSE "status" END,
+          "updatedAt" = "updatedAt"
+        WHERE "code" = $1
+      `, profile.legacyCode, profile.iataCode);
+    }
+
+    for (const tableName of ['CommercialUnit', 'CommercialResourcePool', 'CommercialUserAccess']) {
+      await db.$executeRawUnsafe(`
+        UPDATE "${tableName}"
+        SET "locationCode" = $2, "updatedAt" = "updatedAt"
+        WHERE "locationCode" = $1
+      `, profile.legacyCode, profile.icaoCode);
+    }
+  }
+
+  await db.$executeRawUnsafe(`
+    UPDATE "CommercialUserAccess"
+    SET "scopeKey" = "userId" || '|' || "organisationCode" || '|' || COALESCE("locationCode", '') || '|' || COALESCE("unitCode", '') || '|' || COALESCE("moduleCode", '')
+    WHERE "scopeKey" IS NULL OR "scopeKey" = '' OR "scopeKey" LIKE '%|ESL|%' OR "scopeKey" LIKE '%|PEA|%' OR "scopeKey" LIKE '%|WLM|%' OR "scopeKey" LIKE '%|AMB|%' OR "scopeKey" LIKE '%|TIN|%' OR "scopeKey" LIKE '%|EDI|%'
+  `);
 }
 
 async function seedCommercialLicenseIfEmpty(db) {
@@ -7269,10 +7329,18 @@ async function seedCommercialConfigIfEmpty(db) {
   const locationOpAreas = settings.locationOpAreas || {};
   const timezoneOffset = Number(settings.timezoneOffset ?? 10);
 
-  const locationCodeFor = (name) => {
+  const locationIdentityFor = (name) => {
     const explicit = abbreviations[name];
-    if (explicit) return String(explicit).toUpperCase();
-    return String(name || 'LOC').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'LOC';
+    const profile = getDefaultAirfieldSolarProfile(explicit) || getDefaultAirfieldSolarProfile(name);
+    const fallbackCode = String(explicit || name || 'LOC')
+      .replace(/[^A-Za-z0-9]/g, '')
+      .slice(0, 4)
+      .toUpperCase() || 'LOC';
+    return {
+      code: String(profile?.icao || fallbackCode).toUpperCase(),
+      iataCode: String(profile?.iataCode || profile?.code || (String(explicit || '').length === 3 ? explicit : '') || '').toUpperCase(),
+      profile: profile || null,
+    };
   };
   const unitCodeFor = (name) => String(name || 'UNIT').replace(/[^A-Za-z0-9]/g, '').slice(0, 12).toUpperCase() || 'UNIT';
 
@@ -7283,18 +7351,18 @@ async function seedCommercialConfigIfEmpty(db) {
   `, JSON.stringify({ source: 'V2 stage-one seed' }), now);
 
   for (const locationName of locationNames) {
-    const code = locationCodeFor(locationName);
-    const solar = getDefaultAirfieldSolarProfile(code) || getDefaultAirfieldSolarProfile(locationName) || {};
+    const identity = locationIdentityFor(locationName);
+    const solar = identity.profile || {};
     await db.$executeRawUnsafe(`
       INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "iataCode", "name", "timezoneOffset", "latitude", "longitude", "timezone", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, null, $2, $3, $4, $5, $6, $7, 'ACTIVE', '{}'::jsonb, $8::timestamp, $8::timestamp)
+      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, $2, $3, $4, $5, $6, $7, $8, 'ACTIVE', '{}'::jsonb, $9::timestamp, $9::timestamp)
       ON CONFLICT ("code") DO NOTHING
-    `, code, locationName, timezoneOffset, solar.latitude ?? null, solar.longitude ?? null, solar.timezone ?? null, Array.isArray(locationOpAreas[locationName]) ? locationOpAreas[locationName] : [], now);
+    `, identity.code, identity.iataCode || null, locationName, timezoneOffset, solar.latitude ?? null, solar.longitude ?? null, solar.timezone ?? null, Array.isArray(locationOpAreas[locationName]) ? locationOpAreas[locationName] : [], now);
   }
 
   for (const unitName of units) {
     const mappedLocationName = unitLocations[unitName] || locationNames[0];
-    const locationCode = locationCodeFor(mappedLocationName);
+    const locationCode = locationIdentityFor(mappedLocationName).code;
     const unitCode = unitCodeFor(unitName);
     await db.$executeRawUnsafe(`
       INSERT INTO "CommercialUnit" ("id", "organisationCode", "locationCode", "code", "name", "unitType", "status", "settings", "createdAt", "updatedAt")
@@ -7310,7 +7378,7 @@ async function seedCommercialConfigIfEmpty(db) {
   `, JSON.stringify({ source: 'Current V2 default aircraft type' }), now);
 
   for (const locationName of locationNames) {
-    const locationCode = locationCodeFor(locationName);
+    const locationCode = locationIdentityFor(locationName).code;
     await db.$executeRawUnsafe(`
       INSERT INTO "CommercialResourcePool" ("id", "organisationCode", "locationCode", "unitCode", "aircraftTypeCode", "code", "name", "poolType", "status", "settings", "createdAt", "updatedAt")
       VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, 'PC-21', $2, $3, 'Shared', 'ACTIVE', $4::jsonb, $5::timestamp, $5::timestamp)

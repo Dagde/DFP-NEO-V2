@@ -1,4 +1,5 @@
 import { getAppApiBase } from './externalDataControls';
+import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from './sunTimes.js';
 
 export interface PlatformLocation {
   code: string;
@@ -229,6 +230,66 @@ const emptyPlatformConfig: PlatformConfig = {
 
 const getApiBase = (): string => getAppApiBase();
 
+const normaliseLocationIdentifier = (value: unknown): string => String(value || '').trim().toLowerCase();
+
+const defaultLocationProfiles = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {});
+
+const getKnownLocationProfile = (identifier: unknown): any | null => {
+  const token = normaliseLocationIdentifier(identifier);
+  if (!token) return null;
+  return defaultLocationProfiles.find((profile: any) => (
+    [
+      profile.code,
+      profile.iataCode,
+      profile.icao,
+      profile.name,
+    ].some((value) => normaliseLocationIdentifier(value) === token)
+  )) || null;
+};
+
+const getKnownLocationAliases = (identifier: unknown): string[] => {
+  const profile = getKnownLocationProfile(identifier);
+  if (!profile) return [String(identifier || '').trim()].filter(Boolean);
+  return uniqueValues([
+    profile.icao,
+    profile.iataCode,
+    profile.code,
+  ].map((value) => String(value || '').trim()).filter(Boolean));
+};
+
+const getConfiguredLocationAliases = (location: PlatformLocation): string[] => {
+  const directAliases = [
+    location.code,
+    location.iataCode,
+    location.settings?.legacyCode,
+    location.settings?.runtimeCode,
+  ].map((value) => String(value || '').trim()).filter(Boolean);
+  const profileAliases = directAliases.flatMap(getKnownLocationAliases);
+  return uniqueValues([...directAliases, ...profileAliases]);
+};
+
+const resolveRuntimeLocationCode = (
+  config: PlatformConfig | null,
+  locationCode: string,
+  supportedCodes: string[] = ['ESL', 'PEA'],
+): string => {
+  const rawCode = String(locationCode || '').trim();
+  if (!rawCode) return '';
+  const supported = new Set(supportedCodes.map((code) => normaliseLocationIdentifier(code)));
+  const activeLocations = (config?.locations || []).filter((location) => location.status !== 'INACTIVE');
+  const matchingLocation = activeLocations.find((location) => (
+    getConfiguredLocationAliases(location).some((alias) => normaliseLocationIdentifier(alias) === normaliseLocationIdentifier(rawCode))
+  ));
+  const aliases = matchingLocation ? getConfiguredLocationAliases(matchingLocation) : getKnownLocationAliases(rawCode);
+  const supportedAlias = aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias)));
+  return supportedAlias || rawCode;
+};
+
+const locationCodesAreEquivalent = (left: string, right: string): boolean => {
+  const leftAliases = new Set(getKnownLocationAliases(left).map(normaliseLocationIdentifier));
+  return getKnownLocationAliases(right).some((alias) => leftAliases.has(normaliseLocationIdentifier(alias)));
+};
+
 export const loadPlatformConfigFromDB = async (): Promise<PlatformConfig | null> => {
   try {
     const res = await fetch(`${getApiBase()}/platform-config`, {
@@ -253,11 +314,14 @@ export const getLocationCodesForCurrentRuntime = (
   config: PlatformConfig | null,
   supportedCodes: string[] = ['ESL', 'PEA'],
 ): string[] => {
-  const supported = new Set(supportedCodes);
+  const supported = new Set(supportedCodes.map((code) => normaliseLocationIdentifier(code)));
   const configuredCodes = (config?.locations || [])
     .filter((location) => location.status !== 'INACTIVE')
-    .map((location) => location.code)
-    .filter((code) => supported.has(code));
+    .map((location) => {
+      const aliases = getConfiguredLocationAliases(location);
+      return aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias))) || location.code;
+    })
+    .filter((code) => supported.has(normaliseLocationIdentifier(code)));
 
   return configuredCodes.length > 0 ? configuredCodes : supportedCodes;
 };
@@ -382,7 +446,13 @@ export const getPlatformAccessContext = (
 ): PlatformAccessContext => {
   const activeRows = ((config?.userAccess || []) as PlatformAccessRow[])
     .map(normaliseAccessRow)
-    .filter((row) => normaliseAccessValue(row.status) !== 'inactive');
+    .filter((row) => normaliseAccessValue(row.status) !== 'inactive')
+    .map((row) => ({
+      ...row,
+      locationCode: row.locationCode
+        ? resolveRuntimeLocationCode(config, row.locationCode, supportedCodes)
+        : row.locationCode,
+    }));
   const configuredLocations = getLocationCodesForCurrentRuntime(config, supportedCodes);
 
   if (!config || activeRows.length === 0) {
@@ -584,9 +654,16 @@ export const getLocationResourcePool = (
   config: PlatformConfig | null,
   locationCode: string,
 ): PlatformResourcePool | null => {
+  const matchingLocation = (config?.locations || []).find((location) => (
+    getConfiguredLocationAliases(location).some((alias) => locationCodesAreEquivalent(alias, locationCode))
+  ));
+  const locationAliases = new Set(
+    (matchingLocation ? getConfiguredLocationAliases(matchingLocation) : getKnownLocationAliases(locationCode))
+      .map(normaliseLocationIdentifier),
+  );
   const pools = (config?.resourcePools || []).filter((pool) => (
     pool.status !== 'INACTIVE' &&
-    pool.locationCode === locationCode &&
+    locationAliases.has(normaliseLocationIdentifier(pool.locationCode)) &&
     pool.poolType === 'Shared'
   ));
 
