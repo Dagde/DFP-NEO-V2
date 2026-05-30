@@ -73,6 +73,7 @@ const Header: React.FC<HeaderProps> = ({
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
     const disabledActionClass = 'opacity-45 cursor-not-allowed grayscale';
     const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}`;
+    const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
     const hoveredContext = contextOptions.find(option => option.location === hoveredContextLocation) || contextOptions[0];
 
     // Close user menu when clicking outside - must check BOTH the trigger and the portal dropdown
@@ -145,7 +146,12 @@ const Header: React.FC<HeaderProps> = ({
                         aria-haspopup="menu"
                         aria-expanded={showContextMenu}
                     >
-                        <span className="min-w-0 flex-1 truncate text-center">{activeContextLabel}</span>
+                        <span
+                            className="min-w-0 flex-1 whitespace-nowrap text-center leading-none"
+                            style={{ fontSize: `${activeContextFontSize}px` }}
+                        >
+                            {activeContextLabel}
+                        </span>
                         <span className="ml-2 text-[10px] text-gray-300">v</span>
                     </button>
                     {showContextMenu && (

@@ -4760,6 +4760,7 @@ const Header = ({
   const isSuperAdmin = authUser?.role === "SUPER_ADMIN" || authUser?.role === "ADMIN";
   const disabledActionClass = "opacity-45 cursor-not-allowed grayscale";
   const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}`;
+  const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
   const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || contextOptions[0];
   reactExports.useEffect(() => {
     const handleClickOutside = (event) => {
@@ -4809,7 +4810,14 @@ const Header = ({
             "aria-haspopup": "menu",
             "aria-expanded": showContextMenu,
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 flex-1 truncate text-center", children: activeContextLabel }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: "min-w-0 flex-1 whitespace-nowrap text-center leading-none",
+                  style: { fontSize: `${activeContextFontSize}px` },
+                  children: activeContextLabel
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-[10px] text-gray-300", children: "v" })
             ]
           }
