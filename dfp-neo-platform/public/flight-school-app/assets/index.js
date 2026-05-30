@@ -15670,7 +15670,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 }
               )
             ] }),
-            !isReadOnly && (event.type === "flight" || event.type === "ftd") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            (event.type === "flight" || event.type === "ftd") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && !freezeAllowedActions.postFlightTimes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePostFlightClick, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
                 "Post",

@@ -2558,8 +2558,8 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </button>
                                         </div>
                                     )}
-                                    {/* Post Flight button - frozen unless postFlightTimes is allowed */}
-                                    {!isReadOnly && (event.type === 'flight' || event.type === 'ftd') && (
+                                    {/* Post Flight remains available for past DFPs; it records actual outcomes, not schedule amendments. */}
+                                    {(event.type === 'flight' || event.type === 'ftd') && (
                                         <div className="relative w-[75px]">
                                             {isFrozen && !freezeAllowedActions.postFlightTimes && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
