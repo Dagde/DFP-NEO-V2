@@ -26859,19 +26859,19 @@ const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
     }
   );
 };
-const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraftChange, onRequestEdit, onSave, onCancel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[190px] rounded-md border border-slate-700/80 bg-slate-950/45 p-3", children: [
+const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraftChange, onRequestEdit, onSave, onCancel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${isEditing ? "min-w-[220px]" : "min-w-[128px]"} rounded border border-slate-700/70 bg-slate-950/55 p-2 shadow-sm`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: title }),
-      !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-slate-200", children: periodLabel(boundary) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: title }),
+      !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[11px] font-semibold text-slate-300", children: periodLabel(boundary) })
     ] }),
     !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         type: "button",
         onClick: () => onRequestEdit(periodKey),
-        className: "rounded border border-slate-700 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:border-cyan-400 hover:text-cyan-200",
-        children: "Change"
+        className: "rounded border border-slate-700 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500 hover:border-cyan-400 hover:text-cyan-200",
+        children: "Edit"
       }
     )
   ] }),
@@ -26885,7 +26885,7 @@ const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraft
             value: draft.start,
             onChange: (event) => onDraftChange({ ...draft, start: event.target.value }),
             placeholder: "MM-DD",
-            className: "h-8 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
+            className: "h-7 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
           }
         )
       ] }),
@@ -26897,7 +26897,7 @@ const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraft
             value: draft.end,
             onChange: (event) => onDraftChange({ ...draft, end: event.target.value }),
             placeholder: "MM-DD",
-            className: "h-8 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
+            className: "h-7 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
           }
         )
       ] })
@@ -27142,48 +27142,46 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
         periodSettings
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-between gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Business-Level Intelligence" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
-            "Operational schedule, cancellation and utilisation signals. Preview cards show ",
-            previewDateRangeLabel,
-            "; each expanded graph has its own timeline control."
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-stretch gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            BliPeriodWindow,
-            {
-              title: "Calendar Year",
-              periodKey: "cy",
-              boundary: periodSettings.cy,
-              isEditing: editingPeriod === "cy",
-              draft: periodDraft.cy,
-              onDraftChange: (boundary) => updatePeriodDraft("cy", boundary),
-              onRequestEdit: requestPeriodEdit,
-              onSave: savePeriodBoundary,
-              onCancel: cancelPeriodEdit
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            BliPeriodWindow,
-            {
-              title: "Financial Year",
-              periodKey: "fy",
-              boundary: periodSettings.fy,
-              isEditing: editingPeriod === "fy",
-              draft: periodDraft.fy,
-              onDraftChange: (boundary) => updatePeriodDraft("fy", boundary),
-              onRequestEdit: requestPeriodEdit,
-              onSave: savePeriodBoundary,
-              onCancel: cancelPeriodEdit
-            }
-          )
-        ] })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap justify-end gap-2 lg:absolute lg:right-3 lg:top-3 lg:mb-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          BliPeriodWindow,
+          {
+            title: "CY",
+            periodKey: "cy",
+            boundary: periodSettings.cy,
+            isEditing: editingPeriod === "cy",
+            draft: periodDraft.cy,
+            onDraftChange: (boundary) => updatePeriodDraft("cy", boundary),
+            onRequestEdit: requestPeriodEdit,
+            onSave: savePeriodBoundary,
+            onCancel: cancelPeriodEdit
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          BliPeriodWindow,
+          {
+            title: "FY",
+            periodKey: "fy",
+            boundary: periodSettings.fy,
+            isEditing: editingPeriod === "fy",
+            draft: periodDraft.fy,
+            onDraftChange: (boundary) => updatePeriodDraft("fy", boundary),
+            onRequestEdit: requestPeriodEdit,
+            onSave: savePeriodBoundary,
+            onCancel: cancelPeriodEdit
+          }
+        )
       ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:pr-[310px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-4xl", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Business-Level Intelligence" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
+          "Operational schedule, cancellation and utilisation signals. Preview cards show ",
+          previewDateRangeLabel,
+          "; each expanded graph has its own timeline control."
+        ] })
+      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading published metrics..." : `${metrics.snapshotCount} published snapshots in range` }),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })

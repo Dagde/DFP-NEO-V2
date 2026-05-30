@@ -1004,19 +1004,19 @@ const BliPeriodWindow: React.FC<{
   onSave: (periodKey: PeriodKey) => void;
   onCancel: () => void;
 }> = ({ title, periodKey, boundary, isEditing, draft, onDraftChange, onRequestEdit, onSave, onCancel }) => (
-  <div className="min-w-[190px] rounded-md border border-slate-700/80 bg-slate-950/45 p-3">
+  <div className={`${isEditing ? 'min-w-[220px]' : 'min-w-[128px]'} rounded border border-slate-700/70 bg-slate-950/55 p-2 shadow-sm`}>
     <div className="flex items-start justify-between gap-3">
       <div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</div>
-        {!isEditing && <div className="mt-1 text-sm font-semibold text-slate-200">{periodLabel(boundary)}</div>}
+        <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</div>
+        {!isEditing && <div className="mt-0.5 text-[11px] font-semibold text-slate-300">{periodLabel(boundary)}</div>}
       </div>
       {!isEditing && (
         <button
           type="button"
           onClick={() => onRequestEdit(periodKey)}
-          className="rounded border border-slate-700 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:border-cyan-400 hover:text-cyan-200"
+          className="rounded border border-slate-700 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500 hover:border-cyan-400 hover:text-cyan-200"
         >
-          Change
+          Edit
         </button>
       )}
     </div>
@@ -1029,7 +1029,7 @@ const BliPeriodWindow: React.FC<{
               value={draft.start}
               onChange={event => onDraftChange({ ...draft, start: event.target.value })}
               placeholder="MM-DD"
-              className="h-8 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
+              className="h-7 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
             />
           </label>
           <label className="block">
@@ -1038,7 +1038,7 @@ const BliPeriodWindow: React.FC<{
               value={draft.end}
               onChange={event => onDraftChange({ ...draft, end: event.target.value })}
               placeholder="MM-DD"
-              className="h-8 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
+              className="h-7 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
             />
           </label>
         </div>
@@ -1330,38 +1330,38 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
         />
       )}
 
-      <div className="rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
+      <div className="relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4">
+        <div className="mb-3 flex flex-wrap justify-end gap-2 lg:absolute lg:right-3 lg:top-3 lg:mb-0">
+          <BliPeriodWindow
+            title="CY"
+            periodKey="cy"
+            boundary={periodSettings.cy}
+            isEditing={editingPeriod === 'cy'}
+            draft={periodDraft.cy}
+            onDraftChange={boundary => updatePeriodDraft('cy', boundary)}
+            onRequestEdit={requestPeriodEdit}
+            onSave={savePeriodBoundary}
+            onCancel={cancelPeriodEdit}
+          />
+          <BliPeriodWindow
+            title="FY"
+            periodKey="fy"
+            boundary={periodSettings.fy}
+            isEditing={editingPeriod === 'fy'}
+            draft={periodDraft.fy}
+            onDraftChange={boundary => updatePeriodDraft('fy', boundary)}
+            onRequestEdit={requestPeriodEdit}
+            onSave={savePeriodBoundary}
+            onCancel={cancelPeriodEdit}
+          />
+        </div>
+        <div className="lg:pr-[310px]">
+          <div className="max-w-4xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">BLI</p>
             <h2 className="mt-1 text-2xl font-bold text-white">Business-Level Intelligence</h2>
             <p className="mt-1 text-sm text-slate-400">
               Operational schedule, cancellation and utilisation signals. Preview cards show {previewDateRangeLabel}; each expanded graph has its own timeline control.
             </p>
-          </div>
-          <div className="flex flex-wrap items-stretch gap-3">
-            <BliPeriodWindow
-              title="Calendar Year"
-              periodKey="cy"
-              boundary={periodSettings.cy}
-              isEditing={editingPeriod === 'cy'}
-              draft={periodDraft.cy}
-              onDraftChange={boundary => updatePeriodDraft('cy', boundary)}
-              onRequestEdit={requestPeriodEdit}
-              onSave={savePeriodBoundary}
-              onCancel={cancelPeriodEdit}
-            />
-            <BliPeriodWindow
-              title="Financial Year"
-              periodKey="fy"
-              boundary={periodSettings.fy}
-              isEditing={editingPeriod === 'fy'}
-              draft={periodDraft.fy}
-              onDraftChange={boundary => updatePeriodDraft('fy', boundary)}
-              onRequestEdit={requestPeriodEdit}
-              onSave={savePeriodBoundary}
-              onCancel={cancelPeriodEdit}
-            />
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
