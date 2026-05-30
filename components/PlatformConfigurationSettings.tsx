@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_PLATFORM_PERMISSION_PROFILES,
   PLATFORM_PERMISSION_CATALOG,
@@ -17,6 +17,8 @@ import {
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { getAppApiBase } from '../utils/externalDataControls';
+import { logAudit } from '../utils/auditLogger';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import {
   DEFAULT_INSERT_EVENT_TYPES,
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -31,7 +33,7 @@ import {
   isValidLongitude,
   isValidTimeZone,
 } from '../utils/sunTimes.js';
-import { showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 
 type PlatformConfig = {
   organisations: any[];
@@ -178,6 +180,10 @@ const COMMON_IANA_TIMEZONES = [
 
 const AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
 const MAX_AIRFIELD_SUGGESTIONS = 6;
+
+const createClientRecordId = (prefix: string): string => (
+  `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+);
 
 const ACCREDITATION_STATUS_OPTIONS = [
   'Not started',
@@ -455,27 +461,21 @@ const findAirfieldCatalogueExact = (
   return token ? lookup.exact.get(token) || null : null;
 };
 
-const getAirfieldCatalogueSuggestions = (
-  location: any,
+const getAirfieldCatalogueSuggestionsForQuery = (
+  value: any,
   lookup: AirfieldCatalogueLookup,
 ): AirfieldCatalogueEntry[] => {
-  const rawQueries = [location?.code, location?.name]
-    .map((value) => String(value || '').trim())
-    .filter((value) => value.length >= 2);
-  const queries = rawQueries.map(normaliseAirfieldLookupToken).filter((value) => value.length >= 2);
-  if (!queries.length || lookup.searchable.length === 0) return [];
+  const query = normaliseAirfieldLookupToken(value);
+  if (query.length < 2 || lookup.searchable.length === 0) return [];
 
   const scored = lookup.searchable
     .map((item) => {
       let score = 0;
-      queries.forEach((query) => {
-        if (!query) return;
-        if (item.codeText === query) score = Math.max(score, 100);
-        else if (item.nameText === query) score = Math.max(score, 95);
-        else if (item.codeText.startsWith(query)) score = Math.max(score, 85);
-        else if (item.nameText.startsWith(query)) score = Math.max(score, 75);
-        else if (item.searchText.includes(query)) score = Math.max(score, 55);
-      });
+      if (item.codeText === query) score = 100;
+      else if (item.nameText === query) score = 95;
+      else if (item.codeText.startsWith(query)) score = 85;
+      else if (item.nameText.startsWith(query)) score = 75;
+      else if (item.searchText.includes(query)) score = 55;
       return { ...item, score };
     })
     .filter((item) => item.score > 0)
@@ -537,13 +537,22 @@ const getAirfieldCatalogueLocationChanges = (
   const currentOffset = getCurrentTimezoneOffsetHours(entry.t);
   if (currentOffset !== null) changes.timezoneOffset = currentOffset;
   if (fillIdentity) {
-    if (!String(currentLocation?.code || '').trim()) {
-      const primaryCode = getAirfieldPrimaryCode(entry);
-      if (primaryCode) changes.code = primaryCode;
-    }
-    if (!String(currentLocation?.name || '').trim()) changes.name = entry.n;
+    const primaryCode = getAirfieldPrimaryCode(entry);
+    if (primaryCode) changes.code = primaryCode;
+    changes.name = entry.n;
   }
   return changes;
+};
+
+const getPlatformLocationAuditKey = (location: any): string => (
+  String(location?.id || location?.code || location?.name || '').trim().toLowerCase()
+);
+
+const getPlatformLocationAuditLabel = (location: any): string => {
+  const code = String(location?.code || '').trim();
+  const name = String(location?.name || '').trim();
+  if (code && name) return `${code} - ${name}`;
+  return code || name || 'Unnamed location';
 };
 
 const uniqueValues = (values: string[]): string[] => Array.from(new Set(values.filter(Boolean)));
@@ -870,6 +879,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [saving, setSaving] = useState(false);
   const [applyingChanges, setApplyingChanges] = useState(false);
   const [error, setError] = useState('');
+  const loadedConfigRef = useRef<PlatformConfig>(emptyConfig);
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
@@ -958,6 +968,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         if (!cancelled) {
           const nextConfig = { ...emptyConfig, ...data };
           setConfig(nextConfig);
+          loadedConfigRef.current = nextConfig;
           if (nextLicenseStatus) setLicenseStatus(nextLicenseStatus);
           const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || '';
           setSelectedAccessUserId((current) => current || firstUserId);
@@ -1252,22 +1263,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addLocation = () => {
     setConfig((prev) => {
-      const existingCodes = new Set(prev.locations.map((location) => String(location.code || '').toUpperCase()));
-      let nextIndex = prev.locations.length + 1;
-      let code = `LOC-${nextIndex}`;
-      while (existingCodes.has(code)) {
-        nextIndex += 1;
-        code = `LOC-${nextIndex}`;
-      }
       const referenceLocation = prev.locations[0] || {};
       return {
         ...prev,
         locations: [
           ...prev.locations,
           {
+            id: createClientRecordId('location'),
             organisationCode: prev.organisations[0]?.code || 'DEFAULT',
-            code,
-            name: 'New Location',
+            code: '',
+            name: '',
             timezoneOffset: referenceLocation.timezoneOffset ?? 10,
             latitude: null,
             longitude: null,
@@ -1277,6 +1282,57 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             settings: {},
           },
         ],
+      };
+    });
+  };
+
+  const removeLocation = async (index: number) => {
+    if (!canEdit) return;
+    const location = config.locations[index];
+    if (!location) return;
+    if (config.locations.length <= 1) {
+      await showDarkAlert('At least one location must remain configured.', 'Cannot Remove Location', 'warning');
+      return;
+    }
+
+    const password = await showDarkPrompt({
+      title: 'Remove Location',
+      message: `Enter your password to remove ${getPlatformLocationAuditLabel(location)}. Units and resource pools assigned to it will be moved to the first remaining location.`,
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Remove',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!password) return;
+
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert('The password was not accepted. The location was not removed.', 'Password Required', 'warning');
+        return;
+      }
+    } catch {
+      await showDarkAlert('The app could not verify your password. The location was not removed.', 'Password Check Failed', 'error');
+      return;
+    }
+
+    setConfig((prev) => {
+      const removed = prev.locations[index];
+      const removedCode = String(removed?.code || '').trim();
+      const nextLocations = prev.locations.filter((_, itemIndex) => itemIndex !== index);
+      const fallbackCode = String(nextLocations[0]?.code || '').trim();
+
+      return {
+        ...prev,
+        locations: nextLocations,
+        units: prev.units.map((unit) => (
+          removedCode && unit.locationCode === removedCode ? { ...unit, locationCode: fallbackCode } : unit
+        )),
+        resourcePools: prev.resourcePools.map((pool) => (
+          removedCode && pool.locationCode === removedCode ? { ...pool, locationCode: fallbackCode || null } : pool
+        )),
       };
     });
   };
@@ -1621,6 +1677,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         const body = await res.text();
         throw new Error(body || `Save failed (${res.status})`);
       }
+      const previousLocationMap = new Map(
+        loadedConfigRef.current.locations.map((location) => [getPlatformLocationAuditKey(location), location])
+      );
+      const nextLocationMap = new Map(
+        config.locations.map((location) => [getPlatformLocationAuditKey(location), location])
+      );
+      config.locations.forEach((location) => {
+        const key = getPlatformLocationAuditKey(location);
+        if (!key || previousLocationMap.has(key)) return;
+        logAudit({
+          page: 'Settings - Platform Locations',
+          action: 'Add',
+          description: `Added location ${getPlatformLocationAuditLabel(location)}`,
+          changes: `Latitude: ${location.latitude ?? 'blank'}; longitude: ${location.longitude ?? 'blank'}; timezone: ${location.timezone || 'blank'}`,
+        });
+      });
+      loadedConfigRef.current.locations.forEach((location) => {
+        const key = getPlatformLocationAuditKey(location);
+        if (!key || nextLocationMap.has(key)) return;
+        logAudit({
+          page: 'Settings - Platform Locations',
+          action: 'Delete',
+          description: `Removed location ${getPlatformLocationAuditLabel(location)}`,
+          changes: `Remaining locations: ${config.locations.map(getPlatformLocationAuditLabel).join(', ') || 'none'}`,
+        });
+      });
+      loadedConfigRef.current = config;
       shouldReload = true;
       setApplyingChanges(true);
       onShowSuccess('Platform configuration saved. Applying changes...');
@@ -1887,17 +1970,43 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             const defaultProfile = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
             const exactCatalogueMatch = findAirfieldCatalogueExact(location.code, airfieldCatalogueLookup)
               || findAirfieldCatalogueExact(location.name, airfieldCatalogueLookup);
-            const suggestions = getAirfieldCatalogueSuggestions(location, airfieldCatalogueLookup);
+            const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
+            const nameSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.name, airfieldCatalogueLookup);
             return (
-              <div key={location.id || location.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2 xl:grid-cols-8">
-                <Field label="Location Code" value={location.code} disabled={!canEdit} onChange={(value) => updateLocationIdentity(index, 'code', value.toUpperCase())} />
-                <Field label="Location Name" value={location.name} disabled={!canEdit} onChange={(value) => updateLocationIdentity(index, 'name', value)} />
+              <div key={location.id || `platform-location-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2 xl:grid-cols-8">
+                <AirfieldLookupField
+                  label="Location Code"
+                  value={location.code}
+                  disabled={!canEdit}
+                  suggestions={codeSuggestions}
+                  onChange={(value) => updateLocationIdentity(index, 'code', value.toUpperCase())}
+                  onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
+                />
+                <AirfieldLookupField
+                  label="Location Name"
+                  value={location.name}
+                  disabled={!canEdit}
+                  suggestions={nameSuggestions}
+                  onChange={(value) => updateLocationIdentity(index, 'name', value)}
+                  onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
+                />
                 <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
                 <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
                 <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
                 <TimeZoneField label="IANA Timezone" value={location.timezone || ''} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezone: value })} info="Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." />
                 <Field label="Training Areas" value={(location.trainingAreas || []).join(', ')} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { trainingAreas: value.split(',').map((item) => item.trim()).filter(Boolean) })} />
-                <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
+                <div className="grid gap-2">
+                  <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-100 hover:bg-red-500/20"
+                      onClick={() => removeLocation(index)}
+                    >
+                      Remove Location
+                    </button>
+                  ) : null}
+                </div>
                 {canEdit && defaultProfile ? (
                   <button
                     type="button"
@@ -1923,27 +2032,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   >
                     Apply Catalogue Match
                   </button>
-                ) : null}
-                {canEdit && suggestions.length > 0 ? (
-                  <div className="rounded-lg border border-gray-700 bg-gray-950/70 p-3 md:col-span-2 xl:col-span-8">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wide text-cyan-100">Airfield matches</span>
-                      <span className="text-xs text-gray-400">Select one to fill latitude, longitude and timezone.</span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {suggestions.map((entry) => (
-                        <button
-                          key={`${entry.c}-${entry.i}-${entry.l}-${entry.n}-${entry.a}-${entry.o}`}
-                          type="button"
-                          className="rounded border border-gray-600 bg-gray-800 px-3 py-2 text-left text-xs font-semibold text-gray-100 hover:border-cyan-400 hover:bg-cyan-500/10"
-                          onClick={() => applyKnownAirfieldToLocation(index, entry, location)}
-                          title={`${entry.a}, ${entry.o} - ${entry.t}`}
-                        >
-                          {getAirfieldDisplayLabel(entry)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 ) : null}
               </div>
             );
@@ -3063,6 +3151,67 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: s
     ) : null}
   </label>
 );
+
+const AirfieldLookupField = ({
+  label,
+  value,
+  disabled,
+  suggestions,
+  onChange,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  suggestions: AirfieldCatalogueEntry[];
+  onChange: (value: string) => void;
+  onSelect: (entry: AirfieldCatalogueEntry) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const showSuggestions = isOpen && !disabled && suggestions.length > 0 && String(value || '').trim().length >= 2;
+
+  return (
+    <label className="relative block">
+      <FieldLabel label={label} />
+      <input
+        className={fieldClass}
+        value={value || ''}
+        disabled={disabled}
+        autoComplete="off"
+        onChange={(event) => {
+          onChange(event.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
+      />
+      {showSuggestions ? (
+        <div className="absolute z-40 mt-1 max-h-72 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl">
+          {suggestions.map((entry, entryIndex) => (
+            <button
+              key={`${entry.c}-${entry.i}-${entry.l}-${entry.n}-${entry.a}-${entry.o}`}
+              type="button"
+              className={`block w-full border-b border-gray-800 px-3 py-2 text-left text-xs hover:bg-cyan-500/20 ${
+                entryIndex === 0 ? 'bg-cyan-500/10 text-cyan-100' : 'text-gray-100'
+              }`}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                onSelect(entry);
+                setIsOpen(false);
+              }}
+              title={`${entry.a}, ${entry.o} - ${entry.t}`}
+            >
+              <span className="block font-bold">{getAirfieldDisplayLabel(entry)}</span>
+              <span className="mt-0.5 block text-[11px] text-gray-400">
+                {entry.a.toFixed(4)}, {entry.o.toFixed(4)} - {entry.t}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </label>
+  );
+};
 
 const NumberField = ({ label, value, disabled, onChange, info }: { label: string; value: number; disabled: boolean; onChange: (value: number) => void; info?: string }) => (
   <label>
