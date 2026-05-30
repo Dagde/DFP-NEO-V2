@@ -10113,6 +10113,214 @@ app.get('/api/daily-snapshot/:date', async (req, res) => {
   }
 });
 
+const isoDateOnly = (value) => String(value || '').slice(0, 10);
+
+const parseJsonArraySafe = (value) => {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const eventCategoryLabel = (event) => {
+  const type = String(event?.type || '').toLowerCase();
+  if (type === 'flight') return 'Flight';
+  if (type === 'ftd' || type === 'sim' || type === 'simulator') return 'Simulator';
+  if (type === 'cpt') return 'CPT';
+  if (type === 'ground' || type === 'academic') return 'Ground';
+  if (type === 'deployment') return 'Deployment';
+  return 'Other';
+};
+
+const isFlightMetricEvent = (event) => String(event?.type || '').toLowerCase() === 'flight';
+const isSimulatorMetricEvent = (event) => {
+  const type = String(event?.type || '').toLowerCase();
+  return type === 'ftd' || type === 'sim' || type === 'simulator';
+};
+
+const addMetricCount = (target, field, amount = 1) => {
+  target[field] = Number(target[field] || 0) + amount;
+};
+
+const eventStaffNames = (event) => {
+  const names = [
+    event?.instructor,
+    event?.pilot,
+    event?.crew,
+    ...(Array.isArray(event?.attendees) ? event.attendees : []),
+  ]
+    .map((name) => String(name || '').trim())
+    .filter((name) => name && !/^TBA$/i.test(name));
+  return [...new Set(names)];
+};
+
+// GET /api/bli/metrics
+// Aggregates published daily snapshots into bounded Build Leadership Intelligence series.
+app.get('/api/bli/metrics', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const startDate = isoDateOnly(req.query.startDate);
+    const endDate = isoDateOnly(req.query.endDate);
+    const school = String(req.query.school || '').trim().toUpperCase();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return res.status(400).json({ error: 'startDate and endDate must be YYYY-MM-DD' });
+    }
+
+    const start = new Date(`${startDate}T00:00:00.000Z`);
+    const end = new Date(`${endDate}T00:00:00.000Z`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+      return res.status(400).json({ error: 'Invalid BLI date range' });
+    }
+
+    const days = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+    if (days > 1900) {
+      return res.status(400).json({ error: 'BLI date range is too large. Maximum supported range is five years.' });
+    }
+
+    const seriesByDate = new Map();
+    for (let i = 0; i < days; i += 1) {
+      const d = new Date(start.getTime() + i * 86400000);
+      const dateKey = d.toISOString().slice(0, 10);
+      seriesByDate.set(dateKey, {
+        date: dateKey,
+        flightEvents: 0,
+        simulatorEvents: 0,
+        totalEvents: 0,
+      });
+    }
+
+    const snapshotParams = [startDate, endDate];
+    let snapshotSql = `
+      SELECT date, "scheduleEvents", "baselineEvents"
+      FROM "DailySnapshot"
+      WHERE substring(date from 1 for 10) >= $1::text
+        AND substring(date from 1 for 10) <= $2::text
+    `;
+
+    if (school === 'ESL') {
+      snapshotSql += ` AND (date LIKE $3::text OR date !~ '__(ESL|PEA)$')`;
+      snapshotParams.push(`%__${school}`);
+    } else if (school === 'PEA') {
+      snapshotSql += ` AND date LIKE $3::text`;
+      snapshotParams.push(`%__${school}`);
+    }
+    snapshotSql += ` ORDER BY date ASC`;
+
+    const snapshots = await db.$queryRawUnsafe(snapshotSql, ...snapshotParams);
+    const staffDaily = {};
+    const cancellationCategories = {};
+
+    for (const snapshot of snapshots || []) {
+      const dateKey = isoDateOnly(snapshot.date);
+      if (!seriesByDate.has(dateKey)) continue;
+
+      const events = parseJsonArraySafe(snapshot.scheduleEvents).length > 0
+        ? parseJsonArraySafe(snapshot.scheduleEvents)
+        : parseJsonArraySafe(snapshot.baselineEvents);
+
+      const day = seriesByDate.get(dateKey);
+      for (const event of events) {
+        addMetricCount(day, 'totalEvents');
+        if (isFlightMetricEvent(event)) addMetricCount(day, 'flightEvents');
+        if (isSimulatorMetricEvent(event)) addMetricCount(day, 'simulatorEvents');
+
+        for (const staffName of eventStaffNames(event)) {
+          if (!staffDaily[staffName]) staffDaily[staffName] = {};
+          if (!staffDaily[staffName][dateKey]) {
+            staffDaily[staffName][dateKey] = { date: dateKey, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 };
+          }
+          addMetricCount(staffDaily[staffName][dateKey], 'totalEvents');
+          if (isFlightMetricEvent(event)) addMetricCount(staffDaily[staffName][dateKey], 'flightEvents');
+          if (isSimulatorMetricEvent(event)) addMetricCount(staffDaily[staffName][dateKey], 'simulatorEvents');
+        }
+
+        if (event?.isCancelled || event?.cancellationCode) {
+          const category = eventCategoryLabel(event);
+          const code = String(
+            event?.cancellationCode === 'OTHER' && event?.cancellationManualEntry
+              ? event.cancellationManualEntry
+              : event?.cancellationCode || 'UNSPECIFIED'
+          ).trim() || 'UNSPECIFIED';
+          if (!cancellationCategories[category]) cancellationCategories[category] = { category, total: 0, codes: {} };
+          cancellationCategories[category].total += 1;
+          cancellationCategories[category].codes[code] = Number(cancellationCategories[category].codes[code] || 0) + 1;
+        }
+      }
+    }
+
+    const availabilityRows = await db.$queryRawUnsafe(
+      `
+        SELECT *
+        FROM "AircraftAvailabilityHistory"
+        WHERE date >= $1::text AND date <= $2::text
+        ORDER BY date ASC
+      `,
+      startDate,
+      endDate
+    ).catch((error) => {
+      console.warn('[BLI] Aircraft availability history unavailable:', error.message);
+      return [];
+    });
+
+    const availabilityByDate = new Map();
+    for (const row of availabilityRows || []) {
+      const dateKey = isoDateOnly(row.date);
+      const totalAircraft = Number(row.totalAircraft ?? row.totalFleet ?? 0);
+      const dailyAverage = Number(row.dailyAverage ?? 0);
+      availabilityByDate.set(dateKey, {
+        date: dateKey,
+        availableAverage: dailyAverage,
+        totalAircraft,
+        availabilityPct: Number(row.availabilityPct ?? (totalAircraft > 0 ? (dailyAverage / totalAircraft) * 100 : 0)),
+      });
+    }
+
+    const dates = [...seriesByDate.keys()];
+    const staffSeries = {};
+    for (const [staffName, byDate] of Object.entries(staffDaily)) {
+      staffSeries[staffName] = dates.map((date) => byDate[date] || { date, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 });
+    }
+
+    const cancellationsByCategory = Object.values(cancellationCategories)
+      .map((entry) => ({
+        category: entry.category,
+        total: entry.total,
+        codes: Object.entries(entry.codes)
+          .map(([code, count]) => ({ code, count }))
+          .sort((a, b) => Number(b.count) - Number(a.count) || a.code.localeCompare(b.code)),
+      }))
+      .sort((a, b) => Number(b.total) - Number(a.total) || a.category.localeCompare(b.category));
+
+    res.json({
+      success: true,
+      startDate,
+      endDate,
+      snapshotCount: (snapshots || []).length,
+      dates,
+      eventSeries: dates.map((date) => seriesByDate.get(date)),
+      availabilitySeries: dates.map((date) => availabilityByDate.get(date) || {
+        date,
+        availableAverage: null,
+        totalAircraft: null,
+        availabilityPct: null,
+      }),
+      cancellationsByCategory,
+      staffSeries,
+    });
+  } catch (error) {
+    console.error('❌ GET /api/bli/metrics error:', error);
+    res.status(500).json({ error: 'Failed to load BLI metrics', details: error.message });
+  }
+});
+
 // DELETE /api/daily-snapshot/seed-cleanup - Delete all seed DataBackup records
 app.delete('/api/daily-snapshot/seed-cleanup', async (req, res) => {
   try {

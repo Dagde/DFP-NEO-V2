@@ -4,6 +4,7 @@ import PeopleTab from './tabs/PeopleTab';
 import CourseMetricsTab from './tabs/CourseMetricsTab';
 import BuildAnalyticsTab from './tabs/BuildAnalyticsTab';
 import TrainingIntelligenceTab from './tabs/TrainingIntelligenceTab';
+import BliTab from './tabs/BliTab';
 import ACHistoryIntelligencePanel from './ACHistoryIntelligencePanel';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
@@ -89,7 +90,7 @@ interface BuildIntelligenceViewProps {
   analysis: BuildAnalysis | null;
 }
 
-type TabType = 'people' | 'course-metrics' | 'build-analytics' | 'ac-history' | 'managerial-analytics';
+type TabType = 'people' | 'course-metrics' | 'build-analytics' | 'ac-history' | 'managerial-analytics' | 'bli';
 
 const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<TabType>('people');
@@ -112,7 +113,8 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
     { id: 'course-metrics' as TabType, label: 'Course Metrics' },
     { id: 'build-analytics' as TabType, label: 'Build Analytics' },
     { id: 'ac-history' as TabType, label: 'AC History' },
-    { id: 'managerial-analytics' as TabType, label: 'Managerial Analytics' }
+    { id: 'managerial-analytics' as TabType, label: 'Managerial Analytics' },
+    { id: 'bli' as TabType, label: 'BLI' }
   ];
 
   return (
@@ -210,6 +212,16 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
 
             {activeTab === 'managerial-analytics' && (
               <TrainingIntelligenceTab />
+            )}
+
+            {activeTab === 'bli' && (
+              <BliTab
+                date={props.date}
+                events={props.events}
+                instructorsData={props.instructorsData}
+                currentAircraftAvailable={props.currentAircraftAvailable}
+                totalAircraft={props.totalAircraft}
+              />
             )}
           </div>
         </div>
