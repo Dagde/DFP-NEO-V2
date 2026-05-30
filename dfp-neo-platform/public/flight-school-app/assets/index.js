@@ -26113,6 +26113,20 @@ const initialCancellationCodes = [
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
   }
 ];
+const verifyCurrentUserPassword = async (password) => {
+  const sessionToken = localStorage.getItem("dfp_session_token") || "";
+  const response = await fetch("/api/auth/verify-password", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+    },
+    body: JSON.stringify({ password })
+  });
+  const data = await response.json().catch(() => ({}));
+  return response.ok && data.valid === true;
+};
 const isStaffMetricKey = (key) => key === "staffFlight" || key === "staffSimulator" || key === "staffTotal";
 const metricStrokeColor = (color) => {
   if (color.includes("cyan")) return "#22d3ee";
@@ -26133,8 +26147,17 @@ const TIMELINE_OPTIONS = [
   { key: "12m", label: "Last 12 months" },
   { key: "2y", label: "Last 2 years" },
   { key: "3y", label: "Last 3 years" },
-  { key: "5y", label: "Last 5 years" }
+  { key: "5y", label: "Last 5 years" },
+  { key: "lastCY", label: "Last CY" },
+  { key: "lastFY", label: "Last FY" },
+  { key: "thisCY", label: "This CY" },
+  { key: "thisFY", label: "This FY" }
 ];
+const BLI_PERIOD_SETTINGS_KEY = "neo_bli_period_settings";
+const DEFAULT_BLI_PERIOD_SETTINGS = {
+  cy: { start: "01-01", end: "12-31" },
+  fy: { start: "07-01", end: "06-30" }
+};
 const RANK_ORDER = {
   AIRCDRE: 1,
   GPCAPT: 2,
@@ -26161,6 +26184,51 @@ const dateLabel = (value) => {
   return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" });
 };
 const formatDateRange = (startDate, endDate) => `${dateLabel(startDate)} - ${dateLabel(endDate)}`;
+const parseMonthDay = (value) => {
+  const match = /^(\d{1,2})-(\d{1,2})$/.exec(String(value || "").trim());
+  if (!match) return null;
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  if (!Number.isInteger(month) || !Number.isInteger(day) || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const probe = new Date(Date.UTC(2024, month - 1, day));
+  if (probe.getUTCMonth() !== month - 1 || probe.getUTCDate() !== day) return null;
+  return { month, day };
+};
+const monthDaySortValue = (value) => {
+  const parsed = parseMonthDay(value);
+  return parsed ? parsed.month * 100 + parsed.day : 0;
+};
+const normaliseMonthDay = (value) => {
+  const parsed = parseMonthDay(value);
+  if (!parsed) return "";
+  return `${String(parsed.month).padStart(2, "0")}-${String(parsed.day).padStart(2, "0")}`;
+};
+const monthDayLabel = (value) => {
+  const parsed = parseMonthDay(value);
+  if (!parsed) return value;
+  const date = new Date(Date.UTC(2024, parsed.month - 1, parsed.day));
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" });
+};
+const periodLabel = (period) => `${monthDayLabel(period.start)} - ${monthDayLabel(period.end)}`;
+const loadBliPeriodSettings = () => {
+  if (typeof window === "undefined") return DEFAULT_BLI_PERIOD_SETTINGS;
+  try {
+    const stored = window.localStorage.getItem(BLI_PERIOD_SETTINGS_KEY);
+    if (!stored) return DEFAULT_BLI_PERIOD_SETTINGS;
+    const parsed = JSON.parse(stored);
+    const cyStart = normaliseMonthDay(parsed?.cy?.start) || DEFAULT_BLI_PERIOD_SETTINGS.cy.start;
+    const cyEnd = normaliseMonthDay(parsed?.cy?.end) || DEFAULT_BLI_PERIOD_SETTINGS.cy.end;
+    const fyStart = normaliseMonthDay(parsed?.fy?.start) || DEFAULT_BLI_PERIOD_SETTINGS.fy.start;
+    const fyEnd = normaliseMonthDay(parsed?.fy?.end) || DEFAULT_BLI_PERIOD_SETTINGS.fy.end;
+    return { cy: { start: cyStart, end: cyEnd }, fy: { start: fyStart, end: fyEnd } };
+  } catch {
+    return DEFAULT_BLI_PERIOD_SETTINGS;
+  }
+};
+const saveBliPeriodSettings = (settings) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(BLI_PERIOD_SETTINGS_KEY, JSON.stringify(settings));
+};
 const addUtcDays = (date, days) => {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + days);
@@ -26171,7 +26239,26 @@ const addUtcYears = (date, years) => {
   next.setUTCFullYear(next.getUTCFullYear() + years);
   return next;
 };
-const getTimelineRange = (anchorIso, timeline) => {
+const buildConfiguredPeriod = (period, startYear) => {
+  const start = parseMonthDay(period.start) || parseMonthDay(DEFAULT_BLI_PERIOD_SETTINGS.cy.start);
+  const end = parseMonthDay(period.end) || parseMonthDay(DEFAULT_BLI_PERIOD_SETTINGS.cy.end);
+  const rollsIntoNextYear = monthDaySortValue(period.end) < monthDaySortValue(period.start);
+  return {
+    start: new Date(Date.UTC(startYear, start.month - 1, start.day)),
+    end: new Date(Date.UTC(rollsIntoNextYear ? startYear + 1 : startYear, end.month - 1, end.day))
+  };
+};
+const getConfiguredPeriodRange = (anchor, period, mode) => {
+  const anchorYear = anchor.getUTCFullYear();
+  const candidates = [anchorYear - 1, anchorYear, anchorYear + 1].map((year) => ({
+    startYear: year,
+    ...buildConfiguredPeriod(period, year)
+  }));
+  const current = candidates.find((candidate) => anchor >= candidate.start && anchor <= candidate.end) || candidates[1];
+  const selected = mode === "this" ? current : { startYear: current.startYear - 1, ...buildConfiguredPeriod(period, current.startYear - 1) };
+  return { startDate: toIsoDate(selected.start), endDate: toIsoDate(selected.end) };
+};
+const getTimelineRange = (anchorIso, timeline, periodSettings = DEFAULT_BLI_PERIOD_SETTINGS) => {
   const end = parseIsoDate(anchorIso);
   let start = new Date(end);
   if (timeline === "7d") start = addUtcDays(end, -6);
@@ -26181,6 +26268,10 @@ const getTimelineRange = (anchorIso, timeline) => {
   if (timeline === "2y") start = addUtcYears(end, -2);
   if (timeline === "3y") start = addUtcYears(end, -3);
   if (timeline === "5y") start = addUtcYears(end, -5);
+  if (timeline === "thisCY") return getConfiguredPeriodRange(end, periodSettings.cy, "this");
+  if (timeline === "lastCY") return getConfiguredPeriodRange(end, periodSettings.cy, "last");
+  if (timeline === "thisFY") return getConfiguredPeriodRange(end, periodSettings.fy, "this");
+  if (timeline === "lastFY") return getConfiguredPeriodRange(end, periodSettings.fy, "last");
   return { startDate: toIsoDate(start), endDate: toIsoDate(end) };
 };
 const normalizeAvailabilityDate = (value) => String(value || "").slice(0, 10);
@@ -26768,13 +26859,62 @@ const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
     }
   );
 };
-const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff }) => {
+const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraftChange, onRequestEdit, onSave, onCancel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[190px] rounded-md border border-slate-700/80 bg-slate-950/45 p-3", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: title }),
+      !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-slate-200", children: periodLabel(boundary) })
+    ] }),
+    !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        onClick: () => onRequestEdit(periodKey),
+        className: "rounded border border-slate-700 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:border-cyan-400 hover:text-cyan-200",
+        children: "Change"
+      }
+    )
+  ] }),
+  isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] uppercase tracking-[0.14em] text-slate-500", children: "Start" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            value: draft.start,
+            onChange: (event) => onDraftChange({ ...draft, start: event.target.value }),
+            placeholder: "MM-DD",
+            className: "h-8 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] uppercase tracking-[0.14em] text-slate-500", children: "End" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            value: draft.end,
+            onChange: (event) => onDraftChange({ ...draft, end: event.target.value }),
+            placeholder: "MM-DD",
+            className: "h-8 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded px-2 py-1 text-[11px] font-semibold text-slate-400 hover:text-white", children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => onSave(periodKey), className: "rounded bg-cyan-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-cyan-500", children: "Save" })
+    ] })
+  ] })
+] });
+const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings }) => {
   const [timeline, setTimeline] = reactExports.useState("7d");
   const [modalMetrics, setModalMetrics] = reactExports.useState(initialMetrics);
   const [selectedStaff, setSelectedStaff] = reactExports.useState(initialStaff);
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
-  const range = reactExports.useMemo(() => getTimelineRange(date, timeline), [date, timeline]);
+  const range = reactExports.useMemo(() => getTimelineRange(date, timeline, periodSettings), [date, periodSettings, timeline]);
   const dateRangeLabel = reactExports.useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
   const showStaffSelector = isStaffMetricKey(metric.key);
   reactExports.useEffect(() => {
@@ -26888,11 +27028,67 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
   const [openMetric, setOpenMetric] = reactExports.useState(null);
-  const previewRange = reactExports.useMemo(() => getTimelineRange(date, "7d"), [date]);
+  const [periodSettings, setPeriodSettings] = reactExports.useState(() => loadBliPeriodSettings());
+  const [editingPeriod, setEditingPeriod] = reactExports.useState(null);
+  const [periodDraft, setPeriodDraft] = reactExports.useState(() => loadBliPeriodSettings());
+  const previewRange = reactExports.useMemo(() => getTimelineRange(date, "7d", periodSettings), [date, periodSettings]);
   const previewDateRangeLabel = reactExports.useMemo(
     () => formatDateRange(previewRange.startDate, previewRange.endDate),
     [previewRange.endDate, previewRange.startDate]
   );
+  const requestPeriodEdit = async (periodKey) => {
+    const password = await showDarkPrompt({
+      title: "Change BLI Year Dates",
+      message: `Enter your password to change the ${periodKey === "cy" ? "Calendar Year" : "Financial Year"} reporting dates.`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted. The BLI reporting dates were not unlocked.", "Password Required", "warning");
+        return;
+      }
+    } catch {
+      await showDarkAlert("The app could not verify your password. The BLI reporting dates were not unlocked.", "Password Check Failed", "error");
+      return;
+    }
+    setPeriodDraft(periodSettings);
+    setEditingPeriod(periodKey);
+  };
+  const updatePeriodDraft = (periodKey, boundary) => {
+    setPeriodDraft((prev) => ({ ...prev, [periodKey]: boundary }));
+  };
+  const cancelPeriodEdit = () => {
+    setPeriodDraft(periodSettings);
+    setEditingPeriod(null);
+  };
+  const savePeriodBoundary = async (periodKey) => {
+    const draft = periodDraft[periodKey];
+    const start = normaliseMonthDay(draft.start);
+    const end = normaliseMonthDay(draft.end);
+    if (!start || !end) {
+      await showDarkAlert("Enter dates in MM-DD format, for example 01-01 or 07-01.", "Invalid Date Format", "warning");
+      return;
+    }
+    if (start === end) {
+      await showDarkAlert("Start and end dates must be different.", "Invalid Reporting Period", "warning");
+      return;
+    }
+    const nextSettings = {
+      ...periodSettings,
+      [periodKey]: { start, end }
+    };
+    setPeriodSettings(nextSettings);
+    setPeriodDraft(nextSettings);
+    saveBliPeriodSettings(nextSettings);
+    setEditingPeriod(null);
+  };
   const sortedStaff2 = reactExports.useMemo(() => {
     const deduped = /* @__PURE__ */ new Map();
     instructorsData.forEach((person) => {
@@ -26942,19 +27138,52 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
         totalAircraft,
         initialMetrics: metrics,
         staffGroups,
-        initialStaff: previewStaff
+        initialStaff: previewStaff,
+        periodSettings
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap items-end justify-between gap-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Business-Level Intelligence" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
-          "Operational schedule, cancellation and utilisation signals. Preview cards show ",
-          previewDateRangeLabel,
-          "; each expanded graph has its own timeline control."
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-between gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Business-Level Intelligence" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
+            "Operational schedule, cancellation and utilisation signals. Preview cards show ",
+            previewDateRangeLabel,
+            "; each expanded graph has its own timeline control."
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-stretch gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            BliPeriodWindow,
+            {
+              title: "Calendar Year",
+              periodKey: "cy",
+              boundary: periodSettings.cy,
+              isEditing: editingPeriod === "cy",
+              draft: periodDraft.cy,
+              onDraftChange: (boundary) => updatePeriodDraft("cy", boundary),
+              onRequestEdit: requestPeriodEdit,
+              onSave: savePeriodBoundary,
+              onCancel: cancelPeriodEdit
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            BliPeriodWindow,
+            {
+              title: "Financial Year",
+              periodKey: "fy",
+              boundary: periodSettings.fy,
+              isEditing: editingPeriod === "fy",
+              draft: periodDraft.fy,
+              onDraftChange: (boundary) => updatePeriodDraft("fy", boundary),
+              onRequestEdit: requestPeriodEdit,
+              onSave: savePeriodBoundary,
+              onCancel: cancelPeriodEdit
+            }
+          )
         ] })
-      ] }) }),
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading published metrics..." : `${metrics.snapshotCount} published snapshots in range` }),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })
@@ -27587,7 +27816,7 @@ const ACHistoryAircraftAvailability = ({
         <td style="text-align:right;color:${pctColor}">${r.availabilityPct.toFixed(1)}%</td>
       </tr>`;
     }).join("");
-    const periodLabel = formatPeriodLabel(selectedPeriod);
+    const periodLabel2 = formatPeriodLabel(selectedPeriod);
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
 <head><meta charset="UTF-8">
 <style>
@@ -27597,7 +27826,7 @@ const ACHistoryAircraftAvailability = ({
 </style>
 </head>
 <body>
-<h2 style="font-family:Arial;color:#1e3a5f">Daily Average Aircraft Available — ${periodLabel}</h2>
+<h2 style="font-family:Arial;color:#1e3a5f">Daily Average Aircraft Available — ${periodLabel2}</h2>
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-family:Arial;font-size:12px">
   <thead><tr>
     <th>Date</th><th>Day</th><th>Daily Avg (ac)</th><th>Planned</th><th>Actual</th><th>Fleet Size</th><th>Availability %</th>
@@ -37020,20 +37249,6 @@ const EmergencyPage = ({
       ] })
     ] }) })
   ] });
-};
-const verifyCurrentUserPassword = async (password) => {
-  const sessionToken = localStorage.getItem("dfp_session_token") || "";
-  const response = await fetch("/api/auth/verify-password", {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
-    },
-    body: JSON.stringify({ password })
-  });
-  const data = await response.json().catch(() => ({}));
-  return response.ok && data.valid === true;
 };
 const INITIAL_ELEMENTS_LIST_INLINE = [
   "Generic Flying Elements",

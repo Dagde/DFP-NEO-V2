@@ -9,12 +9,15 @@ import {
   Squares2X2Icon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import { showDarkAlert, showDarkPrompt } from '../DarkMessageModal';
 import { initialCancellationCodes } from '../../data/cancellationCodes';
 import type { Instructor, ScheduleEvent } from '../../types';
+import { verifyCurrentUserPassword } from '../../utils/passwordVerification';
 
-type TimelineKey = '7d' | '1m' | '6m' | '12m' | '2y' | '3y' | '5y';
+type TimelineKey = '7d' | '1m' | '6m' | '12m' | '2y' | '3y' | '5y' | 'lastCY' | 'lastFY' | 'thisCY' | 'thisFY';
 type MetricKey = 'availability' | 'flight' | 'flightHours' | 'simulator' | 'simulatorHours' | 'total' | 'cancellations' | 'staffFlight' | 'staffSimulator' | 'staffTotal';
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+type PeriodKey = 'cy' | 'fy';
 
 interface DailyEventMetrics {
   date: string;
@@ -98,6 +101,16 @@ interface SeriesStats {
   dataPointCount: number;
 }
 
+interface BliYearBoundary {
+  start: string;
+  end: string;
+}
+
+interface BliPeriodSettings {
+  cy: BliYearBoundary;
+  fy: BliYearBoundary;
+}
+
 const isStaffMetricKey = (key: MetricKey): boolean => (
   key === 'staffFlight' || key === 'staffSimulator' || key === 'staffTotal'
 );
@@ -123,7 +136,17 @@ const TIMELINE_OPTIONS: { key: TimelineKey; label: string }[] = [
   { key: '2y', label: 'Last 2 years' },
   { key: '3y', label: 'Last 3 years' },
   { key: '5y', label: 'Last 5 years' },
+  { key: 'lastCY', label: 'Last CY' },
+  { key: 'lastFY', label: 'Last FY' },
+  { key: 'thisCY', label: 'This CY' },
+  { key: 'thisFY', label: 'This FY' },
 ];
+
+const BLI_PERIOD_SETTINGS_KEY = 'neo_bli_period_settings';
+const DEFAULT_BLI_PERIOD_SETTINGS: BliPeriodSettings = {
+  cy: { start: '01-01', end: '12-31' },
+  fy: { start: '07-01', end: '06-30' },
+};
 
 const RANK_ORDER: Record<string, number> = {
   AIRCDRE: 1,
@@ -156,6 +179,58 @@ const dateLabel = (value: string): string => {
 
 const formatDateRange = (startDate: string, endDate: string): string => `${dateLabel(startDate)} - ${dateLabel(endDate)}`;
 
+const parseMonthDay = (value: string): { month: number; day: number } | null => {
+  const match = /^(\d{1,2})-(\d{1,2})$/.exec(String(value || '').trim());
+  if (!match) return null;
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  if (!Number.isInteger(month) || !Number.isInteger(day) || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const probe = new Date(Date.UTC(2024, month - 1, day));
+  if (probe.getUTCMonth() !== month - 1 || probe.getUTCDate() !== day) return null;
+  return { month, day };
+};
+
+const monthDaySortValue = (value: string): number => {
+  const parsed = parseMonthDay(value);
+  return parsed ? parsed.month * 100 + parsed.day : 0;
+};
+
+const normaliseMonthDay = (value: string): string => {
+  const parsed = parseMonthDay(value);
+  if (!parsed) return '';
+  return `${String(parsed.month).padStart(2, '0')}-${String(parsed.day).padStart(2, '0')}`;
+};
+
+const monthDayLabel = (value: string): string => {
+  const parsed = parseMonthDay(value);
+  if (!parsed) return value;
+  const date = new Date(Date.UTC(2024, parsed.month - 1, parsed.day));
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+};
+
+const periodLabel = (period: BliYearBoundary): string => `${monthDayLabel(period.start)} - ${monthDayLabel(period.end)}`;
+
+const loadBliPeriodSettings = (): BliPeriodSettings => {
+  if (typeof window === 'undefined') return DEFAULT_BLI_PERIOD_SETTINGS;
+  try {
+    const stored = window.localStorage.getItem(BLI_PERIOD_SETTINGS_KEY);
+    if (!stored) return DEFAULT_BLI_PERIOD_SETTINGS;
+    const parsed = JSON.parse(stored);
+    const cyStart = normaliseMonthDay(parsed?.cy?.start) || DEFAULT_BLI_PERIOD_SETTINGS.cy.start;
+    const cyEnd = normaliseMonthDay(parsed?.cy?.end) || DEFAULT_BLI_PERIOD_SETTINGS.cy.end;
+    const fyStart = normaliseMonthDay(parsed?.fy?.start) || DEFAULT_BLI_PERIOD_SETTINGS.fy.start;
+    const fyEnd = normaliseMonthDay(parsed?.fy?.end) || DEFAULT_BLI_PERIOD_SETTINGS.fy.end;
+    return { cy: { start: cyStart, end: cyEnd }, fy: { start: fyStart, end: fyEnd } };
+  } catch {
+    return DEFAULT_BLI_PERIOD_SETTINGS;
+  }
+};
+
+const saveBliPeriodSettings = (settings: BliPeriodSettings): void => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(BLI_PERIOD_SETTINGS_KEY, JSON.stringify(settings));
+};
+
 const addUtcDays = (date: Date, days: number): Date => {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + days);
@@ -168,7 +243,38 @@ const addUtcYears = (date: Date, years: number): Date => {
   return next;
 };
 
-const getTimelineRange = (anchorIso: string, timeline: TimelineKey): { startDate: string; endDate: string } => {
+const buildConfiguredPeriod = (period: BliYearBoundary, startYear: number): { start: Date; end: Date } => {
+  const start = parseMonthDay(period.start) || parseMonthDay(DEFAULT_BLI_PERIOD_SETTINGS.cy.start)!;
+  const end = parseMonthDay(period.end) || parseMonthDay(DEFAULT_BLI_PERIOD_SETTINGS.cy.end)!;
+  const rollsIntoNextYear = monthDaySortValue(period.end) < monthDaySortValue(period.start);
+  return {
+    start: new Date(Date.UTC(startYear, start.month - 1, start.day)),
+    end: new Date(Date.UTC(rollsIntoNextYear ? startYear + 1 : startYear, end.month - 1, end.day)),
+  };
+};
+
+const getConfiguredPeriodRange = (
+  anchor: Date,
+  period: BliYearBoundary,
+  mode: 'this' | 'last',
+): { startDate: string; endDate: string } => {
+  const anchorYear = anchor.getUTCFullYear();
+  const candidates = [anchorYear - 1, anchorYear, anchorYear + 1].map(year => ({
+    startYear: year,
+    ...buildConfiguredPeriod(period, year),
+  }));
+  const current = candidates.find(candidate => anchor >= candidate.start && anchor <= candidate.end) || candidates[1];
+  const selected = mode === 'this'
+    ? current
+    : { startYear: current.startYear - 1, ...buildConfiguredPeriod(period, current.startYear - 1) };
+  return { startDate: toIsoDate(selected.start), endDate: toIsoDate(selected.end) };
+};
+
+const getTimelineRange = (
+  anchorIso: string,
+  timeline: TimelineKey,
+  periodSettings: BliPeriodSettings = DEFAULT_BLI_PERIOD_SETTINGS,
+): { startDate: string; endDate: string } => {
   const end = parseIsoDate(anchorIso);
   let start = new Date(end);
 
@@ -179,6 +285,10 @@ const getTimelineRange = (anchorIso: string, timeline: TimelineKey): { startDate
   if (timeline === '2y') start = addUtcYears(end, -2);
   if (timeline === '3y') start = addUtcYears(end, -3);
   if (timeline === '5y') start = addUtcYears(end, -5);
+  if (timeline === 'thisCY') return getConfiguredPeriodRange(end, periodSettings.cy, 'this');
+  if (timeline === 'lastCY') return getConfiguredPeriodRange(end, periodSettings.cy, 'last');
+  if (timeline === 'thisFY') return getConfiguredPeriodRange(end, periodSettings.fy, 'this');
+  if (timeline === 'lastFY') return getConfiguredPeriodRange(end, periodSettings.fy, 'last');
 
   return { startDate: toIsoDate(start), endDate: toIsoDate(end) };
 };
@@ -883,6 +993,68 @@ const MetricTile: React.FC<{
   );
 };
 
+const BliPeriodWindow: React.FC<{
+  title: string;
+  periodKey: PeriodKey;
+  boundary: BliYearBoundary;
+  isEditing: boolean;
+  draft: BliYearBoundary;
+  onDraftChange: (boundary: BliYearBoundary) => void;
+  onRequestEdit: (periodKey: PeriodKey) => void;
+  onSave: (periodKey: PeriodKey) => void;
+  onCancel: () => void;
+}> = ({ title, periodKey, boundary, isEditing, draft, onDraftChange, onRequestEdit, onSave, onCancel }) => (
+  <div className="min-w-[190px] rounded-md border border-slate-700/80 bg-slate-950/45 p-3">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</div>
+        {!isEditing && <div className="mt-1 text-sm font-semibold text-slate-200">{periodLabel(boundary)}</div>}
+      </div>
+      {!isEditing && (
+        <button
+          type="button"
+          onClick={() => onRequestEdit(periodKey)}
+          className="rounded border border-slate-700 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:border-cyan-400 hover:text-cyan-200"
+        >
+          Change
+        </button>
+      )}
+    </div>
+    {isEditing && (
+      <div className="mt-2 space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-slate-500">Start</span>
+            <input
+              value={draft.start}
+              onChange={event => onDraftChange({ ...draft, start: event.target.value })}
+              placeholder="MM-DD"
+              className="h-8 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-slate-500">End</span>
+            <input
+              value={draft.end}
+              onChange={event => onDraftChange({ ...draft, end: event.target.value })}
+              placeholder="MM-DD"
+              className="h-8 w-full rounded border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
+            />
+          </label>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded px-2 py-1 text-[11px] font-semibold text-slate-400 hover:text-white">
+            Cancel
+          </button>
+          <button type="button" onClick={() => onSave(periodKey)} className="rounded bg-cyan-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-cyan-500">
+            Save
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+);
+
 const MetricModal: React.FC<{
   metric: MetricDefinition;
   onClose: () => void;
@@ -893,13 +1065,14 @@ const MetricModal: React.FC<{
   initialMetrics: BliMetricsResponse;
   staffGroups: [string, Instructor[]][];
   initialStaff: string;
-}> = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff }) => {
+  periodSettings: BliPeriodSettings;
+}> = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings }) => {
   const [timeline, setTimeline] = useState<TimelineKey>('7d');
   const [modalMetrics, setModalMetrics] = useState<BliMetricsResponse>(initialMetrics);
   const [selectedStaff, setSelectedStaff] = useState(initialStaff);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const range = useMemo(() => getTimelineRange(date, timeline), [date, timeline]);
+  const range = useMemo(() => getTimelineRange(date, timeline, periodSettings), [date, periodSettings, timeline]);
   const dateRangeLabel = useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
   const showStaffSelector = isStaffMetricKey(metric.key);
 
@@ -1021,12 +1194,75 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openMetric, setOpenMetric] = useState<MetricDefinition | null>(null);
+  const [periodSettings, setPeriodSettings] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
+  const [editingPeriod, setEditingPeriod] = useState<PeriodKey | null>(null);
+  const [periodDraft, setPeriodDraft] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
 
-  const previewRange = useMemo(() => getTimelineRange(date, '7d'), [date]);
+  const previewRange = useMemo(() => getTimelineRange(date, '7d', periodSettings), [date, periodSettings]);
   const previewDateRangeLabel = useMemo(
     () => formatDateRange(previewRange.startDate, previewRange.endDate),
     [previewRange.endDate, previewRange.startDate],
   );
+
+  const requestPeriodEdit = async (periodKey: PeriodKey) => {
+    const password = await showDarkPrompt({
+      title: 'Change BLI Year Dates',
+      message: `Enter your password to change the ${periodKey === 'cy' ? 'Calendar Year' : 'Financial Year'} reporting dates.`,
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!password) return;
+
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert('The password was not accepted. The BLI reporting dates were not unlocked.', 'Password Required', 'warning');
+        return;
+      }
+    } catch {
+      await showDarkAlert('The app could not verify your password. The BLI reporting dates were not unlocked.', 'Password Check Failed', 'error');
+      return;
+    }
+
+    setPeriodDraft(periodSettings);
+    setEditingPeriod(periodKey);
+  };
+
+  const updatePeriodDraft = (periodKey: PeriodKey, boundary: BliYearBoundary) => {
+    setPeriodDraft(prev => ({ ...prev, [periodKey]: boundary }));
+  };
+
+  const cancelPeriodEdit = () => {
+    setPeriodDraft(periodSettings);
+    setEditingPeriod(null);
+  };
+
+  const savePeriodBoundary = async (periodKey: PeriodKey) => {
+    const draft = periodDraft[periodKey];
+    const start = normaliseMonthDay(draft.start);
+    const end = normaliseMonthDay(draft.end);
+    if (!start || !end) {
+      await showDarkAlert('Enter dates in MM-DD format, for example 01-01 or 07-01.', 'Invalid Date Format', 'warning');
+      return;
+    }
+    if (start === end) {
+      await showDarkAlert('Start and end dates must be different.', 'Invalid Reporting Period', 'warning');
+      return;
+    }
+
+    const nextSettings = {
+      ...periodSettings,
+      [periodKey]: { start, end },
+    };
+    setPeriodSettings(nextSettings);
+    setPeriodDraft(nextSettings);
+    saveBliPeriodSettings(nextSettings);
+    setEditingPeriod(null);
+  };
 
   const sortedStaff = useMemo(() => {
     const deduped = new Map<string, Instructor>();
@@ -1090,6 +1326,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
           initialMetrics={metrics}
           staffGroups={staffGroups}
           initialStaff={previewStaff}
+          periodSettings={periodSettings}
         />
       )}
 
@@ -1101,6 +1338,30 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
             <p className="mt-1 text-sm text-slate-400">
               Operational schedule, cancellation and utilisation signals. Preview cards show {previewDateRangeLabel}; each expanded graph has its own timeline control.
             </p>
+          </div>
+          <div className="flex flex-wrap items-stretch gap-3">
+            <BliPeriodWindow
+              title="Calendar Year"
+              periodKey="cy"
+              boundary={periodSettings.cy}
+              isEditing={editingPeriod === 'cy'}
+              draft={periodDraft.cy}
+              onDraftChange={boundary => updatePeriodDraft('cy', boundary)}
+              onRequestEdit={requestPeriodEdit}
+              onSave={savePeriodBoundary}
+              onCancel={cancelPeriodEdit}
+            />
+            <BliPeriodWindow
+              title="Financial Year"
+              periodKey="fy"
+              boundary={periodSettings.fy}
+              isEditing={editingPeriod === 'fy'}
+              draft={periodDraft.fy}
+              onDraftChange={boundary => updatePeriodDraft('fy', boundary)}
+              onRequestEdit={requestPeriodEdit}
+              onSave={savePeriodBoundary}
+              onCancel={cancelPeriodEdit}
+            />
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
