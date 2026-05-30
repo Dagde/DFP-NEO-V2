@@ -2083,7 +2083,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="md:col-span-1">
                   <Field label="Unit" value={unit.code} disabled={!canEdit} onChange={(value) => updateRow('units', index, { code: value })} />
                 </div>
-                <div className="md:col-span-3">
+                <div className="md:col-span-2">
                   <Field label="Unit Name" value={unit.name} disabled={!canEdit} onChange={(value) => updateRow('units', index, { name: value })} />
                 </div>
                 <div className="md:col-span-2">
@@ -2107,7 +2107,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     })}
                   />
                 </div>
-                <div className="md:col-span-1">
+                <div className="md:col-span-2">
                   <SelectField label="Status" value={unit.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('units', index, { status: value })} />
                 </div>
               </div>

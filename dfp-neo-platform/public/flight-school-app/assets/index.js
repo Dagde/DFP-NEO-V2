@@ -4781,28 +4781,35 @@ const Header = ({
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 flex items-center justify-center", style: { width: "230px", paddingLeft: "8px", paddingRight: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-full items-center gap-1", title: `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}${activeModelLabel ? ` | ${activeModelLabel}` : ""}`, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "select",
-          {
-            value: activeLocation,
-            onChange: (e) => onLocationChange(e.target.value),
-            className: "w-[78px] bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-1 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none text-center",
-            children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs font-bold", children: "-" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "select",
-          {
-            value: activeUnit,
-            onChange: (e) => onUnitChange(e.target.value),
-            disabled: units.length <= 1,
-            className: "min-w-0 flex-1 bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-1 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none text-center disabled:opacity-80",
-            children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
-          }
-        )
-      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 flex items-center justify-center", style: { width: "250px", paddingLeft: "8px", paddingRight: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "flex h-8 w-full items-center overflow-hidden rounded-md border border-gray-600 bg-gray-700 shadow-inner",
+          title: `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}${activeModelLabel ? ` | ${activeModelLabel}` : ""}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: activeLocation,
+                onChange: (e) => onLocationChange(e.target.value),
+                className: "h-full w-[86px] border-0 bg-transparent px-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-0",
+                children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-full items-center border-x border-gray-600 px-2 text-xs font-bold text-gray-300", children: "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: activeUnit,
+                onChange: (e) => onUnitChange(e.target.value),
+                disabled: units.length <= 1,
+                className: "h-full min-w-0 flex-1 border-0 bg-transparent px-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-0 disabled:opacity-80",
+                children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+              }
+            )
+          ]
+        }
+      ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", style: { gap: "1px" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -4938,7 +4945,7 @@ const Header = ({
           }
         ) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", style: { width: "230px" } })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", style: { width: "250px" } })
     ] }),
     showUserMenu && authUser && userButtonRef.current && ReactDOM.createPortal(
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -45157,7 +45164,7 @@ const PlatformConfigurationSettings = ({
         const unitSettings = unit.settings || {};
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit", value: unit.code, disabled: !canEdit, onChange: (value) => updateRow("units", index, { code: value }) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !canEdit, onChange: (value) => updateRow("units", index, { name: value }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !canEdit, onChange: (value) => updateRow("units", index, { name: value }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !canEdit, options: config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -45176,7 +45183,7 @@ const PlatformConfigurationSettings = ({
               })
             }
           ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) }) })
         ] }, unit.id || unit.code || index);
       }) })
     ] }),

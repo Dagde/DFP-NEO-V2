@@ -112,30 +112,33 @@ const Header: React.FC<HeaderProps> = ({
                 LAYOUT:
                 The header sits between left sidebar (110px) and right sidebar (110px).
                 Header uses a 3-column flex layout:
-                  [230px context dropdowns] [flex-1 centered buttons] [230px spacer]
-                The 230px spacer on the right balances the context controls on the left,
+                  [250px context selector] [flex-1 centered buttons] [250px spacer]
+                The 250px spacer on the right balances the context controls on the left,
                 so the button group is perfectly centered in the header.
             */}
             <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative">
 
                 {/* LEFT: Operational context - Location then Unit */}
-                <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '230px', paddingLeft: '8px', paddingRight: '8px' }}>
-                  <div className="flex w-full items-center gap-1" title={`${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}${activeModelLabel ? ` | ${activeModelLabel}` : ''}`}>
+                <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '250px', paddingLeft: '8px', paddingRight: '8px' }}>
+                  <div
+                    className="flex h-8 w-full items-center overflow-hidden rounded-md border border-gray-600 bg-gray-700 shadow-inner"
+                    title={`${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}${activeModelLabel ? ` | ${activeModelLabel}` : ''}`}
+                  >
                     <select
                         value={activeLocation}
                         onChange={(e) => onLocationChange(e.target.value)}
-                        className="w-[78px] bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-1 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none text-center"
+                        className="h-full w-[86px] border-0 bg-transparent px-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-0"
                     >
                         {locations.map(loc => (
                             <option key={loc} value={loc}>{loc}</option>
                         ))}
                     </select>
-                    <span className="text-gray-400 text-xs font-bold">-</span>
+                    <span className="flex h-full items-center border-x border-gray-600 px-2 text-xs font-bold text-gray-300">-</span>
                     <select
                         value={activeUnit}
                         onChange={(e) => onUnitChange(e.target.value)}
                         disabled={units.length <= 1}
-                        className="min-w-0 flex-1 bg-gray-700 border border-gray-600 rounded-md text-white py-1 px-1 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none text-center disabled:opacity-80"
+                        className="h-full min-w-0 flex-1 border-0 bg-transparent px-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-0 disabled:opacity-80"
                     >
                         {units.map(unit => (
                             <option key={unit} value={unit}>{unit}</option>
@@ -274,7 +277,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* RIGHT: spacer to balance the operational context selector on the left,
                     ensuring the button group is perfectly centered in the header */}
-                <div className="flex-shrink-0" style={{ width: '230px' }}></div>
+                <div className="flex-shrink-0" style={{ width: '250px' }}></div>
 
             </header>
             
