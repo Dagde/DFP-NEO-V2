@@ -10516,6 +10516,19 @@ const App: React.FC = () => {
         return events.length;
     }, [activeUnitCode]);
 
+    const getDailySnapshotLocationAliases = React.useCallback((locationCode: string): string[] => {
+        const normalisedLocationCode = String(locationCode || '').trim().toUpperCase();
+        const matchingLocation = (platformConfig?.locations || [])
+            .filter((location: any) => location.status !== 'INACTIVE')
+            .find((location: any) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+        return [
+            normalisedLocationCode,
+            ...(matchingLocation ? getLocationSelectorAliases(matchingLocation) : []),
+        ].map(alias => String(alias || '').trim().toUpperCase()).filter((alias, index, aliases) => (
+            Boolean(alias) && aliases.indexOf(alias) === index
+        ));
+    }, [getLocationSelectorAliases, platformConfig]);
+
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
     const loadSnapshotForDate = React.useCallback(async (
         targetDate: string,
@@ -10525,12 +10538,14 @@ const App: React.FC = () => {
         const snapshotSchool = schoolOverride ?? school;
         const snapshotUnit = unitOverride ?? activeUnitCode;
         const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
+        const snapshotLocationAliases = getDailySnapshotLocationAliases(snapshotSchool);
         const cacheKey = `dfp_snapshot_cache_${snapshotKey}`;
         pushDfpDataDiag('snapshot:load-start', {
             targetDate,
             snapshotSchool,
             snapshotUnit,
             snapshotKey,
+            snapshotLocationAliases,
             cacheKey,
             force,
             replace,
@@ -10602,38 +10617,37 @@ const App: React.FC = () => {
                 }
 
                 try {
-                    const scopedUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(snapshotKey)}`;
-                    let res = await fetch(scopedUrl);
-                    pushDfpDataDiag('snapshot:fetch-response', {
-                        kind: 'unit-scoped',
-                        url: scopedUrl,
-                        status: res.status,
-                        ok: res.ok,
-                    });
-                    if (!res.ok && res.status === 404) {
-                        const locationFallbackKey = getDailySnapshotKey(targetDate, snapshotSchool, '');
-                        const locationUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(locationFallbackKey)}`;
-                        res = await fetch(locationUrl);
+                    const candidateKeys = [
+                        ...snapshotLocationAliases.map(locationAlias => getDailySnapshotKey(targetDate, locationAlias, snapshotUnit)),
+                        ...snapshotLocationAliases.map(locationAlias => getDailySnapshotKey(targetDate, locationAlias, '')),
+                        targetDate,
+                    ].filter((key, index, keys) => Boolean(key) && keys.indexOf(key) === index);
+
+                    let res: Response | null = null;
+                    let resolvedSnapshotKey = snapshotKey;
+                    for (const candidateKey of candidateKeys) {
+                        const candidateUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(candidateKey)}`;
+                        const candidateRes = await fetch(candidateUrl);
                         pushDfpDataDiag('snapshot:fetch-response', {
-                            kind: 'location-scoped',
-                            url: locationUrl,
-                            status: res.status,
-                            ok: res.ok,
-                            locationFallbackKey,
+                            kind: candidateKey === targetDate
+                                ? 'legacy-date'
+                                : candidateKey.includes(`__${snapshotUnit}`)
+                                    ? 'unit-scoped-or-alias'
+                                    : 'location-scoped-or-alias',
+                            url: candidateUrl,
+                            candidateKey,
+                            canonicalSnapshotKey: snapshotKey,
+                            status: candidateRes.status,
+                            ok: candidateRes.ok,
                         });
-                    }
-                    if (!res.ok && res.status === 404) {
-                        const legacyUrl = `${apiBase}/daily-snapshot/${targetDate}`;
-                        res = await fetch(legacyUrl);
-                        pushDfpDataDiag('snapshot:fetch-response', {
-                            kind: 'legacy-date',
-                            url: legacyUrl,
-                            status: res.status,
-                            ok: res.ok,
-                        });
+                        res = candidateRes;
+                        resolvedSnapshotKey = candidateKey;
+                        if (candidateRes.ok || candidateRes.status !== 404) {
+                            break;
+                        }
                     }
 
-                    if (res.status === 404) {
+                    if (!res || res.status === 404) {
                         if (replace) {
                             setPublishedSchedules(prev => ({ ...prev, [targetDate]: [] }));
                             setBaselineSchedules(prev => ({ ...prev, [snapshotKey]: [] }));
@@ -10642,6 +10656,7 @@ const App: React.FC = () => {
                         pushDfpDataDiag('snapshot:load-empty', {
                             targetDate,
                             snapshotKey,
+                            candidateKeys,
                             replace,
                         });
                         setDfpSnapshotLoadState({
@@ -10662,6 +10677,7 @@ const App: React.FC = () => {
                     pushDfpDataDiag('snapshot:network-json', {
                         targetDate,
                         snapshotKey,
+                        resolvedSnapshotKey,
                         snapKey: snap?.date,
                         eventCount: Array.isArray(snap?.scheduleEvents) ? snap.scheduleEvents.length : 0,
                         baselineCount: Array.isArray(snap?.baselineEvents) ? snap.baselineEvents.length : 0,
@@ -10698,7 +10714,7 @@ const App: React.FC = () => {
         } finally {
             loadingSnapshotDates.current.delete(snapshotKey);
         }
-    }, [activeUnitCode, applyDailySnapshot, school]);
+    }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
 
     useEffect(() => {
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
