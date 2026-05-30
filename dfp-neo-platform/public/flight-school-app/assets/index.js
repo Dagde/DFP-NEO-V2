@@ -26862,7 +26862,7 @@ const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
 const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraftChange, onRequestEdit, onSave, onCancel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${isEditing ? "min-w-[220px]" : "min-w-[128px]"} rounded border border-slate-700/70 bg-slate-950/55 p-2 shadow-sm`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: title }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: title }),
       !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[11px] font-semibold text-slate-300", children: periodLabel(boundary) })
     ] }),
     !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx(

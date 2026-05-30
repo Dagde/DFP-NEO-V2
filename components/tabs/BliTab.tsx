@@ -1007,7 +1007,7 @@ const BliPeriodWindow: React.FC<{
   <div className={`${isEditing ? 'min-w-[220px]' : 'min-w-[128px]'} rounded border border-slate-700/70 bg-slate-950/55 p-2 shadow-sm`}>
     <div className="flex items-start justify-between gap-3">
       <div>
-        <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</div>
         {!isEditing && <div className="mt-0.5 text-[11px] font-semibold text-slate-300">{periodLabel(boundary)}</div>}
       </div>
       {!isEditing && (
