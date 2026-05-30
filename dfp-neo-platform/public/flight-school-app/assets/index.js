@@ -4795,7 +4795,7 @@ const Header = ({
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 flex items-center justify-center", style: { width: "250px", paddingLeft: "8px", paddingRight: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: contextSelectorRef, className: "relative w-full", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 flex items-center justify-center", style: { width: "125px", paddingLeft: "8px", paddingRight: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: contextSelectorRef, className: "relative w-full", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
@@ -4980,7 +4980,7 @@ const Header = ({
           }
         ) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", style: { width: "250px" } })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", style: { width: "125px" } })
     ] }),
     showUserMenu && authUser && userButtonRef.current && ReactDOM.createPortal(
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
