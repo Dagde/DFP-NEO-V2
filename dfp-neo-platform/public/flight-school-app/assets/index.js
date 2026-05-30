@@ -63008,19 +63008,35 @@ const App = () => {
       cancelled = true;
     };
   }, []);
+  const getLocationSelectorAliases = reactExports.useCallback((location) => {
+    const directAliases = [
+      location?.code,
+      location?.iataCode,
+      location?.name,
+      location?.settings?.legacyCode,
+      location?.settings?.runtimeCode
+    ].map((value) => String(value || "").trim()).filter(Boolean);
+    const profileAliases = directAliases.flatMap((alias) => {
+      const profile = getDefaultAirfieldSolarProfile(alias);
+      return profile ? [profile.code, profile.iataCode, profile.icao, profile.name] : [];
+    });
+    return [...new Set([...directAliases, ...profileAliases].map((alias) => alias.toUpperCase()).filter(Boolean))];
+  }, []);
   const baseSelectableLocationCodes = reactExports.useMemo(() => {
-    const activeLocationCodes = new Set(
-      (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").map((location) => String(location.code || "").trim()).filter(Boolean)
-    );
-    const activeUnitLocationCodes = new Set(
-      (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim().toUpperCase()).filter(Boolean)
-    );
-    const configuredLocationsWithUnits = [...activeLocationCodes].filter((code) => activeUnitLocationCodes.has(code.toUpperCase()));
+    const activeLocations = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE");
+    const activeUnitLocationCodes = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim()).filter(Boolean);
+    const configuredLocationsWithUnits = activeUnitLocationCodes.filter((unitLocationCode, index, allCodes) => {
+      const normalisedUnitLocation = unitLocationCode.toUpperCase();
+      if (allCodes.findIndex((code) => code.toUpperCase() === normalisedUnitLocation) !== index) return false;
+      return activeLocations.some((location) => getLocationSelectorAliases(location).includes(normalisedUnitLocation));
+    });
     return configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]);
-  }, [platformConfig]);
+  }, [getLocationSelectorAliases, platformConfig]);
   const getUnitOptionsForLocation = reactExports.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-    const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => String(unit.locationCode || "").trim().toUpperCase() === normalisedLocationCode).map((unit) => ({
+    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+    const locationAliases = new Set(activeLocation ? getLocationSelectorAliases(activeLocation) : [normalisedLocationCode]);
+    const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
       code: String(unit.code || "").trim(),
       name: String(unit.name || unit.code || "").trim(),
       model: getUnitOperationalModel(unit)
@@ -63034,7 +63050,7 @@ const App = () => {
       name: code,
       model: normaliseOperationalModel("flight_school")
     }));
-  }, [platformConfig]);
+  }, [getLocationSelectorAliases, platformConfig]);
   const activeLocationUnitOptions = reactExports.useMemo(
     () => getUnitOptionsForLocation(school),
     [getUnitOptionsForLocation, school]
@@ -63063,11 +63079,8 @@ const App = () => {
     [platformConfig, school, activeUnitCode]
   );
   const activeLocationSolarProfile = reactExports.useMemo(() => {
-    const configuredLocation = (platformConfig?.locations || []).find((location) => {
-      const code = String(location?.code || "").toUpperCase();
-      const name = String(location?.name || "");
-      return code === school || name === school;
-    });
+    const normalisedSchool = String(school || "").trim().toUpperCase();
+    const configuredLocation = (platformConfig?.locations || []).find((location) => getLocationSelectorAliases(location).includes(normalisedSchool));
     const fallbackProfile = getDefaultAirfieldSolarProfile(configuredLocation?.code) || getDefaultAirfieldSolarProfile(configuredLocation?.name) || getDefaultAirfieldSolarProfile(school);
     const latitude = configuredLocation?.latitude ?? configuredLocation?.settings?.latitude ?? fallbackProfile?.latitude ?? null;
     const longitude = configuredLocation?.longitude ?? configuredLocation?.settings?.longitude ?? fallbackProfile?.longitude ?? null;
@@ -63899,7 +63912,7 @@ const App = () => {
             const locationFallbackKey = getDailySnapshotKey(targetDate, snapshotSchool, "");
             res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(locationFallbackKey)}`);
           }
-          if (!res.ok && res.status === 404 && snapshotSchool === "ESL") {
+          if (!res.ok && res.status === 404) {
             res = await fetch(`${apiBase2}/daily-snapshot/${targetDate}`);
           }
           if (res.status === 404) {

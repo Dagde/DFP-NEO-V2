@@ -10081,22 +10081,20 @@ app.get('/api/daily-snapshot', async (req, res) => {
           `SELECT * FROM "DailySnapshot"
            WHERE date LIKE $1::text
               OR date LIKE $2::text
-              OR ($3::boolean AND date !~ '__[A-Za-z0-9_-]+(__[A-Za-z0-9_-]+)?$')
+              OR date !~ '__[A-Za-z0-9_-]+(__[A-Za-z0-9_-]+)?$'
            ORDER BY date DESC LIMIT 5`,
           `%__${school}__${unit}`,
-          `%__${school}`,
-          school === 'ESL'
+          `%__${school}`
         )
       : school
       ? await db.$queryRawUnsafe(
           `SELECT * FROM "DailySnapshot"
            WHERE date LIKE $1::text
               OR date LIKE $2::text
-              OR ($3::boolean AND date !~ '__[A-Za-z0-9_-]+(__[A-Za-z0-9_-]+)?$')
+              OR date !~ '__[A-Za-z0-9_-]+(__[A-Za-z0-9_-]+)?$'
            ORDER BY date DESC LIMIT 5`,
           `%__${school}`,
-          `%__${school}__%`,
-          school === 'ESL'
+          `%__${school}__%`
         )
       : await db.$queryRawUnsafe(
           `SELECT * FROM "DailySnapshot" ORDER BY date DESC LIMIT 5`
