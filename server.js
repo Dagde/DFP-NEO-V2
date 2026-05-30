@@ -10149,6 +10149,11 @@ const addMetricCount = (target, field, amount = 1) => {
   target[field] = Number(target[field] || 0) + amount;
 };
 
+const eventMetricHours = (event) => {
+  const duration = Number(event?.duration ?? 0);
+  return Number.isFinite(duration) && duration > 0 ? duration : 0;
+};
+
 const eventStaffNames = (event) => {
   const names = [
     event?.instructor,
@@ -10194,6 +10199,8 @@ app.get('/api/bli/metrics', async (req, res) => {
         flightEvents: 0,
         simulatorEvents: 0,
         totalEvents: 0,
+        flightHours: 0,
+        simulatorHours: 0,
       });
     }
 
@@ -10228,18 +10235,38 @@ app.get('/api/bli/metrics', async (req, res) => {
 
       const day = seriesByDate.get(dateKey);
       for (const event of events) {
+        const hours = eventMetricHours(event);
         addMetricCount(day, 'totalEvents');
-        if (isFlightMetricEvent(event)) addMetricCount(day, 'flightEvents');
-        if (isSimulatorMetricEvent(event)) addMetricCount(day, 'simulatorEvents');
+        if (isFlightMetricEvent(event)) {
+          addMetricCount(day, 'flightEvents');
+          addMetricCount(day, 'flightHours', hours);
+        }
+        if (isSimulatorMetricEvent(event)) {
+          addMetricCount(day, 'simulatorEvents');
+          addMetricCount(day, 'simulatorHours', hours);
+        }
 
         for (const staffName of eventStaffNames(event)) {
           if (!staffDaily[staffName]) staffDaily[staffName] = {};
           if (!staffDaily[staffName][dateKey]) {
-            staffDaily[staffName][dateKey] = { date: dateKey, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 };
+            staffDaily[staffName][dateKey] = {
+              date: dateKey,
+              flightEvents: 0,
+              simulatorEvents: 0,
+              totalEvents: 0,
+              flightHours: 0,
+              simulatorHours: 0,
+            };
           }
           addMetricCount(staffDaily[staffName][dateKey], 'totalEvents');
-          if (isFlightMetricEvent(event)) addMetricCount(staffDaily[staffName][dateKey], 'flightEvents');
-          if (isSimulatorMetricEvent(event)) addMetricCount(staffDaily[staffName][dateKey], 'simulatorEvents');
+          if (isFlightMetricEvent(event)) {
+            addMetricCount(staffDaily[staffName][dateKey], 'flightEvents');
+            addMetricCount(staffDaily[staffName][dateKey], 'flightHours', hours);
+          }
+          if (isSimulatorMetricEvent(event)) {
+            addMetricCount(staffDaily[staffName][dateKey], 'simulatorEvents');
+            addMetricCount(staffDaily[staffName][dateKey], 'simulatorHours', hours);
+          }
         }
 
         if (event?.isCancelled || event?.cancellationCode) {
@@ -10286,7 +10313,14 @@ app.get('/api/bli/metrics', async (req, res) => {
     const dates = [...seriesByDate.keys()];
     const staffSeries = {};
     for (const [staffName, byDate] of Object.entries(staffDaily)) {
-      staffSeries[staffName] = dates.map((date) => byDate[date] || { date, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 });
+      staffSeries[staffName] = dates.map((date) => byDate[date] || {
+        date,
+        flightEvents: 0,
+        simulatorEvents: 0,
+        totalEvents: 0,
+        flightHours: 0,
+        simulatorHours: 0,
+      });
     }
 
     const cancellationsByCategory = Object.values(cancellationCategories)

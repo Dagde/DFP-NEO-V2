@@ -26039,6 +26039,7 @@ const metricStrokeColor = (color) => {
   if (color.includes("amber")) return "#fbbf24";
   if (color.includes("rose")) return "#fb7185";
   if (color.includes("sky")) return "#38bdf8";
+  if (color.includes("teal")) return "#2dd4bf";
   if (color.includes("violet")) return "#a78bfa";
   if (color.includes("fuchsia")) return "#f472b6";
   return "#f472b6";
@@ -26106,9 +26107,36 @@ const valueAvg = (series) => {
   if (values.length === 0) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 };
+const seriesStats = (series) => {
+  const values = series.filter((point) => point.value !== null && Number.isFinite(Number(point.value))).map((point) => ({ ...point, value: Number(point.value) }));
+  if (values.length === 0) {
+    return { total: 0, average: null, highest: null, lowest: null, dataPointCount: 0 };
+  }
+  const total = values.reduce((sum, point) => sum + point.value, 0);
+  const highest = values.reduce((best, point) => point.value > best.value ? point : best, values[0]);
+  const lowest = values.reduce((best, point) => point.value < best.value ? point : best, values[0]);
+  return {
+    total,
+    average: total / values.length,
+    highest,
+    lowest,
+    dataPointCount: values.length
+  };
+};
 const compactNumber = (value, digits = 0) => {
   if (value === null || value === void 0 || !Number.isFinite(value)) return "No data";
   return Number(value).toLocaleString("en-GB", { maximumFractionDigits: digits, minimumFractionDigits: digits });
+};
+const metricDigits = (metric) => metric.unit === "%" || metric.unit === "h" ? 1 : 0;
+const formatMetricAmount = (value, metric) => {
+  const formatted = compactNumber(value, metricDigits(metric));
+  if (formatted === "No data") return formatted;
+  return `${formatted}${metric.unit || ""}`;
+};
+const sumDailyMetric = (rows, field) => rows.reduce((sum, row) => sum + (Number(row[field]) || 0), 0);
+const eventMetricHours = (event) => {
+  const duration = Number(event.duration ?? 0);
+  return Number.isFinite(duration) && duration > 0 ? duration : 0;
 };
 const eventStaffNames = (event) => {
   const names = [
@@ -26122,15 +26150,23 @@ const eventStaffNames = (event) => {
 const buildFallbackMetrics = (date, events, currentAircraftAvailable, totalAircraft) => {
   const flightEvents = events.filter((event) => event.type === "flight").length;
   const simulatorEvents = events.filter((event) => event.type === "ftd").length;
+  const flightHours = events.reduce((sum, event) => sum + (event.type === "flight" ? eventMetricHours(event) : 0), 0);
+  const simulatorHours = events.reduce((sum, event) => sum + (event.type === "ftd" ? eventMetricHours(event) : 0), 0);
   const staffSeries = {};
   events.forEach((event) => {
     eventStaffNames(event).forEach((staffName) => {
       if (!staffSeries[staffName]) {
-        staffSeries[staffName] = [{ date, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 }];
+        staffSeries[staffName] = [{ date, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }];
       }
       staffSeries[staffName][0].totalEvents += 1;
-      if (event.type === "flight") staffSeries[staffName][0].flightEvents += 1;
-      if (event.type === "ftd") staffSeries[staffName][0].simulatorEvents += 1;
+      if (event.type === "flight") {
+        staffSeries[staffName][0].flightEvents += 1;
+        staffSeries[staffName][0].flightHours += eventMetricHours(event);
+      }
+      if (event.type === "ftd") {
+        staffSeries[staffName][0].simulatorEvents += 1;
+        staffSeries[staffName][0].simulatorHours += eventMetricHours(event);
+      }
     });
   });
   const cancellationMap = /* @__PURE__ */ new Map();
@@ -26151,7 +26187,7 @@ const buildFallbackMetrics = (date, events, currentAircraftAvailable, totalAircr
     endDate: date,
     snapshotCount: 0,
     dates: [date],
-    eventSeries: [{ date, flightEvents, simulatorEvents, totalEvents: events.length }],
+    eventSeries: [{ date, flightEvents, simulatorEvents, totalEvents: events.length, flightHours, simulatorHours }],
     availabilitySeries: [{
       date,
       availableAverage: currentAircraftAvailable ?? null,
@@ -26175,14 +26211,16 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
   const dates = metrics.dates.length > 0 ? metrics.dates : [date];
   const fallback = buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft);
   const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : fallback.eventSeries;
-  const staffDays = selectedStaff ? metrics.staffSeries?.[selectedStaff] || dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 })) : dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 }));
+  const staffDays = selectedStaff ? metrics.staffSeries?.[selectedStaff] || dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 })) : dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }));
   const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
   const availabilityPoints = availabilitySeries.map((point) => ({
     date: point.date,
     value: point.availabilityPct
   }));
   const flightPoints = eventSeries.map((point) => ({ date: point.date, value: point.flightEvents }));
+  const flightHourPoints = eventSeries.map((point) => ({ date: point.date, value: point.flightHours }));
   const simPoints = eventSeries.map((point) => ({ date: point.date, value: point.simulatorEvents }));
+  const simHourPoints = eventSeries.map((point) => ({ date: point.date, value: point.simulatorHours }));
   const totalPoints = eventSeries.map((point) => ({ date: point.date, value: point.totalEvents }));
   const staffFlightPoints = staffDays.map((point) => ({ date: point.date, value: point.flightEvents }));
   const staffSimPoints = staffDays.map((point) => ({ date: point.date, value: point.simulatorEvents }));
@@ -26211,6 +26249,17 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       footer: "total flights in range"
     },
     {
+      key: "flightHours",
+      title: "Flight hours per day",
+      subtitle: "Total scheduled flying hours from published DFP snapshots.",
+      icon: ForwardRef$8,
+      color: "border-sky-400/40 bg-sky-400/10 text-sky-200",
+      unit: "h",
+      series: flightHourPoints,
+      summary: `${compactNumber(valueSum(flightHourPoints), 1)}h`,
+      footer: "total flight hours"
+    },
+    {
       key: "simulator",
       title: "Simulator events per day",
       subtitle: "FTD and simulator events counted by published DFP day.",
@@ -26219,6 +26268,17 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       series: simPoints,
       summary: compactNumber(valueSum(simPoints)),
       footer: "total simulator events"
+    },
+    {
+      key: "simulatorHours",
+      title: "Simulator hours per day",
+      subtitle: "Total scheduled FTD and simulator hours by published DFP day.",
+      icon: ForwardRef$8,
+      color: "border-teal-400/40 bg-teal-400/10 text-teal-200",
+      unit: "h",
+      series: simHourPoints,
+      summary: `${compactNumber(valueSum(simHourPoints), 1)}h`,
+      footer: "total simulator hours"
     },
     {
       key: "total",
@@ -26330,6 +26390,199 @@ const FullLineChart = ({ series, color, label, unit }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: width - padding.right, y: height - 12, textAnchor: "end", fill: "rgb(148,163,184)", fontSize: "12", children: dateLabel(series[series.length - 1].date) })
     ] })
   ] }) });
+};
+const cancellationColumnColor = (category) => {
+  const key = category.toLowerCase();
+  if (key.includes("flight")) return "bg-blue-400";
+  if (key.includes("simulator")) return "bg-emerald-400";
+  if (key.includes("cpt")) return "bg-violet-400";
+  if (key.includes("ground")) return "bg-amber-400";
+  if (key.includes("deployment")) return "bg-fuchsia-400";
+  return "bg-rose-400";
+};
+const CancellationColumnChart = ({ categories }) => {
+  const columns = categories.flatMap((category) => category.codes.map((code) => ({
+    category: category.category,
+    code: code.code,
+    count: code.count
+  }))).sort((a, b) => b.count - a.count || a.category.localeCompare(b.category) || a.code.localeCompare(b.code));
+  const maxCount = Math.max(1, ...columns.map((column) => column.count));
+  const total = columns.reduce((sum, column) => sum + column.count, 0);
+  if (columns.length === 0) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-5 text-sm text-slate-400", children: "No cancellation codes were recorded in this timeline." });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex flex-wrap items-end justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Cancellation codes by category" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-slate-400", children: [
+        compactNumber(total),
+        " cancellations across ",
+        compactNumber(categories.length),
+        " event categories"
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-80 min-w-max items-end gap-3 border-b border-l border-slate-700/80 px-3 pb-12 pt-6", children: columns.map((column) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-20 flex-col items-center justify-end", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 text-xs font-semibold text-slate-200", children: column.count }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: `w-11 rounded-t-md ${cancellationColumnColor(column.category)} shadow-[0_0_16px_rgba(251,113,133,0.22)]`,
+          style: { height: `${Math.max(10, column.count / maxCount * 220)}px` },
+          title: `${column.category} ${column.code}: ${column.count}`
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute -bottom-10 w-24 text-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[11px] font-semibold text-slate-200", title: column.code, children: column.code }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[10px] uppercase tracking-[0.14em] text-slate-500", title: column.category, children: column.category })
+      ] })
+    ] }, `${column.category}-${column.code}`)) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex flex-wrap gap-2", children: categories.map((category) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300", children: [
+      category.category,
+      ": ",
+      category.total
+    ] }, category.category)) })
+  ] });
+};
+const StatRow = ({ label, value, subtext, accent = "text-white" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-950/50 p-3", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-1 text-lg font-bold ${accent}`, children: value }),
+  subtext && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-slate-500", children: subtext })
+] });
+const staffRankingField = (key) => {
+  if (key === "staffFlight") return "flightEvents";
+  if (key === "staffSimulator") return "simulatorEvents";
+  if (key === "staffTotal") return "totalEvents";
+  return null;
+};
+const MetricStatsPanel = ({ metric, metrics, staffGroups, selectedStaff }) => {
+  const stats = seriesStats(metric.series);
+  const primaryValue = metric.key === "availability" ? formatMetricAmount(stats.average, metric) : formatMetricAmount(stats.total, metric);
+  const flightHourStats = seriesStats(metrics.eventSeries.map((point) => ({ date: point.date, value: point.flightHours })));
+  const simulatorHourStats = seriesStats(metrics.eventSeries.map((point) => ({ date: point.date, value: point.simulatorHours })));
+  const allStaff = staffGroups.flatMap(([, staff]) => staff);
+  const selectedStaffInfo = allStaff.find((staff) => staff.name === selectedStaff);
+  const selectedUnit = selectedStaffInfo?.unit || "";
+  const rankingField = staffRankingField(metric.key);
+  const rankedStaff = rankingField ? allStaff.filter((staff) => !selectedUnit || (staff.unit || "Unassigned") === selectedUnit).map((staff) => ({
+    staff,
+    total: sumDailyMetric(metrics.staffSeries?.[staff.name] || [], rankingField)
+  })).sort((a, b) => b.total - a.total || staffSort(a.staff, b.staff)) : [];
+  const selectedRankIndex = rankingField ? rankedStaff.findIndex((row) => row.staff.name === selectedStaff) : -1;
+  const visibleRanking = rankedStaff.slice(0, 8);
+  const selectedRanking = selectedRankIndex >= 8 ? rankedStaff[selectedRankIndex] : null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold uppercase tracking-[0.18em] text-slate-400", children: "Selected Period" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-slate-500", children: [
+        compactNumber(stats.dataPointCount),
+        " daily data points"
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        StatRow,
+        {
+          label: metric.key === "availability" ? "Average" : "Total",
+          value: primaryValue,
+          accent: "text-cyan-200"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        StatRow,
+        {
+          label: metric.key === "availability" ? "Mean by day" : "Average per day",
+          value: formatMetricAmount(stats.average, metric)
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        StatRow,
+        {
+          label: "Highest day",
+          value: formatMetricAmount(stats.highest?.value, metric),
+          subtext: stats.highest ? dateLabel(stats.highest.date) : "No date",
+          accent: "text-emerald-200"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        StatRow,
+        {
+          label: "Lowest day",
+          value: formatMetricAmount(stats.lowest?.value, metric),
+          subtext: stats.lowest ? dateLabel(stats.lowest.date) : "No date",
+          accent: "text-amber-200"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-950/50 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Hours in period" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-2 gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-500", children: "Flight" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-base font-bold text-sky-200", children: [
+            compactNumber(flightHourStats.total, 1),
+            "h"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-slate-500", children: [
+            compactNumber(flightHourStats.average, 1),
+            "h/day"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-500", children: "Simulator" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-base font-bold text-teal-200", children: [
+            compactNumber(simulatorHourStats.total, 1),
+            "h"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-slate-500", children: [
+            compactNumber(simulatorHourStats.average, 1),
+            "h/day"
+          ] })
+        ] })
+      ] })
+    ] }),
+    rankingField && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-950/50 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: [
+          selectedUnit || "All staff",
+          " ranking"
+        ] }),
+        selectedRankIndex >= 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-semibold text-cyan-200", children: [
+          "#",
+          selectedRankIndex + 1
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2", children: [
+        visibleRanking.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: `grid grid-cols-[28px_minmax(0,1fr)_42px] items-center gap-2 rounded px-2 py-1.5 text-xs ${row.staff.name === selectedStaff ? "bg-cyan-400/12 text-cyan-100" : "text-slate-300"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-500", children: index + 1 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+                row.staff.rank,
+                " ",
+                row.staff.name
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right font-semibold", children: compactNumber(row.total) })
+            ]
+          },
+          row.staff.name
+        )),
+        selectedRanking && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 text-center text-slate-600", children: "..." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[28px_minmax(0,1fr)_42px] items-center gap-2 rounded bg-cyan-400/12 px-2 py-1.5 text-xs text-cyan-100", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: selectedRankIndex + 1 }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+              selectedRanking.staff.rank,
+              " ",
+              selectedRanking.staff.name
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right font-semibold", children: compactNumber(selectedRanking.total) })
+          ] })
+        ] })
+      ] })
+    ] })
+  ] });
 };
 const CancellationPreview = ({ categories }) => {
   const max = Math.max(1, ...categories.map((category) => category.total));
@@ -26461,34 +26714,26 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading this graph..." : `${modalMetrics.snapshotCount} published snapshots in this graph` }),
           error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })
         ] }),
-        activeMetric.key === "cancellations" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
-          modalMetrics.cancellationsByCategory.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-5 text-sm text-slate-400", children: "No cancellation codes were recorded in this timeline." }),
-          modalMetrics.cancellationsByCategory.map((category) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: category.category }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full bg-rose-500/15 px-3 py-1 text-sm font-semibold text-rose-200", children: category.total })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: category.codes.map((code) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-28 truncate text-sm font-medium text-slate-300", children: code.code }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 flex-1 rounded-full bg-slate-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "div",
-                {
-                  className: "h-3 rounded-full bg-rose-400",
-                  style: { width: `${Math.max(4, code.count / Math.max(1, category.total) * 100)}%` }
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-10 text-right text-sm text-slate-300", children: code.count })
-            ] }, code.code)) })
-          ] }, category.category))
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-          FullLineChart,
-          {
-            series: activeMetric.series,
-            color: metricStrokeColor(activeMetric.color),
-            label: activeMetric.title,
-            unit: activeMetric.unit
-          }
-        )
+        activeMetric.key === "cancellations" ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancellationColumnChart, { categories: modalMetrics.cancellationsByCategory }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            FullLineChart,
+            {
+              series: activeMetric.series,
+              color: metricStrokeColor(activeMetric.color),
+              label: activeMetric.title,
+              unit: activeMetric.unit
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            MetricStatsPanel,
+            {
+              metric: activeMetric,
+              metrics: modalMetrics,
+              staffGroups,
+              selectedStaff
+            }
+          )
+        ] })
       ]
     }
   ) });

@@ -12,7 +12,7 @@ import {
 import type { Instructor, ScheduleEvent } from '../../types';
 
 type TimelineKey = '7d' | '1m' | '6m' | '12m' | '2y' | '3y' | '5y';
-type MetricKey = 'availability' | 'flight' | 'simulator' | 'total' | 'cancellations' | 'staffFlight' | 'staffSimulator' | 'staffTotal';
+type MetricKey = 'availability' | 'flight' | 'flightHours' | 'simulator' | 'simulatorHours' | 'total' | 'cancellations' | 'staffFlight' | 'staffSimulator' | 'staffTotal';
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 interface DailyEventMetrics {
@@ -20,7 +20,11 @@ interface DailyEventMetrics {
   flightEvents: number;
   simulatorEvents: number;
   totalEvents: number;
+  flightHours: number;
+  simulatorHours: number;
 }
+
+type DailyMetricNumberKey = Exclude<keyof DailyEventMetrics, 'date'>;
 
 interface AvailabilityMetrics {
   date: string;
@@ -77,6 +81,14 @@ interface MetricDefinition {
   footer: string;
 }
 
+interface SeriesStats {
+  total: number;
+  average: number | null;
+  highest: ChartPoint | null;
+  lowest: ChartPoint | null;
+  dataPointCount: number;
+}
+
 const isStaffMetricKey = (key: MetricKey): boolean => (
   key === 'staffFlight' || key === 'staffSimulator' || key === 'staffTotal'
 );
@@ -88,6 +100,7 @@ const metricStrokeColor = (color: string): string => {
   if (color.includes('amber')) return '#fbbf24';
   if (color.includes('rose')) return '#fb7185';
   if (color.includes('sky')) return '#38bdf8';
+  if (color.includes('teal')) return '#2dd4bf';
   if (color.includes('violet')) return '#a78bfa';
   if (color.includes('fuchsia')) return '#f472b6';
   return '#f472b6';
@@ -169,9 +182,48 @@ const valueAvg = (series: ChartPoint[]): number | null => {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 };
 
+const seriesStats = (series: ChartPoint[]): SeriesStats => {
+  const values = series
+    .filter(point => point.value !== null && Number.isFinite(Number(point.value)))
+    .map(point => ({ ...point, value: Number(point.value) }));
+  if (values.length === 0) {
+    return { total: 0, average: null, highest: null, lowest: null, dataPointCount: 0 };
+  }
+
+  const total = values.reduce((sum, point) => sum + point.value, 0);
+  const highest = values.reduce((best, point) => (point.value > best.value ? point : best), values[0]);
+  const lowest = values.reduce((best, point) => (point.value < best.value ? point : best), values[0]);
+  return {
+    total,
+    average: total / values.length,
+    highest,
+    lowest,
+    dataPointCount: values.length,
+  };
+};
+
 const compactNumber = (value: number | null | undefined, digits = 0): string => {
   if (value === null || value === undefined || !Number.isFinite(value)) return 'No data';
   return Number(value).toLocaleString('en-GB', { maximumFractionDigits: digits, minimumFractionDigits: digits });
+};
+
+const metricDigits = (metric: Pick<MetricDefinition, 'unit'>): number => (
+  metric.unit === '%' || metric.unit === 'h' ? 1 : 0
+);
+
+const formatMetricAmount = (value: number | null | undefined, metric: Pick<MetricDefinition, 'unit'>): string => {
+  const formatted = compactNumber(value, metricDigits(metric));
+  if (formatted === 'No data') return formatted;
+  return `${formatted}${metric.unit || ''}`;
+};
+
+const sumDailyMetric = (rows: DailyEventMetrics[], field: DailyMetricNumberKey): number => (
+  rows.reduce((sum, row) => sum + (Number(row[field]) || 0), 0)
+);
+
+const eventMetricHours = (event: ScheduleEvent): number => {
+  const duration = Number(event.duration ?? 0);
+  return Number.isFinite(duration) && duration > 0 ? duration : 0;
 };
 
 const eventStaffNames = (event: ScheduleEvent): string[] => {
@@ -194,16 +246,24 @@ const buildFallbackMetrics = (
 ): BliMetricsResponse => {
   const flightEvents = events.filter(event => event.type === 'flight').length;
   const simulatorEvents = events.filter(event => event.type === 'ftd').length;
+  const flightHours = events.reduce((sum, event) => sum + (event.type === 'flight' ? eventMetricHours(event) : 0), 0);
+  const simulatorHours = events.reduce((sum, event) => sum + (event.type === 'ftd' ? eventMetricHours(event) : 0), 0);
   const staffSeries: Record<string, DailyEventMetrics[]> = {};
 
   events.forEach(event => {
     eventStaffNames(event).forEach(staffName => {
       if (!staffSeries[staffName]) {
-        staffSeries[staffName] = [{ date, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 }];
+        staffSeries[staffName] = [{ date, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }];
       }
       staffSeries[staffName][0].totalEvents += 1;
-      if (event.type === 'flight') staffSeries[staffName][0].flightEvents += 1;
-      if (event.type === 'ftd') staffSeries[staffName][0].simulatorEvents += 1;
+      if (event.type === 'flight') {
+        staffSeries[staffName][0].flightEvents += 1;
+        staffSeries[staffName][0].flightHours += eventMetricHours(event);
+      }
+      if (event.type === 'ftd') {
+        staffSeries[staffName][0].simulatorEvents += 1;
+        staffSeries[staffName][0].simulatorHours += eventMetricHours(event);
+      }
     });
   });
 
@@ -236,7 +296,7 @@ const buildFallbackMetrics = (
     endDate: date,
     snapshotCount: 0,
     dates: [date],
-    eventSeries: [{ date, flightEvents, simulatorEvents, totalEvents: events.length }],
+    eventSeries: [{ date, flightEvents, simulatorEvents, totalEvents: events.length, flightHours, simulatorHours }],
     availabilitySeries: [{
       date,
       availableAverage: currentAircraftAvailable ?? null,
@@ -272,8 +332,8 @@ const buildMetricDefinitions = (
   const fallback = buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft);
   const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : fallback.eventSeries;
   const staffDays = selectedStaff
-    ? (metrics.staffSeries?.[selectedStaff] || dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 })))
-    : dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0 }));
+    ? (metrics.staffSeries?.[selectedStaff] || dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 })))
+    : dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }));
   const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
 
   const availabilityPoints = availabilitySeries.map(point => ({
@@ -281,7 +341,9 @@ const buildMetricDefinitions = (
     value: point.availabilityPct,
   }));
   const flightPoints = eventSeries.map(point => ({ date: point.date, value: point.flightEvents }));
+  const flightHourPoints = eventSeries.map(point => ({ date: point.date, value: point.flightHours }));
   const simPoints = eventSeries.map(point => ({ date: point.date, value: point.simulatorEvents }));
+  const simHourPoints = eventSeries.map(point => ({ date: point.date, value: point.simulatorHours }));
   const totalPoints = eventSeries.map(point => ({ date: point.date, value: point.totalEvents }));
   const staffFlightPoints = staffDays.map(point => ({ date: point.date, value: point.flightEvents }));
   const staffSimPoints = staffDays.map(point => ({ date: point.date, value: point.simulatorEvents }));
@@ -311,6 +373,17 @@ const buildMetricDefinitions = (
       footer: 'total flights in range',
     },
     {
+      key: 'flightHours',
+      title: 'Flight hours per day',
+      subtitle: 'Total scheduled flying hours from published DFP snapshots.',
+      icon: ClockIcon,
+      color: 'border-sky-400/40 bg-sky-400/10 text-sky-200',
+      unit: 'h',
+      series: flightHourPoints,
+      summary: `${compactNumber(valueSum(flightHourPoints), 1)}h`,
+      footer: 'total flight hours',
+    },
+    {
       key: 'simulator',
       title: 'Simulator events per day',
       subtitle: 'FTD and simulator events counted by published DFP day.',
@@ -319,6 +392,17 @@ const buildMetricDefinitions = (
       series: simPoints,
       summary: compactNumber(valueSum(simPoints)),
       footer: 'total simulator events',
+    },
+    {
+      key: 'simulatorHours',
+      title: 'Simulator hours per day',
+      subtitle: 'Total scheduled FTD and simulator hours by published DFP day.',
+      icon: ClockIcon,
+      color: 'border-teal-400/40 bg-teal-400/10 text-teal-200',
+      unit: 'h',
+      series: simHourPoints,
+      summary: `${compactNumber(valueSum(simHourPoints), 1)}h`,
+      footer: 'total simulator hours',
     },
     {
       key: 'total',
@@ -441,6 +525,200 @@ const FullLineChart: React.FC<{ series: ChartPoint[]; color: string; label: stri
         )}
       </svg>
     </div>
+  );
+};
+
+const cancellationColumnColor = (category: string): string => {
+  const key = category.toLowerCase();
+  if (key.includes('flight')) return 'bg-blue-400';
+  if (key.includes('simulator')) return 'bg-emerald-400';
+  if (key.includes('cpt')) return 'bg-violet-400';
+  if (key.includes('ground')) return 'bg-amber-400';
+  if (key.includes('deployment')) return 'bg-fuchsia-400';
+  return 'bg-rose-400';
+};
+
+const CancellationColumnChart: React.FC<{ categories: CancellationCategory[] }> = ({ categories }) => {
+  const columns = categories
+    .flatMap(category => category.codes.map(code => ({
+      category: category.category,
+      code: code.code,
+      count: code.count,
+    })))
+    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category) || a.code.localeCompare(b.code));
+  const maxCount = Math.max(1, ...columns.map(column => column.count));
+  const total = columns.reduce((sum, column) => sum + column.count, 0);
+
+  if (columns.length === 0) {
+    return (
+      <div className="rounded-lg border border-slate-700 bg-slate-950/45 p-5 text-sm text-slate-400">
+        No cancellation codes were recorded in this timeline.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-white">Cancellation codes by category</h3>
+          <p className="text-sm text-slate-400">{compactNumber(total)} cancellations across {compactNumber(categories.length)} event categories</p>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <div className="flex h-80 min-w-max items-end gap-3 border-b border-l border-slate-700/80 px-3 pb-12 pt-6">
+          {columns.map(column => (
+            <div key={`${column.category}-${column.code}`} className="relative flex h-full w-20 flex-col items-center justify-end">
+              <span className="mb-2 text-xs font-semibold text-slate-200">{column.count}</span>
+              <div
+                className={`w-11 rounded-t-md ${cancellationColumnColor(column.category)} shadow-[0_0_16px_rgba(251,113,133,0.22)]`}
+                style={{ height: `${Math.max(10, (column.count / maxCount) * 220)}px` }}
+                title={`${column.category} ${column.code}: ${column.count}`}
+              />
+              <div className="absolute -bottom-10 w-24 text-center">
+                <div className="truncate text-[11px] font-semibold text-slate-200" title={column.code}>{column.code}</div>
+                <div className="truncate text-[10px] uppercase tracking-[0.14em] text-slate-500" title={column.category}>{column.category}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {categories.map(category => (
+          <span key={category.category} className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300">
+            {category.category}: {category.total}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const StatRow: React.FC<{ label: string; value: string; subtext?: string; accent?: string }> = ({ label, value, subtext, accent = 'text-white' }) => (
+  <div className="rounded-md border border-slate-700/80 bg-slate-950/50 p-3">
+    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</div>
+    <div className={`mt-1 text-lg font-bold ${accent}`}>{value}</div>
+    {subtext && <div className="mt-1 text-xs text-slate-500">{subtext}</div>}
+  </div>
+);
+
+const staffRankingField = (key: MetricKey): DailyMetricNumberKey | null => {
+  if (key === 'staffFlight') return 'flightEvents';
+  if (key === 'staffSimulator') return 'simulatorEvents';
+  if (key === 'staffTotal') return 'totalEvents';
+  return null;
+};
+
+const MetricStatsPanel: React.FC<{
+  metric: MetricDefinition;
+  metrics: BliMetricsResponse;
+  staffGroups: [string, Instructor[]][];
+  selectedStaff: string;
+}> = ({ metric, metrics, staffGroups, selectedStaff }) => {
+  const stats = seriesStats(metric.series);
+  const primaryValue = metric.key === 'availability'
+    ? formatMetricAmount(stats.average, metric)
+    : formatMetricAmount(stats.total, metric);
+  const flightHourStats = seriesStats(metrics.eventSeries.map(point => ({ date: point.date, value: point.flightHours })));
+  const simulatorHourStats = seriesStats(metrics.eventSeries.map(point => ({ date: point.date, value: point.simulatorHours })));
+  const allStaff = staffGroups.flatMap(([, staff]) => staff);
+  const selectedStaffInfo = allStaff.find(staff => staff.name === selectedStaff);
+  const selectedUnit = selectedStaffInfo?.unit || '';
+  const rankingField = staffRankingField(metric.key);
+  const rankedStaff = rankingField
+    ? allStaff
+      .filter(staff => !selectedUnit || (staff.unit || 'Unassigned') === selectedUnit)
+      .map(staff => ({
+        staff,
+        total: sumDailyMetric(metrics.staffSeries?.[staff.name] || [], rankingField),
+      }))
+      .sort((a, b) => b.total - a.total || staffSort(a.staff, b.staff))
+    : [];
+  const selectedRankIndex = rankingField ? rankedStaff.findIndex(row => row.staff.name === selectedStaff) : -1;
+  const visibleRanking = rankedStaff.slice(0, 8);
+  const selectedRanking = selectedRankIndex >= 8 ? rankedStaff[selectedRankIndex] : null;
+
+  return (
+    <aside className="space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+      <div>
+        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Selected Period</h3>
+        <p className="mt-1 text-xs text-slate-500">{compactNumber(stats.dataPointCount)} daily data points</p>
+      </div>
+      <div className="grid grid-cols-1 gap-2">
+        <StatRow
+          label={metric.key === 'availability' ? 'Average' : 'Total'}
+          value={primaryValue}
+          accent="text-cyan-200"
+        />
+        <StatRow
+          label={metric.key === 'availability' ? 'Mean by day' : 'Average per day'}
+          value={formatMetricAmount(stats.average, metric)}
+        />
+        <StatRow
+          label="Highest day"
+          value={formatMetricAmount(stats.highest?.value, metric)}
+          subtext={stats.highest ? dateLabel(stats.highest.date) : 'No date'}
+          accent="text-emerald-200"
+        />
+        <StatRow
+          label="Lowest day"
+          value={formatMetricAmount(stats.lowest?.value, metric)}
+          subtext={stats.lowest ? dateLabel(stats.lowest.date) : 'No date'}
+          accent="text-amber-200"
+        />
+      </div>
+
+      <div className="rounded-md border border-slate-700/80 bg-slate-950/50 p-3">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Hours in period</div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div>
+            <div className="text-xs text-slate-500">Flight</div>
+            <div className="text-base font-bold text-sky-200">{compactNumber(flightHourStats.total, 1)}h</div>
+            <div className="text-[11px] text-slate-500">{compactNumber(flightHourStats.average, 1)}h/day</div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-500">Simulator</div>
+            <div className="text-base font-bold text-teal-200">{compactNumber(simulatorHourStats.total, 1)}h</div>
+            <div className="text-[11px] text-slate-500">{compactNumber(simulatorHourStats.average, 1)}h/day</div>
+          </div>
+        </div>
+      </div>
+
+      {rankingField && (
+        <div className="rounded-md border border-slate-700/80 bg-slate-950/50 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              {selectedUnit || 'All staff'} ranking
+            </div>
+            {selectedRankIndex >= 0 && (
+              <div className="text-xs font-semibold text-cyan-200">#{selectedRankIndex + 1}</div>
+            )}
+          </div>
+          <div className="mt-3 space-y-2">
+            {visibleRanking.map((row, index) => (
+              <div
+                key={row.staff.name}
+                className={`grid grid-cols-[28px_minmax(0,1fr)_42px] items-center gap-2 rounded px-2 py-1.5 text-xs ${row.staff.name === selectedStaff ? 'bg-cyan-400/12 text-cyan-100' : 'text-slate-300'}`}
+              >
+                <span className="text-slate-500">{index + 1}</span>
+                <span className="truncate">{row.staff.rank} {row.staff.name}</span>
+                <span className="text-right font-semibold">{compactNumber(row.total)}</span>
+              </div>
+            ))}
+            {selectedRanking && (
+              <>
+                <div className="px-2 text-center text-slate-600">...</div>
+                <div className="grid grid-cols-[28px_minmax(0,1fr)_42px] items-center gap-2 rounded bg-cyan-400/12 px-2 py-1.5 text-xs text-cyan-100">
+                  <span>{selectedRankIndex + 1}</span>
+                  <span className="truncate">{selectedRanking.staff.rank} {selectedRanking.staff.name}</span>
+                  <span className="text-right font-semibold">{compactNumber(selectedRanking.total)}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </aside>
   );
 };
 
@@ -609,42 +887,22 @@ const MetricModal: React.FC<{
         </div>
 
         {activeMetric.key === 'cancellations' ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {modalMetrics.cancellationsByCategory.length === 0 && (
-              <div className="rounded-lg border border-slate-700 bg-slate-950/45 p-5 text-sm text-slate-400">
-                No cancellation codes were recorded in this timeline.
-              </div>
-            )}
-            {modalMetrics.cancellationsByCategory.map(category => (
-              <div key={category.category} className="rounded-lg border border-slate-700 bg-slate-950/45 p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold text-white">{category.category}</h3>
-                  <span className="rounded-full bg-rose-500/15 px-3 py-1 text-sm font-semibold text-rose-200">{category.total}</span>
-                </div>
-                <div className="space-y-2">
-                  {category.codes.map(code => (
-                    <div key={code.code} className="flex items-center gap-3">
-                      <span className="w-28 truncate text-sm font-medium text-slate-300">{code.code}</span>
-                      <div className="h-3 flex-1 rounded-full bg-slate-800">
-                        <div
-                          className="h-3 rounded-full bg-rose-400"
-                          style={{ width: `${Math.max(4, (code.count / Math.max(1, category.total)) * 100)}%` }}
-                        />
-                      </div>
-                      <span className="w-10 text-right text-sm text-slate-300">{code.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <CancellationColumnChart categories={modalMetrics.cancellationsByCategory} />
         ) : (
-          <FullLineChart
-            series={activeMetric.series}
-            color={metricStrokeColor(activeMetric.color)}
-            label={activeMetric.title}
-            unit={activeMetric.unit}
-          />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <FullLineChart
+              series={activeMetric.series}
+              color={metricStrokeColor(activeMetric.color)}
+              label={activeMetric.title}
+              unit={activeMetric.unit}
+            />
+            <MetricStatsPanel
+              metric={activeMetric}
+              metrics={modalMetrics}
+              staffGroups={staffGroups}
+              selectedStaff={selectedStaff}
+            />
+          </div>
         )}
       </div>
     </div>
