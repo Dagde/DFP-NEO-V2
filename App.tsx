@@ -10339,7 +10339,10 @@ const App: React.FC = () => {
                 const data = await res.json();
                 const dates: string[] = [...new Set((data.dates || []).map((d: any) => d.date))] as string[];
                 console.log(`[Snapshot] ✅ Loaded ${dates.length} snapshot dates for calendar`);
-                setSnapshotDates(dates);
+                setSnapshotDates(prev => (
+                    [...new Set([...prev, ...dates])]
+                        .sort((a, b) => b.localeCompare(a))
+                ));
             } catch (err) {
                 console.warn('[Snapshot] Could not load snapshot dates:', err);
             }
@@ -11482,6 +11485,87 @@ const App: React.FC = () => {
                 if (saved.units?.length) setUnits(saved.units);
                 if (saved.unitLocations) setUnitLocations(saved.unitLocations);
                 if (saved.locationOpAreas) setLocationOpAreas(saved.locationOpAreas);
+                const savedLocations = saved.locations?.length ? saved.locations : locations;
+                const savedLocationAbbreviations = {
+                    ...locationAbbreviations,
+                    ...(saved.locationAbbreviations || {}),
+                };
+                const savedUnits = saved.units?.length ? saved.units : units;
+                const savedUnitLocations = saved.unitLocations || unitLocations;
+                const savedLocationOpAreas = saved.locationOpAreas || locationOpAreas;
+                const resolveLegacyLocationCode = (locationValue: string): string => {
+                    const raw = String(locationValue || '').trim();
+                    if (!raw) return '';
+                    if (savedLocationAbbreviations[raw]) return String(savedLocationAbbreviations[raw]).trim();
+                    const matchingLocationName = savedLocations.find((locationName) => (
+                        String(locationName || '').trim().toLowerCase() === raw.toLowerCase()
+                    ));
+                    if (matchingLocationName && savedLocationAbbreviations[matchingLocationName]) {
+                        return String(savedLocationAbbreviations[matchingLocationName]).trim();
+                    }
+                    return raw;
+                };
+                const legacyPlatformLocations = savedLocations
+                    .map((locationName) => ({
+                        code: resolveLegacyLocationCode(locationName),
+                        iataCode: resolveLegacyLocationCode(locationName),
+                        name: String(locationName || '').trim(),
+                        organisationCode: 'DEFAULT',
+                        timezoneOffset: 10,
+                        trainingAreas: savedLocationOpAreas[locationName] || [],
+                        status: 'ACTIVE',
+                        settings: { source: 'legacy-settings' },
+                    }))
+                    .filter((location) => location.code && location.name);
+                const legacyPlatformUnits = savedUnits
+                    .map((unitCode) => {
+                        const code = String(unitCode || '').trim();
+                        const locationCode = resolveLegacyLocationCode(savedUnitLocations[code] || '');
+                        return {
+                            code,
+                            name: code,
+                            organisationCode: 'DEFAULT',
+                            locationCode,
+                            unitType: 'Training',
+                            status: 'ACTIVE',
+                            settings: {
+                                source: 'legacy-settings',
+                                operationalModel: normaliseOperationalModel('flight_school'),
+                            },
+                        };
+                    })
+                    .filter((unit) => unit.code && unit.locationCode);
+                setPlatformConfig(prev => {
+                    const base = prev || {
+                        organisations: [],
+                        locations: [],
+                        units: [],
+                        aircraftTypes: [],
+                        resourcePools: [],
+                        modules: [],
+                        unitModules: [],
+                        userAccess: [],
+                        platformUsers: [],
+                        schedulingRuleSets: [],
+                    };
+                    const existingLocationCodes = new Set((base.locations || []).map((location: any) => String(location.code || '').trim().toUpperCase()));
+                    const existingLocationNames = new Set((base.locations || []).map((location: any) => String(location.name || '').trim().toLowerCase()));
+                    const existingUnitCodes = new Set((base.units || []).map((unit: any) => String(unit.code || '').trim().toUpperCase()));
+                    return {
+                        ...base,
+                        locations: [
+                            ...(base.locations || []),
+                            ...legacyPlatformLocations.filter(location => (
+                                !existingLocationCodes.has(location.code.toUpperCase())
+                                && !existingLocationNames.has(location.name.toLowerCase())
+                            )),
+                        ],
+                        units: [
+                            ...(base.units || []),
+                            ...legacyPlatformUnits.filter(unit => !existingUnitCodes.has(unit.code.toUpperCase())),
+                        ],
+                    };
+                });
                 if (saved.eventLimits) setEventLimits(saved.eventLimits);
                 if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
                 if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
