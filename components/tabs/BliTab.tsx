@@ -410,10 +410,12 @@ const buildMetricDefinitions = (
     : dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }));
   const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
 
-  const availabilityPoints = availabilitySeries.map(point => ({
-    date: point.date,
-    value: point.availableAverage,
-  }));
+  const availabilityPoints = availabilitySeries
+    .filter(point => point.availableAverage !== null && Number.isFinite(Number(point.availableAverage)))
+    .map(point => ({
+      date: point.date,
+      value: Number(point.availableAverage),
+    }));
   const flightPoints = eventSeries.map(point => ({ date: point.date, value: point.flightEvents }));
   const flightHourPoints = eventSeries.map(point => ({ date: point.date, value: point.flightHours }));
   const simPoints = eventSeries.map(point => ({ date: point.date, value: point.simulatorEvents }));
@@ -896,6 +898,9 @@ const MetricModal: React.FC<{
     return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff)
       .find(candidate => candidate.key === metric.key) || metric;
   }, [currentAircraftAvailable, date, events, metric, modalMetrics, selectedStaff, totalAircraft]);
+  const metricStatusText = activeMetric.key === 'availability'
+    ? `${activeMetric.series.length} AC History availability records in this graph`
+    : `${modalMetrics.snapshotCount} published snapshots in this graph`;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8" onMouseDown={onClose}>
@@ -949,7 +954,7 @@ const MetricModal: React.FC<{
           </div>
         </div>
         <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-          <span>{loading ? 'Loading this graph...' : `${modalMetrics.snapshotCount} published snapshots in this graph`}</span>
+          <span>{loading ? 'Loading this graph...' : metricStatusText}</span>
           {error && <span className="text-amber-300">{error}</span>}
         </div>
 

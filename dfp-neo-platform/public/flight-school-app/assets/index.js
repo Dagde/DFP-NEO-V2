@@ -26258,9 +26258,9 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
   const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : fallback.eventSeries;
   const staffDays = selectedStaff ? metrics.staffSeries?.[selectedStaff] || dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 })) : dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }));
   const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
-  const availabilityPoints = availabilitySeries.map((point) => ({
+  const availabilityPoints = availabilitySeries.filter((point) => point.availableAverage !== null && Number.isFinite(Number(point.availableAverage))).map((point) => ({
     date: point.date,
-    value: point.availableAverage
+    value: Number(point.availableAverage)
   }));
   const flightPoints = eventSeries.map((point) => ({ date: point.date, value: point.flightEvents }));
   const flightHourPoints = eventSeries.map((point) => ({ date: point.date, value: point.flightHours }));
@@ -26694,6 +26694,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
   const activeMetric = reactExports.useMemo(() => {
     return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff).find((candidate) => candidate.key === metric.key) || metric;
   }, [currentAircraftAvailable, date, events, metric, modalMetrics, selectedStaff, totalAircraft]);
+  const metricStatusText = activeMetric.key === "availability" ? `${activeMetric.series.length} AC History availability records in this graph` : `${modalMetrics.snapshotCount} published snapshots in this graph`;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8", onMouseDown: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -26750,7 +26751,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-500", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading this graph..." : `${modalMetrics.snapshotCount} published snapshots in this graph` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading this graph..." : metricStatusText }),
           error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })
         ] }),
         activeMetric.key === "cancellations" ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancellationColumnChart, { categories: modalMetrics.cancellationsByCategory }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]", children: [
