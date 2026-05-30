@@ -26127,7 +26127,7 @@ const compactNumber = (value, digits = 0) => {
   if (value === null || value === void 0 || !Number.isFinite(value)) return "No data";
   return Number(value).toLocaleString("en-GB", { maximumFractionDigits: digits, minimumFractionDigits: digits });
 };
-const metricDigits = (metric) => metric.unit === "%" || metric.unit === "h" ? 1 : 0;
+const metricDigits = (metric) => ["%", "h", "ac"].includes(String(metric.unit || "").trim()) ? 1 : 0;
 const formatMetricAmount = (value, metric) => {
   const formatted = compactNumber(value, metricDigits(metric));
   if (formatted === "No data") return formatted;
@@ -26215,7 +26215,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
   const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
   const availabilityPoints = availabilitySeries.map((point) => ({
     date: point.date,
-    value: point.availabilityPct
+    value: point.availableAverage
   }));
   const flightPoints = eventSeries.map((point) => ({ date: point.date, value: point.flightEvents }));
   const flightHourPoints = eventSeries.map((point) => ({ date: point.date, value: point.flightHours }));
@@ -26230,13 +26230,13 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
     {
       key: "availability",
       title: "Aircraft availability",
-      subtitle: "Average daily availability across the selected timeline.",
+      subtitle: "Daily average aircraft available from AC History records.",
       icon: ForwardRef$4,
       color: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
-      unit: "%",
+      unit: " ac",
       series: availabilityPoints,
-      summary: `${compactNumber(valueAvg(availabilityPoints), 1)}%`,
-      footer: `${metrics.snapshotCount} published DFP snapshots`
+      summary: `${compactNumber(valueAvg(availabilityPoints), 1)} ac`,
+      footer: `${availabilityPoints.filter((point) => point.value !== null).length} availability records`
     },
     {
       key: "flight",

@@ -208,7 +208,7 @@ const compactNumber = (value: number | null | undefined, digits = 0): string => 
 };
 
 const metricDigits = (metric: Pick<MetricDefinition, 'unit'>): number => (
-  metric.unit === '%' || metric.unit === 'h' ? 1 : 0
+  ['%', 'h', 'ac'].includes(String(metric.unit || '').trim()) ? 1 : 0
 );
 
 const formatMetricAmount = (value: number | null | undefined, metric: Pick<MetricDefinition, 'unit'>): string => {
@@ -338,7 +338,7 @@ const buildMetricDefinitions = (
 
   const availabilityPoints = availabilitySeries.map(point => ({
     date: point.date,
-    value: point.availabilityPct,
+    value: point.availableAverage,
   }));
   const flightPoints = eventSeries.map(point => ({ date: point.date, value: point.flightEvents }));
   const flightHourPoints = eventSeries.map(point => ({ date: point.date, value: point.flightHours }));
@@ -354,13 +354,13 @@ const buildMetricDefinitions = (
     {
       key: 'availability',
       title: 'Aircraft availability',
-      subtitle: 'Average daily availability across the selected timeline.',
+      subtitle: 'Daily average aircraft available from AC History records.',
       icon: PaperAirplaneIcon,
       color: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-200',
-      unit: '%',
+      unit: ' ac',
       series: availabilityPoints,
-      summary: `${compactNumber(valueAvg(availabilityPoints), 1)}%`,
-      footer: `${metrics.snapshotCount} published DFP snapshots`,
+      summary: `${compactNumber(valueAvg(availabilityPoints), 1)} ac`,
+      footer: `${availabilityPoints.filter(point => point.value !== null).length} availability records`,
     },
     {
       key: 'flight',
