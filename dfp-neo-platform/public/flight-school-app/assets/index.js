@@ -42396,6 +42396,7 @@ const getCurrentTimezoneOffsetHours = (timezone) => {
 };
 const getAirfieldCatalogueLocationChanges = (entry, currentLocation, fillIdentity = true) => {
   const changes = {
+    iataCode: entry.i || "",
     latitude: entry.a,
     longitude: entry.o,
     timezone: entry.t
@@ -42403,7 +42404,7 @@ const getAirfieldCatalogueLocationChanges = (entry, currentLocation, fillIdentit
   const currentOffset = getCurrentTimezoneOffsetHours(entry.t);
   if (currentOffset !== null) changes.timezoneOffset = currentOffset;
   if (fillIdentity) {
-    const primaryCode = getAirfieldPrimaryCode(entry);
+    const primaryCode = entry.c || entry.l || entry.i || "";
     if (primaryCode) changes.code = primaryCode;
     changes.name = entry.n;
   }
@@ -42703,6 +42704,8 @@ const PlatformConfigurationSettings = ({
   const [airfieldCatalogue, setAirfieldCatalogue] = reactExports.useState([]);
   const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = reactExports.useState("idle");
   const [airfieldCatalogueError, setAirfieldCatalogueError] = reactExports.useState("");
+  const locationRowRefs = reactExports.useRef({});
+  const pendingLocationScrollIdRef = reactExports.useRef(null);
   const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.("settings.rankTerminology.edit") ?? canEdit;
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
@@ -42821,6 +42824,16 @@ const PlatformConfigurationSettings = ({
       cancelled = true;
     };
   }, []);
+  reactExports.useEffect(() => {
+    const pendingLocationId = pendingLocationScrollIdRef.current;
+    if (!pendingLocationId) return;
+    const target = locationRowRefs.current[pendingLocationId];
+    if (!target) return;
+    pendingLocationScrollIdRef.current = null;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 40);
+  }, [config.locations.length]);
   reactExports.useEffect(() => {
     if (!scrollTarget || loading) return;
     const frame = window.requestAnimationFrame(() => {
@@ -43007,6 +43020,8 @@ const PlatformConfigurationSettings = ({
     updateRow("locations", index, { [field]: value });
   };
   const addLocation = () => {
+    const newLocationId = createClientRecordId("location");
+    pendingLocationScrollIdRef.current = newLocationId;
     setConfig((prev) => {
       const referenceLocation = prev.locations[0] || {};
       return {
@@ -43014,9 +43029,10 @@ const PlatformConfigurationSettings = ({
         locations: [
           ...prev.locations,
           {
-            id: createClientRecordId("location"),
+            id: newLocationId,
             organisationCode: prev.organisations[0]?.code || "DEFAULT",
             code: "",
+            iataCode: "",
             name: "",
             timezoneOffset: referenceLocation.timezoneOffset ?? 10,
             latitude: null,
@@ -43365,7 +43381,7 @@ const PlatformConfigurationSettings = ({
           page: "Settings - Platform Locations",
           action: "Add",
           description: `Added location ${getPlatformLocationAuditLabel(location)}`,
-          changes: `Latitude: ${location.latitude ?? "blank"}; longitude: ${location.longitude ?? "blank"}; timezone: ${location.timezone || "blank"}`
+          changes: `IATA: ${location.iataCode || "blank"}; latitude: ${location.latitude ?? "blank"}; longitude: ${location.longitude ?? "blank"}; timezone: ${location.timezone || "blank"}`
         });
       });
       loadedConfigRef.current.locations.forEach((location) => {
@@ -43578,49 +43594,72 @@ const PlatformConfigurationSettings = ({
           airfieldCatalogueStatus === "loaded" ? `${airfieldCatalogue.length.toLocaleString()} local entries available for code or name lookup.` : airfieldCatalogueStatus === "loading" ? "loading local catalogue..." : airfieldCatalogueStatus === "error" ? `local catalogue unavailable (${airfieldCatalogueError}). Manual latitude, longitude and timezone entry still works.` : "preparing lookup."
         ] }),
         config.locations.map((location, index) => {
+          const rowKey = location.id || `platform-location-${index}`;
           const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
+          const iataSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.iataCode, airfieldCatalogueLookup);
           const nameSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.name, airfieldCatalogueLookup);
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2 xl:grid-cols-8", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              AirfieldLookupField,
-              {
-                label: "Location Code",
-                value: location.code,
-                disabled: !canEdit,
-                suggestions: codeSuggestions,
-                onChange: (value) => updateLocationIdentity(index, "code", value),
-                onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              AirfieldLookupField,
-              {
-                label: "Location Name",
-                value: location.name,
-                disabled: !canEdit,
-                suggestions: nameSuggestions,
-                onChange: (value) => updateLocationIdentity(index, "name", value),
-                onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TimeZoneField, { label: "IANA Timezone", value: location.timezone || "", disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezone: value }), info: "Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Training Areas", value: (location.trainingAreas || []).join(", "), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { trainingAreas: value.split(",").map((item) => item.trim()).filter(Boolean) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }),
-              canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-100 hover:bg-red-500/20",
-                  onClick: () => removeLocation(index),
-                  children: "Remove Location"
-                }
-              ) : null
-            ] })
-          ] }, location.id || `platform-location-${index}`);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              ref: (node) => {
+                locationRowRefs.current[rowKey] = node;
+              },
+              className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  AirfieldLookupField,
+                  {
+                    label: "ICAO Code",
+                    value: location.code,
+                    disabled: !canEdit,
+                    suggestions: codeSuggestions,
+                    onChange: (value) => updateLocationIdentity(index, "code", value),
+                    onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
+                  }
+                ) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  AirfieldLookupField,
+                  {
+                    label: "IATA Code",
+                    value: location.iataCode || "",
+                    disabled: !canEdit,
+                    suggestions: iataSuggestions,
+                    onChange: (value) => updateLocationIdentity(index, "iataCode", value),
+                    onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
+                  }
+                ) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  AirfieldLookupField,
+                  {
+                    label: "Location Name",
+                    value: location.name,
+                    disabled: !canEdit,
+                    suggestions: nameSuggestions,
+                    onChange: (value) => updateLocationIdentity(index, "name", value),
+                    onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
+                  }
+                ) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:col-span-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }),
+                  canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-100 hover:bg-red-500/20",
+                      onClick: () => removeLocation(index),
+                      children: "Remove Location"
+                    }
+                  ) : null
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TimeZoneField, { label: "IANA Timezone", value: location.timezone || "", disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezone: value }), info: "Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Training Areas", value: (location.trainingAreas || []).join(", "), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { trainingAreas: value.split(",").map((item) => item.trim()).filter(Boolean) }) }) })
+              ]
+            },
+            rowKey
+          );
         })
       ] })
     ] }),

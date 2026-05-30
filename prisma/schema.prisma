@@ -468,6 +468,7 @@ model CommercialLocation {
   id               String   @id @default(cuid())
   organisationCode String
   code             String   @unique
+  iataCode         String?
   name             String
   timezoneOffset   Int      @default(10)
   trainingAreas    String[] @default([])

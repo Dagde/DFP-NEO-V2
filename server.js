@@ -550,12 +550,13 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
   {
     collection: 'locations',
     entityType: 'CommercialLocation',
-    fields: ['organisationCode', 'code', 'name', 'timezoneOffset', 'latitude', 'longitude', 'timezone', 'trainingAreas', 'status', 'settings'],
+    fields: ['organisationCode', 'code', 'iataCode', 'name', 'timezoneOffset', 'latitude', 'longitude', 'timezone', 'trainingAreas', 'status', 'settings'],
     isValid: (row) => Boolean(row.code && row.name),
     normalise: (row) => ({
       id: row.id || null,
       organisationCode: row.organisationCode || 'DEFAULT',
       code: row.code || '',
+      iataCode: row.iataCode || '',
       name: row.name || '',
       timezoneOffset: Number(row.timezoneOffset ?? 10),
       latitude: row.latitude === null || row.latitude === undefined || row.latitude === '' ? null : Number(row.latitude),
@@ -802,6 +803,7 @@ const PLATFORM_FIELD_LABELS = {
   CommercialLocation: {
     organisationCode: 'Organisation',
     code: 'Location code',
+    iataCode: 'IATA code',
     name: 'Location name',
     timezoneOffset: 'UTC offset',
     latitude: 'Latitude',
@@ -1927,21 +1929,23 @@ app.post('/api/platform-config', async (req, res) => {
     for (const location of locations) {
       if (!location.code || !location.name) continue;
       const solar = normaliseLocationSolarFields(location);
+      const iataCode = String(location.iataCode || '').trim() || null;
       await db.$executeRawUnsafe(`
-        INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "name", "timezoneOffset", "latitude", "longitude", "timezone", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
-        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::timestamp, $11::timestamp)
+        INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "iataCode", "name", "timezoneOffset", "latitude", "longitude", "timezone", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::timestamp, $12::timestamp)
         ON CONFLICT ("code") DO UPDATE SET
           "organisationCode" = $1,
-          "name" = $3,
-          "timezoneOffset" = $4,
-          "latitude" = $5,
-          "longitude" = $6,
-          "timezone" = $7,
-          "trainingAreas" = $8,
-          "status" = $9,
-          "settings" = $10::jsonb,
-          "updatedAt" = $11::timestamp
-      `, location.organisationCode || 'DEFAULT', location.code, location.name, Number(location.timezoneOffset ?? 10), solar.latitude, solar.longitude, solar.timezone, toArray(location.trainingAreas), location.status || 'ACTIVE', toJson(location.settings), now);
+          "iataCode" = $3,
+          "name" = $4,
+          "timezoneOffset" = $5,
+          "latitude" = $6,
+          "longitude" = $7,
+          "timezone" = $8,
+          "trainingAreas" = $9,
+          "status" = $10,
+          "settings" = $11::jsonb,
+          "updatedAt" = $12::timestamp
+      `, location.organisationCode || 'DEFAULT', location.code, iataCode, location.name, Number(location.timezoneOffset ?? 10), solar.latitude, solar.longitude, solar.timezone, toArray(location.trainingAreas), location.status || 'ACTIVE', toJson(location.settings), now);
     }
 
     for (const unit of units) {
@@ -6976,6 +6980,7 @@ async function ensureCommercialConfigTables(db) {
         "id" TEXT NOT NULL,
         "organisationCode" TEXT NOT NULL,
         "code" TEXT NOT NULL,
+        "iataCode" TEXT,
         "name" TEXT NOT NULL,
         "timezoneOffset" DOUBLE PRECISION NOT NULL DEFAULT 10,
         "latitude" DOUBLE PRECISION,
@@ -6993,6 +6998,7 @@ async function ensureCommercialConfigTables(db) {
     await db.$executeRawUnsafe(`ALTER TABLE "CommercialLocation" ADD COLUMN IF NOT EXISTS "latitude" DOUBLE PRECISION;`);
     await db.$executeRawUnsafe(`ALTER TABLE "CommercialLocation" ADD COLUMN IF NOT EXISTS "longitude" DOUBLE PRECISION;`);
     await db.$executeRawUnsafe(`ALTER TABLE "CommercialLocation" ADD COLUMN IF NOT EXISTS "timezone" TEXT;`);
+    await db.$executeRawUnsafe(`ALTER TABLE "CommercialLocation" ADD COLUMN IF NOT EXISTS "iataCode" TEXT;`);
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialLocation_code_key" ON "CommercialLocation"("code");`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialLocation_organisationCode_idx" ON "CommercialLocation"("organisationCode");`);
     for (const code of ['ESL', 'PEA', 'WLM', 'AMB', 'TIN', 'EDI']) {
@@ -7280,8 +7286,8 @@ async function seedCommercialConfigIfEmpty(db) {
     const code = locationCodeFor(locationName);
     const solar = getDefaultAirfieldSolarProfile(code) || getDefaultAirfieldSolarProfile(locationName) || {};
     await db.$executeRawUnsafe(`
-      INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "name", "timezoneOffset", "latitude", "longitude", "timezone", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, $2, $3, $4, $5, $6, $7, 'ACTIVE', '{}'::jsonb, $8::timestamp, $8::timestamp)
+      INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "iataCode", "name", "timezoneOffset", "latitude", "longitude", "timezone", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, null, $2, $3, $4, $5, $6, $7, 'ACTIVE', '{}'::jsonb, $8::timestamp, $8::timestamp)
       ON CONFLICT ("code") DO NOTHING
     `, code, locationName, timezoneOffset, solar.latitude ?? null, solar.longitude ?? null, solar.timezone ?? null, Array.isArray(locationOpAreas[locationName]) ? locationOpAreas[locationName] : [], now);
   }

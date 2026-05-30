@@ -522,6 +522,7 @@ const getAirfieldCatalogueLocationChanges = (
   fillIdentity = true,
 ): Record<string, any> => {
   const changes: Record<string, any> = {
+    iataCode: entry.i || '',
     latitude: entry.a,
     longitude: entry.o,
     timezone: entry.t,
@@ -529,7 +530,7 @@ const getAirfieldCatalogueLocationChanges = (
   const currentOffset = getCurrentTimezoneOffsetHours(entry.t);
   if (currentOffset !== null) changes.timezoneOffset = currentOffset;
   if (fillIdentity) {
-    const primaryCode = getAirfieldPrimaryCode(entry);
+    const primaryCode = entry.c || entry.l || entry.i || '';
     if (primaryCode) changes.code = primaryCode;
     changes.name = entry.n;
   }
@@ -886,6 +887,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [airfieldCatalogue, setAirfieldCatalogue] = useState<AirfieldCatalogueEntry[]>([]);
   const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [airfieldCatalogueError, setAirfieldCatalogueError] = useState('');
+  const locationRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const pendingLocationScrollIdRef = useRef<string | null>(null);
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
@@ -1012,6 +1015,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     loadAirfieldCatalogue();
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    const pendingLocationId = pendingLocationScrollIdRef.current;
+    if (!pendingLocationId) return;
+    const target = locationRowRefs.current[pendingLocationId];
+    if (!target) return;
+    pendingLocationScrollIdRef.current = null;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 40);
+  }, [config.locations.length]);
 
   useEffect(() => {
     if (!scrollTarget || loading) return;
@@ -1233,11 +1247,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateRow('locations', index, getAirfieldCatalogueLocationChanges(entry, currentLocation, true));
   };
 
-  const updateLocationIdentity = (index: number, field: 'code' | 'name', value: string) => {
+  const updateLocationIdentity = (index: number, field: 'code' | 'iataCode' | 'name', value: string) => {
     updateRow('locations', index, { [field]: value });
   };
 
   const addLocation = () => {
+    const newLocationId = createClientRecordId('location');
+    pendingLocationScrollIdRef.current = newLocationId;
     setConfig((prev) => {
       const referenceLocation = prev.locations[0] || {};
       return {
@@ -1245,9 +1261,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         locations: [
           ...prev.locations,
           {
-            id: createClientRecordId('location'),
+            id: newLocationId,
             organisationCode: prev.organisations[0]?.code || 'DEFAULT',
             code: '',
+            iataCode: '',
             name: '',
             timezoneOffset: referenceLocation.timezoneOffset ?? 10,
             latitude: null,
@@ -1666,7 +1683,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           page: 'Settings - Platform Locations',
           action: 'Add',
           description: `Added location ${getPlatformLocationAuditLabel(location)}`,
-          changes: `Latitude: ${location.latitude ?? 'blank'}; longitude: ${location.longitude ?? 'blank'}; timezone: ${location.timezone || 'blank'}`,
+          changes: `IATA: ${location.iataCode || 'blank'}; latitude: ${location.latitude ?? 'blank'}; longitude: ${location.longitude ?? 'blank'}; timezone: ${location.timezone || 'blank'}`,
         });
       });
       loadedConfigRef.current.locations.forEach((location) => {
@@ -1943,32 +1960,50 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   : 'preparing lookup.'}
           </div>
           {config.locations.map((location, index) => {
+            const rowKey = location.id || `platform-location-${index}`;
             const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
+            const iataSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.iataCode, airfieldCatalogueLookup);
             const nameSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.name, airfieldCatalogueLookup);
             return (
-              <div key={location.id || `platform-location-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2 xl:grid-cols-8">
-                <AirfieldLookupField
-                  label="Location Code"
-                  value={location.code}
-                  disabled={!canEdit}
-                  suggestions={codeSuggestions}
-                  onChange={(value) => updateLocationIdentity(index, 'code', value)}
-                  onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
-                />
-                <AirfieldLookupField
-                  label="Location Name"
-                  value={location.name}
-                  disabled={!canEdit}
-                  suggestions={nameSuggestions}
-                  onChange={(value) => updateLocationIdentity(index, 'name', value)}
-                  onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
-                />
-                <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
-                <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
-                <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
-                <TimeZoneField label="IANA Timezone" value={location.timezone || ''} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezone: value })} info="Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." />
-                <Field label="Training Areas" value={(location.trainingAreas || []).join(', ')} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { trainingAreas: value.split(',').map((item) => item.trim()).filter(Boolean) })} />
-                <div className="grid gap-2">
+              <div
+                key={rowKey}
+                ref={(node) => { locationRowRefs.current[rowKey] = node; }}
+                className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12"
+              >
+                <div className="md:col-span-2">
+                  <AirfieldLookupField
+                    label="ICAO Code"
+                    value={location.code}
+                    disabled={!canEdit}
+                    suggestions={codeSuggestions}
+                    onChange={(value) => updateLocationIdentity(index, 'code', value)}
+                    onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <AirfieldLookupField
+                    label="IATA Code"
+                    value={location.iataCode || ''}
+                    disabled={!canEdit}
+                    suggestions={iataSuggestions}
+                    onChange={(value) => updateLocationIdentity(index, 'iataCode', value)}
+                    onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
+                  />
+                </div>
+                <div className="md:col-span-5">
+                  <AirfieldLookupField
+                    label="Location Name"
+                    value={location.name}
+                    disabled={!canEdit}
+                    suggestions={nameSuggestions}
+                    onChange={(value) => updateLocationIdentity(index, 'name', value)}
+                    onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
+                </div>
+                <div className="grid gap-2 md:col-span-2">
                   <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
                   {canEdit ? (
                     <button
@@ -1979,6 +2014,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       Remove Location
                     </button>
                   ) : null}
+                </div>
+                <div className="md:col-span-2">
+                  <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
+                </div>
+                <div className="md:col-span-2">
+                  <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
+                </div>
+                <div className="md:col-span-3">
+                  <TimeZoneField label="IANA Timezone" value={location.timezone || ''} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezone: value })} info="Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." />
+                </div>
+                <div className="md:col-span-5">
+                  <Field label="Training Areas" value={(location.trainingAreas || []).join(', ')} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { trainingAreas: value.split(',').map((item) => item.trim()).filter(Boolean) })} />
                 </div>
               </div>
             );

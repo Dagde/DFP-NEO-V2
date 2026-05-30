@@ -2,6 +2,7 @@ import { getAppApiBase } from './externalDataControls';
 
 export interface PlatformLocation {
   code: string;
+  iataCode?: string | null;
   name: string;
   organisationCode?: string;
   timezoneOffset?: number;
