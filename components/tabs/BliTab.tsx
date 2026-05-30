@@ -9,6 +9,7 @@ import {
   Squares2X2Icon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import { initialCancellationCodes } from '../../data/cancellationCodes';
 import type { Instructor, ScheduleEvent } from '../../types';
 
 type TimelineKey = '7d' | '1m' | '6m' | '12m' | '2y' | '3y' | '5y';
@@ -615,6 +616,7 @@ const cancellationColumnColor = (category: string): string => {
 };
 
 const CancellationColumnChart: React.FC<{ categories: CancellationCategory[] }> = ({ categories }) => {
+  const cancellationLegendByCode = new Map(initialCancellationCodes.map(code => [code.code.toUpperCase(), code]));
   const columns = categories
     .flatMap(category => category.codes.map(code => ({
       category: category.category,
@@ -624,6 +626,22 @@ const CancellationColumnChart: React.FC<{ categories: CancellationCategory[] }> 
     .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category) || a.code.localeCompare(b.code));
   const maxCount = Math.max(1, ...columns.map(column => column.count));
   const total = columns.reduce((sum, column) => sum + column.count, 0);
+  const legendItems = [...new Map(columns.map(column => [column.code.toUpperCase(), column])).values()]
+    .sort((a, b) => a.code.localeCompare(b.code))
+    .map(column => {
+      const definition = cancellationLegendByCode.get(column.code.toUpperCase());
+      const description = definition
+        ? [definition.category, definition.description]
+          .filter(Boolean)
+          .filter((part, index, parts) => index === 0 || part.toLowerCase() !== parts[0].toLowerCase())
+          .join(' ')
+        : column.category;
+      return {
+        code: column.code,
+        description,
+        category: column.category,
+      };
+    });
 
   if (columns.length === 0) {
     return (
@@ -641,23 +659,40 @@ const CancellationColumnChart: React.FC<{ categories: CancellationCategory[] }> 
           <p className="text-sm text-slate-400">{compactNumber(total)} cancellations across {compactNumber(categories.length)} event categories</p>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <div className="flex h-80 min-w-max items-end gap-3 border-b border-l border-slate-700/80 px-3 pb-12 pt-6">
-          {columns.map(column => (
-            <div key={`${column.category}-${column.code}`} className="relative flex h-full w-20 flex-col items-center justify-end">
-              <span className="mb-2 text-xs font-semibold text-slate-200">{column.count}</span>
-              <div
-                className={`w-11 rounded-t-md ${cancellationColumnColor(column.category)} shadow-[0_0_16px_rgba(251,113,133,0.22)]`}
-                style={{ height: `${Math.max(10, (column.count / maxCount) * 220)}px` }}
-                title={`${column.category} ${column.code}: ${column.count}`}
-              />
-              <div className="absolute -bottom-10 w-24 text-center">
-                <div className="truncate text-[11px] font-semibold text-slate-200" title={column.code}>{column.code}</div>
-                <div className="truncate text-[10px] uppercase tracking-[0.14em] text-slate-500" title={column.category}>{column.category}</div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="overflow-x-auto">
+          <div className="flex h-80 min-w-max items-end gap-3 border-b border-l border-slate-700/80 px-3 pb-12 pt-6">
+            {columns.map(column => (
+              <div key={`${column.category}-${column.code}`} className="relative flex h-full w-20 flex-col items-center justify-end">
+                <span className="mb-2 text-xs font-semibold text-slate-200">{column.count}</span>
+                <div
+                  className={`w-11 rounded-t-md ${cancellationColumnColor(column.category)} shadow-[0_0_16px_rgba(251,113,133,0.22)]`}
+                  style={{ height: `${Math.max(10, (column.count / maxCount) * 220)}px` }}
+                  title={`${column.category} ${column.code}: ${column.count}`}
+                />
+                <div className="absolute -bottom-10 w-24 text-center">
+                  <div className="truncate text-[11px] font-semibold text-slate-200" title={column.code}>{column.code}</div>
+                  <div className="truncate text-[10px] uppercase tracking-[0.14em] text-slate-500" title={column.category}>{column.category}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+        <aside className="rounded-md border border-slate-700/80 bg-slate-950/50 p-3">
+          <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Code Key</div>
+          <div className="space-y-1.5">
+            {legendItems.map(item => (
+              <div key={item.code} className="flex items-start gap-2 text-[11px] leading-4 text-slate-300">
+                <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${cancellationColumnColor(item.category)}`} />
+                <span>
+                  <span className="font-bold text-slate-100">{item.code}</span>
+                  <span className="text-slate-500"> - </span>
+                  <span>{item.description}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </aside>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {categories.map(category => (

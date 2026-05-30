@@ -26031,6 +26031,88 @@ function UserGroupIcon({
   }));
 }
 const ForwardRef = /* @__PURE__ */ reactExports.forwardRef(UserGroupIcon);
+const initialCancellationCodes = [
+  {
+    code: "AD",
+    category: "Aircraft",
+    description: "On deployment",
+    appliesTo: "Both",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    code: "AT",
+    category: "Aircraft",
+    description: "Time constraint",
+    appliesTo: "Both",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    code: "AU",
+    category: "Aircraft",
+    description: "Unavailable",
+    appliesTo: "Both",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    code: "CI",
+    category: "Crew",
+    description: "Instructor",
+    appliesTo: "Both",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    code: "CO",
+    category: "Crew",
+    description: "Other crew",
+    appliesTo: "Both",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    code: "CP",
+    category: "Crew",
+    description: "Pilot",
+    appliesTo: "Both",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    code: "CS",
+    category: "Crew",
+    description: "Student",
+    appliesTo: "Both",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    code: "PC",
+    category: "Program",
+    description: "Change",
+    appliesTo: "Both",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    code: "PE",
+    category: "Program",
+    description: "Error",
+    appliesTo: "Both",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    code: "WX",
+    category: "Weather",
+    description: "Weather",
+    appliesTo: "Flight",
+    isActive: true,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  }
+];
 const isStaffMetricKey = (key) => key === "staffFlight" || key === "staffSimulator" || key === "staffTotal";
 const metricStrokeColor = (color) => {
   if (color.includes("cyan")) return "#22d3ee";
@@ -26446,6 +26528,7 @@ const cancellationColumnColor = (category) => {
   return "bg-rose-400";
 };
 const CancellationColumnChart = ({ categories }) => {
+  const cancellationLegendByCode = new Map(initialCancellationCodes.map((code) => [code.code.toUpperCase(), code]));
   const columns = categories.flatMap((category) => category.codes.map((code) => ({
     category: category.category,
     code: code.code,
@@ -26453,6 +26536,15 @@ const CancellationColumnChart = ({ categories }) => {
   }))).sort((a, b) => b.count - a.count || a.category.localeCompare(b.category) || a.code.localeCompare(b.code));
   const maxCount = Math.max(1, ...columns.map((column) => column.count));
   const total = columns.reduce((sum, column) => sum + column.count, 0);
+  const legendItems = [...new Map(columns.map((column) => [column.code.toUpperCase(), column])).values()].sort((a, b) => a.code.localeCompare(b.code)).map((column) => {
+    const definition = cancellationLegendByCode.get(column.code.toUpperCase());
+    const description = definition ? [definition.category, definition.description].filter(Boolean).filter((part, index, parts) => index === 0 || part.toLowerCase() !== parts[0].toLowerCase()).join(" ") : column.category;
+    return {
+      code: column.code,
+      description,
+      category: column.category
+    };
+  });
   if (columns.length === 0) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-5 text-sm text-slate-400", children: "No cancellation codes were recorded in this timeline." });
   }
@@ -26466,21 +26558,34 @@ const CancellationColumnChart = ({ categories }) => {
         " event categories"
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-80 min-w-max items-end gap-3 border-b border-l border-slate-700/80 px-3 pb-12 pt-6", children: columns.map((column) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-20 flex-col items-center justify-end", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 text-xs font-semibold text-slate-200", children: column.count }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: `w-11 rounded-t-md ${cancellationColumnColor(column.category)} shadow-[0_0_16px_rgba(251,113,133,0.22)]`,
-          style: { height: `${Math.max(10, column.count / maxCount * 220)}px` },
-          title: `${column.category} ${column.code}: ${column.count}`
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute -bottom-10 w-24 text-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[11px] font-semibold text-slate-200", title: column.code, children: column.code }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[10px] uppercase tracking-[0.14em] text-slate-500", title: column.category, children: column.category })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_220px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-80 min-w-max items-end gap-3 border-b border-l border-slate-700/80 px-3 pb-12 pt-6", children: columns.map((column) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-20 flex-col items-center justify-end", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 text-xs font-semibold text-slate-200", children: column.count }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: `w-11 rounded-t-md ${cancellationColumnColor(column.category)} shadow-[0_0_16px_rgba(251,113,133,0.22)]`,
+            style: { height: `${Math.max(10, column.count / maxCount * 220)}px` },
+            title: `${column.category} ${column.code}: ${column.count}`
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute -bottom-10 w-24 text-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[11px] font-semibold text-slate-200", title: column.code, children: column.code }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[10px] uppercase tracking-[0.14em] text-slate-500", title: column.category, children: column.category })
+        ] })
+      ] }, `${column.category}-${column.code}`)) }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "rounded-md border border-slate-700/80 bg-slate-950/50 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Code Key" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: legendItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-2 text-[11px] leading-4 text-slate-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 h-2 w-2 shrink-0 rounded-full ${cancellationColumnColor(item.category)}` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-slate-100", children: item.code }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-500", children: " - " }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.description })
+          ] })
+        ] }, item.code)) })
       ] })
-    ] }, `${column.category}-${column.code}`)) }) }),
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex flex-wrap gap-2", children: categories.map((category) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300", children: [
       category.category,
       ": ",
@@ -55716,88 +55821,6 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
     masters: [...enrichedMasters, ...missingMasters]
   };
 };
-const initialCancellationCodes = [
-  {
-    code: "AD",
-    category: "Aircraft",
-    description: "On deployment",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "AT",
-    category: "Aircraft",
-    description: "Time constraint",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "AU",
-    category: "Aircraft",
-    description: "Unavailable",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "CI",
-    category: "Crew",
-    description: "Instructor",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "CO",
-    category: "Crew",
-    description: "Other crew",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "CP",
-    category: "Crew",
-    description: "Pilot",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "CS",
-    category: "Crew",
-    description: "Student",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "PC",
-    category: "Program",
-    description: "Change",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "PE",
-    category: "Program",
-    description: "Error",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "WX",
-    category: "Weather",
-    description: "Weather",
-    appliesTo: "Flight",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  }
-];
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
 const normalisePersonnelRecord = (person) => {
