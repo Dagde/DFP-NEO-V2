@@ -389,6 +389,7 @@ interface EventDetailModalProps {
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftNumberSettings?: AircraftNumberSettings;
     personnelDisplaySettings?: PersonnelDisplaySettings;
+    isReadOnly?: boolean;
 }
 
 interface CrewMember {
@@ -434,7 +435,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, isReadOnly = false }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -447,7 +448,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     });
 
     const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
-    const [isEditing, setIsEditing] = useState(isEditingDefault);
+    const [isEditing, setIsEditing] = useState(isReadOnly ? false : isEditingDefault);
     const [localHighlight, setLocalHighlight] = useState(highlightedField);
     const [showDeleteChoice, setShowDeleteChoice] = useState(false);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -1094,7 +1095,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             group: event.group || '',
             groupTraineeIds: event.groupTraineeIds || []
         }]);
-        setIsEditing(isEditingDefault);
+        setIsEditing(isReadOnly ? false : isEditingDefault);
         setLocalHighlight(highlightedField);
         setLocationType(event.locationType || 'Local');
         setOrigin(event.origin || school);
@@ -1110,7 +1111,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setDeploymentEndDate(event.deploymentEndDate || event.date); 
         setDeploymentEndTime(event.deploymentEndTime || '');
 
-    }, [event, isEditingDefault, highlightedField, school]);
+    }, [event, isEditingDefault, highlightedField, school, isReadOnly]);
     
     useEffect(() => {
         if (locationType === 'Local') {
@@ -1459,6 +1460,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setDuration(visualAdjustEndTime - visualAdjustStartTime);
     };
     const handleSave = async () => {
+        if (isReadOnly) {
+            await showDarkAlert('Past DFPs are locked. Tile details cannot be amended.', 'Past DFP Locked', 'warning');
+            return;
+        }
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
@@ -2038,7 +2043,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                         )}
                         <h2 className="text-xl font-bold text-white">{modalTitle}</h2>
                         <div className="absolute right-2 flex items-center space-x-4">
-                            {isEditing && eventType === 'flight' && (
+                            {isEditing && !isReadOnly && eventType === 'flight' && (
                                 <label className="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-black/20">
                                     <input
                                         type="checkbox"
@@ -2055,14 +2060,14 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     <span className="text-sm font-semibold text-white">Add Deployment</span>
                                 </label>
                             )}
-                            <div className="relative">
+                            {!isReadOnly && <div className="relative">
                                 {isFrozen && (
                                     <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                 )}
                                 <button onClick={() => setShowDeleteChoice(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md" style={{backgroundColor: "#FF6666", color: "white"}} aria-label="Delete Event">
                                     Delete
                                 </button>
-                            </div>
+                            </div>}
                         </div>
                     </div>
 
@@ -2110,14 +2115,14 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </button>
                                         </div>
                                     )}
-                                    <div className="relative w-[75px]">
+                                    {!isReadOnly && <div className="relative w-[75px]">
                                         {isFrozen && (
                                             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                         )}
                                         <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
                                             <span className="text-center leading-tight">Edit</span>
                                         </button>
-                                    </div>
+                                    </div>}
                                 </>
                             )}
                         </div>
@@ -2517,7 +2522,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         )}
                                     </div>
                                     {/* NEO button - always frozen when system is frozen */}
-                                    <div className="relative w-[75px]">
+                                    {!isReadOnly && <div className="relative w-[75px]">
                                         {isFrozen && (
                                             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                         )}
@@ -2527,9 +2532,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         >
                                             <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO</span>
                                         </button>
-                                    </div>
+                                    </div>}
                                     {/* Auth button - frozen unless flightAuthorisation is allowed */}
-                                    {event.type === 'flight' && (
+                                    {!isReadOnly && event.type === 'flight' && (
                                         <div className="relative w-[75px]">
                                             {isFrozen && !freezeAllowedActions.flightAuthorisation && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -2540,7 +2545,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         </div>
                                     )}
                                     {/* Complete button - always frozen when system is frozen */}
-                                    {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
+                                    {!isReadOnly && ((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
                                         <div className="relative w-[75px]">
                                             {isFrozen && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -2554,7 +2559,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         </div>
                                     )}
                                     {/* Post Flight button - frozen unless postFlightTimes is allowed */}
-                                    {(event.type === 'flight' || event.type === 'ftd') && (
+                                    {!isReadOnly && (event.type === 'flight' || event.type === 'ftd') && (
                                         <div className="relative w-[75px]">
                                             {isFrozen && !freezeAllowedActions.postFlightTimes && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />

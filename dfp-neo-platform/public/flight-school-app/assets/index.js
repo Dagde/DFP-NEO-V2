@@ -6059,7 +6059,8 @@ const AircraftAvailabilityOverlay = ({
   onUserChange,
   initialAvailability = 15,
   apiBase: apiBase2,
-  showLiveAvailabilityLine
+  showLiveAvailabilityLine,
+  isReadOnly = false
 }) => {
   const [currentAvailable, setCurrentAvailable] = reactExports.useState(initialAvailability);
   const [snapshots, setSnapshots] = reactExports.useState([]);
@@ -6176,6 +6177,7 @@ const AircraftAvailabilityOverlay = ({
     currentDateRef.current = currentDate;
   }, [currentDate]);
   const handleLineMouseDown = async (e) => {
+    if (isReadOnly) return;
     const freezeRaw = localStorage.getItem("systemFreezeState");
     if (freezeRaw) {
       const freeze = JSON.parse(freezeRaw);
@@ -6613,6 +6615,7 @@ const ScheduleView = ({
   alertsData,
   formatResourceLabel: formatResourceLabel2,
   aircraftNumberSettings,
+  isReadOnly = false,
   timezoneOffset = 11
   // Default to UTC+11
 }) => {
@@ -6741,6 +6744,10 @@ const ScheduleView = ({
     console.log("Event target:", e.target);
     console.log("Current target:", e.currentTarget);
     if (e.button !== 0) return;
+    if (isReadOnly && event) {
+      didDragRef.current = false;
+      return;
+    }
     didDragRef.current = false;
     document.body.classList.add("no-select");
     if (isOracleMode && !event) {
@@ -7278,7 +7285,7 @@ const ScheduleView = ({
             conflictedPersonnelName: personToHighlight,
             personnelData,
             seatConfigs,
-            isDraggable: !isPauseSelectMode,
+            isDraggable: !isPauseSelectMode && !isReadOnly,
             currentTime,
             isSelected,
             isChanged,
@@ -7438,8 +7445,9 @@ const ScheduleView = ({
                   pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
                   startHour: START_HOUR$5,
                   onAvailabilityChange,
-                  onUserChange: onUserAvailabilityChange,
-                  showLiveAvailabilityLine
+                  onUserChange: isReadOnly ? void 0 : onUserAvailabilityChange,
+                  showLiveAvailabilityLine,
+                  isReadOnly
                 }
               ),
               renderEvents(),
@@ -13968,7 +13976,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -13979,7 +13987,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     isSct: event.isSct
   });
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
-  const [isEditing, setIsEditing] = reactExports.useState(isEditingDefault);
+  const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
   const [showDeleteChoice, setShowDeleteChoice] = reactExports.useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = reactExports.useState(false);
@@ -14452,7 +14460,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       group: event.group || "",
       groupTraineeIds: event.groupTraineeIds || []
     }]);
-    setIsEditing(isEditingDefault);
+    setIsEditing(isReadOnly ? false : isEditingDefault);
     setLocalHighlight(highlightedField);
     setLocationType(event.locationType || "Local");
     setOrigin(event.origin || school);
@@ -14465,7 +14473,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     setDeploymentStartTime(event.deploymentStartTime || "");
     setDeploymentEndDate(event.deploymentEndDate || event.date);
     setDeploymentEndTime(event.deploymentEndTime || "");
-  }, [event, isEditingDefault, highlightedField, school]);
+  }, [event, isEditingDefault, highlightedField, school, isReadOnly]);
   reactExports.useEffect(() => {
     if (locationType === "Local") {
       setOrigin(school);
@@ -14712,6 +14720,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     setDuration(visualAdjustEndTime - visualAdjustStartTime);
   };
   const handleSave = async () => {
+    if (isReadOnly) {
+      await showDarkAlert("Past DFPs are locked. Tile details cannot be amended.", "Past DFP Locked", "warning");
+      return;
+    }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
     if (_freezeRaw) {
       const _freeze = JSON.parse(_freezeRaw);
@@ -15179,7 +15191,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: modalTitle }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute right-2 flex items-center space-x-4", children: [
-          isEditing && eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-black/20", children: [
+          isEditing && !isReadOnly && eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-black/20", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -15197,7 +15209,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: "Add Deployment" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
             isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowDeleteChoice(true), className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md", style: { backgroundColor: "#FF6666", color: "white" }, "aria-label": "Delete Event", children: "Delete" })
           ] })
@@ -15246,7 +15258,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setIsEditing(true), className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Edit" }) })
             ] })
@@ -15632,7 +15644,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[10px] font-semibold text-gray-400", children: "Conflict?" }),
               isConflict ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-bold text-red-500", children: "YES" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-bold text-green-500", children: "NO" })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -15643,11 +15655,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 }
               )
             ] }),
-            event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            !isReadOnly && event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && !freezeAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAuthClick, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Auth" }) })
             ] }),
-            (traineeObject && event.type === "ground" || (event.flightNumber.includes("MB") || event.flightNumber.includes(" MB"))) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            !isReadOnly && (traineeObject && event.type === "ground" || (event.flightNumber.includes("MB") || event.flightNumber.includes(" MB"))) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -15658,7 +15670,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 }
               )
             ] }),
-            (event.type === "flight" || event.type === "ftd") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            !isReadOnly && (event.type === "flight" || event.type === "ftd") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && !freezeAllowedActions.postFlightTimes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePostFlightClick, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
                 "Post",
@@ -62870,6 +62882,15 @@ const App = () => {
     const day = String(adjustedDate.getUTCDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
+  const isPastDfpDate = (targetDate) => Boolean(targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) && targetDate < getLocalDateString());
+  const isViewingPastDfp = isPastDfpDate(date);
+  const denyPastDfpEdit = (action = "modify this DFP") => {
+    showDarkAlert2(
+      `Past DFPs are locked. You cannot ${action} for ${date}.`,
+      "Past DFP Locked",
+      "warning"
+    );
+  };
   const safeParseDate = (dateStr) => {
     if (!dateStr || typeof dateStr !== "string" || !dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
       console.warn("[safeParseDate] Invalid date string provided:", dateStr);
@@ -67500,9 +67521,14 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const handleOpenModal = (event, options = {}) => {
     if (!event) {
+      const targetDate = oracleContext === "nextDayBuild" || activeView === "NextDayBuild" || activeView === "Priorities" || activeView === "ProgramData" ? buildDfpDate : date;
+      if (!options.isPriority && isPastDfpDate(targetDate)) {
+        denyPastDfpEdit("add tiles");
+        return;
+      }
       const newEvent = {
         id: v4(),
-        date: oracleContext === "nextDayBuild" || activeView === "NextDayBuild" || activeView === "Priorities" || activeView === "ProgramData" ? buildDfpDate : date,
+        date: targetDate,
         type: options.type || "flight",
         flightNumber: "",
         duration: 1.5,
@@ -67748,6 +67774,12 @@ ${error instanceof Error ? error.message : String(error)}`,
     console.log("🔵 date:", date);
     console.log("🔵 buildDfpDate:", buildDfpDate);
     if (!eventsToSave || eventsToSave.length === 0) return;
+    const isNextDaySaveContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
+    const lockedPastEvents = eventsToSave.filter((event) => !isPriority && !isNextDaySaveContext && isPastDfpDate(event.date));
+    if (lockedPastEvents.length > 0) {
+      denyPastDfpEdit("save changes");
+      return;
+    }
     eventsToSave = eventsToSave.map(normaliseCrewFieldsForSave);
     for (const event of eventsToSave) {
       const personnel = getPersonnel(event);
@@ -68007,6 +68039,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       return;
     }
     const eventDate = selectedEvent.date;
+    const isNextDay = eventDate === buildDfpDate && (activeView === "NextDayBuild" || activeView === "Priorities" || activeView === "ProgramData");
+    if (!isNextDay && isPastDfpDate(eventDate)) {
+      denyPastDfpEdit("cancel events");
+      return;
+    }
     const personnelNames = [
       selectedEvent.instructor,
       selectedEvent.student,
@@ -68037,7 +68074,6 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       cancelledAt: (/* @__PURE__ */ new Date()).toISOString()
       // Keep original resourceId - don't move to STBY
     };
-    const isNextDay = eventDate === buildDfpDate && (activeView === "NextDayBuild" || activeView === "Priorities" || activeView === "ProgramData");
     if (isNextDay) {
       setNextDayBuildEvents(
         (prev) => prev.map((e) => e.id === selectedEvent.id ? cancelledEvent : e)
@@ -68088,8 +68124,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
     if (!selectedEvent) return;
     const eventDate = selectedEvent.date;
-    setHighestPriorityEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
     const isNextDay = eventDate === buildDfpDate && (activeView === "NextDayBuild" || activeView === "Priorities" || activeView === "ProgramData");
+    if (!isNextDay && isPastDfpDate(eventDate)) {
+      denyPastDfpEdit("delete events");
+      return;
+    }
+    setHighestPriorityEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
     if (isNextDay) {
       setNextDayBuildEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
     } else {
@@ -68145,9 +68185,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
     if (!selectedEvent || selectedEvent.id !== eventId) return;
     const eventDate = selectedEvent.date;
+    const isNextDay = eventDate === buildDfpDate && (activeView === "NextDayBuild" || activeView === "Priorities" || activeView === "ProgramData");
+    if (!isNextDay && isPastDfpDate(eventDate)) {
+      denyPastDfpEdit("restore events");
+      return;
+    }
     const { isCancelled, cancellationCode, cancellationManualEntry, cancelledBy, cancelledAt, ...rest } = selectedEvent;
     const restoredEvent = { ...rest };
-    const isNextDay = eventDate === buildDfpDate && (activeView === "NextDayBuild" || activeView === "Priorities" || activeView === "ProgramData");
     if (isNextDay) {
       setNextDayBuildEvents(
         (prev) => prev.map((e) => e.id === eventId ? restoredEvent : e)
@@ -68176,6 +68220,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const apiBase2 = "/api";
     const userId = getCurrentUserId() || currentUserName;
     const eventForAlert = events.find((e) => e.id === eventId) || selectedEvent;
+    if (isPastDfpDate(eventForAlert?.date || date)) {
+      denyPastDfpEdit("send alerts");
+      return false;
+    }
     const snapshotDate = getDailySnapshotKey(date);
     console.log("🔔 [Alert] ========== SEND ALERT START ==========");
     console.log("🔔 [Alert] eventId:", eventId);
@@ -68242,6 +68290,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
   };
   const handleClearAlert = async (eventId) => {
+    if (isPastDfpDate(date)) {
+      denyPastDfpEdit("clear alerts");
+      return;
+    }
     const apiBase2 = "/api";
     try {
       const res = await fetch(`${apiBase2}/alerts/clear`, {
@@ -68265,6 +68317,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   };
   const handleVisualAdjustStart = async (event) => {
     console.log("Visual Adjust Start - Event:", event);
+    if (isPastDfpDate(event.date || date)) {
+      denyPastDfpEdit("visually adjust tiles");
+      return;
+    }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
     if (_freezeRaw) {
       const _freeze = JSON.parse(_freezeRaw);
@@ -68280,6 +68336,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   const handleVisualAdjustEnd = (event) => {
     const finalEvent = visualAdjustEvent && visualAdjustEvent.id === event.id ? visualAdjustEvent : event;
     const eventDate = finalEvent.date || date;
+    if (isPastDfpDate(eventDate)) {
+      denyPastDfpEdit("visually adjust tiles");
+      setIsVisualAdjustMode(false);
+      setVisualAdjustEvent(null);
+      return;
+    }
     setPublishedSchedules((prev) => {
       const scheduleForDate = prev[eventDate] || [];
       const updatedSchedule = scheduleForDate.map(
@@ -70233,6 +70295,10 @@ ${conflictLines.join("\n")}${moreText}`,
   };
   const handleScheduleUpdate = (updates) => {
     if (!updates || updates.length === 0) return;
+    if (isPastDfpDate(date)) {
+      denyPastDfpEdit("move tiles");
+      return;
+    }
     let updatedEventsForDate = [];
     setPublishedSchedules((prev) => {
       const scheduleForDate = prev[date] || [];
@@ -70348,6 +70414,11 @@ ${conflictLines.join("\n")}${moreText}`,
     return options;
   }, [syllabusDetails]);
   const handleAuthorise = async (eventId, notes, role, isVerbal, selectedPersonName) => {
+    const authEventDate = eventForAuth?.date || Object.entries(publishedSchedules).find(([, eventsList]) => eventsList.some((e) => e.id === eventId))?.[0];
+    if (isPastDfpDate(authEventDate)) {
+      denyPastDfpEdit("authorise events");
+      return;
+    }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
     if (_freezeRaw) {
       const _freeze = JSON.parse(_freezeRaw);
@@ -70447,6 +70518,11 @@ ${conflictLines.join("\n")}${moreText}`,
     }
   };
   const clearAuthorisationForEvent = (eventId) => {
+    const authEventDate = eventForAuth?.date || Object.entries(publishedSchedules).find(([, eventsList]) => eventsList.some((e) => e.id === eventId))?.[0];
+    if (isPastDfpDate(authEventDate)) {
+      denyPastDfpEdit("clear authorisations");
+      return;
+    }
     let affectedScheduleDate = null;
     const clearAuthFields = (e) => {
       if (e.id !== eventId) return e;
@@ -71958,6 +72034,7 @@ ${conflictLines.join("\n")}${moreText}`,
             alertsData: alertsDataByDate[date] || {},
             formatResourceLabel: formatResourceDisplayLabel,
             aircraftNumberSettings,
+            isReadOnly: isViewingPastDfp,
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,
@@ -71975,6 +72052,10 @@ ${conflictLines.join("\n")}${moreText}`,
               console.log(`[AV] 📋 onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
             },
             onUserAvailabilityChange: async (count) => {
+              if (isViewingPastDfp) {
+                denyPastDfpEdit("change aircraft availability");
+                return;
+              }
               console.log(`[AV] 🔥 onUserAvailabilityChange: user dragged line to ${count}`);
               if (!sessionUser?.userId) {
                 console.log("[AV] ⚠️ No session user, skipping DB post");
@@ -71991,6 +72072,10 @@ ${conflictLines.join("\n")}${moreText}`,
             isVisualAdjustMode,
             visualAdjustEvent,
             onVisualAdjustTimeChange: (startTime, endTime) => {
+              if (isViewingPastDfp) {
+                denyPastDfpEdit("visually adjust tiles");
+                return;
+              }
               if (visualAdjustEvent) {
                 const newDuration = endTime - startTime;
                 const updatedEvent = {
@@ -74011,6 +74096,10 @@ Do you want to replace the existing entry?`,
           Header,
           {
             onAddTile: () => {
+              if (isViewingPastDfp) {
+                denyPastDfpEdit("add flight tiles");
+                return;
+              }
               if (!canEditDfpTiles) {
                 denyPlatformAction("Add or edit flight tiles is not permitted for your assigned permission profile");
                 return;
@@ -74019,6 +74108,10 @@ Do you want to replace the existing entry?`,
               handleOpenModal(null, { type: "flight" });
             },
             onAddGroundEvent: () => {
+              if (isViewingPastDfp) {
+                denyPastDfpEdit("add ground tiles");
+                return;
+              }
               if (!canEditDfpTiles) {
                 denyPlatformAction("Add or edit ground tiles is not permitted for your assigned permission profile");
                 return;
@@ -74046,12 +74139,16 @@ Do you want to replace the existing entry?`,
             onToggleOracleMode: handleToggleOracleMode,
             showDepartureDensityOverlay,
             onToggleDepartureDensityOverlay: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay),
-            canEditDfpTiles,
+            canEditDfpTiles: canEditDfpTiles && !isViewingPastDfp,
             canRunValidation,
             canRunNeoBuild: canRunNeoBuildForActiveModel,
             showAircraftAvailability,
             onToggleAircraftAvailability: activeView === "Program Schedule" ? () => setShowAircraftAvailability(!showAircraftAvailability) : void 0,
             onPauseFlightOps: activeView === "Program Schedule" ? () => {
+              if (isViewingPastDfp) {
+                denyPastDfpEdit("pause flight operations");
+                return;
+              }
               if (!canEditDfpTiles || !canRunNeoBuildForActiveModel) {
                 denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a Flight School model NEO context`);
                 return;
@@ -74320,6 +74417,7 @@ Do you want to replace the existing entry?`,
           nextDayBuildEvents,
           activeView,
           isAddingTile,
+          isReadOnly: isPastDfpDate(selectedEvent.date) && !["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView),
           formationCallsigns,
           currentLocation: school === "ESL" ? "East Sale" : "Pearce",
           onVisualAdjustStart: handleVisualAdjustStart,
@@ -74339,7 +74437,7 @@ Do you want to replace the existing entry?`,
           baselineEvent: selectedEvent ? baselineSchedules[activeBaselineKey]?.find((b) => b.id === selectedEvent.id) || null : null,
           onSendAlert: handleSendAlert,
           onClearAlert: handleClearAlert,
-          canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule",
+          canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule" && !isPastDfpDate(selectedEvent.date),
           resourceDisplayNames,
           aircraftNumberSettings
         },

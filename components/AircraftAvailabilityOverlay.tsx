@@ -26,6 +26,7 @@ interface AircraftAvailabilityOverlayProps {
     // Explicitly controls the solid live availability line. Historical dates
     // should render only the dotted trace.
     showLiveAvailabilityLine?: boolean;
+    isReadOnly?: boolean;
 }
 
 const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = ({
@@ -43,6 +44,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     initialAvailability = 15,
     apiBase,
     showLiveAvailabilityLine,
+    isReadOnly = false,
 }) => {
     const [currentAvailable, setCurrentAvailable] = useState<number>(initialAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
@@ -181,6 +183,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     useEffect(() => { currentDateRef.current = currentDate; }, [currentDate]);
 
     const handleLineMouseDown = async (e: React.MouseEvent) => {
+        if (isReadOnly) return;
         const freezeRaw = localStorage.getItem('systemFreezeState');
         if (freezeRaw) {
             const freeze = JSON.parse(freezeRaw);

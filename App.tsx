@@ -9067,6 +9067,20 @@ const App: React.FC = () => {
         return `${year}-${month}-${day}`;
     };
 
+    const isPastDfpDate = (targetDate?: string | null): boolean => (
+        Boolean(targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) && targetDate < getLocalDateString())
+    );
+
+    const isViewingPastDfp = isPastDfpDate(date);
+
+    const denyPastDfpEdit = (action: string = 'modify this DFP') => {
+        showDarkAlert(
+            `Past DFPs are locked. You cannot ${action} for ${date}.`,
+            'Past DFP Locked',
+            'warning'
+        );
+    };
+
     // Helper: safely parse a date string to Date object if valid, otherwise return null
     const safeParseDate = (dateStr: string | undefined | null): Date | null => {
         if (!dateStr || typeof dateStr !== 'string' || !dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -14916,9 +14930,14 @@ const App: React.FC = () => {
 
     const handleOpenModal = (event: ScheduleEvent | null, options: { type?: 'flight' | 'ftd' | 'ground', isPriority?: boolean, oracleContext?: typeof oracleContextForModal } = {}) => {
         if (!event) { // Creating a new event
+            const targetDate = oracleContext === 'nextDayBuild' || activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData' ? buildDfpDate : date;
+            if (!options.isPriority && isPastDfpDate(targetDate)) {
+                denyPastDfpEdit('add tiles');
+                return;
+            }
             const newEvent: ScheduleEvent = {
                 id: uuidv4(),
-                date: oracleContext === 'nextDayBuild' || activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData' ? buildDfpDate : date,
+                date: targetDate,
                 type: options.type || 'flight',
                 flightNumber: '',
                 duration: 1.5,
@@ -15234,6 +15253,14 @@ const App: React.FC = () => {
         console.log('🔵 date:', date);
         console.log('🔵 buildDfpDate:', buildDfpDate);
         if (!eventsToSave || eventsToSave.length === 0) return;
+        const isNextDaySaveContext = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
+        const lockedPastEvents = eventsToSave.filter(event => (
+            !isPriority && !isNextDaySaveContext && isPastDfpDate(event.date)
+        ));
+        if (lockedPastEvents.length > 0) {
+            denyPastDfpEdit('save changes');
+            return;
+        }
         eventsToSave = eventsToSave.map(normaliseCrewFieldsForSave);
 
         // HARD-WIRED: Check day/night separation violations BEFORE saving any events
@@ -15576,6 +15603,11 @@ const App: React.FC = () => {
             return;
         }
         const eventDate = selectedEvent.date;
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+        if (!isNextDay && isPastDfpDate(eventDate)) {
+            denyPastDfpEdit('cancel events');
+            return;
+        }
 
         // Create cancellation record
         const personnelNames = [
@@ -15613,8 +15645,6 @@ const App: React.FC = () => {
             cancelledAt: new Date().toISOString(),
             // Keep original resourceId - don't move to STBY
         };
-
-        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
 
         if (isNextDay) {
             setNextDayBuildEvents(prev =>
@@ -15688,10 +15718,13 @@ const App: React.FC = () => {
         }
         if (!selectedEvent) return;
         const eventDate = selectedEvent.date;
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+        if (!isNextDay && isPastDfpDate(eventDate)) {
+            denyPastDfpEdit('delete events');
+            return;
+        }
 
         setHighestPriorityEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
-
-        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
 
         if (isNextDay) {
             setNextDayBuildEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
@@ -15764,12 +15797,15 @@ const App: React.FC = () => {
         if (!selectedEvent || selectedEvent.id !== eventId) return;
 
         const eventDate = selectedEvent.date;
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+        if (!isNextDay && isPastDfpDate(eventDate)) {
+            denyPastDfpEdit('restore events');
+            return;
+        }
 
         // Build the restored event — strip all cancellation fields
         const { isCancelled, cancellationCode, cancellationManualEntry, cancelledBy, cancelledAt, ...rest } = selectedEvent as any;
         const restoredEvent: ScheduleEvent = { ...rest };
-
-        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
 
         if (isNextDay) {
             setNextDayBuildEvents(prev =>
@@ -15807,6 +15843,10 @@ const App: React.FC = () => {
         const apiBase = '/api';
         const userId = getCurrentUserId() || currentUserName;
         const eventForAlert = events.find(e => e.id === eventId) || selectedEvent;
+        if (isPastDfpDate(eventForAlert?.date || date)) {
+            denyPastDfpEdit('send alerts');
+            return false;
+        }
         const snapshotDate = getDailySnapshotKey(date);
 
         console.log('🔔 [Alert] ========== SEND ALERT START ==========');
@@ -15883,6 +15923,10 @@ const App: React.FC = () => {
 
     // handleClearAlert - Clear alert history for an event to allow re-sending
     const handleClearAlert = async (eventId: string) => {
+        if (isPastDfpDate(date)) {
+            denyPastDfpEdit('clear alerts');
+            return;
+        }
         const apiBase = '/api';
         try {
             const res = await fetch(`${apiBase}/alerts/clear`, {
@@ -15909,6 +15953,10 @@ const App: React.FC = () => {
     // Visual Adjust handlers
     const handleVisualAdjustStart = async (event: ScheduleEvent) => {
         console.log('Visual Adjust Start - Event:', event);
+        if (isPastDfpDate(event.date || date)) {
+            denyPastDfpEdit('visually adjust tiles');
+            return;
+        }
         // System freeze check - prevent dragging when frozen
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
@@ -15928,6 +15976,12 @@ const App: React.FC = () => {
             ? visualAdjustEvent
             : event;
         const eventDate = finalEvent.date || date;
+        if (isPastDfpDate(eventDate)) {
+            denyPastDfpEdit('visually adjust tiles');
+            setIsVisualAdjustMode(false);
+            setVisualAdjustEvent(null);
+            return;
+        }
 
         setPublishedSchedules(prev => {
             const scheduleForDate = prev[eventDate] || [];
@@ -18338,6 +18392,10 @@ const App: React.FC = () => {
 
     const handleScheduleUpdate = (updates: { eventId: string; newStartTime?: number; newResourceId?: string; }[]) => {
         if (!updates || updates.length === 0) return;
+        if (isPastDfpDate(date)) {
+            denyPastDfpEdit('move tiles');
+            return;
+        }
 
         // Simple event update - no formation linking
         let updatedEventsForDate: ScheduleEvent[] = [];
@@ -18482,6 +18540,13 @@ updates.forEach(update => {
     }, [syllabusDetails]);
 
     const handleAuthorise = async (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean, selectedPersonName: string) => {
+        const authEventDate = eventForAuth?.date || Object.entries(publishedSchedules).find(([, eventsList]) => (
+            (eventsList as ScheduleEvent[]).some(e => e.id === eventId)
+        ))?.[0];
+        if (isPastDfpDate(authEventDate)) {
+            denyPastDfpEdit('authorise events');
+            return;
+        }
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
@@ -18613,6 +18678,13 @@ updates.forEach(update => {
     };
 
     const clearAuthorisationForEvent = (eventId: string) => {
+        const authEventDate = eventForAuth?.date || Object.entries(publishedSchedules).find(([, eventsList]) => (
+            (eventsList as ScheduleEvent[]).some(e => e.id === eventId)
+        ))?.[0];
+        if (isPastDfpDate(authEventDate)) {
+            denyPastDfpEdit('clear authorisations');
+            return;
+        }
         let affectedScheduleDate: string | null = null;
 
         const clearAuthFields = (e: ScheduleEvent): ScheduleEvent => {
@@ -20590,6 +20662,7 @@ updates.forEach(update => {
                            alertsData={alertsDataByDate[date] || {}}
                            formatResourceLabel={formatResourceDisplayLabel}
                            aircraftNumberSettings={aircraftNumberSettings}
+                           isReadOnly={isViewingPastDfp}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
@@ -20610,6 +20683,10 @@ updates.forEach(update => {
                                console.log(`[AV] 📋 onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
                            }}
                            onUserAvailabilityChange={async (count: number) => {
+                               if (isViewingPastDfp) {
+                                   denyPastDfpEdit('change aircraft availability');
+                                   return;
+                               }
                                // Called ONLY when the user physically drags the line.
                                // This is the ONLY place that posts to the DB.
                                console.log(`[AV] 🔥 onUserAvailabilityChange: user dragged line to ${count}`);
@@ -20628,6 +20705,10 @@ updates.forEach(update => {
                            isVisualAdjustMode={isVisualAdjustMode}
                            visualAdjustEvent={visualAdjustEvent}
                            onVisualAdjustTimeChange={(startTime: number, endTime: number) => {
+                               if (isViewingPastDfp) {
+                                   denyPastDfpEdit('visually adjust tiles');
+                                   return;
+                               }
                                if (visualAdjustEvent) {
                                    const newDuration = endTime - startTime;
                                    const updatedEvent = {
@@ -22828,6 +22909,10 @@ updates.forEach(update => {
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header
                     onAddTile={() => {
+                        if (isViewingPastDfp) {
+                            denyPastDfpEdit('add flight tiles');
+                            return;
+                        }
                         if (!canEditDfpTiles) {
                             denyPlatformAction('Add or edit flight tiles is not permitted for your assigned permission profile');
                             return;
@@ -22837,6 +22922,10 @@ updates.forEach(update => {
                         handleOpenModal(null, { type: 'flight' });
                     }}
                     onAddGroundEvent={() => {
+                        if (isViewingPastDfp) {
+                            denyPastDfpEdit('add ground tiles');
+                            return;
+                        }
                         if (!canEditDfpTiles) {
                             denyPlatformAction('Add or edit ground tiles is not permitted for your assigned permission profile');
                             return;
@@ -22864,13 +22953,17 @@ updates.forEach(update => {
                     onToggleOracleMode={handleToggleOracleMode}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onToggleDepartureDensityOverlay={() => setShowDepartureDensityOverlay(!showDepartureDensityOverlay)}
-                    canEditDfpTiles={canEditDfpTiles}
+                    canEditDfpTiles={canEditDfpTiles && !isViewingPastDfp}
                     canRunValidation={canRunValidation}
                     canRunNeoBuild={canRunNeoBuildForActiveModel}
 
                        showAircraftAvailability={showAircraftAvailability}
                        onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
                        onPauseFlightOps={activeView === 'Program Schedule' ? () => {
+                           if (isViewingPastDfp) {
+                               denyPastDfpEdit('pause flight operations');
+                               return;
+                           }
                            if (!canEditDfpTiles || !canRunNeoBuildForActiveModel) {
                                denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a Flight School model NEO context`);
                                return;
@@ -23154,6 +23247,7 @@ updates.forEach(update => {
                     nextDayBuildEvents={nextDayBuildEvents}
                     activeView={activeView}
                     isAddingTile={isAddingTile}
+                    isReadOnly={isPastDfpDate(selectedEvent.date) && !['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView)}
                        formationCallsigns={formationCallsigns}
                        currentLocation={school === 'ESL' ? 'East Sale' : 'Pearce'}
                     onVisualAdjustStart={handleVisualAdjustStart}
@@ -23175,7 +23269,7 @@ updates.forEach(update => {
                     baselineEvent={selectedEvent ? (baselineSchedules[activeBaselineKey]?.find(b => b.id === selectedEvent.id) || null) : null}
                     onSendAlert={handleSendAlert}
                     onClearAlert={handleClearAlert}
-                    canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule'}
+                    canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule' && !isPastDfpDate(selectedEvent.date)}
                     resourceDisplayNames={resourceDisplayNames}
                     aircraftNumberSettings={aircraftNumberSettings}
                 />

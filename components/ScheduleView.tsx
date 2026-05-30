@@ -78,6 +78,7 @@ interface ScheduleViewProps {
   alertsData?: Record<string, { responses?: Record<string, { status: string }> }>;
   formatResourceLabel?: (resourceId: string) => string;
   aircraftNumberSettings?: AircraftNumberSettings;
+  isReadOnly?: boolean;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -179,6 +180,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     alertsData,
     formatResourceLabel,
     aircraftNumberSettings,
+    isReadOnly = false,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -358,6 +360,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         console.log('Event target:', e.target);
         console.log('Current target:', e.currentTarget);
         if (e.button !== 0) return;
+        if (isReadOnly && event) {
+            didDragRef.current = false;
+            return;
+        }
         didDragRef.current = false;
         document.body.classList.add('no-select');
 
@@ -990,7 +996,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         conflictedPersonnelName={personToHighlight}
                         personnelData={personnelData}
                         seatConfigs={seatConfigs}
-                        isDraggable={!isPauseSelectMode}
+                        isDraggable={!isPauseSelectMode && !isReadOnly}
                         currentTime={currentTime}
                         isSelected={isSelected}
                         isChanged={isChanged}
@@ -1160,8 +1166,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
                             startHour={START_HOUR}
                             onAvailabilityChange={onAvailabilityChange}
-                            onUserChange={onUserAvailabilityChange}
+                            onUserChange={isReadOnly ? undefined : onUserAvailabilityChange}
                             showLiveAvailabilityLine={showLiveAvailabilityLine}
+                            isReadOnly={isReadOnly}
                         />
                     )}
                     
