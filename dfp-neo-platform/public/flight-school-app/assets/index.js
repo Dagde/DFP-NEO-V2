@@ -4726,12 +4726,10 @@ const Header = ({
   onAddGroundEvent,
   showValidation,
   setShowValidation,
-  locations,
+  contextOptions,
   activeLocation,
-  onLocationChange,
-  units,
   activeUnit,
-  onUnitChange,
+  onContextChange,
   activeModelLabel,
   isMagnifierEnabled,
   setIsMagnifierEnabled,
@@ -4754,10 +4752,15 @@ const Header = ({
 }) => {
   const [showAuditFlyout, setShowAuditFlyout] = reactExports.useState(false);
   const [showUserMenu, setShowUserMenu] = reactExports.useState(false);
+  const [showContextMenu, setShowContextMenu] = reactExports.useState(false);
+  const [hoveredContextLocation, setHoveredContextLocation] = reactExports.useState(activeLocation);
   const userButtonRef = reactExports.useRef(null);
   const dropdownMenuRef = reactExports.useRef(null);
+  const contextSelectorRef = reactExports.useRef(null);
   const isSuperAdmin = authUser?.role === "SUPER_ADMIN" || authUser?.role === "ADMIN";
   const disabledActionClass = "opacity-45 cursor-not-allowed grayscale";
+  const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}`;
+  const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || contextOptions[0];
   reactExports.useEffect(() => {
     const handleClickOutside = (event) => {
       if (userButtonRef.current && userButtonRef.current.contains(event.target)) {
@@ -4773,6 +4776,17 @@ const Header = ({
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showUserMenu]);
+  reactExports.useEffect(() => {
+    if (!showContextMenu) return;
+    const handleClickOutside = (event) => {
+      if (contextSelectorRef.current && contextSelectorRef.current.contains(event.target)) {
+        return;
+      }
+      setShowContextMenu(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showContextMenu]);
   const [activeCommit, setActiveCommit] = reactExports.useState("...");
   reactExports.useEffect(() => {
     fetch("/api/version").then((r) => r.json()).then((data) => {
@@ -4781,35 +4795,56 @@ const Header = ({
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 flex items-center justify-center", style: { width: "250px", paddingLeft: "8px", paddingRight: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          className: "flex h-8 w-full items-center overflow-hidden rounded-md border border-gray-600 bg-gray-700 shadow-inner",
-          title: `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}${activeModelLabel ? ` | ${activeModelLabel}` : ""}`,
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: activeLocation,
-                onChange: (e) => onLocationChange(e.target.value),
-                className: "h-full w-[86px] border-0 bg-transparent px-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-0",
-                children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-full items-center border-x border-gray-600 px-2 text-xs font-bold text-gray-300", children: "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: activeUnit,
-                onChange: (e) => onUnitChange(e.target.value),
-                disabled: units.length <= 1,
-                className: "h-full min-w-0 flex-1 border-0 bg-transparent px-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-0 disabled:opacity-80",
-                children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
-              }
-            )
-          ]
-        }
-      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 flex items-center justify-center", style: { width: "250px", paddingLeft: "8px", paddingRight: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: contextSelectorRef, className: "relative w-full", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              setHoveredContextLocation(activeLocation);
+              setShowContextMenu((prev) => !prev);
+            },
+            className: "flex h-8 w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-sm font-semibold text-white shadow-inner hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500",
+            title: `${activeContextLabel}${activeModelLabel ? ` | ${activeModelLabel}` : ""}`,
+            "aria-haspopup": "menu",
+            "aria-expanded": showContextMenu,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 flex-1 truncate text-center", children: activeContextLabel }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-[10px] text-gray-300", children: "v" })
+            ]
+          }
+        ),
+        showContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-0 top-9 z-[100] flex overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl", role: "menu", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[96px] border-r border-gray-700 py-1", children: contextOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onMouseEnter: () => setHoveredContextLocation(option.location),
+              onFocus: () => setHoveredContextLocation(option.location),
+              className: `flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${option.location === hoveredContextLocation ? "bg-sky-700 text-white" : "text-gray-200 hover:bg-gray-700"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.location }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] text-gray-300", children: ">" })
+              ]
+            },
+            option.location
+          )) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[136px] py-1", children: (hoveredContext?.units || []).map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                if (!hoveredContext?.location) return;
+                onContextChange(hoveredContext.location, unit);
+                setShowContextMenu(false);
+              },
+              className: `h-8 w-full px-3 text-left text-sm font-semibold ${hoveredContext?.location === activeLocation && unit === activeUnit ? "bg-sky-600 text-white" : "text-gray-200 hover:bg-gray-700"}`,
+              children: unit
+            },
+            `${hoveredContext?.location}-${unit}`
+          )) })
+        ] })
+      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", style: { gap: "1px" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -62969,20 +63004,25 @@ const App = () => {
     () => getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]),
     [platformConfig]
   );
-  const activeLocationUnitOptions = reactExports.useMemo(() => {
-    const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => String(unit.locationCode || "").trim().toUpperCase() === school).map((unit) => ({
+  const getUnitOptionsForLocation = reactExports.useCallback((locationCode) => {
+    const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
+    const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => String(unit.locationCode || "").trim().toUpperCase() === normalisedLocationCode).map((unit) => ({
       code: String(unit.code || "").trim(),
       name: String(unit.name || unit.code || "").trim(),
       model: getUnitOperationalModel(unit)
     })).filter((unit) => unit.code);
     if (configuredUnits.length > 0) return configuredUnits;
-    const fallbackCodes = school === "PEA" ? ["2FTS"] : ["1FTS", "CFS"];
+    const fallbackCodes = normalisedLocationCode === "PEA" ? ["2FTS"] : ["1FTS", "CFS"];
     return fallbackCodes.map((code) => ({
       code,
       name: code,
       model: normaliseOperationalModel("flight_school")
     }));
-  }, [platformConfig, school]);
+  }, [platformConfig]);
+  const activeLocationUnitOptions = reactExports.useMemo(
+    () => getUnitOptionsForLocation(school),
+    [getUnitOptionsForLocation, school]
+  );
   reactExports.useEffect(() => {
     if (activeLocationUnitOptions.length === 0) return;
     if (!activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode)) {
@@ -63268,6 +63308,13 @@ const App = () => {
   const selectableLocationCodes = reactExports.useMemo(
     () => platformAccessContext.accessibleLocations,
     [platformAccessContext]
+  );
+  const operationalContextOptions = reactExports.useMemo(
+    () => selectableLocationCodes.map((location) => ({
+      location,
+      units: getUnitOptionsForLocation(location).map((unit) => unit.code)
+    })).filter((option) => option.units.length > 0),
+    [getUnitOptionsForLocation, selectableLocationCodes]
   );
   const platformDataScopeQuery = reactExports.useMemo(() => {
     const scope = getPlatformDataScopeForLocation(platformAccessContext, school);
@@ -66743,8 +66790,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setPendingNavigation(null);
   };
   const getDefaultUnitForSchool = (targetSchool) => {
-    const configuredUnit = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => String(unit.locationCode || "").trim().toUpperCase() === targetSchool);
-    return String(configuredUnit?.code || "").trim() || (targetSchool === "PEA" ? "2FTS" : "1FTS");
+    return getUnitOptionsForLocation(targetSchool)[0]?.code || (targetSchool === "PEA" ? "2FTS" : "1FTS");
   };
   const changeSchool = (newSchool) => {
     const nextUnit = getDefaultUnitForSchool(newSchool);
@@ -66756,11 +66802,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     setPublishedSchedules({});
     void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: nextUnit });
   };
-  const changeOperationalUnit = (newUnit) => {
+  const changeOperationalContext = (newSchool, newUnit) => {
+    setSchool(newSchool);
     setActiveUnitCode(newUnit);
+    setIsLocalityChangeVisible(true);
+    setTimeout(() => setIsLocalityChangeVisible(false), 2e3);
     setNextDayBuildEvents([]);
     setPublishedSchedules({});
-    void loadSnapshotForDate(date, { force: true, replace: true, unitOverride: newUnit });
+    void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: newUnit });
   };
   const handleAddCourseFromTrainingRecords = async (data) => {
     setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));
@@ -73591,12 +73640,10 @@ Do you want to replace the existing entry?`,
               }
               setShowValidation(show);
             },
-            locations: selectableLocationCodes,
+            contextOptions: operationalContextOptions,
             activeLocation: school,
-            onLocationChange: (loc) => changeSchool(loc),
-            units: activeLocationUnitOptions.map((unit) => unit.code),
             activeUnit: activeUnitCode,
-            onUnitChange: changeOperationalUnit,
+            onContextChange: (loc, unit) => changeOperationalContext(loc, unit),
             activeModelLabel: activeOperationalModelLabel,
             isMagnifierEnabled,
             setIsMagnifierEnabled,

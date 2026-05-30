@@ -8,12 +8,10 @@ interface HeaderProps {
     onAddGroundEvent: () => void;
     showValidation: boolean;
     setShowValidation: (show: boolean) => void;
-    locations: string[];
+    contextOptions: Array<{ location: string; units: string[] }>;
     activeLocation: string;
-    onLocationChange: (location: string) => void;
-    units: string[];
     activeUnit: string;
-    onUnitChange: (unit: string) => void;
+    onContextChange: (location: string, unit: string) => void;
     activeModelLabel?: string;
     isMagnifierEnabled: boolean;
     setIsMagnifierEnabled: (enabled: boolean) => void;
@@ -41,12 +39,10 @@ const Header: React.FC<HeaderProps> = ({
     onAddGroundEvent, 
     showValidation, 
     setShowValidation, 
-    locations,
+    contextOptions,
     activeLocation,
-    onLocationChange,
-    units,
     activeUnit,
-    onUnitChange,
+    onContextChange,
     activeModelLabel,
     isMagnifierEnabled, 
     setIsMagnifierEnabled, 
@@ -69,10 +65,15 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
     const [showAuditFlyout, setShowAuditFlyout] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [showContextMenu, setShowContextMenu] = useState(false);
+    const [hoveredContextLocation, setHoveredContextLocation] = useState(activeLocation);
     const userButtonRef = useRef<HTMLDivElement>(null);
     const dropdownMenuRef = useRef<HTMLDivElement>(null);
+    const contextSelectorRef = useRef<HTMLDivElement>(null);
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
     const disabledActionClass = 'opacity-45 cursor-not-allowed grayscale';
+    const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}`;
+    const hoveredContext = contextOptions.find(option => option.location === hoveredContextLocation) || contextOptions[0];
 
     // Close user menu when clicking outside - must check BOTH the trigger and the portal dropdown
     useEffect(() => {
@@ -92,6 +93,18 @@ const Header: React.FC<HeaderProps> = ({
         }
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showUserMenu]);
+
+    useEffect(() => {
+        if (!showContextMenu) return;
+        const handleClickOutside = (event: MouseEvent) => {
+            if (contextSelectorRef.current && contextSelectorRef.current.contains(event.target as Node)) {
+                return;
+            }
+            setShowContextMenu(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showContextMenu]);
 
     // Fetch the active commit hash from the server at runtime.
     // /api/version reads RAILWAY_GIT_COMMIT_SHA from the live process environment,
@@ -118,32 +131,63 @@ const Header: React.FC<HeaderProps> = ({
             */}
             <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative">
 
-                {/* LEFT: Operational context - Location then Unit */}
+                {/* LEFT: Operational context - Location and Unit */}
                 <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '250px', paddingLeft: '8px', paddingRight: '8px' }}>
-                  <div
-                    className="flex h-8 w-full items-center overflow-hidden rounded-md border border-gray-600 bg-gray-700 shadow-inner"
-                    title={`${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}${activeModelLabel ? ` | ${activeModelLabel}` : ''}`}
-                  >
-                    <select
-                        value={activeLocation}
-                        onChange={(e) => onLocationChange(e.target.value)}
-                        className="h-full w-[86px] border-0 bg-transparent px-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-0"
+                  <div ref={contextSelectorRef} className="relative w-full">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setHoveredContextLocation(activeLocation);
+                            setShowContextMenu(prev => !prev);
+                        }}
+                        className="flex h-8 w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-sm font-semibold text-white shadow-inner hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        title={`${activeContextLabel}${activeModelLabel ? ` | ${activeModelLabel}` : ''}`}
+                        aria-haspopup="menu"
+                        aria-expanded={showContextMenu}
                     >
-                        {locations.map(loc => (
-                            <option key={loc} value={loc}>{loc}</option>
-                        ))}
-                    </select>
-                    <span className="flex h-full items-center border-x border-gray-600 px-2 text-xs font-bold text-gray-300">-</span>
-                    <select
-                        value={activeUnit}
-                        onChange={(e) => onUnitChange(e.target.value)}
-                        disabled={units.length <= 1}
-                        className="h-full min-w-0 flex-1 border-0 bg-transparent px-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-0 disabled:opacity-80"
-                    >
-                        {units.map(unit => (
-                            <option key={unit} value={unit}>{unit}</option>
-                        ))}
-                    </select>
+                        <span className="min-w-0 flex-1 truncate text-center">{activeContextLabel}</span>
+                        <span className="ml-2 text-[10px] text-gray-300">v</span>
+                    </button>
+                    {showContextMenu && (
+                        <div className="absolute left-0 top-9 z-[100] flex overflow-visible rounded-md border border-gray-600 bg-gray-800 shadow-2xl" role="menu">
+                            <div className="w-[96px] border-r border-gray-700 py-1">
+                                {contextOptions.map(option => (
+                                    <button
+                                        key={option.location}
+                                        type="button"
+                                        onMouseEnter={() => setHoveredContextLocation(option.location)}
+                                        onFocus={() => setHoveredContextLocation(option.location)}
+                                        className={`flex h-8 w-full items-center justify-between px-3 text-left text-sm font-semibold ${
+                                            option.location === hoveredContextLocation ? 'bg-sky-700 text-white' : 'text-gray-200 hover:bg-gray-700'
+                                        }`}
+                                    >
+                                        <span>{option.location}</span>
+                                        <span className="text-[10px] text-gray-300">&gt;</span>
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="w-[136px] py-1">
+                                {(hoveredContext?.units || []).map(unit => (
+                                    <button
+                                        key={`${hoveredContext?.location}-${unit}`}
+                                        type="button"
+                                        onClick={() => {
+                                            if (!hoveredContext?.location) return;
+                                            onContextChange(hoveredContext.location, unit);
+                                            setShowContextMenu(false);
+                                        }}
+                                        className={`h-8 w-full px-3 text-left text-sm font-semibold ${
+                                            hoveredContext?.location === activeLocation && unit === activeUnit
+                                                ? 'bg-sky-600 text-white'
+                                                : 'text-gray-200 hover:bg-gray-700'
+                                        }`}
+                                    >
+                                        {unit}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                   </div>
                 </div>
 

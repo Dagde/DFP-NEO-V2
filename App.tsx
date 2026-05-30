@@ -9237,10 +9237,11 @@ const App: React.FC = () => {
         [platformConfig],
     );
 
-    const activeLocationUnitOptions = useMemo(() => {
+    const getUnitOptionsForLocation = useCallback((locationCode: string) => {
+        const normalisedLocationCode = String(locationCode || '').trim().toUpperCase();
         const configuredUnits = (platformConfig?.units || [])
             .filter((unit: any) => unit.status !== 'INACTIVE')
-            .filter((unit: any) => String(unit.locationCode || '').trim().toUpperCase() === school)
+            .filter((unit: any) => String(unit.locationCode || '').trim().toUpperCase() === normalisedLocationCode)
             .map((unit: any) => ({
                 code: String(unit.code || '').trim(),
                 name: String(unit.name || unit.code || '').trim(),
@@ -9250,13 +9251,18 @@ const App: React.FC = () => {
 
         if (configuredUnits.length > 0) return configuredUnits;
 
-        const fallbackCodes = school === 'PEA' ? ['2FTS'] : ['1FTS', 'CFS'];
+        const fallbackCodes = normalisedLocationCode === 'PEA' ? ['2FTS'] : ['1FTS', 'CFS'];
         return fallbackCodes.map(code => ({
             code,
             name: code,
             model: normaliseOperationalModel('flight_school'),
         }));
-    }, [platformConfig, school]);
+    }, [platformConfig]);
+
+    const activeLocationUnitOptions = useMemo(
+        () => getUnitOptionsForLocation(school),
+        [getUnitOptionsForLocation, school],
+    );
 
     useEffect(() => {
         if (activeLocationUnitOptions.length === 0) return;
@@ -9609,6 +9615,14 @@ const App: React.FC = () => {
     const selectableLocationCodes = useMemo(
         () => platformAccessContext.accessibleLocations,
         [platformAccessContext],
+    );
+
+    const operationalContextOptions = useMemo(
+        () => selectableLocationCodes.map(location => ({
+            location,
+            units: getUnitOptionsForLocation(location).map(unit => unit.code),
+        })).filter(option => option.units.length > 0),
+        [getUnitOptionsForLocation, selectableLocationCodes],
     );
 
     const platformDataScopeQuery = useMemo(() => {
@@ -14030,10 +14044,7 @@ const App: React.FC = () => {
 
 
     const getDefaultUnitForSchool = (targetSchool: 'ESL' | 'PEA'): string => {
-        const configuredUnit = (platformConfig?.units || [])
-            .filter((unit: any) => unit.status !== 'INACTIVE')
-            .find((unit: any) => String(unit.locationCode || '').trim().toUpperCase() === targetSchool);
-        return String(configuredUnit?.code || '').trim() || (targetSchool === 'PEA' ? '2FTS' : '1FTS');
+        return getUnitOptionsForLocation(targetSchool)[0]?.code || (targetSchool === 'PEA' ? '2FTS' : '1FTS');
     };
 
     const changeSchool = (newSchool: 'ESL' | 'PEA') => {
@@ -14051,11 +14062,14 @@ const App: React.FC = () => {
         void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: nextUnit });
     };
 
-    const changeOperationalUnit = (newUnit: string) => {
+    const changeOperationalContext = (newSchool: 'ESL' | 'PEA', newUnit: string) => {
+        setSchool(newSchool);
         setActiveUnitCode(newUnit);
+        setIsLocalityChangeVisible(true);
+        setTimeout(() => setIsLocalityChangeVisible(false), 2000);
         setNextDayBuildEvents([]);
         setPublishedSchedules({});
-        void loadSnapshotForDate(date, { force: true, replace: true, unitOverride: newUnit });
+        void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: newUnit });
     };
 
     // NOTE: School switch no longer resets events/courses to mock data.
@@ -22384,12 +22398,10 @@ updates.forEach(update => {
                         }
                         setShowValidation(show);
                     }}
-                    locations={selectableLocationCodes}
+                    contextOptions={operationalContextOptions}
                     activeLocation={school}
-                    onLocationChange={(loc) => changeSchool(loc as 'ESL' | 'PEA')}
-                    units={activeLocationUnitOptions.map(unit => unit.code)}
                     activeUnit={activeUnitCode}
-                    onUnitChange={changeOperationalUnit}
+                    onContextChange={(loc, unit) => changeOperationalContext(loc as 'ESL' | 'PEA', unit)}
                     activeModelLabel={activeOperationalModelLabel}
                     isMagnifierEnabled={isMagnifierEnabled}
                     setIsMagnifierEnabled={setIsMagnifierEnabled}
