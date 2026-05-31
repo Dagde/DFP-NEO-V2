@@ -320,6 +320,7 @@ async function ensureSyllabusTablesExist(db) {
         "methodOfAssessment"   TEXT[] NOT NULL DEFAULT '{}',
         "resourcesPhysical"    TEXT[] NOT NULL DEFAULT '{}',
         "resourceNumber"       INTEGER NOT NULL DEFAULT 1,
+        "acceptableAircraftConfigs" TEXT[] NOT NULL DEFAULT ARRAY['ANY']::text[],
         "resourcesHuman"       TEXT[] NOT NULL DEFAULT '{}',
         "eventDetailsCommon"   TEXT[] NOT NULL DEFAULT '{}',
         "eventDetailsSortie"   TEXT[] NOT NULL DEFAULT '{}',
@@ -347,6 +348,7 @@ async function ensureSyllabusTablesExist(db) {
       )
     `);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "resourceNumber" INTEGER NOT NULL DEFAULT 1`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "acceptableAircraftConfigs" TEXT[] NOT NULL DEFAULT ARRAY['ANY']::text[]`);
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SyllabusItem_code_key" ON "SyllabusItem"("code")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_sortOrder_idx" ON "SyllabusItem"("sortOrder")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_isActive_idx" ON "SyllabusItem"("isActive")`);
@@ -5428,23 +5430,25 @@ app.post('/api/syllabus', async (req, res) => {
     await db.$executeRawUnsafe(`
       INSERT INTO "SyllabusItem" (
         "id","code","eventDescription","phase","module","type","sortieType","dayNight",
-        "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber","resourcesHuman",
+        "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber","acceptableAircraftConfigs","resourcesHuman",
         "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
         "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
         "location","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
         "notes","createdBy","createdAt","updatedAt"
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,
-        $9,$10,$11,$12,$13,$14,
-        $15,$16,$17,$18,$19,
-        $20,$21,$22,$23,$24,
-        $25,$26,$27,$28,$29,$30,$31,$32,
-        $33,$34,NOW(),NOW()
+        $9,$10,$11,$12,$13,$14,$15,
+        $16,$17,$18,$19,$20,
+        $21,$22,$23,$24,$25,
+        $26,$27,$28,$29,$30,$31,$32,$33,
+        $34,$35,NOW(),NOW()
       )`,
       id, finalCode, body.eventDescription, body.phase, body.module, body.type,
       body.sortieType || null, body.dayNight || 'Day',
       finalCourses, body.methodOfDelivery || [], body.methodOfAssessment || [],
-      body.resourcesPhysical || [], Math.max(0, Math.round(Number(body.resourceNumber ?? (body.resourcesPhysical?.length ? 1 : 0)) || 0)), body.resourcesHuman || [],
+      body.resourcesPhysical || [], Math.max(0, Math.round(Number(body.resourceNumber ?? (body.resourcesPhysical?.length ? 1 : 0)) || 0)),
+      Array.isArray(body.acceptableAircraftConfigs) && body.acceptableAircraftConfigs.length ? body.acceptableAircraftConfigs : ['ANY'],
+      body.resourcesHuman || [],
       body.eventDetailsCommon || [], body.eventDetailsSortie || [],
       body.flightOrSimHours || 0, body.totalEventHours || 1, body.duration || 1,
       body.preFlightTime || 0, body.postFlightTime || 0,
@@ -5482,7 +5486,7 @@ app.put('/api/syllabus/:id', async (req, res) => {
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
     // Build SET clauses, casting array fields and boolean fields properly
-    const ARRAY_FIELDS = ['courses','methodOfDelivery','methodOfAssessment','resourcesPhysical','resourcesHuman',
+    const ARRAY_FIELDS = ['courses','methodOfDelivery','methodOfAssessment','resourcesPhysical','acceptableAircraftConfigs','resourcesHuman',
                           'eventDetailsCommon','eventDetailsSortie','prerequisites','prerequisitesGround','prerequisitesFlying'];
     const BOOL_FIELDS = ['isActive','isRemedial'];
     const INT_FIELDS = ['resourceNumber'];
@@ -5493,7 +5497,13 @@ app.put('/api/syllabus/:id', async (req, res) => {
       if (INT_FIELDS.includes(f)) return `"${f}" = $${i + 2}::integer`;
       return `"${f}" = $${i + 2}`;
     }).join(', ');
-    const values = fields.map(f => INT_FIELDS.includes(f) ? Math.max(0, Math.round(Number(body[f]) || 0)) : body[f]);
+    const values = fields.map(f => {
+      if (INT_FIELDS.includes(f)) return Math.max(0, Math.round(Number(body[f]) || 0));
+      if (f === 'acceptableAircraftConfigs') {
+        return Array.isArray(body[f]) && body[f].length ? body[f] : ['ANY'];
+      }
+      return body[f];
+    });
 
     await db.$executeRawUnsafe(
       `UPDATE "SyllabusItem" SET ${setClauses}, "version" = "version" + 1, "updatedAt" = NOW() WHERE "id" = $1 OR "code" = $1`,

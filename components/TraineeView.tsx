@@ -7,6 +7,7 @@ import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '..
 import type { TrainingReportTerminology } from '../utils/trainingReportTerminology';
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
+import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 interface TraineeViewProps {
   // Props for CourseRosterView
@@ -56,6 +57,7 @@ interface TraineeViewProps {
   canAddRemedialPackageForTrainee?: (trainee: any) => boolean;
   onInsertCustomLmpEvent?: (trainee: any, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
   insertEventTypes?: InsertEventTypeConfig[];
+  aircraftConfigurations?: AircraftConfigurationDefinition[];
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
@@ -152,6 +154,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onInsertCustomLmpEvent={props.onInsertCustomLmpEvent}
             onUpdateLmpItem={props.onUpdateLmpItem}
             insertEventTypes={props.insertEventTypes}
+            aircraftConfigurations={props.aircraftConfigurations}
             onOpenInstructorProfile={props.onOpenInstructorProfile}
             onUpdateCourseNumber={props.onUpdateCourseNumber}
             onUpdateCourseUnit={props.onUpdateCourseUnit}

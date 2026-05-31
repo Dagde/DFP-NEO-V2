@@ -9,6 +9,12 @@ import {
     type InsertEventDayNight,
     type InsertEventTypeConfig,
 } from '../utils/insertEventTypes';
+import {
+    ANY_AIRCRAFT_CONFIG,
+    formatAircraftConfigurationSummary,
+    normaliseSelectedAircraftConfigurations,
+    type AircraftConfigurationDefinition,
+} from '../utils/aircraftConfigurationSettings';
 
 interface TraineeLmpViewProps {
   trainee: Trainee;
@@ -23,6 +29,7 @@ interface TraineeLmpViewProps {
   canOpenPt051?: boolean;
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
+  aircraftConfigurations?: AircraftConfigurationDefinition[];
   onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
   onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
   insertEventTypes?: InsertEventTypeConfig[];
@@ -67,11 +74,76 @@ const alignPhysicalResourcesToResourceNumber = (
     return aligned;
 };
 
+const AircraftConfigInfoIcon: React.FC<{ definitions: AircraftConfigurationDefinition[] }> = ({ definitions }) => (
+    <span className="group relative inline-flex">
+        <button
+            type="button"
+            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-500 text-[10px] font-bold text-gray-300 hover:border-sky-400 hover:text-sky-200"
+            aria-label="Aircraft configuration definitions"
+        >
+            i
+        </button>
+        <span className="pointer-events-none absolute left-0 top-5 z-30 hidden w-72 rounded-md border border-sky-500/45 bg-gray-950 p-3 text-left text-[11px] normal-case tracking-normal text-gray-200 shadow-xl group-hover:block group-focus-within:block">
+            <span className="mb-2 block font-semibold text-sky-200">Aircraft Config Definitions</span>
+            {definitions.length > 0 ? (
+                definitions.map(definition => (
+                    <span key={definition.id} className="mb-1 block">
+                        <span className="font-semibold text-white">{definition.label}: </span>
+                        <span>{definition.definition || 'No definition entered'}</span>
+                    </span>
+                ))
+            ) : (
+                <span>No aircraft configurations are defined for the active resource pool.</span>
+            )}
+            <span className="mt-2 block border-t border-gray-700 pt-2 text-gray-400">ANY means aircraft configuration does not matter for this LMP event.</span>
+        </span>
+    </span>
+);
+
+const AircraftConfigCheckboxes: React.FC<{
+    value?: string[];
+    definitions: AircraftConfigurationDefinition[];
+    onChange: (value: string[]) => void;
+}> = ({ value, definitions, onChange }) => {
+    const selected = normaliseSelectedAircraftConfigurations(value, definitions);
+    const toggle = (id: string, checked: boolean) => {
+        if (id === ANY_AIRCRAFT_CONFIG) {
+            onChange([ANY_AIRCRAFT_CONFIG]);
+            return;
+        }
+        const withoutAny = selected.filter(item => item !== ANY_AIRCRAFT_CONFIG);
+        const next = checked
+            ? Array.from(new Set([...withoutAny, id]))
+            : withoutAny.filter(item => item !== id);
+        onChange(next.length > 0 ? next : [ANY_AIRCRAFT_CONFIG]);
+    };
+
+    return (
+        <div className="grid grid-cols-2 gap-2">
+            <label className="flex items-center gap-2 rounded border border-gray-600 bg-gray-900 px-2 py-1.5 text-xs text-gray-100">
+                <input type="checkbox" checked={selected.includes(ANY_AIRCRAFT_CONFIG)} onChange={() => toggle(ANY_AIRCRAFT_CONFIG, true)} />
+                ANY
+            </label>
+            {definitions.map(definition => (
+                <label key={definition.id} className="flex items-center gap-2 rounded border border-gray-600 bg-gray-900 px-2 py-1.5 text-xs text-gray-100">
+                    <input
+                        type="checkbox"
+                        checked={!selected.includes(ANY_AIRCRAFT_CONFIG) && selected.includes(definition.id)}
+                        onChange={(event) => toggle(definition.id, event.target.checked)}
+                    />
+                    {definition.label}
+                </label>
+            ))}
+        </div>
+    );
+};
+
 const LmpEventEditModal: React.FC<{
     item: SyllabusItemDetail;
+    aircraftConfigurations: AircraftConfigurationDefinition[];
     onCancel: () => void;
     onSave: (updatedItem: SyllabusItemDetail) => void;
-}> = ({ item, onCancel, onSave }) => {
+}> = ({ item, aircraftConfigurations, onCancel, onSave }) => {
     const [code, setCode] = useState(item.code || item.id || '');
     const [eventDescription, setEventDescription] = useState(item.eventDescription || '');
     const [type, setType] = useState<SyllabusItemDetail['type']>(item.type || 'Flight');
@@ -83,6 +155,9 @@ const LmpEventEditModal: React.FC<{
     const [preFlightTime, setPreFlightTime] = useState(item.preFlightTime || 0);
     const [postFlightTime, setPostFlightTime] = useState(item.postFlightTime || 0);
     const [resourceNumber, setResourceNumber] = useState(item.resourceNumber ?? (item.resourcesPhysical?.length ? item.resourcesPhysical.length : 0));
+    const [acceptableAircraftConfigs, setAcceptableAircraftConfigs] = useState<string[]>(() => (
+        normaliseSelectedAircraftConfigurations(item.acceptableAircraftConfigs, aircraftConfigurations)
+    ));
     const [resourcesPhysical, setResourcesPhysical] = useState(joinListInput(item.resourcesPhysical));
     const [resourcesHuman, setResourcesHuman] = useState(joinListInput(item.resourcesHuman));
     const [validationMessage, setValidationMessage] = useState('');
@@ -117,6 +192,7 @@ const LmpEventEditModal: React.FC<{
             postFlightTime: Math.max(0, Number(postFlightTime) || 0),
             resourceNumber: roundedResourceNumber,
             resourceCount: roundedResourceNumber,
+            acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(acceptableAircraftConfigs, aircraftConfigurations),
             resourcesPhysical: normalizedPhysicalResources,
             resourcesHuman: splitListInput(resourcesHuman),
         } as SyllabusItemDetail & { resourceCount: number });
@@ -170,6 +246,18 @@ const LmpEventEditModal: React.FC<{
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Resource Number</span>
                         <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="1" min="0" value={resourceNumber} onChange={(event) => setResourceNumber(Number(event.target.value))} />
                     </label>
+                    <div className="space-y-2 rounded border border-gray-700 bg-gray-950/60 p-3 md:col-span-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">CONFIG</span>
+                            <AircraftConfigInfoIcon definitions={aircraftConfigurations} />
+                            <span className="text-[11px] text-gray-500">{formatAircraftConfigurationSummary(acceptableAircraftConfigs, aircraftConfigurations)}</span>
+                        </div>
+                        <AircraftConfigCheckboxes
+                            value={acceptableAircraftConfigs}
+                            definitions={aircraftConfigurations}
+                            onChange={setAcceptableAircraftConfigs}
+                        />
+                    </div>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Duration</span>
                         <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
@@ -871,6 +959,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     allTraineesData,
     onOpenPt051ForLesson,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    aircraftConfigurations = [],
     canOpenPt051 = true,
     onAccessDenied,
     onDeleteRemedialItem,
@@ -986,6 +1075,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
             {itemBeingEdited && (
                 <LmpEventEditModal
                     item={itemBeingEdited}
+                    aircraftConfigurations={aircraftConfigurations}
                     onCancel={() => setItemBeingEdited(null)}
                     onSave={async (updatedItem) => {
                         const updated = await onUpdateLmpItem?.(trainee, itemBeingEdited, updatedItem);

@@ -35,6 +35,7 @@ import {
     type ResourceDisplayNames,
 } from './utils/resourceDisplayNames';
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
+import { ANY_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions } from './utils/aircraftConfigurationSettings';
 import {
     readTileStatusSettingsFromLocalStorage,
     normaliseTileStatusSettings,
@@ -606,6 +607,7 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS: (keyof SyllabusItemDetail)[] = [
     'methodOfAssessment',
     'resourcesPhysical',
     'resourceNumber',
+    'acceptableAircraftConfigs',
     'resourcesHuman',
     'eventDetailsCommon',
     'eventDetailsSortie',
@@ -11060,6 +11062,10 @@ const App: React.FC = () => {
         () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
         [activePlatformResourcePool]
     );
+    const aircraftConfigurations = useMemo(
+        () => getAircraftConfigurationDefinitions(activePlatformResourcePool),
+        [activePlatformResourcePool]
+    );
     const personnelDisplaySettings = useMemo(
         () => getPersonnelDisplaySettings(platformConfig),
         [platformConfig]
@@ -14390,6 +14396,7 @@ const App: React.FC = () => {
             resourcesPhysical: physicalResources,
             resourceNumber: request.resourceCount,
             resourceCount: request.resourceCount,
+            acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
             resourcesHuman: request.eventType.syllabusType === 'Academics' ? [] : ['QFI', 'Trainee'],
             completedAt: null,
             masterEventId: undefined,
@@ -20994,6 +21001,7 @@ updates.forEach(update => {
                             onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
                             onUpdateLmpItem={handleUpdateIndividualLmpItem}
                             insertEventTypes={insertEventTypes}
+                            aircraftConfigurations={aircraftConfigurations}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}
                             units={units}
@@ -21148,6 +21156,7 @@ updates.forEach(update => {
                             onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
                             onUpdateLmpItem={handleUpdateIndividualLmpItem}
                             insertEventTypes={insertEventTypes}
+                            aircraftConfigurations={aircraftConfigurations}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}
                             units={units}
@@ -22044,6 +22053,7 @@ updates.forEach(update => {
                            initialSelectedId={initialSyllabusId || undefined}
                            onUpdateItem={handleUpdateSyllabusItem}
                            onAddItem={handleAddSyllabusItem}
+                           aircraftConfigurations={aircraftConfigurations}
                        />;
              case 'Currency':
                 if (selectedPersonForCurrency) {

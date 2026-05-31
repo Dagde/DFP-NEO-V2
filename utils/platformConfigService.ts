@@ -41,6 +41,7 @@ export interface PlatformResourcePool {
     aircraftNumberUsePrefix?: boolean;
     aircraftNumberPrefixes?: string[];
     aircraftNumberDefaultPrefix?: string;
+    aircraftConfigurations?: Array<{ id: string; label?: string; definition?: string; description?: string }>;
     ftd?: number;
     ftdLabel?: string;
     cpt?: number;

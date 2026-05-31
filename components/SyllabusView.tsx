@@ -7,6 +7,12 @@ import { logAudit } from '../utils/auditLogger';
 import { createSyllabusItem, updateSyllabusItem, retireSyllabusItem } from '../lib/syllabusService';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import {
+    ANY_AIRCRAFT_CONFIG,
+    formatAircraftConfigurationSummary,
+    normaliseSelectedAircraftConfigurations,
+    type AircraftConfigurationDefinition,
+} from '../utils/aircraftConfigurationSettings';
 
 interface SyllabusViewProps {
   syllabusDetails: SyllabusItemDetail[];
@@ -15,10 +21,11 @@ interface SyllabusViewProps {
   onUpdateItem: (item: SyllabusItemDetail) => void;
   onAddItem?: (item: SyllabusItemDetail) => void;
   resourceDisplayNames?: ResourceDisplayNames;
+  aircraftConfigurations?: AircraftConfigurationDefinition[];
 }
 
 // Reusable components for view mode
-const DetailCard: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
+const DetailCard: React.FC<{ label: React.ReactNode; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
     <div className={`bg-gray-700/50 p-1 rounded-lg ${className}`}>
         <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">{label}</label>
         <div className="mt-0.5 text-[10px] font-semibold text-white">{value}</div>
@@ -67,6 +74,80 @@ const EditableList: React.FC<{ title: string; items: string[]; onChange: (items:
     </div>
 );
 
+const AircraftConfigInfoIcon: React.FC<{ definitions: AircraftConfigurationDefinition[] }> = ({ definitions }) => (
+    <span className="group relative inline-flex">
+        <button
+            type="button"
+            className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-500 text-[10px] font-bold text-gray-300 hover:border-sky-400 hover:text-sky-200"
+            aria-label="Aircraft configuration definitions"
+        >
+            i
+        </button>
+        <span className="pointer-events-none absolute left-0 top-5 z-30 hidden w-72 rounded-md border border-sky-500/45 bg-gray-950 p-3 text-left text-[11px] normal-case tracking-normal text-gray-200 shadow-xl group-hover:block group-focus-within:block">
+            <span className="mb-2 block font-semibold text-sky-200">Aircraft Config Definitions</span>
+            {definitions.length > 0 ? (
+                definitions.map(definition => (
+                    <span key={definition.id} className="mb-1 block">
+                        <span className="font-semibold text-white">{definition.label}: </span>
+                        <span>{definition.definition || 'No definition entered'}</span>
+                    </span>
+                ))
+            ) : (
+                <span>No aircraft configurations are defined for the active resource pool.</span>
+            )}
+            <span className="mt-2 block border-t border-gray-700 pt-2 text-gray-400">ANY means aircraft configuration does not matter for this LMP event.</span>
+        </span>
+    </span>
+);
+
+const AircraftConfigSelector: React.FC<{
+    value?: string[];
+    definitions: AircraftConfigurationDefinition[];
+    onChange: (value: string[]) => void;
+}> = ({ value, definitions, onChange }) => {
+    const selected = normaliseSelectedAircraftConfigurations(value, definitions);
+    const toggle = (id: string, checked: boolean) => {
+        if (id === ANY_AIRCRAFT_CONFIG) {
+            onChange([ANY_AIRCRAFT_CONFIG]);
+            return;
+        }
+        const withoutAny = selected.filter(item => item !== ANY_AIRCRAFT_CONFIG);
+        const next = checked
+            ? Array.from(new Set([...withoutAny, id]))
+            : withoutAny.filter(item => item !== id);
+        onChange(next.length > 0 ? next : [ANY_AIRCRAFT_CONFIG]);
+    };
+
+    return (
+        <div className="bg-gray-700/50 p-1 rounded-lg lg:col-span-2">
+            <label className="flex items-center text-[9px] font-medium text-gray-400 uppercase tracking-wider">
+                CONFIG
+                <AircraftConfigInfoIcon definitions={definitions} />
+            </label>
+            <div className="mt-1 grid grid-cols-2 gap-1">
+                <label className="flex items-center gap-1 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[10px] text-gray-100">
+                    <input
+                        type="checkbox"
+                        checked={selected.includes(ANY_AIRCRAFT_CONFIG)}
+                        onChange={() => toggle(ANY_AIRCRAFT_CONFIG, true)}
+                    />
+                    ANY
+                </label>
+                {definitions.map(definition => (
+                    <label key={definition.id} className="flex items-center gap-1 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[10px] text-gray-100">
+                        <input
+                            type="checkbox"
+                            checked={!selected.includes(ANY_AIRCRAFT_CONFIG) && selected.includes(definition.id)}
+                            onChange={(event) => toggle(definition.id, event.target.checked)}
+                        />
+                        {definition.label}
+                    </label>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 const DetailView: React.FC<{ 
     item: SyllabusItemDetail; 
@@ -75,7 +156,8 @@ const DetailView: React.FC<{
     onItemChange: (newItem: SyllabusItemDetail) => void;
     onDeleteEvent?: (item: SyllabusItemDetail) => void;
     resourceDisplayNames?: ResourceDisplayNames;
-}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+    aircraftConfigurations?: AircraftConfigurationDefinition[];
+}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [] }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -226,6 +308,11 @@ const DetailView: React.FC<{
                                 className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             />
                         </div>
+                        <AircraftConfigSelector
+                            value={currentItem.acceptableAircraftConfigs}
+                            definitions={aircraftConfigurations}
+                            onChange={(value) => handleFieldChange('acceptableAircraftConfigs', value)}
+                        />
                         <div className="bg-gray-700/50 p-1 rounded-lg">
                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Pre-Flight (min)</label>
                             <input
@@ -294,6 +381,11 @@ const DetailView: React.FC<{
                         <DetailCard label="Total Event Hrs" value={<>{item.totalEventHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
                         <DetailCard label="Flight/Sim Hrs" value={<>{item.flightOrSimHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
                         <DetailCard label="Resource Number" value={item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0)} />
+                        <DetailCard
+                            label={<span className="flex items-center">CONFIG<AircraftConfigInfoIcon definitions={aircraftConfigurations} /></span>}
+                            value={formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)}
+                            className="lg:col-span-2"
+                        />
                         <DetailCard label="Pre-Flight" value={<>{Math.round(item.preFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
                         <DetailCard label="Post-Flight" value={<>{Math.round(item.postFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
                         <DetailCard label="Code" value={item.code} />
@@ -395,6 +487,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     onUpdateItem,
     onAddItem,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    aircraftConfigurations = [],
 }) => {
     const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -524,21 +617,25 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       try {
           // Save the selected event item if one is being edited
           if (editedItem) {
-              const isNew = editedItem.id.startsWith('new-');
+              const itemToSave = {
+                  ...editedItem,
+                  acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(editedItem.acceptableAircraftConfigs, aircraftConfigurations),
+              };
+              const isNew = itemToSave.id.startsWith('new-');
               let savedItem: SyllabusItemDetail;
               if (isNew) {
-                  const { id: _tmpId, ...itemWithoutTmpId } = editedItem;
+                  const { id: _tmpId, ...itemWithoutTmpId } = itemToSave;
                   savedItem = await createSyllabusItem(itemWithoutTmpId, 'New LMP event created via Master LMP editor');
               } else {
-                  savedItem = await updateSyllabusItem(editedItem.id, editedItem, 'Updated via Master LMP editor');
+                  savedItem = await updateSyllabusItem(itemToSave.id, itemToSave, 'Updated via Master LMP editor');
               }
               // Detect changes for audit
               const changes: string[] = [];
-              if (selectedItem && selectedItem.preFlightTime !== editedItem.preFlightTime) {
-                  changes.push(`Pre-flight time: ${Math.round(selectedItem.preFlightTime * 60)} min to ${Math.round(editedItem.preFlightTime * 60)} min`);
+              if (selectedItem && selectedItem.preFlightTime !== itemToSave.preFlightTime) {
+                  changes.push(`Pre-flight time: ${Math.round(selectedItem.preFlightTime * 60)} min to ${Math.round(itemToSave.preFlightTime * 60)} min`);
               }
-              if (selectedItem && selectedItem.postFlightTime !== editedItem.postFlightTime) {
-                  changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} min to ${Math.round(editedItem.postFlightTime * 60)} min`);
+              if (selectedItem && selectedItem.postFlightTime !== itemToSave.postFlightTime) {
+                  changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} min to ${Math.round(itemToSave.postFlightTime * 60)} min`);
               }
               if (changes.length > 0) {
                   logAudit({ action: 'Edit', description: `Updated LMP item ${savedItem.code}`, changes: changes.join(', '), page: 'Master LMP' });
@@ -762,6 +859,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           methodOfAssessment: [],
           resourcesPhysical: [],
           resourceNumber: 0,
+          acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
           resourcesHuman: [],
           location: '',
           courses: [courseCode],
@@ -812,6 +910,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           methodOfAssessment: [],
           resourcesPhysical: [],
           resourceNumber: 0,
+          acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
           resourcesHuman: [],
           location: '',
           courses: [selectedCourseType],
@@ -971,6 +1070,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     onItemChange={setEditedItem}
                     onDeleteEvent={handleDeleteEventRequest}
                     resourceDisplayNames={resourceDisplayNames}
+                    aircraftConfigurations={aircraftConfigurations}
                 />
             ) : (
               <div className="flex items-center justify-center h-full">

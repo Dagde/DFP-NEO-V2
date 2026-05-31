@@ -15,6 +15,7 @@ import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '..
 import type { TrainingReportTerminology } from '../utils/trainingReportTerminology';
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
+import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -64,6 +65,7 @@ interface CourseRosterViewProps {
     onInsertCustomLmpEvent?: (trainee: Trainee, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
     onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
     insertEventTypes?: InsertEventTypeConfig[];
+    aircraftConfigurations?: AircraftConfigurationDefinition[];
     onAccessDenied?: (actionLabel: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
@@ -143,6 +145,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onInsertCustomLmpEvent,
     onUpdateLmpItem,
     insertEventTypes,
+    aircraftConfigurations = [],
     onAccessDenied,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
@@ -520,6 +523,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onInsertCustomLmpEvent={onInsertCustomLmpEvent}
                     onUpdateLmpItem={onUpdateLmpItem}
                     insertEventTypes={insertEventTypes}
+                    aircraftConfigurations={aircraftConfigurations}
                     onSelectPt051ForEvent={(assessment) => onSelectPt051ForEvent?.(
                         isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!,
                         assessment

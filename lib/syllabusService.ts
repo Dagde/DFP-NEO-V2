@@ -12,7 +12,7 @@ const CACHE_TIMESTAMP_KEY = 'dfp-syllabus-cache-timestamp';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 // Increment this version when DB schema/data migrations change the syllabus structure.
 // Old caches with a different version are automatically invalidated on next load.
-const CACHE_VERSION = '3'; // v3: Syllabus items include resourceNumber
+const CACHE_VERSION = '4'; // v4: Syllabus items include acceptableAircraftConfigs
 const CACHE_VERSION_KEY = 'dfp-syllabus-cache-version';
 
 // ============================================================================
@@ -72,12 +72,18 @@ export function clearSyllabusCache(): void {
 
 function populatePrerequisites(items: SyllabusItemDetail[]): SyllabusItemDetail[] {
   return items.map((item, index, arr) => {
+    const itemWithDefaults = {
+      ...item,
+      acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0
+        ? item.acceptableAircraftConfigs
+        : ['ANY'],
+    };
     const hasExplicitPrereqs =
       (item.prerequisitesGround && item.prerequisitesGround.length > 0) ||
       (item.prerequisitesFlying && item.prerequisitesFlying.length > 0);
 
     if (hasExplicitPrereqs || item.lmpType === 'Master LMP') {
-      return item;
+      return itemWithDefaults;
     }
 
     const prerequisitesGround: string[] = [];
@@ -99,6 +105,7 @@ function populatePrerequisites(items: SyllabusItemDetail[]): SyllabusItemDetail[
 
     return {
       ...item,
+      acceptableAircraftConfigs: itemWithDefaults.acceptableAircraftConfigs,
       prerequisitesGround,
       prerequisitesFlying,
       prerequisites: [...prerequisitesGround, ...prerequisitesFlying],

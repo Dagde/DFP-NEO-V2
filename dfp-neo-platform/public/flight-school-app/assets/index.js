@@ -2415,6 +2415,38 @@ const formatAircraftNumber = (number, prefix, settings = DEFAULT_AIRCRAFT_NUMBER
   const cleanPrefix = cleanToken(prefix) || parsed.prefix || settings.defaultPrefix || settings.prefixes[0] || "";
   return cleanPrefix ? `${cleanPrefix} ${cleanNumber2}` : cleanNumber2;
 };
+const ANY_AIRCRAFT_CONFIG = "ANY";
+const normaliseConfigId = (value, fallback) => {
+  const cleaned = String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
+  return cleaned || fallback;
+};
+const normaliseAircraftConfigurationDefinitions = (definitions) => {
+  if (!Array.isArray(definitions)) return [];
+  return definitions.map((definition, index) => {
+    const item = definition && typeof definition === "object" ? definition : {};
+    const fallbackId = `CONFIG-${index + 1}`;
+    return {
+      id: normaliseConfigId(item.id || item.label || fallbackId, fallbackId),
+      label: `Config ${index + 1}`,
+      definition: String(item.definition || item.description || "").trim()
+    };
+  }).filter((definition, index, all) => all.findIndex((candidate) => candidate.id === definition.id) === index);
+};
+const getAircraftConfigurationDefinitions = (resourcePool) => normaliseAircraftConfigurationDefinitions(resourcePool?.settings?.aircraftConfigurations);
+const normaliseSelectedAircraftConfigurations = (selected, definitions = []) => {
+  if (!Array.isArray(selected) || selected.length === 0) return [ANY_AIRCRAFT_CONFIG];
+  const validIds = new Set(definitions.map((definition) => definition.id));
+  const cleaned = selected.map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+  if (cleaned.includes(ANY_AIRCRAFT_CONFIG)) return [ANY_AIRCRAFT_CONFIG];
+  const filtered = cleaned.filter((value) => validIds.has(value));
+  return filtered.length > 0 ? Array.from(new Set(filtered)) : [ANY_AIRCRAFT_CONFIG];
+};
+const formatAircraftConfigurationSummary = (selected, definitions = []) => {
+  const normalised = normaliseSelectedAircraftConfigurations(selected, definitions);
+  if (normalised.includes(ANY_AIRCRAFT_CONFIG)) return "ANY";
+  const definitionMap = new Map(definitions.map((definition) => [definition.id, definition.label]));
+  return normalised.map((id) => definitionMap.get(id) || id).join(", ") || "ANY";
+};
 const DEFAULT_STAFF_RANK_ORDER = [
   "AIRMSHL",
   "AVM",
@@ -10196,7 +10228,58 @@ const alignPhysicalResourcesToResourceNumber = (resources, resourceNumber, resou
   }
   return aligned;
 };
-const LmpEventEditModal = ({ item, onCancel, onSave }) => {
+const AircraftConfigInfoIcon$1 = ({ definitions }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "button",
+    {
+      type: "button",
+      className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-500 text-[10px] font-bold text-gray-300 hover:border-sky-400 hover:text-sky-200",
+      "aria-label": "Aircraft configuration definitions",
+      children: "i"
+    }
+  ),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "pointer-events-none absolute left-0 top-5 z-30 hidden w-72 rounded-md border border-sky-500/45 bg-gray-950 p-3 text-left text-[11px] normal-case tracking-normal text-gray-200 shadow-xl group-hover:block group-focus-within:block", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block font-semibold text-sky-200", children: "Aircraft Config Definitions" }),
+    definitions.length > 0 ? definitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 block", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-white", children: [
+        definition.label,
+        ": "
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: definition.definition || "No definition entered" })
+    ] }, definition.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "No aircraft configurations are defined for the active resource pool." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block border-t border-gray-700 pt-2 text-gray-400", children: "ANY means aircraft configuration does not matter for this LMP event." })
+  ] })
+] });
+const AircraftConfigCheckboxes = ({ value, definitions, onChange }) => {
+  const selected = normaliseSelectedAircraftConfigurations(value, definitions);
+  const toggle = (id, checked) => {
+    if (id === ANY_AIRCRAFT_CONFIG) {
+      onChange([ANY_AIRCRAFT_CONFIG]);
+      return;
+    }
+    const withoutAny = selected.filter((item) => item !== ANY_AIRCRAFT_CONFIG);
+    const next = checked ? Array.from(/* @__PURE__ */ new Set([...withoutAny, id])) : withoutAny.filter((item) => item !== id);
+    onChange(next.length > 0 ? next : [ANY_AIRCRAFT_CONFIG]);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded border border-gray-600 bg-gray-900 px-2 py-1.5 text-xs text-gray-100", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: selected.includes(ANY_AIRCRAFT_CONFIG), onChange: () => toggle(ANY_AIRCRAFT_CONFIG, true) }),
+      "ANY"
+    ] }),
+    definitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded border border-gray-600 bg-gray-900 px-2 py-1.5 text-xs text-gray-100", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          type: "checkbox",
+          checked: !selected.includes(ANY_AIRCRAFT_CONFIG) && selected.includes(definition.id),
+          onChange: (event) => toggle(definition.id, event.target.checked)
+        }
+      ),
+      definition.label
+    ] }, definition.id))
+  ] });
+};
+const LmpEventEditModal = ({ item, aircraftConfigurations, onCancel, onSave }) => {
   const [code, setCode] = reactExports.useState(item.code || item.id || "");
   const [eventDescription, setEventDescription] = reactExports.useState(item.eventDescription || "");
   const [type, setType] = reactExports.useState(item.type || "Flight");
@@ -10208,6 +10291,7 @@ const LmpEventEditModal = ({ item, onCancel, onSave }) => {
   const [preFlightTime, setPreFlightTime] = reactExports.useState(item.preFlightTime || 0);
   const [postFlightTime, setPostFlightTime] = reactExports.useState(item.postFlightTime || 0);
   const [resourceNumber, setResourceNumber] = reactExports.useState(item.resourceNumber ?? (item.resourcesPhysical?.length ? item.resourcesPhysical.length : 0));
+  const [acceptableAircraftConfigs, setAcceptableAircraftConfigs] = reactExports.useState(() => normaliseSelectedAircraftConfigurations(item.acceptableAircraftConfigs, aircraftConfigurations));
   const [resourcesPhysical, setResourcesPhysical] = reactExports.useState(joinListInput(item.resourcesPhysical));
   const [resourcesHuman, setResourcesHuman] = reactExports.useState(joinListInput(item.resourcesHuman));
   const [validationMessage, setValidationMessage] = reactExports.useState("");
@@ -10240,6 +10324,7 @@ const LmpEventEditModal = ({ item, onCancel, onSave }) => {
       postFlightTime: Math.max(0, Number(postFlightTime) || 0),
       resourceNumber: roundedResourceNumber,
       resourceCount: roundedResourceNumber,
+      acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(acceptableAircraftConfigs, aircraftConfigurations),
       resourcesPhysical: normalizedPhysicalResources,
       resourcesHuman: splitListInput(resourcesHuman)
     });
@@ -10292,6 +10377,21 @@ const LmpEventEditModal = ({ item, onCancel, onSave }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Resource Number" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "1", min: "0", value: resourceNumber, onChange: (event) => setResourceNumber(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 rounded border border-gray-700 bg-gray-950/60 p-3 md:col-span-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "CONFIG" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(AircraftConfigInfoIcon$1, { definitions: aircraftConfigurations }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] text-gray-500", children: formatAircraftConfigurationSummary(acceptableAircraftConfigs, aircraftConfigurations) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          AircraftConfigCheckboxes,
+          {
+            value: acceptableAircraftConfigs,
+            definitions: aircraftConfigurations,
+            onChange: setAcceptableAircraftConfigs
+          }
+        )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Duration" }),
@@ -10848,6 +10948,7 @@ const TraineeLmpView = ({
   allTraineesData,
   onOpenPt051ForLesson,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  aircraftConfigurations = [],
   canOpenPt051 = true,
   onAccessDenied,
   onDeleteRemedialItem,
@@ -10961,6 +11062,7 @@ const TraineeLmpView = ({
       LmpEventEditModal,
       {
         item: itemBeingEdited,
+        aircraftConfigurations,
         onCancel: () => setItemBeingEdited(null),
         onSave: async (updatedItem) => {
           const updated = await onUpdateLmpItem?.(trainee, itemBeingEdited, updatedItem);
@@ -11131,6 +11233,7 @@ const TraineeProfileFlyout = ({
   onInsertCustomLmpEvent,
   onUpdateLmpItem,
   insertEventTypes,
+  aircraftConfigurations = [],
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -11885,7 +11988,8 @@ const TraineeProfileFlyout = ({
                     onGeneratePt051ForItem,
                     onInsertCustomEvent: onInsertCustomLmpEvent,
                     onUpdateLmpItem,
-                    insertEventTypes
+                    insertEventTypes,
+                    aircraftConfigurations
                   }
                 ) });
               })(),
@@ -12830,6 +12934,7 @@ const CourseRosterView = ({
   onInsertCustomLmpEvent,
   onUpdateLmpItem,
   insertEventTypes,
+  aircraftConfigurations = [],
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
@@ -13137,6 +13242,7 @@ const CourseRosterView = ({
         onInsertCustomLmpEvent,
         onUpdateLmpItem,
         insertEventTypes,
+        aircraftConfigurations,
         onSelectPt051ForEvent: (assessment) => onSelectPt051ForEvent?.(
           isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
           assessment
@@ -31436,6 +31542,7 @@ const TraineeView = (props) => {
           onInsertCustomLmpEvent: props.onInsertCustomLmpEvent,
           onUpdateLmpItem: props.onUpdateLmpItem,
           insertEventTypes: props.insertEventTypes,
+          aircraftConfigurations: props.aircraftConfigurations,
           onOpenInstructorProfile: props.onOpenInstructorProfile,
           onUpdateCourseNumber: props.onUpdateCourseNumber,
           onUpdateCourseUnit: props.onUpdateCourseUnit,
@@ -31553,7 +31660,7 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "3";
+const CACHE_VERSION = "4";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
 function getCachedSyllabus() {
   try {
@@ -31598,9 +31705,13 @@ function clearSyllabusCache() {
 }
 function populatePrerequisites$1(items) {
   return items.map((item, index, arr) => {
+    const itemWithDefaults = {
+      ...item,
+      acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0 ? item.acceptableAircraftConfigs : ["ANY"]
+    };
     const hasExplicitPrereqs = item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
     if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
-      return item;
+      return itemWithDefaults;
     }
     const prerequisitesGround = [];
     const prerequisitesFlying = [];
@@ -31618,6 +31729,7 @@ function populatePrerequisites$1(items) {
     }
     return {
       ...item,
+      acceptableAircraftConfigs: itemWithDefaults.acceptableAircraftConfigs,
       prerequisitesGround,
       prerequisitesFlying,
       prerequisites: [...prerequisitesGround, ...prerequisitesFlying]
@@ -31744,7 +31856,71 @@ const EditableList = ({ title, items, onChange }) => /* @__PURE__ */ jsxRuntimeE
     }
   )
 ] });
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const AircraftConfigInfoIcon = ({ definitions }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "button",
+    {
+      type: "button",
+      className: "ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-500 text-[10px] font-bold text-gray-300 hover:border-sky-400 hover:text-sky-200",
+      "aria-label": "Aircraft configuration definitions",
+      children: "i"
+    }
+  ),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "pointer-events-none absolute left-0 top-5 z-30 hidden w-72 rounded-md border border-sky-500/45 bg-gray-950 p-3 text-left text-[11px] normal-case tracking-normal text-gray-200 shadow-xl group-hover:block group-focus-within:block", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block font-semibold text-sky-200", children: "Aircraft Config Definitions" }),
+    definitions.length > 0 ? definitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 block", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-white", children: [
+        definition.label,
+        ": "
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: definition.definition || "No definition entered" })
+    ] }, definition.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "No aircraft configurations are defined for the active resource pool." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block border-t border-gray-700 pt-2 text-gray-400", children: "ANY means aircraft configuration does not matter for this LMP event." })
+  ] })
+] });
+const AircraftConfigSelector = ({ value, definitions, onChange }) => {
+  const selected = normaliseSelectedAircraftConfigurations(value, definitions);
+  const toggle = (id, checked) => {
+    if (id === ANY_AIRCRAFT_CONFIG) {
+      onChange([ANY_AIRCRAFT_CONFIG]);
+      return;
+    }
+    const withoutAny = selected.filter((item) => item !== ANY_AIRCRAFT_CONFIG);
+    const next = checked ? Array.from(/* @__PURE__ */ new Set([...withoutAny, id])) : withoutAny.filter((item) => item !== id);
+    onChange(next.length > 0 ? next : [ANY_AIRCRAFT_CONFIG]);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg lg:col-span-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: [
+      "CONFIG",
+      /* @__PURE__ */ jsxRuntimeExports.jsx(AircraftConfigInfoIcon, { definitions })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-2 gap-1", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[10px] text-gray-100", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "checkbox",
+            checked: selected.includes(ANY_AIRCRAFT_CONFIG),
+            onChange: () => toggle(ANY_AIRCRAFT_CONFIG, true)
+          }
+        ),
+        "ANY"
+      ] }),
+      definitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[10px] text-gray-100", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "checkbox",
+            checked: !selected.includes(ANY_AIRCRAFT_CONFIG) && selected.includes(definition.id),
+            onChange: (event) => toggle(definition.id, event.target.checked)
+          }
+        ),
+        definition.label
+      ] }, definition.id))
+    ] })
+  ] });
+};
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [] }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -31902,6 +32078,14 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             }
           )
         ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          AircraftConfigSelector,
+          {
+            value: currentItem.acceptableAircraftConfigs,
+            definitions: aircraftConfigurations,
+            onChange: (value) => handleFieldChange("acceptableAircraftConfigs", value)
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "Pre-Flight (min)" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31994,6 +32178,17 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-normal", children: "hrs" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Resource Number", value: item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center", children: [
+              "CONFIG",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(AircraftConfigInfoIcon, { definitions: aircraftConfigurations })
+            ] }),
+            value: formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations),
+            className: "lg:col-span-2"
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Pre-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           Math.round(item.preFlightTime * 60),
           " ",
@@ -32066,7 +32261,8 @@ const SyllabusView = ({
   initialSelectedId,
   onUpdateItem,
   onAddItem,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  aircraftConfigurations = []
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -32170,20 +32366,24 @@ const SyllabusView = ({
     setIsSaving(true);
     try {
       if (editedItem) {
-        const isNew = editedItem.id.startsWith("new-");
+        const itemToSave = {
+          ...editedItem,
+          acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(editedItem.acceptableAircraftConfigs, aircraftConfigurations)
+        };
+        const isNew = itemToSave.id.startsWith("new-");
         let savedItem;
         if (isNew) {
-          const { id: _tmpId, ...itemWithoutTmpId } = editedItem;
+          const { id: _tmpId, ...itemWithoutTmpId } = itemToSave;
           savedItem = await createSyllabusItem$1(itemWithoutTmpId, "New LMP event created via Master LMP editor");
         } else {
-          savedItem = await updateSyllabusItem(editedItem.id, editedItem, "Updated via Master LMP editor");
+          savedItem = await updateSyllabusItem(itemToSave.id, itemToSave, "Updated via Master LMP editor");
         }
         const changes = [];
-        if (selectedItem && selectedItem.preFlightTime !== editedItem.preFlightTime) {
-          changes.push(`Pre-flight time: ${Math.round(selectedItem.preFlightTime * 60)} min to ${Math.round(editedItem.preFlightTime * 60)} min`);
+        if (selectedItem && selectedItem.preFlightTime !== itemToSave.preFlightTime) {
+          changes.push(`Pre-flight time: ${Math.round(selectedItem.preFlightTime * 60)} min to ${Math.round(itemToSave.preFlightTime * 60)} min`);
         }
-        if (selectedItem && selectedItem.postFlightTime !== editedItem.postFlightTime) {
-          changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} min to ${Math.round(editedItem.postFlightTime * 60)} min`);
+        if (selectedItem && selectedItem.postFlightTime !== itemToSave.postFlightTime) {
+          changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} min to ${Math.round(itemToSave.postFlightTime * 60)} min`);
         }
         if (changes.length > 0) {
           logAudit({ action: "Edit", description: `Updated LMP item ${savedItem.code}`, changes: changes.join(", "), page: "Master LMP" });
@@ -32386,6 +32586,7 @@ const SyllabusView = ({
       methodOfAssessment: [],
       resourcesPhysical: [],
       resourceNumber: 0,
+      acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
       resourcesHuman: [],
       location: "",
       courses: [courseCode],
@@ -32430,6 +32631,7 @@ const SyllabusView = ({
       methodOfAssessment: [],
       resourcesPhysical: [],
       resourceNumber: 0,
+      acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
       resourcesHuman: [],
       location: "",
       courses: [selectedCourseType],
@@ -32577,7 +32779,8 @@ const SyllabusView = ({
             editedItem,
             onItemChange: setEditedItem,
             onDeleteEvent: handleDeleteEventRequest,
-            resourceDisplayNames
+            resourceDisplayNames,
+            aircraftConfigurations
           }
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
       ] })
@@ -44668,6 +44871,7 @@ const PlatformConfigurationSettings = ({
             aircraftNumberUsePrefix: true,
             aircraftNumberPrefixes: ["A54"],
             aircraftNumberDefaultPrefix: "A54",
+            aircraftConfigurations: [],
             ftdLabel: "FTD",
             cptLabel: "CPT",
             aircraft: 24,
@@ -44884,6 +45088,26 @@ const PlatformConfigurationSettings = ({
       aircraftNumberPrefixes: prefixes,
       aircraftNumberDefaultPrefix: prefixes.includes(settings.defaultPrefix) ? settings.defaultPrefix : prefixes[0] || ""
     });
+  };
+  const updateAircraftConfiguration = (poolIndex, configIndex, definition) => {
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []).map((configDefinition, index) => index === configIndex ? { ...configDefinition, definition } : configDefinition);
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations });
+  };
+  const addAircraftConfiguration = (poolIndex) => {
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
+    const existingIds = new Set(aircraftConfigurations.map((configDefinition) => configDefinition.id));
+    let nextNumber = aircraftConfigurations.length + 1;
+    while (existingIds.has(`CONFIG-${nextNumber}`)) nextNumber += 1;
+    updateResourcePoolSettings(poolIndex, {
+      aircraftConfigurations: [
+        ...aircraftConfigurations,
+        { id: `CONFIG-${nextNumber}`, label: `Config ${nextNumber}`, definition: "" }
+      ]
+    });
+  };
+  const removeAircraftConfiguration = (poolIndex, configIndex) => {
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []).filter((_, index) => index !== configIndex);
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations });
   };
   const save = async () => {
     if (!canEdit) return;
@@ -45252,6 +45476,7 @@ const PlatformConfigurationSettings = ({
         ] }, aircraft.id || aircraft.code || index)) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.resourcePools.map((pool, index) => {
           const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
+          const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Code", value: pool.code, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { code: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Name", value: pool.name, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { name: value }) }),
@@ -45325,6 +45550,49 @@ const PlatformConfigurationSettings = ({
                   }
                 )
               ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
+                    pool.settings?.aircraftLabel || "Aircraft",
+                    " Configurations"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-cyan-100/75", children: "Define aircraft fit states that LMP events may require. LMP events default to ANY when configuration does not matter." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    disabled: !canEdit,
+                    onClick: () => addAircraftConfiguration(index),
+                    className: "shrink-0 rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                    children: "Add Config"
+                  }
+                )
+              ] }),
+              aircraftConfigurations.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/50 px-3 py-2 text-xs text-gray-400", children: "No configured aircraft states. LMP events will show ANY only." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: aircraftConfigurations.map((aircraftConfig, configIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-24 shrink-0 rounded border border-gray-700 bg-gray-950 px-3 py-2 text-xs font-bold text-cyan-100", children: aircraftConfig.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Field,
+                  {
+                    label: "Definition",
+                    value: aircraftConfig.definition,
+                    disabled: !canEdit,
+                    onChange: (value) => updateAircraftConfiguration(index, configIndex, value)
+                  }
+                ) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    disabled: !canEdit,
+                    onClick: () => removeAircraftConfiguration(index, configIndex),
+                    className: "h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
+                    children: "Delete"
+                  }
+                )
+              ] }, aircraftConfig.id || configIndex)) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               ToggleField,
@@ -56407,6 +56675,7 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
   "methodOfAssessment",
   "resourcesPhysical",
   "resourceNumber",
+  "acceptableAircraftConfigs",
   "resourcesHuman",
   "eventDetailsCommon",
   "eventDetailsSortie",
@@ -64436,6 +64705,10 @@ const App = () => {
     () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
     [activePlatformResourcePool]
   );
+  const aircraftConfigurations = reactExports.useMemo(
+    () => getAircraftConfigurationDefinitions(activePlatformResourcePool),
+    [activePlatformResourcePool]
+  );
   const personnelDisplaySettings = reactExports.useMemo(
     () => getPersonnelDisplaySettings(platformConfig),
     [platformConfig]
@@ -67102,6 +67375,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       resourcesPhysical: physicalResources,
       resourceNumber: request.resourceCount,
       resourceCount: request.resourceCount,
+      acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
       resourcesHuman: request.eventType.syllabusType === "Academics" ? [] : ["QFI", "Trainee"],
       completedAt: null,
       masterEventId: void 0,
@@ -72345,6 +72619,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onInsertCustomLmpEvent: handleInsertCustomLmpEvent,
             onUpdateLmpItem: handleUpdateIndividualLmpItem,
             insertEventTypes,
+            aircraftConfigurations,
             onAccessDenied: denyPlatformAction,
             locations,
             units,
@@ -72490,6 +72765,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onInsertCustomLmpEvent: handleInsertCustomLmpEvent,
             onUpdateLmpItem: handleUpdateIndividualLmpItem,
             insertEventTypes,
+            aircraftConfigurations,
             onAccessDenied: denyPlatformAction,
             locations,
             units,
@@ -73347,7 +73623,8 @@ ${conflictLines.join("\n")}${moreText}`,
             },
             initialSelectedId: initialSyllabusId || void 0,
             onUpdateItem: handleUpdateSyllabusItem,
-            onAddItem: handleAddSyllabusItem
+            onAddItem: handleAddSyllabusItem,
+            aircraftConfigurations
           }
         );
       case "Currency":

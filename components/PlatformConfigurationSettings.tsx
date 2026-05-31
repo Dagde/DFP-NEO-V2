@@ -19,6 +19,7 @@ import {
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConfigurationSettings';
 import { getAppApiBase } from '../utils/externalDataControls';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
@@ -1402,6 +1403,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             aircraftNumberUsePrefix: true,
             aircraftNumberPrefixes: ['A54'],
             aircraftNumberDefaultPrefix: 'A54',
+            aircraftConfigurations: [],
             ftdLabel: 'FTD',
             cptLabel: 'CPT',
             aircraft: 24,
@@ -1676,6 +1678,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ? settings.defaultPrefix
         : prefixes[0] || '',
     });
+  };
+
+  const updateAircraftConfiguration = (poolIndex: number, configIndex: number, definition: string) => {
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || [])
+      .map((configDefinition, index) => (
+        index === configIndex ? { ...configDefinition, definition } : configDefinition
+      ));
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations });
+  };
+
+  const addAircraftConfiguration = (poolIndex: number) => {
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
+    const existingIds = new Set(aircraftConfigurations.map(configDefinition => configDefinition.id));
+    let nextNumber = aircraftConfigurations.length + 1;
+    while (existingIds.has(`CONFIG-${nextNumber}`)) nextNumber += 1;
+    updateResourcePoolSettings(poolIndex, {
+      aircraftConfigurations: [
+        ...aircraftConfigurations,
+        { id: `CONFIG-${nextNumber}`, label: `Config ${nextNumber}`, definition: '' },
+      ],
+    });
+  };
+
+  const removeAircraftConfiguration = (poolIndex: number, configIndex: number) => {
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || [])
+      .filter((_, index) => index !== configIndex);
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations });
   };
 
   const save = async () => {
@@ -2131,6 +2160,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="space-y-3">
             {config.resourcePools.map((pool, index) => {
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
+              const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
               return (
               <div key={pool.id || pool.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2">
                 <Field label="Pool Code" value={pool.code} disabled={!canEdit} onChange={(value) => updateRow('resourcePools', index, { code: value })} />
@@ -2199,6 +2229,55 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       >
                         Add Prefix
                       </button>
+                    </div>
+                  )}
+                </div>
+                <div className="grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-bold text-cyan-100">{pool.settings?.aircraftLabel || 'Aircraft'} Configurations</div>
+                      <div className="mt-1 text-xs text-cyan-100/75">
+                        Define aircraft fit states that LMP events may require. LMP events default to ANY when configuration does not matter.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!canEdit}
+                      onClick={() => addAircraftConfiguration(index)}
+                      className="shrink-0 rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Add Config
+                    </button>
+                  </div>
+                  {aircraftConfigurations.length === 0 ? (
+                    <div className="rounded border border-gray-700 bg-gray-950/50 px-3 py-2 text-xs text-gray-400">
+                      No configured aircraft states. LMP events will show ANY only.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {aircraftConfigurations.map((aircraftConfig, configIndex) => (
+                        <div key={aircraftConfig.id || configIndex} className="flex items-end gap-2">
+                          <div className="w-24 shrink-0 rounded border border-gray-700 bg-gray-950 px-3 py-2 text-xs font-bold text-cyan-100">
+                            {aircraftConfig.label}
+                          </div>
+                          <div className="flex-1">
+                            <Field
+                              label="Definition"
+                              value={aircraftConfig.definition}
+                              disabled={!canEdit}
+                              onChange={(value) => updateAircraftConfiguration(index, configIndex, value)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={!canEdit}
+                            onClick={() => removeAircraftConfiguration(index, configIndex)}
+                            className="h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

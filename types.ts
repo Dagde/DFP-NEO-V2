@@ -273,6 +273,7 @@ export interface SyllabusItemDetail {
   methodOfAssessment: string[];
   resourcesPhysical: string[];
   resourceNumber?: number;
+  acceptableAircraftConfigs?: string[];
   resourcesHuman: string[];
   isRemedial?: boolean;
   completedAt?: string | null;
