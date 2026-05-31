@@ -8,7 +8,7 @@ import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
-import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 interface PrioritiesViewProps {
   school?: 'ESL' | 'PEA';
@@ -62,6 +62,7 @@ interface PrioritiesViewProps {
   traineeLMPs?: Map<string, SyllabusItemDetail[]>; // Optional
   remedialRequests?: RemedialRequest[];
   onToggleRemedialRequest?: (traineeId: number, eventCode: string) => void;
+  onUpdateRemedialAircraftConfig?: (traineeId: number, eventCode: string, aircraftConfigId: string) => void;
   currencyNames: string[];
   resourceDisplayNames?: ResourceDisplayNames;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
@@ -82,6 +83,30 @@ const ConfigCapacityInfoHint: React.FC<{ definition: AircraftConfigurationDefini
         {description}
       </span>
     </span>
+  );
+};
+
+const AircraftConfigSelect: React.FC<{
+  value?: string;
+  definitions: AircraftConfigurationDefinition[];
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}> = ({ value, definitions, disabled = false, onChange }) => {
+  const selectedValue = value || BASE_AIRCRAFT_CONFIG.id;
+  return (
+    <select
+      value={selectedValue}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+      className="w-28 rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs font-semibold text-slate-100 outline-none transition focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+      title={definitions.find(definition => definition.id === selectedValue)?.definition || BASE_AIRCRAFT_CONFIG.definition}
+    >
+      {definitions.map(definition => (
+        <option key={definition.id} value={definition.id}>
+          {definition.label}
+        </option>
+      ))}
+    </select>
   );
 };
 
@@ -138,6 +163,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   traineeLMPs = new Map(),
   remedialRequests = [],
   onToggleRemedialRequest = (_traineeId: number, _eventCode: string) => {},
+  onUpdateRemedialAircraftConfig = (_traineeId: number, _eventCode: string, _aircraftConfigId: string) => {},
   currencyNames,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
@@ -145,6 +171,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const ftdLabel = resourceDisplayNames.ftd;
   const cptLabel = resourceDisplayNames.cpt;
   const staffRankOrder = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'];
+  const aircraftConfigOptions = useMemo(() => {
+    const definitions = aircraftConfigurationDefinitions.length > 0
+      ? aircraftConfigurationDefinitions
+      : [BASE_AIRCRAFT_CONFIG];
+    return definitions.some(definition => definition.id === BASE_AIRCRAFT_CONFIG.id)
+      ? definitions
+      : [BASE_AIRCRAFT_CONFIG, ...definitions];
+  }, [aircraftConfigurationDefinitions]);
 
   // State for Course Priorities
   const courseDragItem = useRef<number | null>(null);
@@ -254,13 +288,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     crewMode: 'withInstructor' | 'solo' | 'withOtherPilot';
     dueCurrencies: string[];
     selectedCurrencies: string[];
+    aircraftConfigId: string;
     selected: boolean;
     pushed: boolean;
   }>>(() => {
     try {
       const stored = localStorage.getItem(currencyDraftStorageKey);
       const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed)
+        ? parsed.map((draft: any) => ({
+            ...draft,
+            aircraftConfigId: draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+          }))
+        : [];
     } catch {
       return [];
     }
@@ -364,6 +404,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           crewMode,
           dueCurrencies: person.dueCurrencies,
           selectedCurrencies: [],
+          aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
           selected: true,
           pushed: false,
         });
@@ -377,6 +418,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const isSolo = draft.crewMode === 'solo';
       const startBase = draft.eventType === 'flight' ? flyingStartTime : ftdStartTime;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(', ') : '';
+      const aircraftConfigId = draft.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
       return {
         id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${uuidv4()}`,
         currencyDraftId: draft.id,
@@ -399,6 +441,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         currency: selectedCurrencyText || 'Currency',
         priority: 'Medium',
         notes: selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : 'Currency event required',
+        ...(draft.eventType === 'flight' ? {
+          aircraftConfigId,
+          acceptableAircraftConfigs: [aircraftConfigId],
+        } : {}),
       };
     });
   };
@@ -1325,13 +1371,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                             <th className="px-2 py-2 text-left">Person</th>
                             <th className="px-2 py-2 text-left">Event</th>
                             <th className="px-2 py-2 text-left">Crew</th>
+                            <th className="px-2 py-2 text-left">Config</th>
                             <th className="px-2 py-2 text-left">Currencies</th>
                             <th className="px-2 py-2 text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/60">
                         {currencyDraftEvents.length === 0 && (
-                            <tr><td colSpan={7} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
+                            <tr><td colSpan={8} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
                         )}
                         {currencyDraftEvents.map(draft => {
                             const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
@@ -1350,6 +1397,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <td className={`px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`}>{draft.personName}</td>
                                 <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-amber-200'}`}>{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</td>
                                 <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-300'}`}>{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'Dual' : 'With other pilot'}</td>
+                                <td className="px-2 py-2">
+                                    <AircraftConfigSelect
+                                        value={draft.aircraftConfigId}
+                                        definitions={aircraftConfigOptions}
+                                        disabled={isPublishedInActiveSchedule || draft.eventType !== 'flight'}
+                                        onChange={(aircraftConfigId) => setCurrencyDraftEvents(prev => prev.map(event =>
+                                            event.id === draft.id ? { ...event, aircraftConfigId } : event
+                                        ))}
+                                    />
+                                </td>
                                 <td className="px-2 py-2">
                                     <div className="relative">
                                         <button
@@ -1418,6 +1475,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <th className="py-2 px-2 text-left">Type</th>
                                 <th className="py-2 px-2 text-left">Currency</th>
                                 <th className="py-2 px-2 text-left">Priority</th>
+                                <th className="py-2 px-2 text-left">Config</th>
                                 <th className="py-2 px-2 text-center">Include in Build</th>
                             </tr>
                         </thead>
@@ -1429,6 +1487,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     <td className="py-2 px-2 text-gray-300">{req.flightType}</td>
                                     <td className="py-2 px-2 text-gray-300">{req.currency || 'N/A'}</td>
                                     <td className={`py-2 px-2 font-semibold ${req.priority === 'Medium' ? 'text-orange-400' : 'text-green-400'}`}>{req.priority}</td>
+                                    <td className="py-2 px-2">
+                                        <AircraftConfigSelect
+                                            value={req.aircraftConfigId}
+                                            definitions={aircraftConfigOptions}
+                                            onChange={(aircraftConfigId) => onUpdateSctRequest(req.id, 'aircraftConfigId', aircraftConfigId, 'flight')}
+                                        />
+                                    </td>
                                     <td className="py-2 px-2 text-center">
                                         <input
                                             type="checkbox"
@@ -1458,6 +1523,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <th className="py-2 px-2 text-left">Type</th>
                                 <th className="py-2 px-2 text-left">Currency</th>
                                 <th className="py-2 px-2 text-left">Priority</th>
+                                <th className="py-2 px-2 text-left">Config</th>
                                 <th className="py-2 px-2 text-center">Include in Build</th>
                             </tr>
                         </thead>
@@ -1469,6 +1535,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     <td className="py-2 px-2 text-gray-300">{req.flightType}</td>
                                     <td className="py-2 px-2 text-gray-300">{req.currency || 'N/A'}</td>
                                     <td className={`py-2 px-2 font-semibold ${req.priority === 'Medium' ? 'text-orange-400' : 'text-green-400'}`}>{req.priority}</td>
+                                    <td className="py-2 px-2">
+                                        <AircraftConfigSelect
+                                            value={req.aircraftConfigId}
+                                            definitions={aircraftConfigOptions}
+                                            disabled
+                                            onChange={() => {}}
+                                        />
+                                    </td>
                                     <td className="py-2 px-2 text-center">
                                         <input
                                             type="checkbox"
@@ -1496,6 +1570,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                           <th className="py-2 px-2 text-left">Course</th>
                           <th className="py-2 px-2 text-left">Event</th>
                           <th className="py-2 px-2 text-left">Staff</th>
+                          <th className="py-2 px-2 text-left">Config</th>
                           <th className="py-2 px-2 text-center">Force Schedule</th>
                       </tr>
                   </thead>
@@ -1514,6 +1589,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                               <td className="py-2 px-2 text-amber-300 font-mono">{item.code}</td>
                               <td className="py-2 px-2 text-gray-300">
                                   {allocatedStaff}
+                              </td>
+                              <td className="py-2 px-2">
+                                  <AircraftConfigSelect
+                                      value={existingRequest?.aircraftConfigId}
+                                      definitions={aircraftConfigOptions}
+                                      disabled={!forceSchedule || item.type !== 'Flight'}
+                                      onChange={(aircraftConfigId) => onUpdateRemedialAircraftConfig(trainee.idNumber, item.code, aircraftConfigId)}
+                                  />
                               </td>
                               <td className="py-2 px-2 text-center">
                                  <input

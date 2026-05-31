@@ -229,6 +229,8 @@ export interface ScheduleEvent {
       isRemedialForceSchedule?: boolean;
       traineeId?: number;
       eventCode?: string;
+      aircraftConfigId?: string;
+      acceptableAircraftConfigs?: string[];
       
       // Cancellation fields
       isCancelled?: boolean;
@@ -460,6 +462,8 @@ export interface SctRequest {
     requestedTime?: string; // Format: "HH:MM" (e.g., "15:00")
     submitted?: boolean;
     includeInBuild?: boolean; // For MEDIUM/LOW priority - user can manually include in build
+    aircraftConfigId?: string;
+    crewMember?: string;
 }
 
 export type PermissionRole = 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
@@ -477,6 +481,7 @@ export interface RemedialRequest {
     traineeId: number;
     eventCode: string;
     forceSchedule?: boolean;
+    aircraftConfigId?: string;
 }
 
 // Oracle Feature Types

@@ -306,6 +306,7 @@ model SctRequest {
   requestedTime  String?
   submitted      Boolean  @default(false)
   includeInBuild Boolean  @default(false)
+  aircraftConfigId String? @default("CONFIG-0")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

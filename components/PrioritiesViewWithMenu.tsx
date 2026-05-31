@@ -57,6 +57,7 @@ interface PrioritiesViewWithMenuProps {
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   remedialRequests?: RemedialRequest[];
   onToggleRemedialRequest?: (traineeId: number, eventCode: string) => void;
+  onUpdateRemedialAircraftConfig?: (traineeId: number, eventCode: string, aircraftConfigId: string) => void;
   currencyNames: string[];
   resourceDisplayNames?: ResourceDisplayNames;
 }

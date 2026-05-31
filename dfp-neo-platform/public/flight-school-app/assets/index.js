@@ -21259,6 +21259,20 @@ const ConfigCapacityInfoHint = ({ definition }) => {
     }
   );
 };
+const AircraftConfigSelect = ({ value, definitions, disabled = false, onChange }) => {
+  const selectedValue = value || BASE_AIRCRAFT_CONFIG.id;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "select",
+    {
+      value: selectedValue,
+      disabled,
+      onChange: (event) => onChange(event.target.value),
+      className: "w-28 rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs font-semibold text-slate-100 outline-none transition focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60",
+      title: definitions.find((definition) => definition.id === selectedValue)?.definition || BASE_AIRCRAFT_CONFIG.definition,
+      children: definitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id))
+    }
+  );
+};
 const PrioritiesView = ({
   school = "ESL",
   coursePriorities,
@@ -21313,6 +21327,8 @@ const PrioritiesView = ({
   remedialRequests = [],
   onToggleRemedialRequest = (_traineeId, _eventCode) => {
   },
+  onUpdateRemedialAircraftConfig = (_traineeId, _eventCode, _aircraftConfigId) => {
+  },
   currencyNames,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
@@ -21320,6 +21336,10 @@ const PrioritiesView = ({
   const ftdLabel = resourceDisplayNames.ftd;
   const cptLabel = resourceDisplayNames.cpt;
   const staffRankOrder = ["WGCDR", "SQNLDR", "FLTLT", "FLGOFF", "PLTOFF", "Mr"];
+  const aircraftConfigOptions = reactExports.useMemo(() => {
+    const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
+    return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
+  }, [aircraftConfigurationDefinitions]);
   const courseDragItem = reactExports.useRef(null);
   const courseDragOverItem = reactExports.useRef(null);
   const [courseTimestamp, setCourseTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
@@ -21391,7 +21411,10 @@ const PrioritiesView = ({
     try {
       const stored = localStorage.getItem(currencyDraftStorageKey);
       const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? parsed.map((draft) => ({
+        ...draft,
+        aircraftConfigId: draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id
+      })) : [];
     } catch {
       return [];
     }
@@ -21469,6 +21492,7 @@ const PrioritiesView = ({
           crewMode,
           dueCurrencies: person.dueCurrencies,
           selectedCurrencies: [],
+          aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
           selected: true,
           pushed: false
         });
@@ -21481,6 +21505,7 @@ const PrioritiesView = ({
       const isSolo = draft.crewMode === "solo";
       const startBase = draft.eventType === "flight" ? flyingStartTime : ftdStartTime;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(", ") : "";
+      const aircraftConfigId = draft.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
       return {
         id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${v4()}`,
         currencyDraftId: draft.id,
@@ -21502,7 +21527,11 @@ const PrioritiesView = ({
         eventCategory: "currency",
         currency: selectedCurrencyText || "Currency",
         priority: "Medium",
-        notes: selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : "Currency event required"
+        notes: selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : "Currency event required",
+        ...draft.eventType === "flight" ? {
+          aircraftConfigId,
+          acceptableAircraftConfigs: [aircraftConfigId]
+        } : {}
       };
     });
   };
@@ -22336,11 +22365,12 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Person" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Event" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Crew" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Config" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Currencies" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-right", children: "Action" })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
-            currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }) }),
+            currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 8, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }) }),
             currencyDraftEvents.map((draft) => {
               const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `align-top hover:bg-sky-900/40 ${isPublishedInActiveSchedule ? "text-green-300" : ""}`, children: [
@@ -22358,6 +22388,17 @@ const PrioritiesView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? "text-green-300" : "text-white"}`, children: draft.personName }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-amber-200"}`, children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-slate-300"}`, children: draft.crewMode === "solo" ? "Solo" : draft.audience === "trainee" ? "Dual" : "With other pilot" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  AircraftConfigSelect,
+                  {
+                    value: draft.aircraftConfigId,
+                    definitions: aircraftConfigOptions,
+                    disabled: isPublishedInActiveSchedule || draft.eventType !== "flight",
+                    onChange: (aircraftConfigId) => setCurrencyDraftEvents((prev) => prev.map(
+                      (event) => event.id === draft.id ? { ...event, aircraftConfigId } : event
+                    ))
+                  }
+                ) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
@@ -22410,6 +22451,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Type" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Include in Build" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: sctFlights.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
@@ -22418,6 +22460,14 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                AircraftConfigSelect,
+                {
+                  value: req.aircraftConfigId,
+                  definitions: aircraftConfigOptions,
+                  onChange: (aircraftConfigId) => onUpdateSctRequest(req.id, "aircraftConfigId", aircraftConfigId, "flight")
+                }
+              ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -22443,6 +22493,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Type" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Include in Build" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: sctFtds.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
@@ -22451,6 +22502,16 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                AircraftConfigSelect,
+                {
+                  value: req.aircraftConfigId,
+                  definitions: aircraftConfigOptions,
+                  disabled: true,
+                  onChange: () => {
+                  }
+                }
+              ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -22472,6 +22533,7 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Course" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Staff" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Force Schedule" })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: incompleteRemedials.map(({ trainee, item }) => {
@@ -22483,6 +22545,15 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: trainee.course }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-mono", children: item.code }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: allocatedStaff }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                AircraftConfigSelect,
+                {
+                  value: existingRequest?.aircraftConfigId,
+                  definitions: aircraftConfigOptions,
+                  disabled: !forceSchedule || item.type !== "Flight",
+                  onChange: (aircraftConfigId) => onUpdateRemedialAircraftConfig(trainee.idNumber, item.code, aircraftConfigId)
+                }
+              ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -56729,7 +56800,8 @@ const normaliseRemedialRequests = (value) => {
   return value.map((item) => ({
     traineeId: Number(item?.traineeId),
     eventCode: String(item?.eventCode || ""),
-    forceSchedule: item?.forceSchedule === true
+    forceSchedule: item?.forceSchedule === true,
+    aircraftConfigId: String(item?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id)
   })).filter((item) => Number.isFinite(item.traineeId) && item.eventCode && item.forceSchedule);
 };
 const loadStoredRemedialRequests = () => {
@@ -65148,7 +65220,8 @@ const App = () => {
           dateRequested: r.dateRequested,
           requestedTime: r.requestedTime,
           submitted: r.submitted,
-          includeInBuild: r.includeInBuild
+          includeInBuild: r.includeInBuild,
+          aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id
         })));
         setSctFtds(data.filter((r) => r.requestType === "ftd").map((r) => ({
           id: r.id,
@@ -65162,7 +65235,8 @@ const App = () => {
           dateRequested: r.dateRequested,
           requestedTime: r.requestedTime,
           submitted: r.submitted,
-          includeInBuild: r.includeInBuild
+          includeInBuild: r.includeInBuild,
+          aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id
         })));
       } catch (err) {
         console.error("[SCT] Failed to load SCT requests from DB:", err);
@@ -68940,6 +69014,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           const [hours, minutes] = sctReq.requestedTime.split(":").map(Number);
           startTime = hours + minutes / 60;
         }
+        const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
         newPriorityEvents[existingInPriorityIndex] = {
           ...newPriorityEvents[existingInPriorityIndex],
           student: sctReq.flightType === "Dual" ? sctReq.crewMember || "TBA" : "",
@@ -68949,13 +69024,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           startTime,
           flightType: sctReq.flightType,
           soloOrDual: sctReq.flightType,
-          currency: sctReq.currency
+          currency: sctReq.currency,
+          aircraftConfigId,
+          acceptableAircraftConfigs: [aircraftConfigId]
         };
         console.log("🔄 Updated HIGH priority SCT flight:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
         const duration = syllabusItem?.duration || 1.5;
+        const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
         let startTime = 8;
         if (sctReq.requestedTime) {
           const [hours, minutes] = sctReq.requestedTime.split(":").map(Number);
@@ -68988,7 +69066,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           isSct: true,
           eventCategory: "sct",
           // This is the key field that makes it use SCT logic
-          currency: sctReq.currency
+          currency: sctReq.currency,
+          aircraftConfigId,
+          acceptableAircraftConfigs: [aircraftConfigId]
         };
         newPriorityEvents.push(newEvent);
         added++;
@@ -69138,6 +69218,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         const duration = syllabusItem?.duration || 1.5;
         const mappedScheduleType = syllabusItem?.type === "FTD" ? "ftd" : syllabusItem?.type === "Ground School" ? "ground" : syllabusItem?.type === "Flight" ? "flight" : null;
+        const remedialAircraftConfigId = remedialReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
         const allocatedInstructor = syllabusItem?.resourcesHuman && syllabusItem.resourcesHuman.length > 0 ? syllabusItem.resourcesHuman[0] : existingEvent?.instructor || "";
         traceRemedialSyncMovement({
           phase: existingEvent ? "force-remedial-refresh-lookup" : "force-remedial-create-lookup",
@@ -69205,7 +69286,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               preStart: syllabusItem.preFlightTime,
               postEnd: syllabusItem.postFlightTime,
               isRemedial: true,
-              isTimeFixed: true
+              isTimeFixed: true,
+              ...syllabusItem.type === "Flight" ? {
+                aircraftConfigId: remedialAircraftConfigId,
+                acceptableAircraftConfigs: [remedialAircraftConfigId]
+              } : {}
             };
             traceRemedialSyncMovement({
               phase: "highest-priority-remedial-refreshed",
@@ -69262,7 +69347,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               preStart: syllabusItem.preFlightTime,
               postEnd: syllabusItem.postFlightTime,
               isTimeFixed: true,
-              isRemedial: true
+              isRemedial: true,
+              ...syllabusItem.type === "Flight" ? {
+                aircraftConfigId: remedialAircraftConfigId,
+                acceptableAircraftConfigs: [remedialAircraftConfigId]
+              } : {}
             };
             newPriorityEvents.push(newEvent);
             traceRemedialSyncMovement({
@@ -73247,7 +73336,8 @@ ${conflictLines.join("\n")}${moreText}`,
                 dateRequested: getLocalDateString(),
                 requestedTime: "15:00",
                 submitted: false,
-                includeInBuild: false
+                includeInBuild: false,
+                aircraftConfigId: BASE_AIRCRAFT_CONFIG.id
               };
               console.log("[SCT] Created new request:", newReq.id);
               if (type === "flight") setSctFlights((prev) => [...prev, newReq]);
@@ -73307,7 +73397,7 @@ ${conflictLines.join("\n")}${moreText}`,
                 const requests = type === "flight" ? sctFlights : sctFtds;
                 const request = requests.find((r) => r.id === id);
                 const updatedRequest = request ? { ...request, [field]: value } : null;
-                if (updatedRequest && updatedRequest.priority === "High") {
+                if (updatedRequest && (updatedRequest.priority === "High" || updatedRequest.includeInBuild)) {
                   syncPriorityEventsWithSctAndRemedial();
                 }
               }, 100);
@@ -73362,14 +73452,27 @@ ${conflictLines.join("\n")}${moreText}`,
                   const newForceScheduleValue = !existing.forceSchedule;
                   console.log(`🔄 Toggling Force Schedule for trainee ${traineeId}, event ${eventCode}: ${existing.forceSchedule} → ${newForceScheduleValue}`);
                   newRequests = prev.map(
-                    (r) => r.traineeId === traineeId && r.eventCode === eventCode ? { ...r, forceSchedule: newForceScheduleValue } : r
+                    (r) => r.traineeId === traineeId && r.eventCode === eventCode ? { ...r, forceSchedule: newForceScheduleValue, aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id } : r
                   );
                 } else {
                   console.log(`✅ Creating new Force Schedule request for trainee ${traineeId}, event ${eventCode}`);
-                  newRequests = [...prev, { traineeId, eventCode, forceSchedule: true }];
+                  newRequests = [...prev, { traineeId, eventCode, forceSchedule: true, aircraftConfigId: BASE_AIRCRAFT_CONFIG.id }];
                 }
                 console.log(`📋 Updated remedialRequests:`, newRequests.filter((r) => r.forceSchedule));
                 storeRemedialRequests(newRequests);
+                return newRequests;
+              });
+            },
+            onUpdateRemedialAircraftConfig: (traineeId, eventCode, aircraftConfigId) => {
+              setRemedialRequests((prev) => {
+                const existing = prev.find((r) => r.traineeId === traineeId && r.eventCode === eventCode);
+                const newRequests = existing ? prev.map(
+                  (r) => r.traineeId === traineeId && r.eventCode === eventCode ? { ...r, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id } : r
+                ) : [...prev, { traineeId, eventCode, forceSchedule: true, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }];
+                storeRemedialRequests(newRequests);
+                setTimeout(() => {
+                  syncPriorityEventsWithSctAndRemedial();
+                }, 100);
                 return newRequests;
               });
             },
@@ -75193,16 +75296,20 @@ Do you want to replace the existing entry?`,
           onClose: () => setShowSctRequest(false),
           onSave: async (request) => {
             console.log("[SCT] SctRequestFlyout onSave called with request:", request);
-            if (request.event.includes("FTD")) {
-              setSctFtds((prev) => [...prev, request]);
+            const requestWithDefaults = {
+              ...request,
+              aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id
+            };
+            if (requestWithDefaults.event.includes("FTD")) {
+              setSctFtds((prev) => [...prev, requestWithDefaults]);
             } else {
-              setSctFlights((prev) => [...prev, request]);
+              setSctFlights((prev) => [...prev, requestWithDefaults]);
             }
             const flyoutUserId = getCurrentUserId();
             if (flyoutUserId) {
               try {
-                const requestType = request.event.includes("FTD") ? "ftd" : "flight";
-                const payload = { ...request, userId: flyoutUserId, requestType };
+                const requestType = requestWithDefaults.event.includes("FTD") ? "ftd" : "flight";
+                const payload = { ...requestWithDefaults, userId: flyoutUserId, requestType };
                 console.log("[SCT] POST from SctRequestFlyout:", JSON.stringify(payload));
                 const res = await fetch("/api/sct-requests", {
                   method: "POST",
@@ -75212,10 +75319,10 @@ Do you want to replace the existing entry?`,
                 if (res.ok) {
                   const saved = await res.json();
                   console.log("[SCT] Saved from Flyout:", saved.id, "userId:", saved.userId);
-                  if (request.event.includes("FTD")) {
-                    setSctFtds((prev) => prev.map((r) => r.id === request.id ? { ...r, id: saved.id } : r));
+                  if (requestWithDefaults.event.includes("FTD")) {
+                    setSctFtds((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
                   } else {
-                    setSctFlights((prev) => prev.map((r) => r.id === request.id ? { ...r, id: saved.id } : r));
+                    setSctFlights((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
                   }
                 } else {
                   const errData = await res.json().catch(() => ({}));

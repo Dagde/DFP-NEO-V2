@@ -511,6 +511,7 @@ const normaliseRemedialRequests = (value: unknown): RemedialRequest[] => {
             traineeId: Number(item?.traineeId),
             eventCode: String(item?.eventCode || ''),
             forceSchedule: item?.forceSchedule === true,
+            aircraftConfigId: String(item?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id),
         }))
         .filter(item => Number.isFinite(item.traineeId) && item.eventCode && item.forceSchedule);
 };
@@ -11482,13 +11483,15 @@ const App: React.FC = () => {
                     id: r.id, name: r.name, event: r.event, flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
                     notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
-                    submitted: r.submitted, includeInBuild: r.includeInBuild
+                    submitted: r.submitted, includeInBuild: r.includeInBuild,
+                    aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
                 })));
                 setSctFtds(data.filter((r: any) => r.requestType === 'ftd').map((r: any) => ({
                     id: r.id, name: r.name, event: r.event, flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
                     notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
-                    submitted: r.submitted, includeInBuild: r.includeInBuild
+                    submitted: r.submitted, includeInBuild: r.includeInBuild,
+                    aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
                 })));
             } catch (err) {
                 console.error('[SCT] Failed to load SCT requests from DB:', err);
@@ -16267,6 +16270,7 @@ const App: React.FC = () => {
                 }
 
                 // Update the existing event with new data from SCT request
+                const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
                 newPriorityEvents[existingInPriorityIndex] = {
                     ...newPriorityEvents[existingInPriorityIndex],
                     student: sctReq.flightType === 'Dual' ? (sctReq.crewMember || 'TBA') : '',
@@ -16276,13 +16280,16 @@ const App: React.FC = () => {
                     startTime: startTime,
                     flightType: sctReq.flightType,
                     soloOrDual: sctReq.flightType,
-                    currency: sctReq.currency
+                    currency: sctReq.currency,
+                    aircraftConfigId,
+                    acceptableAircraftConfigs: [aircraftConfigId],
                 };
                 console.log('🔄 Updated HIGH priority SCT flight:', sctReq.event, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else if (!existingInNextDay) {
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
                 const trainee = allTraineesData.find(t => t.fullName === sctReq.name);
                 const duration = syllabusItem?.duration || 1.5;
+                const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
 
                 // Convert requested time to decimal hours (e.g., "15:00" -> 15.0)
                 let startTime = 8.0; // Default
@@ -16311,7 +16318,9 @@ const App: React.FC = () => {
                     isTimeFixed: true,
                     isSct: true,
                     eventCategory: 'sct', // This is the key field that makes it use SCT logic
-                    currency: sctReq.currency
+                    currency: sctReq.currency,
+                    aircraftConfigId,
+                    acceptableAircraftConfigs: [aircraftConfigId],
                 };
 
                 newPriorityEvents.push(newEvent);
@@ -16480,6 +16489,7 @@ const App: React.FC = () => {
                 const mappedScheduleType = syllabusItem?.type === 'FTD' ? 'ftd' :
                     syllabusItem?.type === 'Ground School' ? 'ground' :
                     syllabusItem?.type === 'Flight' ? 'flight' : null;
+                const remedialAircraftConfigId = remedialReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
                 const allocatedInstructor = syllabusItem?.resourcesHuman && syllabusItem.resourcesHuman.length > 0
                     ? syllabusItem.resourcesHuman[0]
                     : existingEvent?.instructor || '';
@@ -16557,6 +16567,10 @@ const App: React.FC = () => {
                             postEnd: syllabusItem.postFlightTime,
                             isRemedial: true,
                             isTimeFixed: true,
+                            ...(syllabusItem.type === 'Flight' ? {
+                                aircraftConfigId: remedialAircraftConfigId,
+                                acceptableAircraftConfigs: [remedialAircraftConfigId],
+                            } : {}),
                         };
                         traceRemedialSyncMovement({
                             phase: 'highest-priority-remedial-refreshed',
@@ -16616,7 +16630,11 @@ const App: React.FC = () => {
                             preStart: syllabusItem.preFlightTime,
                             postEnd: syllabusItem.postFlightTime,
                             isTimeFixed: true,
-                            isRemedial: true
+                            isRemedial: true,
+                            ...(syllabusItem.type === 'Flight' ? {
+                                aircraftConfigId: remedialAircraftConfigId,
+                                acceptableAircraftConfigs: [remedialAircraftConfigId],
+                            } : {}),
                         };
 
                         newPriorityEvents.push(newEvent);
@@ -21587,7 +21605,8 @@ updates.forEach(update => {
                           dateRequested: getLocalDateString(),
                           requestedTime: '15:00',
                           submitted: false,
-                          includeInBuild: false
+                          includeInBuild: false,
+                          aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
                       };
                       console.log('[SCT] Created new request:', newReq.id);
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
@@ -21646,7 +21665,7 @@ updates.forEach(update => {
                         const requests = type === 'flight' ? sctFlights : sctFtds;
                         const request = requests.find(r => r.id === id);
                         const updatedRequest = request ? { ...request, [field]: value } : null;
-                        if (updatedRequest && updatedRequest.priority === 'High') {
+                        if (updatedRequest && (updatedRequest.priority === 'High' || updatedRequest.includeInBuild)) {
                           syncPriorityEventsWithSctAndRemedial();
                         }
                       }, 100);
@@ -21702,17 +21721,34 @@ updates.forEach(update => {
                                 console.log(`🔄 Toggling Force Schedule for trainee ${traineeId}, event ${eventCode}: ${existing.forceSchedule} → ${newForceScheduleValue}`);
                                 newRequests = prev.map(r =>
                                     r.traineeId === traineeId && r.eventCode === eventCode
-                                        ? { ...r, forceSchedule: newForceScheduleValue }
+                                        ? { ...r, forceSchedule: newForceScheduleValue, aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }
                                         : r
                                 );
                             } else {
                                 // Create new request with forceSchedule set to true
                                 console.log(`✅ Creating new Force Schedule request for trainee ${traineeId}, event ${eventCode}`);
-                                newRequests = [...prev, { traineeId, eventCode, forceSchedule: true }];
+                                newRequests = [...prev, { traineeId, eventCode, forceSchedule: true, aircraftConfigId: BASE_AIRCRAFT_CONFIG.id }];
                             }
 
                             console.log(`📋 Updated remedialRequests:`, newRequests.filter(r => r.forceSchedule));
                             storeRemedialRequests(newRequests);
+                            return newRequests;
+                        });
+                    }}
+                    onUpdateRemedialAircraftConfig={(traineeId, eventCode, aircraftConfigId) => {
+                        setRemedialRequests(prev => {
+                            const existing = prev.find(r => r.traineeId === traineeId && r.eventCode === eventCode);
+                            const newRequests = existing
+                                ? prev.map(r =>
+                                    r.traineeId === traineeId && r.eventCode === eventCode
+                                        ? { ...r, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }
+                                        : r
+                                )
+                                : [...prev, { traineeId, eventCode, forceSchedule: true, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }];
+                            storeRemedialRequests(newRequests);
+                            setTimeout(() => {
+                                syncPriorityEventsWithSctAndRemedial();
+                            }, 100);
                             return newRequests;
                         });
                     }}
@@ -23697,18 +23733,22 @@ updates.forEach(update => {
                     onClose={() => setShowSctRequest(false)}
                     onSave={async (request) => {
                         console.log('[SCT] SctRequestFlyout onSave called with request:', request);
+                        const requestWithDefaults = {
+                            ...request,
+                            aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                        };
                         // Add the SCT request to the appropriate list
-                        if (request.event.includes('FTD')) {
-                            setSctFtds(prev => [...prev, request]);
+                        if (requestWithDefaults.event.includes('FTD')) {
+                            setSctFtds(prev => [...prev, requestWithDefaults]);
                         } else {
-                            setSctFlights(prev => [...prev, request]);
+                            setSctFlights(prev => [...prev, requestWithDefaults]);
                         }
                         // Persist to DB using robust userId lookup
                         const flyoutUserId = getCurrentUserId();
                         if (flyoutUserId) {
                             try {
-                                const requestType = request.event.includes('FTD') ? 'ftd' : 'flight';
-                                const payload = { ...request, userId: flyoutUserId, requestType };
+                                const requestType = requestWithDefaults.event.includes('FTD') ? 'ftd' : 'flight';
+                                const payload = { ...requestWithDefaults, userId: flyoutUserId, requestType };
                                 console.log('[SCT] POST from SctRequestFlyout:', JSON.stringify(payload));
                                 const res = await fetch('/api/sct-requests', {
                                     method: 'POST',
@@ -23719,10 +23759,10 @@ updates.forEach(update => {
                                     const saved = await res.json();
                                     console.log('[SCT] Saved from Flyout:', saved.id, 'userId:', saved.userId);
                                     // Update local state with DB-assigned id
-                                    if (request.event.includes('FTD')) {
-                                        setSctFtds(prev => prev.map(r => r.id === request.id ? { ...r, id: saved.id } : r));
+                                    if (requestWithDefaults.event.includes('FTD')) {
+                                        setSctFtds(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
                                     } else {
-                                        setSctFlights(prev => prev.map(r => r.id === request.id ? { ...r, id: saved.id } : r));
+                                        setSctFlights(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
                                     }
                                 } else {
                                     const errData = await res.json().catch(() => ({}));
