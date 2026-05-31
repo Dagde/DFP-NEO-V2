@@ -21677,6 +21677,7 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Days to Expire" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Requested Time" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
+          type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Status" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-1 text-right" })
         ] }) }),
@@ -21705,6 +21706,14 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
             ] }) }),
+            type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              AircraftConfigSelect,
+              {
+                value: req.aircraftConfigId,
+                definitions: aircraftConfigOptions,
+                onChange: (aircraftConfigId) => onUpdateSctRequest(req.id, "aircraftConfigId", aircraftConfigId, "flight")
+              }
+            ) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 text-xs font-semibold", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -54317,7 +54326,7 @@ const DutyWarningFlyout = ({ onConfirm, onCancel, instructorName, dutyHours }) =
     ] })
   ] }) });
 };
-const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp }) => {
+const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, aircraftConfigurationDefinitions = [] }) => {
   const [event, setEvent] = reactExports.useState("SCT GF");
   const [flightType, setFlightType] = reactExports.useState("Dual");
   const [currency, setCurrency] = reactExports.useState("");
@@ -54325,7 +54334,12 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
   const [priority, setPriority] = reactExports.useState("Medium");
   const [notes, setNotes] = reactExports.useState("");
   const [requestedTime, setRequestedTime] = reactExports.useState("15:00");
+  const [aircraftConfigId, setAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const sctEvents = reactExports.useMemo(() => sctEventsProp || ["SCT GF", "SCT IF", "SCT NAV", "SCT FORM", "Night SCT"], [sctEventsProp]);
+  const aircraftConfigOptions = reactExports.useMemo(() => {
+    const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
+    return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
+  }, [aircraftConfigurationDefinitions]);
   const timeOptions = reactExports.useMemo(() => {
     const times = [];
     for (let hour = 6; hour < 24; hour++) {
@@ -54352,7 +54366,8 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
       priority,
       notes,
       dateRequested: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
-      requestedTime
+      requestedTime,
+      aircraftConfigId
     };
     onSave(newRequest);
   };
@@ -54383,35 +54398,50 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
           /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: requestedTime, onChange: (e) => setRequestedTime(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white", children: timeOptions.map((time) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: time, children: time }, time)) })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Flight Type" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "radio",
-                value: "Solo",
-                checked: flightType === "Solo",
-                onChange: (e) => setFlightType(e.target.value),
-                className: "mr-2 text-sky-600 focus:ring-sky-500 border-gray-600 bg-gray-700"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: "Solo" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "radio",
-                value: "Dual",
-                checked: flightType === "Dual",
-                onChange: (e) => setFlightType(e.target.value),
-                className: "mr-2 text-sky-600 focus:ring-sky-500 border-gray-600 bg-gray-700"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: "Dual" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Flight Type" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  value: "Solo",
+                  checked: flightType === "Solo",
+                  onChange: (e) => setFlightType(e.target.value),
+                  className: "mr-2 text-sky-600 focus:ring-sky-500 border-gray-600 bg-gray-700"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: "Solo" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  value: "Dual",
+                  checked: flightType === "Dual",
+                  onChange: (e) => setFlightType(e.target.value),
+                  className: "mr-2 text-sky-600 focus:ring-sky-500 border-gray-600 bg-gray-700"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: "Dual" })
+            ] })
           ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Required CONFIG" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              value: aircraftConfigId,
+              onChange: (e) => setAircraftConfigId(e.target.value),
+              className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white",
+              title: aircraftConfigOptions.find((definition) => definition.id === aircraftConfigId)?.definition || BASE_AIRCRAFT_CONFIG.definition,
+              children: aircraftConfigOptions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id))
+            }
+          )
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
@@ -75343,7 +75373,8 @@ Do you want to replace the existing entry?`,
             setSuccessMessage(`SCT request submitted for ${instructorForSct.name}`);
           },
           currencyNames: ["Instrument", "Night", "Multi-Engine", "Formation"],
-          sctEvents
+          sctEvents,
+          aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions
         }
       ),
       darkMessageModal && /* @__PURE__ */ jsxRuntimeExports.jsx(

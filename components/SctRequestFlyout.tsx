@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Instructor, SctRequest } from '../types';
+import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 interface SctRequestFlyoutProps {
   instructor: Instructor;
@@ -8,9 +9,10 @@ interface SctRequestFlyoutProps {
   onSave: (request: SctRequest) => void;
   currencyNames: string[];
   sctEvents?: string[];
+  aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
 }
 
-const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp }) => {
+const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, aircraftConfigurationDefinitions = [] }) => {
   const [event, setEvent] = useState('SCT GF');
   const [flightType, setFlightType] = useState<'Solo' | 'Dual'>('Dual');
   const [currency, setCurrency] = useState('');
@@ -18,8 +20,17 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [notes, setNotes] = useState('');
   const [requestedTime, setRequestedTime] = useState('15:00');
+  const [aircraftConfigId, setAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
 
   const sctEvents = useMemo(() => sctEventsProp || ['SCT GF', 'SCT IF', 'SCT NAV', 'SCT FORM', 'Night SCT'], [sctEventsProp]);
+  const aircraftConfigOptions = useMemo(() => {
+    const definitions = aircraftConfigurationDefinitions.length > 0
+      ? aircraftConfigurationDefinitions
+      : [BASE_AIRCRAFT_CONFIG];
+    return definitions.some(definition => definition.id === BASE_AIRCRAFT_CONFIG.id)
+      ? definitions
+      : [BASE_AIRCRAFT_CONFIG, ...definitions];
+  }, [aircraftConfigurationDefinitions]);
   
   // Generate time options at 5-minute intervals from 06:00 to 23:55
   const timeOptions = useMemo(() => {
@@ -50,6 +61,7 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
       notes,
       dateRequested: new Date().toISOString().split('T')[0],
       requestedTime,
+      aircraftConfigId,
     };
     onSave(newRequest);
   };
@@ -89,29 +101,44 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Flight Type</label>
-            <div className="flex space-x-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="Solo"
-                  checked={flightType === 'Solo'}
-                  onChange={e => setFlightType(e.target.value as 'Solo' | 'Dual')}
-                  className="mr-2 text-sky-600 focus:ring-sky-500 border-gray-600 bg-gray-700"
-                />
-                <span className="text-white">Solo</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="Dual"
-                  checked={flightType === 'Dual'}
-                  onChange={e => setFlightType(e.target.value as 'Solo' | 'Dual')}
-                  className="mr-2 text-sky-600 focus:ring-sky-500 border-gray-600 bg-gray-700"
-                />
-                <span className="text-white">Dual</span>
-              </label>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Flight Type</label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="Solo"
+                    checked={flightType === 'Solo'}
+                    onChange={e => setFlightType(e.target.value as 'Solo' | 'Dual')}
+                    className="mr-2 text-sky-600 focus:ring-sky-500 border-gray-600 bg-gray-700"
+                  />
+                  <span className="text-white">Solo</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="Dual"
+                    checked={flightType === 'Dual'}
+                    onChange={e => setFlightType(e.target.value as 'Solo' | 'Dual')}
+                    className="mr-2 text-sky-600 focus:ring-sky-500 border-gray-600 bg-gray-700"
+                  />
+                  <span className="text-white">Dual</span>
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400">Required CONFIG</label>
+              <select
+                value={aircraftConfigId}
+                onChange={e => setAircraftConfigId(e.target.value)}
+                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
+                title={aircraftConfigOptions.find(definition => definition.id === aircraftConfigId)?.definition || BASE_AIRCRAFT_CONFIG.definition}
+              >
+                {aircraftConfigOptions.map(definition => (
+                  <option key={definition.id} value={definition.id}>{definition.label}</option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">

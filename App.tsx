@@ -23730,6 +23730,7 @@ updates.forEach(update => {
                     }}
                     currencyNames={['Instrument', 'Night', 'Multi-Engine', 'Formation']}
                     sctEvents={sctEvents}
+                    aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                 />
             )}
 

@@ -636,6 +636,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                           <th className="py-2 px-2 text-left">Days to Expire</th>
                           <th className="py-2 px-2 text-left">Requested Time</th>
                           <th className="py-2 px-2 text-left">Priority</th>
+                          {type === 'flight' && <th className="py-2 px-2 text-left">Config</th>}
                           <th className="py-2 px-2 text-left">Status</th>
                           <th className="py-2 px-1 text-right"></th>
                       </tr>
@@ -689,6 +690,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                       <option value="Low">Low</option>
                                   </select>
                               </td>
+                              {type === 'flight' && (
+                                  <td className="py-1 px-2 w-32">
+                                      <AircraftConfigSelect
+                                          value={req.aircraftConfigId}
+                                          definitions={aircraftConfigOptions}
+                                          onChange={(aircraftConfigId) => onUpdateSctRequest(req.id, 'aircraftConfigId', aircraftConfigId, 'flight')}
+                                      />
+                                  </td>
+                              )}
                               <td className="py-1 px-2 w-24">
                                   {req.submitted ? (
                                       <span className="text-green-400 text-xs font-semibold">Submitted</span>
