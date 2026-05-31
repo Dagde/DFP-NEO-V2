@@ -11098,8 +11098,14 @@ const App: React.FC = () => {
         [activePlatformResourcePool]
     );
     const aircraftConfigurations = useMemo(() => {
+        const activePoolRawDefinitions = activePlatformResourcePool?.settings?.aircraftConfigurations;
         const activePoolDefinitions = getAircraftConfigurationDefinitions(activePlatformResourcePool);
-        if (activePoolDefinitions.length > 0) return activePoolDefinitions;
+        const activePoolHasUserDefinitions = Array.isArray(activePoolRawDefinitions)
+            && activePoolRawDefinitions.some((definition: any) => {
+                const id = String(definition?.id || definition?.label || '').trim().toUpperCase();
+                return id && id !== BASE_AIRCRAFT_CONFIG.id;
+            });
+        if (activePoolHasUserDefinitions) return activePoolDefinitions;
 
         const normaliseToken = (value: unknown) => String(value || '').trim().toUpperCase();
         const activeLocation = (platformConfig?.locations || [])

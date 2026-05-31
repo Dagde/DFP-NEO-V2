@@ -64803,8 +64803,13 @@ const App = () => {
     [activePlatformResourcePool]
   );
   const aircraftConfigurations = reactExports.useMemo(() => {
+    const activePoolRawDefinitions = activePlatformResourcePool?.settings?.aircraftConfigurations;
     const activePoolDefinitions = getAircraftConfigurationDefinitions(activePlatformResourcePool);
-    if (activePoolDefinitions.length > 0) return activePoolDefinitions;
+    const activePoolHasUserDefinitions = Array.isArray(activePoolRawDefinitions) && activePoolRawDefinitions.some((definition) => {
+      const id = String(definition?.id || definition?.label || "").trim().toUpperCase();
+      return id && id !== BASE_AIRCRAFT_CONFIG.id;
+    });
+    if (activePoolHasUserDefinitions) return activePoolDefinitions;
     const normaliseToken = (value) => String(value || "").trim().toUpperCase();
     const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normaliseToken(school)));
     const locationAliases = new Set([
