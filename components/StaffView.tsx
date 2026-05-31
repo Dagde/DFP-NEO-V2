@@ -56,13 +56,8 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   const { isFrozen } = useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
 
-  // Filter and sort instructors by location for Staff Schedule
-  // Filter by location field (not unit) - ESL = East Sale, PEA = Pearce
+  // App already provides the active location/unit scoped staff list.
   const locationFilteredInstructorsForSchedule = props.instructorsData
-    .filter(i => {
-      const locationFullName = props.school === 'ESL' ? 'East Sale' : 'Pearce';
-      return i.location === locationFullName;
-    })
     .sort((a, b) => {
       // First sort by Role - QFIs before SIM IPs
       const roleA = a.role === 'QFI' ? 0 : 1;

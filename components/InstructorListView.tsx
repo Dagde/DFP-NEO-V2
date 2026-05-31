@@ -17,13 +17,6 @@ const generateRandomIdNumber = (): number => {
     return Math.floor(Math.random() * (9999999 - 1000000 + 1)) + 1000000;
 };
 
-// Unit to location mapping: which school each unit belongs to
-const UNIT_LOCATION: Record<string, string> = {
-    '1FTS': 'ESL',
-    'CFS':  'ESL',
-    '2FTS': 'PEA',
-};
-
 // Unit display sort order in Staff Profile
 const UNIT_SORT_ORDER: Record<string, number> = { '1FTS': 1, 'CFS': 2, '2FTS': 3 };
 
@@ -52,7 +45,7 @@ interface InstructorListViewProps {
   traineesData: Trainee[];
   instructorsData: Instructor[];
   archivedInstructorsData: Instructor[];
-  school: 'ESL' | 'PEA';
+  school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void;
   onNavigateToCurrency: (person: Instructor) => void;
@@ -185,35 +178,23 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const qfis = useMemo(() => {
       return instructorsData
           .filter(i => {
-              // Filter by role/flag - include QFI and INSTRUCTOR roles
               const isQFI = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
-              if (!isQFI) return false;
-
-              // Filter by location (not unit)
-              // ESL = East Sale, PEA = Pearce
-              // Also include staff with no location set (default to ESL)
-              const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-              const hasNoLocation = !i.location || i.location === '' || i.location === 'N/A';
-              return i.location === locationFullName || (hasNoLocation && school === 'ESL');
+              return isQFI;
           })
           .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
-  }, [instructorsData, school, personnelDisplaySettings]);
+  }, [instructorsData, personnelDisplaySettings]);
 
   const qfisByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
       qfis.forEach(instructor => {
           const unit = instructor.unit || 'Unassigned';
-          // Only include unit if it belongs to the selected school location
-          // Units with no mapping (e.g. 'Unassigned') default to ESL
-          const unitSchool = UNIT_LOCATION[unit] ?? 'ESL';
-          if (unitSchool !== school) return;
           if (!groups[unit]) {
               groups[unit] = [];
           }
           groups[unit].push(instructor);
       });
       return groups;
-  }, [qfis, school]);
+  }, [qfis]);
 
   const sortedUnits = useMemo(() =>
       Object.keys(qfisByUnit).sort((a, b) => {
@@ -229,17 +210,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         const simIpCandidates = instructorsData.filter(i => {
             const isSimIp = i.role === 'SIM IP';
             if (!isSimIp) return false;
-
-            // Filter by location (not unit)
-            // ESL = East Sale, PEA = Pearce
-            // Also include staff with no location set (default to ESL)
-            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-            const hasNoLocation = !i.location || i.location === '' || i.location === 'N/A';
-            const isValid = i.location === locationFullName || (hasNoLocation && school === 'ESL');
-            if (isSimIp && isValid) {
-                console.log(`🔍 [SIM IP FILTER] Found ${school} SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
-            }
-            return isValid;
+            console.log(`🔍 [SIM IP FILTER] Found active-context SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
+            return true;
         });
         console.log('🔍 [SIM IP FILTER] Total SIM IPs found:', simIpCandidates.length);
 
@@ -252,7 +224,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             }
             return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
-    }, [instructorsData, school, personnelDisplaySettings]);
+    }, [instructorsData, personnelDisplaySettings]);
 
     const ofis = useMemo(() => {
         console.log('🔍 [OFI FILTER] instructorsData length:', instructorsData.length);
@@ -261,13 +233,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         const ofiCandidates = instructorsData.filter(i => {
             const isOfi = i.role === 'OFI' || i.isOFI === true;
             if (!isOfi) return false;
-
-            // Filter by location (not unit)
-            // ESL = East Sale, PEA = Pearce
-            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-            const isValid = i.location === locationFullName;
-            console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}, isValid=${isValid}`);
-            return isValid;
+            console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}`);
+            return true;
         });
 
         console.log('🔍 [OFI FILTER] OFI candidates found:', ofiCandidates.length);
@@ -299,15 +266,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             // Include everyone else
             const isOther = !isQfi && !isSimIp && !isOfi;
             if (!isOther) return false;
-
-            // Filter by location (not unit)
-            // ESL = East Sale, PEA = Pearce
-            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-            const isValid = i.location === locationFullName;
-            if (isOther && isValid) {
-                console.log(`🔍 [OTHER STAFF] Found ${school} other staff: ${i.name} (${i.rank}) - role: ${i.role}, location: ${i.location}`);
-            }
-            return isValid;
+            console.log(`🔍 [OTHER STAFF] Found active-context other staff: ${i.name} (${i.rank}) - role: ${i.role}, location: ${i.location}`);
+            return true;
         });
 
         console.log('🔍 [OTHER STAFF] Total other staff found:', otherStaffCandidates.length);
@@ -321,7 +281,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             }
             return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
-    }, [instructorsData, school, personnelDisplaySettings]);
+    }, [instructorsData, personnelDisplaySettings]);
 
   // SIM IPs are shown as a single combined section (not split by unit)
   // simIps is already sorted by unit → rank → name from the simIps useMemo above
@@ -330,16 +290,13 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       const groups: { [key: string]: Instructor[] } = {};
       ofis.forEach(instructor => {
           const unit = instructor.unit || 'Unassigned';
-          // Only include unit if it belongs to the selected school location
-          const unitSchool = UNIT_LOCATION[unit] ?? 'ESL';
-          if (unitSchool !== school) return;
           if (!groups[unit]) {
               groups[unit] = [];
           }
           groups[unit].push(instructor);
       });
       return groups;
-  }, [ofis, school]);
+  }, [ofis]);
 
   const sortedOfiUnits = useMemo(() =>
       Object.keys(ofisByUnit).sort((a, b) => {
@@ -354,16 +311,13 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       const groups: { [key: string]: Instructor[] } = {};
       otherStaff.forEach(instructor => {
           const unit = instructor.unit || 'Unassigned';
-          // Only include unit if it belongs to the selected school location
-          const unitSchool = UNIT_LOCATION[unit] ?? 'ESL';
-          if (unitSchool !== school) return;
           if (!groups[unit]) {
               groups[unit] = [];
           }
           groups[unit].push(instructor);
       });
       return groups;
-  }, [otherStaff, school]);
+  }, [otherStaff]);
 
   const sortedOtherStaffUnits = useMemo(() =>
       Object.keys(otherStaffByUnit).sort((a, b) => {
@@ -470,8 +424,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       ))}
     </ul>
   );
-
-  const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
 
   return (
     <>

@@ -31047,11 +31047,6 @@ const ArchivedInstructorsFlyout = ({ archivedInstructors, onClose, onRestore }) 
 const generateRandomIdNumber$1 = () => {
   return Math.floor(Math.random() * (9999999 - 1e6 + 1)) + 1e6;
 };
-const UNIT_LOCATION = {
-  "1FTS": "ESL",
-  "CFS": "ESL",
-  "2FTS": "PEA"
-};
 const UNIT_SORT_ORDER = { "1FTS": 1, "CFS": 2, "2FTS": 3 };
 const generateNewInstructorTemplate = () => ({
   idNumber: generateRandomIdNumber$1(),
@@ -31160,25 +31155,20 @@ const InstructorListView = ({
   const qfis = reactExports.useMemo(() => {
     return instructorsData.filter((i) => {
       const isQFI = i.role === "QFI" || i.isQFI === true || i.role === "INSTRUCTOR";
-      if (!isQFI) return false;
-      const locationFullName2 = school === "ESL" ? "East Sale" : "Pearce";
-      const hasNoLocation = !i.location || i.location === "" || i.location === "N/A";
-      return i.location === locationFullName2 || hasNoLocation && school === "ESL";
+      return isQFI;
     }).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
-  }, [instructorsData, school, personnelDisplaySettings]);
+  }, [instructorsData, personnelDisplaySettings]);
   const qfisByUnit = reactExports.useMemo(() => {
     const groups = {};
     qfis.forEach((instructor) => {
       const unit = instructor.unit || "Unassigned";
-      const unitSchool = UNIT_LOCATION[unit] ?? "ESL";
-      if (unitSchool !== school) return;
       if (!groups[unit]) {
         groups[unit] = [];
       }
       groups[unit].push(instructor);
     });
     return groups;
-  }, [qfis, school]);
+  }, [qfis]);
   const sortedUnits = reactExports.useMemo(
     () => Object.keys(qfisByUnit).sort((a, b) => {
       const orderA = UNIT_SORT_ORDER[a] ?? 99;
@@ -31193,13 +31183,8 @@ const InstructorListView = ({
     const simIpCandidates = instructorsData.filter((i) => {
       const isSimIp2 = i.role === "SIM IP";
       if (!isSimIp2) return false;
-      const locationFullName2 = school === "ESL" ? "East Sale" : "Pearce";
-      const hasNoLocation = !i.location || i.location === "" || i.location === "N/A";
-      const isValid = i.location === locationFullName2 || hasNoLocation && school === "ESL";
-      if (isSimIp2 && isValid) {
-        console.log(`🔍 [SIM IP FILTER] Found ${school} SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
-      }
-      return isValid;
+      console.log(`🔍 [SIM IP FILTER] Found active-context SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
+      return true;
     });
     console.log("🔍 [SIM IP FILTER] Total SIM IPs found:", simIpCandidates.length);
     return simIpCandidates.sort((a, b) => {
@@ -31210,17 +31195,15 @@ const InstructorListView = ({
       }
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, school, personnelDisplaySettings]);
+  }, [instructorsData, personnelDisplaySettings]);
   const ofis = reactExports.useMemo(() => {
     console.log("🔍 [OFI FILTER] instructorsData length:", instructorsData.length);
     console.log("🔍 [OFI FILTER] All instructors:", instructorsData.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
     const ofiCandidates = instructorsData.filter((i) => {
       const isOfi = i.role === "OFI" || i.isOFI === true;
       if (!isOfi) return false;
-      const locationFullName2 = school === "ESL" ? "East Sale" : "Pearce";
-      const isValid = i.location === locationFullName2;
-      console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}, isValid=${isValid}`);
-      return isValid;
+      console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}`);
+      return true;
     });
     console.log("🔍 [OFI FILTER] OFI candidates found:", ofiCandidates.length);
     console.log("🔍 [OFI FILTER] OFI candidates:", ofiCandidates.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
@@ -31243,12 +31226,8 @@ const InstructorListView = ({
       const isOfi = i.role === "OFI" || i.isOFI === true;
       const isOther = !isQfi && !isSimIp2 && !isOfi;
       if (!isOther) return false;
-      const locationFullName2 = school === "ESL" ? "East Sale" : "Pearce";
-      const isValid = i.location === locationFullName2;
-      if (isOther && isValid) {
-        console.log(`🔍 [OTHER STAFF] Found ${school} other staff: ${i.name} (${i.rank}) - role: ${i.role}, location: ${i.location}`);
-      }
-      return isValid;
+      console.log(`🔍 [OTHER STAFF] Found active-context other staff: ${i.name} (${i.rank}) - role: ${i.role}, location: ${i.location}`);
+      return true;
     });
     console.log("🔍 [OTHER STAFF] Total other staff found:", otherStaffCandidates.length);
     return otherStaffCandidates.sort((a, b) => {
@@ -31259,20 +31238,18 @@ const InstructorListView = ({
       }
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, school, personnelDisplaySettings]);
+  }, [instructorsData, personnelDisplaySettings]);
   const ofisByUnit = reactExports.useMemo(() => {
     const groups = {};
     ofis.forEach((instructor) => {
       const unit = instructor.unit || "Unassigned";
-      const unitSchool = UNIT_LOCATION[unit] ?? "ESL";
-      if (unitSchool !== school) return;
       if (!groups[unit]) {
         groups[unit] = [];
       }
       groups[unit].push(instructor);
     });
     return groups;
-  }, [ofis, school]);
+  }, [ofis]);
   const sortedOfiUnits = reactExports.useMemo(
     () => Object.keys(ofisByUnit).sort((a, b) => {
       const orderA = UNIT_SORT_ORDER[a] ?? 99;
@@ -31286,15 +31263,13 @@ const InstructorListView = ({
     const groups = {};
     otherStaff.forEach((instructor) => {
       const unit = instructor.unit || "Unassigned";
-      const unitSchool = UNIT_LOCATION[unit] ?? "ESL";
-      if (unitSchool !== school) return;
       if (!groups[unit]) {
         groups[unit] = [];
       }
       groups[unit].push(instructor);
     });
     return groups;
-  }, [otherStaff, school]);
+  }, [otherStaff]);
   const sortedOtherStaffUnits = reactExports.useMemo(
     () => Object.keys(otherStaffByUnit).sort((a, b) => {
       const orderA = UNIT_SORT_ORDER[a] ?? 99;
@@ -31546,10 +31521,7 @@ const StaffView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("profile");
   useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
-  const locationFilteredInstructorsForSchedule = props.instructorsData.filter((i) => {
-    const locationFullName = props.school === "ESL" ? "East Sale" : "Pearce";
-    return i.location === locationFullName;
-  }).sort((a, b) => {
+  const locationFilteredInstructorsForSchedule = props.instructorsData.sort((a, b) => {
     const roleA = a.role === "QFI" ? 0 : 1;
     const roleB = b.role === "QFI" ? 0 : 1;
     if (roleA !== roleB) {
