@@ -9258,20 +9258,53 @@ const App: React.FC = () => {
         return () => { cancelled = true; };
     }, []);
 
+    const knownDfpLocationAliases = useCallback((identifier: unknown): string[] => {
+        const rawIdentifier = String(identifier || '').trim();
+        if (!rawIdentifier) return [];
+        const profile = getDefaultAirfieldSolarProfile(rawIdentifier);
+        const profileAliases = profile ? [profile.code, profile.iataCode, profile.icao, profile.name] : [];
+        const legacyAliasMap: Record<string, string[]> = {
+            ESL: ['YMES', 'EAST SALE'],
+            YMES: ['ESL', 'EAST SALE'],
+            'EAST SALE': ['ESL', 'YMES'],
+            PEA: ['YPEA', 'PEARCE'],
+            YPEA: ['PEA', 'PEARCE'],
+            PEARCE: ['PEA', 'YPEA'],
+            WLM: ['YWLM', 'WILLIAMTOWN'],
+            YWLM: ['WLM', 'WILLIAMTOWN'],
+            WILLIAMTOWN: ['WLM', 'YWLM'],
+            AMB: ['YAMB', 'AMBERLEY'],
+            YAMB: ['AMB', 'AMBERLEY'],
+            AMBERLEY: ['AMB', 'YAMB'],
+            EDI: ['YPED', 'EDINBURGH'],
+            YPED: ['EDI', 'EDINBURGH'],
+            EDINBURGH: ['EDI', 'YPED'],
+            TIN: ['YPTN', 'TINDAL'],
+            YPTN: ['TIN', 'TINDAL'],
+            TINDAL: ['TIN', 'YPTN'],
+        };
+        const seedAliases = [rawIdentifier, ...profileAliases]
+            .map(alias => String(alias || '').trim().toUpperCase())
+            .filter(Boolean);
+        const mappedAliases = seedAliases.flatMap(alias => legacyAliasMap[alias] || []);
+        return [...new Set([...seedAliases, ...mappedAliases].map(alias => String(alias || '').trim().toUpperCase()).filter(Boolean))];
+    }, []);
+
     const getLocationSelectorAliases = useCallback((location: any): string[] => {
         const directAliases = [
             location?.code,
             location?.iataCode,
+            location?.icao,
+            location?.icaoCode,
             location?.name,
             location?.settings?.legacyCode,
             location?.settings?.runtimeCode,
+            ...(Array.isArray(location?.aliases) ? location.aliases : []),
+            ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
         ].map((value) => String(value || '').trim()).filter(Boolean);
-        const profileAliases = directAliases.flatMap((alias) => {
-            const profile = getDefaultAirfieldSolarProfile(alias);
-            return profile ? [profile.code, profile.iataCode, profile.icao, profile.name] : [];
-        });
+        const profileAliases = directAliases.flatMap(knownDfpLocationAliases);
         return [...new Set([...directAliases, ...profileAliases].map((alias) => alias.toUpperCase()).filter(Boolean))];
-    }, []);
+    }, [knownDfpLocationAliases]);
 
     const baseSelectableLocationCodes = useMemo(() => {
         const activeLocations = (platformConfig?.locations || [])
@@ -10573,11 +10606,12 @@ const App: React.FC = () => {
             .find((location: any) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
         return [
             normalisedLocationCode,
+            ...knownDfpLocationAliases(normalisedLocationCode),
             ...(matchingLocation ? getLocationSelectorAliases(matchingLocation) : []),
         ].map(alias => String(alias || '').trim().toUpperCase()).filter((alias, index, aliases) => (
             Boolean(alias) && aliases.indexOf(alias) === index
         ));
-    }, [getLocationSelectorAliases, platformConfig]);
+    }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
 
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
     const loadSnapshotForDate = React.useCallback(async (
