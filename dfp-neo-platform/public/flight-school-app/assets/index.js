@@ -21240,6 +21240,25 @@ const NextDayBuildView = ({
     }
   ) });
 };
+const ConfigCapacityInfoHint = ({ definition }) => {
+  const description = definition.definition?.trim() || "No definition has been entered for this aircraft configuration.";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "span",
+    {
+      role: "button",
+      tabIndex: 0,
+      "aria-label": `${definition.label} definition`,
+      className: "group relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/30 bg-slate-950 text-[10px] font-bold italic leading-none text-cyan-100/60 outline-none transition hover:border-cyan-300/70 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50",
+      children: [
+        "i",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "pointer-events-none absolute left-0 top-5 z-50 hidden w-64 max-w-[min(16rem,calc(100vw-2rem))] rounded border border-cyan-500/30 bg-slate-950 p-3 text-left text-xs font-normal not-italic leading-relaxed text-slate-100 shadow-xl group-hover:block group-focus:block", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[11px] font-bold uppercase tracking-wide text-cyan-200", children: definition.label }),
+          description
+        ] })
+      ]
+    }
+  );
+};
 const PrioritiesView = ({
   school = "ESL",
   coursePriorities,
@@ -21324,8 +21343,9 @@ const PrioritiesView = ({
   const normaliseCapacityInput = (value) => {
     const trimmed = String(value || "").trim();
     if (!trimmed) return "";
-    const nextCount = Math.max(0, parseInt(trimmed, 10) || 0);
-    return String(nextCount);
+    const digitsOnly = trimmed.replace(/[^\d]/g, "");
+    if (!digitsOnly) return "";
+    return String(Math.max(0, parseInt(digitsOnly, 10) || 0));
   };
   const handleAircraftConfigCapacityChange = (configId, value) => {
     const nextValue = normaliseCapacityInput(value);
@@ -21869,17 +21889,25 @@ const PrioritiesView = ({
               const isCleanConfig = definition.id === "CONFIG-0";
               const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400", title: definition.definition || definition.label, children: definition.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400", title: definition.definition || definition.label, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: definition.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ConfigCapacityInfoHint, { definition })
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
                     type: "number",
                     min: 0,
+                    step: 1,
+                    inputMode: "numeric",
                     value: displayValue,
                     readOnly: isCleanConfig,
+                    disabled: isCleanConfig,
                     placeholder: "",
-                    onChange: (e) => handleAircraftConfigCapacityChange(definition.id, e.target.value),
-                    className: `mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? "text-slate-400" : ""}`
+                    onChange: (e) => {
+                      if (!isCleanConfig) handleAircraftConfigCapacityChange(definition.id, e.target.value);
+                    },
+                    className: `mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? "cursor-not-allowed text-slate-400 opacity-80" : ""}`
                   }
                 )
               ] }, definition.id);
@@ -45120,6 +45148,23 @@ const PlatformConfigurationSettings = ({
       }
     });
   };
+  const getConfigWithResourcePoolSettings = (sourceConfig, index, changes) => {
+    const currentSettings = sourceConfig.resourcePools[index]?.settings || {};
+    return {
+      ...sourceConfig,
+      resourcePools: sourceConfig.resourcePools.map((pool, poolIndex) => poolIndex === index ? { ...pool, settings: { ...currentSettings, ...changes } } : pool)
+    };
+  };
+  const promptToSaveAircraftConfigurationChanges = async (nextConfig) => {
+    const shouldSave = await showDarkConfirm(
+      "Do you wish to save these aircraft configuration changes now?\n\nThe app will refresh after saving so the updated configurations are available across the DFP and Build Priorities.",
+      "Save Aircraft Configuration Changes",
+      "warning"
+    );
+    if (shouldSave) {
+      await save(nextConfig);
+    }
+  };
   const updateAircraftNumberPrefix = (poolIndex, prefixIndex, value) => {
     const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
     const prefixes = settings.prefixes.map((prefix, index) => index === prefixIndex ? value.toUpperCase().trim() : prefix).filter(Boolean);
@@ -45152,28 +45197,33 @@ const PlatformConfigurationSettings = ({
     const nextAircraftConfigurations = aircraftConfigurations.map((configDefinition) => configDefinition.id === targetId ? { ...configDefinition, definition } : configDefinition);
     updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
-  const addAircraftConfiguration = (poolIndex) => {
+  const addAircraftConfiguration = async (poolIndex) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const existingIds = new Set(aircraftConfigurations.map((configDefinition) => configDefinition.id));
     let nextNumber = 1;
     while (existingIds.has(`CONFIG-${nextNumber}`)) nextNumber += 1;
-    updateResourcePoolSettings(poolIndex, {
+    const nextConfig = getConfigWithResourcePoolSettings(config, poolIndex, {
       aircraftConfigurations: [
         ...aircraftConfigurations,
         { id: `CONFIG-${nextNumber}`, label: `Config ${nextNumber}`, definition: "" }
       ]
     });
+    setConfig(nextConfig);
+    await promptToSaveAircraftConfigurationChanges(nextConfig);
   };
-  const removeAircraftConfiguration = (poolIndex, configIndex) => {
+  const removeAircraftConfiguration = async (poolIndex, configIndex) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const targetId = aircraftConfigurations[configIndex]?.id;
     if (!targetId || targetId === "CONFIG-0") return;
     const nextAircraftConfigurations = aircraftConfigurations.filter((configDefinition) => configDefinition.id !== targetId);
-    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
+    const nextConfig = getConfigWithResourcePoolSettings(config, poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
+    setConfig(nextConfig);
+    await promptToSaveAircraftConfigurationChanges(nextConfig);
   };
-  const save = async () => {
+  const save = async (configOverride) => {
+    const configToSave = configOverride || config;
     if (!canEdit) return;
-    const solarValidationError = config.locations.map(validateSolarLocation).find(Boolean);
+    const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
       setError(solarValidationError);
       return;
@@ -45189,7 +45239,7 @@ const PlatformConfigurationSettings = ({
           "Content-Type": "application/json",
           ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
         },
-        body: JSON.stringify(config)
+        body: JSON.stringify(configToSave)
       });
       if (!res.ok) {
         const body = await res.text();
@@ -45199,9 +45249,9 @@ const PlatformConfigurationSettings = ({
         loadedConfigRef.current.locations.map((location) => [getPlatformLocationAuditKey(location), location])
       );
       const nextLocationMap = new Map(
-        config.locations.map((location) => [getPlatformLocationAuditKey(location), location])
+        configToSave.locations.map((location) => [getPlatformLocationAuditKey(location), location])
       );
-      config.locations.forEach((location) => {
+      configToSave.locations.forEach((location) => {
         const key = getPlatformLocationAuditKey(location);
         if (!key || previousLocationMap.has(key)) return;
         logAudit({
@@ -45218,10 +45268,10 @@ const PlatformConfigurationSettings = ({
           page: "Settings - Platform Locations",
           action: "Delete",
           description: `Removed location ${getPlatformLocationAuditLabel(location)}`,
-          changes: `Remaining locations: ${config.locations.map(getPlatformLocationAuditLabel).join(", ") || "none"}`
+          changes: `Remaining locations: ${configToSave.locations.map(getPlatformLocationAuditLabel).join(", ") || "none"}`
         });
       });
-      loadedConfigRef.current = config;
+      loadedConfigRef.current = configToSave;
       shouldReload = true;
       setApplyingChanges(true);
       onShowSuccess("Platform configuration saved. Applying changes...");

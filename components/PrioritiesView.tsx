@@ -67,6 +67,24 @@ interface PrioritiesViewProps {
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
 
+const ConfigCapacityInfoHint: React.FC<{ definition: AircraftConfigurationDefinition }> = ({ definition }) => {
+  const description = definition.definition?.trim() || 'No definition has been entered for this aircraft configuration.';
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={`${definition.label} definition`}
+      className="group relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/30 bg-slate-950 text-[10px] font-bold italic leading-none text-cyan-100/60 outline-none transition hover:border-cyan-300/70 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50"
+    >
+      i
+      <span className="pointer-events-none absolute left-0 top-5 z-50 hidden w-64 max-w-[min(16rem,calc(100vw-2rem))] rounded border border-cyan-500/30 bg-slate-950 p-3 text-left text-xs font-normal not-italic leading-relaxed text-slate-100 shadow-xl group-hover:block group-focus:block">
+        <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-cyan-200">{definition.label}</span>
+        {description}
+      </span>
+    </span>
+  );
+};
+
 // FIX: Export component as a named const to fix module import error.
 export const PrioritiesView: React.FC<PrioritiesViewProps> = ({ 
   school = 'ESL',
@@ -162,8 +180,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const normaliseCapacityInput = (value: string): string => {
     const trimmed = String(value || '').trim();
     if (!trimmed) return '';
-    const nextCount = Math.max(0, parseInt(trimmed, 10) || 0);
-    return String(nextCount);
+    const digitsOnly = trimmed.replace(/[^\d]/g, '');
+    if (!digitsOnly) return '';
+    return String(Math.max(0, parseInt(digitsOnly, 10) || 0));
   };
 
   const handleAircraftConfigCapacityChange = (configId: string, value: string) => {
@@ -862,17 +881,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 : (aircraftConfigCapacities[definition.id] || '');
                                             return (
                                                 <label key={definition.id} className="block">
-                                                    <span className="block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400" title={definition.definition || definition.label}>
-                                                        {definition.label}
+                                                    <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400" title={definition.definition || definition.label}>
+                                                        <span className="truncate">{definition.label}</span>
+                                                        <ConfigCapacityInfoHint definition={definition} />
                                                     </span>
                                                     <input
                                                         type="number"
                                                         min={0}
+                                                        step={1}
+                                                        inputMode="numeric"
                                                         value={displayValue}
                                                         readOnly={isCleanConfig}
+                                                        disabled={isCleanConfig}
                                                         placeholder=""
-                                                        onChange={(e) => handleAircraftConfigCapacityChange(definition.id, e.target.value)}
-                                                        className={`mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? 'text-slate-400' : ''}`}
+                                                        onChange={(e) => {
+                                                            if (!isCleanConfig) handleAircraftConfigCapacityChange(definition.id, e.target.value);
+                                                        }}
+                                                        className={`mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? 'cursor-not-allowed text-slate-400 opacity-80' : ''}`}
                                                     />
                                                 </label>
                                             );

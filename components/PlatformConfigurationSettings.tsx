@@ -1646,6 +1646,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
+  const getConfigWithResourcePoolSettings = (
+    sourceConfig: PlatformConfig,
+    index: number,
+    changes: Record<string, any>,
+  ): PlatformConfig => {
+    const currentSettings = sourceConfig.resourcePools[index]?.settings || {};
+    return {
+      ...sourceConfig,
+      resourcePools: sourceConfig.resourcePools.map((pool, poolIndex) => (
+        poolIndex === index
+          ? { ...pool, settings: { ...currentSettings, ...changes } }
+          : pool
+      )),
+    };
+  };
+
+  const promptToSaveAircraftConfigurationChanges = async (nextConfig: PlatformConfig) => {
+    const shouldSave = await showDarkConfirm(
+      'Do you wish to save these aircraft configuration changes now?\n\nThe app will refresh after saving so the updated configurations are available across the DFP and Build Priorities.',
+      'Save Aircraft Configuration Changes',
+      'warning',
+    );
+    if (shouldSave) {
+      await save(nextConfig);
+    }
+  };
+
   const updateAircraftNumberPrefix = (poolIndex: number, prefixIndex: number, value: string) => {
     const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
     const prefixes = settings.prefixes.map((prefix, index) => (
@@ -1690,30 +1717,35 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
 
-  const addAircraftConfiguration = (poolIndex: number) => {
+  const addAircraftConfiguration = async (poolIndex: number) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const existingIds = new Set(aircraftConfigurations.map(configDefinition => configDefinition.id));
     let nextNumber = 1;
     while (existingIds.has(`CONFIG-${nextNumber}`)) nextNumber += 1;
-    updateResourcePoolSettings(poolIndex, {
+    const nextConfig = getConfigWithResourcePoolSettings(config, poolIndex, {
       aircraftConfigurations: [
         ...aircraftConfigurations,
         { id: `CONFIG-${nextNumber}`, label: `Config ${nextNumber}`, definition: '' },
       ],
     });
+    setConfig(nextConfig);
+    await promptToSaveAircraftConfigurationChanges(nextConfig);
   };
 
-  const removeAircraftConfiguration = (poolIndex: number, configIndex: number) => {
+  const removeAircraftConfiguration = async (poolIndex: number, configIndex: number) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const targetId = aircraftConfigurations[configIndex]?.id;
     if (!targetId || targetId === 'CONFIG-0') return;
     const nextAircraftConfigurations = aircraftConfigurations.filter((configDefinition) => configDefinition.id !== targetId);
-    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
+    const nextConfig = getConfigWithResourcePoolSettings(config, poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
+    setConfig(nextConfig);
+    await promptToSaveAircraftConfigurationChanges(nextConfig);
   };
 
-  const save = async () => {
+  const save = async (configOverride?: PlatformConfig) => {
+    const configToSave = configOverride || config;
     if (!canEdit) return;
-    const solarValidationError = config.locations.map(validateSolarLocation).find(Boolean);
+    const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
       setError(solarValidationError);
       return;
@@ -1729,7 +1761,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           'Content-Type': 'application/json',
           ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
         },
-        body: JSON.stringify(config),
+        body: JSON.stringify(configToSave),
       });
       if (!res.ok) {
         const body = await res.text();
@@ -1739,9 +1771,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         loadedConfigRef.current.locations.map((location) => [getPlatformLocationAuditKey(location), location])
       );
       const nextLocationMap = new Map(
-        config.locations.map((location) => [getPlatformLocationAuditKey(location), location])
+        configToSave.locations.map((location) => [getPlatformLocationAuditKey(location), location])
       );
-      config.locations.forEach((location) => {
+      configToSave.locations.forEach((location) => {
         const key = getPlatformLocationAuditKey(location);
         if (!key || previousLocationMap.has(key)) return;
         logAudit({
@@ -1758,10 +1790,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           page: 'Settings - Platform Locations',
           action: 'Delete',
           description: `Removed location ${getPlatformLocationAuditLabel(location)}`,
-          changes: `Remaining locations: ${config.locations.map(getPlatformLocationAuditLabel).join(', ') || 'none'}`,
+          changes: `Remaining locations: ${configToSave.locations.map(getPlatformLocationAuditLabel).join(', ') || 'none'}`,
         });
       });
-      loadedConfigRef.current = config;
+      loadedConfigRef.current = configToSave;
       shouldReload = true;
       setApplyingChanges(true);
       onShowSuccess('Platform configuration saved. Applying changes...');
