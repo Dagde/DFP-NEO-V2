@@ -23331,6 +23331,7 @@ updates.forEach(update => {
                     formationCallsigns={formationCallsigns}
                     userId={getCurrentUserId() ?? undefined}
                     aircraftNumberSettings={aircraftNumberSettings}
+                    aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                     personnelDisplaySettings={personnelDisplaySettings}
                 />
             )}
@@ -23492,6 +23493,7 @@ updates.forEach(update => {
                     canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule' && !isPastDfpDate(selectedEvent.date)}
                     resourceDisplayNames={resourceDisplayNames}
                     aircraftNumberSettings={aircraftNumberSettings}
+                    aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                 />
             )}
 

@@ -14093,7 +14093,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], personnelDisplaySettings, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -14122,7 +14122,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const initialAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
   const [aircraftNumber, setAircraftNumber] = reactExports.useState(initialAircraftNumber.number || "001");
   const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(initialAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
+  const [aircraftConfigId, setAircraftConfigId] = reactExports.useState(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
   const [aircraftCount, setAircraftCount] = reactExports.useState(1);
+  const aircraftConfigOptions = reactExports.useMemo(() => {
+    const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
+    return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
+  }, [aircraftConfigurationDefinitions]);
   const [isVisualAdjustMode, setIsVisualAdjustMode] = reactExports.useState(false);
   const [visualAdjustStartTime, setVisualAdjustStartTime] = reactExports.useState(event.startTime);
   const [visualAdjustEndTime, setVisualAdjustEndTime] = reactExports.useState(event.startTime + event.duration);
@@ -14568,6 +14573,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     const parsedAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
     setAircraftNumber(parsedAircraftNumber.number || "001");
     setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
+    setAircraftConfigId(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
     setAircraftCount(1);
     setCrew([{
       flightType: event.flightType,
@@ -14881,6 +14887,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         // Ensure duration is a number
         area: eventType === "flight" ? area : void 0,
         aircraftNumber: eventType === "flight" ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : void 0,
+        aircraftConfigId: eventType === "flight" ? aircraftConfigId : void 0,
+        acceptableAircraftConfigs: eventType === "flight" ? [aircraftConfigId] : event.acceptableAircraftConfigs,
         color: eventColor,
         flightType: c.flightType,
         instructor: c.instructor,
@@ -15522,7 +15530,21 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               ] })
             ] })
           ] }),
-          eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
+          eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "CONFIG" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: aircraftConfigId,
+                  onChange: (e) => setAircraftConfigId(e.target.value),
+                  disabled: isDeploy,
+                  className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                  title: aircraftConfigOptions.find((definition) => definition.id === aircraftConfigId)?.definition || BASE_AIRCRAFT_CONFIG.definition,
+                  children: aircraftConfigOptions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id))
+                }
+              )
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -15702,6 +15724,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Area:" }),
             " ",
             event.area
+          ] }),
+          event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "CONFIG:" }),
+            " ",
+            aircraftConfigOptions.find((definition) => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Dual/Solo:" }),
@@ -17146,6 +17173,7 @@ const AddFlightTileModal = ({
   formationCallsigns = [],
   userId,
   aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
+  aircraftConfigurationDefinitions = [],
   personnelDisplaySettings
 }) => {
   const [eventCategory, setEventCategory] = reactExports.useState("lmp_event");
@@ -17158,6 +17186,7 @@ const AddFlightTileModal = ({
   const [area, setArea] = reactExports.useState("");
   const [aircraftNumber, setAircraftNumber] = reactExports.useState("001");
   const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(aircraftNumberSettings.defaultPrefix);
+  const [aircraftConfigId, setAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const [locationType, setLocationType] = reactExports.useState("Local");
   const [origin, setOrigin] = reactExports.useState(school);
   const [destination, setDestination] = reactExports.useState(school);
@@ -17175,6 +17204,10 @@ const AddFlightTileModal = ({
   const [deploymentEndTime, setDeploymentEndTime] = reactExports.useState("08:00");
   const [deploymentAircraftCount, setDeploymentAircraftCount] = reactExports.useState(1);
   const [guidedStep, setGuidedStep] = reactExports.useState("startTime");
+  const aircraftConfigOptions = reactExports.useMemo(() => {
+    const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
+    return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
+  }, [aircraftConfigurationDefinitions]);
   const LAYOUT_ELEM_KEYS = ["startTime", "picName", "coPilot", "duration", "event", "area", "aircraft", "callsign"];
   const MODAL_DEFAULT_POSITIONS = {
     startTime: { x: 14, y: 7 },
@@ -17574,6 +17607,8 @@ const AddFlightTileModal = ({
           duration,
           area,
           aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
+          aircraftConfigId,
+          acceptableAircraftConfigs: [aircraftConfigId],
           callsign: savedCallsign,
           locationType,
           color: tileColor,
@@ -17846,29 +17881,44 @@ const AddFlightTileModal = ({
                   ] })
                 ] }),
                 !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-4 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Flight Type" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mb-4", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Flight Type" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: () => setFlightType("Dual"),
+                            className: `flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === "Dual" ? "bg-sky-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+                            children: "Dual"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: () => setFlightType("Solo"),
+                            className: `flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === "Solo" ? "bg-amber-500 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+                            children: "Solo"
+                          }
+                        )
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "CONFIG" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
+                        "select",
                         {
-                          type: "button",
-                          onClick: () => setFlightType("Dual"),
-                          className: `flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === "Dual" ? "bg-sky-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
-                          children: "Dual"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
-                        {
-                          type: "button",
-                          onClick: () => setFlightType("Solo"),
-                          className: `flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === "Solo" ? "bg-amber-500 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
-                          children: "Solo"
+                          value: aircraftConfigId,
+                          onChange: (e) => setAircraftConfigId(e.target.value),
+                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
+                          title: aircraftConfigOptions.find((definition) => definition.id === aircraftConfigId)?.definition || BASE_AIRCRAFT_CONFIG.definition,
+                          children: aircraftConfigOptions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id))
                         }
                       )
                     ] })
-                  ] }) }),
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }),
@@ -75000,6 +75050,7 @@ Do you want to replace the existing entry?`,
           formationCallsigns,
           userId: getCurrentUserId() ?? void 0,
           aircraftNumberSettings,
+          aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
           personnelDisplaySettings
         }
       ),
@@ -75142,7 +75193,8 @@ Do you want to replace the existing entry?`,
           onClearAlert: handleClearAlert,
           canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule" && !isPastDfpDate(selectedEvent.date),
           resourceDisplayNames,
-          aircraftNumberSettings
+          aircraftNumberSettings,
+          aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),

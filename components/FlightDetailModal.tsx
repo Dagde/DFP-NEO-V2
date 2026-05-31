@@ -18,6 +18,7 @@ import {
     parseAircraftNumber,
     type AircraftNumberSettings,
 } from '../utils/aircraftNumberFormat';
+import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -388,6 +389,7 @@ interface EventDetailModalProps {
     onClearAlert?: (eventId: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftNumberSettings?: AircraftNumberSettings;
+    aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
     personnelDisplaySettings?: PersonnelDisplaySettings;
     isReadOnly?: boolean;
 }
@@ -435,7 +437,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, isReadOnly = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], personnelDisplaySettings, isReadOnly = false }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -469,7 +471,16 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const initialAircraftNumber = parseAircraftNumber(event.aircraftNumber || '001', aircraftNumberSettings);
     const [aircraftNumber, setAircraftNumber] = useState(initialAircraftNumber.number || '001');
     const [aircraftNumberPrefix, setAircraftNumberPrefix] = useState(initialAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
+    const [aircraftConfigId, setAircraftConfigId] = useState(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
     const [aircraftCount, setAircraftCount] = useState(1);
+    const aircraftConfigOptions = useMemo(() => {
+        const definitions = aircraftConfigurationDefinitions.length > 0
+            ? aircraftConfigurationDefinitions
+            : [BASE_AIRCRAFT_CONFIG];
+        return definitions.some(definition => definition.id === BASE_AIRCRAFT_CONFIG.id)
+            ? definitions
+            : [BASE_AIRCRAFT_CONFIG, ...definitions];
+    }, [aircraftConfigurationDefinitions]);
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
     const [visualAdjustStartTime, setVisualAdjustStartTime] = useState(event.startTime);
     const [visualAdjustEndTime, setVisualAdjustEndTime] = useState(event.startTime + event.duration);
@@ -1086,6 +1097,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         const parsedAircraftNumber = parseAircraftNumber(event.aircraftNumber || '001', aircraftNumberSettings);
         setAircraftNumber(parsedAircraftNumber.number || '001');
         setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
+        setAircraftConfigId(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
         setAircraftCount(1);
         setCrew([{ 
             flightType: event.flightType, 
@@ -1515,6 +1527,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 duration: typeof duration === 'number' ? duration : 0, // Ensure duration is a number
                 area: eventType === 'flight' ? area : undefined,
                 aircraftNumber: eventType === 'flight' ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : undefined,
+                aircraftConfigId: eventType === 'flight' ? aircraftConfigId : undefined,
+                acceptableAircraftConfigs: eventType === 'flight' ? [aircraftConfigId] : event.acceptableAircraftConfigs,
                 color: eventColor,
                 flightType: c.flightType,
                 instructor: c.instructor,
@@ -2286,7 +2300,23 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     </div>
 
                                     {eventType === 'flight' && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">CONFIG</label>
+                                                <select
+                                                    value={aircraftConfigId}
+                                                    onChange={e => setAircraftConfigId(e.target.value)}
+                                                    disabled={isDeploy}
+                                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                    title={aircraftConfigOptions.find(definition => definition.id === aircraftConfigId)?.definition || BASE_AIRCRAFT_CONFIG.definition}
+                                                >
+                                                    {aircraftConfigOptions.map(definition => (
+                                                        <option key={definition.id} value={definition.id}>
+                                                            {definition.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
                                                 <select
@@ -2469,6 +2499,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     <p><strong>Syllabus Item:</strong> {event.flightNumber}</p>
                                     {event.type === 'flight' && <p><strong>Route:</strong> {event.origin}-{event.destination}</p>}
                                     {event.type === 'flight' && event.area && <p><strong>Area:</strong> {event.area}</p>}
+                                    {event.type === 'flight' && (
+                                        <p><strong>CONFIG:</strong> {aircraftConfigOptions.find(definition => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label}</p>
+                                    )}
                                     <p><strong>Dual/Solo:</strong> <span className="font-semibold">{event.flightType}</span></p>
                                     {event.flightType === 'Dual' ? (
                                         <>

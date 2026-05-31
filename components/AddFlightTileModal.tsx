@@ -9,6 +9,7 @@ import {
   formatAircraftNumber,
   type AircraftNumberSettings,
 } from '../utils/aircraftNumberFormat';
+import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 interface AddFlightTileModalProps {
   onClose: () => void;
@@ -27,6 +28,7 @@ interface AddFlightTileModalProps {
   formationCallsigns?: { name: string; code: string; unit: string; location: string; locationCode: string }[];
   userId?: string;
   aircraftNumberSettings?: AircraftNumberSettings;
+  aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
   personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
@@ -1021,6 +1023,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   formationCallsigns = [],
   userId,
   aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
+  aircraftConfigurationDefinitions = [],
   personnelDisplaySettings,
 }) => {
   const [eventCategory, setEventCategory] = useState<'lmp_event'|'lmp_currency'|'sct'|'staff_cat'|'twr_di'>('lmp_event');
@@ -1033,6 +1036,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [area,          setArea]          = useState('');
   const [aircraftNumber,setAircraftNumber]= useState('001');
   const [aircraftNumberPrefix,setAircraftNumberPrefix]= useState(aircraftNumberSettings.defaultPrefix);
+  const [aircraftConfigId, setAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
   const [locationType,  setLocationType]  = useState<'Local'|'Land Away'>('Local');
   const [origin,        setOrigin]        = useState(school);
   const [destination,   setDestination]   = useState(school);
@@ -1050,6 +1054,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [deploymentEndTime,    setDeploymentEndTime]    = useState('08:00');
   const [deploymentAircraftCount, setDeploymentAircraftCount] = useState(1);
   const [guidedStep, setGuidedStep] = useState<GuideStep>('startTime');
+  const aircraftConfigOptions = useMemo(() => {
+    const definitions = aircraftConfigurationDefinitions.length > 0
+      ? aircraftConfigurationDefinitions
+      : [BASE_AIRCRAFT_CONFIG];
+    return definitions.some(definition => definition.id === BASE_AIRCRAFT_CONFIG.id)
+      ? definitions
+      : [BASE_AIRCRAFT_CONFIG, ...definitions];
+  }, [aircraftConfigurationDefinitions]);
 
   // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
@@ -1536,6 +1548,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           duration,
           area,
           aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
+          aircraftConfigId,
+          acceptableAircraftConfigs: [aircraftConfigId],
           callsign: savedCallsign,
           locationType,
           color: tileColor,
@@ -1801,6 +1815,21 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         Solo
                       </button>
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">CONFIG</label>
+                    <select
+                      value={aircraftConfigId}
+                      onChange={e => setAircraftConfigId(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
+                      title={aircraftConfigOptions.find(definition => definition.id === aircraftConfigId)?.definition || BASE_AIRCRAFT_CONFIG.definition}
+                    >
+                      {aircraftConfigOptions.map(definition => (
+                        <option key={definition.id} value={definition.id}>
+                          {definition.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
