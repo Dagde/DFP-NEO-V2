@@ -1711,8 +1711,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
 
-  const save = async (configOverride?: PlatformConfig) => {
-    const configToSave = configOverride || config;
+  const save = async (configOverride?: PlatformConfig, restoreSection?: string) => {
+    const configToSave = configOverride && Array.isArray(configOverride.locations)
+      ? configOverride
+      : config;
     if (!canEdit) return;
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
@@ -1768,7 +1770,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       onShowSuccess('Platform configuration saved. Applying changes...');
       try {
         sessionStorage.setItem('dfp_restore_view_after_reload', 'Settings');
-        sessionStorage.setItem('dfp_restore_settings_section_after_reload', 'platform-configuration');
+        sessionStorage.setItem('dfp_restore_settings_section_after_reload', restoreSection || scrollTarget || 'platform-configuration');
       } catch {
         // Non-critical: the configuration still saves if session storage is unavailable.
       }
@@ -1867,7 +1869,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const saveButton = (
     <button
       type="button"
-      onClick={save}
+      onClick={() => save()}
       disabled={!canEdit || saving || applyingChanges}
       className="ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
     >
@@ -2249,7 +2251,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <button
                         type="button"
                         disabled={!canEdit || saving || applyingChanges}
-                        onClick={() => save()}
+                        onClick={() => save(undefined, 'platform-resource-pools')}
                         className="rounded border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Save
