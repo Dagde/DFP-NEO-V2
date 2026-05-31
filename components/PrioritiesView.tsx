@@ -1374,12 +1374,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         </div>
 
         <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
+            <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
                     <h2 className="text-xl font-semibold text-sky-400">Consolidated Currency Event Build</h2>
-                    <p className="mt-1 text-xs text-slate-400">Review built Currency events, optionally tick the currencies being satisfied, then send selected rows to Highest Priority.</p>
+                    <p className="mt-1 text-xs text-slate-400">Review built Currency events, optionally tick the currencies being satisfied, then send selected rows to Higher Priority.</p>
                 </div>
-                <div className="flex flex-wrap justify-end gap-2">
+                <div className="ml-auto flex shrink-0 flex-wrap justify-end gap-2">
                     <div className="relative">
                         <button
                             type="button"
@@ -1432,7 +1432,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         disabled={currencyDraftEvents.filter(event => event.selected).length === 0}
                         className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
                     >
-                        Push Selected to Highest Priority
+                        Push to Higher Priority
                     </button>
                 </div>
             </div>
