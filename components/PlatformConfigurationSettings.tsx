@@ -1646,33 +1646,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
-  const getConfigWithResourcePoolSettings = (
-    sourceConfig: PlatformConfig,
-    index: number,
-    changes: Record<string, any>,
-  ): PlatformConfig => {
-    const currentSettings = sourceConfig.resourcePools[index]?.settings || {};
-    return {
-      ...sourceConfig,
-      resourcePools: sourceConfig.resourcePools.map((pool, poolIndex) => (
-        poolIndex === index
-          ? { ...pool, settings: { ...currentSettings, ...changes } }
-          : pool
-      )),
-    };
-  };
-
-  const promptToSaveAircraftConfigurationChanges = async (nextConfig: PlatformConfig) => {
-    const shouldSave = await showDarkConfirm(
-      'Do you wish to save these aircraft configuration changes now?\n\nThe app will refresh after saving so the updated configurations are available across the DFP and Build Priorities.',
-      'Save Aircraft Configuration Changes',
-      'warning',
-    );
-    if (shouldSave) {
-      await save(nextConfig);
-    }
-  };
-
   const updateAircraftNumberPrefix = (poolIndex: number, prefixIndex: number, value: string) => {
     const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
     const prefixes = settings.prefixes.map((prefix, index) => (
@@ -1717,29 +1690,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
 
-  const addAircraftConfiguration = async (poolIndex: number) => {
+  const addAircraftConfiguration = (poolIndex: number) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const existingIds = new Set(aircraftConfigurations.map(configDefinition => configDefinition.id));
     let nextNumber = 1;
     while (existingIds.has(`CONFIG-${nextNumber}`)) nextNumber += 1;
-    const nextConfig = getConfigWithResourcePoolSettings(config, poolIndex, {
+    updateResourcePoolSettings(poolIndex, {
       aircraftConfigurations: [
         ...aircraftConfigurations,
         { id: `CONFIG-${nextNumber}`, label: `Config ${nextNumber}`, definition: '' },
       ],
     });
-    setConfig(nextConfig);
-    await promptToSaveAircraftConfigurationChanges(nextConfig);
   };
 
-  const removeAircraftConfiguration = async (poolIndex: number, configIndex: number) => {
+  const removeAircraftConfiguration = (poolIndex: number, configIndex: number) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const targetId = aircraftConfigurations[configIndex]?.id;
     if (!targetId || targetId === 'CONFIG-0') return;
     const nextAircraftConfigurations = aircraftConfigurations.filter((configDefinition) => configDefinition.id !== targetId);
-    const nextConfig = getConfigWithResourcePoolSettings(config, poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
-    setConfig(nextConfig);
-    await promptToSaveAircraftConfigurationChanges(nextConfig);
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
 
   const save = async (configOverride?: PlatformConfig) => {
@@ -2276,14 +2245,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         Define aircraft fit states that LMP events may require. LMP events default to ANY when configuration does not matter.
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      disabled={!canEdit}
-                      onClick={() => addAircraftConfiguration(index)}
-                      className="shrink-0 rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Add Config
-                    </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={!canEdit || saving || applyingChanges}
+                        onClick={() => save()}
+                        className="rounded border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!canEdit}
+                        onClick={() => addAircraftConfiguration(index)}
+                        className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Add Config
+                      </button>
+                    </div>
                   </div>
                   {aircraftConfigurations.length === 0 ? (
                     <div className="rounded border border-gray-700 bg-gray-950/50 px-3 py-2 text-xs text-gray-400">

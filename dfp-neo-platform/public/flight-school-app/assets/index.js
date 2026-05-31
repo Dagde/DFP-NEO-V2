@@ -45148,23 +45148,6 @@ const PlatformConfigurationSettings = ({
       }
     });
   };
-  const getConfigWithResourcePoolSettings = (sourceConfig, index, changes) => {
-    const currentSettings = sourceConfig.resourcePools[index]?.settings || {};
-    return {
-      ...sourceConfig,
-      resourcePools: sourceConfig.resourcePools.map((pool, poolIndex) => poolIndex === index ? { ...pool, settings: { ...currentSettings, ...changes } } : pool)
-    };
-  };
-  const promptToSaveAircraftConfigurationChanges = async (nextConfig) => {
-    const shouldSave = await showDarkConfirm(
-      "Do you wish to save these aircraft configuration changes now?\n\nThe app will refresh after saving so the updated configurations are available across the DFP and Build Priorities.",
-      "Save Aircraft Configuration Changes",
-      "warning"
-    );
-    if (shouldSave) {
-      await save(nextConfig);
-    }
-  };
   const updateAircraftNumberPrefix = (poolIndex, prefixIndex, value) => {
     const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
     const prefixes = settings.prefixes.map((prefix, index) => index === prefixIndex ? value.toUpperCase().trim() : prefix).filter(Boolean);
@@ -45197,28 +45180,24 @@ const PlatformConfigurationSettings = ({
     const nextAircraftConfigurations = aircraftConfigurations.map((configDefinition) => configDefinition.id === targetId ? { ...configDefinition, definition } : configDefinition);
     updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
-  const addAircraftConfiguration = async (poolIndex) => {
+  const addAircraftConfiguration = (poolIndex) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const existingIds = new Set(aircraftConfigurations.map((configDefinition) => configDefinition.id));
     let nextNumber = 1;
     while (existingIds.has(`CONFIG-${nextNumber}`)) nextNumber += 1;
-    const nextConfig = getConfigWithResourcePoolSettings(config, poolIndex, {
+    updateResourcePoolSettings(poolIndex, {
       aircraftConfigurations: [
         ...aircraftConfigurations,
         { id: `CONFIG-${nextNumber}`, label: `Config ${nextNumber}`, definition: "" }
       ]
     });
-    setConfig(nextConfig);
-    await promptToSaveAircraftConfigurationChanges(nextConfig);
   };
-  const removeAircraftConfiguration = async (poolIndex, configIndex) => {
+  const removeAircraftConfiguration = (poolIndex, configIndex) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const targetId = aircraftConfigurations[configIndex]?.id;
     if (!targetId || targetId === "CONFIG-0") return;
     const nextAircraftConfigurations = aircraftConfigurations.filter((configDefinition) => configDefinition.id !== targetId);
-    const nextConfig = getConfigWithResourcePoolSettings(config, poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
-    setConfig(nextConfig);
-    await promptToSaveAircraftConfigurationChanges(nextConfig);
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
   const save = async (configOverride) => {
     const configToSave = configOverride || config;
@@ -45672,16 +45651,28 @@ const PlatformConfigurationSettings = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-cyan-100/75", children: "Define aircraft fit states that LMP events may require. LMP events default to ANY when configuration does not matter." })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    disabled: !canEdit,
-                    onClick: () => addAircraftConfiguration(index),
-                    className: "shrink-0 rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
-                    children: "Add Config"
-                  }
-                )
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      disabled: !canEdit || saving || applyingChanges,
+                      onClick: () => save(),
+                      className: "rounded border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50",
+                      children: "Save"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      disabled: !canEdit,
+                      onClick: () => addAircraftConfiguration(index),
+                      className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                      children: "Add Config"
+                    }
+                  )
+                ] })
               ] }),
               aircraftConfigurations.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/50 px-3 py-2 text-xs text-gray-400", children: "No configured aircraft states. LMP events will show ANY only." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: aircraftConfigurations.map((aircraftConfig, configIndex) => {
                 const isBaseConfig = aircraftConfig.id === "CONFIG-0";
