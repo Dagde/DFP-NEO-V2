@@ -100,7 +100,7 @@ const AircraftConfigSelect: React.FC<{
       value={selectedValue}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
-      className="w-28 rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs font-semibold text-slate-100 outline-none transition focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs disabled:cursor-not-allowed disabled:opacity-60"
       title={selectedValue === ANY_AIRCRAFT_CONFIG ? 'Any aircraft configuration is acceptable.' : selectedDefinition?.definition || BASE_AIRCRAFT_CONFIG.definition}
     >
       {includeAny && (
