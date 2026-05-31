@@ -607,19 +607,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         }
     };
     
-    // Generate time options at 5-minute intervals from 06:00 to 23:55
-    const timeOptions = React.useMemo(() => {
-        const times: string[] = [];
-        for (let hour = 6; hour < 24; hour++) {
-            for (let minute = 0; minute < 60; minute += 5) {
-                const h = String(hour).padStart(2, '0');
-                const m = String(minute).padStart(2, '0');
-                times.push(`${h}:${m}`);
-            }
-        }
-        return times;
-    }, []);
-      
       return (
       <div>
           <h3 className="text-lg font-semibold text-sky-400 mb-2">{type === 'flight' ? 'Flights' : ftdLabel}</h3>
@@ -634,7 +621,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                           <th className="py-2 px-2 text-left">Currency Expire</th>
                           <th className="py-2 px-2 text-left">Date Req.</th>
                           <th className="py-2 px-2 text-left">Days to Expire</th>
-                          <th className="py-2 px-2 text-left">Requested Time</th>
                           <th className="py-2 px-2 text-left">Priority</th>
                           {type === 'flight' && <th className="py-2 px-2 text-left">Config</th>}
                           <th className="py-2 px-2 text-left">Status</th>
@@ -678,11 +664,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                               <td className="py-1 px-2 w-32 text-center">
                                 {expiryInfo ? <span className={`font-bold ${expiryInfo.color}`}>{expiryInfo.days}</span> : <span className="text-gray-500">-</span>}
                               </td>
-                              <td className="py-1 px-2 w-32">
-                                  <select value={req.requestedTime || '15:00'} onChange={e => onUpdateSctRequest(req.id, 'requestedTime', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
-                                      {timeOptions.map(time => <option key={time} value={time}>{time}</option>)}
-                                  </select>
-                              </td>
                                <td className="py-1 px-2 w-32">
                                   <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
                                       <option value="High">High</option>
@@ -691,7 +672,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </select>
                               </td>
                               {type === 'flight' && (
-                                  <td className="py-1 px-2 w-32">
+                                  <td className="py-1 px-2 w-48">
                                       <AircraftConfigSelect
                                           value={req.aircraftConfigId}
                                           definitions={aircraftConfigOptions}

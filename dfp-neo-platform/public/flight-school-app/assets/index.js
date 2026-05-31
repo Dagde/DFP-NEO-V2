@@ -21703,17 +21703,6 @@ const PrioritiesView = ({
         return "-";
       }
     };
-    const timeOptions2 = React.useMemo(() => {
-      const times = [];
-      for (let hour = 6; hour < 24; hour++) {
-        for (let minute = 0; minute < 60; minute += 5) {
-          const h = String(hour).padStart(2, "0");
-          const m = String(minute).padStart(2, "0");
-          times.push(`${h}:${m}`);
-        }
-      }
-      return times;
-    }, []);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-400 mb-2", children: type === "flight" ? "Flights" : ftdLabel }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
@@ -21725,7 +21714,6 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency Expire" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date Req." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Days to Expire" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Requested Time" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
           type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Status" }),
@@ -21750,13 +21738,12 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.currencyExpire, onChange: (e) => onUpdateSctRequest(req.id, "currencyExpire", e.target.value, type), style: { colorScheme: "dark" }, className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24 text-gray-300 font-mono", children: formatDate2(req.dateRequested) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32 text-center", children: expiryInfo ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold ${expiryInfo.color}`, children: expiryInfo.days }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "-" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: req.requestedTime || "15:00", onChange: (e) => onUpdateSctRequest(req.id, "requestedTime", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: timeOptions2.map((time) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: time, children: time }, time)) }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.priority, onChange: (e) => onUpdateSctRequest(req.id, "priority", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
             ] }) }),
-            type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               AircraftConfigSelect,
               {
                 value: req.aircraftConfigId,
