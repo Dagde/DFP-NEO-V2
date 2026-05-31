@@ -64,6 +64,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
             let resourceText: string = resource;
             const displayText = formatResourceLabel ? formatResourceLabel(resourceText) : resourceText;
             const configLabel = aircraftConfigLabelsByResource[resource];
+            const compactConfigLabel = configLabel?.replace(/^CONFIG\s*(\d+)$/i, 'C $1').replace(/^Config\s+(\d+)$/i, 'C $1');
             let textColorClass = 'text-gray-400';
             let isDraggable = true;
 
@@ -122,13 +123,13 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
             >
               {resource.startsWith('PC-21') ? (
                   <div className="relative flex h-full w-full min-w-0 items-center text-center">
-                      <span className="absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                      <span className="absolute left-1 top-1/2 -translate-y-1/2 text-xs text-blue-800">
                           {resource.match(/\d+$/)?.[0] || ''}
                       </span>
                       <span className="absolute left-7 top-1/2 -translate-y-1/2">{formatResourceLabel ? formatResourceLabel('PC-21') : 'PC-21'}</span>
                       {configLabel && (
-                          <span className="absolute bottom-0.5 right-0.5 max-w-[42px] truncate text-right text-[7px] font-semibold leading-none text-gray-500">
-                              {configLabel}
+                          <span className="absolute bottom-0.5 right-0.5 max-w-[28px] truncate text-right text-[9px] font-semibold leading-none text-gray-500">
+                              {compactConfigLabel}
                           </span>
                       )}
                   </div>
