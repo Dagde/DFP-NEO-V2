@@ -11098,6 +11098,9 @@ const App: React.FC = () => {
         [activePlatformResourcePool]
     );
     const aircraftConfigurations = useMemo(() => {
+        const hasUserConfiguredDefinitions = (
+            definitions: Iterable<ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>,
+        ) => Array.from(definitions).some(definition => definition.id !== BASE_AIRCRAFT_CONFIG.id);
         const activePoolRawDefinitions = activePlatformResourcePool?.settings?.aircraftConfigurations;
         const activePoolDefinitions = getAircraftConfigurationDefinitions(activePlatformResourcePool);
         const activePoolHasUserDefinitions = Array.isArray(activePoolRawDefinitions)
@@ -11138,7 +11141,9 @@ const App: React.FC = () => {
             })
             .forEach((pool: any) => pushDefinitions(locationDefinitionsById, pool));
 
-        if (locationDefinitionsById.size > 0) return Array.from(locationDefinitionsById.values());
+        if (hasUserConfiguredDefinitions(locationDefinitionsById.values())) {
+            return Array.from(locationDefinitionsById.values());
+        }
 
         const activeAircraftType = normaliseToken(activePlatformResourcePool?.aircraftTypeCode);
         const aircraftTypeDefinitionsById = new Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>();
@@ -11149,7 +11154,18 @@ const App: React.FC = () => {
                 .forEach((pool: any) => pushDefinitions(aircraftTypeDefinitionsById, pool));
         }
 
-        return Array.from(aircraftTypeDefinitionsById.values());
+        if (hasUserConfiguredDefinitions(aircraftTypeDefinitionsById.values())) {
+            return Array.from(aircraftTypeDefinitionsById.values());
+        }
+
+        const allDefinitionsById = new Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>();
+        (platformConfig?.resourcePools || [])
+            .filter((pool: any) => pool.status !== 'INACTIVE')
+            .forEach((pool: any) => pushDefinitions(allDefinitionsById, pool));
+
+        return hasUserConfiguredDefinitions(allDefinitionsById.values())
+            ? Array.from(allDefinitionsById.values())
+            : activePoolDefinitions;
     }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
     const aircraftConfigCapacityDefinitions = useMemo(() => ([
         BASE_AIRCRAFT_CONFIG,
