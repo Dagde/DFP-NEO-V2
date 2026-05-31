@@ -10621,7 +10621,6 @@ const App: React.FC = () => {
             setAircraftConfigStateByDate(prev => ({
                 ...prev,
                 [baselineKey]: snap.aircraftConfigState,
-                [targetDate]: snap.aircraftConfigState,
             }));
         }
 
@@ -11132,75 +11131,8 @@ const App: React.FC = () => {
         [activePlatformResourcePool]
     );
     const aircraftConfigurations = useMemo(() => {
-        const hasUserConfiguredDefinitions = (
-            definitions: Iterable<ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>,
-        ) => Array.from(definitions).some(definition => definition.id !== BASE_AIRCRAFT_CONFIG.id);
-        const activePoolRawDefinitions = activePlatformResourcePool?.settings?.aircraftConfigurations;
-        const activePoolDefinitions = getAircraftConfigurationDefinitions(activePlatformResourcePool);
-        const activePoolHasUserDefinitions = Array.isArray(activePoolRawDefinitions)
-            && activePoolRawDefinitions.some((definition: any) => {
-                const id = String(definition?.id || definition?.label || '').trim().toUpperCase();
-                return id && id !== BASE_AIRCRAFT_CONFIG.id;
-            });
-        if (activePoolHasUserDefinitions) return activePoolDefinitions;
-
-        const normaliseToken = (value: unknown) => String(value || '').trim().toUpperCase();
-        const activeLocation = (platformConfig?.locations || [])
-            .filter((location: any) => location.status !== 'INACTIVE')
-            .find((location: any) => getLocationSelectorAliases(location).includes(normaliseToken(school)));
-        const locationAliases = new Set([
-            ...knownDfpLocationAliases(school),
-            ...(activeLocation ? getLocationSelectorAliases(activeLocation) : [school]),
-        ].map(normaliseToken).filter(Boolean));
-        const targetUnit = normaliseToken(activeUnitCode);
-        const pushDefinitions = (
-            definitionsById: Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>,
-            pool: any,
-        ) => {
-            normaliseAircraftConfigurationDefinitions(pool?.settings?.aircraftConfigurations || [])
-                .forEach((definition) => {
-                    if (!definitionsById.has(definition.id)) {
-                        definitionsById.set(definition.id, definition);
-                    }
-                });
-        };
-        const locationDefinitionsById = new Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>();
-
-        (platformConfig?.resourcePools || [])
-            .filter((pool: any) => pool.status !== 'INACTIVE')
-            .filter((pool: any) => locationAliases.has(normaliseToken(pool.locationCode)))
-            .filter((pool: any) => {
-                const poolUnit = normaliseToken(pool.unitCode);
-                return !targetUnit || !poolUnit || poolUnit === targetUnit || pool.poolType === 'Shared';
-            })
-            .forEach((pool: any) => pushDefinitions(locationDefinitionsById, pool));
-
-        if (hasUserConfiguredDefinitions(locationDefinitionsById.values())) {
-            return Array.from(locationDefinitionsById.values());
-        }
-
-        const activeAircraftType = normaliseToken(activePlatformResourcePool?.aircraftTypeCode);
-        const aircraftTypeDefinitionsById = new Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>();
-        if (activeAircraftType) {
-            (platformConfig?.resourcePools || [])
-                .filter((pool: any) => pool.status !== 'INACTIVE')
-                .filter((pool: any) => normaliseToken(pool.aircraftTypeCode) === activeAircraftType)
-                .forEach((pool: any) => pushDefinitions(aircraftTypeDefinitionsById, pool));
-        }
-
-        if (hasUserConfiguredDefinitions(aircraftTypeDefinitionsById.values())) {
-            return Array.from(aircraftTypeDefinitionsById.values());
-        }
-
-        const allDefinitionsById = new Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>();
-        (platformConfig?.resourcePools || [])
-            .filter((pool: any) => pool.status !== 'INACTIVE')
-            .forEach((pool: any) => pushDefinitions(allDefinitionsById, pool));
-
-        return hasUserConfiguredDefinitions(allDefinitionsById.values())
-            ? Array.from(allDefinitionsById.values())
-            : activePoolDefinitions;
-    }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
+        return getAircraftConfigurationDefinitions(activePlatformResourcePool);
+    }, [activePlatformResourcePool]);
     const aircraftConfigCapacityDefinitions = useMemo(() => ([
         BASE_AIRCRAFT_CONFIG,
         ...aircraftConfigurations.filter(definition => definition.id !== 'CONFIG-0'),
@@ -11262,7 +11194,7 @@ const App: React.FC = () => {
 
     const aircraftConfigLabelsByResource = useMemo(() => {
         const snapshotKey = getDailySnapshotKey(date);
-        const dateConfigState = aircraftConfigStateByDate[snapshotKey] || aircraftConfigStateByDate[date];
+        const dateConfigState = aircraftConfigStateByDate[snapshotKey];
         return buildAircraftConfigLabelsByResource(dateConfigState || currentAircraftConfigState);
     }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date]);
     const [flyingStartTime, setFlyingStartTime] = useState(8.0); // 08:00
@@ -18205,7 +18137,6 @@ const App: React.FC = () => {
         setAircraftConfigStateByDate(prev => ({
             ...prev,
             [publishedSnapshotKey]: currentAircraftConfigState,
-            [buildDfpDate]: currentAircraftConfigState,
         }));
 
         // NEW APPROACH: Sync PT-051s with Active DFP after publish

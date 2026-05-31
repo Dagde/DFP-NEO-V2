@@ -64484,8 +64484,7 @@ const App = () => {
       const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
       setAircraftConfigStateByDate((prev) => ({
         ...prev,
-        [baselineKey]: snap2.aircraftConfigState,
-        [targetDate]: snap2.aircraftConfigState
+        [baselineKey]: snap2.aircraftConfigState
       }));
     }
     return events2.length;
@@ -64897,48 +64896,8 @@ const App = () => {
     [activePlatformResourcePool]
   );
   const aircraftConfigurations = reactExports.useMemo(() => {
-    const hasUserConfiguredDefinitions = (definitions) => Array.from(definitions).some((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id);
-    const activePoolRawDefinitions = activePlatformResourcePool?.settings?.aircraftConfigurations;
-    const activePoolDefinitions = getAircraftConfigurationDefinitions(activePlatformResourcePool);
-    const activePoolHasUserDefinitions = Array.isArray(activePoolRawDefinitions) && activePoolRawDefinitions.some((definition) => {
-      const id = String(definition?.id || definition?.label || "").trim().toUpperCase();
-      return id && id !== BASE_AIRCRAFT_CONFIG.id;
-    });
-    if (activePoolHasUserDefinitions) return activePoolDefinitions;
-    const normaliseToken = (value) => String(value || "").trim().toUpperCase();
-    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normaliseToken(school)));
-    const locationAliases = new Set([
-      ...knownDfpLocationAliases(school),
-      ...activeLocation ? getLocationSelectorAliases(activeLocation) : [school]
-    ].map(normaliseToken).filter(Boolean));
-    const targetUnit = normaliseToken(activeUnitCode);
-    const pushDefinitions = (definitionsById, pool) => {
-      normaliseAircraftConfigurationDefinitions(pool?.settings?.aircraftConfigurations || []).forEach((definition) => {
-        if (!definitionsById.has(definition.id)) {
-          definitionsById.set(definition.id, definition);
-        }
-      });
-    };
-    const locationDefinitionsById = /* @__PURE__ */ new Map();
-    (platformConfig?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE").filter((pool) => locationAliases.has(normaliseToken(pool.locationCode))).filter((pool) => {
-      const poolUnit = normaliseToken(pool.unitCode);
-      return !targetUnit || !poolUnit || poolUnit === targetUnit || pool.poolType === "Shared";
-    }).forEach((pool) => pushDefinitions(locationDefinitionsById, pool));
-    if (hasUserConfiguredDefinitions(locationDefinitionsById.values())) {
-      return Array.from(locationDefinitionsById.values());
-    }
-    const activeAircraftType = normaliseToken(activePlatformResourcePool?.aircraftTypeCode);
-    const aircraftTypeDefinitionsById = /* @__PURE__ */ new Map();
-    if (activeAircraftType) {
-      (platformConfig?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE").filter((pool) => normaliseToken(pool.aircraftTypeCode) === activeAircraftType).forEach((pool) => pushDefinitions(aircraftTypeDefinitionsById, pool));
-    }
-    if (hasUserConfiguredDefinitions(aircraftTypeDefinitionsById.values())) {
-      return Array.from(aircraftTypeDefinitionsById.values());
-    }
-    const allDefinitionsById = /* @__PURE__ */ new Map();
-    (platformConfig?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE").forEach((pool) => pushDefinitions(allDefinitionsById, pool));
-    return hasUserConfiguredDefinitions(allDefinitionsById.values()) ? Array.from(allDefinitionsById.values()) : activePoolDefinitions;
-  }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
+    return getAircraftConfigurationDefinitions(activePlatformResourcePool);
+  }, [activePlatformResourcePool]);
   const aircraftConfigCapacityDefinitions = reactExports.useMemo(() => [
     BASE_AIRCRAFT_CONFIG,
     ...aircraftConfigurations.filter((definition) => definition.id !== "CONFIG-0")
@@ -64995,7 +64954,7 @@ const App = () => {
   }, [aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
   const aircraftConfigLabelsByResource = reactExports.useMemo(() => {
     const snapshotKey = getDailySnapshotKey(date);
-    const dateConfigState = aircraftConfigStateByDate[snapshotKey] || aircraftConfigStateByDate[date];
+    const dateConfigState = aircraftConfigStateByDate[snapshotKey];
     return buildAircraftConfigLabelsByResource(dateConfigState || currentAircraftConfigState);
   }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date]);
   const [flyingStartTime, setFlyingStartTime] = reactExports.useState(8);
@@ -70537,8 +70496,7 @@ ${conflictLines.join("\n")}${moreText}`,
     const publishedSnapshotKey = getDailySnapshotKey(buildDfpDate);
     setAircraftConfigStateByDate((prev) => ({
       ...prev,
-      [publishedSnapshotKey]: currentAircraftConfigState,
-      [buildDfpDate]: currentAircraftConfigState
+      [publishedSnapshotKey]: currentAircraftConfigState
     }));
     console.log("📋 Triggering PT-051 sync after publish...");
     setTimeout(() => {
