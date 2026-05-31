@@ -4392,24 +4392,16 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     return a.localeCompare(b);
   });
   const filteredCourses = React.useMemo(() => {
-    if (!school || !allTraineesData) {
+    if (!allTraineesData || allTraineesData.length === 0) {
       return Object.entries(courseColors);
     }
-    const locationMap = {
-      "ESL": "East Sale",
-      "PEA": "Pearce"
-    };
-    const targetLocation = locationMap[school] || school;
-    const coursesAtLocation = /* @__PURE__ */ new Set();
-    allTraineesData.forEach((trainee) => {
-      if (trainee.location === targetLocation && trainee.course) {
-        coursesAtLocation.add(trainee.course);
-      }
-    });
-    return Object.entries(courseColors).filter(
-      ([courseName]) => coursesAtLocation.has(courseName)
+    const activeCourses = new Set(
+      allTraineesData.map((trainee) => trainee.course).filter(Boolean)
     );
-  }, [school, allTraineesData, courseColors]);
+    return Object.entries(courseColors).filter(
+      ([courseName]) => activeCourses.has(courseName)
+    );
+  }, [allTraineesData, courseColors]);
   const allCourses = filteredCourses;
   const dashboardViews = ["MyDashboard", "SupervisorDashboard"];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
@@ -74735,7 +74727,7 @@ Do you want to replace the existing entry?`,
           })),
           onUserChange: handleUserChange,
           school,
-          allTraineesData,
+          allTraineesData: traineesData,
           canAccessView
         }
       ),

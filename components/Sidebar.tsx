@@ -110,33 +110,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     return a.localeCompare(b);
   });
 
-  // Filter courses by school/location - only show courses that have trainees at the current school
+  // Show courses represented in the already-scoped active trainee list.
   const filteredCourses = React.useMemo(() => {
-    if (!school || !allTraineesData) {
+    if (!allTraineesData || allTraineesData.length === 0) {
       return Object.entries(courseColors);
     }
 
-    // Map school to location name
-    const locationMap: Record<string, string> = {
-      'ESL': 'East Sale',
-      'PEA': 'Pearce'
-    };
-
-    const targetLocation = locationMap[school] || school;
-
-    // Find all courses that have trainees at this location
-    const coursesAtLocation = new Set<string>();
-    allTraineesData.forEach(trainee => {
-      if (trainee.location === targetLocation && trainee.course) {
-        coursesAtLocation.add(trainee.course);
-      }
-    });
-
-    // Filter courseColors to only include courses at this location
-    return Object.entries(courseColors).filter(([courseName]) =>
-      coursesAtLocation.has(courseName)
+    const activeCourses = new Set(
+      allTraineesData
+        .map(trainee => trainee.course)
+        .filter(Boolean)
     );
-  }, [school, allTraineesData, courseColors]);
+
+    return Object.entries(courseColors).filter(([courseName]) =>
+      activeCourses.has(courseName)
+    );
+  }, [allTraineesData, courseColors]);
 
   const allCourses = filteredCourses;
 

@@ -23192,7 +23192,7 @@ updates.forEach(update => {
                 }))}
                 onUserChange={handleUserChange}
                 school={school}
-                allTraineesData={allTraineesData}
+                allTraineesData={traineesData}
                 canAccessView={canAccessView}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
