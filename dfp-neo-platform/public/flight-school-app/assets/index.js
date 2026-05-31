@@ -64736,10 +64736,29 @@ const App = () => {
     () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
     [activePlatformResourcePool]
   );
-  const aircraftConfigurations = reactExports.useMemo(
-    () => getAircraftConfigurationDefinitions(activePlatformResourcePool),
-    [activePlatformResourcePool]
-  );
+  const aircraftConfigurations = reactExports.useMemo(() => {
+    const activePoolDefinitions = getAircraftConfigurationDefinitions(activePlatformResourcePool);
+    if (activePoolDefinitions.length > 0) return activePoolDefinitions;
+    const normaliseToken = (value) => String(value || "").trim().toUpperCase();
+    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normaliseToken(school)));
+    const locationAliases = new Set([
+      ...knownDfpLocationAliases(school),
+      ...activeLocation ? getLocationSelectorAliases(activeLocation) : [school]
+    ].map(normaliseToken).filter(Boolean));
+    const targetUnit = normaliseToken(activeUnitCode);
+    const definitionsById = /* @__PURE__ */ new Map();
+    (platformConfig?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE").filter((pool) => locationAliases.has(normaliseToken(pool.locationCode))).filter((pool) => {
+      const poolUnit = normaliseToken(pool.unitCode);
+      return !targetUnit || !poolUnit || poolUnit === targetUnit || pool.poolType === "Shared";
+    }).forEach((pool) => {
+      normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []).forEach((definition) => {
+        if (!definitionsById.has(definition.id)) {
+          definitionsById.set(definition.id, definition);
+        }
+      });
+    });
+    return Array.from(definitionsById.values());
+  }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
   const personnelDisplaySettings = reactExports.useMemo(
     () => getPersonnelDisplaySettings(platformConfig),
     [platformConfig]

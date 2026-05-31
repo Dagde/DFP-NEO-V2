@@ -35,7 +35,7 @@ import {
     type ResourceDisplayNames,
 } from './utils/resourceDisplayNames';
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
-import { ANY_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions } from './utils/aircraftConfigurationSettings';
+import { ANY_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions } from './utils/aircraftConfigurationSettings';
 import {
     readTileStatusSettingsFromLocalStorage,
     normaliseTileStatusSettings,
@@ -11096,10 +11096,39 @@ const App: React.FC = () => {
         () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
         [activePlatformResourcePool]
     );
-    const aircraftConfigurations = useMemo(
-        () => getAircraftConfigurationDefinitions(activePlatformResourcePool),
-        [activePlatformResourcePool]
-    );
+    const aircraftConfigurations = useMemo(() => {
+        const activePoolDefinitions = getAircraftConfigurationDefinitions(activePlatformResourcePool);
+        if (activePoolDefinitions.length > 0) return activePoolDefinitions;
+
+        const normaliseToken = (value: unknown) => String(value || '').trim().toUpperCase();
+        const activeLocation = (platformConfig?.locations || [])
+            .filter((location: any) => location.status !== 'INACTIVE')
+            .find((location: any) => getLocationSelectorAliases(location).includes(normaliseToken(school)));
+        const locationAliases = new Set([
+            ...knownDfpLocationAliases(school),
+            ...(activeLocation ? getLocationSelectorAliases(activeLocation) : [school]),
+        ].map(normaliseToken).filter(Boolean));
+        const targetUnit = normaliseToken(activeUnitCode);
+        const definitionsById = new Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>();
+
+        (platformConfig?.resourcePools || [])
+            .filter((pool: any) => pool.status !== 'INACTIVE')
+            .filter((pool: any) => locationAliases.has(normaliseToken(pool.locationCode)))
+            .filter((pool: any) => {
+                const poolUnit = normaliseToken(pool.unitCode);
+                return !targetUnit || !poolUnit || poolUnit === targetUnit || pool.poolType === 'Shared';
+            })
+            .forEach((pool: any) => {
+                normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || [])
+                    .forEach((definition) => {
+                        if (!definitionsById.has(definition.id)) {
+                            definitionsById.set(definition.id, definition);
+                        }
+                    });
+            });
+
+        return Array.from(definitionsById.values());
+    }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
     const personnelDisplaySettings = useMemo(
         () => getPersonnelDisplaySettings(platformConfig),
         [platformConfig]
