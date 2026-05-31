@@ -31889,12 +31889,12 @@ const AircraftConfigSelector = ({ value, definitions, onChange }) => {
     const next = checked ? Array.from(/* @__PURE__ */ new Set([...withoutAny, id])) : withoutAny.filter((item) => item !== id);
     onChange(next.length > 0 ? next : [ANY_AIRCRAFT_CONFIG]);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg lg:col-span-2", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: [
       "CONFIG",
       /* @__PURE__ */ jsxRuntimeExports.jsx(AircraftConfigInfoIcon, { definitions })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-2 gap-1", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-1 gap-1", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[10px] text-gray-100", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",

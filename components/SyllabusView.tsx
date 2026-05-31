@@ -119,12 +119,12 @@ const AircraftConfigSelector: React.FC<{
     };
 
     return (
-        <div className="bg-gray-700/50 p-1 rounded-lg lg:col-span-2">
+        <div className="bg-gray-700/50 p-1 rounded-lg">
             <label className="flex items-center text-[9px] font-medium text-gray-400 uppercase tracking-wider">
                 CONFIG
                 <AircraftConfigInfoIcon definitions={definitions} />
             </label>
-            <div className="mt-1 grid grid-cols-2 gap-1">
+            <div className="mt-1 grid grid-cols-1 gap-1">
                 <label className="flex items-center gap-1 rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[10px] text-gray-100">
                     <input
                         type="checkbox"
