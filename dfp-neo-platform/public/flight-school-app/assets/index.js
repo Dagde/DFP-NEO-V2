@@ -2417,21 +2417,34 @@ const formatAircraftNumber = (number, prefix, settings = DEFAULT_AIRCRAFT_NUMBER
   return cleanPrefix ? `${cleanPrefix} ${cleanNumber2}` : cleanNumber2;
 };
 const ANY_AIRCRAFT_CONFIG = "ANY";
+const BASE_AIRCRAFT_CONFIG = {
+  id: "CONFIG-0",
+  label: "CONFIG 0",
+  definition: "Clean"
+};
 const normaliseConfigId = (value, fallback) => {
   const cleaned = String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
   return cleaned || fallback;
 };
+const formatConfigLabel = (id, fallbackIndex) => {
+  const match = id.match(/^CONFIG-(\d+)$/);
+  if (!match) return `Config ${fallbackIndex + 1}`;
+  const configNumber = Number(match[1]);
+  return configNumber === 0 ? "CONFIG 0" : `Config ${configNumber}`;
+};
 const normaliseAircraftConfigurationDefinitions = (definitions) => {
-  if (!Array.isArray(definitions)) return [];
-  return definitions.map((definition, index) => {
+  if (!Array.isArray(definitions)) return [BASE_AIRCRAFT_CONFIG];
+  const userDefinitions = definitions.map((definition, index) => {
     const item = definition && typeof definition === "object" ? definition : {};
     const fallbackId = `CONFIG-${index + 1}`;
+    const id = normaliseConfigId(item.id || item.label || fallbackId, fallbackId);
     return {
-      id: normaliseConfigId(item.id || item.label || fallbackId, fallbackId),
-      label: `Config ${index + 1}`,
+      id,
+      label: formatConfigLabel(id, index),
       definition: String(item.definition || item.description || "").trim()
     };
-  }).filter((definition, index, all) => all.findIndex((candidate) => candidate.id === definition.id) === index);
+  }).filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id).filter((definition, index, all) => all.findIndex((candidate) => candidate.id === definition.id) === index);
+  return [BASE_AIRCRAFT_CONFIG, ...userDefinitions];
 };
 const getAircraftConfigurationDefinitions = (resourcePool) => normaliseAircraftConfigurationDefinitions(resourcePool?.settings?.aircraftConfigurations);
 const normaliseSelectedAircraftConfigurations = (selected, definitions = []) => {
@@ -45132,13 +45145,16 @@ const PlatformConfigurationSettings = ({
     });
   };
   const updateAircraftConfiguration = (poolIndex, configIndex, definition) => {
-    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []).map((configDefinition, index) => index === configIndex ? { ...configDefinition, definition } : configDefinition);
-    updateResourcePoolSettings(poolIndex, { aircraftConfigurations });
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
+    const targetId = aircraftConfigurations[configIndex]?.id;
+    if (!targetId || targetId === "CONFIG-0") return;
+    const nextAircraftConfigurations = aircraftConfigurations.map((configDefinition) => configDefinition.id === targetId ? { ...configDefinition, definition } : configDefinition);
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
   const addAircraftConfiguration = (poolIndex) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const existingIds = new Set(aircraftConfigurations.map((configDefinition) => configDefinition.id));
-    let nextNumber = aircraftConfigurations.length + 1;
+    let nextNumber = 1;
     while (existingIds.has(`CONFIG-${nextNumber}`)) nextNumber += 1;
     updateResourcePoolSettings(poolIndex, {
       aircraftConfigurations: [
@@ -45148,8 +45164,11 @@ const PlatformConfigurationSettings = ({
     });
   };
   const removeAircraftConfiguration = (poolIndex, configIndex) => {
-    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []).filter((_, index) => index !== configIndex);
-    updateResourcePoolSettings(poolIndex, { aircraftConfigurations });
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
+    const targetId = aircraftConfigurations[configIndex]?.id;
+    if (!targetId || targetId === "CONFIG-0") return;
+    const nextAircraftConfigurations = aircraftConfigurations.filter((configDefinition) => configDefinition.id !== targetId);
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
   const save = async () => {
     if (!canEdit) return;
@@ -45613,28 +45632,31 @@ const PlatformConfigurationSettings = ({
                   }
                 )
               ] }),
-              aircraftConfigurations.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/50 px-3 py-2 text-xs text-gray-400", children: "No configured aircraft states. LMP events will show ANY only." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: aircraftConfigurations.map((aircraftConfig, configIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-24 shrink-0 rounded border border-gray-700 bg-gray-950 px-3 py-2 text-xs font-bold text-cyan-100", children: aircraftConfig.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Field,
-                  {
-                    label: "Definition",
-                    value: aircraftConfig.definition,
-                    disabled: !canEdit,
-                    onChange: (value) => updateAircraftConfiguration(index, configIndex, value)
-                  }
-                ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    disabled: !canEdit,
-                    onClick: () => removeAircraftConfiguration(index, configIndex),
-                    className: "h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
-                    children: "Delete"
-                  }
-                )
-              ] }, aircraftConfig.id || configIndex)) })
+              aircraftConfigurations.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/50 px-3 py-2 text-xs text-gray-400", children: "No configured aircraft states. LMP events will show ANY only." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: aircraftConfigurations.map((aircraftConfig, configIndex) => {
+                const isBaseConfig = aircraftConfig.id === "CONFIG-0";
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-24 shrink-0 rounded border border-gray-700 bg-gray-950 px-3 py-2 text-xs font-bold text-cyan-100", children: aircraftConfig.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Field,
+                    {
+                      label: "Definition",
+                      value: aircraftConfig.definition,
+                      disabled: !canEdit || isBaseConfig,
+                      onChange: (value) => updateAircraftConfiguration(index, configIndex, value)
+                    }
+                  ) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      disabled: !canEdit || isBaseConfig,
+                      onClick: () => removeAircraftConfiguration(index, configIndex),
+                      className: "h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
+                      children: isBaseConfig ? "Base" : "Delete"
+                    }
+                  )
+                ] }, aircraftConfig.id || configIndex);
+              }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               ToggleField,
@@ -64810,7 +64832,7 @@ const App = () => {
     return Array.from(aircraftTypeDefinitionsById.values());
   }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
   const aircraftConfigCapacityDefinitions = reactExports.useMemo(() => [
-    { id: "CONFIG-0", label: "Config 0", definition: "Clean aircraft, no external stores" },
+    BASE_AIRCRAFT_CONFIG,
     ...aircraftConfigurations.filter((definition) => definition.id !== "CONFIG-0")
   ], [aircraftConfigurations]);
   const personnelDisplaySettings = reactExports.useMemo(

@@ -35,7 +35,7 @@ import {
     type ResourceDisplayNames,
 } from './utils/resourceDisplayNames';
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
-import { ANY_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions } from './utils/aircraftConfigurationSettings';
+import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions } from './utils/aircraftConfigurationSettings';
 import {
     readTileStatusSettingsFromLocalStorage,
     normaliseTileStatusSettings,
@@ -11146,7 +11146,7 @@ const App: React.FC = () => {
         return Array.from(aircraftTypeDefinitionsById.values());
     }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
     const aircraftConfigCapacityDefinitions = useMemo(() => ([
-        { id: 'CONFIG-0', label: 'Config 0', definition: 'Clean aircraft, no external stores' },
+        BASE_AIRCRAFT_CONFIG,
         ...aircraftConfigurations.filter(definition => definition.id !== 'CONFIG-0'),
     ]), [aircraftConfigurations]);
     const personnelDisplaySettings = useMemo(

@@ -1681,17 +1681,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateAircraftConfiguration = (poolIndex: number, configIndex: number, definition: string) => {
-    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || [])
-      .map((configDefinition, index) => (
-        index === configIndex ? { ...configDefinition, definition } : configDefinition
-      ));
-    updateResourcePoolSettings(poolIndex, { aircraftConfigurations });
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
+    const targetId = aircraftConfigurations[configIndex]?.id;
+    if (!targetId || targetId === 'CONFIG-0') return;
+    const nextAircraftConfigurations = aircraftConfigurations.map((configDefinition) => (
+      configDefinition.id === targetId ? { ...configDefinition, definition } : configDefinition
+    ));
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
 
   const addAircraftConfiguration = (poolIndex: number) => {
     const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
     const existingIds = new Set(aircraftConfigurations.map(configDefinition => configDefinition.id));
-    let nextNumber = aircraftConfigurations.length + 1;
+    let nextNumber = 1;
     while (existingIds.has(`CONFIG-${nextNumber}`)) nextNumber += 1;
     updateResourcePoolSettings(poolIndex, {
       aircraftConfigurations: [
@@ -1702,9 +1704,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const removeAircraftConfiguration = (poolIndex: number, configIndex: number) => {
-    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || [])
-      .filter((_, index) => index !== configIndex);
-    updateResourcePoolSettings(poolIndex, { aircraftConfigurations });
+    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
+    const targetId = aircraftConfigurations[configIndex]?.id;
+    if (!targetId || targetId === 'CONFIG-0') return;
+    const nextAircraftConfigurations = aircraftConfigurations.filter((configDefinition) => configDefinition.id !== targetId);
+    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
 
   const save = async () => {
@@ -2255,29 +2259,32 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {aircraftConfigurations.map((aircraftConfig, configIndex) => (
-                        <div key={aircraftConfig.id || configIndex} className="flex items-end gap-2">
-                          <div className="w-24 shrink-0 rounded border border-gray-700 bg-gray-950 px-3 py-2 text-xs font-bold text-cyan-100">
-                            {aircraftConfig.label}
+                      {aircraftConfigurations.map((aircraftConfig, configIndex) => {
+                        const isBaseConfig = aircraftConfig.id === 'CONFIG-0';
+                        return (
+                          <div key={aircraftConfig.id || configIndex} className="flex items-end gap-2">
+                            <div className="w-24 shrink-0 rounded border border-gray-700 bg-gray-950 px-3 py-2 text-xs font-bold text-cyan-100">
+                              {aircraftConfig.label}
+                            </div>
+                            <div className="flex-1">
+                              <Field
+                                label="Definition"
+                                value={aircraftConfig.definition}
+                                disabled={!canEdit || isBaseConfig}
+                                onChange={(value) => updateAircraftConfiguration(index, configIndex, value)}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={!canEdit || isBaseConfig}
+                              onClick={() => removeAircraftConfiguration(index, configIndex)}
+                              className="h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {isBaseConfig ? 'Base' : 'Delete'}
+                            </button>
                           </div>
-                          <div className="flex-1">
-                            <Field
-                              label="Definition"
-                              value={aircraftConfig.definition}
-                              disabled={!canEdit}
-                              onChange={(value) => updateAircraftConfiguration(index, configIndex, value)}
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            disabled={!canEdit}
-                            onClick={() => removeAircraftConfiguration(index, configIndex)}
-                            className="h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

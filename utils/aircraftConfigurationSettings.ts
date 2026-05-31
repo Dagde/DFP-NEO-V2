@@ -1,6 +1,11 @@
 import type { PlatformResourcePool } from './platformConfigService';
 
 export const ANY_AIRCRAFT_CONFIG = 'ANY';
+export const BASE_AIRCRAFT_CONFIG = {
+  id: 'CONFIG-0',
+  label: 'CONFIG 0',
+  definition: 'Clean',
+};
 
 export interface AircraftConfigurationDefinition {
   id: string;
@@ -13,24 +18,35 @@ const normaliseConfigId = (value: unknown, fallback: string): string => {
   return cleaned || fallback;
 };
 
+const formatConfigLabel = (id: string, fallbackIndex: number): string => {
+  const match = id.match(/^CONFIG-(\d+)$/);
+  if (!match) return `Config ${fallbackIndex + 1}`;
+  const configNumber = Number(match[1]);
+  return configNumber === 0 ? 'CONFIG 0' : `Config ${configNumber}`;
+};
+
 export const normaliseAircraftConfigurationDefinitions = (
   definitions?: unknown,
 ): AircraftConfigurationDefinition[] => {
-  if (!Array.isArray(definitions)) return [];
+  if (!Array.isArray(definitions)) return [BASE_AIRCRAFT_CONFIG];
 
-  return definitions
+  const userDefinitions = definitions
     .map((definition, index) => {
       const item = definition && typeof definition === 'object' ? definition as Record<string, any> : {};
       const fallbackId = `CONFIG-${index + 1}`;
+      const id = normaliseConfigId(item.id || item.label || fallbackId, fallbackId);
       return {
-        id: normaliseConfigId(item.id || item.label || fallbackId, fallbackId),
-        label: `Config ${index + 1}`,
+        id,
+        label: formatConfigLabel(id, index),
         definition: String(item.definition || item.description || '').trim(),
       };
     })
+    .filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id)
     .filter((definition, index, all) => (
       all.findIndex(candidate => candidate.id === definition.id) === index
     ));
+
+  return [BASE_AIRCRAFT_CONFIG, ...userDefinitions];
 };
 
 export const getAircraftConfigurationDefinitions = (
