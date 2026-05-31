@@ -10906,6 +10906,20 @@ const App: React.FC = () => {
         date: string;
         message: string;
     }>({ status: 'idle', date: '', message: '' });
+    const [showDfpRetrievalNotice, setShowDfpRetrievalNotice] = useState(false);
+    useEffect(() => {
+        const isPendingSnapshotLoad = isAuthenticated
+            && dfpSnapshotLoadState.date === date
+            && ['loading', 'retrying'].includes(dfpSnapshotLoadState.status);
+        if (!isPendingSnapshotLoad) {
+            setShowDfpRetrievalNotice(false);
+            return;
+        }
+        const noticeTimer = window.setTimeout(() => {
+            setShowDfpRetrievalNotice(true);
+        }, 700);
+        return () => window.clearTimeout(noticeTimer);
+    }, [date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAuthenticated]);
 
     function getDailySnapshotKey(targetDate: string, targetSchool: string = school, targetUnit: string = activeUnitCode): string {
         const safeUnit = String(targetUnit || '').trim().replace(/[^A-Za-z0-9_-]/g, '-');
@@ -23561,6 +23575,18 @@ updates.forEach(update => {
                     <div className="w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-400 text-sm">Loading DFP-NEO...</p>
                 </div>
+            </div>
+        )}
+
+        {showDfpRetrievalNotice && (
+            <div className="pointer-events-none fixed left-1/2 top-[92px] z-[160] w-[min(460px,calc(100vw-32px))] -translate-x-1/2 rounded-md border border-sky-500/50 bg-gray-950/95 px-4 py-3 text-center shadow-2xl shadow-black/30 backdrop-blur-md">
+                <div className="mb-2 flex items-center justify-center gap-2">
+                    <span className="h-3 w-3 rounded-full border-2 border-sky-400 border-t-transparent animate-spin"></span>
+                    <span className="text-sm font-semibold text-white">Retrieving DFP</span>
+                </div>
+                <p className="text-xs leading-5 text-gray-300">
+                    Please wait while we retrieve the DFP for the selected date.
+                </p>
             </div>
         )}
 

@@ -64304,6 +64304,18 @@ const App = () => {
   const loadedSnapshotDates = React.useRef(/* @__PURE__ */ new Set());
   const loadingSnapshotDates = React.useRef(/* @__PURE__ */ new Set());
   const [dfpSnapshotLoadState, setDfpSnapshotLoadState] = reactExports.useState({ status: "idle", date: "", message: "" });
+  const [showDfpRetrievalNotice, setShowDfpRetrievalNotice] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    const isPendingSnapshotLoad = isAuthenticated && dfpSnapshotLoadState.date === date && ["loading", "retrying"].includes(dfpSnapshotLoadState.status);
+    if (!isPendingSnapshotLoad) {
+      setShowDfpRetrievalNotice(false);
+      return;
+    }
+    const noticeTimer = window.setTimeout(() => {
+      setShowDfpRetrievalNotice(true);
+    }, 700);
+    return () => window.clearTimeout(noticeTimer);
+  }, [date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAuthenticated]);
   function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode) {
     const safeUnit = String(targetUnit || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
     const safeSchool = String(targetSchool || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
@@ -74712,6 +74724,13 @@ Do you want to replace the existing entry?`,
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." })
     ] }) }),
+    showDfpRetrievalNotice && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-none fixed left-1/2 top-[92px] z-[160] w-[min(460px,calc(100vw-32px))] -translate-x-1/2 rounded-md border border-sky-500/50 bg-gray-950/95 px-4 py-3 text-center shadow-2xl shadow-black/30 backdrop-blur-md", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-3 w-3 rounded-full border-2 border-sky-400 border-t-transparent animate-spin" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: "Retrieving DFP" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-5 text-gray-300", children: "Please wait while we retrieve the DFP for the selected date." })
+    ] }),
     isAuthenticated && dfpSnapshotLoadState.date === date && ["loading", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[188px] right-[18px] z-[100] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", title: dfpSnapshotLoadState.message, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
