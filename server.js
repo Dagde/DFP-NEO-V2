@@ -9586,6 +9586,10 @@ async function ensureDailySnapshotTable(db) {
     await db.$executeRawUnsafe(`
       ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "alertsData" JSONB DEFAULT '{}';
     `);
+    // Add aircraft configuration capacity state used by the DFP resource column
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "aircraftConfigState" JSONB DEFAULT '{}';
+    `);
     // Add device tokens table for APNs push notifications
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "DeviceToken" (
@@ -9938,7 +9942,8 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       staffCurrency,
       staffLogbook,
       savedBy,
-      baselineEvents
+      baselineEvents,
+      aircraftConfigState
     } = req.body;
 
     if (!date) {
@@ -9979,8 +9984,9 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
             "staffLogbook" = $9::jsonb,
             "savedAt" = NOW(),
             "savedBy" = $10::text,
-            "baselineEvents" = $11::jsonb
-          WHERE date = $12::text
+            "baselineEvents" = $11::jsonb,
+            "aircraftConfigState" = $12::jsonb
+          WHERE date = $13::text
         `,
           JSON.stringify(scheduleEvents || []),
           JSON.stringify(staffEvents || []),
@@ -9993,6 +9999,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
           JSON.stringify(staffLogbook || {}),
           savedBy || null,
           JSON.stringify(baselineEvents),
+          JSON.stringify(aircraftConfigState || {}),
           date
         );
       } else {
@@ -10009,8 +10016,9 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
             "staffCurrency" = $8::jsonb,
             "staffLogbook" = $9::jsonb,
             "savedAt" = NOW(),
-            "savedBy" = $10::text
-          WHERE date = $11::text
+            "savedBy" = $10::text,
+            "aircraftConfigState" = $11::jsonb
+          WHERE date = $12::text
         `,
           JSON.stringify(scheduleEvents || []),
           JSON.stringify(staffEvents || []),
@@ -10022,6 +10030,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
           JSON.stringify(staffCurrency || {}),
           JSON.stringify(staffLogbook || {}),
           savedBy || null,
+          JSON.stringify(aircraftConfigState || {}),
           date
         );
       }
@@ -10031,8 +10040,8 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
         INSERT INTO "DailySnapshot"
           ("id", "date", "scheduleEvents", "staffEvents", "traineeEvents",
            "pt051Assessments", "traineeProfiles", "staffProfiles", "lmpCompletedIds",
-           "staffCurrency", "staffLogbook", "savedAt", "savedBy", "baselineEvents")
-        VALUES ($1::text, $2::text, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, NOW(), $12::text, $13::jsonb)
+           "staffCurrency", "staffLogbook", "savedAt", "savedBy", "baselineEvents", "aircraftConfigState")
+        VALUES ($1::text, $2::text, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, NOW(), $12::text, $13::jsonb, $14::jsonb)
       `,
         id, date,
         JSON.stringify(scheduleEvents || []),
@@ -10045,7 +10054,8 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
         JSON.stringify(staffCurrency || {}),
         JSON.stringify(staffLogbook || {}),
         savedBy || null,
-        JSON.stringify(baselineEvents !== undefined && baselineEvents !== null ? baselineEvents : (scheduleEvents || []))
+        JSON.stringify(baselineEvents !== undefined && baselineEvents !== null ? baselineEvents : (scheduleEvents || [])),
+        JSON.stringify(aircraftConfigState || {})
       );
       console.log(`✅ POST /api/daily-snapshot/save - Created snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
     }

@@ -10596,6 +10596,15 @@ const App: React.FC = () => {
             setAlertsDataByDate(prev => ({ ...prev, [targetDate]: snap.alertsData }));
         }
 
+        if (snap.aircraftConfigState && Object.keys(snap.aircraftConfigState).length > 0) {
+            const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
+            setAircraftConfigStateByDate(prev => ({
+                ...prev,
+                [baselineKey]: snap.aircraftConfigState,
+                [targetDate]: snap.aircraftConfigState,
+            }));
+        }
+
         return events.length;
     }, [activeUnitCode]);
 
@@ -11086,6 +11095,11 @@ const App: React.FC = () => {
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
     const [neoAvailableAircraftCount, setNeoAvailableAircraftCount] = useState(15);
     const [neoAircraftConfigCapacities, setNeoAircraftConfigCapacities] = useState<Record<string, string>>({});
+    const [aircraftConfigStateByDate, setAircraftConfigStateByDate] = useState<Record<string, {
+        availableAircraftCount: number;
+        aircraftConfigCapacities: Record<string, string>;
+        aircraftConfigurationDefinitions: ReturnType<typeof normaliseAircraftConfigurationDefinitions>;
+    }>>({});
     const [availableFtdCount, setAvailableFtdCount] = useState(school === 'ESL' ? 5 : 4);
     const [availableCptCount, setAvailableCptCount] = useState(4);
     const resourceDisplayNames = useMemo(
@@ -11193,12 +11207,22 @@ const App: React.FC = () => {
     const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, 'cpt', availableCptCount);
     const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, 'standby', 4);
     const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6);
-    const aircraftConfigLabelsByResource = useMemo(() => {
-        const cleanConfig = aircraftConfigCapacityDefinitions[0];
-        const configuredDefinitions = aircraftConfigCapacityDefinitions.filter(definition => definition.id !== cleanConfig.id);
-        const totalAvailable = Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0));
+    const currentAircraftConfigState = useMemo(() => ({
+        availableAircraftCount: Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0)),
+        aircraftConfigCapacities: neoAircraftConfigCapacities,
+        aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
+    }), [aircraftConfigCapacityDefinitions, neoAircraftConfigCapacities, neoAvailableAircraftCount]);
+
+    const buildAircraftConfigLabelsByResource = useCallback((configState = currentAircraftConfigState) => {
+        const definitions = configState.aircraftConfigurationDefinitions?.length
+            ? configState.aircraftConfigurationDefinitions
+            : aircraftConfigCapacityDefinitions;
+        const cleanConfig = definitions.find(definition => definition.id === BASE_AIRCRAFT_CONFIG.id) || BASE_AIRCRAFT_CONFIG;
+        const configuredDefinitions = definitions.filter(definition => definition.id !== cleanConfig.id);
+        const capacities = configState.aircraftConfigCapacities || {};
+        const totalAvailable = Math.max(0, Math.floor(Number(configState.availableAircraftCount) || 0));
         const configuredLabels = configuredDefinitions.flatMap((definition) => {
-            const count = Math.max(0, parseInt(neoAircraftConfigCapacities[definition.id] || '', 10) || 0);
+            const count = Math.max(0, parseInt(capacities[definition.id] || '', 10) || 0);
             return Array.from({ length: count }, () => definition.label);
         });
         const cleanCount = Math.max(0, totalAvailable - configuredLabels.length);
@@ -11214,7 +11238,13 @@ const App: React.FC = () => {
             acc[resourceId] = label;
             return acc;
         }, {});
-    }, [aircraftConfigCapacityDefinitions, configuredAirframeCount, neoAircraftConfigCapacities, neoAvailableAircraftCount]);
+    }, [aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
+
+    const aircraftConfigLabelsByResource = useMemo(() => {
+        const snapshotKey = getDailySnapshotKey(date);
+        const dateConfigState = aircraftConfigStateByDate[snapshotKey] || aircraftConfigStateByDate[date];
+        return buildAircraftConfigLabelsByResource(dateConfigState || currentAircraftConfigState);
+    }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date]);
     const [flyingStartTime, setFlyingStartTime] = useState(8.0); // 08:00
     const [flyingEndTime, setFlyingEndTime] = useState(17.0); // 17:00
     const [ftdStartTime, setFtdStartTime] = useState(8.0); // 08:00
@@ -15349,6 +15379,7 @@ const App: React.FC = () => {
             lmpCompletedIds: lmpCompletedIdsMap,
             staffCurrency: staffCurrencyMap,
             staffLogbook: {},
+            aircraftConfigState: currentAircraftConfigState,
             savedBy,
         };
         // Only include baselineEvents if explicitly provided (initial publish)
@@ -18133,6 +18164,12 @@ const App: React.FC = () => {
             ...prev,
             [buildDfpDate]: newEventsForDate
         }));
+        const publishedSnapshotKey = getDailySnapshotKey(buildDfpDate);
+        setAircraftConfigStateByDate(prev => ({
+            ...prev,
+            [publishedSnapshotKey]: currentAircraftConfigState,
+            [buildDfpDate]: currentAircraftConfigState,
+        }));
 
         // NEW APPROACH: Sync PT-051s with Active DFP after publish
         console.log('\u{1F4CB} Triggering PT-051 sync after publish...');
@@ -18277,6 +18314,7 @@ const App: React.FC = () => {
                 lmpCompletedIds: lmpCompletedIdsMap,
                 staffCurrency: staffCurrencyMap,
                 staffLogbook: staffLogbookMap,
+                aircraftConfigState: currentAircraftConfigState,
                 savedBy: authUser?.userId || (authUser as any)?.username || null,
                 // Store the baseline (original published events) for change-bar detection after page reload
                 baselineEvents: newEventsForDate,
