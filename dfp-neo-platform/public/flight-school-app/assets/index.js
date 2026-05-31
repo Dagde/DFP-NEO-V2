@@ -64080,7 +64080,8 @@ const App = () => {
             setDfpSnapshotLoadState({
               status: "cached",
               date: targetDate,
-              message: "Showing cached DFP while refreshing"
+              message: "Showing cached DFP while refreshing",
+              progress: 45
             });
           }
         }
@@ -64098,14 +64099,16 @@ const App = () => {
           setDfpSnapshotLoadState({
             status: "retrying",
             date: targetDate,
-            message: `Retrying DFP load (${attempt + 1}/${retryDelays.length})`
+            message: `Retrying DFP load (${attempt + 1}/${retryDelays.length})`,
+            progress: Math.min(70, 18 + attempt * 12)
           });
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
           setDfpSnapshotLoadState({
             status: "loading",
             date: targetDate,
-            message: "Loading DFP"
+            message: "Loading DFP",
+            progress: 10
           });
         }
         try {
@@ -64116,7 +64119,14 @@ const App = () => {
           ].filter((key, index, keys) => Boolean(key) && keys.indexOf(key) === index);
           let res = null;
           let resolvedSnapshotKey = snapshotKey;
-          for (const candidateKey of candidateKeys) {
+          for (const [candidateIndex, candidateKey] of candidateKeys.entries()) {
+            const progress = Math.min(82, 18 + Math.round(candidateIndex / Math.max(candidateKeys.length, 1) * 56));
+            setDfpSnapshotLoadState({
+              status: attempt > 0 ? "retrying" : "loading",
+              date: targetDate,
+              message: `Retrieving DFP data (${candidateIndex + 1}/${candidateKeys.length})`,
+              progress
+            });
             const candidateUrl = `${apiBase2}/daily-snapshot/${encodeURIComponent(candidateKey)}`;
             const candidateRes = await fetch(candidateUrl);
             pushDfpDataDiag("snapshot:fetch-response", {
@@ -64148,7 +64158,8 @@ const App = () => {
             setDfpSnapshotLoadState({
               status: "empty",
               date: targetDate,
-              message: "No published DFP for this date"
+              message: "No published DFP for this date",
+              progress: 100
             });
             return;
           }
@@ -64156,6 +64167,12 @@ const App = () => {
             lastError = new Error(`Snapshot request failed with ${res.status}`);
             continue;
           }
+          setDfpSnapshotLoadState({
+            status: attempt > 0 ? "retrying" : "loading",
+            date: targetDate,
+            message: "Reading DFP data",
+            progress: 88
+          });
           const data = await res.json();
           const snap2 = data.snapshot;
           pushDfpDataDiag("snapshot:network-json", {
@@ -64172,13 +64189,20 @@ const App = () => {
           }
           const currentEventsSignature = getSnapshotEventsSignature(publishedSchedulesRef.current[targetDate] || []);
           const shouldReplaceCachedEvents = !!cachedEventsSignature && currentEventsSignature === cachedEventsSignature;
+          setDfpSnapshotLoadState({
+            status: attempt > 0 ? "retrying" : "loading",
+            date: targetDate,
+            message: "Applying DFP data",
+            progress: 94
+          });
           const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, snap2, replace || shouldReplaceCachedEvents, "network");
           cacheDailySnapshot(snapshotKey, snap2, targetDate);
           loadedSnapshotDates.current.add(snapshotKey);
           setDfpSnapshotLoadState({
             status: "loaded",
             date: targetDate,
-            message: eventCount > 0 ? `Loaded ${eventCount} DFP events` : "DFP loaded"
+            message: eventCount > 0 ? `Loaded ${eventCount} DFP events` : "DFP loaded",
+            progress: 100
           });
           return;
         } catch (err) {
@@ -64190,7 +64214,8 @@ const App = () => {
       setDfpSnapshotLoadState({
         status: "error",
         date: targetDate,
-        message: "DFP did not load. Check connection or retry."
+        message: "DFP did not load. Check connection or retry.",
+        progress: 100
       });
       console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
     } finally {
@@ -74724,13 +74749,27 @@ Do you want to replace the existing entry?`,
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." })
     ] }) }),
-    showDfpRetrievalNotice && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pointer-events-none fixed left-1/2 top-[92px] z-[160] w-[min(460px,calc(100vw-32px))] -translate-x-1/2 rounded-md border border-sky-500/50 bg-gray-950/95 px-4 py-3 text-center shadow-2xl shadow-black/30 backdrop-blur-md", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-3 w-3 rounded-full border-2 border-sky-400 border-t-transparent animate-spin" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: "Retrieving DFP" })
+    showDfpRetrievalNotice && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none fixed inset-0 z-[160] flex items-center justify-center px-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[min(640px,calc(100vw-48px))] rounded-lg border border-sky-500/60 bg-gray-950/95 px-8 py-7 text-center shadow-2xl shadow-black/40 backdrop-blur-md", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-5 w-5 rounded-full border-[3px] border-sky-400 border-t-transparent animate-spin" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-semibold text-white", children: "Retrieving DFP" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-5 text-gray-300", children: "Please wait while we retrieve the DFP for the selected date." })
-    ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-base leading-7 text-gray-200", children: "Please wait while we retrieve the DFP for the selected date." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 h-3 overflow-hidden rounded-full border border-sky-400/40 bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "h-full rounded-full bg-sky-400 transition-all duration-500 ease-out",
+          style: { width: `${Math.max(8, Math.min(100, dfpSnapshotLoadState.progress ?? 18))}%` }
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: dfpSnapshotLoadState.message || "Loading DFP" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          Math.round(Math.max(8, Math.min(100, dfpSnapshotLoadState.progress ?? 18))),
+          "%"
+        ] })
+      ] })
+    ] }) }),
     isAuthenticated && dfpSnapshotLoadState.date === date && ["loading", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[188px] right-[18px] z-[100] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", title: dfpSnapshotLoadState.message, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
