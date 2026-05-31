@@ -57,8 +57,8 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
   const displayResources: string[] = resources;
 
   return (
-    <div className="w-36 bg-gray-800 flex-shrink-0 h-full">
-      <ul>
+    <div className="w-full min-w-0 bg-gray-800 flex-shrink-0 h-full">
+      <ul className="w-full">
         {displayResources.map((resource, index) => {
             // Resource is already the display text (PC-21 1-24, Duty Sup, STBY, FTD, CPT, Ground)
             let resourceText: string = resource;
@@ -121,13 +121,13 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
               style={{ height: rowHeight }}
             >
               {resource.startsWith('PC-21') ? (
-                  <div className="relative flex h-full w-full items-center justify-center text-center">
+                  <div className="relative flex h-full w-full min-w-0 items-center text-center">
                       <span className="absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
                           {resource.match(/\d+$/)?.[0] || ''}
                       </span>
-                      <span>{formatResourceLabel ? formatResourceLabel('PC-21') : 'PC-21'}</span>
+                      <span className="absolute left-7 top-1/2 -translate-y-1/2">{formatResourceLabel ? formatResourceLabel('PC-21') : 'PC-21'}</span>
                       {configLabel && (
-                          <span className="absolute bottom-0.5 right-1 text-[8px] font-semibold leading-none text-gray-500">
+                          <span className="absolute bottom-0.5 right-0.5 max-w-[42px] truncate text-right text-[7px] font-semibold leading-none text-gray-500">
                               {configLabel}
                           </span>
                       )}

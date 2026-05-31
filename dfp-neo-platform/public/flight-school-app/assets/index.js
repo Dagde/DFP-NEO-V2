@@ -5944,7 +5944,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
     setDraggedIndex(null);
   };
   const displayResources = resources;
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-36 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: displayResources.map((resource, index) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full min-w-0 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "w-full", children: displayResources.map((resource, index) => {
     let resourceText = resource;
     const displayText = formatResourceLabel2 ? formatResourceLabel2(resourceText) : resourceText;
     const configLabel = aircraftConfigLabelsByResource[resource];
@@ -5993,10 +5993,10 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
         onDragEnd: () => setDraggedIndex(null),
         className: `${baseClasses} ${textColorClass} ${cursorClass} ${borderClass} ${hoverClass} ${dragClass}`,
         style: { height: rowHeight },
-        children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-full items-center justify-center text-center", children: [
+        children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-full min-w-0 items-center text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-xs", children: resource.match(/\d+$/)?.[0] || "" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatResourceLabel2 ? formatResourceLabel2("PC-21") : "PC-21" }),
-          configLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-0.5 right-1 text-[8px] font-semibold leading-none text-gray-500", children: configLabel })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-7 top-1/2 -translate-y-1/2", children: formatResourceLabel2 ? formatResourceLabel2("PC-21") : "PC-21" }),
+          configLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-0.5 right-0.5 max-w-[42px] truncate text-right text-[7px] font-semibold leading-none text-gray-500", children: configLabel })
         ] }) : resource.startsWith("Deployed") ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-left pl-1 pr-1 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: displayText.replace(/\s+\d+$/, "") }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: displayText.replace(/\s+\d+$/, "") }) })
       },
       `${resource}-${index}`
