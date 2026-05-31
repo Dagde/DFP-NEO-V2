@@ -11109,7 +11109,18 @@ const App: React.FC = () => {
             ...(activeLocation ? getLocationSelectorAliases(activeLocation) : [school]),
         ].map(normaliseToken).filter(Boolean));
         const targetUnit = normaliseToken(activeUnitCode);
-        const definitionsById = new Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>();
+        const pushDefinitions = (
+            definitionsById: Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>,
+            pool: any,
+        ) => {
+            normaliseAircraftConfigurationDefinitions(pool?.settings?.aircraftConfigurations || [])
+                .forEach((definition) => {
+                    if (!definitionsById.has(definition.id)) {
+                        definitionsById.set(definition.id, definition);
+                    }
+                });
+        };
+        const locationDefinitionsById = new Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>();
 
         (platformConfig?.resourcePools || [])
             .filter((pool: any) => pool.status !== 'INACTIVE')
@@ -11118,16 +11129,20 @@ const App: React.FC = () => {
                 const poolUnit = normaliseToken(pool.unitCode);
                 return !targetUnit || !poolUnit || poolUnit === targetUnit || pool.poolType === 'Shared';
             })
-            .forEach((pool: any) => {
-                normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || [])
-                    .forEach((definition) => {
-                        if (!definitionsById.has(definition.id)) {
-                            definitionsById.set(definition.id, definition);
-                        }
-                    });
-            });
+            .forEach((pool: any) => pushDefinitions(locationDefinitionsById, pool));
 
-        return Array.from(definitionsById.values());
+        if (locationDefinitionsById.size > 0) return Array.from(locationDefinitionsById.values());
+
+        const activeAircraftType = normaliseToken(activePlatformResourcePool?.aircraftTypeCode);
+        const aircraftTypeDefinitionsById = new Map<string, ReturnType<typeof normaliseAircraftConfigurationDefinitions>[number]>();
+        if (activeAircraftType) {
+            (platformConfig?.resourcePools || [])
+                .filter((pool: any) => pool.status !== 'INACTIVE')
+                .filter((pool: any) => normaliseToken(pool.aircraftTypeCode) === activeAircraftType)
+                .forEach((pool: any) => pushDefinitions(aircraftTypeDefinitionsById, pool));
+        }
+
+        return Array.from(aircraftTypeDefinitionsById.values());
     }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
     const personnelDisplaySettings = useMemo(
         () => getPersonnelDisplaySettings(platformConfig),
