@@ -8,7 +8,7 @@ import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
-import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 interface PrioritiesViewProps {
   school?: 'ESL' | 'PEA';
@@ -90,17 +90,22 @@ const AircraftConfigSelect: React.FC<{
   value?: string;
   definitions: AircraftConfigurationDefinition[];
   disabled?: boolean;
+  includeAny?: boolean;
   onChange: (value: string) => void;
-}> = ({ value, definitions, disabled = false, onChange }) => {
+}> = ({ value, definitions, disabled = false, includeAny = false, onChange }) => {
   const selectedValue = value || BASE_AIRCRAFT_CONFIG.id;
+  const selectedDefinition = definitions.find(definition => definition.id === selectedValue);
   return (
     <select
       value={selectedValue}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
       className="w-28 rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs font-semibold text-slate-100 outline-none transition focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
-      title={definitions.find(definition => definition.id === selectedValue)?.definition || BASE_AIRCRAFT_CONFIG.definition}
+      title={selectedValue === ANY_AIRCRAFT_CONFIG ? 'Any aircraft configuration is acceptable.' : selectedDefinition?.definition || BASE_AIRCRAFT_CONFIG.definition}
     >
+      {includeAny && (
+        <option value={ANY_AIRCRAFT_CONFIG}>ANY</option>
+      )}
       {definitions.map(definition => (
         <option key={definition.id} value={definition.id}>
           {definition.label}
@@ -275,6 +280,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = useState<'withOtherPilot' | 'solo'>('withOtherPilot');
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = useState(false);
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = useState<string | null>(null);
+  const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = useState(false);
+  const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
   const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
   const [currencyDraftEvents, setCurrencyDraftEvents] = useState<Array<{
     id: string;
@@ -480,6 +487,24 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     ));
     setOpenCurrencyDraftId(null);
     logAudit('Priorities', 'Add', 'Added reviewed currency events to Highest Priority queue', `${priorityEvents.length} Currency event(s) added`);
+  };
+
+  const currencyAircraftConfigChoices = useMemo(() => ([
+    { id: ANY_AIRCRAFT_CONFIG, label: 'ANY', definition: 'Any aircraft configuration is acceptable.' },
+    ...aircraftConfigOptions,
+  ]), [aircraftConfigOptions]);
+
+  const applyCurrencyAircraftConfigToDrafts = () => {
+    const targetConfigId = bulkCurrencyAircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+    let updatedCount = 0;
+    setCurrencyDraftEvents(prev => prev.map(event => {
+      if (activeCurrencyDraftIds.has(event.id)) return event;
+      updatedCount += 1;
+      return { ...event, aircraftConfigId: targetConfigId };
+    }));
+    setIsCurrencyConfigApplyOpen(false);
+    const configLabel = currencyAircraftConfigChoices.find(choice => choice.id === targetConfigId)?.label || targetConfigId;
+    logAudit('Priorities', 'Edit', 'Applied aircraft CONFIG to consolidated currency events', `${configLabel} applied to ${updatedCount} staged Currency event(s)`);
   };
 
   const toggleDraftCurrency = (draftId: string, currencyName: string) => {
@@ -1354,13 +1379,62 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <h2 className="text-xl font-semibold text-sky-400">Consolidated Currency Event Build</h2>
                     <p className="mt-1 text-xs text-slate-400">Review built Currency events, optionally tick the currencies being satisfied, then send selected rows to Highest Priority.</p>
                 </div>
-                <button
-                    onClick={pushSelectedCurrencyDraftsToPriority}
-                    disabled={currencyDraftEvents.filter(event => event.selected).length === 0}
-                    className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-                >
-                    Push Selected to Highest Priority
-                </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setIsCurrencyConfigApplyOpen(prev => !prev)}
+                            disabled={currencyDraftEvents.length === 0}
+                            className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500"
+                        >
+                            Apply CONFIG
+                        </button>
+                        {isCurrencyConfigApplyOpen && (
+                            <div className="absolute right-0 z-30 mt-2 w-72 rounded-lg border border-slate-600 bg-slate-950 p-3 text-left shadow-xl">
+                                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-cyan-200">Apply CONFIG to staged Currency events</div>
+                                <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
+                                    {currencyAircraftConfigChoices.map(choice => (
+                                        <label key={choice.id} className="flex cursor-pointer items-start gap-2 rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-xs text-slate-200 hover:border-cyan-500/40">
+                                            <input
+                                                type="checkbox"
+                                                checked={bulkCurrencyAircraftConfigId === choice.id}
+                                                onChange={() => setBulkCurrencyAircraftConfigId(choice.id)}
+                                                className="mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                                            />
+                                            <span>
+                                                <span className="block font-semibold text-slate-100">{choice.label}</span>
+                                                <span className="mt-0.5 block text-[11px] leading-snug text-slate-400">{choice.definition || 'No definition has been entered.'}</span>
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="mt-3 flex justify-end gap-2 border-t border-slate-800 pt-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCurrencyConfigApplyOpen(false)}
+                                        className="rounded-md border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={applyCurrencyAircraftConfigToDrafts}
+                                        className="rounded-md bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-400"
+                                    >
+                                        Apply
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        onClick={pushSelectedCurrencyDraftsToPriority}
+                        disabled={currencyDraftEvents.filter(event => event.selected).length === 0}
+                        className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                    >
+                        Push Selected to Highest Priority
+                    </button>
+                </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-700">
                 <table className="min-w-full text-sm">
@@ -1401,6 +1475,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     <AircraftConfigSelect
                                         value={draft.aircraftConfigId}
                                         definitions={aircraftConfigOptions}
+                                        includeAny
                                         disabled={isPublishedInActiveSchedule || draft.eventType !== 'flight'}
                                         onChange={(aircraftConfigId) => setCurrencyDraftEvents(prev => prev.map(event =>
                                             event.id === draft.id ? { ...event, aircraftConfigId } : event

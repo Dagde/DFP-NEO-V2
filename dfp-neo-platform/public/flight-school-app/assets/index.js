@@ -21251,17 +21251,21 @@ const ConfigCapacityInfoHint = ({ definition }) => {
     }
   );
 };
-const AircraftConfigSelect = ({ value, definitions, disabled = false, onChange }) => {
+const AircraftConfigSelect = ({ value, definitions, disabled = false, includeAny = false, onChange }) => {
   const selectedValue = value || BASE_AIRCRAFT_CONFIG.id;
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+  const selectedDefinition = definitions.find((definition) => definition.id === selectedValue);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "select",
     {
       value: selectedValue,
       disabled,
       onChange: (event) => onChange(event.target.value),
       className: "w-28 rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs font-semibold text-slate-100 outline-none transition focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60",
-      title: definitions.find((definition) => definition.id === selectedValue)?.definition || BASE_AIRCRAFT_CONFIG.definition,
-      children: definitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id))
+      title: selectedValue === ANY_AIRCRAFT_CONFIG ? "Any aircraft configuration is acceptable." : selectedDefinition?.definition || BASE_AIRCRAFT_CONFIG.definition,
+      children: [
+        includeAny && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: ANY_AIRCRAFT_CONFIG, children: "ANY" }),
+        definitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id))
+      ]
     }
   );
 };
@@ -21398,6 +21402,8 @@ const PrioritiesView = ({
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = reactExports.useState("withOtherPilot");
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = reactExports.useState(false);
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = reactExports.useState(null);
+  const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = reactExports.useState(false);
+  const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const currencyDraftStorageKey = "neoCurrencyDraftEvents";
   const [currencyDraftEvents, setCurrencyDraftEvents] = reactExports.useState(() => {
     try {
@@ -21552,6 +21558,22 @@ const PrioritiesView = ({
     ));
     setOpenCurrencyDraftId(null);
     logAudit("Priorities", "Add", "Added reviewed currency events to Highest Priority queue", `${priorityEvents.length} Currency event(s) added`);
+  };
+  const currencyAircraftConfigChoices = reactExports.useMemo(() => [
+    { id: ANY_AIRCRAFT_CONFIG, label: "ANY", definition: "Any aircraft configuration is acceptable." },
+    ...aircraftConfigOptions
+  ], [aircraftConfigOptions]);
+  const applyCurrencyAircraftConfigToDrafts = () => {
+    const targetConfigId = bulkCurrencyAircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+    let updatedCount = 0;
+    setCurrencyDraftEvents((prev) => prev.map((event) => {
+      if (activeCurrencyDraftIds.has(event.id)) return event;
+      updatedCount += 1;
+      return { ...event, aircraftConfigId: targetConfigId };
+    }));
+    setIsCurrencyConfigApplyOpen(false);
+    const configLabel = currencyAircraftConfigChoices.find((choice) => choice.id === targetConfigId)?.label || targetConfigId;
+    logAudit("Priorities", "Edit", "Applied aircraft CONFIG to consolidated currency events", `${configLabel} applied to ${updatedCount} staged Currency event(s)`);
   };
   const toggleDraftCurrency = (draftId, currencyName) => {
     setCurrencyDraftEvents((prev) => prev.map((event) => {
@@ -22340,15 +22362,67 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Consolidated Currency Event Build" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "Review built Currency events, optionally tick the currencies being satisfied, then send selected rows to Highest Priority." })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: pushSelectedCurrencyDraftsToPriority,
-              disabled: currencyDraftEvents.filter((event) => event.selected).length === 0,
-              className: "rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400",
-              children: "Push Selected to Highest Priority"
-            }
-          )
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setIsCurrencyConfigApplyOpen((prev) => !prev),
+                  disabled: currencyDraftEvents.length === 0,
+                  className: "rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500",
+                  children: "Apply CONFIG"
+                }
+              ),
+              isCurrencyConfigApplyOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute right-0 z-30 mt-2 w-72 rounded-lg border border-slate-600 bg-slate-950 p-3 text-left shadow-xl", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-semibold uppercase tracking-wide text-cyan-200", children: "Apply CONFIG to staged Currency events" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 space-y-2 overflow-y-auto pr-1", children: currencyAircraftConfigChoices.map((choice) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-start gap-2 rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-xs text-slate-200 hover:border-cyan-500/40", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked: bulkCurrencyAircraftConfigId === choice.id,
+                      onChange: () => setBulkCurrencyAircraftConfigId(choice.id),
+                      className: "mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold text-slate-100", children: choice.label }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[11px] leading-snug text-slate-400", children: choice.definition || "No definition has been entered." })
+                  ] })
+                ] }, choice.id)) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex justify-end gap-2 border-t border-slate-800 pt-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => setIsCurrencyConfigApplyOpen(false),
+                      className: "rounded-md border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800",
+                      children: "Cancel"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: applyCurrencyAircraftConfigToDrafts,
+                      className: "rounded-md bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-400",
+                      children: "Apply"
+                    }
+                  )
+                ] })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: pushSelectedCurrencyDraftsToPriority,
+                disabled: currencyDraftEvents.filter((event) => event.selected).length === 0,
+                className: "rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400",
+                children: "Push Selected to Highest Priority"
+              }
+            )
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-xs uppercase text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -22385,6 +22459,7 @@ const PrioritiesView = ({
                   {
                     value: draft.aircraftConfigId,
                     definitions: aircraftConfigOptions,
+                    includeAny: true,
                     disabled: isPublishedInActiveSchedule || draft.eventType !== "flight",
                     onChange: (aircraftConfigId) => setCurrencyDraftEvents((prev) => prev.map(
                       (event) => event.id === draft.id ? { ...event, aircraftConfigId } : event
