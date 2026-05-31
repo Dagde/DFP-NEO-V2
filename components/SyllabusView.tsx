@@ -384,7 +384,6 @@ const DetailView: React.FC<{
                         <DetailCard
                             label={<span className="flex items-center">CONFIG<AircraftConfigInfoIcon definitions={aircraftConfigurations} /></span>}
                             value={formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)}
-                            className="lg:col-span-2"
                         />
                         <DetailCard label="Pre-Flight" value={<>{Math.round(item.preFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
                         <DetailCard label="Post-Flight" value={<>{Math.round(item.postFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />

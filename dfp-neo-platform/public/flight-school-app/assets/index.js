@@ -32185,8 +32185,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
               "CONFIG",
               /* @__PURE__ */ jsxRuntimeExports.jsx(AircraftConfigInfoIcon, { definitions: aircraftConfigurations })
             ] }),
-            value: formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations),
-            className: "lg:col-span-2"
+            value: formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Pre-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
