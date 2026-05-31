@@ -20,9 +20,9 @@ const normaliseConfigId = (value: unknown, fallback: string): string => {
 
 const formatConfigLabel = (id: string, fallbackIndex: number): string => {
   const match = id.match(/^CONFIG-(\d+)$/);
-  if (!match) return `Config ${fallbackIndex + 1}`;
+  if (!match) return `CONFIG ${fallbackIndex + 1}`;
   const configNumber = Number(match[1]);
-  return configNumber === 0 ? 'CONFIG 0' : `Config ${configNumber}`;
+  return `CONFIG ${configNumber}`;
 };
 
 export const normaliseAircraftConfigurationDefinitions = (

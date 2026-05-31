@@ -1698,7 +1698,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateResourcePoolSettings(poolIndex, {
       aircraftConfigurations: [
         ...aircraftConfigurations,
-        { id: `CONFIG-${nextNumber}`, label: `Config ${nextNumber}`, definition: '' },
+        { id: `CONFIG-${nextNumber}`, label: `CONFIG ${nextNumber}`, definition: '' },
       ],
     });
   };

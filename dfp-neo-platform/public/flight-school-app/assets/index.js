@@ -2428,9 +2428,9 @@ const normaliseConfigId = (value, fallback) => {
 };
 const formatConfigLabel = (id, fallbackIndex) => {
   const match = id.match(/^CONFIG-(\d+)$/);
-  if (!match) return `Config ${fallbackIndex + 1}`;
+  if (!match) return `CONFIG ${fallbackIndex + 1}`;
   const configNumber = Number(match[1]);
-  return configNumber === 0 ? "CONFIG 0" : `Config ${configNumber}`;
+  return `CONFIG ${configNumber}`;
 };
 const normaliseAircraftConfigurationDefinitions = (definitions) => {
   if (!Array.isArray(definitions)) return [BASE_AIRCRAFT_CONFIG];
@@ -45344,7 +45344,7 @@ const PlatformConfigurationSettings = ({
     updateResourcePoolSettings(poolIndex, {
       aircraftConfigurations: [
         ...aircraftConfigurations,
-        { id: `CONFIG-${nextNumber}`, label: `Config ${nextNumber}`, definition: "" }
+        { id: `CONFIG-${nextNumber}`, label: `CONFIG ${nextNumber}`, definition: "" }
       ]
     });
   };
