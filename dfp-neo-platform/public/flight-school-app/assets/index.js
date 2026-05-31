@@ -2441,7 +2441,7 @@ const normaliseAircraftConfigurationDefinitions = (definitions) => {
     return {
       id,
       label: formatConfigLabel(id, index),
-      definition: String(item.definition || item.description || "").trim()
+      definition: String(item.definition || item.description || "")
     };
   }).filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id).filter((definition, index, all) => all.findIndex((candidate) => candidate.id === definition.id) === index);
   return [BASE_AIRCRAFT_CONFIG, ...userDefinitions];

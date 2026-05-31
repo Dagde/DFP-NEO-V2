@@ -38,7 +38,7 @@ export const normaliseAircraftConfigurationDefinitions = (
       return {
         id,
         label: formatConfigLabel(id, index),
-        definition: String(item.definition || item.description || '').trim(),
+        definition: String(item.definition || item.description || ''),
       };
     })
     .filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id)
