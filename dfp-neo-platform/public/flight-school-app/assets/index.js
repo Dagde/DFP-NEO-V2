@@ -1609,6 +1609,7 @@ const buildSettingsSnapshot = (state) => {
     coursePriorities: state.coursePriorities || [],
     coursePercentages: state.coursePercentages || {},
     neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
+    neoAircraftConfigCapacities: state.neoAircraftConfigCapacities || {},
     phraseBank: state.phraseBank || {},
     cancellationCodes: state.cancellationCodes || [],
     masterCurrencies: state.masterCurrencies || [],
@@ -5910,7 +5911,7 @@ const getCategory = (res) => {
   if (res.startsWith("Ground")) return "Ground";
   return "Other";
 };
-const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel: formatResourceLabel2 }) => {
+const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel: formatResourceLabel2, aircraftConfigLabelsByResource = {} }) => {
   const [draggedIndex, setDraggedIndex] = reactExports.useState(null);
   const handleDragStart = (index) => {
     setDraggedIndex(index);
@@ -5933,6 +5934,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-36 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: displayResources.map((resource, index) => {
     let resourceText = resource;
     const displayText = formatResourceLabel2 ? formatResourceLabel2(resourceText) : resourceText;
+    const configLabel = aircraftConfigLabelsByResource[resource];
     let textColorClass = "text-gray-400";
     let isDraggable = true;
     if (resource === "Duty Sup") {
@@ -5978,9 +5980,10 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
         onDragEnd: () => setDraggedIndex(null),
         className: `${baseClasses} ${textColorClass} ${cursorClass} ${borderClass} ${hoverClass} ${dragClass}`,
         style: { height: rowHeight },
-        children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full text-center", children: [
+        children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-full items-center justify-center text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-xs", children: resource.match(/\d+$/)?.[0] || "" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatResourceLabel2 ? formatResourceLabel2("PC-21") : "PC-21" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatResourceLabel2 ? formatResourceLabel2("PC-21") : "PC-21" }),
+          configLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-0.5 right-1 text-[8px] font-semibold leading-none text-gray-500", children: configLabel })
         ] }) : resource.startsWith("Deployed") ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-left pl-1 pr-1 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: displayText.replace(/\s+\d+$/, "") }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: displayText.replace(/\s+\d+$/, "") }) })
       },
       `${resource}-${index}`
@@ -6646,6 +6649,7 @@ const ScheduleView = ({
   onPauseToggleCompleted,
   alertsData,
   formatResourceLabel: formatResourceLabel2,
+  aircraftConfigLabelsByResource,
   aircraftNumberSettings,
   isReadOnly = false,
   timezoneOffset = 11
@@ -7442,7 +7446,8 @@ const ScheduleView = ({
             ftdCount,
             cptCount,
             events,
-            formatResourceLabel: formatResourceLabel2
+            formatResourceLabel: formatResourceLabel2,
+            aircraftConfigLabelsByResource
           }
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -20427,6 +20432,7 @@ const NextDayBuildView = ({
   pauseWindowStart = null,
   pauseWindowEnd = null,
   formatResourceLabel: formatResourceLabel2,
+  aircraftConfigLabelsByResource,
   aircraftNumberSettings
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
@@ -21121,7 +21127,8 @@ const NextDayBuildView = ({
             ftdCount,
             cptCount,
             events,
-            formatResourceLabel: formatResourceLabel2
+            formatResourceLabel: formatResourceLabel2,
+            aircraftConfigLabelsByResource
           }
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -21227,6 +21234,10 @@ const PrioritiesView = ({
   onUpdatePercentages,
   availableAircraftCount,
   onUpdateAircraftCount,
+  aircraftConfigurationDefinitions = [],
+  aircraftConfigCapacities = {},
+  onUpdateAircraftConfigCapacities = () => {
+  },
   availableFtdCount,
   onUpdateFtdCount,
   availableCptCount,
@@ -21290,12 +21301,28 @@ const PrioritiesView = ({
   }, [coursePriorities, coursePercentages]);
   reactExports.useEffect(() => {
     setAircraftTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
-  }, [availableAircraftCount]);
+  }, [availableAircraftCount, aircraftConfigCapacities]);
   const handleAircraftCapacityChange = (value) => {
     const nextCount = Math.max(0, parseInt(value, 10) || 0);
     logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} → ${nextCount}`);
     onUpdateAircraftCount(nextCount);
   };
+  const normaliseCapacityInput = (value) => {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return "";
+    const nextCount = Math.max(0, parseInt(trimmed, 10) || 0);
+    return String(nextCount);
+  };
+  const handleAircraftConfigCapacityChange = (configId, value) => {
+    const nextValue = normaliseCapacityInput(value);
+    const nextCapacities = { ...aircraftConfigCapacities, [configId]: nextValue };
+    if (!nextValue) delete nextCapacities[configId];
+    logAudit("Priorities", "Edit", `Updated ${configId.replace("-", " ")} aircraft capacity`, `${aircraftConfigCapacities[configId] || "blank"} → ${nextValue || "blank"}`);
+    onUpdateAircraftConfigCapacities(nextCapacities);
+  };
+  const nonCleanConfigCapacityTotal = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || "", 10) || 0), 0), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
+  const hasEnteredConfigCapacity = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").some((definition) => String(aircraftConfigCapacities[definition.id] || "").trim() !== ""), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
+  const derivedCleanConfigCapacity = Math.max(0, availableAircraftCount - nonCleanConfigCapacityTotal);
   reactExports.useEffect(() => {
     setFlyingWindowTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
   }, [flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, allowNightFlying]);
@@ -21822,11 +21849,27 @@ const PrioritiesView = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 p-4 md:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-slate-300", children: [
-              "Available ",
-              aircraftLabel
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", min: 0, value: availableAircraftCount, onChange: (e) => handleAircraftCapacityChange(e.target.value), className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-slate-300", children: "Total Aircraft Available" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", min: 0, value: availableAircraftCount, onChange: (e) => handleAircraftCapacityChange(e.target.value), className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" }),
+            aircraftConfigurationDefinitions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 border-t border-slate-700 pt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: aircraftConfigurationDefinitions.map((definition) => {
+              const isCleanConfig = definition.id === "CONFIG-0";
+              const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400", title: definition.definition || definition.label, children: definition.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "number",
+                    min: 0,
+                    value: displayValue,
+                    readOnly: isCleanConfig,
+                    placeholder: "",
+                    onChange: (e) => handleAircraftConfigCapacityChange(definition.id, e.target.value),
+                    className: `mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? "text-slate-400" : ""}`
+                  }
+                )
+              ] }, definition.id);
+            }) }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "ftd-count", className: "block text-sm font-medium text-slate-300", children: [
@@ -64725,6 +64768,7 @@ const App = () => {
   const [lastBuildAnalysis, setLastBuildAnalysis] = reactExports.useState(null);
   const [availableAircraftCount, setAvailableAircraftCount] = reactExports.useState(15);
   const [neoAvailableAircraftCount, setNeoAvailableAircraftCount] = reactExports.useState(15);
+  const [neoAircraftConfigCapacities, setNeoAircraftConfigCapacities] = reactExports.useState({});
   const [availableFtdCount, setAvailableFtdCount] = reactExports.useState(school === "ESL" ? 5 : 4);
   const [availableCptCount, setAvailableCptCount] = reactExports.useState(4);
   const resourceDisplayNames = reactExports.useMemo(
@@ -64765,6 +64809,10 @@ const App = () => {
     }
     return Array.from(aircraftTypeDefinitionsById.values());
   }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
+  const aircraftConfigCapacityDefinitions = reactExports.useMemo(() => [
+    { id: "CONFIG-0", label: "Config 0", definition: "Clean aircraft, no external stores" },
+    ...aircraftConfigurations.filter((definition) => definition.id !== "CONFIG-0")
+  ], [aircraftConfigurations]);
   const personnelDisplaySettings = reactExports.useMemo(
     () => getPersonnelDisplaySettings(platformConfig),
     [platformConfig]
@@ -64787,6 +64835,27 @@ const App = () => {
   const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount);
   const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, "standby", 4);
   const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, "ground", 6);
+  const aircraftConfigLabelsByResource = reactExports.useMemo(() => {
+    const cleanConfig = aircraftConfigCapacityDefinitions[0];
+    const configuredDefinitions = aircraftConfigCapacityDefinitions.filter((definition) => definition.id !== cleanConfig.id);
+    const totalAvailable = Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0));
+    const configuredLabels = configuredDefinitions.flatMap((definition) => {
+      const count = Math.max(0, parseInt(neoAircraftConfigCapacities[definition.id] || "", 10) || 0);
+      return Array.from({ length: count }, () => definition.label);
+    });
+    const cleanCount = Math.max(0, totalAvailable - configuredLabels.length);
+    const availableLabels = [
+      ...Array.from({ length: cleanCount }, () => cleanConfig.label),
+      ...configuredLabels
+    ].slice(0, totalAvailable);
+    return Array.from({ length: configuredAirframeCount }, (_, index) => {
+      const resourceId = `PC-21 ${index + 1}`;
+      return [resourceId, availableLabels[index] || cleanConfig.label];
+    }).reduce((acc, [resourceId, label]) => {
+      acc[resourceId] = label;
+      return acc;
+    }, {});
+  }, [aircraftConfigCapacityDefinitions, configuredAirframeCount, neoAircraftConfigCapacities, neoAvailableAircraftCount]);
   const [flyingStartTime, setFlyingStartTime] = reactExports.useState(8);
   const [flyingEndTime, setFlyingEndTime] = reactExports.useState(17);
   const [ftdStartTime, setFtdStartTime] = reactExports.useState(8);
@@ -65495,6 +65564,9 @@ ${"=".repeat(60)}`);
         } else if (saved.availableAircraftCount != null) {
           setNeoAvailableAircraftCount(saved.availableAircraftCount);
         }
+        if (saved.neoAircraftConfigCapacities) {
+          setNeoAircraftConfigCapacities(saved.neoAircraftConfigCapacities);
+        }
         if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
         if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
         if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
@@ -65585,6 +65657,7 @@ ${"=".repeat(60)}`);
       ceaseNightFlying,
       availableAircraftCount,
       neoAvailableAircraftCount,
+      neoAircraftConfigCapacities,
       availableFtdCount,
       availableCptCount,
       timezoneOffset,
@@ -65629,6 +65702,7 @@ ${"=".repeat(60)}`);
     ceaseNightFlying,
     availableAircraftCount,
     neoAvailableAircraftCount,
+    neoAircraftConfigCapacities,
     availableFtdCount,
     availableCptCount,
     timezoneOffset,
@@ -72410,6 +72484,7 @@ ${conflictLines.join("\n")}${moreText}`,
             baselineEvents: baselineSchedules[activeBaselineKey],
             alertsData: alertsDataByDate[date] || {},
             formatResourceLabel: formatResourceDisplayLabel,
+            aircraftConfigLabelsByResource,
             aircraftNumberSettings,
             isReadOnly: isViewingPastDfp,
             isOracleMode,
@@ -73002,6 +73077,7 @@ ${conflictLines.join("\n")}${moreText}`,
             pauseWindowStart: showPausePanel ? pauseOverlayStart : null,
             pauseWindowEnd: showPausePanel ? pauseOverlayEnd : null,
             formatResourceLabel: formatResourceDisplayLabel,
+            aircraftConfigLabelsByResource,
             aircraftNumberSettings
           }
         );
@@ -73016,6 +73092,9 @@ ${conflictLines.join("\n")}${moreText}`,
             onUpdatePercentages: setCoursePercentages,
             availableAircraftCount: neoAvailableAircraftCount,
             onUpdateAircraftCount: setNeoAvailableAircraftCount,
+            aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
+            aircraftConfigCapacities: neoAircraftConfigCapacities,
+            onUpdateAircraftConfigCapacities: setNeoAircraftConfigCapacities,
             availableFtdCount,
             onUpdateFtdCount: setAvailableFtdCount,
             availableCptCount,

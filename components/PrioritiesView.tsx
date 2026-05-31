@@ -8,6 +8,7 @@ import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 interface PrioritiesViewProps {
   school?: 'ESL' | 'PEA';
@@ -17,6 +18,9 @@ interface PrioritiesViewProps {
   onUpdatePercentages: (newPercentages: Map<string, number>) => void;
   availableAircraftCount: number;
   onUpdateAircraftCount: (count: number) => void;
+  aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
+  aircraftConfigCapacities?: Record<string, string>;
+  onUpdateAircraftConfigCapacities?: (capacities: Record<string, string>) => void;
   availableFtdCount: number;
   onUpdateFtdCount: (count: number) => void;
   availableCptCount: number;
@@ -72,6 +76,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onUpdatePercentages,
   availableAircraftCount,
   onUpdateAircraftCount,
+  aircraftConfigurationDefinitions = [],
+  aircraftConfigCapacities = {},
+  onUpdateAircraftConfigCapacities = () => {},
   availableFtdCount,
   onUpdateFtdCount,
   availableCptCount,
@@ -144,13 +151,42 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   useEffect(() => {
     setAircraftTimestamp(new Date().toLocaleString());
-  }, [availableAircraftCount]);
+  }, [availableAircraftCount, aircraftConfigCapacities]);
 
   const handleAircraftCapacityChange = (value: string) => {
     const nextCount = Math.max(0, parseInt(value, 10) || 0);
     logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} → ${nextCount}`);
     onUpdateAircraftCount(nextCount);
   };
+
+  const normaliseCapacityInput = (value: string): string => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return '';
+    const nextCount = Math.max(0, parseInt(trimmed, 10) || 0);
+    return String(nextCount);
+  };
+
+  const handleAircraftConfigCapacityChange = (configId: string, value: string) => {
+    const nextValue = normaliseCapacityInput(value);
+    const nextCapacities = { ...aircraftConfigCapacities, [configId]: nextValue };
+    if (!nextValue) delete nextCapacities[configId];
+    logAudit("Priorities", "Edit", `Updated ${configId.replace('-', ' ')} aircraft capacity`, `${aircraftConfigCapacities[configId] || 'blank'} → ${nextValue || 'blank'}`);
+    onUpdateAircraftConfigCapacities(nextCapacities);
+  };
+
+  const nonCleanConfigCapacityTotal = useMemo(() => (
+    aircraftConfigurationDefinitions
+      .filter(definition => definition.id !== 'CONFIG-0')
+      .reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || '', 10) || 0), 0)
+  ), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
+
+  const hasEnteredConfigCapacity = useMemo(() => (
+    aircraftConfigurationDefinitions
+      .filter(definition => definition.id !== 'CONFIG-0')
+      .some(definition => String(aircraftConfigCapacities[definition.id] || '').trim() !== '')
+  ), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
+
+  const derivedCleanConfigCapacity = Math.max(0, availableAircraftCount - nonCleanConfigCapacityTotal);
 
   useEffect(() => {
     setFlyingWindowTimestamp(new Date().toLocaleString());
@@ -814,8 +850,36 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label htmlFor="aircraft-count" className="block text-sm font-medium text-slate-300">Available {aircraftLabel}</label>
+                            <label htmlFor="aircraft-count" className="block text-sm font-medium text-slate-300">Total Aircraft Available</label>
                             <input id="aircraft-count" type="number" min={0} value={availableAircraftCount} onChange={(e) => handleAircraftCapacityChange(e.target.value)} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            {aircraftConfigurationDefinitions.length > 0 && (
+                                <div className="mt-4 border-t border-slate-700 pt-3">
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {aircraftConfigurationDefinitions.map((definition) => {
+                                            const isCleanConfig = definition.id === 'CONFIG-0';
+                                            const displayValue = isCleanConfig
+                                                ? (hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : '')
+                                                : (aircraftConfigCapacities[definition.id] || '');
+                                            return (
+                                                <label key={definition.id} className="block">
+                                                    <span className="block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400" title={definition.definition || definition.label}>
+                                                        {definition.label}
+                                                    </span>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={displayValue}
+                                                        readOnly={isCleanConfig}
+                                                        placeholder=""
+                                                        onChange={(e) => handleAircraftConfigCapacityChange(definition.id, e.target.value)}
+                                                        className={`mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? 'text-slate-400' : ''}`}
+                                                    />
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                             <label htmlFor="ftd-count" className="block text-sm font-medium text-slate-300">{ftdLabel} Available</label>

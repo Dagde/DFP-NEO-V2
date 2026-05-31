@@ -4,6 +4,7 @@ import AuditButton from './AuditButton';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest } from '../types';
 import { InstructorPriorityConfig } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 interface PrioritiesViewWithMenuProps {
   school: 'ESL' | 'PEA';
@@ -13,6 +14,9 @@ interface PrioritiesViewWithMenuProps {
   onUpdatePercentages: (newPercentages: Map<string, number>) => void;
   availableAircraftCount: number;
   onUpdateAircraftCount: (count: number) => void;
+  aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
+  aircraftConfigCapacities?: Record<string, string>;
+  onUpdateAircraftConfigCapacities?: (capacities: Record<string, string>) => void;
   availableFtdCount: number;
   onUpdateFtdCount: (count: number) => void;
   availableCptCount: number;

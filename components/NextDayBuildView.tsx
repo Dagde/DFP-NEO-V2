@@ -53,6 +53,7 @@ interface NextDayBuildViewProps {
   pauseWindowStart?: number | null;  // decimal hours, e.g. 10.0
   pauseWindowEnd?: number | null;    // decimal hours, e.g. 11.0
   formatResourceLabel?: (resourceId: string) => string;
+  aircraftConfigLabelsByResource?: Record<string, string>;
   aircraftNumberSettings?: AircraftNumberSettings;
 }
 
@@ -118,6 +119,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     pauseWindowStart = null, pauseWindowEnd = null,
     formatResourceLabel,
+    aircraftConfigLabelsByResource,
     aircraftNumberSettings,
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -922,6 +924,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         cptCount={cptCount}
                         events={events}
                         formatResourceLabel={formatResourceLabel}
+                        aircraftConfigLabelsByResource={aircraftConfigLabelsByResource}
                     />
                 </div>
 

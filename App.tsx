@@ -11085,6 +11085,7 @@ const App: React.FC = () => {
     const [lastBuildAnalysis, setLastBuildAnalysis] = useState<BuildAnalysis | null>(null);
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
     const [neoAvailableAircraftCount, setNeoAvailableAircraftCount] = useState(15);
+    const [neoAircraftConfigCapacities, setNeoAircraftConfigCapacities] = useState<Record<string, string>>({});
     const [availableFtdCount, setAvailableFtdCount] = useState(school === 'ESL' ? 5 : 4);
     const [availableCptCount, setAvailableCptCount] = useState(4);
     const resourceDisplayNames = useMemo(
@@ -11144,6 +11145,10 @@ const App: React.FC = () => {
 
         return Array.from(aircraftTypeDefinitionsById.values());
     }, [activePlatformResourcePool, activeUnitCode, getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
+    const aircraftConfigCapacityDefinitions = useMemo(() => ([
+        { id: 'CONFIG-0', label: 'Config 0', definition: 'Clean aircraft, no external stores' },
+        ...aircraftConfigurations.filter(definition => definition.id !== 'CONFIG-0'),
+    ]), [aircraftConfigurations]);
     const personnelDisplaySettings = useMemo(
         () => getPersonnelDisplaySettings(platformConfig),
         [platformConfig]
@@ -11166,6 +11171,28 @@ const App: React.FC = () => {
     const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, 'cpt', availableCptCount);
     const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, 'standby', 4);
     const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6);
+    const aircraftConfigLabelsByResource = useMemo(() => {
+        const cleanConfig = aircraftConfigCapacityDefinitions[0];
+        const configuredDefinitions = aircraftConfigCapacityDefinitions.filter(definition => definition.id !== cleanConfig.id);
+        const totalAvailable = Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0));
+        const configuredLabels = configuredDefinitions.flatMap((definition) => {
+            const count = Math.max(0, parseInt(neoAircraftConfigCapacities[definition.id] || '', 10) || 0);
+            return Array.from({ length: count }, () => definition.label);
+        });
+        const cleanCount = Math.max(0, totalAvailable - configuredLabels.length);
+        const availableLabels = [
+            ...Array.from({ length: cleanCount }, () => cleanConfig.label),
+            ...configuredLabels,
+        ].slice(0, totalAvailable);
+
+        return Array.from({ length: configuredAirframeCount }, (_, index) => {
+            const resourceId = `PC-21 ${index + 1}`;
+            return [resourceId, availableLabels[index] || cleanConfig.label] as const;
+        }).reduce<Record<string, string>>((acc, [resourceId, label]) => {
+            acc[resourceId] = label;
+            return acc;
+        }, {});
+    }, [aircraftConfigCapacityDefinitions, configuredAirframeCount, neoAircraftConfigCapacities, neoAvailableAircraftCount]);
     const [flyingStartTime, setFlyingStartTime] = useState(8.0); // 08:00
     const [flyingEndTime, setFlyingEndTime] = useState(17.0); // 17:00
     const [ftdStartTime, setFtdStartTime] = useState(8.0); // 08:00
@@ -12013,6 +12040,9 @@ const App: React.FC = () => {
                 } else if (saved.availableAircraftCount != null) {
                     setNeoAvailableAircraftCount(saved.availableAircraftCount);
                 }
+                if (saved.neoAircraftConfigCapacities) {
+                    setNeoAircraftConfigCapacities(saved.neoAircraftConfigCapacities);
+                }
                 if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
                 if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
                 if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
@@ -12116,6 +12146,7 @@ const App: React.FC = () => {
             ceaseNightFlying,
             availableAircraftCount,
             neoAvailableAircraftCount,
+            neoAircraftConfigCapacities,
             availableFtdCount,
             availableCptCount,
             timezoneOffset,
@@ -12145,7 +12176,7 @@ const App: React.FC = () => {
         flightTurnaround, ftdTurnaround, cptTurnaround,
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
-        availableAircraftCount, neoAvailableAircraftCount, availableFtdCount, availableCptCount,
+        availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, availableFtdCount, availableCptCount,
         timezoneOffset, showDepartureDensityOverlay, tileStatusSettings,
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
@@ -20796,6 +20827,7 @@ updates.forEach(update => {
                            baselineEvents={baselineSchedules[activeBaselineKey]}
                            alertsData={alertsDataByDate[date] || {}}
                            formatResourceLabel={formatResourceDisplayLabel}
+                           aircraftConfigLabelsByResource={aircraftConfigLabelsByResource}
                            aircraftNumberSettings={aircraftNumberSettings}
                            isReadOnly={isViewingPastDfp}
                            isOracleMode={isOracleMode}
@@ -21434,6 +21466,7 @@ updates.forEach(update => {
                             pauseWindowStart={showPausePanel ? pauseOverlayStart : null}
                             pauseWindowEnd={showPausePanel ? pauseOverlayEnd : null}
                             formatResourceLabel={formatResourceDisplayLabel}
+                            aircraftConfigLabelsByResource={aircraftConfigLabelsByResource}
                             aircraftNumberSettings={aircraftNumberSettings}
                        />;
             case 'Priorities':
@@ -21445,6 +21478,9 @@ updates.forEach(update => {
                     onUpdatePercentages={setCoursePercentages}
                     availableAircraftCount={neoAvailableAircraftCount}
                     onUpdateAircraftCount={setNeoAvailableAircraftCount}
+                    aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
+                    aircraftConfigCapacities={neoAircraftConfigCapacities}
+                    onUpdateAircraftConfigCapacities={setNeoAircraftConfigCapacities}
                     availableFtdCount={availableFtdCount}
                     onUpdateFtdCount={setAvailableFtdCount}
                     availableCptCount={availableCptCount}

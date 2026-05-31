@@ -77,6 +77,7 @@ interface ScheduleViewProps {
   // Alert status per event id
   alertsData?: Record<string, { responses?: Record<string, { status: string }> }>;
   formatResourceLabel?: (resourceId: string) => string;
+  aircraftConfigLabelsByResource?: Record<string, string>;
   aircraftNumberSettings?: AircraftNumberSettings;
   isReadOnly?: boolean;
 }
@@ -179,6 +180,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     alertsData,
     formatResourceLabel,
+    aircraftConfigLabelsByResource,
     aircraftNumberSettings,
     isReadOnly = false,
     timezoneOffset = 11 // Default to UTC+11
@@ -1131,6 +1133,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         cptCount={cptCount}
                         events={events}
                         formatResourceLabel={formatResourceLabel}
+                        aircraftConfigLabelsByResource={aircraftConfigLabelsByResource}
                     />
                 </div>
 

@@ -10,6 +10,7 @@ interface AirframeColumnProps {
   cptCount: number;
   events?: any[]; // Add events prop to filter resources
   formatResourceLabel?: (resourceId: string) => string;
+  aircraftConfigLabelsByResource?: Record<string, string>;
 }
 
 // Helper to determine resource category
@@ -25,7 +26,7 @@ const getCategory = (res: string) => {
     return 'Other';
 };
 
-const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel }) => {
+const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel, aircraftConfigLabelsByResource = {} }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const handleDragStart = (index: number) => {
@@ -62,6 +63,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
             // Resource is already the display text (PC-21 1-24, Duty Sup, STBY, FTD, CPT, Ground)
             let resourceText: string = resource;
             const displayText = formatResourceLabel ? formatResourceLabel(resourceText) : resourceText;
+            const configLabel = aircraftConfigLabelsByResource[resource];
             let textColorClass = 'text-gray-400';
             let isDraggable = true;
 
@@ -119,11 +121,16 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
               style={{ height: rowHeight }}
             >
               {resource.startsWith('PC-21') ? (
-                  <div className="relative w-full text-center">
+                  <div className="relative flex h-full w-full items-center justify-center text-center">
                       <span className="absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
                           {resource.match(/\d+$/)?.[0] || ''}
                       </span>
                       <span>{formatResourceLabel ? formatResourceLabel('PC-21') : 'PC-21'}</span>
+                      {configLabel && (
+                          <span className="absolute bottom-0.5 right-1 text-[8px] font-semibold leading-none text-gray-500">
+                              {configLabel}
+                          </span>
+                      )}
                   </div>
               ) : resource.startsWith('Deployed') ? (
                   <div className="w-full text-left pl-1 pr-1 overflow-hidden">
