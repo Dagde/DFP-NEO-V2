@@ -63622,6 +63622,33 @@ const App = () => {
     firstLight: selectedDfpSunTimes?.hasFirstLight ? selectedDfpSunTimes.firstLight : null,
     lastLight: selectedDfpSunTimes?.hasLastLight ? selectedDfpSunTimes.lastLight : null
   }), [selectedDfpSunTimes]);
+  const activeLocationAliasSet = reactExports.useMemo(() => {
+    const normaliseToken = (value) => String(value || "").trim().toUpperCase();
+    const selectedAliases = knownDfpLocationAliases(school);
+    const selectedAliasSet = new Set(selectedAliases.map(normaliseToken).filter(Boolean));
+    const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliasSet.has(normaliseToken(alias))));
+    const configuredAliases = configuredLocation ? getLocationSelectorAliases(configuredLocation) : [];
+    const expandedAliases = [school, ...selectedAliases, ...configuredAliases].flatMap((alias) => [alias, ...knownDfpLocationAliases(alias)]).map(normaliseToken).filter(Boolean);
+    return new Set(expandedAliases);
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
+  const isActiveLocationAlias = reactExports.useCallback((value) => {
+    const directToken = String(value || "").trim().toUpperCase();
+    if (!directToken) return false;
+    return [directToken, ...knownDfpLocationAliases(directToken)].map((alias) => String(alias || "").trim().toUpperCase()).some((alias) => activeLocationAliasSet.has(alias));
+  }, [activeLocationAliasSet, knownDfpLocationAliases]);
+  const personMatchesActiveLocation = reactExports.useCallback((person) => {
+    const personLocation = person?.location;
+    const personUnit = String(person?.unit || "").trim();
+    if (!personLocation && !personUnit) return true;
+    if (personLocation && isActiveLocationAlias(personLocation)) return true;
+    const unitCode = personUnit.split("/")[0].trim().toUpperCase();
+    if (!unitCode) return !personLocation;
+    const configuredUnit = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => String(unit.code || "").trim().toUpperCase() === unitCode);
+    if (configuredUnit?.locationCode && isActiveLocationAlias(configuredUnit.locationCode)) return true;
+    if (unitCode.startsWith("2FTS")) return isActiveLocationAlias("PEA");
+    if (unitCode.startsWith("1FTS") || unitCode.startsWith("CFS")) return isActiveLocationAlias("ESL");
+    return !personLocation;
+  }, [isActiveLocationAlias, platformConfig]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     if (activePlatformResourcePool) {
@@ -63641,36 +63668,17 @@ const App = () => {
   }, [activePlatformResourcePool, activeOperationalModel, activeUnitCode, platformConfigLoaded, school]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
-    const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
-    const locationShortCode2 = school === "ESL" ? "ESL" : "PEA";
-    const locationFiltered = allInstructorsData.filter((i) => {
-      if (!i.location && !i.unit) return true;
-      if (i.location) return i.location === locationFullName || i.location === locationShortCode2 || i.location === school;
-      if (i.unit) {
-        if (i.unit.startsWith("2FTS")) return locationFullName === "Pearce";
-        if (i.unit.startsWith("1FTS") || i.unit.startsWith("CFS")) return locationFullName === "East Sale";
-      }
-      return true;
-    });
-    const contextFiltered = activeUnitCode ? locationFiltered.filter((i) => !i.unit || String(i.unit || "").split("/")[0] === activeUnitCode) : locationFiltered;
+    const locationFiltered = allInstructorsData.filter(personMatchesActiveLocation);
+    const contextFiltered = activeUnitCode ? locationFiltered.filter((i) => !i.unit || String(i.unit || "").split("/")[0].trim().toUpperCase() === String(activeUnitCode || "").trim().toUpperCase()) : locationFiltered;
     if (!mockOn && !dbOn) return [];
     if (mockOn && dbOn) return contextFiltered;
     if (mockOn && !dbOn) return contextFiltered.filter((i) => i._dataSource !== "database");
     return contextFiltered.filter((i) => i._dataSource === "database");
-  }, [activeUnitCode, allInstructorsData, dataSourceSettings, school]);
+  }, [activeUnitCode, allInstructorsData, dataSourceSettings, personMatchesActiveLocation]);
   const traineesData = reactExports.useMemo(() => {
     const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
-    const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
-    const locationShortCode = school === "ESL" ? "ESL" : "PEA";
-    const locationFilteredTrainees = allTraineesData.filter((t) => {
-      if (t.location) return t.location === locationFullName || t.location === locationShortCode || t.location === school;
-      if (t.unit) {
-        if (t.unit.startsWith("2FTS")) return locationFullName === "Pearce";
-        if (t.unit.startsWith("1FTS") || t.unit.startsWith("CFS")) return locationFullName === "East Sale";
-      }
-      return true;
-    });
-    const contextFilteredTrainees = activeUnitCode ? locationFilteredTrainees.filter((t) => !t.unit || String(t.unit || "").split("/")[0] === activeUnitCode) : locationFilteredTrainees;
+    const locationFilteredTrainees = allTraineesData.filter(personMatchesActiveLocation);
+    const contextFilteredTrainees = activeUnitCode ? locationFilteredTrainees.filter((t) => !t.unit || String(t.unit || "").split("/")[0].trim().toUpperCase() === String(activeUnitCode || "").trim().toUpperCase()) : locationFilteredTrainees;
     if (!mockOn && !dbOn) return [];
     if (mockOn && !dbOn) return contextFilteredTrainees.filter((t) => t._dataSource === "mockdata");
     if (!mockOn && dbOn) return contextFilteredTrainees.filter((t) => t._dataSource === "database");
@@ -63678,7 +63686,7 @@ const App = () => {
     const dbCourses = new Set(dbTrainees.map((t) => t.course));
     const mockTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "mockdata" && !dbCourses.has(t.course));
     return [...mockTrainees, ...dbTrainees];
-  }, [activeUnitCode, allTraineesData, dataSourceSettings, school]);
+  }, [activeUnitCode, allTraineesData, dataSourceSettings, personMatchesActiveLocation]);
   const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
   const [authUser, setAuthUser] = reactExports.useState(null);
   const [authSessionToken, setAuthSessionToken] = reactExports.useState("");
