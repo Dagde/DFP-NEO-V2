@@ -62902,6 +62902,16 @@ const App = () => {
     }
     return dateObj;
   };
+  const formatDfpRetrievalDate = (dateStr) => {
+    const parsedDate = safeParseDate(dateStr);
+    if (!parsedDate) return dateStr || "selected date";
+    return parsedDate.toLocaleDateString("en-AU", {
+      day: "numeric",
+      month: "short",
+      year: "2-digit",
+      timeZone: "UTC"
+    }).replace(",", "");
+  };
   const showDarkAlert2 = (message, title = "Notice", variant = "info", autoCloseDelay) => {
     return new Promise((resolve) => {
       setDarkMessageModal({
@@ -74754,7 +74764,11 @@ Do you want to replace the existing entry?`,
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-5 w-5 rounded-full border-[3px] border-sky-400 border-t-transparent animate-spin" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-semibold text-white", children: "Retrieving DFP" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-base leading-7 text-gray-200", children: "Please wait while we retrieve the DFP for the selected date." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-base leading-7 text-gray-200", children: [
+        "Please wait while we retrieve the DFP for the ",
+        formatDfpRetrievalDate(date),
+        "."
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 h-3 overflow-hidden rounded-full border border-sky-400/40 bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "div",
         {

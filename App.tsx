@@ -9093,6 +9093,17 @@ const App: React.FC = () => {
         return dateObj;
     };
 
+    const formatDfpRetrievalDate = (dateStr: string): string => {
+        const parsedDate = safeParseDate(dateStr);
+        if (!parsedDate) return dateStr || 'selected date';
+        return parsedDate.toLocaleDateString('en-AU', {
+            day: 'numeric',
+            month: 'short',
+            year: '2-digit',
+            timeZone: 'UTC'
+        }).replace(',', '');
+    };
+
     // Dark Message Modal utility functions
     const showDarkAlert = (message: string, title: string = 'Notice', variant: 'error' | 'warning' | 'info' | 'success' = 'info', autoCloseDelay?: number) => {
         return new Promise<void>((resolve) => {
@@ -23612,7 +23623,7 @@ updates.forEach(update => {
                         <span className="text-2xl font-semibold text-white">Retrieving DFP</span>
                     </div>
                     <p className="text-base leading-7 text-gray-200">
-                        Please wait while we retrieve the DFP for the selected date.
+                        Please wait while we retrieve the DFP for the {formatDfpRetrievalDate(date)}.
                     </p>
                     <div className="mt-6 h-3 overflow-hidden rounded-full border border-sky-400/40 bg-gray-800">
                         <div
