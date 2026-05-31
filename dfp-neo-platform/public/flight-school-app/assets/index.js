@@ -5997,7 +5997,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
         children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full w-full min-w-0 items-center text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1 top-1/2 -translate-y-1/2 text-xs text-blue-800", children: resource.match(/\d+$/)?.[0] || "" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-7 top-1/2 -translate-y-1/2", children: formatResourceLabel2 ? formatResourceLabel2("PC-21") : "PC-21" }),
-          configLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-0.5 right-0.5 max-w-[28px] truncate text-right text-[9px] font-semibold leading-none text-gray-500", children: compactConfigLabel })
+          configLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-0.5 right-0.5 max-w-[28px] truncate text-right text-[10px] font-semibold leading-none text-gray-500", children: compactConfigLabel })
         ] }) : resource.startsWith("Deployed") ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-left pl-1 pr-1 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: displayText.replace(/\s+\d+$/, "") }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: displayText.replace(/\s+\d+$/, "") }) })
       },
       `${resource}-${index}`

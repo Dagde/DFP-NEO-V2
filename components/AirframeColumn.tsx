@@ -128,7 +128,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
                       </span>
                       <span className="absolute left-7 top-1/2 -translate-y-1/2">{formatResourceLabel ? formatResourceLabel('PC-21') : 'PC-21'}</span>
                       {configLabel && (
-                          <span className="absolute bottom-0.5 right-0.5 max-w-[28px] truncate text-right text-[9px] font-semibold leading-none text-gray-500">
+                          <span className="absolute bottom-0.5 right-0.5 max-w-[28px] truncate text-right text-[10px] font-semibold leading-none text-gray-500">
                               {compactConfigLabel}
                           </span>
                       )}
