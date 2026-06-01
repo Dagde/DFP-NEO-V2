@@ -73550,7 +73550,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onDateSelect: handleDateSelect,
             snapshotDates,
             events: eventsForStaffTraineeSchedule,
-            trainees: [...allTraineesData].sort((a, b) => {
+            trainees: [...traineesData].sort((a, b) => {
               if (a.course !== b.course) {
                 return a.course.localeCompare(b.course);
               }
@@ -73573,17 +73573,7 @@ ${conflictLines.join("\n")}${moreText}`,
           }
         );
       case "InstructorSchedule":
-        const locationFilteredInstructorsForSchedule = instructorsData.filter((i) => {
-          const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
-          const locationShortCode = school === "ESL" ? "ESL" : "PEA";
-          if (!i.location && !i.unit) return true;
-          if (i.location) return i.location === locationFullName || i.location === locationShortCode || i.location === school;
-          if (i.unit) {
-            if (i.unit.startsWith("2FTS")) return locationFullName === "Pearce";
-            if (i.unit.startsWith("1FTS") || i.unit.startsWith("CFS")) return locationFullName === "East Sale";
-          }
-          return true;
-        }).sort((a, b) => {
+        const locationFilteredInstructorsForSchedule = instructorsData.sort((a, b) => {
           const unitA = a.unit || "ZZZ";
           const unitB = b.unit || "ZZZ";
           if (unitA !== unitB) {
@@ -73628,17 +73618,7 @@ ${conflictLines.join("\n")}${moreText}`,
           throw error;
         }
       case "NextDayInstructorSchedule":
-        const sortedNextDayInstructors = instructorsData.filter((i) => {
-          const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
-          const locationShortCode = school === "ESL" ? "ESL" : "PEA";
-          if (!i.location && !i.unit) return true;
-          if (i.location) return i.location === locationFullName || i.location === locationShortCode || i.location === school;
-          if (i.unit) {
-            if (i.unit.startsWith("2FTS")) return locationFullName === "Pearce";
-            if (i.unit.startsWith("1FTS") || i.unit.startsWith("CFS")) return locationFullName === "East Sale";
-          }
-          return true;
-        }).sort((a, b) => {
+        const sortedNextDayInstructors = instructorsData.sort((a, b) => {
           const unitA = a.unit || "ZZZ";
           const unitB = b.unit || "ZZZ";
           if (unitA !== unitB) {
@@ -73672,16 +73652,7 @@ ${conflictLines.join("\n")}${moreText}`,
           NextDayTraineeScheduleView,
           {
             events: nextDayEventsForStaffTraineeSchedule.map((e) => ({ ...e, date: buildDfpDate })),
-            trainees: [...allTraineesData].filter((t) => {
-              const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
-              const locationShortCode = school === "ESL" ? "ESL" : "PEA";
-              if (t.location) return t.location === locationFullName || t.location === locationShortCode || t.location === school;
-              if (t.unit) {
-                if (t.unit.startsWith("2FTS")) return locationFullName === "Pearce";
-                if (t.unit.startsWith("1FTS") || t.unit.startsWith("CFS")) return locationFullName === "East Sale";
-              }
-              return true;
-            }).sort((a, b) => {
+            trainees: [...traineesData].sort((a, b) => {
               if (a.course !== b.course) {
                 return a.course.localeCompare(b.course);
               }

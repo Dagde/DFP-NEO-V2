@@ -21357,7 +21357,7 @@ updates.forEach(update => {
                             onDateSelect={handleDateSelect}
                             snapshotDates={snapshotDates}
                             events={eventsForStaffTraineeSchedule}
-                            trainees={[...allTraineesData]
+                            trainees={[...traineesData]
                                 .sort((a, b) => {
                                     // First sort by course
                                     if (a.course !== b.course) {
@@ -21384,20 +21384,7 @@ updates.forEach(update => {
                             aircraftNumberSettings={aircraftNumberSettings}
                        />;
             case 'InstructorSchedule':
-                // Filter instructors by location (not unit) for Staff Schedule
-                // ESL = East Sale, PEA = Pearce
                 const locationFilteredInstructorsForSchedule = instructorsData
-                    .filter(i => {
-                        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-                        const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
-                        if (!i.location && !i.unit) return true;
-                        if (i.location) return i.location === locationFullName || i.location === locationShortCode || i.location === school;
-                        if (i.unit) {
-                            if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
-                            if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
-                        }
-                        return true;
-                    })
                     .sort((a, b) => {
                         // First sort by unit (group by unit)
                         const unitA = a.unit || 'ZZZ'; // Put staff without unit at the end
@@ -21446,17 +21433,6 @@ updates.forEach(update => {
             case 'NextDayInstructorSchedule':
                 // Apply same sorting for Next Day view: group by unit, then configured rank/name order within unit.
                 const sortedNextDayInstructors = instructorsData
-                    .filter(i => {
-                        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-                        const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
-                        if (!i.location && !i.unit) return true;
-                        if (i.location) return i.location === locationFullName || i.location === locationShortCode || i.location === school;
-                        if (i.unit) {
-                            if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
-                            if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
-                        }
-                        return true;
-                    })
                     .sort((a, b) => {
                         const unitA = a.unit || 'ZZZ';
                         const unitB = b.unit || 'ZZZ';
@@ -21487,17 +21463,7 @@ updates.forEach(update => {
             case 'NextDayTraineeSchedule':
                 return <NextDayTraineeScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
-                    trainees={[...allTraineesData]
-                        .filter(t => {
-                            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-                            const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
-                            if (t.location) return t.location === locationFullName || t.location === locationShortCode || t.location === school;
-                            if (t.unit) {
-                                if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
-                                if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
-                            }
-                            return true;
-                        })
+                    trainees={[...traineesData]
                         .sort((a, b) => {
                             // First sort by course (matching Daily Schedule behavior)
                             if (a.course !== b.course) {
