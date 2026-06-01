@@ -123,7 +123,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
             >
               {resource.startsWith('PC-21') ? (
                   <div className="relative flex h-full w-full min-w-0 items-center text-center">
-                      <span className="absolute left-1 top-1/2 -translate-y-1/2 text-xs text-blue-800">
+                      <span className="absolute left-1 top-1/2 -translate-y-1/2 text-xs text-blue-300">
                           {resource.match(/\d+$/)?.[0] || ''}
                       </span>
                       <span className="absolute left-7 top-1/2 -translate-y-1/2">{formatResourceLabel ? formatResourceLabel('PC-21') : 'PC-21'}</span>
