@@ -1622,7 +1622,9 @@ const buildSettingsSnapshot = (state) => {
       allocationMode: "combined",
       selectedUnits: [],
       desiredAllocations: {},
-      remainderUnitIndex: -1
+      remainderUnitIndex: -1,
+      activeResourceSharingGroupId: "resource-sharing-1",
+      resourceSharingGroups: []
     },
     savedAt: (/* @__PURE__ */ new Date()).toISOString(),
     version: SETTINGS_VERSION
@@ -43356,6 +43358,49 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     ] })
   ] }) });
 };
+const createEmptyResourceSharingGroup = (index) => ({
+  id: `resource-sharing-${Date.now()}-${index}`,
+  name: `Sharing Arrangement ${index}`,
+  selectedUnits: [],
+  allocationMode: "combined",
+  desiredAllocations: {},
+  remainderUnitIndex: -1,
+  enabled: true
+});
+const normaliseResourceSharingGroups = (savedSettings) => {
+  const savedGroups = Array.isArray(savedSettings?.resourceSharingGroups) ? savedSettings.resourceSharingGroups : [];
+  if (savedGroups.length > 0) {
+    return savedGroups.map((group, index) => ({
+      id: group.id || `resource-sharing-${index + 1}`,
+      name: group.name || `Sharing Arrangement ${index + 1}`,
+      selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
+      allocationMode: group.allocationMode || "combined",
+      desiredAllocations: group.desiredAllocations || {},
+      remainderUnitIndex: typeof group.remainderUnitIndex === "number" ? group.remainderUnitIndex : -1,
+      enabled: group.enabled !== false
+    }));
+  }
+  if ((savedSettings?.selectedUnits || []).length > 0) {
+    return [{
+      id: savedSettings?.activeResourceSharingGroupId || "resource-sharing-1",
+      name: `${(savedSettings?.selectedUnits || []).join("+")} Shared Fleet`,
+      selectedUnits: savedSettings?.selectedUnits || [],
+      allocationMode: savedSettings?.allocationMode || "combined",
+      desiredAllocations: savedSettings?.desiredAllocations || {},
+      remainderUnitIndex: typeof savedSettings?.remainderUnitIndex === "number" ? savedSettings.remainderUnitIndex : -1,
+      enabled: true
+    }];
+  }
+  return [{
+    id: "resource-sharing-1",
+    name: "Sharing Arrangement 1",
+    selectedUnits: [],
+    allocationMode: "combined",
+    desiredAllocations: {},
+    remainderUnitIndex: -1,
+    enabled: true
+  }];
+};
 const OrganisationSettings = ({
   units,
   currentAircraftAvailable = 0,
@@ -43364,13 +43409,18 @@ const OrganisationSettings = ({
   onSettingsChange,
   settingsLoaded = false
 }) => {
+  const initialResourceSharingGroups = reactExports.useMemo(() => normaliseResourceSharingGroups(savedSettings), []);
+  const initialActiveResourceSharingGroupId = savedSettings?.activeResourceSharingGroupId || initialResourceSharingGroups[0]?.id || "resource-sharing-1";
+  const initialActiveResourceSharingGroup = initialResourceSharingGroups.find((group) => group.id === initialActiveResourceSharingGroupId) || initialResourceSharingGroups[0] || createEmptyResourceSharingGroup(1);
   const [staffSharingEnabled, setStaffSharingEnabled] = reactExports.useState(savedSettings?.staffSharingEnabled ?? false);
   const [staffSharingUnits, setStaffSharingUnits] = reactExports.useState(savedSettings?.staffSharingUnits ?? []);
   const [fleetSharingEnabled, setFleetSharingEnabled] = reactExports.useState(savedSettings?.fleetSharingEnabled ?? false);
-  const [selectedUnits, setSelectedUnits] = reactExports.useState(savedSettings?.selectedUnits ?? []);
-  const [allocationMode, setAllocationMode] = reactExports.useState(savedSettings?.allocationMode ?? "combined");
-  const [desiredAllocations, setDesiredAllocations] = reactExports.useState(savedSettings?.desiredAllocations ?? {});
-  const [remainderUnitIndex, setRemainderUnitIndex] = reactExports.useState(savedSettings?.remainderUnitIndex ?? -1);
+  const [resourceSharingGroups, setResourceSharingGroups] = reactExports.useState(initialResourceSharingGroups);
+  const [activeResourceSharingGroupId, setActiveResourceSharingGroupId] = reactExports.useState(initialActiveResourceSharingGroup.id);
+  const [selectedUnits, setSelectedUnits] = reactExports.useState(initialActiveResourceSharingGroup.selectedUnits);
+  const [allocationMode, setAllocationMode] = reactExports.useState(initialActiveResourceSharingGroup.allocationMode);
+  const [desiredAllocations, setDesiredAllocations] = reactExports.useState(initialActiveResourceSharingGroup.desiredAllocations);
+  const [remainderUnitIndex, setRemainderUnitIndex] = reactExports.useState(initialActiveResourceSharingGroup.remainderUnitIndex);
   const hasInitializedFromDB = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
@@ -43378,12 +43428,40 @@ const OrganisationSettings = ({
       setStaffSharingEnabled(savedSettings.staffSharingEnabled ?? false);
       setStaffSharingUnits(savedSettings.staffSharingUnits ?? []);
       setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
-      setAllocationMode(savedSettings.allocationMode ?? "combined");
-      setSelectedUnits(savedSettings.selectedUnits ?? []);
-      setDesiredAllocations(savedSettings.desiredAllocations ?? {});
-      setRemainderUnitIndex(savedSettings.remainderUnitIndex ?? -1);
+      const loadedGroups = normaliseResourceSharingGroups(savedSettings);
+      const loadedActiveId = savedSettings.activeResourceSharingGroupId || loadedGroups[0]?.id || "resource-sharing-1";
+      const loadedActiveGroup = loadedGroups.find((group) => group.id === loadedActiveId) || loadedGroups[0] || createEmptyResourceSharingGroup(1);
+      setResourceSharingGroups(loadedGroups);
+      setActiveResourceSharingGroupId(loadedActiveGroup.id);
+      setAllocationMode(loadedActiveGroup.allocationMode);
+      setSelectedUnits(loadedActiveGroup.selectedUnits);
+      setDesiredAllocations(loadedActiveGroup.desiredAllocations);
+      setRemainderUnitIndex(loadedActiveGroup.remainderUnitIndex);
     }
   }, [settingsLoaded, savedSettings]);
+  const activeResourceSharingGroup = resourceSharingGroups.find((group) => group.id === activeResourceSharingGroupId) || resourceSharingGroups[0] || createEmptyResourceSharingGroup(1);
+  const persistedResourceSharingGroups = reactExports.useMemo(() => {
+    return resourceSharingGroups.map(
+      (group) => group.id === activeResourceSharingGroupId ? {
+        ...group,
+        selectedUnits,
+        allocationMode,
+        desiredAllocations,
+        remainderUnitIndex
+      } : group
+    );
+  }, [resourceSharingGroups, activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
+  reactExports.useEffect(() => {
+    setResourceSharingGroups((previous) => previous.map(
+      (group) => group.id === activeResourceSharingGroupId ? {
+        ...group,
+        selectedUnits,
+        allocationMode,
+        desiredAllocations,
+        remainderUnitIndex
+      } : group
+    ));
+  }, [activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
   reactExports.useEffect(() => {
     if (!settingsLoaded && !hasInitializedFromDB.current) {
       return;
@@ -43396,10 +43474,12 @@ const OrganisationSettings = ({
         allocationMode,
         selectedUnits,
         desiredAllocations,
-        remainderUnitIndex
+        remainderUnitIndex,
+        activeResourceSharingGroupId,
+        resourceSharingGroups: persistedResourceSharingGroups
       });
     }
-  }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex]);
+  }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex, activeResourceSharingGroupId, persistedResourceSharingGroups]);
   const [actualAllocations, setActualAllocations] = reactExports.useState({});
   const [validationMessage, setValidationMessage] = reactExports.useState(null);
   const [validationType, setValidationType] = reactExports.useState("info");
@@ -43475,6 +43555,43 @@ const OrganisationSettings = ({
         return [...prev, unitCode];
       }
     });
+  };
+  const loadResourceSharingGroup = (group) => {
+    setActiveResourceSharingGroupId(group.id);
+    setSelectedUnits(group.selectedUnits || []);
+    setAllocationMode(group.allocationMode || "combined");
+    setDesiredAllocations(group.desiredAllocations || {});
+    setRemainderUnitIndex(typeof group.remainderUnitIndex === "number" ? group.remainderUnitIndex : -1);
+    setValidationMessage(null);
+  };
+  const handleSelectResourceSharingGroup = (groupId) => {
+    const group = persistedResourceSharingGroups.find((candidate) => candidate.id === groupId);
+    if (!group) return;
+    loadResourceSharingGroup(group);
+    logAudit("Settings - Organisation", "Edit", `Active aircraft resource sharing arrangement changed to ${group.name}`);
+  };
+  const handleAddResourceSharingGroup = () => {
+    const nextIndex = resourceSharingGroups.length + 1;
+    const newGroup = createEmptyResourceSharingGroup(nextIndex);
+    const updatedGroups = [...persistedResourceSharingGroups, newGroup];
+    setResourceSharingGroups(updatedGroups);
+    loadResourceSharingGroup(newGroup);
+    logAudit("Settings - Organisation", "Edit", `Aircraft resource sharing arrangement ${newGroup.name} added`);
+  };
+  const handleDeleteResourceSharingGroup = () => {
+    if (resourceSharingGroups.length <= 1) return;
+    const deletedGroup = activeResourceSharingGroup;
+    const remainingGroups = persistedResourceSharingGroups.filter((group) => group.id !== activeResourceSharingGroupId);
+    const nextGroup = remainingGroups[0] || createEmptyResourceSharingGroup(1);
+    setResourceSharingGroups(remainingGroups.length > 0 ? remainingGroups : [nextGroup]);
+    loadResourceSharingGroup(nextGroup);
+    logAudit("Settings - Organisation", "Edit", `Aircraft resource sharing arrangement ${deletedGroup.name} deleted`);
+  };
+  const handleRenameResourceSharingGroup = (name) => {
+    setResourceSharingGroups((previous) => previous.map(
+      (group) => group.id === activeResourceSharingGroupId ? { ...group, name } : group
+    ));
+    logAudit("Settings - Organisation", "Edit", `Aircraft resource sharing arrangement renamed to ${name || "Unnamed arrangement"}`);
   };
   const handleToggleUnit = (unitCode) => {
     const isCurrentlySelected = selectedUnits.includes(unitCode);
@@ -43664,6 +43781,75 @@ const OrganisationSettings = ({
         ] }) })
       ] }),
       fleetSharingEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-end", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Aircraft Sharing Arrangement" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: activeResourceSharingGroupId,
+                  onChange: (event) => handleSelectResourceSharingGroup(event.target.value),
+                  className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500",
+                  children: persistedResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
+                    group.name || "Unnamed arrangement",
+                    group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
+                  ] }, group.id))
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Arrangement Name" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: activeResourceSharingGroup.name || "",
+                  onChange: (event) => handleRenameResourceSharingGroup(event.target.value),
+                  placeholder: "e.g. YMES 1FTS/CFS shared PC-21 pool",
+                  className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: handleAddResourceSharingGroup,
+                  className: "rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500",
+                  children: "Add Arrangement"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: handleDeleteResourceSharingGroup,
+                  disabled: resourceSharingGroups.length <= 1,
+                  className: `rounded-md px-3 py-2 text-xs font-semibold ${resourceSharingGroups.length <= 1 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-red-600/80 text-white hover:bg-red-600"}`,
+                  children: "Delete"
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each shared resource pool in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled." }),
+          persistedResourceSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: persistedResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: `rounded border px-3 py-2 text-xs ${group.id === activeResourceSharingGroupId ? "border-sky-500/50 bg-sky-500/10 text-sky-100" : "border-gray-700 bg-gray-900/60 text-gray-400"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold", children: [
+                  group.name || "Unnamed arrangement",
+                  ":"
+                ] }),
+                " ",
+                group.selectedUnits.length > 0 ? group.selectedUnits.join(", ") : "No units selected"
+              ]
+            },
+            group.id
+          )) })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Aircraft / Resources" }),
@@ -48264,6 +48450,7 @@ const LocaleSettingsSection = ({
   ] });
 };
 const SettingsViewWithMenu = (props) => {
+  const contentScrollRef = reactExports.useRef(null);
   const [activeSection, setActiveSection] = reactExports.useState(() => {
     try {
       const restoreSection = sessionStorage.getItem("dfp_restore_settings_section_after_reload");
@@ -48283,6 +48470,9 @@ const SettingsViewWithMenu = (props) => {
   const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState("Airmanship");
   const [settingsSearch, setSettingsSearch] = reactExports.useState("");
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
+  reactExports.useEffect(() => {
+    contentScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [activeSection]);
   React.useEffect(() => {
     setFilteredMockdata(props.instructorsData);
   }, [props.instructorsData]);
@@ -48443,7 +48633,7 @@ const SettingsViewWithMenu = (props) => {
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 sm:p-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: contentScrollRef, className: "flex-1 overflow-y-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 sm:p-6", children: [
       activeSection === "home" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/70 shadow-lg overflow-hidden", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
@@ -63698,7 +63888,9 @@ const App = () => {
     allocationMode: "combined",
     selectedUnits: [],
     desiredAllocations: {},
-    remainderUnitIndex: -1
+    remainderUnitIndex: -1,
+    activeResourceSharingGroupId: "resource-sharing-1",
+    resourceSharingGroups: []
   });
   const [allInstructorsData, setInstructorsData] = reactExports.useState([]);
   const [archivedInstructorsData, setArchivedInstructorsData] = reactExports.useState([]);
@@ -63798,24 +63990,32 @@ const App = () => {
     })).filter((unit) => unit.code);
     if (configuredUnits.length > 0) {
       const configuredByCode = new Map(configuredUnits.map((unit) => [normaliseUnitCode(unit.code), unit]));
-      const sharedUnitCodes = Array.from(new Set(
-        (organisationSettings.fleetSharingEnabled ? organisationSettings.selectedUnits : []).map(normaliseUnitCode).filter((unitCode) => configuredByCode.has(unitCode))
-      ));
-      if (sharedUnitCodes.length > 1) {
+      const sharingGroups2 = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0 ? organisationSettings.resourceSharingGroups : (organisationSettings.selectedUnits || []).length > 1 ? [{
+        id: "legacy-resource-sharing",
+        name: `${organisationSettings.selectedUnits.join("+")} Shared Fleet`,
+        selectedUnits: organisationSettings.selectedUnits,
+        allocationMode: organisationSettings.allocationMode,
+        desiredAllocations: organisationSettings.desiredAllocations,
+        remainderUnitIndex: organisationSettings.remainderUnitIndex,
+        enabled: true
+      }] : [];
+      const sharedContextOptions = organisationSettings.fleetSharingEnabled ? sharingGroups2.flatMap((group) => {
+        if (group?.enabled === false) return [];
+        const sharedUnitCodes = Array.from(new Set(
+          (group?.selectedUnits || []).map(normaliseUnitCode).filter((unitCode) => configuredByCode.has(unitCode))
+        ));
+        if (sharedUnitCodes.length <= 1) return [];
         const sharedUnits = sharedUnitCodes.map((unitCode) => configuredByCode.get(unitCode)).filter((unit) => Boolean(unit));
         const sharedModels = new Set(sharedUnits.map((unit) => unit.model));
-        return [
-          ...configuredUnits,
-          {
-            code: sharedUnitCodes.join("+"),
-            name: `${sharedUnitCodes.join("+")} Shared Fleet`,
-            model: sharedModels.size === 1 ? sharedUnits[0].model : normaliseOperationalModel("flight_school"),
-            memberUnits: sharedUnitCodes,
-            isSharedFleetContext: true
-          }
-        ];
-      }
-      return configuredUnits;
+        return [{
+          code: sharedUnitCodes.join("+"),
+          name: String(group?.name || `${sharedUnitCodes.join("+")} Shared Fleet`),
+          model: sharedModels.size === 1 ? sharedUnits[0].model : normaliseOperationalModel("flight_school"),
+          memberUnits: sharedUnitCodes,
+          isSharedFleetContext: true
+        }];
+      }) : [];
+      return [...configuredUnits, ...sharedContextOptions];
     }
     const hasConfiguredPlatformUnits = (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE");
     if (hasConfiguredPlatformUnits) return [];
@@ -63825,23 +64025,40 @@ const App = () => {
       name: code,
       model: normaliseOperationalModel("flight_school")
     }));
-    const sharedFallbackUnits = Array.from(new Set(
-      (organisationSettings.fleetSharingEnabled ? organisationSettings.selectedUnits : []).map(normaliseUnitCode).filter((unitCode) => fallbackCodes.includes(unitCode))
-    ));
-    if (sharedFallbackUnits.length > 1) {
-      return [
-        ...fallbackUnits,
-        {
-          code: sharedFallbackUnits.join("+"),
-          name: `${sharedFallbackUnits.join("+")} Shared Fleet`,
-          model: normaliseOperationalModel("flight_school"),
-          memberUnits: sharedFallbackUnits,
-          isSharedFleetContext: true
-        }
-      ];
-    }
-    return fallbackUnits;
-  }, [getLocationSelectorAliases, organisationSettings.fleetSharingEnabled, organisationSettings.selectedUnits, platformConfig]);
+    const sharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0 ? organisationSettings.resourceSharingGroups : (organisationSettings.selectedUnits || []).length > 1 ? [{
+      id: "legacy-resource-sharing",
+      name: `${organisationSettings.selectedUnits.join("+")} Shared Fleet`,
+      selectedUnits: organisationSettings.selectedUnits,
+      allocationMode: organisationSettings.allocationMode,
+      desiredAllocations: organisationSettings.desiredAllocations,
+      remainderUnitIndex: organisationSettings.remainderUnitIndex,
+      enabled: true
+    }] : [];
+    const sharedFallbackContexts = organisationSettings.fleetSharingEnabled ? sharingGroups.flatMap((group) => {
+      if (group?.enabled === false) return [];
+      const sharedFallbackUnits = Array.from(new Set(
+        (group?.selectedUnits || []).map(normaliseUnitCode).filter((unitCode) => fallbackCodes.includes(unitCode))
+      ));
+      if (sharedFallbackUnits.length <= 1) return [];
+      return [{
+        code: sharedFallbackUnits.join("+"),
+        name: String(group?.name || `${sharedFallbackUnits.join("+")} Shared Fleet`),
+        model: normaliseOperationalModel("flight_school"),
+        memberUnits: sharedFallbackUnits,
+        isSharedFleetContext: true
+      }];
+    }) : [];
+    return [...fallbackUnits, ...sharedFallbackContexts];
+  }, [
+    getLocationSelectorAliases,
+    organisationSettings.allocationMode,
+    organisationSettings.desiredAllocations,
+    organisationSettings.fleetSharingEnabled,
+    organisationSettings.remainderUnitIndex,
+    organisationSettings.resourceSharingGroups,
+    organisationSettings.selectedUnits,
+    platformConfig
+  ]);
   const activeLocationUnitOptions = reactExports.useMemo(
     () => getUnitOptionsForLocation(school),
     [getUnitOptionsForLocation, school]

@@ -9388,6 +9388,8 @@ const App: React.FC = () => {
         selectedUnits: [],
         desiredAllocations: {},
         remainderUnitIndex: -1,
+        activeResourceSharingGroupId: 'resource-sharing-1',
+        resourceSharingGroups: [],
     });
     const [allInstructorsData, setInstructorsData] = useState<Instructor[]>([]);
 
@@ -9509,28 +9511,42 @@ const App: React.FC = () => {
 
         if (configuredUnits.length > 0) {
             const configuredByCode = new Map(configuredUnits.map(unit => [normaliseUnitCode(unit.code), unit]));
-            const sharedUnitCodes = Array.from(new Set(
-                (organisationSettings.fleetSharingEnabled ? organisationSettings.selectedUnits : [])
-                    .map(normaliseUnitCode)
-                    .filter(unitCode => configuredByCode.has(unitCode))
-            ));
-            if (sharedUnitCodes.length > 1) {
-                const sharedUnits = sharedUnitCodes
-                    .map(unitCode => configuredByCode.get(unitCode))
-                    .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit));
-                const sharedModels = new Set(sharedUnits.map(unit => unit.model));
-                return [
-                    ...configuredUnits,
-                    {
+            const sharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0
+                ? organisationSettings.resourceSharingGroups
+                : (organisationSettings.selectedUnits || []).length > 1
+                    ? [{
+                        id: 'legacy-resource-sharing',
+                        name: `${organisationSettings.selectedUnits.join('+')} Shared Fleet`,
+                        selectedUnits: organisationSettings.selectedUnits,
+                        allocationMode: organisationSettings.allocationMode,
+                        desiredAllocations: organisationSettings.desiredAllocations,
+                        remainderUnitIndex: organisationSettings.remainderUnitIndex,
+                        enabled: true,
+                    }]
+                    : [];
+            const sharedContextOptions = organisationSettings.fleetSharingEnabled
+                ? sharingGroups.flatMap((group: any) => {
+                    if (group?.enabled === false) return [];
+                    const sharedUnitCodes = Array.from(new Set(
+                        (group?.selectedUnits || [])
+                            .map(normaliseUnitCode)
+                            .filter(unitCode => configuredByCode.has(unitCode))
+                    ));
+                    if (sharedUnitCodes.length <= 1) return [];
+                    const sharedUnits = sharedUnitCodes
+                        .map(unitCode => configuredByCode.get(unitCode))
+                        .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit));
+                    const sharedModels = new Set(sharedUnits.map(unit => unit.model));
+                    return [{
                         code: sharedUnitCodes.join('+'),
-                        name: `${sharedUnitCodes.join('+')} Shared Fleet`,
+                        name: String(group?.name || `${sharedUnitCodes.join('+')} Shared Fleet`),
                         model: sharedModels.size === 1 ? sharedUnits[0].model : normaliseOperationalModel('flight_school'),
                         memberUnits: sharedUnitCodes,
                         isSharedFleetContext: true,
-                    },
-                ];
-            }
-            return configuredUnits;
+                    }];
+                })
+                : [];
+            return [...configuredUnits, ...sharedContextOptions];
         }
         const hasConfiguredPlatformUnits = (platformConfig?.units || [])
             .some((unit: any) => unit.status !== 'INACTIVE');
@@ -9542,25 +9558,48 @@ const App: React.FC = () => {
             name: code,
             model: normaliseOperationalModel('flight_school'),
         }));
-        const sharedFallbackUnits = Array.from(new Set(
-            (organisationSettings.fleetSharingEnabled ? organisationSettings.selectedUnits : [])
-                .map(normaliseUnitCode)
-                .filter(unitCode => fallbackCodes.includes(unitCode))
-        ));
-        if (sharedFallbackUnits.length > 1) {
-            return [
-                ...fallbackUnits,
-                {
+        const sharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0
+            ? organisationSettings.resourceSharingGroups
+            : (organisationSettings.selectedUnits || []).length > 1
+                ? [{
+                    id: 'legacy-resource-sharing',
+                    name: `${organisationSettings.selectedUnits.join('+')} Shared Fleet`,
+                    selectedUnits: organisationSettings.selectedUnits,
+                    allocationMode: organisationSettings.allocationMode,
+                    desiredAllocations: organisationSettings.desiredAllocations,
+                    remainderUnitIndex: organisationSettings.remainderUnitIndex,
+                    enabled: true,
+                }]
+                : [];
+        const sharedFallbackContexts = organisationSettings.fleetSharingEnabled
+            ? sharingGroups.flatMap((group: any) => {
+                if (group?.enabled === false) return [];
+                const sharedFallbackUnits = Array.from(new Set(
+                    (group?.selectedUnits || [])
+                        .map(normaliseUnitCode)
+                        .filter(unitCode => fallbackCodes.includes(unitCode))
+                ));
+                if (sharedFallbackUnits.length <= 1) return [];
+                return [{
                     code: sharedFallbackUnits.join('+'),
-                    name: `${sharedFallbackUnits.join('+')} Shared Fleet`,
+                    name: String(group?.name || `${sharedFallbackUnits.join('+')} Shared Fleet`),
                     model: normaliseOperationalModel('flight_school'),
                     memberUnits: sharedFallbackUnits,
                     isSharedFleetContext: true,
-                },
-            ];
-        }
-        return fallbackUnits;
-    }, [getLocationSelectorAliases, organisationSettings.fleetSharingEnabled, organisationSettings.selectedUnits, platformConfig]);
+                }];
+            })
+            : [];
+        return [...fallbackUnits, ...sharedFallbackContexts];
+    }, [
+        getLocationSelectorAliases,
+        organisationSettings.allocationMode,
+        organisationSettings.desiredAllocations,
+        organisationSettings.fleetSharingEnabled,
+        organisationSettings.remainderUnitIndex,
+        organisationSettings.resourceSharingGroups,
+        organisationSettings.selectedUnits,
+        platformConfig
+    ]);
 
     const activeLocationUnitOptions = useMemo(
         () => getUnitOptionsForLocation(school),

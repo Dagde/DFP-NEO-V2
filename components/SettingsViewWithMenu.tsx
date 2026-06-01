@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
@@ -98,6 +98,16 @@ interface SettingsViewWithMenuProps {
         selectedUnits: string[];
         desiredAllocations: Record<string, number>;
         remainderUnitIndex: number;
+        activeResourceSharingGroupId?: string;
+        resourceSharingGroups?: Array<{
+            id: string;
+            name: string;
+            selectedUnits: string[];
+            allocationMode: 'combined' | 'fixed';
+            desiredAllocations: Record<string, number>;
+            remainderUnitIndex: number;
+            enabled?: boolean;
+        }>;
     };
     onUpdateOrganisationSettings?: (settings: {
         staffSharingEnabled: boolean;
@@ -107,6 +117,16 @@ interface SettingsViewWithMenuProps {
         selectedUnits: string[];
         desiredAllocations: Record<string, number>;
         remainderUnitIndex: number;
+        activeResourceSharingGroupId?: string;
+        resourceSharingGroups?: Array<{
+            id: string;
+            name: string;
+            selectedUnits: string[];
+            allocationMode: 'combined' | 'fixed';
+            desiredAllocations: Record<string, number>;
+            remainderUnitIndex: number;
+            enabled?: boolean;
+        }>;
     }) => void;
     onDataSourceSettingsChange?: (settings: {
         staff: boolean;
@@ -1166,6 +1186,7 @@ const LocaleSettingsSection: React.FC<{
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     type ActiveSection = SettingsMenuSection | 'home';
+    const contentScrollRef = useRef<HTMLDivElement | null>(null);
     const [activeSection, setActiveSection] = useState<ActiveSection>(() => {
         try {
             const restoreSection = sessionStorage.getItem('dfp_restore_settings_section_after_reload');
@@ -1184,6 +1205,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>('Airmanship');
     const [settingsSearch, setSettingsSearch] = useState('');
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        contentScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, [activeSection]);
 
     // Initialize filtered mockdata with instructorsData
     React.useEffect(() => {
@@ -1380,7 +1405,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 )}
             </aside>
 
-            <div className="flex-1 overflow-y-auto bg-gray-900">
+            <div ref={contentScrollRef} className="flex-1 overflow-y-auto bg-gray-900">
                 <div className="p-4 sm:p-6">
 
                     {/* ── ICON GRID HOME ───────────────────────────────────── */}

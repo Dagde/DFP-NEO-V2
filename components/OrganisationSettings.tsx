@@ -11,14 +11,28 @@ interface UnitActualAllocation {
   actualAllocation: number;
 }
 
+type AllocationMode = 'combined' | 'fixed';
+
+interface ResourceSharingGroup {
+  id: string;
+  name: string;
+  selectedUnits: string[];
+  allocationMode: AllocationMode;
+  desiredAllocations: Record<string, number>;
+  remainderUnitIndex: number;
+  enabled?: boolean;
+}
+
 interface OrganisationSettingsSavedState {
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
   fleetSharingEnabled: boolean;
-  allocationMode: 'combined' | 'fixed';
+  allocationMode: AllocationMode;
   selectedUnits: string[];
   desiredAllocations: Record<string, number>;
   remainderUnitIndex: number;
+  activeResourceSharingGroupId?: string;
+  resourceSharingGroups?: ResourceSharingGroup[];
 }
 
 interface OrganisationSettingsProps {
@@ -30,7 +44,55 @@ interface OrganisationSettingsProps {
   settingsLoaded?: boolean;
 }
 
-type AllocationMode = 'combined' | 'fixed';
+const createEmptyResourceSharingGroup = (index: number): ResourceSharingGroup => ({
+  id: `resource-sharing-${Date.now()}-${index}`,
+  name: `Sharing Arrangement ${index}`,
+  selectedUnits: [],
+  allocationMode: 'combined',
+  desiredAllocations: {},
+  remainderUnitIndex: -1,
+  enabled: true,
+});
+
+const normaliseResourceSharingGroups = (savedSettings?: OrganisationSettingsSavedState): ResourceSharingGroup[] => {
+  const savedGroups = Array.isArray(savedSettings?.resourceSharingGroups)
+    ? savedSettings.resourceSharingGroups
+    : [];
+
+  if (savedGroups.length > 0) {
+    return savedGroups.map((group, index) => ({
+      id: group.id || `resource-sharing-${index + 1}`,
+      name: group.name || `Sharing Arrangement ${index + 1}`,
+      selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
+      allocationMode: group.allocationMode || 'combined',
+      desiredAllocations: group.desiredAllocations || {},
+      remainderUnitIndex: typeof group.remainderUnitIndex === 'number' ? group.remainderUnitIndex : -1,
+      enabled: group.enabled !== false,
+    }));
+  }
+
+  if ((savedSettings?.selectedUnits || []).length > 0) {
+    return [{
+      id: savedSettings?.activeResourceSharingGroupId || 'resource-sharing-1',
+      name: `${(savedSettings?.selectedUnits || []).join('+')} Shared Fleet`,
+      selectedUnits: savedSettings?.selectedUnits || [],
+      allocationMode: savedSettings?.allocationMode || 'combined',
+      desiredAllocations: savedSettings?.desiredAllocations || {},
+      remainderUnitIndex: typeof savedSettings?.remainderUnitIndex === 'number' ? savedSettings.remainderUnitIndex : -1,
+      enabled: true,
+    }];
+  }
+
+  return [{
+    id: 'resource-sharing-1',
+    name: 'Sharing Arrangement 1',
+    selectedUnits: [],
+    allocationMode: 'combined',
+    desiredAllocations: {},
+    remainderUnitIndex: -1,
+    enabled: true,
+  }];
+};
 
 const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({ 
   units, 
@@ -40,6 +102,13 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   onSettingsChange,
   settingsLoaded = false,
 }) => {
+  const initialResourceSharingGroups = useMemo(() => normaliseResourceSharingGroups(savedSettings), []);
+  const initialActiveResourceSharingGroupId = savedSettings?.activeResourceSharingGroupId || initialResourceSharingGroups[0]?.id || 'resource-sharing-1';
+  const initialActiveResourceSharingGroup =
+    initialResourceSharingGroups.find(group => group.id === initialActiveResourceSharingGroupId) ||
+    initialResourceSharingGroups[0] ||
+    createEmptyResourceSharingGroup(1);
+
   // Staff Sharing enable/disable
   const [staffSharingEnabled, setStaffSharingEnabled] = useState(savedSettings?.staffSharingEnabled ?? false);
   // Selected units for staff sharing
@@ -49,16 +118,18 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   const [fleetSharingEnabled, setFleetSharingEnabled] = useState(savedSettings?.fleetSharingEnabled ?? false);
 
   // Selected units to share assets with
-  const [selectedUnits, setSelectedUnits] = useState<string[]>(savedSettings?.selectedUnits ?? []);
+  const [resourceSharingGroups, setResourceSharingGroups] = useState<ResourceSharingGroup[]>(initialResourceSharingGroups);
+  const [activeResourceSharingGroupId, setActiveResourceSharingGroupId] = useState<string>(initialActiveResourceSharingGroup.id);
+  const [selectedUnits, setSelectedUnits] = useState<string[]>(initialActiveResourceSharingGroup.selectedUnits);
   
   // Allocation mode: combined (pool) or fixed (per-unit caps)
-  const [allocationMode, setAllocationMode] = useState<AllocationMode>(savedSettings?.allocationMode ?? 'combined');
+  const [allocationMode, setAllocationMode] = useState<AllocationMode>(initialActiveResourceSharingGroup.allocationMode);
   
   // Desired allocations for fixed mode (user-entered values)
-  const [desiredAllocations, setDesiredAllocations] = useState<Record<string, number>>(savedSettings?.desiredAllocations ?? {});
+  const [desiredAllocations, setDesiredAllocations] = useState<Record<string, number>>(initialActiveResourceSharingGroup.desiredAllocations);
   
   // Which unit is the auto-calculated remainder unit (index in selectedUnits array)
-  const [remainderUnitIndex, setRemainderUnitIndex] = useState<number>(savedSettings?.remainderUnitIndex ?? -1);
+  const [remainderUnitIndex, setRemainderUnitIndex] = useState<number>(initialActiveResourceSharingGroup.remainderUnitIndex);
 
   // Ref to ensure we only sync from DB data once (prevent re-syncing on parent re-renders)
   const hasInitializedFromDB = useRef(false);
@@ -70,12 +141,50 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       setStaffSharingEnabled(savedSettings.staffSharingEnabled ?? false);
       setStaffSharingUnits(savedSettings.staffSharingUnits ?? []);
       setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
-      setAllocationMode(savedSettings.allocationMode ?? 'combined');
-      setSelectedUnits(savedSettings.selectedUnits ?? []);
-      setDesiredAllocations(savedSettings.desiredAllocations ?? {});
-      setRemainderUnitIndex(savedSettings.remainderUnitIndex ?? -1);
+      const loadedGroups = normaliseResourceSharingGroups(savedSettings);
+      const loadedActiveId = savedSettings.activeResourceSharingGroupId || loadedGroups[0]?.id || 'resource-sharing-1';
+      const loadedActiveGroup = loadedGroups.find(group => group.id === loadedActiveId) || loadedGroups[0] || createEmptyResourceSharingGroup(1);
+      setResourceSharingGroups(loadedGroups);
+      setActiveResourceSharingGroupId(loadedActiveGroup.id);
+      setAllocationMode(loadedActiveGroup.allocationMode);
+      setSelectedUnits(loadedActiveGroup.selectedUnits);
+      setDesiredAllocations(loadedActiveGroup.desiredAllocations);
+      setRemainderUnitIndex(loadedActiveGroup.remainderUnitIndex);
     }
   }, [settingsLoaded, savedSettings]);
+
+  const activeResourceSharingGroup =
+    resourceSharingGroups.find(group => group.id === activeResourceSharingGroupId) ||
+    resourceSharingGroups[0] ||
+    createEmptyResourceSharingGroup(1);
+
+  const persistedResourceSharingGroups = useMemo(() => {
+    return resourceSharingGroups.map(group =>
+      group.id === activeResourceSharingGroupId
+        ? {
+            ...group,
+            selectedUnits,
+            allocationMode,
+            desiredAllocations,
+            remainderUnitIndex,
+          }
+        : group
+    );
+  }, [resourceSharingGroups, activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
+
+  useEffect(() => {
+    setResourceSharingGroups(previous => previous.map(group =>
+      group.id === activeResourceSharingGroupId
+        ? {
+            ...group,
+            selectedUnits,
+            allocationMode,
+            desiredAllocations,
+            remainderUnitIndex,
+          }
+        : group
+    ));
+  }, [activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
 
   // Notify parent of changes for persistence (skip before DB has loaded)
   useEffect(() => {
@@ -91,9 +200,11 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         selectedUnits,
         desiredAllocations,
         remainderUnitIndex,
+        activeResourceSharingGroupId,
+        resourceSharingGroups: persistedResourceSharingGroups,
       });
     }
-  }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex]);
+  }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex, activeResourceSharingGroupId, persistedResourceSharingGroups]);
   
   // Actual allocations (after pro-rata adjustment if needed)
   const [actualAllocations, setActualAllocations] = useState<Record<string, number>>({});
@@ -198,6 +309,50 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         return [...prev, unitCode];
       }
     });
+  };
+
+  const loadResourceSharingGroup = (group: ResourceSharingGroup) => {
+    setActiveResourceSharingGroupId(group.id);
+    setSelectedUnits(group.selectedUnits || []);
+    setAllocationMode(group.allocationMode || 'combined');
+    setDesiredAllocations(group.desiredAllocations || {});
+    setRemainderUnitIndex(typeof group.remainderUnitIndex === 'number' ? group.remainderUnitIndex : -1);
+    setValidationMessage(null);
+  };
+
+  const handleSelectResourceSharingGroup = (groupId: string) => {
+    const group = persistedResourceSharingGroups.find(candidate => candidate.id === groupId);
+    if (!group) return;
+    loadResourceSharingGroup(group);
+    logAudit('Settings - Organisation', 'Edit', `Active aircraft resource sharing arrangement changed to ${group.name}`);
+  };
+
+  const handleAddResourceSharingGroup = () => {
+    const nextIndex = resourceSharingGroups.length + 1;
+    const newGroup = createEmptyResourceSharingGroup(nextIndex);
+    const updatedGroups = [...persistedResourceSharingGroups, newGroup];
+    setResourceSharingGroups(updatedGroups);
+    loadResourceSharingGroup(newGroup);
+    logAudit('Settings - Organisation', 'Edit', `Aircraft resource sharing arrangement ${newGroup.name} added`);
+  };
+
+  const handleDeleteResourceSharingGroup = () => {
+    if (resourceSharingGroups.length <= 1) return;
+    const deletedGroup = activeResourceSharingGroup;
+    const remainingGroups = persistedResourceSharingGroups.filter(group => group.id !== activeResourceSharingGroupId);
+    const nextGroup = remainingGroups[0] || createEmptyResourceSharingGroup(1);
+    setResourceSharingGroups(remainingGroups.length > 0 ? remainingGroups : [nextGroup]);
+    loadResourceSharingGroup(nextGroup);
+    logAudit('Settings - Organisation', 'Edit', `Aircraft resource sharing arrangement ${deletedGroup.name} deleted`);
+  };
+
+  const handleRenameResourceSharingGroup = (name: string) => {
+    setResourceSharingGroups(previous => previous.map(group =>
+      group.id === activeResourceSharingGroupId
+        ? { ...group, name }
+        : group
+    ));
+    logAudit('Settings - Organisation', 'Edit', `Aircraft resource sharing arrangement renamed to ${name || 'Unnamed arrangement'}`);
   };
 
   // Handle adding/removing units
@@ -474,6 +629,80 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
         {fleetSharingEnabled && (
           <>
+            <div className="bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                <div className="flex-1">
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1">
+                    Aircraft Sharing Arrangement
+                  </label>
+                  <select
+                    value={activeResourceSharingGroupId}
+                    onChange={(event) => handleSelectResourceSharingGroup(event.target.value)}
+                    className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  >
+                    {persistedResourceSharingGroups.map(group => (
+                      <option key={group.id} value={group.id}>
+                        {group.name || 'Unnamed arrangement'}{group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join('+')})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1">
+                    Arrangement Name
+                  </label>
+                  <input
+                    type="text"
+                    value={activeResourceSharingGroup.name || ''}
+                    onChange={(event) => handleRenameResourceSharingGroup(event.target.value)}
+                    placeholder="e.g. YMES 1FTS/CFS shared PC-21 pool"
+                    className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddResourceSharingGroup}
+                    className="rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500"
+                  >
+                    Add Arrangement
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteResourceSharingGroup}
+                    disabled={resourceSharingGroups.length <= 1}
+                    className={`rounded-md px-3 py-2 text-xs font-semibold ${
+                      resourceSharingGroups.length <= 1
+                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                        : 'bg-red-600/80 text-white hover:bg-red-600'
+                    }`}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-gray-300">
+                Create one arrangement for each shared resource pool in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled.
+              </p>
+              {persistedResourceSharingGroups.length > 1 && (
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {persistedResourceSharingGroups.map(group => (
+                    <div
+                      key={group.id}
+                      className={`rounded border px-3 py-2 text-xs ${
+                        group.id === activeResourceSharingGroupId
+                          ? 'border-sky-500/50 bg-sky-500/10 text-sky-100'
+                          : 'border-gray-700 bg-gray-900/60 text-gray-400'
+                      }`}
+                    >
+                      <span className="font-semibold">{group.name || 'Unnamed arrangement'}:</span>{' '}
+                      {group.selectedUnits.length > 0 ? group.selectedUnits.join(', ') : 'No units selected'}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Select Units and Allocation Mode - Side by Side */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
               {/* Select Units Sharing Asset - Narrower Width */}

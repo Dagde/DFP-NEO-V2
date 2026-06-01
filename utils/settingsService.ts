@@ -106,6 +106,16 @@ export interface AppSettingsData {
     selectedUnits: string[];
     desiredAllocations: Record<string, number>;
     remainderUnitIndex: number;
+    activeResourceSharingGroupId?: string;
+    resourceSharingGroups?: Array<{
+      id: string;
+      name: string;
+      selectedUnits: string[];
+      allocationMode: 'combined' | 'fixed';
+      desiredAllocations: Record<string, number>;
+      remainderUnitIndex: number;
+      enabled?: boolean;
+    }>;
   };
 
   // Metadata
@@ -312,6 +322,8 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
       selectedUnits: [],
       desiredAllocations: {},
       remainderUnitIndex: -1,
+      activeResourceSharingGroupId: 'resource-sharing-1',
+      resourceSharingGroups: [],
     },
     savedAt: new Date().toISOString(),
     version: SETTINGS_VERSION,
