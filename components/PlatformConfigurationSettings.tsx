@@ -1061,13 +1061,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [config.locations.length]);
 
   useEffect(() => {
-    if (!scrollTarget || loading) return;
+    if (!scrollTarget || loading || sectionOnly) return;
     const frame = window.requestAnimationFrame(() => {
       const target = document.getElementById(scrollTarget);
       target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [scrollTarget, loading]);
+  }, [scrollTarget, loading, sectionOnly]);
 
   const enabledModuleCount = useMemo(
     () => config.unitModules.filter((item) => item.isEnabled !== false).length,
