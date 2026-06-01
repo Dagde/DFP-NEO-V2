@@ -33112,12 +33112,20 @@ const SyllabusView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "LMP/Event Details" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddLMP, disabled: isFrozen, className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: isTrainingPackagesTab ? "Add package" : "Add Course" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddLMP, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              "Add",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              isTrainingPackagesTab ? "Package" : "Course"
+            ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setDeletePassword("");
               setDeleteError("");
               setShowDeleteModal(true);
-            }, disabled: isFrozen, className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed", children: isTrainingPackagesTab ? "Del package" : "Del Course" }),
+            }, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              "Del",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              isTrainingPackagesTab ? "Package" : "Course"
+            ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setUploadFile(null);
               setUploadResult(null);

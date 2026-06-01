@@ -1067,8 +1067,16 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
             ) : (
                 <div className="flex items-center gap-[1px]">
                     <AuditButton pageName="LMP/Event Details" />
-                    <button onClick={handleAddLMP} disabled={isFrozen} className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">{isTrainingPackagesTab ? 'Add package' : 'Add Course'}</button>
-                    <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">{isTrainingPackagesTab ? 'Del package' : 'Del Course'}</button>
+                    <button onClick={handleAddLMP} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span>
+                            Add<br />{isTrainingPackagesTab ? 'Package' : 'Course'}
+                        </span>
+                    </button>
+                    <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span>
+                            Del<br />{isTrainingPackagesTab ? 'Package' : 'Course'}
+                        </span>
+                    </button>
                     <button onClick={() => { setUploadFile(null); setUploadResult(null); setShowUploadModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed">Upload</button>
                     <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
