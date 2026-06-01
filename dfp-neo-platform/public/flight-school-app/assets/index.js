@@ -32269,6 +32269,29 @@ const AircraftConfigSelector = ({ value, definitions, onChange }) => {
     ] })
   ] });
 };
+const getMasterLmpDisplayType = (syllabusItem) => {
+  if (syllabusItem.type === "Flight") return "Flight";
+  if (syllabusItem.type === "FTD") return "FTD";
+  if (syllabusItem.type === "Academics") return "Academics";
+  if (syllabusItem.type === "Ground School") {
+    if (syllabusItem.code.includes("CPT")) return "CPT";
+    return "Ground";
+  }
+  return "Flight";
+};
+const formatMasterLmpDisplayType = (displayType, resourceDisplayNames) => {
+  if (displayType === "FTD") return resourceDisplayNames.ftd;
+  if (displayType === "CPT") return resourceDisplayNames.cpt;
+  return displayType;
+};
+const formatMasterLmpSortieLabel = (item, resourceDisplayNames) => {
+  if (item.type === "Flight") return item.sortieType || "Dual";
+  return formatMasterLmpDisplayType(getMasterLmpDisplayType(item), resourceDisplayNames);
+};
+const formatMasterLmpHours = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
+};
 const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [] }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
@@ -33055,71 +33078,54 @@ const SyllabusView = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-row overflow-hidden", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-1/4 border-r border-gray-700 overflow-hidden flex flex-col", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 flex gap-0 bg-gray-900", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700 text-center w-12 flex-shrink-0", children: "Phase" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700 text-center w-[68px] flex-shrink-0", children: "Module" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 flex-1 whitespace-nowrap overflow-hidden", children: "Event" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto", children: [
-            filteredSyllabusDetails.map((item, index) => {
-              const totalItems = filteredSyllabusDetails.length;
-              const midPoint = Math.ceil(totalItems / 2);
-              const phaseNum = index < midPoint ? 1 : 2;
-              const moduleNum = Math.floor(index * 12 / totalItems) + 1;
-              const actualModule = Math.min(moduleNum, 12);
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => {
-                      if (!isEditing) {
-                        setSelectedItem(item);
-                      }
-                    },
-                    onMouseEnter: () => setHoveredItem(item),
-                    onMouseLeave: () => setHoveredItem(null),
-                    disabled: isEditing,
-                    className: `text-center p-2 transition-colors text-sm border-r border-gray-700 w-12 flex-shrink-0 ${selectedItem?.id === item.id && !isEditing ? "bg-sky-700 text-white font-semibold" : "text-gray-300"} ${isEditing ? "cursor-not-allowed text-gray-500" : "hover:bg-gray-700/50"}`,
-                    children: phaseNum
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[292px] border-r border-gray-700 overflow-hidden flex flex-col bg-gray-950/25", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-3", children: [
+          filteredSyllabusDetails.map((item, index) => {
+            const totalItems = filteredSyllabusDetails.length;
+            const midPoint = Math.ceil(totalItems / 2);
+            const phaseNum = index < midPoint ? 1 : 2;
+            const moduleNum = Math.floor(index * 12 / totalItems) + 1;
+            const actualModule = Math.min(moduleNum, 12);
+            const isSelected = selectedItem?.id === item.id && !isEditing;
+            const sortieLabel = formatMasterLmpSortieLabel(item, resourceDisplayNames);
+            const dayLabel = item.dayNight || "Day";
+            const durationLabel = formatMasterLmpHours(item.totalEventHours || item.duration);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  if (!isEditing) {
+                    setHoveredItem(null);
+                    setSelectedItem(item);
                   }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => {
-                      if (!isEditing) {
-                        setSelectedItem(item);
-                      }
-                    },
-                    onMouseEnter: () => setHoveredItem(item),
-                    onMouseLeave: () => setHoveredItem(null),
-                    disabled: isEditing,
-                    className: `text-center p-2 transition-colors text-sm border-r border-gray-700 w-[68px] flex-shrink-0 ${selectedItem?.id === item.id && !isEditing ? "bg-sky-700 text-white font-semibold" : "text-gray-300"} ${isEditing ? "cursor-not-allowed text-gray-500" : "hover:bg-gray-700/50"}`,
-                    children: actualModule
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => {
-                      if (!isEditing) {
-                        setSelectedItem(item);
-                      }
-                    },
-                    onMouseEnter: () => setHoveredItem(item),
-                    onMouseLeave: () => setHoveredItem(null),
-                    disabled: isEditing,
-                    className: `text-left p-2 transition-colors text-sm flex-1 whitespace-nowrap overflow-hidden text-ellipsis ${selectedItem?.id === item.id && !isEditing ? "bg-sky-700 text-white font-semibold" : "text-gray-300"} ${isEditing ? "cursor-not-allowed text-gray-500" : "hover:bg-gray-700/50"}`,
-                    children: item.code
-                  }
-                )
-              ] }, item.id);
-            }),
-            filteredSyllabusDetails.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-center text-gray-500 italic text-sm", children: "No events found for this syllabus." })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3/4 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: hoveredItem || selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                },
+                disabled: isEditing,
+                "aria-pressed": isSelected,
+                title: `${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ""}`,
+                className: `relative mb-2 h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "border-sky-400 bg-sky-800/85 text-white shadow-sky-950/40" : "border-gray-700 bg-gray-900 text-gray-200 shadow-black/15"} ${isEditing ? "cursor-not-allowed opacity-55" : "hover:border-sky-500/70 hover:bg-gray-800"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: [
+                    "P ",
+                    phaseNum
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute right-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: sortieLabel }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-center text-[15px] font-extrabold leading-tight", children: item.code }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute bottom-2 left-3 max-w-[38%] truncate text-[10px] font-semibold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: [
+                    "M ",
+                    actualModule
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute bottom-2 right-3 inline-flex max-w-[54%] items-center gap-3 overflow-hidden text-[10px] font-semibold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: dayLabel }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0", children: durationLabel })
+                  ] })
+                ]
+              },
+              item.id
+            );
+          }),
+          filteredSyllabusDetails.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-center text-gray-500 italic text-sm", children: "No events found for this syllabus." })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: hoveredItem || selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
           DetailView,
           {
             item: hoveredItem || selectedItem,
