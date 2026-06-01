@@ -32625,7 +32625,11 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
     ) })
   ] });
 };
-const STATIC_COURSE_LMPS = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh", "Staff CAT"];
+const STATIC_MASTER_LMPS = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh"];
+const STATIC_TRAINING_PACKAGES = ["Staff CAT"];
+const getItemLmpDetailsTab = (item) => item.lmpType === "Staff CAT" ? "packages" : "master";
+const getActiveLmpType = (tab) => tab === "packages" ? "Staff CAT" : "Master LMP";
+const getDefaultLmpSelection = (tab) => tab === "packages" ? STATIC_TRAINING_PACKAGES[0] : STATIC_MASTER_LMPS[0];
 const SyllabusView = ({
   syllabusDetails,
   onBack,
@@ -32640,18 +32644,26 @@ const SyllabusView = ({
   const [hoveredItem, setHoveredItem] = reactExports.useState(null);
   const [isEditing, setIsEditing] = reactExports.useState(false);
   const [editedItem, setEditedItem] = reactExports.useState(null);
+  const [activeTab, setActiveTab] = reactExports.useState("master");
   const [selectedCourseType, setSelectedCourseType] = reactExports.useState("BPC+IPC");
   const [editingCourseTitle, setEditingCourseTitle] = reactExports.useState("");
+  const isTrainingPackagesTab = activeTab === "packages";
+  const activeLmpType = getActiveLmpType(activeTab);
+  const activeCollectionNoun = isTrainingPackagesTab ? "package" : "course";
+  const activeCollectionTitle = isTrainingPackagesTab ? "Training Packages" : "Master LMP";
+  const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
   const courseLMPs = reactExports.useMemo(() => {
     const fromSyllabus = /* @__PURE__ */ new Set();
     syllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
+      if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach((c) => {
         if (c) fromSyllabus.add(c);
       });
     });
-    const all = /* @__PURE__ */ new Set([...STATIC_COURSE_LMPS, ...Array.from(fromSyllabus)]);
+    const staticItems = activeTab === "packages" ? STATIC_TRAINING_PACKAGES : STATIC_MASTER_LMPS;
+    const all = /* @__PURE__ */ new Set([...staticItems, ...Array.from(fromSyllabus)]);
     return Array.from(all).sort();
-  }, [syllabusDetails]);
+  }, [activeTab, syllabusDetails]);
   const courseTitleMap = reactExports.useMemo(() => {
     const map = {};
     syllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
@@ -32684,24 +32696,39 @@ const SyllabusView = ({
   const filteredSyllabusDetails = reactExports.useMemo(() => {
     return syllabusDetails.filter((item) => {
       if (item.isActive === false) return false;
+      if (getItemLmpDetailsTab(item) !== activeTab) return false;
       if (!item.courses || item.courses.length === 0) {
-        return selectedCourseType === "BPC+IPC";
+        return activeTab === "master" && selectedCourseType === "BPC+IPC";
       }
       return item.courses.includes(selectedCourseType);
     });
-  }, [syllabusDetails, selectedCourseType]);
+  }, [activeTab, syllabusDetails, selectedCourseType]);
   reactExports.useEffect(() => {
     logAudit({
       action: "View",
-      description: "Viewed Master LMP page",
-      changes: `Viewing ${selectedCourseType} syllabus`,
-      page: "Master LMP"
+      description: "Viewed LMP/Event Details page",
+      changes: `Viewing ${activeCollectionTitle}: ${selectedCourseType}`,
+      page: "LMP/Event Details"
     });
   }, []);
+  reactExports.useEffect(() => {
+    if (courseLMPs.length === 0) return;
+    if (!courseLMPs.includes(selectedCourseType)) {
+      setSelectedCourseType(courseLMPs[0]);
+      setSelectedItem(null);
+      setHoveredItem(null);
+      setIsEditing(false);
+      setEditedItem(null);
+    }
+  }, [courseLMPs, selectedCourseType]);
   reactExports.useEffect(() => {
     if (initialSelectedId) {
       const itemToSelect = syllabusDetails.find((item) => item.code === initialSelectedId);
       if (itemToSelect) {
+        const itemTab = getItemLmpDetailsTab(itemToSelect);
+        if (itemTab !== activeTab) {
+          setActiveTab(itemTab);
+        }
         setSelectedItem(itemToSelect);
         if (itemToSelect.courses && itemToSelect.courses.length > 0) {
           if (!itemToSelect.courses.includes(selectedCourseType)) {
@@ -32714,10 +32741,10 @@ const SyllabusView = ({
         setSelectedItem(filteredSyllabusDetails[0]);
       } else if (selectedItem) {
         const updated = syllabusDetails.find((item) => item.code === selectedItem.code);
-        if (updated) setSelectedItem(updated);
+        if (updated && getItemLmpDetailsTab(updated) === activeTab) setSelectedItem(updated);
       }
     }
-  }, [initialSelectedId, syllabusDetails, selectedItem, selectedCourseType, filteredSyllabusDetails]);
+  }, [activeTab, initialSelectedId, syllabusDetails, selectedItem, selectedCourseType, filteredSyllabusDetails]);
   reactExports.useEffect(() => {
     if (filteredSyllabusDetails.length > 0) {
       setSelectedItem(filteredSyllabusDetails[0]);
@@ -32725,7 +32752,8 @@ const SyllabusView = ({
     } else {
       setSelectedItem(null);
     }
-  }, [selectedCourseType]);
+    setHoveredItem(null);
+  }, [activeTab, selectedCourseType]);
   const handleEdit = () => {
     setEditingCourseTitle(getCourseTitle(selectedCourseType));
     if (selectedItem) {
@@ -32745,9 +32773,9 @@ const SyllabusView = ({
         let savedItem;
         if (isNew) {
           const { id: _tmpId, ...itemWithoutTmpId } = itemToSave;
-          savedItem = await createSyllabusItem$1(itemWithoutTmpId, "New LMP event created via Master LMP editor");
+          savedItem = await createSyllabusItem$1(itemWithoutTmpId, `New LMP event created via ${activeCollectionTitle} editor`);
         } else {
-          savedItem = await updateSyllabusItem(itemToSave.id, itemToSave, "Updated via Master LMP editor");
+          savedItem = await updateSyllabusItem(itemToSave.id, itemToSave, `Updated via ${activeCollectionTitle} editor`);
         }
         const changes = [];
         if (selectedItem && selectedItem.preFlightTime !== itemToSave.preFlightTime) {
@@ -32757,7 +32785,7 @@ const SyllabusView = ({
           changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} min to ${Math.round(itemToSave.postFlightTime * 60)} min`);
         }
         if (changes.length > 0) {
-          logAudit({ action: "Edit", description: `Updated LMP item ${savedItem.code}`, changes: changes.join(", "), page: "Master LMP" });
+          logAudit({ action: "Edit", description: `Updated LMP item ${savedItem.code}`, changes: changes.join(", "), page: "LMP/Event Details" });
         }
         onUpdateItem(savedItem);
         setSelectedItem(savedItem);
@@ -32766,13 +32794,13 @@ const SyllabusView = ({
       const newTitle = editingCourseTitle.trim();
       if (newTitle && newTitle !== currentTitle) {
         const courseItems = syllabusDetails.filter(
-          (item) => item.isActive !== false && (item.courses || []).includes(selectedCourseType)
+          (item) => item.isActive !== false && getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
         );
         await Promise.all(courseItems.map(
           (item) => updateSyllabusItem(item.id, { ...item, module: newTitle }, "Course title renamed")
         ));
         courseItems.forEach((item) => onUpdateItem({ ...item, module: newTitle }));
-        logAudit({ action: "Edit", description: `Renamed course: ${selectedCourseType}`, changes: `Title: "${currentTitle}" renamed to "${newTitle}"`, page: "Master LMP" });
+        logAudit({ action: "Edit", description: `Renamed ${activeCollectionNoun}: ${selectedCourseType}`, changes: `Title: "${currentTitle}" renamed to "${newTitle}"`, page: "LMP/Event Details" });
       }
       setIsEditing(false);
       setEditedItem(null);
@@ -32816,23 +32844,23 @@ const SyllabusView = ({
         return;
       }
       const itemsToDelete = syllabusDetails.filter(
-        (item) => (item.courses || []).includes(selectedCourseType)
+        (item) => getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
       );
-      console.log(`🗑️ Deleting ${itemsToDelete.length} items for course: ${selectedCourseType}`, itemsToDelete.map((i) => i.id));
+      console.log(`🗑️ Deleting ${itemsToDelete.length} items for ${activeCollectionNoun}: ${selectedCourseType}`, itemsToDelete.map((i) => i.id));
       if (itemsToDelete.length === 0) {
-        console.warn(`⚠️ No items found for course ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
+        console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
       } else {
         await Promise.all(itemsToDelete.map(
-          (item) => retireSyllabusItem(item.id, `Course deleted: ${selectedCourseType}`)
+          (item) => retireSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
         ));
       }
-      logAudit({ action: "Delete", description: `Deleted course: ${selectedCourseType}`, changes: `${itemsToDelete.length} items retired`, page: "Master LMP" });
+      logAudit({ action: "Delete", description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${itemsToDelete.length} items retired`, page: "LMP/Event Details" });
       itemsToDelete.forEach((item) => onUpdateItem({ ...item, isActive: false }));
       setShowDeleteModal(false);
       setDeletePassword("");
       setSelectedItem(null);
-      const remaining = STATIC_COURSE_LMPS.filter((c) => c !== selectedCourseType);
-      setSelectedCourseType(remaining[0] || "BPC+IPC");
+      const remaining = courseLMPs.filter((c) => c !== selectedCourseType);
+      setSelectedCourseType(remaining[0] || getDefaultLmpSelection(activeTab));
     } catch (err) {
       setDeleteError(`Failed to delete: ${err.message}`);
     } finally {
@@ -32850,6 +32878,7 @@ const SyllabusView = ({
       const formData = new FormData();
       formData.append("file", uploadFile);
       formData.append("courseCode", selectedCourseType);
+      formData.append("lmpType", activeLmpType);
       const resp = await fetch("/api/syllabus/bulk-upload", {
         method: "POST",
         body: formData
@@ -32907,7 +32936,7 @@ const SyllabusView = ({
         const err = await deleteResp.json();
         throw new Error(err.error || "Failed to delete event");
       }
-      logAudit({ action: "Delete", description: `Deleted event: ${deleteEventItem.code} - ${deleteEventItem.eventDescription}`, changes: `Event removed from course: ${selectedCourseType}`, page: "Master LMP" });
+      logAudit({ action: "Delete", description: `Deleted event: ${deleteEventItem.code} - ${deleteEventItem.eventDescription}`, changes: `Event removed from ${activeCollectionNoun}: ${selectedCourseType}`, page: "LMP/Event Details" });
       onUpdateItem({ ...deleteEventItem, isActive: false });
       setShowDeleteEventModal(false);
       setDeleteEventItem(null);
@@ -32928,13 +32957,13 @@ const SyllabusView = ({
   };
   const handleAddLMPSave = async () => {
     if (!newLMPName.trim()) {
-      alert("Please enter a course title.");
+      alert(`Please enter a ${activeCollectionNoun} title.`);
       return;
     }
     const words = newLMPName.trim().split(/\s+/);
     const shortCode = words.length === 1 ? newLMPName.trim().toUpperCase().slice(0, 8) : words.map((w) => w[0].toUpperCase()).join("").slice(0, 8);
     const isAcademic = newLMPCourseType === "Academic Training";
-    const courseCode = isAcademic ? newLMPName.trim() : shortCode;
+    const courseCode = isAcademic && !isTrainingPackagesTab ? newLMPName.trim() : shortCode;
     const newItem = {
       id: `new-lmp-${Date.now()}`,
       code: courseCode,
@@ -32961,21 +32990,21 @@ const SyllabusView = ({
       resourcesHuman: [],
       location: "",
       courses: [courseCode],
-      lmpType: "Master LMP"
+      lmpType: activeLmpType
     };
     setShowAddLMPModal(false);
     try {
       const { id: _tmpId, ...itemWithoutTmpId } = newItem;
-      const savedItem = await createSyllabusItem$1(itemWithoutTmpId, `New course created: ${newLMPName.trim()}`);
+      const savedItem = await createSyllabusItem$1(itemWithoutTmpId, `New ${activeCollectionNoun} created: ${newLMPName.trim()}`);
       if (onAddItem) onAddItem(savedItem);
-      const actualCode = savedItem.code || autoCode;
+      const actualCode = savedItem.courses?.[0] || savedItem.code || courseCode;
       setSelectedCourseType(actualCode);
       setSelectedItem(savedItem);
       setEditedItem(JSON.parse(JSON.stringify(savedItem)));
       setIsEditing(true);
-      logAudit({ action: "Create", description: `Created new course: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: "Master LMP" });
+      logAudit({ action: "Create", description: `Created new ${activeCollectionNoun}: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: "LMP/Event Details" });
     } catch (err) {
-      alert(`❌ Failed to create course: ${err.message}`);
+      alert(`❌ Failed to create ${activeCollectionNoun}: ${err.message}`);
     }
   };
   const handleAddEvent = () => {
@@ -33006,13 +33035,13 @@ const SyllabusView = ({
       resourcesHuman: [],
       location: "",
       courses: [selectedCourseType],
-      lmpType: "Master LMP"
+      lmpType: activeLmpType
     };
     if (onAddItem) onAddItem(newItem);
     setSelectedItem(newItem);
     setEditedItem(JSON.parse(JSON.stringify(newItem)));
     setIsEditing(true);
-    createSyllabusItem$1({ ...newItem, id: void 0 }, "New event added via Master LMP editor").then((saved) => {
+    createSyllabusItem$1({ ...newItem, id: void 0 }, `New event added via ${activeCollectionTitle} editor`).then((saved) => {
       if (onAddItem) onAddItem(saved);
       setSelectedItem(saved);
       setEditedItem(JSON.parse(JSON.stringify(saved)));
@@ -33020,10 +33049,10 @@ const SyllabusView = ({
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-start border-b border-gray-700 gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h1", { className: "text-2xl font-bold text-white", children: [
-            "Master LMP: ",
+            "LMP/Event Details: ",
             isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -33036,11 +33065,32 @@ const SyllabusView = ({
               }
             ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: getCourseTitle(selectedCourseType) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isEditing ? "Editing course title — changes apply to all events in this course" : "Learning Management Package Details" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 inline-flex rounded-md border border-gray-700 bg-gray-950/70 p-1", children: [
+            { id: "master", label: "Master LMP" },
+            { id: "packages", label: "Training Packages" }
+          ].map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                if (tab.id === activeTab) return;
+                setActiveTab(tab.id);
+                setSelectedCourseType(getDefaultLmpSelection(tab.id));
+                setSelectedItem(null);
+                setHoveredItem(null);
+                setIsEditing(false);
+                setEditedItem(null);
+              },
+              className: `h-9 min-w-[136px] rounded px-4 text-sm font-semibold transition ${activeTab === tab.id ? "border border-sky-500/70 bg-sky-900/65 text-white" : "border border-transparent text-gray-300 hover:bg-gray-800 hover:text-white"}`,
+              children: tab.label
+            },
+            tab.id
+          )) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4 pt-1", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 bg-gray-700 p-1 rounded-md", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "course-select", className: "text-xs text-gray-300 font-medium pl-2", children: "Syllabus:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "course-select", className: "text-xs text-gray-300 font-medium pl-2", children: activeCollectionSelectLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "select",
               {
@@ -33051,7 +33101,7 @@ const SyllabusView = ({
                   setSelectedItem(null);
                 },
                 className: "bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8",
-                children: courseLMPs.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: getCourseTitle(c) }, c))
+                children: courseLMPs.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: getCourseTitle(c) }, `${activeTab}-${c}`))
               }
             )
           ] }),
@@ -33061,13 +33111,13 @@ const SyllabusView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, disabled: isSaving2, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-60", children: isSaving2 ? "Saving…" : "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Master LMP" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddLMP, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: "Add Course" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "LMP/Event Details" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddLMP, disabled: isFrozen, className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: isTrainingPackagesTab ? "Add package" : "Add Course" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setDeletePassword("");
               setDeleteError("");
               setShowDeleteModal(true);
-            }, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed", children: "Del Course" }),
+            }, disabled: isFrozen, className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed", children: isTrainingPackagesTab ? "Del package" : "Del Course" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setUploadFile(null);
               setUploadResult(null);
@@ -33165,10 +33215,17 @@ const SyllabusView = ({
             },
             onClick: (e) => e.stopPropagation(),
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { style: { fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 6 }, children: "Add Course" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20 }, children: "A course code will be auto-generated from the title." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { style: { fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 6 }, children: [
+                "Add ",
+                isTrainingPackagesTab ? "Package" : "Course"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20 }, children: [
+                "A ",
+                activeCollectionNoun,
+                " code will be auto-generated from the title."
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: {
                   display: "block",
                   fontSize: 11,
                   fontWeight: 600,
@@ -33176,7 +33233,10 @@ const SyllabusView = ({
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
                   marginBottom: 4
-                }, children: "Course Title *" }),
+                }, children: [
+                  isTrainingPackagesTab ? "Package" : "Course",
+                  " Title *"
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
@@ -33184,7 +33244,7 @@ const SyllabusView = ({
                     value: newLMPName,
                     onChange: (e) => setNewLMPName(e.target.value),
                     onKeyDown: (e) => e.key === "Enter" && handleAddLMPSave(),
-                    placeholder: "e.g. Basic Flying Course",
+                    placeholder: isTrainingPackagesTab ? "e.g. Staff Category" : "e.g. Basic Flying Course",
                     autoFocus: true,
                     style: {
                       width: "100%",
@@ -33213,7 +33273,7 @@ const SyllabusView = ({
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
                   marginBottom: 4
-                }, children: "Course Type" }),
+                }, children: isTrainingPackagesTab ? "Package Type" : "Course Type" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
                   {
@@ -33288,7 +33348,9 @@ const SyllabusView = ({
             onClick: (e) => e.stopPropagation(),
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { style: { fontSize: 16, fontWeight: 700, color: "#ef4444", marginBottom: 8 }, children: [
-                "⚠️ Delete Course: ",
+                "Delete ",
+                isTrainingPackagesTab ? "Package" : "Course",
+                ": ",
                 getCourseTitle(selectedCourseType)
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#9ca3af", marginBottom: 20, lineHeight: 1.6 }, children: [
@@ -33296,7 +33358,9 @@ const SyllabusView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: "all events" }),
                 " in the ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: getCourseTitle(selectedCourseType) }),
-                " course from the database. This action cannot be undone. Enter your password to confirm."
+                " ",
+                activeCollectionNoun,
+                " from the database. This action cannot be undone. Enter your password to confirm."
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
@@ -33499,7 +33563,7 @@ const SyllabusView = ({
             },
             onClick: (e) => e.stopPropagation(),
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { style: { fontSize: 16, fontWeight: 700, color: "#38bdf8", marginBottom: 8 }, children: "📤 Bulk Upload LMP Events" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { style: { fontSize: 16, fontWeight: 700, color: "#38bdf8", marginBottom: 8 }, children: "Bulk Upload LMP Events" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#9ca3af", marginBottom: 4, lineHeight: 1.6 }, children: [
                 "Upload an Excel (.xlsx) file to populate ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: getCourseTitle(selectedCourseType) }),

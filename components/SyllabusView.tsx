@@ -504,7 +504,19 @@ const DetailView: React.FC<{
     );
 };
 
-const STATIC_COURSE_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
+type LmpDetailsTab = 'master' | 'packages';
+
+const STATIC_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh'];
+const STATIC_TRAINING_PACKAGES = ['Staff CAT'];
+
+const getItemLmpDetailsTab = (item: SyllabusItemDetail): LmpDetailsTab =>
+    item.lmpType === 'Staff CAT' ? 'packages' : 'master';
+
+const getActiveLmpType = (tab: LmpDetailsTab): NonNullable<SyllabusItemDetail['lmpType']> =>
+    tab === 'packages' ? 'Staff CAT' : 'Master LMP';
+
+const getDefaultLmpSelection = (tab: LmpDetailsTab): string =>
+    tab === 'packages' ? STATIC_TRAINING_PACKAGES[0] : STATIC_MASTER_LMPS[0];
 
 const SyllabusView: React.FC<SyllabusViewProps> = ({
     syllabusDetails,
@@ -520,18 +532,26 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [hoveredItem, setHoveredItem] = useState<SyllabusItemDetail | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
+  const [activeTab, setActiveTab] = useState<LmpDetailsTab>('master');
   const [selectedCourseType, setSelectedCourseType] = useState<string>('BPC+IPC');
   const [editingCourseTitle, setEditingCourseTitle] = useState<string>('');
+  const isTrainingPackagesTab = activeTab === 'packages';
+  const activeLmpType = getActiveLmpType(activeTab);
+  const activeCollectionNoun = isTrainingPackagesTab ? 'package' : 'course';
+  const activeCollectionTitle = isTrainingPackagesTab ? 'Training Packages' : 'Master LMP';
+  const activeCollectionSelectLabel = isTrainingPackagesTab ? 'Package:' : 'Course:';
 
   // Dynamic course list: union of static list + any courses found in active syllabusDetails
   const courseLMPs = useMemo(() => {
     const fromSyllabus = new Set<string>();
     syllabusDetails.filter(item => item.isActive !== false).forEach(item => {
+      if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach(c => { if (c) fromSyllabus.add(c); });
     });
-    const all = new Set([...STATIC_COURSE_LMPS, ...Array.from(fromSyllabus)]);
+    const staticItems = activeTab === 'packages' ? STATIC_TRAINING_PACKAGES : STATIC_MASTER_LMPS;
+    const all = new Set([...staticItems, ...Array.from(fromSyllabus)]);
     return Array.from(all).sort();
-  }, [syllabusDetails]);
+  }, [activeTab, syllabusDetails]);
 
   // Map from course code → full display title (uses module field of first item in that course)
   const courseTitleMap = useMemo(() => {
@@ -578,29 +598,45 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const filteredSyllabusDetails = useMemo(() => {
       return syllabusDetails.filter(item => {
           if (item.isActive === false) return false;
+          if (getItemLmpDetailsTab(item) !== activeTab) return false;
           // If no courses array defined, assume it belongs to BPC+IPC (legacy behavior)
           if (!item.courses || item.courses.length === 0) {
-              return selectedCourseType === 'BPC+IPC';
+              return activeTab === 'master' && selectedCourseType === 'BPC+IPC';
           }
           return item.courses.includes(selectedCourseType);
       });
-  }, [syllabusDetails, selectedCourseType]);
+  }, [activeTab, syllabusDetails, selectedCourseType]);
 
     // Log view on component mount
     useEffect(() => {
         logAudit({
             action: 'View',
-            description: 'Viewed Master LMP page',
-            changes: `Viewing ${selectedCourseType} syllabus`,
-            page: 'Master LMP'
+            description: 'Viewed LMP/Event Details page',
+            changes: `Viewing ${activeCollectionTitle}: ${selectedCourseType}`,
+            page: 'LMP/Event Details'
         });
     }, []);
+
+  useEffect(() => {
+    if (courseLMPs.length === 0) return;
+    if (!courseLMPs.includes(selectedCourseType)) {
+        setSelectedCourseType(courseLMPs[0]);
+        setSelectedItem(null);
+        setHoveredItem(null);
+        setIsEditing(false);
+        setEditedItem(null);
+    }
+  }, [courseLMPs, selectedCourseType]);
 
   // Select first item by default when syllabusDetails or selectedCourseType changes
   useEffect(() => {
     if (initialSelectedId) {
       const itemToSelect = syllabusDetails.find(item => item.code === initialSelectedId);
       if (itemToSelect) {
+          const itemTab = getItemLmpDetailsTab(itemToSelect);
+          if (itemTab !== activeTab) {
+              setActiveTab(itemTab);
+          }
           setSelectedItem(itemToSelect);
           // If navigating directly, ensure we are on a course type that contains this item
           if (itemToSelect.courses && itemToSelect.courses.length > 0) {
@@ -615,10 +651,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
             setSelectedItem(filteredSyllabusDetails[0]);
         } else if (selectedItem) {
              const updated = syllabusDetails.find(item => item.code === selectedItem.code);
-             if (updated) setSelectedItem(updated);
+             if (updated && getItemLmpDetailsTab(updated) === activeTab) setSelectedItem(updated);
         }
     }
-  }, [initialSelectedId, syllabusDetails, selectedItem, selectedCourseType, filteredSyllabusDetails]);
+  }, [activeTab, initialSelectedId, syllabusDetails, selectedItem, selectedCourseType, filteredSyllabusDetails]);
 
   // Reset selection when course type changes (select first item of new course)
   useEffect(() => {
@@ -628,7 +664,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     } else {
         setSelectedItem(null);
     }
-  }, [selectedCourseType]);
+    setHoveredItem(null);
+  }, [activeTab, selectedCourseType]);
 
   const handleEdit = () => {
       setEditingCourseTitle(getCourseTitle(selectedCourseType));
@@ -651,9 +688,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               let savedItem: SyllabusItemDetail;
               if (isNew) {
                   const { id: _tmpId, ...itemWithoutTmpId } = itemToSave;
-                  savedItem = await createSyllabusItem(itemWithoutTmpId, 'New LMP event created via Master LMP editor');
+                  savedItem = await createSyllabusItem(itemWithoutTmpId, `New LMP event created via ${activeCollectionTitle} editor`);
               } else {
-                  savedItem = await updateSyllabusItem(itemToSave.id, itemToSave, 'Updated via Master LMP editor');
+                  savedItem = await updateSyllabusItem(itemToSave.id, itemToSave, `Updated via ${activeCollectionTitle} editor`);
               }
               // Detect changes for audit
               const changes: string[] = [];
@@ -664,7 +701,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                   changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} min to ${Math.round(itemToSave.postFlightTime * 60)} min`);
               }
               if (changes.length > 0) {
-                  logAudit({ action: 'Edit', description: `Updated LMP item ${savedItem.code}`, changes: changes.join(', '), page: 'Master LMP' });
+                  logAudit({ action: 'Edit', description: `Updated LMP item ${savedItem.code}`, changes: changes.join(', '), page: 'LMP/Event Details' });
               }
               onUpdateItem(savedItem);
               setSelectedItem(savedItem);
@@ -675,14 +712,16 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           const newTitle = editingCourseTitle.trim();
           if (newTitle && newTitle !== currentTitle) {
               const courseItems = syllabusDetails.filter(item =>
-                  item.isActive !== false && (item.courses || []).includes(selectedCourseType)
+                  item.isActive !== false &&
+                  getItemLmpDetailsTab(item) === activeTab &&
+                  (item.courses || []).includes(selectedCourseType)
               );
               await Promise.all(courseItems.map(item =>
                   updateSyllabusItem(item.id, { ...item, module: newTitle }, 'Course title renamed')
               ));
               // Update local state for all items
               courseItems.forEach(item => onUpdateItem({ ...item, module: newTitle }));
-              logAudit({ action: 'Edit', description: `Renamed course: ${selectedCourseType}`, changes: `Title: "${currentTitle}" renamed to "${newTitle}"`, page: 'Master LMP' });
+              logAudit({ action: 'Edit', description: `Renamed ${activeCollectionNoun}: ${selectedCourseType}`, changes: `Title: "${currentTitle}" renamed to "${newTitle}"`, page: 'LMP/Event Details' });
           }
 
           setIsEditing(false);
@@ -729,27 +768,27 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           // Retire all items for this course
           // Include any item that belongs to this course (even if it also belongs to others)
           const itemsToDelete = syllabusDetails.filter(item =>
+              getItemLmpDetailsTab(item) === activeTab &&
               (item.courses || []).includes(selectedCourseType)
           );
-          console.log(`🗑️ Deleting ${itemsToDelete.length} items for course: ${selectedCourseType}`, itemsToDelete.map(i => i.id));
+          console.log(`🗑️ Deleting ${itemsToDelete.length} items for ${activeCollectionNoun}: ${selectedCourseType}`, itemsToDelete.map(i => i.id));
           
           if (itemsToDelete.length === 0) {
-              // Course exists in dropdown but has no items — just remove from UI
-              console.warn(`⚠️ No items found for course ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
+              console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
           } else {
               await Promise.all(itemsToDelete.map(item =>
-                  retireSyllabusItem(item.id, `Course deleted: ${selectedCourseType}`)
+                  retireSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
               ));
           }
-          logAudit({ action: 'Delete', description: `Deleted course: ${selectedCourseType}`, changes: `${itemsToDelete.length} items retired`, page: 'Master LMP' });
+          logAudit({ action: 'Delete', description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${itemsToDelete.length} items retired`, page: 'LMP/Event Details' });
           // Remove from local state by marking isActive: false
           itemsToDelete.forEach(item => onUpdateItem({ ...item, isActive: false } as any));
           setShowDeleteModal(false);
           setDeletePassword('');
           setSelectedItem(null);
           // Switch to first available course (excluding the deleted one)
-          const remaining = STATIC_COURSE_LMPS.filter(c => c !== selectedCourseType);
-          setSelectedCourseType(remaining[0] || 'BPC+IPC');
+          const remaining = courseLMPs.filter(c => c !== selectedCourseType);
+          setSelectedCourseType(remaining[0] || getDefaultLmpSelection(activeTab));
       } catch (err: any) {
           setDeleteError(`Failed to delete: ${err.message}`);
       } finally {
@@ -766,6 +805,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           formData.append('file', uploadFile);
           // Pass the current course code so uploads go into the selected course
           formData.append('courseCode', selectedCourseType);
+          formData.append('lmpType', activeLmpType);
           const resp = await fetch('/api/syllabus/bulk-upload', {
               method: 'POST',
               body: formData,
@@ -825,7 +865,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               const err = await deleteResp.json();
               throw new Error(err.error || 'Failed to delete event');
           }
-          logAudit({ action: 'Delete', description: `Deleted event: ${deleteEventItem.code} - ${deleteEventItem.eventDescription}`, changes: `Event removed from course: ${selectedCourseType}`, page: 'Master LMP' });
+          logAudit({ action: 'Delete', description: `Deleted event: ${deleteEventItem.code} - ${deleteEventItem.eventDescription}`, changes: `Event removed from ${activeCollectionNoun}: ${selectedCourseType}`, page: 'LMP/Event Details' });
           // Remove from local state
           onUpdateItem({ ...deleteEventItem, isActive: false } as any);
           setShowDeleteEventModal(false);
@@ -842,14 +882,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   };
 
   const handleAddLMP = () => {
-      // Open the Add Course modal
       setNewLMPName('');
       setNewLMPCourseType('Flight Training');
       setShowAddLMPModal(true);
   };
 
   const handleAddLMPSave = async () => {
-      if (!newLMPName.trim()) { alert('Please enter a course title.'); return; }
+      if (!newLMPName.trim()) { alert(`Please enter a ${activeCollectionNoun} title.`); return; }
       // For Academic Training courses, use the full name as the course code/identifier.
       // This is critical: the academicLmpType field on trainees/courses stores the FULL NAME
       // (e.g. 'PC-21 Ground School'), and syllabus items are filtered by courses.includes(academicLmpType).
@@ -861,7 +900,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           : words.map(w => w[0].toUpperCase()).join('').slice(0, 8);
       // Academic Training: use full name as course identifier so it matches academicLmpType dropdown
       const isAcademic = newLMPCourseType === 'Academic Training';
-      const courseCode = isAcademic ? newLMPName.trim() : shortCode;
+      const courseCode = isAcademic && !isTrainingPackagesTab ? newLMPName.trim() : shortCode;
       // Build the new course/LMP item with basics filled in
       const newItem: SyllabusItemDetail = {
           id: `new-lmp-${Date.now()}`,
@@ -889,24 +928,24 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           resourcesHuman: [],
           location: '',
           courses: [courseCode],
-          lmpType: 'Master LMP',
+          lmpType: activeLmpType,
       };
       setShowAddLMPModal(false);
       try {
           // Persist the new course/LMP skeleton to the database
           const { id: _tmpId, ...itemWithoutTmpId } = newItem;
-          const savedItem = await createSyllabusItem(itemWithoutTmpId, `New course created: ${newLMPName.trim()}`);
+          const savedItem = await createSyllabusItem(itemWithoutTmpId, `New ${activeCollectionNoun} created: ${newLMPName.trim()}`);
           if (onAddItem) onAddItem(savedItem);
           // Switch to the new course and immediately enter edit mode
-          // Use the actual code returned by server (may differ from autoCode if duplicate was resolved)
-          const actualCode = savedItem.code || autoCode;
+          // Use the actual course/package value returned by server when available.
+          const actualCode = savedItem.courses?.[0] || savedItem.code || courseCode;
           setSelectedCourseType(actualCode);
           setSelectedItem(savedItem);
           setEditedItem(JSON.parse(JSON.stringify(savedItem)));
           setIsEditing(true);
-          logAudit({ action: 'Create', description: `Created new course: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: 'Master LMP' });
+          logAudit({ action: 'Create', description: `Created new ${activeCollectionNoun}: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: 'LMP/Event Details' });
       } catch (err: any) {
-          alert(`❌ Failed to create course: ${err.message}`);
+          alert(`❌ Failed to create ${activeCollectionNoun}: ${err.message}`);
       }
   };
 
@@ -940,7 +979,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           resourcesHuman: [],
           location: '',
           courses: [selectedCourseType],
-          lmpType: 'Master LMP',
+          lmpType: activeLmpType,
       };
       // Add optimistically to UI, then persist to DB
       if (onAddItem) onAddItem(newItem);
@@ -948,7 +987,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       setEditedItem(JSON.parse(JSON.stringify(newItem)));
       setIsEditing(true);
       // Persist to DB in background (save will finalize with real DB id)
-      createSyllabusItem({ ...newItem, id: undefined }, 'New event added via Master LMP editor')
+      createSyllabusItem({ ...newItem, id: undefined }, `New event added via ${activeCollectionTitle} editor`)
           .then(saved => { if (onAddItem) onAddItem(saved); setSelectedItem(saved); setEditedItem(JSON.parse(JSON.stringify(saved))); })
           .catch(err => console.warn('Could not pre-create event in DB:', err));
   };
@@ -957,9 +996,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     <>
     <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
+      <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-start border-b border-gray-700 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Master LMP: {isEditing ? (
+          <h1 className="text-2xl font-bold text-white">LMP/Event Details: {isEditing ? (
               <input
                   type="text"
                   value={editingCourseTitle}
@@ -971,12 +1010,39 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           ) : (
               <span className="text-sky-400">{getCourseTitle(selectedCourseType)}</span>
           )}</h1>
-          <p className="text-sm text-gray-400">{isEditing ? 'Editing course title — changes apply to all events in this course' : 'Learning Management Package Details'}</p>
+          <p className="text-sm text-gray-400">{isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle}</p>
+          <div className="mt-3 inline-flex rounded-md border border-gray-700 bg-gray-950/70 p-1">
+            {[
+              { id: 'master' as LmpDetailsTab, label: 'Master LMP' },
+              { id: 'packages' as LmpDetailsTab, label: 'Training Packages' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                    if (tab.id === activeTab) return;
+                    setActiveTab(tab.id);
+                    setSelectedCourseType(getDefaultLmpSelection(tab.id));
+                    setSelectedItem(null);
+                    setHoveredItem(null);
+                    setIsEditing(false);
+                    setEditedItem(null);
+                }}
+                className={`h-9 min-w-[136px] rounded px-4 text-sm font-semibold transition ${
+                    activeTab === tab.id
+                        ? 'border border-sky-500/70 bg-sky-900/65 text-white'
+                        : 'border border-transparent text-gray-300 hover:bg-gray-800 hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 pt-1">
             <div className="flex items-center space-x-2 bg-gray-700 p-1 rounded-md">
-                <label htmlFor="course-select" className="text-xs text-gray-300 font-medium pl-2">Syllabus:</label>
+                <label htmlFor="course-select" className="text-xs text-gray-300 font-medium pl-2">{activeCollectionSelectLabel}</label>
                 <select 
                     id="course-select"
                     value={selectedCourseType}
@@ -986,7 +1052,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     }}
                     className="bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8"
                 >
-                    {courseLMPs.map(c => <option key={c} value={c}>{getCourseTitle(c)}</option>)}
+                    {courseLMPs.map(c => <option key={`${activeTab}-${c}`} value={c}>{getCourseTitle(c)}</option>)}
                 </select>
             </div>
 
@@ -1000,9 +1066,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 </div>
             ) : (
                 <div className="flex items-center gap-[1px]">
-                    <AuditButton pageName="Master LMP" />
-                    <button onClick={handleAddLMP} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Add Course</button>
-                    <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">Del Course</button>
+                    <AuditButton pageName="LMP/Event Details" />
+                    <button onClick={handleAddLMP} disabled={isFrozen} className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">{isTrainingPackagesTab ? 'Add package' : 'Add Course'}</button>
+                    <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">{isTrainingPackagesTab ? 'Del package' : 'Del Course'}</button>
                     <button onClick={() => { setUploadFile(null); setUploadResult(null); setShowUploadModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed">Upload</button>
                     <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
@@ -1105,24 +1171,24 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 onClick={e => e.stopPropagation()}
             >
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>
-                    Add Course
+                    Add {isTrainingPackagesTab ? 'Package' : 'Course'}
                 </h2>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20 }}>
-                    A course code will be auto-generated from the title.
+                    A {activeCollectionNoun} code will be auto-generated from the title.
                 </p>
 
                 {/* Course Title */}
                 <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
                         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-                        Course Title *
+                        {isTrainingPackagesTab ? 'Package' : 'Course'} Title *
                     </label>
                     <input
                         type="text"
                         value={newLMPName}
                         onChange={e => setNewLMPName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAddLMPSave()}
-                        placeholder="e.g. Basic Flying Course"
+                        placeholder={isTrainingPackagesTab ? 'e.g. Staff Category' : 'e.g. Basic Flying Course'}
                         autoFocus
                         style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
                             borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13,
@@ -1143,7 +1209,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 <div style={{ marginBottom: 24 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
                         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-                        Course Type
+                        {isTrainingPackagesTab ? 'Package Type' : 'Course Type'}
                     </label>
                     <select
                         value={newLMPCourseType}
@@ -1194,10 +1260,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 onClick={e => e.stopPropagation()}
             >
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: '#ef4444', marginBottom: 8 }}>
-                    ⚠️ Delete Course: {getCourseTitle(selectedCourseType)}
+                    Delete {isTrainingPackagesTab ? 'Package' : 'Course'}: {getCourseTitle(selectedCourseType)}
                 </h2>
                 <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20, lineHeight: 1.6 }}>
-                    This will permanently retire <strong style={{ color: '#f9fafb' }}>all events</strong> in the <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> course from the database.
+                    This will permanently retire <strong style={{ color: '#f9fafb' }}>all events</strong> in the <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> {activeCollectionNoun} from the database.
                     This action cannot be undone. Enter your password to confirm.
                 </p>
 
@@ -1319,7 +1385,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 onClick={e => e.stopPropagation()}
             >
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: '#38bdf8', marginBottom: 8 }}>
-                    📤 Bulk Upload LMP Events
+                    Bulk Upload LMP Events
                 </h2>
                 <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4, lineHeight: 1.6 }}>
                     Upload an Excel (.xlsx) file to populate <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> with LMP events.
