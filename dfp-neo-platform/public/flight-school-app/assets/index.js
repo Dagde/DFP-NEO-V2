@@ -58351,7 +58351,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const dayEnd = Math.min(windowEnd, flyingEndTime);
       let nightStart = 0;
       let nightEnd = 0;
-      if (nextEventLists.bnf.length >= 2) {
+      if (isNightFlyingProgrammed()) {
         nightStart = Math.max(windowStart, commenceNightFlying);
         nightEnd = Math.min(windowEnd, ceaseNightFlying);
       }
@@ -58365,7 +58365,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           currentWindow = { start: dayStart, end: dayEnd };
         }
       }
-      if (nightStart < nightEnd && nextEventLists.bnf.length >= 2) {
+      if (nightStart < nightEnd && isNightFlyingProgrammed()) {
         if (!currentWindow) {
           currentWindow = { start: nightStart, end: nightEnd };
         } else if (nightStart <= currentWindow.end) {
@@ -59624,6 +59624,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const bnfTraineeNames = new Set(nextEventLists.bnf.map((t) => t.fullName));
   const filterOutBnfTrainees = (list) => nextEventLists.bnf.length >= 2 ? list.filter((t) => !bnfTraineeNames.has(t.fullName)) : list;
+  const isOperationalNightFlight = (event) => event.type === "flight" && !event.resourceId?.startsWith("STBY") && !event.resourceId?.startsWith("BNF-STBY") && getGeneratedEventDayNightClassification(event) === "Night";
+  const hasMandatoryNightRemedialFlights = mandatoryRemedialFlights.some(isOperationalNightFlight);
+  const hasScheduledNightFlights = () => generatedEvents.some(isOperationalNightFlight);
+  const isNightFlyingProgrammed = () => allowNightFlying && (nextEventLists.bnf.length >= 2 || hasMandatoryNightRemedialFlights || hasScheduledNightFlights());
   const nightPairings = /* @__PURE__ */ new Map();
   let instructors = [...originalInstructors.map((i) => ({ ...i, unavailability: [...i.unavailability || []] }))];
   _diagInitInstructors(buildDate, instructors);
@@ -61082,9 +61086,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     recordProgress({ message: "Invalid day flying window", percentage: 90 });
   }
   let nightDutySup = null;
-  if (nextEventLists.bnf.length >= 2) {
+  if (isNightFlyingProgrammed()) {
     buildDebugLog("🌙 Pre-selecting night duty supervisor to prevent day assignments...");
-    const nightFlyingInstructorNames = new Set(Array.from(nightPairings.values()));
+    const nightFlyingInstructorNames = /* @__PURE__ */ new Set([
+      ...Array.from(nightPairings.values()),
+      ...mandatoryRemedialFlights.filter(isOperationalNightFlight).map((event) => event.instructor || event.pilot || "").filter(Boolean)
+    ]);
     const nightSupPool = instructors.filter(
       (s) => (s.isFlyingSupervisor || s.unavailability.some((u) => u.reason === "TMUF - Ground Duties only" && buildDate >= u.startDate && buildDate < u.endDate)) && !nightFlyingInstructorNames.has(s.name)
     );
@@ -61096,6 +61103,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       if (isPersonScheduledForDayEvents(sup.name)) {
         buildDebugLog(`🌙 ❌ ${sup.name} - has day events (Active DFP or NEO-Build)`);
+        return false;
+      }
+      if (isPersonScheduledForNightEvents(sup.name)) {
+        buildDebugLog(`🌙 ❌ ${sup.name} - already has night commitment`);
         return false;
       }
       buildDebugLog(`🌙 ✅ ${sup.name} - eligible for night duty supervisor`);
@@ -61218,7 +61229,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       currentSupTime += 0.5;
     }
   }
-  if (nextEventLists.bnf.length >= 2 && nightDutySup) {
+  if (isNightFlyingProgrammed() && nightDutySup) {
     recordProgress({ message: "Scheduling Night Duty Supervisor...", percentage: 42 });
     buildDebugLog(`Scheduling night duty supervisor: ${nightDutySup.name}`);
     const existingNightDutySup = generatedEvents.find((e) => {
@@ -61255,7 +61266,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       eventCounts.get(nightDutySup.name).dutySup++;
     }
-  } else if (nextEventLists.bnf.length >= 2 && !nightDutySup) {
+  } else if (isNightFlyingProgrammed() && !nightDutySup) {
     buildDebugLog("WARNING: Night flying scheduled but no night duty supervisor available!");
   }
   const currencyPriorityEvents = highestPriorityEvents.filter(
