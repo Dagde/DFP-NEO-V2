@@ -28,9 +28,12 @@ const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-eng
 // Cookie parser
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const XLSX = require('xlsx');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const KNOWN_AIRFIELD_IDENTITIES = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {})
   .filter((profile) => profile?.icao && profile?.iataCode)
@@ -5336,6 +5339,303 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
 // ============================================================
 // SYLLABUS API
 // ============================================================
+
+const BULK_UPLOAD_REQUIRED_COLUMNS = [
+  'Type',
+  'Event description',
+  'Event Details - Sortie',
+  'Total Event Hours',
+  'Method/s of Delivery',
+];
+
+function getUploadValue(row, aliases) {
+  for (const alias of aliases) {
+    if (Object.prototype.hasOwnProperty.call(row, alias)) return row[alias];
+  }
+
+  const normalisedAliases = aliases.map(alias => alias.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const key = Object.keys(row).find(candidate =>
+    normalisedAliases.includes(candidate.toLowerCase().replace(/[^a-z0-9]/g, ''))
+  );
+  return key ? row[key] : undefined;
+}
+
+function getUploadString(row, aliases) {
+  const value = getUploadValue(row, aliases);
+  return value === undefined || value === null ? '' : String(value).trim();
+}
+
+function getUploadNumber(row, aliases) {
+  const value = getUploadValue(row, aliases);
+  if (value === undefined || value === null || value === '') return undefined;
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : undefined;
+}
+
+function getUploadList(row, aliases) {
+  const value = getUploadValue(row, aliases);
+  if (value === undefined || value === null || value === '') return [];
+  if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean);
+  return String(value)
+    .split(/\r?\n|;/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function normaliseUploadType(value) {
+  const cleanValue = String(value || '').trim().toLowerCase();
+  if (cleanValue === 'flight') return 'Flight';
+  if (cleanValue === 'ftd') return 'FTD';
+  if (cleanValue === 'academics' || cleanValue === 'academic') return 'Academics';
+  if (cleanValue === 'ground' || cleanValue === 'ground school' || cleanValue === 'cpt') return 'Ground School';
+  return value || 'Ground School';
+}
+
+function normaliseUploadDayNight(value) {
+  const cleanValue = String(value || '').trim().toLowerCase();
+  if (cleanValue === 'night') return 'Night';
+  if (cleanValue === 'day/night' || cleanValue === 'day night' || cleanValue === 'daynight') return 'Day/Night';
+  return 'Day';
+}
+
+function normaliseUploadSortieType(value) {
+  const cleanValue = String(value || '').trim().toLowerCase();
+  if (cleanValue === 'solo') return 'Solo';
+  if (cleanValue === 'dual') return 'Dual';
+  return null;
+}
+
+function normaliseUploadAircraftConfigs(value) {
+  const configs = String(value || '')
+    .split(/\r?\n|;|,/)
+    .map(config => config.trim().toUpperCase())
+    .filter(Boolean)
+    .map(config => config === 'ANY' ? 'ANY' : `CONFIG ${config.replace(/^CONFIG\s*/, '').replace(/^C\s*/, '')}`);
+  return configs.length > 0 ? Array.from(new Set(configs)) : ['ANY'];
+}
+
+function normaliseUploadLmpType(value) {
+  return value === 'Staff CAT' ? 'Staff CAT' : 'Master LMP';
+}
+
+function getGeneratedUploadCode(courseCode, sequence) {
+  const prefix = String(courseCode || '').replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 6) || 'PKG';
+  return `${prefix}${String(sequence).padStart(2, '0')}`;
+}
+
+function uploadRowHasContent(row) {
+  return Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
+}
+
+function uploadItemBelongsToDestination(item, courseCode, lmpType) {
+  const courses = Array.isArray(item?.courses) ? item.courses : [];
+  return normaliseUploadLmpType(item?.lmpType) === lmpType && courses.includes(courseCode);
+}
+
+// POST /api/syllabus/bulk-upload - Import/update syllabus events from workbook
+app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { randomUUID } = await import('crypto');
+    const selectedCourseCode = String(req.body?.courseCode || '').trim();
+    const lmpType = normaliseUploadLmpType(String(req.body?.lmpType || 'Master LMP').trim());
+
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: 'No upload file supplied' });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const worksheetName = workbook.SheetNames.includes('Syllabus_LMP')
+      ? 'Syllabus_LMP'
+      : workbook.SheetNames[0];
+
+    if (!worksheetName) {
+      return res.status(400).json({ error: 'The upload file does not contain any worksheets' });
+    }
+
+    const worksheet = workbook.Sheets[worksheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    const created = [];
+    const updated = [];
+    const errors = [];
+    let skipped = 0;
+    let generatedCodeSequence = 1;
+    let generatedPlaceholderUsed = false;
+
+    const maxOrderRows = await db.$queryRawUnsafe(`SELECT COALESCE(MAX("sortOrder"), 0)::int AS "maxSortOrder" FROM "SyllabusItem"`);
+    let nextSortOrder = Number(maxOrderRows?.[0]?.maxSortOrder || 0) + 1;
+
+    const reusablePackagePlaceholder = selectedCourseCode && lmpType === 'Staff CAT'
+      ? (await db.$queryRawUnsafe(
+          `SELECT * FROM "SyllabusItem" WHERE "code" = $1 AND "lmpType" = $2 AND "isActive" = true AND $1 = ANY("courses") LIMIT 1`,
+          selectedCourseCode,
+          lmpType
+        ))[0]
+      : null;
+
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+      const rowNumber = index + 2;
+      if (!uploadRowHasContent(row)) continue;
+
+      const missingColumns = BULK_UPLOAD_REQUIRED_COLUMNS.filter(column => !getUploadString(row, [column]));
+      if (missingColumns.length > 0) {
+        errors.push({ row: rowNumber, error: `Missing required fields: ${missingColumns.join(', ')}` });
+        skipped += 1;
+        continue;
+      }
+
+      const courseFromRow = getUploadString(row, ['Course', 'Package']);
+      const courseCode = selectedCourseCode || courseFromRow;
+      if (!courseCode) {
+        errors.push({ row: rowNumber, error: 'Missing selected course/package code' });
+        skipped += 1;
+        continue;
+      }
+
+      const explicitCode = getUploadString(row, ['Code']);
+      const code = explicitCode || getGeneratedUploadCode(courseCode, generatedCodeSequence++);
+      const type = normaliseUploadType(getUploadString(row, ['Type']));
+      const sortieType = type === 'Flight' ? normaliseUploadSortieType(getUploadString(row, ['Dual/Solo', 'sortieType'])) : null;
+      const flightOrSimHours = getUploadNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
+      const totalEventHours = getUploadNumber(row, ['Total Event Hours', 'totalEventHours']) ?? 0;
+      const itemData = {
+        code,
+        eventDescription: getUploadString(row, ['Event description', 'eventDescription']),
+        phase: getUploadString(row, ['Phase']) || courseCode,
+        module: getUploadString(row, ['Module']) || courseCode,
+        type,
+        sortieType,
+        dayNight: normaliseUploadDayNight(getUploadString(row, ['Day/Night', 'dayNight'])),
+        courses: [courseCode],
+        methodOfDelivery: getUploadList(row, ['Method/s of Delivery', 'methodOfDelivery']),
+        methodOfAssessment: getUploadList(row, ['Method/s of Assessment', 'Type/s and Method/s of Assessment', 'methodOfAssessment']),
+        resourcesPhysical: getUploadList(row, ['Resources Required (physical)', 'resourcesPhysical']),
+        resourceNumber: Math.max(0, Math.round(getUploadNumber(row, ['Resource Number', 'resourceNumber', 'Resources Required Number']) ?? 0)),
+        acceptableAircraftConfigs: normaliseUploadAircraftConfigs(getUploadString(row, ['CONFIG', 'Config', 'Acceptable CONFIG', 'Acceptable Aircraft CONFIG', 'acceptableAircraftConfigs'])),
+        resourcesHuman: getUploadList(row, ['Resources Required (Human)', 'resourcesHuman']),
+        eventDetailsCommon: getUploadList(row, ['Event Details - Common', 'eventDetailsCommon']),
+        eventDetailsSortie: getUploadList(row, ['Event Details - Sortie', 'eventDetailsSortie']),
+        flightOrSimHours: flightOrSimHours ?? 0,
+        totalEventHours,
+        duration: flightOrSimHours ?? totalEventHours,
+        preFlightTime: getUploadNumber(row, ['Pre-flight', 'preFlightTime']) ?? 0,
+        postFlightTime: getUploadNumber(row, ['Post-flight', 'postFlightTime']) ?? 0,
+        prerequisites: getUploadList(row, ['prerequisites', 'Prerequisites']),
+        prerequisitesGround: getUploadList(row, ['Pre-requisite Events (Ground School)', 'prerequisitesGround']),
+        prerequisitesFlying: getUploadList(row, ['Pre-requisite Events (Sim/Flying)', 'prerequisitesFlying']),
+        location: '',
+        lmpType,
+        isActive: true,
+      };
+
+      const existing = (await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "code" = $1 LIMIT 1`, code))[0];
+      if (existing) {
+        if (!uploadItemBelongsToDestination(existing, courseCode, lmpType)) {
+          errors.push({
+            row: rowNumber,
+            error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
+          });
+          skipped += 1;
+          continue;
+        }
+
+        await db.$executeRawUnsafe(`
+          UPDATE "SyllabusItem"
+          SET "code" = $2, "eventDescription" = $3, "phase" = $4, "module" = $5, "type" = $6,
+              "sortieType" = $7, "dayNight" = $8, "courses" = $9::text[],
+              "methodOfDelivery" = $10::text[], "methodOfAssessment" = $11::text[],
+              "resourcesPhysical" = $12::text[], "resourceNumber" = $13::integer,
+              "acceptableAircraftConfigs" = $14::text[], "resourcesHuman" = $15::text[],
+              "eventDetailsCommon" = $16::text[], "eventDetailsSortie" = $17::text[],
+              "flightOrSimHours" = $18, "totalEventHours" = $19, "duration" = $20,
+              "preFlightTime" = $21, "postFlightTime" = $22,
+              "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
+              "prerequisitesFlying" = $25::text[], "location" = $26, "lmpType" = $27,
+              "isActive" = $28::boolean, "version" = "version" + 1, "updatedAt" = NOW()
+          WHERE "id" = $1
+        `,
+          existing.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
+          itemData.sortieType, itemData.dayNight, itemData.courses, itemData.methodOfDelivery, itemData.methodOfAssessment,
+          itemData.resourcesPhysical, itemData.resourceNumber, itemData.acceptableAircraftConfigs, itemData.resourcesHuman,
+          itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
+          itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
+          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.lmpType, itemData.isActive
+        );
+        updated.push({ code });
+        continue;
+      }
+
+      if (!explicitCode && reusablePackagePlaceholder && !generatedPlaceholderUsed) {
+        await db.$executeRawUnsafe(`
+          UPDATE "SyllabusItem"
+          SET "code" = $2, "eventDescription" = $3, "phase" = $4, "module" = $5, "type" = $6,
+              "sortieType" = $7, "dayNight" = $8, "courses" = $9::text[],
+              "methodOfDelivery" = $10::text[], "methodOfAssessment" = $11::text[],
+              "resourcesPhysical" = $12::text[], "resourceNumber" = $13::integer,
+              "acceptableAircraftConfigs" = $14::text[], "resourcesHuman" = $15::text[],
+              "eventDetailsCommon" = $16::text[], "eventDetailsSortie" = $17::text[],
+              "flightOrSimHours" = $18, "totalEventHours" = $19, "duration" = $20,
+              "preFlightTime" = $21, "postFlightTime" = $22,
+              "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
+              "prerequisitesFlying" = $25::text[], "location" = $26, "lmpType" = $27,
+              "isActive" = $28::boolean, "version" = "version" + 1, "updatedAt" = NOW()
+          WHERE "id" = $1
+        `,
+          reusablePackagePlaceholder.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
+          itemData.sortieType, itemData.dayNight, itemData.courses, itemData.methodOfDelivery, itemData.methodOfAssessment,
+          itemData.resourcesPhysical, itemData.resourceNumber, itemData.acceptableAircraftConfigs, itemData.resourcesHuman,
+          itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
+          itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
+          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.lmpType, itemData.isActive
+        );
+        generatedPlaceholderUsed = true;
+        updated.push({ code });
+        continue;
+      }
+
+      const id = randomUUID();
+      await db.$executeRawUnsafe(`
+        INSERT INTO "SyllabusItem" (
+          "id","code","eventDescription","phase","module","type","sortieType","dayNight",
+          "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber",
+          "acceptableAircraftConfigs","resourcesHuman","eventDetailsCommon","eventDetailsSortie",
+          "flightOrSimHours","totalEventHours","duration","preFlightTime","postFlightTime",
+          "prerequisites","prerequisitesGround","prerequisitesFlying","location","sortOrder","lmpType",
+          "isActive","version","createdBy","createdAt","updatedAt"
+        ) VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,
+          $9,$10,$11,$12,$13,
+          $14,$15,$16,$17,
+          $18,$19,$20,$21,$22,
+          $23,$24,$25,$26,$27,$28,
+          $29,$30,$31,NOW(),NOW()
+        )
+      `,
+        id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
+        itemData.sortieType, itemData.dayNight, itemData.courses, itemData.methodOfDelivery,
+        itemData.methodOfAssessment, itemData.resourcesPhysical, itemData.resourceNumber,
+        itemData.acceptableAircraftConfigs, itemData.resourcesHuman, itemData.eventDetailsCommon,
+        itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
+        itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
+        itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, nextSortOrder++,
+        itemData.lmpType, itemData.isActive, 1, 'bulk-upload'
+      );
+      created.push({ code });
+    }
+
+    res.json({
+      created: created.length,
+      updated: updated.length,
+      skipped,
+      errors,
+      message: `${created.length} created, ${updated.length} updated in ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${selectedCourseCode || ''}`.trim(),
+    });
+  } catch (error) {
+    console.error('❌ POST /api/syllabus/bulk-upload error:', error);
+    res.status(500).json({ error: error.message || 'Failed to bulk upload syllabus events', details: error.message });
+  }
+});
 
 // GET /api/syllabus - Fetch all active syllabus items
 app.get('/api/syllabus', async (req, res) => {

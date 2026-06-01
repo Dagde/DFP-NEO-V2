@@ -12,7 +12,6 @@ const REQUIRED_COLUMNS = [
   'Event Details - Sortie',
   'Total Event Hours',
   'Method/s of Delivery',
-  'Resources Required (Human)',
 ];
 
 const getValue = (row: Record<string, any>, aliases: string[]): any => {
@@ -70,6 +69,16 @@ const normaliseSortieType = (value: string): 'Dual' | 'Solo' | null => {
   if (cleanValue === 'solo') return 'Solo';
   if (cleanValue === 'dual') return 'Dual';
   return null;
+};
+
+const normaliseAircraftConfigs = (value: string): string[] => {
+  const configs = value
+    .split(/\r?\n|;|,/)
+    .map(config => config.trim().toUpperCase())
+    .filter(Boolean)
+    .map(config => (config.startsWith('CONFIG ') ? config.replace('CONFIG ', '') : config))
+    .map(config => (config === 'ANY' ? 'ANY' : `CONFIG ${config.replace(/^C\s*/, '').replace(/^CONFIG\s*/, '')}`));
+  return configs.length > 0 ? Array.from(new Set(configs)) : ['ANY'];
 };
 
 const getNormalisedLmpType = (value: string | null | undefined): 'Staff CAT' | 'Master LMP' =>
@@ -196,6 +205,7 @@ export async function POST(request: NextRequest) {
         prerequisitesGround: getList(row, ['Pre-requisite Events (Ground School)', 'prerequisitesGround']),
         prerequisitesFlying: getList(row, ['Pre-requisite Events (Sim/Flying)', 'prerequisitesFlying']),
         resourceNumber: getNumber(row, ['Resource Number', 'resourceNumber', 'Resources Required Number']) ?? 0,
+        acceptableAircraftConfigs: normaliseAircraftConfigs(getString(row, ['CONFIG', 'Config', 'Acceptable CONFIG', 'Acceptable Aircraft CONFIG', 'acceptableAircraftConfigs'])),
         location: '',
         lmpType,
         isActive: true,
