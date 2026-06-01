@@ -540,8 +540,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [hoveredItem, setHoveredItem] = useState<SyllabusItemDetail | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
-  const [activeTab, setActiveTab] = useState<LmpDetailsTab>('master');
-  const [selectedCourseType, setSelectedCourseType] = useState<string>('BPC+IPC');
+  const [activeTab, setActiveTab] = useState<LmpDetailsTab>(() => {
+      const savedTab = localStorage.getItem('neo_lmp_details_active_tab');
+      return savedTab === 'packages' || savedTab === 'master' ? savedTab : 'master';
+  });
+  const [selectedCourseType, setSelectedCourseType] = useState<string>(() =>
+      localStorage.getItem('neo_lmp_details_selected_package') || 'BPC+IPC'
+  );
   const [editingCourseTitle, setEditingCourseTitle] = useState<string>('');
   const isTrainingPackagesTab = activeTab === 'packages';
   const activeLmpType = getActiveLmpType(activeTab);
@@ -638,6 +643,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
         setEditedItem(null);
     }
   }, [courseLMPs, selectedCourseType]);
+
+  useEffect(() => {
+      localStorage.setItem('neo_lmp_details_active_tab', activeTab);
+      localStorage.setItem('neo_lmp_details_selected_package', selectedCourseType);
+  }, [activeTab, selectedCourseType]);
 
   // Select first item by default when syllabusDetails or selectedCourseType changes
   useEffect(() => {
@@ -850,6 +860,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           setUploadResult(data);
           // Reload syllabus data by triggering a page reload after short delay
           if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
+              localStorage.setItem('neo_lmp_details_active_tab', activeTab);
+              localStorage.setItem('neo_lmp_details_selected_package', destinationCode);
               setTimeout(() => window.location.reload(), 2000);
           }
       } catch (err: any) {

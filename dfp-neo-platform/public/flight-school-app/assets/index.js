@@ -32649,8 +32649,13 @@ const SyllabusView = ({
   const [hoveredItem, setHoveredItem] = reactExports.useState(null);
   const [isEditing, setIsEditing] = reactExports.useState(false);
   const [editedItem, setEditedItem] = reactExports.useState(null);
-  const [activeTab, setActiveTab] = reactExports.useState("master");
-  const [selectedCourseType, setSelectedCourseType] = reactExports.useState("BPC+IPC");
+  const [activeTab, setActiveTab] = reactExports.useState(() => {
+    const savedTab = localStorage.getItem("neo_lmp_details_active_tab");
+    return savedTab === "packages" || savedTab === "master" ? savedTab : "master";
+  });
+  const [selectedCourseType, setSelectedCourseType] = reactExports.useState(
+    () => localStorage.getItem("neo_lmp_details_selected_package") || "BPC+IPC"
+  );
   const [editingCourseTitle, setEditingCourseTitle] = reactExports.useState("");
   const isTrainingPackagesTab = activeTab === "packages";
   const activeLmpType = getActiveLmpType(activeTab);
@@ -32729,6 +32734,10 @@ const SyllabusView = ({
       setEditedItem(null);
     }
   }, [courseLMPs, selectedCourseType]);
+  reactExports.useEffect(() => {
+    localStorage.setItem("neo_lmp_details_active_tab", activeTab);
+    localStorage.setItem("neo_lmp_details_selected_package", selectedCourseType);
+  }, [activeTab, selectedCourseType]);
   reactExports.useEffect(() => {
     if (initialSelectedId) {
       const itemToSelect = syllabusDetails.find((item) => item.code === initialSelectedId);
@@ -32919,6 +32928,8 @@ const SyllabusView = ({
       if (!resp.ok) throw new Error(data.error || data.message || `Upload failed (${resp.status} ${resp.statusText})`);
       setUploadResult(data);
       if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
+        localStorage.setItem("neo_lmp_details_active_tab", activeTab);
+        localStorage.setItem("neo_lmp_details_selected_package", destinationCode);
         setTimeout(() => window.location.reload(), 2e3);
       }
     } catch (err) {
