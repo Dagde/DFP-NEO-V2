@@ -21406,6 +21406,7 @@ const PrioritiesView = ({
   const [courseTimestamp, setCourseTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const sctEvents = ["SCT GF", "SCT IF", "SCT NAV", "SCT FORM"];
   const instructorNames = reactExports.useMemo(() => instructorsData.map((i) => i.name).sort(), [instructorsData]);
+  const [openCurrencyRequestKey, setOpenCurrencyRequestKey] = reactExports.useState(null);
   const [aircraftTimestamp, setAircraftTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const [flyingWindowTimestamp, setFlyingWindowTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const [dutyPeriodTimestamp, setDutyPeriodTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
@@ -21438,6 +21439,18 @@ const PrioritiesView = ({
   const nonCleanConfigCapacityTotal = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || "", 10) || 0), 0), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
   const hasEnteredConfigCapacity = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").some((definition) => String(aircraftConfigCapacities[definition.id] || "").trim() !== ""), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
   const derivedCleanConfigCapacity = Math.max(0, availableAircraftCount - nonCleanConfigCapacityTotal);
+  const getAircraftConfigLabel = (configId) => {
+    const normalisedConfigId = configId || BASE_AIRCRAFT_CONFIG.id;
+    if (normalisedConfigId === ANY_AIRCRAFT_CONFIG) return "ANY";
+    const definition = aircraftConfigOptions.find((item) => item.id === normalisedConfigId);
+    return (definition?.label || normalisedConfigId.replace("-", " ")).toUpperCase();
+  };
+  const getAircraftConfigSummary = (event) => {
+    if (event.type !== "flight") return "N/A";
+    const acceptedConfigs = Array.isArray(event.acceptableAircraftConfigs) && event.acceptableAircraftConfigs.length > 0 ? event.acceptableAircraftConfigs : event.aircraftConfigId ? [event.aircraftConfigId] : [BASE_AIRCRAFT_CONFIG.id];
+    if (acceptedConfigs.includes(ANY_AIRCRAFT_CONFIG)) return "ANY";
+    return acceptedConfigs.map(getAircraftConfigLabel).join(", ");
+  };
   reactExports.useEffect(() => {
     setFlyingWindowTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
   }, [flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, allowNightFlying]);
@@ -21688,6 +21701,52 @@ const PrioritiesView = ({
       children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-3 w-3", viewBox: "0 0 20 20", fill: "currentColor", children: direction === "up" ? /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5l-5.5 5.5h11L10 5z", clipRule: "evenodd" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 15l5.5-5.5h-11L10 15z", clipRule: "evenodd" }) })
     }
   );
+  const CurrencySelect = ({ request, type }) => {
+    const dropdownKey = `${type}:${request.id}`;
+    const isOpen = openCurrencyRequestKey === dropdownKey;
+    const selectedLabel = request.currency || "Select Currency";
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          onClick: () => setOpenCurrencyRequestKey(isOpen ? null : dropdownKey),
+          className: "flex w-full items-center justify-between rounded border border-gray-600 bg-gray-700 px-2 py-1 text-left text-xs text-white focus:outline-none focus:ring-1 focus:ring-sky-500",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: selectedLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-[10px] text-gray-300", children: "v" })
+          ]
+        }
+      ),
+      isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-0 top-full z-[120] mt-1 max-h-64 w-64 overflow-y-auto rounded border border-sky-500/40 bg-slate-950 shadow-xl", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              onUpdateSctRequest(request.id, "currency", "", type);
+              setOpenCurrencyRequestKey(null);
+            },
+            className: "block w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-sky-900/70",
+            children: "Select Currency"
+          }
+        ),
+        currencyNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              onUpdateSctRequest(request.id, "currency", name, type);
+              setOpenCurrencyRequestKey(null);
+            },
+            className: "block w-full px-3 py-2 text-left text-xs text-white hover:bg-sky-900/70",
+            children: name
+          },
+          name
+        ))
+      ] })
+    ] });
+  };
   const SctRequestTable = ({ type, requests }) => {
     const calculateDaysToExpire = (expireDateStr) => {
       if (!expireDateStr) return null;
@@ -21746,10 +21805,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.currency, onChange: (e) => onUpdateSctRequest(req.id, "currency", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Currency" }),
-              currencyNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
-            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CurrencySelect, { request: req, type }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.currencyExpire, onChange: (e) => onUpdateSctRequest(req.id, "currencyExpire", e.target.value, type), style: { colorScheme: "dark" }, className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24 text-gray-300 font-mono", children: formatDate2(req.dateRequested) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32 text-center", children: expiryInfo ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold ${expiryInfo.color}`, children: expiryInfo.days }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "-" }) }),
@@ -21770,12 +21826,12 @@ const PrioritiesView = ({
               "button",
               {
                 onClick: () => {
-                  if (req.name && req.currency) {
+                  if (req.name && req.event) {
                     onSubmitSctRequest(req.id, type);
                   }
                 },
-                disabled: !req.name || !req.currency,
-                className: `px-2 py-1 text-xs rounded font-semibold ${req.name && req.currency ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
+                disabled: !req.name || !req.event,
+                className: `px-2 py-1 text-xs rounded font-semibold ${req.name && req.event ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
                 children: "Submit"
               }
             ) }),
@@ -21808,6 +21864,7 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Solo/Dual" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Action" })
     ] }) }),
@@ -21822,6 +21879,7 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: event.flightNumber }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: event.soloOrDual || event.flightType || "N/A" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: event.currency || "N/A" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: getAircraftConfigSummary(event) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${event.priority === "Medium" ? "text-amber-300" : event.priority === "Low" ? "text-green-300" : "text-red-300"}`, children: event.priority || "High" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -57319,6 +57377,7 @@ const stampMasterLmpItems = (masterLMP) => masterLMP.map((item, index) => ({
   masterEventId: getMasterEventId(item),
   lmpSource: "master",
   orderKey: item.orderKey || createLmpOrderKey(index),
+  notes: item.notes || "",
   placementNeedsReview: false
 }));
 const isLmpOverlayItem = (item) => item.lmpSource === "remedial" || item.lmpSource === "custom" || item.isRemedial === true || item.id?.includes("REM") || isRemedialEventCode(item.id) || item.code?.includes("REM") || isRemedialEventCode(item.code) || item.id?.endsWith("-CUR") || item.code?.endsWith("-CUR");
@@ -69785,12 +69844,29 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         ...entry
       });
     };
+    const buildSctEventNotes = (sctReq) => {
+      const noteLines = [];
+      const existingNotes = String(sctReq.notes || "").trim();
+      if (existingNotes) noteLines.push(existingNotes);
+      if (String(sctReq.currency || "").trim()) noteLines.push(`Currency: ${sctReq.currency}`);
+      if (String(sctReq.currencyExpire || "").trim()) noteLines.push(`Currency Expire: ${sctReq.currencyExpire}`);
+      if (String(sctReq.dateRequested || "").trim()) noteLines.push(`Date Requested: ${sctReq.dateRequested}`);
+      if (String(sctReq.currencyExpire || "").trim()) {
+        const expiry = /* @__PURE__ */ new Date(`${sctReq.currencyExpire}T00:00:00Z`);
+        const buildDate = /* @__PURE__ */ new Date(`${buildDfpDate}T00:00:00Z`);
+        if (!Number.isNaN(expiry.getTime()) && !Number.isNaN(buildDate.getTime())) {
+          const daysToExpire = Math.ceil((expiry.getTime() - buildDate.getTime()) / (1e3 * 60 * 60 * 24));
+          noteLines.push(`Days to Expire: ${daysToExpire}`);
+        }
+      }
+      return noteLines.join("\n");
+    };
     console.log("🔍 SCT Sync - buildDfpDate:", buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
-      (req) => (req.priority === "High" || req.includeInBuild) && req.name.trim() !== "" && req.currency.trim() !== ""
+      (req) => (req.priority === "High" || req.includeInBuild) && req.name.trim() !== "" && req.event.trim() !== ""
     );
     const highPrioritySctFtds = sctFtds.filter(
-      (req) => (req.priority === "High" || req.includeInBuild) && req.name.trim() !== "" && req.currency.trim() !== ""
+      (req) => (req.priority === "High" || req.includeInBuild) && req.name.trim() !== "" && req.event.trim() !== ""
     );
     console.log("🔍 Found SCT flights to include:", highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
     highPrioritySctFlights.forEach((sctReq) => {
@@ -69819,6 +69895,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           flightType: sctReq.flightType,
           soloOrDual: sctReq.flightType,
           currency: sctReq.currency,
+          notes: buildSctEventNotes(sctReq),
           aircraftConfigId,
           acceptableAircraftConfigs: [aircraftConfigId]
         };
@@ -69861,6 +69938,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           eventCategory: "sct",
           // This is the key field that makes it use SCT logic
           currency: sctReq.currency,
+          notes: buildSctEventNotes(sctReq),
           aircraftConfigId,
           acceptableAircraftConfigs: [aircraftConfigId]
         };
@@ -69894,7 +69972,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           startTime,
           flightType: "Dual",
           soloOrDual: "Dual",
-          currency: sctReq.currency
+          currency: sctReq.currency,
+          notes: buildSctEventNotes(sctReq)
         };
         console.log("🔄 Updated HIGH priority SCT FTD:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
@@ -69933,7 +70012,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           isSct: true,
           eventCategory: "sct",
           // This is the key field that makes it use SCT logic
-          currency: sctReq.currency
+          currency: sctReq.currency,
+          notes: buildSctEventNotes(sctReq)
         };
         console.log("✅ Added HIGH priority SCT FTD:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
         console.log("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
@@ -74106,7 +74186,7 @@ ${conflictLines.join("\n")}${moreText}`,
                 currency: "",
                 currencyExpire: "",
                 priority: "Medium",
-                dateRequested: getLocalDateString(),
+                dateRequested: "",
                 requestedTime: "15:00",
                 submitted: false,
                 includeInBuild: false,

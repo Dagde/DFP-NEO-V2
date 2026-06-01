@@ -193,6 +193,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   // SCT Request Constants
   const sctEvents = ['SCT GF', 'SCT IF', 'SCT NAV', 'SCT FORM'];
   const instructorNames = useMemo(() => instructorsData.map(i => i.name).sort(), [instructorsData]);
+  const [openCurrencyRequestKey, setOpenCurrencyRequestKey] = useState<string | null>(null);
 
 
   // State for Build Factors
@@ -245,6 +246,24 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   ), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
 
   const derivedCleanConfigCapacity = Math.max(0, availableAircraftCount - nonCleanConfigCapacityTotal);
+
+  const getAircraftConfigLabel = (configId?: string): string => {
+    const normalisedConfigId = configId || BASE_AIRCRAFT_CONFIG.id;
+    if (normalisedConfigId === ANY_AIRCRAFT_CONFIG) return 'ANY';
+    const definition = aircraftConfigOptions.find(item => item.id === normalisedConfigId);
+    return (definition?.label || normalisedConfigId.replace('-', ' ')).toUpperCase();
+  };
+
+  const getAircraftConfigSummary = (event: ScheduleEvent): string => {
+    if (event.type !== 'flight') return 'N/A';
+    const acceptedConfigs = Array.isArray(event.acceptableAircraftConfigs) && event.acceptableAircraftConfigs.length > 0
+      ? event.acceptableAircraftConfigs
+      : event.aircraftConfigId
+        ? [event.aircraftConfigId]
+        : [BASE_AIRCRAFT_CONFIG.id];
+    if (acceptedConfigs.includes(ANY_AIRCRAFT_CONFIG)) return 'ANY';
+    return acceptedConfigs.map(getAircraftConfigLabel).join(', ');
+  };
 
   useEffect(() => {
     setFlyingWindowTimestamp(new Date().toLocaleString());
@@ -569,6 +588,52 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
 
+  const CurrencySelect: React.FC<{ request: SctRequest; type: 'flight' | 'ftd' }> = ({ request, type }) => {
+    const dropdownKey = `${type}:${request.id}`;
+    const isOpen = openCurrencyRequestKey === dropdownKey;
+    const selectedLabel = request.currency || 'Select Currency';
+
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpenCurrencyRequestKey(isOpen ? null : dropdownKey)}
+          className="flex w-full items-center justify-between rounded border border-gray-600 bg-gray-700 px-2 py-1 text-left text-xs text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+        >
+          <span className="truncate">{selectedLabel}</span>
+          <span className="ml-2 text-[10px] text-gray-300">v</span>
+        </button>
+        {isOpen && (
+          <div className="absolute left-0 top-full z-[120] mt-1 max-h-64 w-64 overflow-y-auto rounded border border-sky-500/40 bg-slate-950 shadow-xl">
+            <button
+              type="button"
+              onClick={() => {
+                onUpdateSctRequest(request.id, 'currency', '', type);
+                setOpenCurrencyRequestKey(null);
+              }}
+              className="block w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-sky-900/70"
+            >
+              Select Currency
+            </button>
+            {currencyNames.map(name => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => {
+                  onUpdateSctRequest(request.id, 'currency', name, type);
+                  setOpenCurrencyRequestKey(null);
+                }}
+                className="block w-full px-3 py-2 text-left text-xs text-white hover:bg-sky-900/70"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   
   
   const SctRequestTable: React.FC<{ type: 'flight' | 'ftd', requests: SctRequest[] }> = ({ type, requests }) => {
@@ -650,10 +715,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </select>
                               </td>
                                <td className="py-1 px-2 w-48">
-                                  <select value={req.currency} onChange={e => onUpdateSctRequest(req.id, 'currency', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
-                                      <option value="">Select Currency</option>
-                                      {currencyNames.map(name => <option key={name} value={name}>{name}</option>)}
-                                  </select>
+                                  <CurrencySelect request={req} type={type} />
                               </td>
                                <td className="py-1 px-2 w-40">
                                   <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" />
@@ -686,13 +748,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   ) : (
                                       <button 
                                           onClick={() => {
-                                              if (req.name && req.currency) {
+                                              if (req.name && req.event) {
                                                   onSubmitSctRequest(req.id, type);
                                               }
                                           }}
-                                          disabled={!req.name || !req.currency}
+                                          disabled={!req.name || !req.event}
                                           className={`px-2 py-1 text-xs rounded font-semibold ${
-                                              req.name && req.currency 
+                                              req.name && req.event 
                                                   ? 'bg-green-600 hover:bg-green-700 text-white' 
                                                   : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                                           }`}
@@ -754,6 +816,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <th className="py-2 px-2 text-left">Event</th>
                     <th className="py-2 px-2 text-left">Solo/Dual</th>
                     <th className="py-2 px-2 text-left">Currency</th>
+                    <th className="py-2 px-2 text-left">Config</th>
                     <th className="py-2 px-2 text-left">Priority</th>
                     <th className="py-2 px-2 text-left">Action</th>
                 </tr>
@@ -772,6 +835,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         <td className={`py-2 px-2 ${rowText} font-semibold`}>{event.flightNumber}</td>
                         <td className={`py-2 px-2 ${rowText}`}>{event.soloOrDual || event.flightType || 'N/A'}</td>
                         <td className={`py-2 px-2 ${rowText}`}>{event.currency || 'N/A'}</td>
+                        <td className={`py-2 px-2 ${rowText} font-semibold`}>{getAircraftConfigSummary(event)}</td>
                         <td className={`py-2 px-2 font-semibold ${
                             event.priority === 'Medium'
                                 ? 'text-amber-300'

@@ -1104,7 +1104,7 @@ app.post('/api/sct-requests', async (req, res) => {
       currencyExpire || '',
       priority || 'Medium',
       notes || null,
-      dateRequested || new Date().toISOString().split('T')[0],
+      dateRequested ?? new Date().toISOString().split('T')[0],
       requestedTime || '15:00',
       false,
       false,

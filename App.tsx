@@ -543,6 +543,7 @@ const stampMasterLmpItems = (masterLMP: SyllabusItemDetail[]): SyllabusItemDetai
         masterEventId: getMasterEventId(item),
         lmpSource: 'master',
         orderKey: item.orderKey || createLmpOrderKey(index),
+        notes: item.notes || '',
         placementNeedsReview: false,
     }));
 
@@ -16603,14 +16604,31 @@ const App: React.FC = () => {
                 ...entry,
             });
         };
+        const buildSctEventNotes = (sctReq: SctRequest): string => {
+            const noteLines: string[] = [];
+            const existingNotes = String(sctReq.notes || '').trim();
+            if (existingNotes) noteLines.push(existingNotes);
+            if (String(sctReq.currency || '').trim()) noteLines.push(`Currency: ${sctReq.currency}`);
+            if (String(sctReq.currencyExpire || '').trim()) noteLines.push(`Currency Expire: ${sctReq.currencyExpire}`);
+            if (String(sctReq.dateRequested || '').trim()) noteLines.push(`Date Requested: ${sctReq.dateRequested}`);
+            if (String(sctReq.currencyExpire || '').trim()) {
+                const expiry = new Date(`${sctReq.currencyExpire}T00:00:00Z`);
+                const buildDate = new Date(`${buildDfpDate}T00:00:00Z`);
+                if (!Number.isNaN(expiry.getTime()) && !Number.isNaN(buildDate.getTime())) {
+                    const daysToExpire = Math.ceil((expiry.getTime() - buildDate.getTime()) / (1000 * 60 * 60 * 24));
+                    noteLines.push(`Days to Expire: ${daysToExpire}`);
+                }
+            }
+            return noteLines.join('\n');
+        };
 
         // 1. Auto-add HIGH priority SCT requests AND MEDIUM/LOW with includeInBuild=true
         console.log('🔍 SCT Sync - buildDfpDate:', buildDfpDate);
         const highPrioritySctFlights = sctFlights.filter(req =>
-            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.currency.trim() !== ''
+            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.event.trim() !== ''
         );
         const highPrioritySctFtds = sctFtds.filter(req =>
-            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.currency.trim() !== ''
+            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.event.trim() !== ''
         );
         console.log('🔍 Found SCT flights to include:', highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
 
@@ -16648,6 +16666,7 @@ const App: React.FC = () => {
                     flightType: sctReq.flightType,
                     soloOrDual: sctReq.flightType,
                     currency: sctReq.currency,
+                    notes: buildSctEventNotes(sctReq),
                     aircraftConfigId,
                     acceptableAircraftConfigs: [aircraftConfigId],
                 };
@@ -16686,6 +16705,7 @@ const App: React.FC = () => {
                     isSct: true,
                     eventCategory: 'sct', // This is the key field that makes it use SCT logic
                     currency: sctReq.currency,
+                    notes: buildSctEventNotes(sctReq),
                     aircraftConfigId,
                     acceptableAircraftConfigs: [aircraftConfigId],
                 };
@@ -16729,7 +16749,8 @@ const App: React.FC = () => {
                     startTime: startTime,
                     flightType: 'Dual',
                     soloOrDual: 'Dual',
-                    currency: sctReq.currency
+                    currency: sctReq.currency,
+                    notes: buildSctEventNotes(sctReq)
                 };
                 console.log('🔄 Updated HIGH priority SCT FTD:', sctReq.event, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else if (!existingInNextDay) {
@@ -16764,7 +16785,8 @@ const App: React.FC = () => {
                     isTimeFixed: true,
                     isSct: true,
                     eventCategory: 'sct', // This is the key field that makes it use SCT logic
-                    currency: sctReq.currency
+                    currency: sctReq.currency,
+                    notes: buildSctEventNotes(sctReq)
                 };
                 console.log('\u2705 Added HIGH priority SCT FTD:', sctReq.event, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
                 console.log('  - Event date:', newEvent.date, '| isTimeFixed:', newEvent.isTimeFixed, '| startTime:', newEvent.startTime);
@@ -21943,7 +21965,7 @@ updates.forEach(update => {
                           currency: '',
                           currencyExpire: '',
                           priority: 'Medium' as 'Medium',
-                          dateRequested: getLocalDateString(),
+                          dateRequested: '',
                           requestedTime: '15:00',
                           submitted: false,
                           includeInBuild: false,
