@@ -35,7 +35,7 @@ import {
     type ResourceDisplayNames,
 } from './utils/resourceDisplayNames';
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
-import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions } from './utils/aircraftConfigurationSettings';
+import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from './utils/aircraftConfigurationSettings';
 import {
     readTileStatusSettingsFromLocalStorage,
     normaliseTileStatusSettings,
@@ -905,6 +905,8 @@ interface DfpConfig {
   sctEvents: string[];
   formationCallsigns: FormationCallsign[];
   resourceDisplayNames?: ResourceDisplayNames;
+  aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
+  aircraftConfigIdsByResource?: Record<string, string>;
   remedialPrioritySyncTrace?: any[];
   remedialDataMovementTrace?: any[];
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
@@ -1981,6 +1983,50 @@ function generateDfpInternal(
         staffSharingEnabled, staffSharingUnits
     } = config;
 
+    const aircraftConfigDefinitionsForBuild = config.aircraftConfigurationDefinitions?.length
+        ? config.aircraftConfigurationDefinitions
+        : [BASE_AIRCRAFT_CONFIG];
+    const aircraftConfigDefinitionById = new Map(
+        aircraftConfigDefinitionsForBuild.map(definition => [definition.id, definition])
+    );
+    const aircraftConfigIdsByResource = config.aircraftConfigIdsByResource || {};
+
+    const normaliseAircraftConfigRequirement = (source?: { acceptableAircraftConfigs?: string[]; aircraftConfigId?: string } | null): string[] => {
+        const rawValues = Array.isArray(source?.acceptableAircraftConfigs) && source.acceptableAircraftConfigs.length > 0
+            ? source.acceptableAircraftConfigs
+            : source?.aircraftConfigId
+                ? [source.aircraftConfigId]
+                : [ANY_AIRCRAFT_CONFIG];
+        const cleaned = rawValues
+            .map(value => String(value || '').trim().toUpperCase().replace(/^CONFIG\s+(\d+)$/, 'CONFIG-$1'))
+            .filter(Boolean);
+        if (cleaned.length === 0 || cleaned.includes(ANY_AIRCRAFT_CONFIG)) return [ANY_AIRCRAFT_CONFIG];
+        return Array.from(new Set(cleaned));
+    };
+
+    const getAircraftConfigIdForResource = (resourceId?: string): string => {
+        if (!resourceId) return BASE_AIRCRAFT_CONFIG.id;
+        return aircraftConfigIdsByResource[resourceId] || BASE_AIRCRAFT_CONFIG.id;
+    };
+
+    const getAircraftConfigLabelForId = (configId?: string): string => (
+        aircraftConfigDefinitionById.get(configId || BASE_AIRCRAFT_CONFIG.id)?.label || BASE_AIRCRAFT_CONFIG.label
+    );
+
+    const eventAcceptsResourceConfig = (
+        source: { acceptableAircraftConfigs?: string[]; aircraftConfigId?: string },
+        resourceConfigId: string
+    ): boolean => {
+        const acceptedConfigs = normaliseAircraftConfigRequirement(source);
+        return acceptedConfigs.includes(ANY_AIRCRAFT_CONFIG) || acceptedConfigs.includes(resourceConfigId);
+    };
+
+    const getAircraftConfigRequirementSummary = (source: { acceptableAircraftConfigs?: string[]; aircraftConfigId?: string }): string => {
+        const acceptedConfigs = normaliseAircraftConfigRequirement(source);
+        if (acceptedConfigs.includes(ANY_AIRCRAFT_CONFIG)) return 'ANY';
+        return acceptedConfigs.map(getAircraftConfigLabelForId).join(', ');
+    };
+
     // --- INSTRUCTOR PRIORITY HELPERS ---
     // Derived convenience flags from the new instructorPriority config.
     // These replace the old programWithPrimaries boolean throughout the algorithm.
@@ -2390,7 +2436,33 @@ function generateDfpInternal(
         const resourceCount = event.type === 'flight' ? availableAircraftCount :
                             event.type === 'ftd' ? ftdCount :
                             event.type === 'cpt' ? cptCount : 6;
-        return Array.from({ length: resourceCount }, (_, index) => `${resourcePrefix}${index + 1}`);
+        const resourceOptions = Array.from({ length: resourceCount }, (_, index) => `${resourcePrefix}${index + 1}`);
+        if (event.type !== 'flight') return resourceOptions;
+        return resourceOptions.filter(resourceId => (
+            eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId))
+        ));
+    };
+
+    const ensurePriorityResourceConfigCompatibility = (
+        event: Omit<ScheduleEvent, 'date'>
+    ): Omit<ScheduleEvent, 'date'> => {
+        if (event.type !== 'flight') return event;
+        const acceptableAircraftConfigs = normaliseAircraftConfigRequirement(event);
+        if (event.resourceId && eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(event.resourceId))) {
+            return {
+                ...event,
+                aircraftConfigId: getAircraftConfigIdForResource(event.resourceId),
+                acceptableAircraftConfigs,
+            };
+        }
+        return {
+            ...event,
+            resourceId: '',
+            aircraftConfigId: acceptableAircraftConfigs.includes(ANY_AIRCRAFT_CONFIG)
+                ? BASE_AIRCRAFT_CONFIG.id
+                : acceptableAircraftConfigs[0],
+            acceptableAircraftConfigs,
+        };
     };
 
     const priorityResourceConflict = (
@@ -2740,7 +2812,13 @@ function generateDfpInternal(
 
         for (let startTime = searchStart; startTime + event.duration <= searchEnd + 0.001; startTime += timeIncrement) {
             for (const resourceId of resourceOptions) {
-                const candidate = { ...event, startTime, resourceId };
+                const candidate = {
+                    ...event,
+                    startTime,
+                    resourceId,
+                    aircraftConfigId: event.type === 'flight' ? getAircraftConfigIdForResource(resourceId) : event.aircraftConfigId,
+                    acceptableAircraftConfigs: event.type === 'flight' ? normaliseAircraftConfigRequirement(event) : event.acceptableAircraftConfigs,
+                };
                 const remedialInstructor = getRemedialInstructorOverride(candidate.student || candidate.pilot || '', candidate.flightNumber);
                 const ignoredInstructorConflicts: string[] = [];
                 let conflictReason = '';
@@ -2789,6 +2867,9 @@ function generateDfpInternal(
                     startTime,
                     displayTime: formatDecimalHourToString(startTime),
                     resourceId,
+                    aircraftConfigId: event.type === 'flight' ? candidate.aircraftConfigId : null,
+                    aircraftConfigLabel: event.type === 'flight' ? getAircraftConfigLabelForId(candidate.aircraftConfigId) : null,
+                    requiredAircraftConfig: event.type === 'flight' ? getAircraftConfigRequirementSummary(event) : null,
                     remedialInstructor,
                     outcome: conflicts ? 'rejected' : 'placed',
                     conflictReason: conflictReason || null,
@@ -2806,6 +2887,9 @@ function generateDfpInternal(
                     displayTime: formatDecimalHourToString(startTime),
                     duration: candidate.duration,
                     resourceId,
+                    aircraftConfigId: event.type === 'flight' ? candidate.aircraftConfigId : null,
+                    aircraftConfigLabel: event.type === 'flight' ? getAircraftConfigLabelForId(candidate.aircraftConfigId) : null,
+                    requiredAircraftConfig: event.type === 'flight' ? getAircraftConfigRequirementSummary(event) : null,
                     resourcePoolTried: resourceOptions,
                     remedialInstructor,
                     outcome: conflicts ? 'rejected' : 'placed',
@@ -2930,7 +3014,7 @@ function generateDfpInternal(
 
         if(event.date === buildDate && event.isTimeFixed) {
             const { date, ...rawEventWithoutDate } = event;
-            const eventWithoutDate = placeRemedialPriorityEvent(rawEventWithoutDate);
+            const eventWithoutDate = ensurePriorityResourceConfigCompatibility(placeRemedialPriorityEvent(rawEventWithoutDate));
             if (event.isRemedial || event.id?.startsWith('remedial-')) {
                 traceMandatoryRemedial('placementTrace', {
                     phase: 'highest-priority-fixed-placement',
@@ -3040,6 +3124,9 @@ function generateDfpInternal(
             let assignedResource: string | null = null;
             for (let i = 1; i <= resourceCount; i++) {
                 const resourceId = `${resourcePrefix}${i}`;
+                if (event.type === 'flight' && !eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId))) {
+                    continue;
+                }
                 const isOccupied = generatedEvents.some(e =>
                     e.resourceId === resourceId &&
                     e.id !== event.id &&
@@ -3054,6 +3141,10 @@ function generateDfpInternal(
 
             if (assignedResource) {
                 event.resourceId = assignedResource;
+                if (event.type === 'flight') {
+                    event.aircraftConfigId = getAircraftConfigIdForResource(assignedResource);
+                    event.acceptableAircraftConfigs = normaliseAircraftConfigRequirement(event);
+                }
                 if (event.isRemedial || event.id?.startsWith('remedial-')) {
                     traceRemedialMovement('priorityPlacementTrace', {
                         phase: 'remedial-resource-assigned-after-highest-priority-pass',
@@ -3064,6 +3155,8 @@ function generateDfpInternal(
                         startTime: event.startTime,
                         duration: event.duration,
                         assignedResource,
+                        assignedAircraftConfig: event.type === 'flight' ? getAircraftConfigLabelForId(event.aircraftConfigId) : null,
+                        requiredAircraftConfig: event.type === 'flight' ? getAircraftConfigRequirementSummary(event) : null,
                         resourcePrefix,
                         resourceCount,
                         outcome: 'resource-assigned',
@@ -3082,6 +3175,7 @@ function generateDfpInternal(
                         duration: event.duration,
                         resourcePrefix,
                         resourceCount,
+                        requiredAircraftConfig: event.type === 'flight' ? getAircraftConfigRequirementSummary(event) : null,
                         outcome: 'no-resource-available',
                     });
                 }
@@ -5052,6 +5146,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
+        const acceptedAircraftConfigsForEvent = type === 'flight'
+            ? normaliseAircraftConfigRequirement(syllabusItem)
+            : [ANY_AIRCRAFT_CONFIG];
+        const requiredAircraftConfigSummary = type === 'flight'
+            ? getAircraftConfigRequirementSummary(syllabusItem)
+            : 'ANY';
         const getPreferredNightAircraftResource = (): string | null => {
             if (!isNightPass || !isPlusOne || type !== 'flight') return null;
             const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
@@ -5080,8 +5180,26 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 ...(requirePreferredNightAircraft ? [] : resourceCandidates.filter(id => id !== preferredNightAircraft))
             ]
             : resourceCandidates;
+        let aircraftConfigMismatchCount = 0;
+        const aircraftConfigMismatchSamples: Array<{ resourceId: string; aircraftConfigId: string; aircraftConfigLabel: string }> = [];
+        let compatibleResourceCandidateCount = 0;
 
         for (const id of orderedResourceCandidates) {
+            if (type === 'flight') {
+                const resourceAircraftConfigId = getAircraftConfigIdForResource(id);
+                if (!eventAcceptsResourceConfig(syllabusItem, resourceAircraftConfigId)) {
+                    aircraftConfigMismatchCount++;
+                    if (aircraftConfigMismatchSamples.length < 8) {
+                        aircraftConfigMismatchSamples.push({
+                            resourceId: id,
+                            aircraftConfigId: resourceAircraftConfigId,
+                            aircraftConfigLabel: getAircraftConfigLabelForId(resourceAircraftConfigId),
+                        });
+                    }
+                    continue;
+                }
+                compatibleResourceCandidateCount++;
+            }
             const resourceIsOccupied = generatedEvents.some(e => {
                 if (e.resourceId !== id) return false;
 
@@ -5122,10 +5240,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // If no resource available, return null (STBY will be handled in separate pass)
         if (!resourceId) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AIRCRAFT_AVAILABLE');
+            if (type === 'flight' && compatibleResourceCandidateCount === 0 && aircraftConfigMismatchCount > 0) {
+                return traceScheduleReject('AIRCRAFT_CONFIG_MISMATCH', {
+                    resourcePrefix,
+                    resourceCount,
+                    preferredNightAircraft,
+                    requiredAircraftConfig: requiredAircraftConfigSummary,
+                    acceptedAircraftConfigs: acceptedAircraftConfigsForEvent,
+                    mismatchCount: aircraftConfigMismatchCount,
+                    mismatchSamples: aircraftConfigMismatchSamples,
+                });
+            }
             return traceScheduleReject('NO_RESOURCE_AVAILABLE', {
                 resourcePrefix,
                 resourceCount,
                 preferredNightAircraft,
+                requiredAircraftConfig: type === 'flight' ? requiredAircraftConfigSummary : undefined,
+                compatibleResourceCandidateCount: type === 'flight' ? compatibleResourceCandidateCount : undefined,
+                aircraftConfigMismatchCount: type === 'flight' ? aircraftConfigMismatchCount : undefined,
+                aircraftConfigMismatchSamples: type === 'flight' ? aircraftConfigMismatchSamples : undefined,
             });
         }
 
@@ -5236,6 +5369,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
             area, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
             dayNight: syllabusItem.dayNight,
+            aircraftConfigId: type === 'flight' ? getAircraftConfigIdForResource(resourceId) : undefined,
+            acceptableAircraftConfigs: type === 'flight' ? acceptedAircraftConfigsForEvent : undefined,
             currencyDraftId: options.currencyDraftId,
             currency: options.currency,
             priority: options.priority,
@@ -5268,6 +5403,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 startTime,
                 displayTime: _fmtT(startTime),
                 resourceId,
+                aircraftConfigId: result.aircraftConfigId,
+                aircraftConfigLabel: type === 'flight' ? getAircraftConfigLabelForId(result.aircraftConfigId) : undefined,
+                requiredAircraftConfig: type === 'flight' ? requiredAircraftConfigSummary : undefined,
                 instructor: result.instructor,
                 pilot: result.pilot,
                 student: result.student,
@@ -5286,6 +5424,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 startTime,
                 displayTime: _fmtT(startTime),
                 resourceId,
+                aircraftConfigId: result.aircraftConfigId,
+                aircraftConfigLabel: type === 'flight' ? getAircraftConfigLabelForId(result.aircraftConfigId) : undefined,
+                requiredAircraftConfig: type === 'flight' ? requiredAircraftConfigSummary : undefined,
                 instructor: result.instructor,
                 pilot: result.pilot,
                 student: result.student,
@@ -5308,6 +5449,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 startTime,
                 displayTime: _fmtT(startTime),
                 resourceId,
+                aircraftConfigId: result.aircraftConfigId,
+                aircraftConfigLabel: type === 'flight' ? getAircraftConfigLabelForId(result.aircraftConfigId) : undefined,
+                requiredAircraftConfig: type === 'flight' ? requiredAircraftConfigSummary : undefined,
                 instructor: result.instructor,
                 pilot: result.pilot,
                 student: result.student,
@@ -5331,6 +5475,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             startTime,
             displayTime: _fmtT(startTime),
             resourceId,
+            aircraftConfigId: result.aircraftConfigId,
+            aircraftConfigLabel: type === 'flight' ? getAircraftConfigLabelForId(result.aircraftConfigId) : undefined,
+            requiredAircraftConfig: type === 'flight' ? requiredAircraftConfigSummary : undefined,
             instructor: result.instructor,
             pilot: result.pilot,
             student: result.student,
@@ -5644,6 +5791,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             methodOfAssessment: [],
             resourcesPhysical: [],
             resourcesHuman: [],
+            acceptableAircraftConfigs: normaliseAircraftConfigRequirement(event),
             location: school,
             courses: [],
         };
@@ -6074,7 +6222,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if (!priorityEvent) return null;
 
         const individualLmp = traineeLMPs.get(trainee.fullName) || [];
-        return (
+        const matchedItem = (
             individualLmp.find(item =>
                 normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) ||
                 normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
@@ -6085,6 +6233,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             ) ||
             null
         );
+        if (!matchedItem) return null;
+        return {
+            ...matchedItem,
+            acceptableAircraftConfigs: normaliseAircraftConfigRequirement(priorityEvent),
+        };
     };
 
     const countFormationDispatchesInPreviousHour = (startTime: number): number =>
@@ -11165,7 +11318,7 @@ const App: React.FC = () => {
         aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
     }), [aircraftConfigCapacityDefinitions, neoAircraftConfigCapacities, neoAvailableAircraftCount]);
 
-    const buildAircraftConfigLabelsByResource = useCallback((configState = currentAircraftConfigState) => {
+    const buildAircraftConfigIdsByResource = useCallback((configState = currentAircraftConfigState) => {
         const definitions = configState.aircraftConfigurationDefinitions?.length
             ? configState.aircraftConfigurationDefinitions
             : aircraftConfigCapacityDefinitions;
@@ -11173,24 +11326,38 @@ const App: React.FC = () => {
         const configuredDefinitions = definitions.filter(definition => definition.id !== cleanConfig.id);
         const capacities = configState.aircraftConfigCapacities || {};
         const totalAvailable = Math.max(0, Math.floor(Number(configState.availableAircraftCount) || 0));
-        const configuredLabels = configuredDefinitions.flatMap((definition) => {
+        const configuredIds = configuredDefinitions.flatMap((definition) => {
             const count = Math.max(0, parseInt(capacities[definition.id] || '', 10) || 0);
-            return Array.from({ length: count }, () => definition.label);
+            return Array.from({ length: count }, () => definition.id);
         });
-        const cleanCount = Math.max(0, totalAvailable - configuredLabels.length);
-        const availableLabels = [
-            ...Array.from({ length: cleanCount }, () => cleanConfig.label),
-            ...configuredLabels,
+        const cleanCount = Math.max(0, totalAvailable - configuredIds.length);
+        const availableConfigIds = [
+            ...Array.from({ length: cleanCount }, () => cleanConfig.id),
+            ...configuredIds,
         ].slice(0, totalAvailable);
 
         return Array.from({ length: configuredAirframeCount }, (_, index) => {
             const resourceId = `PC-21 ${index + 1}`;
-            return [resourceId, availableLabels[index] || cleanConfig.label] as const;
+            return [resourceId, availableConfigIds[index] || cleanConfig.id] as const;
         }).reduce<Record<string, string>>((acc, [resourceId, label]) => {
             acc[resourceId] = label;
             return acc;
         }, {});
     }, [aircraftConfigCapacityDefinitions, configuredAirframeCount, currentAircraftConfigState]);
+
+    const buildAircraftConfigLabelsByResource = useCallback((configState = currentAircraftConfigState) => {
+        const definitions = configState.aircraftConfigurationDefinitions?.length
+            ? configState.aircraftConfigurationDefinitions
+            : aircraftConfigCapacityDefinitions;
+        const definitionLabels = new Map(definitions.map(definition => [definition.id, definition.label]));
+        const cleanConfig = definitions.find(definition => definition.id === BASE_AIRCRAFT_CONFIG.id) || BASE_AIRCRAFT_CONFIG;
+        const idsByResource = buildAircraftConfigIdsByResource(configState);
+
+        return Object.entries(idsByResource).reduce<Record<string, string>>((acc, [resourceId, configId]) => {
+            acc[resourceId] = definitionLabels.get(configId) || cleanConfig.label;
+            return acc;
+        }, {});
+    }, [aircraftConfigCapacityDefinitions, buildAircraftConfigIdsByResource, currentAircraftConfigState]);
 
     const aircraftConfigLabelsByResource = useMemo(() => {
         const snapshotKey = getDailySnapshotKey(date);
@@ -17252,6 +17419,8 @@ const App: React.FC = () => {
             sctEvents: sctEvents,
             formationCallsigns,
             resourceDisplayNames,
+            aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
+            aircraftConfigIdsByResource: buildAircraftConfigIdsByResource(currentAircraftConfigState),
             remedialPrioritySyncTrace: (window as any).__lastRemedialPrioritySyncTrace || [],
             remedialDataMovementTrace: (window as any).__lastRemedialDataMovementTrace || [],
             getEventDayNightClassification: getEventDayNightClassification,
