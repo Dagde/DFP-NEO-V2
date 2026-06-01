@@ -3,12 +3,18 @@ import ReactDOM from 'react-dom';
 import AuditButton from './AuditButton';
 import AuditFlyout from './AuditFlyout';
 
+type HeaderContextUnitOption = string | {
+    code: string;
+    disabled?: boolean;
+    disabledReason?: string;
+};
+
 interface HeaderProps {
     onAddTile: () => void;
     onAddGroundEvent: () => void;
     showValidation: boolean;
     setShowValidation: (show: boolean) => void;
-    contextOptions: Array<{ location: string; units: string[] }>;
+    contextOptions: Array<{ location: string; units: HeaderContextUnitOption[] }>;
     activeLocation: string;
     activeUnit: string;
     onContextChange: (location: string, unit: string) => void;
@@ -173,24 +179,34 @@ const Header: React.FC<HeaderProps> = ({
                                 ))}
                             </div>
                             <div className="w-[136px] py-1">
-                                {(hoveredContext?.units || []).map(unit => (
-                                    <button
-                                        key={`${hoveredContext?.location}-${unit}`}
-                                        type="button"
-                                        onClick={() => {
-                                            if (!hoveredContext?.location) return;
-                                            onContextChange(hoveredContext.location, unit);
-                                            setShowContextMenu(false);
-                                        }}
-                                        className={`h-8 w-full px-3 text-left text-sm font-semibold ${
-                                            hoveredContext?.location === activeLocation && unit === activeUnit
-                                                ? 'bg-sky-600 text-white'
-                                                : 'text-gray-200 hover:bg-gray-700'
-                                        }`}
-                                    >
-                                        {unit}
-                                    </button>
-                                ))}
+                                {(hoveredContext?.units || []).map(unit => {
+                                    const unitCode = typeof unit === 'string' ? unit : unit.code;
+                                    const isDisabledUnit = typeof unit === 'string' ? false : unit.disabled === true;
+                                    const disabledReason = typeof unit === 'string' ? '' : unit.disabledReason;
+                                    return (
+                                        <button
+                                            key={`${hoveredContext?.location}-${unitCode}`}
+                                            type="button"
+                                            disabled={isDisabledUnit}
+                                            title={disabledReason || undefined}
+                                            onClick={() => {
+                                                if (isDisabledUnit) return;
+                                                if (!hoveredContext?.location) return;
+                                                onContextChange(hoveredContext.location, unitCode);
+                                                setShowContextMenu(false);
+                                            }}
+                                            className={`h-8 w-full px-3 text-left text-sm font-semibold ${
+                                                hoveredContext?.location === activeLocation && unitCode === activeUnit
+                                                    ? 'bg-sky-600 text-white'
+                                                    : isDisabledUnit
+                                                        ? 'cursor-not-allowed text-gray-500 opacity-60'
+                                                        : 'text-gray-200 hover:bg-gray-700'
+                                            }`}
+                                        >
+                                            {unitCode}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}

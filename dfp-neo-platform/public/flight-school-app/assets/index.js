@@ -4879,20 +4879,28 @@ const Header = ({
             },
             option.location
           )) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[136px] py-1", children: (hoveredContext?.units || []).map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: () => {
-                if (!hoveredContext?.location) return;
-                onContextChange(hoveredContext.location, unit);
-                setShowContextMenu(false);
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[136px] py-1", children: (hoveredContext?.units || []).map((unit) => {
+            const unitCode = typeof unit === "string" ? unit : unit.code;
+            const isDisabledUnit = typeof unit === "string" ? false : unit.disabled === true;
+            const disabledReason = typeof unit === "string" ? "" : unit.disabledReason;
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                disabled: isDisabledUnit,
+                title: disabledReason || void 0,
+                onClick: () => {
+                  if (isDisabledUnit) return;
+                  if (!hoveredContext?.location) return;
+                  onContextChange(hoveredContext.location, unitCode);
+                  setShowContextMenu(false);
+                },
+                className: `h-8 w-full px-3 text-left text-sm font-semibold ${hoveredContext?.location === activeLocation && unitCode === activeUnit ? "bg-sky-600 text-white" : isDisabledUnit ? "cursor-not-allowed text-gray-500 opacity-60" : "text-gray-200 hover:bg-gray-700"}`,
+                children: unitCode
               },
-              className: `h-8 w-full px-3 text-left text-sm font-semibold ${hoveredContext?.location === activeLocation && unit === activeUnit ? "bg-sky-600 text-white" : "text-gray-200 hover:bg-gray-700"}`,
-              children: unit
-            },
-            `${hoveredContext?.location}-${unit}`
-          )) })
+              `${hoveredContext?.location}-${unitCode}`
+            );
+          }) })
         ] })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", style: { gap: "1px" }, children: [
@@ -64334,7 +64342,21 @@ const App = () => {
           isSharedFleetContext: true
         }];
       }) : [];
-      return [...configuredUnits, ...sharedContextOptions];
+      const sharedContextByMemberUnit = /* @__PURE__ */ new Map();
+      sharedContextOptions.forEach((sharedOption) => {
+        (sharedOption.memberUnits || []).forEach((unitCode) => {
+          sharedContextByMemberUnit.set(normaliseUnitCode(unitCode), sharedOption);
+        });
+      });
+      const configuredUnitsWithSharedContextLock = configuredUnits.map((unit) => {
+        const sharedOption = sharedContextByMemberUnit.get(normaliseUnitCode(unit.code));
+        return sharedOption ? {
+          ...unit,
+          disabled: true,
+          disabledReason: `Use ${sharedOption.code} for the shared aircraft/resource DFP context.`
+        } : unit;
+      });
+      return [...configuredUnitsWithSharedContextLock, ...sharedContextOptions];
     }
     const hasConfiguredPlatformUnits = (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE");
     if (hasConfiguredPlatformUnits) return [];
@@ -64367,7 +64389,21 @@ const App = () => {
         isSharedFleetContext: true
       }];
     }) : [];
-    return [...fallbackUnits, ...sharedFallbackContexts];
+    const sharedFallbackContextByMemberUnit = /* @__PURE__ */ new Map();
+    sharedFallbackContexts.forEach((sharedOption) => {
+      (sharedOption.memberUnits || []).forEach((unitCode) => {
+        sharedFallbackContextByMemberUnit.set(normaliseUnitCode(unitCode), sharedOption);
+      });
+    });
+    const fallbackUnitsWithSharedContextLock = fallbackUnits.map((unit) => {
+      const sharedOption = sharedFallbackContextByMemberUnit.get(normaliseUnitCode(unit.code));
+      return sharedOption ? {
+        ...unit,
+        disabled: true,
+        disabledReason: `Use ${sharedOption.code} for the shared aircraft/resource DFP context.`
+      } : unit;
+    });
+    return [...fallbackUnitsWithSharedContextLock, ...sharedFallbackContexts];
   }, [
     getLocationSelectorAliases,
     organisationSettings.allocationMode,
@@ -64400,7 +64436,8 @@ const App = () => {
       pushContextSelectorDiag("validate:skip-no-options");
       return;
     }
-    if (!activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode)) {
+    const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode);
+    if (!activeUnitOption || activeUnitOption.disabled) {
       if (String(activeUnitCode || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
         pushContextSelectorDiag("validate:hold-shared-until-settings", {
           activeUnitCode,
@@ -64408,11 +64445,12 @@ const App = () => {
         });
         return;
       }
-      const nextUnitCode = activeLocationUnitOptions[0].code;
+      const nextUnitCode = (activeLocationUnitOptions.find((unit) => !unit.disabled) || activeLocationUnitOptions[0]).code;
       pushContextSelectorDiag("validate:reset-unit", {
         fromUnit: activeUnitCode,
         toUnit: nextUnitCode,
         optionCodes: activeLocationUnitOptions.map((unit) => unit.code),
+        disabledOption: activeUnitOption?.disabled === true,
         fleetSharingEnabled: organisationSettings.fleetSharingEnabled
       });
       setActiveUnitCode(nextUnitCode);
@@ -64743,7 +64781,11 @@ const App = () => {
   const operationalContextOptions = reactExports.useMemo(
     () => selectableLocationCodes.map((location) => ({
       location,
-      units: getUnitOptionsForLocation(location).map((unit) => unit.code)
+      units: getUnitOptionsForLocation(location).map((unit) => ({
+        code: unit.code,
+        disabled: unit.disabled === true,
+        disabledReason: unit.disabledReason
+      }))
     })).filter((option) => option.units.length > 0),
     [getUnitOptionsForLocation, selectableLocationCodes]
   );
@@ -68685,7 +68727,8 @@ ${error instanceof Error ? error.message : String(error)}`,
     setPendingNavigation(null);
   };
   const getDefaultUnitForSchool = (targetSchool) => {
-    return getUnitOptionsForLocation(targetSchool)[0]?.code || (targetSchool === "PEA" ? "2FTS" : "1FTS");
+    const options = getUnitOptionsForLocation(targetSchool);
+    return (options.find((unit) => !unit.disabled) || options[0])?.code || (targetSchool === "PEA" ? "2FTS" : "1FTS");
   };
   const changeSchool = (newSchool) => {
     const nextUnit = getDefaultUnitForSchool(newSchool);
