@@ -10608,6 +10608,17 @@ const formatHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue.toFixed(1) : "0.0";
 };
+const formatLmpModuleLabel = (value) => {
+  const cleanValue = String(value || "").trim();
+  if (!cleanValue) return "Module";
+  const moduleNumber = cleanValue.match(/\d+/)?.[0];
+  return moduleNumber ? `M ${moduleNumber}` : cleanValue;
+};
+const formatLmpSortieLabel = (item, resourceDisplayNames) => {
+  if (item.type === "Flight") return item.sortieType || "Dual";
+  return formatDisplayType(getDisplayType(item), resourceDisplayNames);
+};
+const formatLmpDurationLabel = (item) => `${formatHours(item.duration)}h`;
 const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -11126,21 +11137,37 @@ const TraineeLmpView = ({
       ) : (
         /* ── NEO Build LMP Tab (existing) ── */
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/4 min-h-0 border-r border-gray-700 overflow-y-auto overscroll-contain", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-2 space-y-1", children: traineeLmp.map((item) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[310px] min-h-0 border-r border-gray-700 overflow-y-auto overscroll-contain bg-gray-950/25", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-3 space-y-2", children: traineeLmp.map((item) => {
             const isCompleted = completedEventIds.has(item.code);
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `group rounded-md transition-colors text-sm flex items-center ${selectedItem?.code === item.code ? "bg-sky-700 text-white font-semibold" : "text-gray-300 hover:bg-gray-700/50"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            const isSelected = selectedItem?.code === item.code;
+            const phaseLabel = item.phase || "Phase";
+            const moduleLabel = formatLmpModuleLabel(item.module);
+            const sortieLabel = formatLmpSortieLabel(item, resourceDisplayNames);
+            const dayLabel = item.dayNight || "Day";
+            const durationLabel = formatLmpDurationLabel(item);
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
+                type: "button",
                 onClick: () => setSelectedItem(item),
-                className: "min-w-0 flex-1 text-left p-2 flex items-center space-x-2",
+                "aria-pressed": isSelected,
+                title: `${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ""}`,
+                className: `relative h-[88px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "border-sky-300 bg-sky-800/85 text-white shadow-sky-950/40" : isCompleted ? "border-emerald-500/60 bg-gray-900 text-gray-100 hover:border-emerald-300/70 hover:bg-gray-800" : "border-gray-700 bg-gray-900 text-gray-200 hover:border-sky-500/60 hover:bg-gray-800"}`,
                 children: [
-                  isCompleted ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 flex-shrink-0" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: item.code })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute left-3 top-2 max-w-[42%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: phaseLabel }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute right-3 top-2 max-w-[42%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: sortieLabel }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-center text-lg font-extrabold leading-tight", children: item.code }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute bottom-2 left-3 max-w-[42%] truncate text-[11px] font-semibold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: moduleLabel }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `absolute bottom-2 right-3 inline-flex max-w-[50%] items-center gap-3 overflow-hidden text-[11px] font-semibold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: dayLabel }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0", children: durationLabel })
+                  ] }),
+                  isCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1/2 top-2 -translate-x-1/2", "aria-label": "Completed", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) })
                 ]
               }
-            ) }) }, item.id || item.code);
+            ) }, item.id || item.code);
           }) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3/4 min-h-0 overflow-y-auto overscroll-contain", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto min-h-full", children: selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-h-0 overflow-y-auto overscroll-contain", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto min-h-full", children: selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             DetailView$1,
             {
               item: selectedItem,
