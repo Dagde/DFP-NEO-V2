@@ -1724,7 +1724,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   <AircraftConfigSelect
                                       value={existingRequest?.aircraftConfigId}
                                       definitions={aircraftConfigOptions}
-                                      disabled={!forceSchedule || item.type !== 'Flight'}
+                                      disabled={item.type !== 'Flight'}
                                       onChange={(aircraftConfigId) => onUpdateRemedialAircraftConfig(trainee.idNumber, item.code, aircraftConfigId)}
                                   />
                               </td>

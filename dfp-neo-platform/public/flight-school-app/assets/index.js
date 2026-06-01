@@ -22736,7 +22736,7 @@ const PrioritiesView = ({
                 {
                   value: existingRequest?.aircraftConfigId,
                   definitions: aircraftConfigOptions,
-                  disabled: !forceSchedule || item.type !== "Flight",
+                  disabled: item.type !== "Flight",
                   onChange: (aircraftConfigId) => onUpdateRemedialAircraftConfig(trainee.idNumber, item.code, aircraftConfigId)
                 }
               ) }),
@@ -74321,7 +74321,7 @@ ${conflictLines.join("\n")}${moreText}`,
                 const existing = prev.find((r) => r.traineeId === traineeId && r.eventCode === eventCode);
                 const newRequests = existing ? prev.map(
                   (r) => r.traineeId === traineeId && r.eventCode === eventCode ? { ...r, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id } : r
-                ) : [...prev, { traineeId, eventCode, forceSchedule: true, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }];
+                ) : [...prev, { traineeId, eventCode, forceSchedule: false, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }];
                 storeRemedialRequests(newRequests);
                 setTimeout(() => {
                   syncPriorityEventsWithSctAndRemedial();

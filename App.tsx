@@ -22107,7 +22107,7 @@ updates.forEach(update => {
                                         ? { ...r, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }
                                         : r
                                 )
-                                : [...prev, { traineeId, eventCode, forceSchedule: true, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }];
+                                : [...prev, { traineeId, eventCode, forceSchedule: false, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }];
                             storeRemedialRequests(newRequests);
                             setTimeout(() => {
                                 syncPriorityEventsWithSctAndRemedial();
