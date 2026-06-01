@@ -10600,7 +10600,7 @@ const formatHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue.toFixed(1) : "0.0";
 };
-const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, isRemedial = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-red-100", children: "Remedial Package Event" }),
@@ -10639,7 +10639,17 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
         " ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Resource Number", value: item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Resource Number", value: item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        DetailCard$1,
+        {
+          label: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center", children: [
+            "CONFIG",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(AircraftConfigInfoIcon$1, { definitions: aircraftConfigurations })
+          ] }),
+          value: formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)
+        }
+      )
     ] })
   ] }),
   score && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-sky-700 rounded-lg bg-sky-900/10", children: [
@@ -11128,6 +11138,7 @@ const TraineeLmpView = ({
               item: selectedItem,
               score: scores.find((s) => s.event === selectedItem.code),
               resourceDisplayNames,
+              aircraftConfigurations,
               isRemedial: isRemedialLmpItem(selectedItem),
               onDelete: isRemedialLmpItem(selectedItem) && onDeleteRemedialItem ? async (item) => {
                 const deleted = await onDeleteRemedialItem(trainee, item);

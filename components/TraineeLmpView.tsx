@@ -497,9 +497,10 @@ const DetailView: React.FC<{
     item: SyllabusItemDetail;
     score: Score | undefined;
     resourceDisplayNames?: ResourceDisplayNames;
+    aircraftConfigurations?: AircraftConfigurationDefinition[];
     isRemedial?: boolean;
     onDelete?: (item: SyllabusItemDetail) => void;
-}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, isRemedial = false, onDelete }) => (
+}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, onDelete }) => (
     <div className="space-y-6">
         {isRemedial && (
             <div className="flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3">
@@ -539,6 +540,10 @@ const DetailView: React.FC<{
                 <DetailCard label="Total Event Hours" value={<>{formatHours(item.totalEventHours)} <span className="text-sm font-normal">hrs</span></>} />
                 <DetailCard label="Flight/Sim Hours" value={<>{formatHours(item.flightOrSimHours)} <span className="text-sm font-normal">hrs</span></>} />
                 <DetailCard label="Resource Number" value={item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0)} />
+                <DetailCard
+                    label={<span className="flex items-center">CONFIG<AircraftConfigInfoIcon definitions={aircraftConfigurations} /></span>}
+                    value={formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)}
+                />
             </div>
         </fieldset>
 
@@ -1150,6 +1155,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                         item={selectedItem}
                                         score={scores.find(s => s.event === selectedItem.code)}
                                         resourceDisplayNames={resourceDisplayNames}
+                                        aircraftConfigurations={aircraftConfigurations}
                                         isRemedial={isRemedialLmpItem(selectedItem)}
                                         onDelete={isRemedialLmpItem(selectedItem) && onDeleteRemedialItem
                                             ? async (item) => {
