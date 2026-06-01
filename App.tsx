@@ -610,7 +610,6 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS: (keyof SyllabusItemDetail)[] = [
     'methodOfAssessment',
     'resourcesPhysical',
     'resourceNumber',
-    'acceptableAircraftConfigs',
     'resourcesHuman',
     'eventDetailsCommon',
     'eventDetailsSortie',

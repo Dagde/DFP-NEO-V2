@@ -3717,6 +3717,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
         resourcesPhysical: item.resourcesPhysical,
         resourceNumber: item.resourceNumber,
         resourceCount: item.resourceCount,
+        acceptableAircraftConfigs: item.acceptableAircraftConfigs,
         resourcesHuman: item.resourcesHuman,
         flightOrSimHours: item.flightOrSimHours,
         totalEventHours: item.totalEventHours,

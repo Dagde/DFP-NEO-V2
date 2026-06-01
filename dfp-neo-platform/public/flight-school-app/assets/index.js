@@ -57335,7 +57335,6 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
   "methodOfAssessment",
   "resourcesPhysical",
   "resourceNumber",
-  "acceptableAircraftConfigs",
   "resourcesHuman",
   "eventDetailsCommon",
   "eventDetailsSortie",
