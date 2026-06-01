@@ -507,7 +507,7 @@ const DetailView: React.FC<{
 type LmpDetailsTab = 'master' | 'packages';
 
 const STATIC_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh'];
-const STATIC_TRAINING_PACKAGES = ['Staff CAT'];
+const STATIC_TRAINING_PACKAGES: string[] = [];
 
 const getItemLmpDetailsTab = (item: SyllabusItemDetail): LmpDetailsTab =>
     item.lmpType === 'Staff CAT' ? 'packages' : 'master';
@@ -516,7 +516,7 @@ const getActiveLmpType = (tab: LmpDetailsTab): NonNullable<SyllabusItemDetail['l
     tab === 'packages' ? 'Staff CAT' : 'Master LMP';
 
 const getDefaultLmpSelection = (tab: LmpDetailsTab): string =>
-    tab === 'packages' ? STATIC_TRAINING_PACKAGES[0] : STATIC_MASTER_LMPS[0];
+    tab === 'packages' ? (STATIC_TRAINING_PACKAGES[0] || '') : STATIC_MASTER_LMPS[0];
 
 const SyllabusView: React.FC<SyllabusViewProps> = ({
     syllabusDetails,
@@ -557,6 +557,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const courseTitleMap = useMemo(() => {
     const map: Record<string, string> = {};
     syllabusDetails.filter(item => item.isActive !== false).forEach(item => {
+      if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach(c => {
         if (c && !map[c] && item.module && item.module !== c) {
           map[c] = item.module;
@@ -564,7 +565,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       });
     });
     return map;
-  }, [syllabusDetails]);
+  }, [activeTab, syllabusDetails]);
 
   // Helper: get display title for a course code
   const getCourseTitle = (code: string) => courseTitleMap[code] || code;
@@ -798,6 +799,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   const handleBulkUpload = async () => {
       if (!uploadFile) { alert('Please select a file first.'); return; }
+      if (!selectedCourseType) { alert(`Please select or add a ${activeCollectionNoun} first.`); return; }
       setIsUploading(true);
       setUploadResult(null);
       try {

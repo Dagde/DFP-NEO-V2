@@ -32626,10 +32626,10 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   ] });
 };
 const STATIC_MASTER_LMPS = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh"];
-const STATIC_TRAINING_PACKAGES = ["Staff CAT"];
+const STATIC_TRAINING_PACKAGES = [];
 const getItemLmpDetailsTab = (item) => item.lmpType === "Staff CAT" ? "packages" : "master";
 const getActiveLmpType = (tab) => tab === "packages" ? "Staff CAT" : "Master LMP";
-const getDefaultLmpSelection = (tab) => tab === "packages" ? STATIC_TRAINING_PACKAGES[0] : STATIC_MASTER_LMPS[0];
+const getDefaultLmpSelection = (tab) => tab === "packages" ? "" : STATIC_MASTER_LMPS[0];
 const SyllabusView = ({
   syllabusDetails,
   onBack,
@@ -32667,6 +32667,7 @@ const SyllabusView = ({
   const courseTitleMap = reactExports.useMemo(() => {
     const map = {};
     syllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
+      if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach((c) => {
         if (c && !map[c] && item.module && item.module !== c) {
           map[c] = item.module;
@@ -32674,7 +32675,7 @@ const SyllabusView = ({
       });
     });
     return map;
-  }, [syllabusDetails]);
+  }, [activeTab, syllabusDetails]);
   const getCourseTitle = (code) => courseTitleMap[code] || code;
   const [showAddLMPModal, setShowAddLMPModal] = reactExports.useState(false);
   const [newLMPName, setNewLMPName] = reactExports.useState("");
@@ -32870,6 +32871,10 @@ const SyllabusView = ({
   const handleBulkUpload = async () => {
     if (!uploadFile) {
       alert("Please select a file first.");
+      return;
+    }
+    if (!selectedCourseType) {
+      alert(`Please select or add a ${activeCollectionNoun} first.`);
       return;
     }
     setIsUploading(true);
