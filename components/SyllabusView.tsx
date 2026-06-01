@@ -583,7 +583,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<{ created: number; skipped: number; errors: any[]; message: string } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{ created: number; updated?: number; skipped: number; errors: any[]; message: string } | null>(null);
 
   // Delete Event modal state
   const [showDeleteEventModal, setShowDeleteEventModal] = useState(false);
@@ -810,15 +810,22 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               method: 'POST',
               body: formData,
           });
-          const data = await resp.json();
-          if (!resp.ok) throw new Error(data.error || 'Upload failed');
+          const responseText = await resp.text();
+          let data: any = {};
+          try {
+              data = responseText ? JSON.parse(responseText) : {};
+          } catch (_parseError) {
+              const preview = responseText.replace(/\s+/g, ' ').trim().slice(0, 180);
+              throw new Error(`Upload endpoint returned a non-JSON response (${resp.status} ${resp.statusText})${preview ? `: ${preview}` : ''}`);
+          }
+          if (!resp.ok) throw new Error(data.error || data.message || `Upload failed (${resp.status} ${resp.statusText})`);
           setUploadResult(data);
           // Reload syllabus data by triggering a page reload after short delay
-          if (data.created > 0) {
+          if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
               setTimeout(() => window.location.reload(), 2000);
           }
       } catch (err: any) {
-          alert(`❌ Upload failed: ${err.message}`);
+          alert(`Upload failed: ${err.message}`);
       } finally {
           setIsUploading(false);
       }
@@ -1400,7 +1407,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     {isTrainingPackagesTab ? ' These rows will be saved to Training Packages, not Master LMP.' : ''}
                 </p>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
-                    The spreadsheet must have a sheet named <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong> with columns: Code, Course, Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical), Resource Number.
+                    Preferred sheet name: <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong>. If that sheet is not present, the first worksheet is used. Mandatory columns: Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Code, Course, Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical), Resource Number. Blank Code cells are generated from the selected {activeCollectionNoun}.
                 </p>
 
                 <div style={{ marginBottom: 16 }}>
@@ -1430,8 +1437,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             {uploadResult.message}
                         </p>
                         <p style={{ fontSize: 11, color: '#9ca3af' }}>
-                            ✅ {uploadResult.created} created &nbsp;|&nbsp; ⏭ {uploadResult.skipped} skipped
-                            {uploadResult.errors.length > 0 && <span style={{ color: '#f87171' }}> &nbsp;|&nbsp; ❌ {uploadResult.errors.length} errors</span>}
+                            Created: {uploadResult.created} &nbsp;|&nbsp; Updated: {uploadResult.updated || 0} &nbsp;|&nbsp; Skipped: {uploadResult.skipped}
+                            {uploadResult.errors.length > 0 && <span style={{ color: '#f87171' }}> &nbsp;|&nbsp; Errors: {uploadResult.errors.length}</span>}
                         </p>
                         {uploadResult.errors.length > 0 && (
                             <div style={{ marginTop: 8, maxHeight: 100, overflowY: 'auto' }}>
@@ -1440,7 +1447,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                                 ))}
                             </div>
                         )}
-                        {uploadResult.created > 0 && (
+                        {(uploadResult.created > 0 || (uploadResult.updated || 0) > 0) && (
                             <p style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>Page will reload automatically…</p>
                         )}
                     </div>
@@ -1453,7 +1460,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderRadius: 6,
                             backgroundColor: '#374151', color: '#d1d5db', border: 'none', cursor: 'pointer' }}
                     >
-                        {uploadResult?.created ? 'Close' : 'Cancel'}
+                        {uploadResult && (uploadResult.created > 0 || (uploadResult.updated || 0) > 0) ? 'Close' : 'Cancel'}
                     </button>
                     {!uploadResult && (
                         <button
@@ -1463,7 +1470,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                                 backgroundColor: uploadFile && !isUploading ? '#0284c7' : '#1e3a5f',
                                 color: '#fff', border: 'none', cursor: uploadFile && !isUploading ? 'pointer' : 'not-allowed' }}
                         >
-                            {isUploading ? 'Uploading…' : '📤 Upload & Import'}
+                            {isUploading ? 'Uploading…' : 'Upload & Import'}
                         </button>
                     )}
                 </div>

@@ -32883,14 +32883,21 @@ const SyllabusView = ({
         method: "POST",
         body: formData
       });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Upload failed");
+      const responseText = await resp.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (_parseError) {
+        const preview = responseText.replace(/\s+/g, " ").trim().slice(0, 180);
+        throw new Error(`Upload endpoint returned a non-JSON response (${resp.status} ${resp.statusText})${preview ? `: ${preview}` : ""}`);
+      }
+      if (!resp.ok) throw new Error(data.error || data.message || `Upload failed (${resp.status} ${resp.statusText})`);
       setUploadResult(data);
-      if (data.created > 0) {
+      if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
         setTimeout(() => window.location.reload(), 2e3);
       }
     } catch (err) {
-      alert(`❌ Upload failed: ${err.message}`);
+      alert(`Upload failed: ${err.message}`);
     } finally {
       setIsUploading(false);
     }
@@ -33585,9 +33592,11 @@ const SyllabusView = ({
                 isTrainingPackagesTab ? " These rows will be saved to Training Packages, not Master LMP." : ""
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20, lineHeight: 1.6 }, children: [
-                "The spreadsheet must have a sheet named ",
+                "Preferred sheet name: ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: "Syllabus_LMP" }),
-                " with columns: Code, Course, Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical), Resource Number."
+                ". If that sheet is not present, the first worksheet is used. Mandatory columns: Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Code, Course, Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical), Resource Number. Blank Code cells are generated from the selected ",
+                activeCollectionNoun,
+                "."
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
@@ -33637,15 +33646,15 @@ const SyllabusView = ({
               }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 13, fontWeight: 600, color: uploadResult.errors.length > 0 ? "#fbbf24" : "#4ade80", marginBottom: 4 }, children: uploadResult.message }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#9ca3af" }, children: [
-                  "✅ ",
+                  "Created: ",
                   uploadResult.created,
-                  " created  |  ⏭ ",
+                  "  |  Updated: ",
+                  uploadResult.updated || 0,
+                  "  |  Skipped: ",
                   uploadResult.skipped,
-                  " skipped",
                   uploadResult.errors.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#f87171" }, children: [
-                    "  |  ❌ ",
-                    uploadResult.errors.length,
-                    " errors"
+                    "  |  Errors: ",
+                    uploadResult.errors.length
                   ] })
                 ] }),
                 uploadResult.errors.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 8, maxHeight: 100, overflowY: "auto" }, children: uploadResult.errors.map((e, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 10, color: "#f87171" }, children: [
@@ -33654,7 +33663,7 @@ const SyllabusView = ({
                   ": ",
                   e.error
                 ] }, i)) }),
-                uploadResult.created > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: "Page will reload automatically…" })
+                (uploadResult.created > 0 || (uploadResult.updated || 0) > 0) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: "Page will reload automatically…" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -33672,7 +33681,7 @@ const SyllabusView = ({
                       border: "none",
                       cursor: "pointer"
                     },
-                    children: uploadResult?.created ? "Close" : "Cancel"
+                    children: uploadResult && (uploadResult.created > 0 || (uploadResult.updated || 0) > 0) ? "Close" : "Cancel"
                   }
                 ),
                 !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -33690,7 +33699,7 @@ const SyllabusView = ({
                       border: "none",
                       cursor: uploadFile && !isUploading ? "pointer" : "not-allowed"
                     },
-                    children: isUploading ? "Uploading…" : "📤 Upload & Import"
+                    children: isUploading ? "Uploading…" : "Upload & Import"
                   }
                 )
               ] })

@@ -7,7 +7,6 @@ const prisma = new PrismaClient();
 const db = prisma as any;
 
 const REQUIRED_COLUMNS = [
-  'Code',
   'Type',
   'Event description',
   'Event Details - Sortie',
@@ -73,6 +72,25 @@ const normaliseSortieType = (value: string): 'Dual' | 'Solo' | null => {
   return null;
 };
 
+const getNormalisedLmpType = (value: string | null | undefined): 'Staff CAT' | 'Master LMP' =>
+  value === 'Staff CAT' ? 'Staff CAT' : 'Master LMP';
+
+const getGeneratedCodePrefix = (courseCode: string): string => {
+  const cleanPrefix = courseCode.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 6);
+  return cleanPrefix || 'PKG';
+};
+
+const getGeneratedEventCode = (courseCode: string, sequence: number): string =>
+  `${getGeneratedCodePrefix(courseCode)}${String(sequence).padStart(2, '0')}`;
+
+const rowHasContent = (row: Record<string, any>): boolean =>
+  Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
+
+const belongsToDestination = (item: any, courseCode: string, lmpType: 'Staff CAT' | 'Master LMP'): boolean => {
+  const courses = Array.isArray(item?.courses) ? item.courses : [];
+  return getNormalisedLmpType(item?.lmpType) === lmpType && courses.includes(courseCode);
+};
+
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
@@ -108,12 +126,30 @@ export async function POST(request: NextRequest) {
     const worksheet = workbook.Sheets[worksheetName];
     const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
     const created: any[] = [];
+    const updated: any[] = [];
     const errors: Array<{ row: number; error: string }> = [];
     let skipped = 0;
+    let generatedCodeSequence = 1;
+    let generatedPlaceholderUsed = false;
+    const maxOrder = await db.syllabusItem.aggregate({ _max: { sortOrder: true } });
+    let nextSortOrder = (maxOrder._max.sortOrder ?? 0) + 1;
+
+    const reusablePackagePlaceholder = selectedCourseCode && lmpType === 'Staff CAT'
+      ? await db.syllabusItem.findFirst({
+          where: {
+            code: selectedCourseCode,
+            lmpType,
+            isActive: true,
+            courses: { has: selectedCourseCode },
+          },
+        })
+      : null;
 
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index];
       const rowNumber = index + 2;
+      if (!rowHasContent(row)) continue;
+
       const missingColumns = REQUIRED_COLUMNS.filter(column => !getString(row, [column]));
       if (missingColumns.length > 0) {
         errors.push({ row: rowNumber, error: `Missing required fields: ${missingColumns.join(', ')}` });
@@ -121,7 +157,6 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const code = getString(row, ['Code']);
       const courseFromRow = getString(row, ['Course', 'Package']);
       const courseCode = selectedCourseCode || courseFromRow;
       if (!courseCode) {
@@ -130,49 +165,99 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const existing = await db.syllabusItem.findUnique({ where: { code } });
-      if (existing) {
-        errors.push({ row: rowNumber, error: `Skipped duplicate event code "${code}"` });
-        skipped += 1;
-        continue;
-      }
+      const explicitCode = getString(row, ['Code']);
+      const code = explicitCode || getGeneratedEventCode(courseCode, generatedCodeSequence++);
 
       const type = normaliseType(getString(row, ['Type']));
       const sortieType = type === 'Flight' ? normaliseSortieType(getString(row, ['Dual/Solo', 'sortieType'])) : null;
       const flightOrSimHours = getNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
       const totalEventHours = getNumber(row, ['Total Event Hours', 'totalEventHours']) ?? 0;
+      const itemData = {
+        code,
+        eventDescription: getString(row, ['Event description', 'eventDescription']),
+        phase: getString(row, ['Phase']) || courseCode,
+        module: getString(row, ['Module']) || courseCode,
+        type,
+        sortieType,
+        dayNight: normaliseDayNight(getString(row, ['Day/Night', 'dayNight'])),
+        courses: [courseCode],
+        methodOfDelivery: getList(row, ['Method/s of Delivery', 'methodOfDelivery']),
+        methodOfAssessment: getList(row, ['Method/s of Assessment', 'Type/s and Method/s of Assessment', 'methodOfAssessment']),
+        resourcesPhysical: getList(row, ['Resources Required (physical)', 'resourcesPhysical']),
+        resourcesHuman: getList(row, ['Resources Required (Human)', 'resourcesHuman']),
+        eventDetailsCommon: getList(row, ['Event Details - Common', 'eventDetailsCommon']),
+        eventDetailsSortie: getList(row, ['Event Details - Sortie', 'eventDetailsSortie']),
+        flightOrSimHours: flightOrSimHours ?? 0,
+        totalEventHours,
+        duration: flightOrSimHours ?? totalEventHours,
+        preFlightTime: getNumber(row, ['Pre-flight', 'preFlightTime']) ?? 0,
+        postFlightTime: getNumber(row, ['Post-flight', 'postFlightTime']) ?? 0,
+        prerequisites: getList(row, ['prerequisites', 'Prerequisites']),
+        prerequisitesGround: getList(row, ['Pre-requisite Events (Ground School)', 'prerequisitesGround']),
+        prerequisitesFlying: getList(row, ['Pre-requisite Events (Sim/Flying)', 'prerequisitesFlying']),
+        resourceNumber: getNumber(row, ['Resource Number', 'resourceNumber', 'Resources Required Number']) ?? 0,
+        location: '',
+        lmpType,
+        isActive: true,
+      };
 
-      const maxOrder = await db.syllabusItem.aggregate({ _max: { sortOrder: true } });
-      const nextSortOrder = (maxOrder._max.sortOrder ?? 0) + 1;
+      const existing = await db.syllabusItem.findUnique({ where: { code } });
+      if (existing) {
+        if (!belongsToDestination(existing, courseCode, lmpType)) {
+          errors.push({
+            row: rowNumber,
+            error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
+          });
+          skipped += 1;
+          continue;
+        }
+
+        const updatedItem = await db.syllabusItem.update({
+          where: { id: existing.id },
+          data: { ...itemData, version: { increment: 1 }, updatedAt: new Date() },
+        });
+
+        await db.syllabusHistory.create({
+          data: {
+            syllabusItemId: updatedItem.id,
+            changeType: 'UPDATE',
+            changeData: updatedItem as any,
+            previousData: existing as any,
+            changedBy: 'bulk-upload',
+            changeReason: `Bulk upload update to ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'}: ${courseCode}`,
+          },
+        });
+
+        updated.push(updatedItem);
+        continue;
+      }
+
+      if (!explicitCode && reusablePackagePlaceholder && !generatedPlaceholderUsed) {
+        const updatedItem = await db.syllabusItem.update({
+          where: { id: reusablePackagePlaceholder.id },
+          data: { ...itemData, version: { increment: 1 }, updatedAt: new Date() },
+        });
+
+        await db.syllabusHistory.create({
+          data: {
+            syllabusItemId: updatedItem.id,
+            changeType: 'UPDATE',
+            changeData: updatedItem as any,
+            previousData: reusablePackagePlaceholder as any,
+            changedBy: 'bulk-upload',
+            changeReason: `Bulk upload populated Training Package: ${courseCode}`,
+          },
+        });
+
+        generatedPlaceholderUsed = true;
+        updated.push(updatedItem);
+        continue;
+      }
+
       const newItem = await db.syllabusItem.create({
         data: {
-          code,
-          eventDescription: getString(row, ['Event description', 'eventDescription']),
-          phase: getString(row, ['Phase']) || courseCode,
-          module: getString(row, ['Module']) || courseCode,
-          type,
-          sortieType,
-          dayNight: normaliseDayNight(getString(row, ['Day/Night', 'dayNight'])),
-          courses: [courseCode],
-          methodOfDelivery: getList(row, ['Method/s of Delivery', 'methodOfDelivery']),
-          methodOfAssessment: getList(row, ['Method/s of Assessment', 'Type/s and Method/s of Assessment', 'methodOfAssessment']),
-          resourcesPhysical: getList(row, ['Resources Required (physical)', 'resourcesPhysical']),
-          resourcesHuman: getList(row, ['Resources Required (Human)', 'resourcesHuman']),
-          eventDetailsCommon: getList(row, ['Event Details - Common', 'eventDetailsCommon']),
-          eventDetailsSortie: getList(row, ['Event Details - Sortie', 'eventDetailsSortie']),
-          flightOrSimHours: flightOrSimHours ?? 0,
-          totalEventHours,
-          duration: flightOrSimHours ?? totalEventHours,
-          preFlightTime: getNumber(row, ['Pre-flight', 'preFlightTime']) ?? 0,
-          postFlightTime: getNumber(row, ['Post-flight', 'postFlightTime']) ?? 0,
-          prerequisites: getList(row, ['prerequisites', 'Prerequisites']),
-          prerequisitesGround: getList(row, ['Pre-requisite Events (Ground School)', 'prerequisitesGround']),
-          prerequisitesFlying: getList(row, ['Pre-requisite Events (Sim/Flying)', 'prerequisitesFlying']),
-          resourceNumber: getNumber(row, ['Resource Number', 'resourceNumber', 'Resources Required Number']) ?? 0,
-          location: '',
-          sortOrder: nextSortOrder,
-          lmpType,
-          isActive: true,
+          ...itemData,
+          sortOrder: nextSortOrder++,
           version: 1,
           createdBy: 'bulk-upload',
         },
@@ -194,9 +279,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         created: created.length,
+        updated: updated.length,
         skipped,
         errors,
-        message: `${created.length} event${created.length === 1 ? '' : 's'} uploaded to ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${selectedCourseCode || ''}`.trim(),
+        message: `${created.length} created, ${updated.length} updated in ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${selectedCourseCode || ''}`.trim(),
       },
       { headers: getCorsHeaders(request) }
     );
