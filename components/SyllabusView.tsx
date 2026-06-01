@@ -1393,10 +1393,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 onClick={e => e.stopPropagation()}
             >
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: '#38bdf8', marginBottom: 8 }}>
-                    Bulk Upload LMP Events
+                    Bulk Upload {isTrainingPackagesTab ? 'Training Package' : 'Master LMP'} Events
                 </h2>
                 <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4, lineHeight: 1.6 }}>
-                    Upload an Excel (.xlsx) file to populate <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> with LMP events.
+                    Upload an Excel (.xlsx) file to populate <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> with {isTrainingPackagesTab ? 'training package' : 'Master LMP'} events.
+                    {isTrainingPackagesTab ? ' These rows will be saved to Training Packages, not Master LMP.' : ''}
                 </p>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
                     The spreadsheet must have a sheet named <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong> with columns: Code, Course, Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical), Resource Number.

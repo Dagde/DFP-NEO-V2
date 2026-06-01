@@ -33571,11 +33571,18 @@ const SyllabusView = ({
             },
             onClick: (e) => e.stopPropagation(),
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { style: { fontSize: 16, fontWeight: 700, color: "#38bdf8", marginBottom: 8 }, children: "Bulk Upload LMP Events" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { style: { fontSize: 16, fontWeight: 700, color: "#38bdf8", marginBottom: 8 }, children: [
+                "Bulk Upload ",
+                isTrainingPackagesTab ? "Training Package" : "Master LMP",
+                " Events"
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#9ca3af", marginBottom: 4, lineHeight: 1.6 }, children: [
                 "Upload an Excel (.xlsx) file to populate ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: getCourseTitle(selectedCourseType) }),
-                " with LMP events."
+                " with ",
+                isTrainingPackagesTab ? "training package" : "Master LMP",
+                " events.",
+                isTrainingPackagesTab ? " These rows will be saved to Training Packages, not Master LMP." : ""
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20, lineHeight: 1.6 }, children: [
                 "The spreadsheet must have a sheet named ",
