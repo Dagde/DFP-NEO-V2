@@ -64909,7 +64909,9 @@ const App = () => {
                         const isCompleted = itemCompletionKeys.some((key) => normalizedCompletedIds.includes(key));
                         return {
                           ...item,
-                          completedAt: isCompleted ? item.completedAt || (/* @__PURE__ */ new Date()).toISOString() : null
+                          completedAt: isCompleted ? item.completedAt || (/* @__PURE__ */ new Date()).toISOString() : null,
+                          isComplete: isCompleted,
+                          completed: isCompleted
                         };
                       });
                       newLMPs.set(lmp.traineeFullName, updatedLMP);

@@ -10527,6 +10527,8 @@ const App: React.FC = () => {
                                                 return {
                                                     ...item,
                                                     completedAt: isCompleted ? (item.completedAt || new Date().toISOString()) : null,
+                                                    isComplete: isCompleted,
+                                                    completed: isCompleted,
                                                 };
                                             });
 

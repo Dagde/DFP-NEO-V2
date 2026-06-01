@@ -3979,10 +3979,15 @@ const addPriorGroundCompletionsForSync = (scoreMap, lmpEvents) => {
 const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, scoreMap) => {
   const stampedMaster = stampMasterLmpItemsForSync(masterSyllabus);
   if (!existingEvents || existingEvents.length === 0) {
-    return stampedMaster.map(item => ({
-      ...item,
-      completedAt: getLmpCompletionTimestampForSync(item, scoreMap),
-    }));
+    return stampedMaster.map(item => {
+      const completedAt = getLmpCompletionTimestampForSync(item, scoreMap);
+      return {
+        ...item,
+        completedAt,
+        isComplete: Boolean(completedAt),
+        completed: Boolean(completedAt),
+      };
+    });
   }
 
   const masterIds = new Set(stampedMaster.map(getLmpMasterEventId).filter(Boolean));
@@ -3995,13 +4000,16 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
 
   const mergedMaster = stampedMaster.map((masterItem, index) => {
     const existingItem = existingByMasterId.get(getLmpMasterEventId(masterItem));
+    const completedAt = getLmpCompletionTimestampForSync(masterItem, scoreMap);
     return {
       ...masterItem,
       ...getIndividualLmpMasterOverridesForSync(existingItem),
       id: masterItem.id,
       masterEventId: getLmpMasterEventId(masterItem),
       lmpSource: 'master',
-      completedAt: getLmpCompletionTimestampForSync(masterItem, scoreMap),
+      completedAt,
+      isComplete: Boolean(completedAt),
+      completed: Boolean(completedAt),
       userLockedPosition: existingItem?.userLockedPosition,
       orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKeyForSync(index),
       placementNeedsReview: false,
@@ -4127,9 +4135,9 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     console.log(`[LMP Sync] Processing ${trainees.length} trainees...`);
 
     const traineePerformanceRows = await db.$queryRawUnsafe(`
-      SELECT "traineeId", "traineeFullName", "flightNumber", "eventCode", "date", "updatedAt", "overallGrade", "overallResult"
+      SELECT "traineeId", "traineeFullName", "flightNumber", "eventCode", "date", "updatedAt", "overallGrade", "overallResult", "dcoResult"
       FROM "TraineePerformance"
-      WHERE "isCompleted" = true
+      WHERE "isCompleted" = true OR UPPER(COALESCE("dcoResult", '')) = 'DCO'
       ORDER BY "date" ASC, "updatedAt" ASC
     `);
     const performanceByTraineeId = new Map();
@@ -12151,6 +12159,9 @@ app.put('/api/trainee-performance/:eventId', async (req, res) => {
     const elementScores = (data.scores || data.elementScores || []);
     const isGS = data.groundSchoolAssessment?.isAssessment || false;
     const gsResult = data.groundSchoolAssessment?.result ?? null;
+    const isCompleted = data.isCompleted === true ||
+      data.isCompleted === 'true' ||
+      String(data.dcoResult || '').trim().toUpperCase() === 'DCO';
 
     await db.$executeRawUnsafe(`
       UPDATE "TraineePerformance" SET
@@ -12179,7 +12190,7 @@ app.put('/api/trainee-performance/:eventId', async (req, res) => {
       data.flightNumber ?? '',
       comments,
       JSON.stringify(elementScores),
-      data.isCompleted ?? false,
+      isCompleted,
       data.startTime ?? null,
       data.duration ?? null,
       data.endTime ?? null,
@@ -12329,6 +12340,8 @@ function mapRowToAssessment(row) {
 // Helper: Map Pt051Assessment (app shape) → DB row for INSERT
 function mapAssessmentToRow(data) {
   const id = data._dbId || data.id || generateSimpleId();
+  const dcoResult = data.dcoResult || null;
+  const isDcoComplete = String(dcoResult || '').trim().toUpperCase() === 'DCO';
 
   // Normalize scores: app uses data.scores, import uses data.elementScores
   const elementScores = (data.scores || data.elementScores || []).map(s => ({
@@ -12353,13 +12366,13 @@ function mapAssessmentToRow(data) {
     instructorId:            data.instructorId || null,
     overallGrade:            data.overallGrade != null ? String(data.overallGrade) : 'No Grade',
     overallResult:           data.overallResult || null,
-    dcoResult:               data.dcoResult || null,
+    dcoResult:               dcoResult,
     startTime:               data.startTime != null ? Number(data.startTime) : null,
     duration:                data.duration != null ? Number(data.duration) : null,
     endTime:                 data.endTime != null ? Number(data.endTime) : null,
     comments:                comments || null,
     elementScores:           elementScores,
-    isCompleted:             data.isCompleted === true || data.isCompleted === 'true',
+    isCompleted:             data.isCompleted === true || data.isCompleted === 'true' || isDcoComplete,
     isGroundSchoolAssessment: data.groundSchoolAssessment?.isAssessment || false,
     groundSchoolResult:      data.groundSchoolAssessment?.result ?? null,
     course:                  data.course || null,
