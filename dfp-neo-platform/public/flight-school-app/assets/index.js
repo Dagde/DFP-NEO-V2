@@ -33730,7 +33730,9 @@ const SyllabusView = ({
               }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 13, fontWeight: 600, color: uploadResult.errors.length > 0 ? "#fbbf24" : "#4ade80", marginBottom: 4 }, children: uploadResult.message }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#9ca3af" }, children: [
-                  "Created: ",
+                  "Imported rows: ",
+                  uploadResult.imported ?? (uploadResult.created || 0) + (uploadResult.updated || 0),
+                  "  |  Created: ",
                   uploadResult.created,
                   "  |  Updated: ",
                   uploadResult.updated || 0,

@@ -5712,9 +5712,10 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
     res.json({
       created: created.length,
       updated: updated.length,
+      imported: created.length + updated.length,
       skipped,
       errors,
-      message: `${created.length} created, ${updated.length} updated in ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${packageName || selectedCourseCode || ''}`.trim(),
+      message: `${created.length + updated.length} row${created.length + updated.length === 1 ? '' : 's'} imported into ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${packageName || selectedCourseCode || ''}`.trim(),
     });
   } catch (error) {
     console.error('❌ POST /api/syllabus/bulk-upload error:', error);

@@ -594,7 +594,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMode, setUploadMode] = useState<'update' | 'replace' | 'create'>('update');
   const [newUploadPackageName, setNewUploadPackageName] = useState('');
-  const [uploadResult, setUploadResult] = useState<{ created: number; updated?: number; skipped: number; errors: any[]; message: string } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{ created: number; updated?: number; imported?: number; skipped: number; errors: any[]; message: string } | null>(null);
 
   // Delete Event modal state
   const [showDeleteEventModal, setShowDeleteEventModal] = useState(false);
@@ -1514,7 +1514,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             {uploadResult.message}
                         </p>
                         <p style={{ fontSize: 11, color: '#9ca3af' }}>
-                            Created: {uploadResult.created} &nbsp;|&nbsp; Updated: {uploadResult.updated || 0} &nbsp;|&nbsp; Skipped: {uploadResult.skipped}
+                            Imported rows: {uploadResult.imported ?? ((uploadResult.created || 0) + (uploadResult.updated || 0))} &nbsp;|&nbsp; Created: {uploadResult.created} &nbsp;|&nbsp; Updated: {uploadResult.updated || 0} &nbsp;|&nbsp; Skipped: {uploadResult.skipped}
                             {uploadResult.errors.length > 0 && <span style={{ color: '#f87171' }}> &nbsp;|&nbsp; Errors: {uploadResult.errors.length}</span>}
                         </p>
                         {uploadResult.errors.length > 0 && (
