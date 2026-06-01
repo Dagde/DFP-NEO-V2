@@ -72926,16 +72926,22 @@ ${conflictLines.join("\n")}${moreText}`,
       switch (conflictResult.conflictType) {
         case "turnaround":
           if (conflictingEvent) {
-            let turnaround = 0;
-            if (event.type === "flight") turnaround = flightTurnaround;
-            else if (event.type === "ftd") turnaround = ftdTurnaround;
-            else if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) turnaround = cptTurnaround;
+            const getTurnaroundRequirement = (candidate) => {
+              if (candidate.type === "flight") return flightTurnaround;
+              if (candidate.type === "ftd") return ftdTurnaround;
+              if (candidate.type === "cpt" || candidate.type === "ground" && candidate.flightNumber.includes("CPT")) return cptTurnaround;
+              return 0;
+            };
+            const selectedEventTurnaround = getTurnaroundRequirement(event);
+            const conflictingEventTurnaround = getTurnaroundRequirement(conflictingEvent);
             if (event.startTime > conflictingEvent.startTime) {
               const gap = event.startTime - (conflictingEvent.startTime + conflictingEvent.duration);
-              errors.push(`❌ Turnaround violation - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and previous event ${conflictingEvent.flightNumber} (minimum required: ${turnaround}hrs)`);
+              const requiredTurnaround = Math.max(selectedEventTurnaround, conflictingEventTurnaround);
+              errors.push(`❌ Turnaround violation - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and previous event ${conflictingEvent.flightNumber} (minimum required: ${requiredTurnaround}hrs)`);
             } else {
               const gap = conflictingEvent.startTime - (event.startTime + event.duration);
-              errors.push(`❌ Turnaround violation - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and next event ${conflictingEvent.flightNumber} (minimum required: ${turnaround}hrs)`);
+              const requiredTurnaround = Math.max(selectedEventTurnaround, conflictingEventTurnaround);
+              errors.push(`❌ Turnaround violation - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and next event ${conflictingEvent.flightNumber} (minimum required: ${requiredTurnaround}hrs)`);
             }
           }
           break;
