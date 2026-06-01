@@ -92,6 +92,14 @@ const getGeneratedCodePrefix = (courseCode: string): string => {
 const getGeneratedEventCode = (courseCode: string, sequence: number): string =>
   `${getGeneratedCodePrefix(courseCode)}${String(sequence).padStart(2, '0')}`;
 
+const getPackageCodeFromTitle = (title: string): string => {
+  const words = title.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '';
+  return words.length === 1
+    ? words[0].toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
+    : words.map(word => word[0].toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 8);
+};
+
 const rowHasContent = (row: Record<string, any>): boolean =>
   Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
 
@@ -108,9 +116,21 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file');
-    const selectedCourseCode = String(formData.get('courseCode') || '').trim();
+    let selectedCourseCode = String(formData.get('courseCode') || '').trim();
+    const packageName = String(formData.get('packageName') || '').trim();
+    const uploadMode = String(formData.get('uploadMode') || 'update').trim();
     const requestedLmpType = String(formData.get('lmpType') || 'Master LMP').trim();
     const lmpType = requestedLmpType === 'Staff CAT' ? 'Staff CAT' : 'Master LMP';
+    if (!selectedCourseCode && lmpType === 'Staff CAT' && uploadMode === 'create') {
+      selectedCourseCode = getPackageCodeFromTitle(packageName);
+    }
+
+    if (!selectedCourseCode) {
+      return NextResponse.json(
+        { error: 'No destination course/package selected' },
+        { status: 400, headers: getCorsHeaders(request) }
+      );
+    }
 
     if (!(file instanceof File)) {
       return NextResponse.json(
@@ -140,10 +160,81 @@ export async function POST(request: NextRequest) {
     let skipped = 0;
     let generatedCodeSequence = 1;
     let generatedPlaceholderUsed = false;
+
+    if (uploadMode === 'replace') {
+      const preflightErrors: Array<{ row: number; error: string }> = [];
+      let preflightSequence = 1;
+      let contentRows = 0;
+      for (let index = 0; index < rows.length; index++) {
+        const row = rows[index];
+        const rowNumber = index + 2;
+        if (!rowHasContent(row)) continue;
+        contentRows += 1;
+
+        const missingColumns = REQUIRED_COLUMNS.filter(column => !getString(row, [column]));
+        if (missingColumns.length > 0) {
+          preflightErrors.push({ row: rowNumber, error: `Missing required fields: ${missingColumns.join(', ')}` });
+          continue;
+        }
+
+        const courseFromRow = getString(row, ['Course', 'Package']);
+        const courseCode = selectedCourseCode || courseFromRow;
+        if (!courseCode) {
+          preflightErrors.push({ row: rowNumber, error: 'Missing selected course/package code' });
+          continue;
+        }
+
+        const explicitCode = getString(row, ['Code']);
+        const code = explicitCode || getGeneratedEventCode(courseCode, preflightSequence++);
+        const existing = await db.syllabusItem.findUnique({ where: { code } });
+        if (existing && !belongsToDestination(existing, courseCode, lmpType)) {
+          preflightErrors.push({
+            row: rowNumber,
+            error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
+          });
+        }
+      }
+
+      if (contentRows === 0) {
+        preflightErrors.push({ row: 1, error: 'The upload file does not contain any event rows' });
+      }
+
+      if (preflightErrors.length > 0) {
+        return NextResponse.json(
+          {
+            created: 0,
+            updated: 0,
+            skipped: preflightErrors.length,
+            errors: preflightErrors,
+            message: 'Replace cancelled. Fix the upload errors and try again.',
+          },
+          { status: 400, headers: getCorsHeaders(request) }
+        );
+      }
+    }
+
+    if (lmpType === 'Staff CAT' && uploadMode === 'create') {
+      const existingPackageCount = await db.syllabusItem.count({
+        where: { lmpType, isActive: true, courses: { has: selectedCourseCode } },
+      });
+      if (existingPackageCount > 0) {
+        return NextResponse.json(
+          { error: `Training package "${selectedCourseCode}" already exists. Select it and use update or replace.` },
+          { status: 409, headers: getCorsHeaders(request) }
+        );
+      }
+    }
+
+    if (lmpType === 'Staff CAT' && uploadMode === 'replace') {
+      await db.syllabusItem.deleteMany({
+        where: { lmpType, courses: { has: selectedCourseCode } },
+      });
+    }
+
     const maxOrder = await db.syllabusItem.aggregate({ _max: { sortOrder: true } });
     let nextSortOrder = (maxOrder._max.sortOrder ?? 0) + 1;
 
-    const reusablePackagePlaceholder = selectedCourseCode && lmpType === 'Staff CAT'
+    const reusablePackagePlaceholder = selectedCourseCode && lmpType === 'Staff CAT' && uploadMode !== 'replace'
       ? await db.syllabusItem.findFirst({
           where: {
             code: selectedCourseCode,
@@ -185,7 +276,7 @@ export async function POST(request: NextRequest) {
         code,
         eventDescription: getString(row, ['Event description', 'eventDescription']),
         phase: getString(row, ['Phase']) || courseCode,
-        module: getString(row, ['Module']) || courseCode,
+        module: getString(row, ['Module']) || packageName || courseCode,
         type,
         sortieType,
         dayNight: normaliseDayNight(getString(row, ['Day/Night', 'dayNight'])),
@@ -292,7 +383,7 @@ export async function POST(request: NextRequest) {
         updated: updated.length,
         skipped,
         errors,
-        message: `${created.length} created, ${updated.length} updated in ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${selectedCourseCode || ''}`.trim(),
+        message: `${created.length} created, ${updated.length} updated in ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${packageName || selectedCourseCode || ''}`.trim(),
       },
       { headers: getCorsHeaders(request) }
     );

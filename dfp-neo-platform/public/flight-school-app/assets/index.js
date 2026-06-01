@@ -32630,6 +32630,11 @@ const STATIC_TRAINING_PACKAGES = [];
 const getItemLmpDetailsTab = (item) => item.lmpType === "Staff CAT" ? "packages" : "master";
 const getActiveLmpType = (tab) => tab === "packages" ? "Staff CAT" : "Master LMP";
 const getDefaultLmpSelection = (tab) => tab === "packages" ? "" : STATIC_MASTER_LMPS[0];
+const getPackageCodeFromTitle = (title) => {
+  const words = title.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "";
+  return words.length === 1 ? words[0].toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) : words.map((word) => word[0].toUpperCase()).join("").replace(/[^A-Z0-9]/g, "").slice(0, 8);
+};
 const SyllabusView = ({
   syllabusDetails,
   onBack,
@@ -32686,6 +32691,8 @@ const SyllabusView = ({
   const [showUploadModal, setShowUploadModal] = reactExports.useState(false);
   const [uploadFile, setUploadFile] = reactExports.useState(null);
   const [isUploading, setIsUploading] = reactExports.useState(false);
+  const [uploadMode, setUploadMode] = reactExports.useState("update");
+  const [newUploadPackageName, setNewUploadPackageName] = reactExports.useState("");
   const [uploadResult, setUploadResult] = reactExports.useState(null);
   const [showDeleteEventModal, setShowDeleteEventModal] = reactExports.useState(false);
   const [deleteEventItem, setDeleteEventItem] = reactExports.useState(null);
@@ -32873,8 +32880,19 @@ const SyllabusView = ({
       alert("Please select a file first.");
       return;
     }
-    if (!selectedCourseType) {
+    const packageName = newUploadPackageName.trim();
+    const destinationCode = isTrainingPackagesTab && uploadMode === "create" ? getPackageCodeFromTitle(packageName) : selectedCourseType;
+    const destinationName = isTrainingPackagesTab && uploadMode === "create" ? packageName : getCourseTitle(selectedCourseType);
+    if (isTrainingPackagesTab && uploadMode === "create" && !packageName) {
+      alert("Please enter a new package name.");
+      return;
+    }
+    if (!destinationCode) {
       alert(`Please select or add a ${activeCollectionNoun} first.`);
+      return;
+    }
+    if (isTrainingPackagesTab && uploadMode === "create" && courseLMPs.includes(destinationCode)) {
+      alert(`A package with code ${destinationCode} already exists. Select it and use Replace Package or Update Package instead.`);
       return;
     }
     setIsUploading(true);
@@ -32882,7 +32900,9 @@ const SyllabusView = ({
     try {
       const formData = new FormData();
       formData.append("file", uploadFile);
-      formData.append("courseCode", selectedCourseType);
+      formData.append("courseCode", destinationCode);
+      formData.append("packageName", destinationName);
+      formData.append("uploadMode", isTrainingPackagesTab ? uploadMode : "update");
       formData.append("lmpType", activeLmpType);
       const resp = await fetch("/api/syllabus/bulk-upload", {
         method: "POST",
@@ -33141,6 +33161,8 @@ const SyllabusView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setUploadFile(null);
               setUploadResult(null);
+              setUploadMode(selectedCourseType ? "update" : "create");
+              setNewUploadPackageName("");
               setShowUploadModal(true);
             }, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed", children: "Upload" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleEdit, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: "Edit" })
@@ -33603,6 +33625,63 @@ const SyllabusView = ({
                 activeCollectionNoun,
                 "."
               ] }),
+              isTrainingPackagesTab && !uploadResult && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16, padding: 12, border: "1px solid #374151", borderRadius: 8, backgroundColor: "#111827" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#9ca3af",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  marginBottom: 10
+                }, children: "Package Destination" }),
+                [
+                  { id: "update", label: "Update selected package", detail: `Add new rows and update matching event codes in ${getCourseTitle(selectedCourseType) || "the selected package"}.` },
+                  { id: "replace", label: "Replace selected package", detail: `Remove current rows in ${getCourseTitle(selectedCourseType) || "the selected package"} before importing this workbook.` },
+                  { id: "create", label: "Create new package", detail: "Enter a package name; the app will create the package code and import these rows into it." }
+                ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8, cursor: "pointer" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      name: "uploadMode",
+                      checked: uploadMode === option.id,
+                      onChange: () => setUploadMode(option.id),
+                      disabled: !selectedCourseType && option.id !== "create",
+                      style: { marginTop: 3 }
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 12, fontWeight: 700, color: "#f9fafb" }, children: option.label }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { display: "block", fontSize: 11, color: "#6b7280", lineHeight: 1.35 }, children: option.detail })
+                  ] })
+                ] }, option.id)),
+                uploadMode === "create" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 10 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: { display: "block", fontSize: 11, fontWeight: 600, color: "#9ca3af", marginBottom: 6 }, children: "New package name" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "text",
+                      value: newUploadPackageName,
+                      onChange: (e) => setNewUploadPackageName(e.target.value),
+                      placeholder: "e.g. Air Combat",
+                      style: {
+                        width: "100%",
+                        fontSize: 13,
+                        color: "#f9fafb",
+                        backgroundColor: "#0f172a",
+                        border: "1px solid #374151",
+                        borderRadius: 6,
+                        padding: "8px 10px"
+                      }
+                    }
+                  ),
+                  newUploadPackageName.trim() && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: [
+                    "Package code: ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: getPackageCodeFromTitle(newUploadPackageName) })
+                  ] })
+                ] })
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
                   display: "block",
@@ -33693,16 +33772,16 @@ const SyllabusView = ({
                   "button",
                   {
                     onClick: handleBulkUpload,
-                    disabled: !uploadFile || isUploading,
+                    disabled: !uploadFile || isUploading || isTrainingPackagesTab && uploadMode === "create" && !newUploadPackageName.trim(),
                     style: {
                       padding: "8px 20px",
                       fontSize: 12,
                       fontWeight: 600,
                       borderRadius: 6,
-                      backgroundColor: uploadFile && !isUploading ? "#0284c7" : "#1e3a5f",
+                      backgroundColor: uploadFile && !isUploading && !(isTrainingPackagesTab && uploadMode === "create" && !newUploadPackageName.trim()) ? "#0284c7" : "#1e3a5f",
                       color: "#fff",
                       border: "none",
-                      cursor: uploadFile && !isUploading ? "pointer" : "not-allowed"
+                      cursor: uploadFile && !isUploading && !(isTrainingPackagesTab && uploadMode === "create" && !newUploadPackageName.trim()) ? "pointer" : "not-allowed"
                     },
                     children: isUploading ? "Uploading…" : "Upload & Import"
                   }

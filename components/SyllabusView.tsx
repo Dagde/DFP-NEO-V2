@@ -518,6 +518,14 @@ const getActiveLmpType = (tab: LmpDetailsTab): NonNullable<SyllabusItemDetail['l
 const getDefaultLmpSelection = (tab: LmpDetailsTab): string =>
     tab === 'packages' ? (STATIC_TRAINING_PACKAGES[0] || '') : STATIC_MASTER_LMPS[0];
 
+const getPackageCodeFromTitle = (title: string): string => {
+    const words = title.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return '';
+    return words.length === 1
+        ? words[0].toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
+        : words.map(word => word[0].toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 8);
+};
+
 const SyllabusView: React.FC<SyllabusViewProps> = ({
     syllabusDetails,
     onBack,
@@ -584,6 +592,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'update' | 'replace' | 'create'>('update');
+  const [newUploadPackageName, setNewUploadPackageName] = useState('');
   const [uploadResult, setUploadResult] = useState<{ created: number; updated?: number; skipped: number; errors: any[]; message: string } | null>(null);
 
   // Delete Event modal state
@@ -799,14 +809,30 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   const handleBulkUpload = async () => {
       if (!uploadFile) { alert('Please select a file first.'); return; }
-      if (!selectedCourseType) { alert(`Please select or add a ${activeCollectionNoun} first.`); return; }
+      const packageName = newUploadPackageName.trim();
+      const destinationCode = isTrainingPackagesTab && uploadMode === 'create'
+          ? getPackageCodeFromTitle(packageName)
+          : selectedCourseType;
+      const destinationName = isTrainingPackagesTab && uploadMode === 'create'
+          ? packageName
+          : getCourseTitle(selectedCourseType);
+      if (isTrainingPackagesTab && uploadMode === 'create' && !packageName) {
+          alert('Please enter a new package name.');
+          return;
+      }
+      if (!destinationCode) { alert(`Please select or add a ${activeCollectionNoun} first.`); return; }
+      if (isTrainingPackagesTab && uploadMode === 'create' && courseLMPs.includes(destinationCode)) {
+          alert(`A package with code ${destinationCode} already exists. Select it and use Replace Package or Update Package instead.`);
+          return;
+      }
       setIsUploading(true);
       setUploadResult(null);
       try {
           const formData = new FormData();
           formData.append('file', uploadFile);
-          // Pass the current course code so uploads go into the selected course
-          formData.append('courseCode', selectedCourseType);
+          formData.append('courseCode', destinationCode);
+          formData.append('packageName', destinationName);
+          formData.append('uploadMode', isTrainingPackagesTab ? uploadMode : 'update');
           formData.append('lmpType', activeLmpType);
           const resp = await fetch('/api/syllabus/bulk-upload', {
               method: 'POST',
@@ -1086,7 +1112,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             Del<br />{isTrainingPackagesTab ? 'Package' : 'Course'}
                         </span>
                     </button>
-                    <button onClick={() => { setUploadFile(null); setUploadResult(null); setShowUploadModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed">Upload</button>
+                    <button onClick={() => { setUploadFile(null); setUploadResult(null); setUploadMode(selectedCourseType ? 'update' : 'create'); setNewUploadPackageName(''); setShowUploadModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed">Upload</button>
                     <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
             )}
@@ -1412,6 +1438,55 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     Preferred sheet name: <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong>. If that sheet is not present, the first worksheet is used. Mandatory columns: Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery. Optional columns: Code, Course, Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical), Resources Required (Human), Resource Number, CONFIG. Blank Code cells are generated from the selected {activeCollectionNoun}.
                 </p>
 
+                {isTrainingPackagesTab && !uploadResult && (
+                    <div style={{ marginBottom: 16, padding: 12, border: '1px solid #374151', borderRadius: 8, backgroundColor: '#111827' }}>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#9ca3af',
+                            textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                            Package Destination
+                        </label>
+                        {[
+                            { id: 'update' as const, label: 'Update selected package', detail: `Add new rows and update matching event codes in ${getCourseTitle(selectedCourseType) || 'the selected package'}.` },
+                            { id: 'replace' as const, label: 'Replace selected package', detail: `Remove current rows in ${getCourseTitle(selectedCourseType) || 'the selected package'} before importing this workbook.` },
+                            { id: 'create' as const, label: 'Create new package', detail: 'Enter a package name; the app will create the package code and import these rows into it.' },
+                        ].map(option => (
+                            <label key={option.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 8, cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="uploadMode"
+                                    checked={uploadMode === option.id}
+                                    onChange={() => setUploadMode(option.id)}
+                                    disabled={!selectedCourseType && option.id !== 'create'}
+                                    style={{ marginTop: 3 }}
+                                />
+                                <span>
+                                    <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#f9fafb' }}>{option.label}</span>
+                                    <span style={{ display: 'block', fontSize: 11, color: '#6b7280', lineHeight: 1.35 }}>{option.detail}</span>
+                                </span>
+                            </label>
+                        ))}
+                        {uploadMode === 'create' && (
+                            <div style={{ marginTop: 10 }}>
+                                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 6 }}>
+                                    New package name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newUploadPackageName}
+                                    onChange={e => setNewUploadPackageName(e.target.value)}
+                                    placeholder="e.g. Air Combat"
+                                    style={{ width: '100%', fontSize: 13, color: '#f9fafb', backgroundColor: '#0f172a',
+                                        border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}
+                                />
+                                {newUploadPackageName.trim() && (
+                                    <p style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
+                                        Package code: <strong style={{ color: '#d1d5db' }}>{getPackageCodeFromTitle(newUploadPackageName)}</strong>
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
                         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
@@ -1467,10 +1542,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     {!uploadResult && (
                         <button
                             onClick={handleBulkUpload}
-                            disabled={!uploadFile || isUploading}
+                            disabled={!uploadFile || isUploading || (isTrainingPackagesTab && uploadMode === 'create' && !newUploadPackageName.trim())}
                             style={{ padding: '8px 20px', fontSize: 12, fontWeight: 600, borderRadius: 6,
-                                backgroundColor: uploadFile && !isUploading ? '#0284c7' : '#1e3a5f',
-                                color: '#fff', border: 'none', cursor: uploadFile && !isUploading ? 'pointer' : 'not-allowed' }}
+                                backgroundColor: uploadFile && !isUploading && !(isTrainingPackagesTab && uploadMode === 'create' && !newUploadPackageName.trim()) ? '#0284c7' : '#1e3a5f',
+                                color: '#fff', border: 'none', cursor: uploadFile && !isUploading && !(isTrainingPackagesTab && uploadMode === 'create' && !newUploadPackageName.trim()) ? 'pointer' : 'not-allowed' }}
                         >
                             {isUploading ? 'Uploading…' : 'Upload & Import'}
                         </button>

@@ -5423,6 +5423,14 @@ function getGeneratedUploadCode(courseCode, sequence) {
   return `${prefix}${String(sequence).padStart(2, '0')}`;
 }
 
+function getUploadPackageCodeFromTitle(title) {
+  const words = String(title || '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '';
+  return words.length === 1
+    ? words[0].toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
+    : words.map(word => word[0].toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 8);
+}
+
 function uploadRowHasContent(row) {
   return Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
 }
@@ -5437,8 +5445,17 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
   try {
     const db = await getPrisma();
     const { randomUUID } = await import('crypto');
-    const selectedCourseCode = String(req.body?.courseCode || '').trim();
+    let selectedCourseCode = String(req.body?.courseCode || '').trim();
+    const packageName = String(req.body?.packageName || '').trim();
+    const uploadMode = String(req.body?.uploadMode || 'update').trim();
     const lmpType = normaliseUploadLmpType(String(req.body?.lmpType || 'Master LMP').trim());
+    if (!selectedCourseCode && lmpType === 'Staff CAT' && uploadMode === 'create') {
+      selectedCourseCode = getUploadPackageCodeFromTitle(packageName);
+    }
+
+    if (!selectedCourseCode) {
+      return res.status(400).json({ error: 'No destination course/package selected' });
+    }
 
     if (!req.file?.buffer) {
       return res.status(400).json({ error: 'No upload file supplied' });
@@ -5462,10 +5479,78 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
     let generatedCodeSequence = 1;
     let generatedPlaceholderUsed = false;
 
+    if (uploadMode === 'replace') {
+      const preflightErrors = [];
+      let preflightSequence = 1;
+      let contentRows = 0;
+      for (let index = 0; index < rows.length; index++) {
+        const row = rows[index];
+        const rowNumber = index + 2;
+        if (!uploadRowHasContent(row)) continue;
+        contentRows += 1;
+
+        const missingColumns = BULK_UPLOAD_REQUIRED_COLUMNS.filter(column => !getUploadString(row, [column]));
+        if (missingColumns.length > 0) {
+          preflightErrors.push({ row: rowNumber, error: `Missing required fields: ${missingColumns.join(', ')}` });
+          continue;
+        }
+
+        const courseFromRow = getUploadString(row, ['Course', 'Package']);
+        const courseCode = selectedCourseCode || courseFromRow;
+        if (!courseCode) {
+          preflightErrors.push({ row: rowNumber, error: 'Missing selected course/package code' });
+          continue;
+        }
+
+        const explicitCode = getUploadString(row, ['Code']);
+        const code = explicitCode || getGeneratedUploadCode(courseCode, preflightSequence++);
+        const existing = (await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "code" = $1 LIMIT 1`, code))[0];
+        if (existing && !uploadItemBelongsToDestination(existing, courseCode, lmpType)) {
+          preflightErrors.push({
+            row: rowNumber,
+            error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
+          });
+        }
+      }
+
+      if (contentRows === 0) {
+        preflightErrors.push({ row: 1, error: 'The upload file does not contain any event rows' });
+      }
+
+      if (preflightErrors.length > 0) {
+        return res.status(400).json({
+          created: 0,
+          updated: 0,
+          skipped: preflightErrors.length,
+          errors: preflightErrors,
+          message: 'Replace cancelled. Fix the upload errors and try again.',
+        });
+      }
+    }
+
+    if (lmpType === 'Staff CAT' && uploadMode === 'create') {
+      const existingPackageRows = await db.$queryRawUnsafe(
+        `SELECT "id" FROM "SyllabusItem" WHERE "lmpType" = $1 AND "isActive" = true AND $2 = ANY("courses") LIMIT 1`,
+        lmpType,
+        selectedCourseCode
+      );
+      if (existingPackageRows.length > 0) {
+        return res.status(409).json({ error: `Training package "${selectedCourseCode}" already exists. Select it and use update or replace.` });
+      }
+    }
+
+    if (lmpType === 'Staff CAT' && uploadMode === 'replace') {
+      await db.$executeRawUnsafe(
+        `DELETE FROM "SyllabusItem" WHERE "lmpType" = $1 AND $2 = ANY("courses")`,
+        lmpType,
+        selectedCourseCode
+      );
+    }
+
     const maxOrderRows = await db.$queryRawUnsafe(`SELECT COALESCE(MAX("sortOrder"), 0)::int AS "maxSortOrder" FROM "SyllabusItem"`);
     let nextSortOrder = Number(maxOrderRows?.[0]?.maxSortOrder || 0) + 1;
 
-    const reusablePackagePlaceholder = selectedCourseCode && lmpType === 'Staff CAT'
+    const reusablePackagePlaceholder = selectedCourseCode && lmpType === 'Staff CAT' && uploadMode !== 'replace'
       ? (await db.$queryRawUnsafe(
           `SELECT * FROM "SyllabusItem" WHERE "code" = $1 AND "lmpType" = $2 AND "isActive" = true AND $1 = ANY("courses") LIMIT 1`,
           selectedCourseCode,
@@ -5503,7 +5588,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
         code,
         eventDescription: getUploadString(row, ['Event description', 'eventDescription']),
         phase: getUploadString(row, ['Phase']) || courseCode,
-        module: getUploadString(row, ['Module']) || courseCode,
+        module: getUploadString(row, ['Module']) || packageName || courseCode,
         type,
         sortieType,
         dayNight: normaliseUploadDayNight(getUploadString(row, ['Day/Night', 'dayNight'])),
@@ -5629,7 +5714,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
       updated: updated.length,
       skipped,
       errors,
-      message: `${created.length} created, ${updated.length} updated in ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${selectedCourseCode || ''}`.trim(),
+      message: `${created.length} created, ${updated.length} updated in ${lmpType === 'Staff CAT' ? 'Training Package' : 'Master LMP'} ${packageName || selectedCourseCode || ''}`.trim(),
     });
   } catch (error) {
     console.error('❌ POST /api/syllabus/bulk-upload error:', error);
