@@ -9380,6 +9380,15 @@ const App: React.FC = () => {
     const [activeUnitCode, setActiveUnitCode] = useState<string>('1FTS');
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
     const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
+    const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
+        staffSharingEnabled: false,
+        staffSharingUnits: [],
+        fleetSharingEnabled: false,
+        allocationMode: 'combined',
+        selectedUnits: [],
+        desiredAllocations: {},
+        remainderUnitIndex: -1,
+    });
     const [allInstructorsData, setInstructorsData] = useState<Instructor[]>([]);
 
 
@@ -9487,6 +9496,7 @@ const App: React.FC = () => {
             .filter((location: any) => location.status !== 'INACTIVE')
             .find((location: any) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
         const locationAliases = new Set(activeLocation ? getLocationSelectorAliases(activeLocation) : [normalisedLocationCode]);
+        const normaliseUnitCode = (value: unknown): string => String(value || '').trim().toUpperCase();
         const configuredUnits = (platformConfig?.units || [])
             .filter((unit: any) => unit.status !== 'INACTIVE')
             .filter((unit: any) => locationAliases.has(String(unit.locationCode || '').trim().toUpperCase()))
@@ -9497,18 +9507,60 @@ const App: React.FC = () => {
             }))
             .filter(unit => unit.code);
 
-        if (configuredUnits.length > 0) return configuredUnits;
+        if (configuredUnits.length > 0) {
+            const configuredByCode = new Map(configuredUnits.map(unit => [normaliseUnitCode(unit.code), unit]));
+            const sharedUnitCodes = Array.from(new Set(
+                (organisationSettings.fleetSharingEnabled ? organisationSettings.selectedUnits : [])
+                    .map(normaliseUnitCode)
+                    .filter(unitCode => configuredByCode.has(unitCode))
+            ));
+            if (sharedUnitCodes.length > 1) {
+                const sharedUnits = sharedUnitCodes
+                    .map(unitCode => configuredByCode.get(unitCode))
+                    .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit));
+                const sharedModels = new Set(sharedUnits.map(unit => unit.model));
+                return [
+                    ...configuredUnits,
+                    {
+                        code: sharedUnitCodes.join('+'),
+                        name: `${sharedUnitCodes.join('+')} Shared Fleet`,
+                        model: sharedModels.size === 1 ? sharedUnits[0].model : normaliseOperationalModel('flight_school'),
+                        memberUnits: sharedUnitCodes,
+                        isSharedFleetContext: true,
+                    },
+                ];
+            }
+            return configuredUnits;
+        }
         const hasConfiguredPlatformUnits = (platformConfig?.units || [])
             .some((unit: any) => unit.status !== 'INACTIVE');
         if (hasConfiguredPlatformUnits) return [];
 
         const fallbackCodes = normalisedLocationCode === 'PEA' ? ['2FTS'] : ['1FTS', 'CFS'];
-        return fallbackCodes.map(code => ({
+        const fallbackUnits = fallbackCodes.map(code => ({
             code,
             name: code,
             model: normaliseOperationalModel('flight_school'),
         }));
-    }, [getLocationSelectorAliases, platformConfig]);
+        const sharedFallbackUnits = Array.from(new Set(
+            (organisationSettings.fleetSharingEnabled ? organisationSettings.selectedUnits : [])
+                .map(normaliseUnitCode)
+                .filter(unitCode => fallbackCodes.includes(unitCode))
+        ));
+        if (sharedFallbackUnits.length > 1) {
+            return [
+                ...fallbackUnits,
+                {
+                    code: sharedFallbackUnits.join('+'),
+                    name: `${sharedFallbackUnits.join('+')} Shared Fleet`,
+                    model: normaliseOperationalModel('flight_school'),
+                    memberUnits: sharedFallbackUnits,
+                    isSharedFleetContext: true,
+                },
+            ];
+        }
+        return fallbackUnits;
+    }, [getLocationSelectorAliases, organisationSettings.fleetSharingEnabled, organisationSettings.selectedUnits, platformConfig]);
 
     const activeLocationUnitOptions = useMemo(
         () => getUnitOptionsForLocation(school),
@@ -9527,19 +9579,39 @@ const App: React.FC = () => {
         [activeLocationUnitOptions, activeUnitCode],
     );
 
+    const activeContextUnitCodes = useMemo(() => {
+        const memberUnits = (activeUnitContext as any)?.memberUnits;
+        const rawUnits = Array.isArray(memberUnits) && memberUnits.length > 0
+            ? memberUnits
+            : String(activeUnitCode || '').split('+');
+        return Array.from(new Set(rawUnits
+            .map(unit => String(unit || '').trim().toUpperCase())
+            .filter(Boolean)));
+    }, [activeUnitCode, activeUnitContext]);
+    const activeContextUnitCodeSet = useMemo(
+        () => new Set(activeContextUnitCodes),
+        [activeContextUnitCodes],
+    );
+    const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
+    const activeResourcePoolUnitCode = isSharedFleetOperationalContext
+        ? null
+        : activeContextUnitCodes[0] || activeUnitCode;
+
     const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel('flight_school');
     const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
     const activeOperationalContext = useMemo(() => ({
         locationCode: school,
         unitCode: activeUnitCode,
         unitName: activeUnitContext?.name || activeUnitCode,
+        unitCodes: activeContextUnitCodes,
+        isSharedFleetContext: isSharedFleetOperationalContext,
         operationalModel: activeOperationalModel,
         operationalModelLabel: activeOperationalModelLabel,
-    }), [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, school]);
+    }), [activeContextUnitCodes, activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
 
     const activePlatformResourcePool = useMemo(
-        () => getLocationResourcePool(platformConfig, school, activeUnitCode),
-        [platformConfig, school, activeUnitCode],
+        () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
+        [activeResourcePoolUnitCode, platformConfig, school],
     );
 
     const activeLocationSolarProfile = useMemo(() => {
@@ -9656,22 +9728,28 @@ const App: React.FC = () => {
     const instructorsData = useMemo(() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
         const locationFiltered = allInstructorsData.filter(personMatchesActiveLocation);
-        const contextFiltered = activeUnitCode
-            ? locationFiltered.filter((i: any) => !i.unit || String(i.unit || '').split('/')[0].trim().toUpperCase() === String(activeUnitCode || '').trim().toUpperCase())
+        const contextFiltered = activeContextUnitCodeSet.size > 0
+            ? locationFiltered.filter((i: any) => {
+                const unitCode = String(i.unit || '').split('/')[0].trim().toUpperCase();
+                return !unitCode || activeContextUnitCodeSet.has(unitCode);
+            })
             : locationFiltered;
 
         if (!mockOn && !dbOn) return [];
         if (mockOn && dbOn) return contextFiltered;
         if (mockOn && !dbOn) return contextFiltered.filter((i: any) => (i as any)._dataSource !== 'database');
         return contextFiltered.filter((i: any) => (i as any)._dataSource === 'database');
-    }, [activeUnitCode, allInstructorsData, dataSourceSettings, personMatchesActiveLocation]);
+    }, [activeContextUnitCodeSet, allInstructorsData, dataSourceSettings, personMatchesActiveLocation]);
 
     const traineesData = useMemo(() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
 
         const locationFilteredTrainees = allTraineesData.filter(personMatchesActiveLocation);
-        const contextFilteredTrainees = activeUnitCode
-            ? locationFilteredTrainees.filter((t: any) => !t.unit || String(t.unit || '').split('/')[0].trim().toUpperCase() === String(activeUnitCode || '').trim().toUpperCase())
+        const contextFilteredTrainees = activeContextUnitCodeSet.size > 0
+            ? locationFilteredTrainees.filter((t: any) => {
+                const unitCode = String(t.unit || '').split('/')[0].trim().toUpperCase();
+                return !unitCode || activeContextUnitCodeSet.has(unitCode);
+            })
             : locationFilteredTrainees;
 
         if (!mockOn && !dbOn) return [];
@@ -9683,7 +9761,7 @@ const App: React.FC = () => {
         const dbCourses = new Set(dbTrainees.map(t => t.course));
         const mockTrainees = contextFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
         return [...mockTrainees, ...dbTrainees];
-    }, [activeUnitCode, allTraineesData, dataSourceSettings, personMatchesActiveLocation]);
+    }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation]);
 
     // ============================================================
     // AUTHENTICATION STATE
@@ -9904,17 +9982,21 @@ const App: React.FC = () => {
         const scope = hasRuntimePlatformWideAccess
             ? { organisationCodes: [], locationCode: school, unitCodes: [], allUnits: true }
             : getPlatformDataScopeForLocation(platformAccessContext, school);
-        const scopedUnitCodes = activeUnitCode
+        const requestedUnitCodes = activeContextUnitCodes.length > 0
+            ? activeContextUnitCodes
+            : activeUnitCode ? [activeUnitCode] : [];
+        const requestedUnitCodeSet = new Set(requestedUnitCodes.map(unitCode => String(unitCode || '').trim().toUpperCase()));
+        const scopedUnitCodes = requestedUnitCodes.length > 0
             ? (scope.allUnits || scope.unitCodes.length === 0
-                ? [activeUnitCode]
-                : scope.unitCodes.filter(unitCode => unitCode === activeUnitCode))
+                ? requestedUnitCodes
+                : scope.unitCodes.filter(unitCode => requestedUnitCodeSet.has(String(unitCode || '').trim().toUpperCase())))
             : scope.unitCodes;
         return buildPlatformDataScopeQuery({
             ...scope,
             unitCodes: scopedUnitCodes,
-            allUnits: !activeUnitCode && scope.allUnits,
+            allUnits: requestedUnitCodes.length === 0 && scope.allUnits,
         });
-    }, [activeUnitCode, hasRuntimePlatformWideAccess, platformAccessContext, school]);
+    }, [activeContextUnitCodes, activeUnitCode, hasRuntimePlatformWideAccess, platformAccessContext, school]);
 
     const scopedApiPath = useCallback((path: string, extraParams?: Record<string, string | number | boolean | undefined | null>) => {
         const params = new URLSearchParams(platformDataScopeQuery);
@@ -12275,17 +12357,6 @@ const App: React.FC = () => {
         };
         loadSettings();
     }, []);
-
-    // ─── ORGANISATION SETTINGS STATE ──────────────────────────────────────────
-    const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
-        staffSharingEnabled: false,
-        staffSharingUnits: [],
-        fleetSharingEnabled: false,
-        allocationMode: 'combined',
-        selectedUnits: [],
-        desiredAllocations: {},
-        remainderUnitIndex: -1,
-    });
 
     // ─── SETTINGS: Auto-save when anything changes ────────────────────────────
     useEffect(() => {

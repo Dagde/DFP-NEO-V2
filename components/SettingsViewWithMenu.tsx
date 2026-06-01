@@ -209,7 +209,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'timezone': 'Timezone',
     'location': 'Location',
     'units': 'Units',
-    'organisation': 'Fleet Sharing',
+    'organisation': 'Resource Sharing',
     'platform-configuration': 'Platform Configuration',
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',
@@ -1698,6 +1698,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         <OrganisationSettings
                             units={props.units}
                             currentAircraftAvailable={props.currentAircraftAvailable}
+                            totalAircraft={props.totalAircraft}
                             savedSettings={props.organisationSettings}
                             onSettingsChange={props.onUpdateOrganisationSettings}
                             settingsLoaded={props.settingsLoaded}

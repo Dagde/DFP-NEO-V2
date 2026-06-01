@@ -43359,6 +43359,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
 const OrganisationSettings = ({
   units,
   currentAircraftAvailable = 0,
+  totalAircraft = 0,
   savedSettings,
   onSettingsChange,
   settingsLoaded = false
@@ -43548,11 +43549,15 @@ const OrganisationSettings = ({
     return allocationMode === "fixed" && isRemainderUnit(unitCode);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 border border-sky-500/30 rounded-lg p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-200 mb-2", children: "Operational Sharing Controls" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300", children: "Fleet sharing controls whether selected units schedule against the same aircraft/resource pool on one shared DFP context. Staff sharing is separate: it controls whether instructors may be allocated across unit boundaries." })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-lg border border-gray-700 p-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Staff Sharing" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Configure staff sharing between organisational units. When enabled, all staff members are available for all sorties across participating units." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Controls instructor eligibility between units. Enable this only when staff from the selected units may be used across those units during NEO Build." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -43588,7 +43593,7 @@ const OrganisationSettings = ({
       staffSharingEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Staff" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose which units will share staff for all sorties." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "These units may use staff from each other. This does not control aircraft/resource sharing." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
@@ -43621,10 +43626,10 @@ const OrganisationSettings = ({
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-lg border border-gray-700 p-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Fleet Sharing" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Aircraft & Resource Sharing" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Configure asset sharing between organisational units. Units can share aircraft, simulators, and other operational resources." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Controls whether selected units operate from one shared aircraft/resource pool and one shared DFP context. This does not share staff unless Staff Sharing is also enabled." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -43640,25 +43645,29 @@ const OrganisationSettings = ({
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Fleet Sharing" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Aircraft & Resource Sharing" })
           ] }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between h-full", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 h-full", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Total Available Aircraft" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Current fleet size available for sharing" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Configured Resource Pool" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Aircraft rows defined in Aircraft & Resource Pools" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-3xl font-bold text-sky-400", children: totalAircraft }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Aircraft rows" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-l border-gray-600 pl-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Daily Build Availability" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Aircraft available for the selected schedule/build day" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-sky-400", children: currentAircraftAvailable }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Aircraft" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Available today" })
           ] })
         ] }) })
       ] }),
       fleetSharingEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Asset" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose which units will have access to shared resources." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Aircraft / Resources" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose units that will schedule aircraft/resources together. Selecting units here creates a shared fleet context in the top-left Location/Unit selector, e.g. 1FTS+CFS." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",
               {
@@ -43687,7 +43696,7 @@ const OrganisationSettings = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M13 10V3L4 14h7v7l9-11h-7z" }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white text-sm", children: "Combined Pool Mode" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "All selected units share one common aircraft pool. No individual aircraft limits. Allocation driven by combined scheduling priorities." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "Selected units schedule against one aircraft/resource pool and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled." })
                   ]
                 }
               ),
@@ -43701,7 +43710,7 @@ const OrganisationSettings = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white text-sm", children: "Fixed Allocation Mode" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "Each unit has a fixed aircraft allocation. One unit is auto-calculated as remainder. Insufficient aircraft: pro-rata reduction." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "Selected units share one DFP, but each unit has a planning allocation from the daily available aircraft. One unit is auto-calculated as remainder." })
                   ]
                 }
               )
@@ -47490,7 +47499,7 @@ const sectionLabels = {
   "timezone": "Timezone",
   "location": "Location",
   "units": "Units",
-  "organisation": "Fleet Sharing",
+  "organisation": "Resource Sharing",
   "platform-configuration": "Platform Configuration",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
@@ -48684,6 +48693,7 @@ const SettingsViewWithMenu = (props) => {
           {
             units: props.units,
             currentAircraftAvailable: props.currentAircraftAvailable,
+            totalAircraft: props.totalAircraft,
             savedSettings: props.organisationSettings,
             onSettingsChange: props.onUpdateOrganisationSettings,
             settingsLoaded: props.settingsLoaded
@@ -63681,6 +63691,15 @@ const App = () => {
   const [activeUnitCode, setActiveUnitCode] = reactExports.useState("1FTS");
   const [platformConfig, setPlatformConfig] = reactExports.useState(null);
   const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
+  const [organisationSettings, setOrganisationSettings] = reactExports.useState({
+    staffSharingEnabled: false,
+    staffSharingUnits: [],
+    fleetSharingEnabled: false,
+    allocationMode: "combined",
+    selectedUnits: [],
+    desiredAllocations: {},
+    remainderUnitIndex: -1
+  });
   const [allInstructorsData, setInstructorsData] = reactExports.useState([]);
   const [archivedInstructorsData, setArchivedInstructorsData] = reactExports.useState([]);
   const [allTraineesData, setTraineesData] = reactExports.useState([]);
@@ -63771,21 +63790,58 @@ const App = () => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
     const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
     const locationAliases = new Set(activeLocation ? getLocationSelectorAliases(activeLocation) : [normalisedLocationCode]);
+    const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
     const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
       code: String(unit.code || "").trim(),
       name: String(unit.name || unit.code || "").trim(),
       model: getUnitOperationalModel(unit)
     })).filter((unit) => unit.code);
-    if (configuredUnits.length > 0) return configuredUnits;
+    if (configuredUnits.length > 0) {
+      const configuredByCode = new Map(configuredUnits.map((unit) => [normaliseUnitCode(unit.code), unit]));
+      const sharedUnitCodes = Array.from(new Set(
+        (organisationSettings.fleetSharingEnabled ? organisationSettings.selectedUnits : []).map(normaliseUnitCode).filter((unitCode) => configuredByCode.has(unitCode))
+      ));
+      if (sharedUnitCodes.length > 1) {
+        const sharedUnits = sharedUnitCodes.map((unitCode) => configuredByCode.get(unitCode)).filter((unit) => Boolean(unit));
+        const sharedModels = new Set(sharedUnits.map((unit) => unit.model));
+        return [
+          ...configuredUnits,
+          {
+            code: sharedUnitCodes.join("+"),
+            name: `${sharedUnitCodes.join("+")} Shared Fleet`,
+            model: sharedModels.size === 1 ? sharedUnits[0].model : normaliseOperationalModel("flight_school"),
+            memberUnits: sharedUnitCodes,
+            isSharedFleetContext: true
+          }
+        ];
+      }
+      return configuredUnits;
+    }
     const hasConfiguredPlatformUnits = (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE");
     if (hasConfiguredPlatformUnits) return [];
     const fallbackCodes = normalisedLocationCode === "PEA" ? ["2FTS"] : ["1FTS", "CFS"];
-    return fallbackCodes.map((code) => ({
+    const fallbackUnits = fallbackCodes.map((code) => ({
       code,
       name: code,
       model: normaliseOperationalModel("flight_school")
     }));
-  }, [getLocationSelectorAliases, platformConfig]);
+    const sharedFallbackUnits = Array.from(new Set(
+      (organisationSettings.fleetSharingEnabled ? organisationSettings.selectedUnits : []).map(normaliseUnitCode).filter((unitCode) => fallbackCodes.includes(unitCode))
+    ));
+    if (sharedFallbackUnits.length > 1) {
+      return [
+        ...fallbackUnits,
+        {
+          code: sharedFallbackUnits.join("+"),
+          name: `${sharedFallbackUnits.join("+")} Shared Fleet`,
+          model: normaliseOperationalModel("flight_school"),
+          memberUnits: sharedFallbackUnits,
+          isSharedFleetContext: true
+        }
+      ];
+    }
+    return fallbackUnits;
+  }, [getLocationSelectorAliases, organisationSettings.fleetSharingEnabled, organisationSettings.selectedUnits, platformConfig]);
   const activeLocationUnitOptions = reactExports.useMemo(
     () => getUnitOptionsForLocation(school),
     [getUnitOptionsForLocation, school]
@@ -63800,18 +63856,31 @@ const App = () => {
     () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
     [activeLocationUnitOptions, activeUnitCode]
   );
+  const activeContextUnitCodes = reactExports.useMemo(() => {
+    const memberUnits = activeUnitContext?.memberUnits;
+    const rawUnits = Array.isArray(memberUnits) && memberUnits.length > 0 ? memberUnits : String(activeUnitCode || "").split("+");
+    return Array.from(new Set(rawUnits.map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean)));
+  }, [activeUnitCode, activeUnitContext]);
+  const activeContextUnitCodeSet = reactExports.useMemo(
+    () => new Set(activeContextUnitCodes),
+    [activeContextUnitCodes]
+  );
+  const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
+  const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
   const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
   const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
   reactExports.useMemo(() => ({
     locationCode: school,
     unitCode: activeUnitCode,
     unitName: activeUnitContext?.name || activeUnitCode,
+    unitCodes: activeContextUnitCodes,
+    isSharedFleetContext: isSharedFleetOperationalContext,
     operationalModel: activeOperationalModel,
     operationalModelLabel: activeOperationalModelLabel
-  }), [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, school]);
+  }), [activeContextUnitCodes, activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
   const activePlatformResourcePool = reactExports.useMemo(
-    () => getLocationResourcePool(platformConfig, school, activeUnitCode),
-    [platformConfig, school, activeUnitCode]
+    () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
+    [activeResourcePoolUnitCode, platformConfig, school]
   );
   const activeLocationSolarProfile = reactExports.useMemo(() => {
     const normalisedSchool = String(school || "").trim().toUpperCase();
@@ -63896,16 +63965,22 @@ const App = () => {
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     const locationFiltered = allInstructorsData.filter(personMatchesActiveLocation);
-    const contextFiltered = activeUnitCode ? locationFiltered.filter((i) => !i.unit || String(i.unit || "").split("/")[0].trim().toUpperCase() === String(activeUnitCode || "").trim().toUpperCase()) : locationFiltered;
+    const contextFiltered = activeContextUnitCodeSet.size > 0 ? locationFiltered.filter((i) => {
+      const unitCode = String(i.unit || "").split("/")[0].trim().toUpperCase();
+      return !unitCode || activeContextUnitCodeSet.has(unitCode);
+    }) : locationFiltered;
     if (!mockOn && !dbOn) return [];
     if (mockOn && dbOn) return contextFiltered;
     if (mockOn && !dbOn) return contextFiltered.filter((i) => i._dataSource !== "database");
     return contextFiltered.filter((i) => i._dataSource === "database");
-  }, [activeUnitCode, allInstructorsData, dataSourceSettings, personMatchesActiveLocation]);
+  }, [activeContextUnitCodeSet, allInstructorsData, dataSourceSettings, personMatchesActiveLocation]);
   const traineesData = reactExports.useMemo(() => {
     const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
     const locationFilteredTrainees = allTraineesData.filter(personMatchesActiveLocation);
-    const contextFilteredTrainees = activeUnitCode ? locationFilteredTrainees.filter((t) => !t.unit || String(t.unit || "").split("/")[0].trim().toUpperCase() === String(activeUnitCode || "").trim().toUpperCase()) : locationFilteredTrainees;
+    const contextFilteredTrainees = activeContextUnitCodeSet.size > 0 ? locationFilteredTrainees.filter((t) => {
+      const unitCode = String(t.unit || "").split("/")[0].trim().toUpperCase();
+      return !unitCode || activeContextUnitCodeSet.has(unitCode);
+    }) : locationFilteredTrainees;
     if (!mockOn && !dbOn) return [];
     if (mockOn && !dbOn) return contextFilteredTrainees.filter((t) => t._dataSource === "mockdata");
     if (!mockOn && dbOn) return contextFilteredTrainees.filter((t) => t._dataSource === "database");
@@ -63913,7 +63988,7 @@ const App = () => {
     const dbCourses = new Set(dbTrainees.map((t) => t.course));
     const mockTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "mockdata" && !dbCourses.has(t.course));
     return [...mockTrainees, ...dbTrainees];
-  }, [activeUnitCode, allTraineesData, dataSourceSettings, personMatchesActiveLocation]);
+  }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation]);
   const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
   const [authUser, setAuthUser] = reactExports.useState(null);
   const [authSessionToken, setAuthSessionToken] = reactExports.useState("");
@@ -64091,13 +64166,15 @@ const App = () => {
   );
   const platformDataScopeQuery = reactExports.useMemo(() => {
     const scope = hasRuntimePlatformWideAccess ? { organisationCodes: [], locationCode: school, unitCodes: [], allUnits: true } : getPlatformDataScopeForLocation(platformAccessContext, school);
-    const scopedUnitCodes = activeUnitCode ? scope.allUnits || scope.unitCodes.length === 0 ? [activeUnitCode] : scope.unitCodes.filter((unitCode) => unitCode === activeUnitCode) : scope.unitCodes;
+    const requestedUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : activeUnitCode ? [activeUnitCode] : [];
+    const requestedUnitCodeSet = new Set(requestedUnitCodes.map((unitCode) => String(unitCode || "").trim().toUpperCase()));
+    const scopedUnitCodes = requestedUnitCodes.length > 0 ? scope.allUnits || scope.unitCodes.length === 0 ? requestedUnitCodes : scope.unitCodes.filter((unitCode) => requestedUnitCodeSet.has(String(unitCode || "").trim().toUpperCase())) : scope.unitCodes;
     return buildPlatformDataScopeQuery({
       ...scope,
       unitCodes: scopedUnitCodes,
-      allUnits: !activeUnitCode && scope.allUnits
+      allUnits: requestedUnitCodes.length === 0 && scope.allUnits
     });
-  }, [activeUnitCode, hasRuntimePlatformWideAccess, platformAccessContext, school]);
+  }, [activeContextUnitCodes, activeUnitCode, hasRuntimePlatformWideAccess, platformAccessContext, school]);
   const scopedApiPath = reactExports.useCallback((path, extraParams) => {
     const params = new URLSearchParams(platformDataScopeQuery);
     Object.entries(extraParams || {}).forEach(([key, value]) => {
@@ -65995,15 +66072,6 @@ ${"=".repeat(60)}`);
     };
     loadSettings();
   }, []);
-  const [organisationSettings, setOrganisationSettings] = reactExports.useState({
-    staffSharingEnabled: false,
-    staffSharingUnits: [],
-    fleetSharingEnabled: false,
-    allocationMode: "combined",
-    selectedUnits: [],
-    desiredAllocations: {},
-    remainderUnitIndex: -1
-  });
   reactExports.useEffect(() => {
     if (!settingsLoaded) {
       console.log("[App] ⏭️ Auto-save skipped — settingsLoaded is false");

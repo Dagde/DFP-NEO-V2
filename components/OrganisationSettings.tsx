@@ -24,6 +24,7 @@ interface OrganisationSettingsSavedState {
 interface OrganisationSettingsProps {
   units: string[];
   currentAircraftAvailable?: number;
+  totalAircraft?: number;
   savedSettings?: OrganisationSettingsSavedState;
   onSettingsChange?: (settings: OrganisationSettingsSavedState) => void;
   settingsLoaded?: boolean;
@@ -34,6 +35,7 @@ type AllocationMode = 'combined' | 'fixed';
 const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({ 
   units, 
   currentAircraftAvailable = 0,
+  totalAircraft = 0,
   savedSettings,
   onSettingsChange,
   settingsLoaded = false,
@@ -300,6 +302,13 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
   return (
     <div className="space-y-4">
+      <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-sky-200 mb-2">Operational Sharing Controls</h3>
+        <p className="text-sm text-gray-300">
+          Fleet sharing controls whether selected units schedule against the same aircraft/resource pool on one shared DFP context. Staff sharing is separate: it controls whether instructors may be allocated across unit boundaries.
+        </p>
+      </div>
+
       {/* Staff Sharing Section */}
       <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-5">
         <h3 className="text-xl font-semibold text-white mb-4">Staff Sharing</h3>
@@ -309,7 +318,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
           {/* Staff Sharing Description and Enable Toggle */}
           <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
             <p className="text-sm text-gray-400 mb-4">
-              Configure staff sharing between organisational units. When enabled, all staff members are available for all sorties across participating units.
+              Controls instructor eligibility between units. Enable this only when staff from the selected units may be used across those units during NEO Build.
             </p>
             <div className="flex items-center">
               <label className="relative inline-flex items-center cursor-pointer">
@@ -355,7 +364,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             <div className="bg-gray-700/30 rounded-lg border border-gray-600 p-4">
               <h4 className="text-base font-medium text-white mb-2">Select Units Sharing Staff</h4>
               <p className="text-xs text-gray-400 mb-3">
-                Choose which units will share staff for all sorties.
+                These units may use staff from each other. This does not control aircraft/resource sharing.
               </p>
               
               {/* Grid for units */}
@@ -415,14 +424,14 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
       {/* Fleet Sharing Section */}
       <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-5">
-        <h3 className="text-xl font-semibold text-white mb-4">Fleet Sharing</h3>
+        <h3 className="text-xl font-semibold text-white mb-4">Aircraft & Resource Sharing</h3>
         
         {/* Header Section: Fleet Sharing Info and Total Aircraft - Side by Side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
           {/* Fleet Sharing Description and Enable Toggle */}
           <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
             <p className="text-sm text-gray-400 mb-4">
-              Configure asset sharing between organisational units. Units can share aircraft, simulators, and other operational resources.
+              Controls whether selected units operate from one shared aircraft/resource pool and one shared DFP context. This does not share staff unless Staff Sharing is also enabled.
             </p>
             <div className="flex items-center">
               <label className="relative inline-flex items-center cursor-pointer">
@@ -438,22 +447,26 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 />
                 <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
                 <span className="ml-3 text-sm font-medium text-white">
-                  Enable Fleet Sharing
+                  Enable Aircraft & Resource Sharing
                 </span>
               </label>
             </div>
           </div>
 
-          {/* Total Aircraft Available */}
+          {/* Resource pool and daily availability distinction */}
           <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
-            <div className="flex items-center justify-between h-full">
+            <div className="grid grid-cols-2 gap-4 h-full">
               <div>
-                <h4 className="text-base font-medium text-white mb-1">Total Available Aircraft</h4>
-                <p className="text-xs text-gray-400">Current fleet size available for sharing</p>
+                <h4 className="text-base font-medium text-white mb-1">Configured Resource Pool</h4>
+                <p className="text-xs text-gray-400">Aircraft rows defined in Aircraft & Resource Pools</p>
+                <div className="mt-2 text-3xl font-bold text-sky-400">{totalAircraft}</div>
+                <div className="text-xs text-gray-400">Aircraft rows</div>
               </div>
-              <div className="text-right">
+              <div className="border-l border-gray-600 pl-4">
+                <h4 className="text-base font-medium text-white mb-1">Daily Build Availability</h4>
+                <p className="text-xs text-gray-400">Aircraft available for the selected schedule/build day</p>
                 <div className="text-3xl font-bold text-sky-400">{currentAircraftAvailable}</div>
-                <div className="text-xs text-gray-400">Aircraft</div>
+                <div className="text-xs text-gray-400">Available today</div>
               </div>
             </div>
           </div>
@@ -465,9 +478,9 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
               {/* Select Units Sharing Asset - Narrower Width */}
               <div className="bg-gray-700/30 rounded-lg border border-gray-600 p-4">
-                <h4 className="text-base font-medium text-white mb-2">Select Units Sharing Asset</h4>
+                <h4 className="text-base font-medium text-white mb-2">Select Units Sharing Aircraft / Resources</h4>
                 <p className="text-xs text-gray-400 mb-3">
-                  Choose which units will have access to shared resources.
+                  Choose units that will schedule aircraft/resources together. Selecting units here creates a shared fleet context in the top-left Location/Unit selector, e.g. 1FTS+CFS.
                 </p>
                 
                 {/* Narrower grid for units */}
@@ -532,7 +545,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                         <span className="font-semibold text-white text-sm">Combined Pool Mode</span>
                       </div>
                       <p className="text-xs text-gray-300">
-                        All selected units share one common aircraft pool. No individual aircraft limits. Allocation driven by combined scheduling priorities.
+                        Selected units schedule against one aircraft/resource pool and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled.
                       </p>
                     </button>
                     
@@ -552,7 +565,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                         <span className="font-semibold text-white text-sm">Fixed Allocation Mode</span>
                       </div>
                       <p className="text-xs text-gray-300">
-                        Each unit has a fixed aircraft allocation. One unit is auto-calculated as remainder. Insufficient aircraft: pro-rata reduction.
+                        Selected units share one DFP, but each unit has a planning allocation from the daily available aircraft. One unit is auto-calculated as remainder.
                       </p>
                     </button>
                   </div>
