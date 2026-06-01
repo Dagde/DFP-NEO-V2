@@ -43943,18 +43943,14 @@ const OrganisationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Aircraft & Resource Sharing" })
           ] }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 h-full", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center justify-between gap-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Configured Resource Pool" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Aircraft rows defined in Aircraft & Resource Pools" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-3xl font-bold text-sky-400", children: totalAircraft }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Aircraft rows" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Aircraft rows defined in Aircraft & Resource Pools. Daily aircraft availability is entered in Build Priorities." })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-l border-gray-600 pl-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Daily Build Availability" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Aircraft available for the selected schedule/build day" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-sky-400", children: currentAircraftAvailable }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Available today" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-sky-400", children: totalAircraft }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Aircraft rows" })
           ] })
         ] }) })
       ] }),

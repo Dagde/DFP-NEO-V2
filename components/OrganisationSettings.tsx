@@ -823,20 +823,18 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             </div>
           </div>
 
-          {/* Resource pool and daily availability distinction */}
+          {/* Persistent resource pool context */}
           <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
-            <div className="grid grid-cols-2 gap-4 h-full">
+            <div className="flex h-full items-center justify-between gap-4">
               <div>
                 <h4 className="text-base font-medium text-white mb-1">Configured Resource Pool</h4>
-                <p className="text-xs text-gray-400">Aircraft rows defined in Aircraft & Resource Pools</p>
-                <div className="mt-2 text-3xl font-bold text-sky-400">{totalAircraft}</div>
-                <div className="text-xs text-gray-400">Aircraft rows</div>
+                <p className="text-xs text-gray-400">
+                  Aircraft rows defined in Aircraft & Resource Pools. Daily aircraft availability is entered in Build Priorities.
+                </p>
               </div>
-              <div className="border-l border-gray-600 pl-4">
-                <h4 className="text-base font-medium text-white mb-1">Daily Build Availability</h4>
-                <p className="text-xs text-gray-400">Aircraft available for the selected schedule/build day</p>
-                <div className="text-3xl font-bold text-sky-400">{currentAircraftAvailable}</div>
-                <div className="text-xs text-gray-400">Available today</div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-sky-400">{totalAircraft}</div>
+                <div className="text-xs text-gray-400">Aircraft rows</div>
               </div>
             </div>
           </div>
