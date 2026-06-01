@@ -912,6 +912,12 @@ interface DfpConfig {
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
+  staffSharingGroups?: Array<{
+    id: string;
+    name: string;
+    selectedUnits: string[];
+    enabled?: boolean;
+  }>;
   excludedCourses: string[];
   // ── DB-backed ELCE map (optional) ──────────────────────────────────────
   // Pre-fetched from /api/event-completions/elce before the build runs.
@@ -1980,7 +1986,7 @@ function generateDfpInternal(
         ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
         eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
         getEventDayNightClassification,
-        staffSharingEnabled, staffSharingUnits
+        staffSharingEnabled, staffSharingUnits, staffSharingGroups
     } = config;
 
     const aircraftConfigDefinitionsForBuild = config.aircraftConfigurationDefinitions?.length
@@ -2054,6 +2060,20 @@ function generateDfpInternal(
         return slashIdx !== -1 ? unit.substring(0, slashIdx) : unit;
     };
 
+    const activeStaffSharingGroups = Array.isArray(staffSharingGroups) && staffSharingGroups.length > 0
+        ? staffSharingGroups
+            .filter(group => group?.enabled !== false)
+            .map(group => Array.from(new Set((group?.selectedUnits || []).map(normalizeUnit).filter(Boolean))))
+            .filter(groupUnits => groupUnits.length > 1)
+        : (staffSharingUnits || []).length > 1
+            ? [Array.from(new Set((staffSharingUnits || []).map(normalizeUnit).filter(Boolean)))]
+            : [];
+
+    const areUnitsInSameStaffSharingGroup = (unitA: string, unitB: string): boolean => {
+        if (!unitA || !unitB) return false;
+        return activeStaffSharingGroups.some(groupUnits => groupUnits.includes(unitA) && groupUnits.includes(unitB));
+    };
+
     // Full unit string including flight suffix (e.g. "CFS/A") for exact same-flight matching
     const fullUnit = (unit: string): string => (unit || '').trim();
 
@@ -2079,15 +2099,15 @@ function generateDfpInternal(
             if (hardGroups.secondary && secondaryArr.includes(instructor.name)) return true;
         }
 
-        // Staff sharing ON — standard group check
-        const traineeInGroup = staffSharingUnits.includes(traineeUnit);
+        // Staff sharing ON — standard group check. Multiple staff-sharing arrangements
+        // remain independent so unrelated groups cannot borrow each other's staff.
+        const traineeInGroup = activeStaffSharingGroups.some(groupUnits => groupUnits.includes(traineeUnit));
         if (!traineeInGroup) {
             // Trainee's unit not in sharing group → same-unit only
             return instructorUnit === traineeUnit;
         }
-        // Trainee IS in the sharing group → instructor must also be in the sharing group
-        const instructorInGroup = staffSharingUnits.includes(instructorUnit);
-        return instructorInGroup;
+        // Trainee IS in a sharing group → instructor must be in the same sharing group
+        return areUnitsInSameStaffSharingGroup(traineeUnit, instructorUnit);
     };
 
     // --- HELPER FUNCTIONS ---
@@ -9383,6 +9403,8 @@ const App: React.FC = () => {
     const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
         staffSharingEnabled: false,
         staffSharingUnits: [],
+        activeStaffSharingGroupId: 'staff-sharing-1',
+        staffSharingGroups: [],
         fleetSharingEnabled: false,
         allocationMode: 'combined',
         selectedUnits: [],
@@ -17536,6 +17558,7 @@ const App: React.FC = () => {
             getEventDayNightClassification: getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,
+            staffSharingGroups: organisationSettings.staffSharingGroups,
             excludedCourses: excludedCourses,
             dbElceMap,  // DB-backed ELCE map (undefined = fall back to DFP-scan)
             timingReport,

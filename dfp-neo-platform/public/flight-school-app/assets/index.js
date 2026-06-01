@@ -1618,6 +1618,8 @@ const buildSettingsSnapshot = (state) => {
     organisationSettings: state.organisationSettings || {
       staffSharingEnabled: false,
       staffSharingUnits: [],
+      activeStaffSharingGroupId: "staff-sharing-1",
+      staffSharingGroups: [],
       fleetSharingEnabled: false,
       allocationMode: "combined",
       selectedUnits: [],
@@ -43367,6 +43369,37 @@ const createEmptyResourceSharingGroup = (index) => ({
   remainderUnitIndex: -1,
   enabled: true
 });
+const createEmptyStaffSharingGroup = (index) => ({
+  id: `staff-sharing-${Date.now()}-${index}`,
+  name: `Staff Sharing Arrangement ${index}`,
+  selectedUnits: [],
+  enabled: true
+});
+const normaliseStaffSharingGroups = (savedSettings) => {
+  const savedGroups = Array.isArray(savedSettings?.staffSharingGroups) ? savedSettings.staffSharingGroups : [];
+  if (savedGroups.length > 0) {
+    return savedGroups.map((group, index) => ({
+      id: group.id || `staff-sharing-${index + 1}`,
+      name: group.name || `Staff Sharing Arrangement ${index + 1}`,
+      selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
+      enabled: group.enabled !== false
+    }));
+  }
+  if ((savedSettings?.staffSharingUnits || []).length > 0) {
+    return [{
+      id: savedSettings?.activeStaffSharingGroupId || "staff-sharing-1",
+      name: `${(savedSettings?.staffSharingUnits || []).join("+")} Staff Sharing`,
+      selectedUnits: savedSettings?.staffSharingUnits || [],
+      enabled: true
+    }];
+  }
+  return [{
+    id: "staff-sharing-1",
+    name: "Staff Sharing Arrangement 1",
+    selectedUnits: [],
+    enabled: true
+  }];
+};
 const normaliseResourceSharingGroups = (savedSettings) => {
   const savedGroups = Array.isArray(savedSettings?.resourceSharingGroups) ? savedSettings.resourceSharingGroups : [];
   if (savedGroups.length > 0) {
@@ -43409,11 +43442,16 @@ const OrganisationSettings = ({
   onSettingsChange,
   settingsLoaded = false
 }) => {
+  const initialStaffSharingGroups = reactExports.useMemo(() => normaliseStaffSharingGroups(savedSettings), []);
+  const initialActiveStaffSharingGroupId = savedSettings?.activeStaffSharingGroupId || initialStaffSharingGroups[0]?.id || "staff-sharing-1";
+  const initialActiveStaffSharingGroup = initialStaffSharingGroups.find((group) => group.id === initialActiveStaffSharingGroupId) || initialStaffSharingGroups[0] || createEmptyStaffSharingGroup(1);
   const initialResourceSharingGroups = reactExports.useMemo(() => normaliseResourceSharingGroups(savedSettings), []);
   const initialActiveResourceSharingGroupId = savedSettings?.activeResourceSharingGroupId || initialResourceSharingGroups[0]?.id || "resource-sharing-1";
   const initialActiveResourceSharingGroup = initialResourceSharingGroups.find((group) => group.id === initialActiveResourceSharingGroupId) || initialResourceSharingGroups[0] || createEmptyResourceSharingGroup(1);
   const [staffSharingEnabled, setStaffSharingEnabled] = reactExports.useState(savedSettings?.staffSharingEnabled ?? false);
-  const [staffSharingUnits, setStaffSharingUnits] = reactExports.useState(savedSettings?.staffSharingUnits ?? []);
+  const [staffSharingGroups, setStaffSharingGroups] = reactExports.useState(initialStaffSharingGroups);
+  const [activeStaffSharingGroupId, setActiveStaffSharingGroupId] = reactExports.useState(initialActiveStaffSharingGroup.id);
+  const [staffSharingUnits, setStaffSharingUnits] = reactExports.useState(initialActiveStaffSharingGroup.selectedUnits);
   const [fleetSharingEnabled, setFleetSharingEnabled] = reactExports.useState(savedSettings?.fleetSharingEnabled ?? false);
   const [resourceSharingGroups, setResourceSharingGroups] = reactExports.useState(initialResourceSharingGroups);
   const [activeResourceSharingGroupId, setActiveResourceSharingGroupId] = reactExports.useState(initialActiveResourceSharingGroup.id);
@@ -43426,7 +43464,12 @@ const OrganisationSettings = ({
     if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
       hasInitializedFromDB.current = true;
       setStaffSharingEnabled(savedSettings.staffSharingEnabled ?? false);
-      setStaffSharingUnits(savedSettings.staffSharingUnits ?? []);
+      const loadedStaffGroups = normaliseStaffSharingGroups(savedSettings);
+      const loadedActiveStaffId = savedSettings.activeStaffSharingGroupId || loadedStaffGroups[0]?.id || "staff-sharing-1";
+      const loadedActiveStaffGroup = loadedStaffGroups.find((group) => group.id === loadedActiveStaffId) || loadedStaffGroups[0] || createEmptyStaffSharingGroup(1);
+      setStaffSharingGroups(loadedStaffGroups);
+      setActiveStaffSharingGroupId(loadedActiveStaffGroup.id);
+      setStaffSharingUnits(loadedActiveStaffGroup.selectedUnits);
       setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
       const loadedGroups = normaliseResourceSharingGroups(savedSettings);
       const loadedActiveId = savedSettings.activeResourceSharingGroupId || loadedGroups[0]?.id || "resource-sharing-1";
@@ -43439,6 +43482,28 @@ const OrganisationSettings = ({
       setRemainderUnitIndex(loadedActiveGroup.remainderUnitIndex);
     }
   }, [settingsLoaded, savedSettings]);
+  const activeStaffSharingGroup = staffSharingGroups.find((group) => group.id === activeStaffSharingGroupId) || staffSharingGroups[0] || createEmptyStaffSharingGroup(1);
+  const persistedStaffSharingGroups = reactExports.useMemo(() => {
+    return staffSharingGroups.map(
+      (group) => group.id === activeStaffSharingGroupId ? {
+        ...group,
+        selectedUnits: staffSharingUnits
+      } : group
+    );
+  }, [staffSharingGroups, activeStaffSharingGroupId, staffSharingUnits]);
+  const allStaffSharingUnits = reactExports.useMemo(() => {
+    return Array.from(new Set(
+      persistedStaffSharingGroups.filter((group) => group.enabled !== false).flatMap((group) => group.selectedUnits || [])
+    ));
+  }, [persistedStaffSharingGroups]);
+  reactExports.useEffect(() => {
+    setStaffSharingGroups((previous) => previous.map(
+      (group) => group.id === activeStaffSharingGroupId ? {
+        ...group,
+        selectedUnits: staffSharingUnits
+      } : group
+    ));
+  }, [activeStaffSharingGroupId, staffSharingUnits]);
   const activeResourceSharingGroup = resourceSharingGroups.find((group) => group.id === activeResourceSharingGroupId) || resourceSharingGroups[0] || createEmptyResourceSharingGroup(1);
   const persistedResourceSharingGroups = reactExports.useMemo(() => {
     return resourceSharingGroups.map(
@@ -43469,7 +43534,9 @@ const OrganisationSettings = ({
     if (onSettingsChange) {
       onSettingsChange({
         staffSharingEnabled,
-        staffSharingUnits,
+        staffSharingUnits: allStaffSharingUnits,
+        activeStaffSharingGroupId,
+        staffSharingGroups: persistedStaffSharingGroups,
         fleetSharingEnabled,
         allocationMode,
         selectedUnits,
@@ -43479,7 +43546,7 @@ const OrganisationSettings = ({
         resourceSharingGroups: persistedResourceSharingGroups
       });
     }
-  }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex, activeResourceSharingGroupId, persistedResourceSharingGroups]);
+  }, [staffSharingEnabled, allStaffSharingUnits, activeStaffSharingGroupId, persistedStaffSharingGroups, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex, activeResourceSharingGroupId, persistedResourceSharingGroups]);
   const [actualAllocations, setActualAllocations] = reactExports.useState({});
   const [validationMessage, setValidationMessage] = reactExports.useState(null);
   const [validationType, setValidationType] = reactExports.useState("info");
@@ -43547,7 +43614,7 @@ const OrganisationSettings = ({
   const handleToggleStaffSharingUnit = (unitCode) => {
     const isCurrentlySelected = staffSharingUnits.includes(unitCode);
     const action = isCurrentlySelected ? "removed from" : "added to";
-    logAudit("Settings - Organisation", "Edit", `Unit ${unitCode} ${action} Staff Sharing`);
+    logAudit("Settings - Organisation", "Edit", `Unit ${unitCode} ${action} Staff Sharing arrangement ${activeStaffSharingGroup.name}`);
     setStaffSharingUnits((prev) => {
       if (isCurrentlySelected) {
         return prev.filter((u) => u !== unitCode);
@@ -43555,6 +43622,39 @@ const OrganisationSettings = ({
         return [...prev, unitCode];
       }
     });
+  };
+  const loadStaffSharingGroup = (group) => {
+    setActiveStaffSharingGroupId(group.id);
+    setStaffSharingUnits(group.selectedUnits || []);
+  };
+  const handleSelectStaffSharingGroup = (groupId) => {
+    const group = persistedStaffSharingGroups.find((candidate) => candidate.id === groupId);
+    if (!group) return;
+    loadStaffSharingGroup(group);
+    logAudit("Settings - Organisation", "Edit", `Active staff sharing arrangement changed to ${group.name}`);
+  };
+  const handleAddStaffSharingGroup = () => {
+    const nextIndex = staffSharingGroups.length + 1;
+    const newGroup = createEmptyStaffSharingGroup(nextIndex);
+    const updatedGroups = [...persistedStaffSharingGroups, newGroup];
+    setStaffSharingGroups(updatedGroups);
+    loadStaffSharingGroup(newGroup);
+    logAudit("Settings - Organisation", "Edit", `Staff sharing arrangement ${newGroup.name} added`);
+  };
+  const handleDeleteStaffSharingGroup = () => {
+    if (staffSharingGroups.length <= 1) return;
+    const deletedGroup = activeStaffSharingGroup;
+    const remainingGroups = persistedStaffSharingGroups.filter((group) => group.id !== activeStaffSharingGroupId);
+    const nextGroup = remainingGroups[0] || createEmptyStaffSharingGroup(1);
+    setStaffSharingGroups(remainingGroups.length > 0 ? remainingGroups : [nextGroup]);
+    loadStaffSharingGroup(nextGroup);
+    logAudit("Settings - Organisation", "Edit", `Staff sharing arrangement ${deletedGroup.name} deleted`);
+  };
+  const handleRenameStaffSharingGroup = (name) => {
+    setStaffSharingGroups((previous) => previous.map(
+      (group) => group.id === activeStaffSharingGroupId ? { ...group, name } : group
+    ));
+    logAudit("Settings - Organisation", "Edit", `Staff sharing arrangement renamed to ${name || "Unnamed arrangement"}`);
   };
   const loadResourceSharingGroup = (group) => {
     setActiveResourceSharingGroupId(group.id);
@@ -43686,6 +43786,7 @@ const OrganisationSettings = ({
                   setStaffSharingEnabled(newVal);
                   if (!newVal) {
                     setStaffSharingUnits([]);
+                    setStaffSharingGroups((previous) => previous.map((group) => ({ ...group, selectedUnits: [] })));
                   }
                   logAudit("Settings - Organisation", "Edit", `Staff Sharing ${newVal ? "enabled" : "disabled"}`);
                 },
@@ -43699,15 +43800,84 @@ const OrganisationSettings = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between h-full", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-1", children: "Units Sharing Staff" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Number of units participating in staff sharing" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Total units participating across all staff-sharing arrangements" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-sky-400", children: staffSharingEnabled ? staffSharingUnits.length : 0 }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-3xl font-bold text-sky-400", children: staffSharingEnabled ? allStaffSharingUnits.length : 0 }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "Units" })
           ] })
         ] }) })
       ] }),
       staffSharingEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-end", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Staff Sharing Arrangement" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: activeStaffSharingGroupId,
+                  onChange: (event) => handleSelectStaffSharingGroup(event.target.value),
+                  className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500",
+                  children: persistedStaffSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group.id, children: [
+                    group.name || "Unnamed arrangement",
+                    group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join("+")})` : ""
+                  ] }, group.id))
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1", children: "Arrangement Name" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: activeStaffSharingGroup.name || "",
+                  onChange: (event) => handleRenameStaffSharingGroup(event.target.value),
+                  placeholder: "e.g. YMES 1FTS/CFS staff sharing",
+                  className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: handleAddStaffSharingGroup,
+                  className: "rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500",
+                  children: "Add Arrangement"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: handleDeleteStaffSharingGroup,
+                  disabled: staffSharingGroups.length <= 1,
+                  className: `rounded-md px-3 py-2 text-xs font-semibold ${staffSharingGroups.length <= 1 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-red-600/80 text-white hover:bg-red-600"}`,
+                  children: "Delete"
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each authorised staff-sharing group. NEO Build will only treat units as sharing staff when both the trainee and instructor belong to the same staff-sharing arrangement." }),
+          persistedStaffSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: persistedStaffSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: `rounded border px-3 py-2 text-xs ${group.id === activeStaffSharingGroupId ? "border-sky-500/50 bg-sky-500/10 text-sky-100" : "border-gray-700 bg-gray-900/60 text-gray-400"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold", children: [
+                  group.name || "Unnamed arrangement",
+                  ":"
+                ] }),
+                " ",
+                group.selectedUnits.length > 0 ? group.selectedUnits.join(", ") : "No units selected"
+              ]
+            },
+            group.id
+          )) })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Staff" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "These units may use staff from each other. This does not control aircraft/resource sharing." }),
@@ -43725,18 +43895,26 @@ const OrganisationSettings = ({
           )) }),
           staffSharingUnits.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2 italic", children: "No units selected. Click on units above to add them." })
         ] }),
-        staffSharingUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg", children: [
+        allStaffSharingUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sky-400 font-semibold text-sm mb-2", children: "Staff Sharing Summary" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-300 space-y-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Active Units:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Total Units:" }),
               " ",
-              staffSharingUnits.length
+              allStaffSharingUnits.length
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Participating Units:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Active Arrangement:" }),
               " ",
-              staffSharingUnits.join(", ")
+              activeStaffSharingGroup.name || "Unnamed arrangement",
+              " (",
+              staffSharingUnits.length,
+              " units)"
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "All Participating Units:" }),
+              " ",
+              allStaffSharingUnits.join(", ")
             ] }) })
           ] })
         ] })
@@ -58027,7 +58205,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     sctEvents,
     getEventDayNightClassification: getEventDayNightClassification2,
     staffSharingEnabled,
-    staffSharingUnits
+    staffSharingUnits,
+    staffSharingGroups
   } = config;
   const aircraftConfigDefinitionsForBuild = config.aircraftConfigurationDefinitions?.length ? config.aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
   const aircraftConfigDefinitionById = new Map(
@@ -58065,6 +58244,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const slashIdx = unit.indexOf("/");
     return slashIdx !== -1 ? unit.substring(0, slashIdx) : unit;
   };
+  const activeStaffSharingGroups = Array.isArray(staffSharingGroups) && staffSharingGroups.length > 0 ? staffSharingGroups.filter((group) => group?.enabled !== false).map((group) => Array.from(new Set((group?.selectedUnits || []).map(normalizeUnit).filter(Boolean)))).filter((groupUnits) => groupUnits.length > 1) : (staffSharingUnits || []).length > 1 ? [Array.from(new Set((staffSharingUnits || []).map(normalizeUnit).filter(Boolean)))] : [];
+  const areUnitsInSameStaffSharingGroup = (unitA, unitB) => {
+    if (!unitA || !unitB) return false;
+    return activeStaffSharingGroups.some((groupUnits) => groupUnits.includes(unitA) && groupUnits.includes(unitB));
+  };
   const fullUnit = (unit) => (unit || "").trim();
   const isInstructorEligibleByUnit = (instructor, trainee) => {
     const traineeUnit = normalizeUnit(trainee.unit || "");
@@ -58080,12 +58264,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (hardGroups.primary && primaryArr.includes(instructor.name)) return true;
       if (hardGroups.secondary && secondaryArr.includes(instructor.name)) return true;
     }
-    const traineeInGroup = staffSharingUnits.includes(traineeUnit);
+    const traineeInGroup = activeStaffSharingGroups.some((groupUnits) => groupUnits.includes(traineeUnit));
     if (!traineeInGroup) {
       return instructorUnit === traineeUnit;
     }
-    const instructorInGroup = staffSharingUnits.includes(instructorUnit);
-    return instructorInGroup;
+    return areUnitsInSameStaffSharingGroup(traineeUnit, instructorUnit);
   };
   const calculateInstructorDutyHours = (instructorName, includeProposedEvent) => {
     const eventsToCheck = includeProposedEvent ? [...generatedEvents, includeProposedEvent] : generatedEvents;
@@ -63884,6 +64067,8 @@ const App = () => {
   const [organisationSettings, setOrganisationSettings] = reactExports.useState({
     staffSharingEnabled: false,
     staffSharingUnits: [],
+    activeStaffSharingGroupId: "staff-sharing-1",
+    staffSharingGroups: [],
     fleetSharingEnabled: false,
     allocationMode: "combined",
     selectedUnits: [],
@@ -70368,6 +70553,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       getEventDayNightClassification,
       staffSharingEnabled: organisationSettings.staffSharingEnabled,
       staffSharingUnits: organisationSettings.staffSharingUnits,
+      staffSharingGroups: organisationSettings.staffSharingGroups,
       excludedCourses,
       dbElceMap,
       // DB-backed ELCE map (undefined = fall back to DFP-scan)

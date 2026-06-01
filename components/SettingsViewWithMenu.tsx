@@ -93,6 +93,13 @@ interface SettingsViewWithMenuProps {
     organisationSettings?: {
         staffSharingEnabled: boolean;
         staffSharingUnits: string[];
+        activeStaffSharingGroupId?: string;
+        staffSharingGroups?: Array<{
+            id: string;
+            name: string;
+            selectedUnits: string[];
+            enabled?: boolean;
+        }>;
         fleetSharingEnabled: boolean;
         allocationMode: 'combined' | 'fixed';
         selectedUnits: string[];
@@ -112,6 +119,13 @@ interface SettingsViewWithMenuProps {
     onUpdateOrganisationSettings?: (settings: {
         staffSharingEnabled: boolean;
         staffSharingUnits: string[];
+        activeStaffSharingGroupId?: string;
+        staffSharingGroups?: Array<{
+            id: string;
+            name: string;
+            selectedUnits: string[];
+            enabled?: boolean;
+        }>;
         fleetSharingEnabled: boolean;
         allocationMode: 'combined' | 'fixed';
         selectedUnits: string[];

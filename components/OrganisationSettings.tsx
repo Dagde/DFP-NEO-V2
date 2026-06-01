@@ -23,9 +23,18 @@ interface ResourceSharingGroup {
   enabled?: boolean;
 }
 
+interface StaffSharingGroup {
+  id: string;
+  name: string;
+  selectedUnits: string[];
+  enabled?: boolean;
+}
+
 interface OrganisationSettingsSavedState {
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
+  activeStaffSharingGroupId?: string;
+  staffSharingGroups?: StaffSharingGroup[];
   fleetSharingEnabled: boolean;
   allocationMode: AllocationMode;
   selectedUnits: string[];
@@ -53,6 +62,44 @@ const createEmptyResourceSharingGroup = (index: number): ResourceSharingGroup =>
   remainderUnitIndex: -1,
   enabled: true,
 });
+
+const createEmptyStaffSharingGroup = (index: number): StaffSharingGroup => ({
+  id: `staff-sharing-${Date.now()}-${index}`,
+  name: `Staff Sharing Arrangement ${index}`,
+  selectedUnits: [],
+  enabled: true,
+});
+
+const normaliseStaffSharingGroups = (savedSettings?: OrganisationSettingsSavedState): StaffSharingGroup[] => {
+  const savedGroups = Array.isArray(savedSettings?.staffSharingGroups)
+    ? savedSettings.staffSharingGroups
+    : [];
+
+  if (savedGroups.length > 0) {
+    return savedGroups.map((group, index) => ({
+      id: group.id || `staff-sharing-${index + 1}`,
+      name: group.name || `Staff Sharing Arrangement ${index + 1}`,
+      selectedUnits: Array.isArray(group.selectedUnits) ? group.selectedUnits : [],
+      enabled: group.enabled !== false,
+    }));
+  }
+
+  if ((savedSettings?.staffSharingUnits || []).length > 0) {
+    return [{
+      id: savedSettings?.activeStaffSharingGroupId || 'staff-sharing-1',
+      name: `${(savedSettings?.staffSharingUnits || []).join('+')} Staff Sharing`,
+      selectedUnits: savedSettings?.staffSharingUnits || [],
+      enabled: true,
+    }];
+  }
+
+  return [{
+    id: 'staff-sharing-1',
+    name: 'Staff Sharing Arrangement 1',
+    selectedUnits: [],
+    enabled: true,
+  }];
+};
 
 const normaliseResourceSharingGroups = (savedSettings?: OrganisationSettingsSavedState): ResourceSharingGroup[] => {
   const savedGroups = Array.isArray(savedSettings?.resourceSharingGroups)
@@ -102,6 +149,12 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   onSettingsChange,
   settingsLoaded = false,
 }) => {
+  const initialStaffSharingGroups = useMemo(() => normaliseStaffSharingGroups(savedSettings), []);
+  const initialActiveStaffSharingGroupId = savedSettings?.activeStaffSharingGroupId || initialStaffSharingGroups[0]?.id || 'staff-sharing-1';
+  const initialActiveStaffSharingGroup =
+    initialStaffSharingGroups.find(group => group.id === initialActiveStaffSharingGroupId) ||
+    initialStaffSharingGroups[0] ||
+    createEmptyStaffSharingGroup(1);
   const initialResourceSharingGroups = useMemo(() => normaliseResourceSharingGroups(savedSettings), []);
   const initialActiveResourceSharingGroupId = savedSettings?.activeResourceSharingGroupId || initialResourceSharingGroups[0]?.id || 'resource-sharing-1';
   const initialActiveResourceSharingGroup =
@@ -112,7 +165,9 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   // Staff Sharing enable/disable
   const [staffSharingEnabled, setStaffSharingEnabled] = useState(savedSettings?.staffSharingEnabled ?? false);
   // Selected units for staff sharing
-  const [staffSharingUnits, setStaffSharingUnits] = useState<string[]>(savedSettings?.staffSharingUnits ?? []);
+  const [staffSharingGroups, setStaffSharingGroups] = useState<StaffSharingGroup[]>(initialStaffSharingGroups);
+  const [activeStaffSharingGroupId, setActiveStaffSharingGroupId] = useState<string>(initialActiveStaffSharingGroup.id);
+  const [staffSharingUnits, setStaffSharingUnits] = useState<string[]>(initialActiveStaffSharingGroup.selectedUnits);
 
   // Fleet Sharing enable/disable
   const [fleetSharingEnabled, setFleetSharingEnabled] = useState(savedSettings?.fleetSharingEnabled ?? false);
@@ -139,7 +194,12 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
       hasInitializedFromDB.current = true;
       setStaffSharingEnabled(savedSettings.staffSharingEnabled ?? false);
-      setStaffSharingUnits(savedSettings.staffSharingUnits ?? []);
+      const loadedStaffGroups = normaliseStaffSharingGroups(savedSettings);
+      const loadedActiveStaffId = savedSettings.activeStaffSharingGroupId || loadedStaffGroups[0]?.id || 'staff-sharing-1';
+      const loadedActiveStaffGroup = loadedStaffGroups.find(group => group.id === loadedActiveStaffId) || loadedStaffGroups[0] || createEmptyStaffSharingGroup(1);
+      setStaffSharingGroups(loadedStaffGroups);
+      setActiveStaffSharingGroupId(loadedActiveStaffGroup.id);
+      setStaffSharingUnits(loadedActiveStaffGroup.selectedUnits);
       setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
       const loadedGroups = normaliseResourceSharingGroups(savedSettings);
       const loadedActiveId = savedSettings.activeResourceSharingGroupId || loadedGroups[0]?.id || 'resource-sharing-1';
@@ -152,6 +212,41 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       setRemainderUnitIndex(loadedActiveGroup.remainderUnitIndex);
     }
   }, [settingsLoaded, savedSettings]);
+
+  const activeStaffSharingGroup =
+    staffSharingGroups.find(group => group.id === activeStaffSharingGroupId) ||
+    staffSharingGroups[0] ||
+    createEmptyStaffSharingGroup(1);
+
+  const persistedStaffSharingGroups = useMemo(() => {
+    return staffSharingGroups.map(group =>
+      group.id === activeStaffSharingGroupId
+        ? {
+            ...group,
+            selectedUnits: staffSharingUnits,
+          }
+        : group
+    );
+  }, [staffSharingGroups, activeStaffSharingGroupId, staffSharingUnits]);
+
+  const allStaffSharingUnits = useMemo(() => {
+    return Array.from(new Set(
+      persistedStaffSharingGroups
+        .filter(group => group.enabled !== false)
+        .flatMap(group => group.selectedUnits || [])
+    ));
+  }, [persistedStaffSharingGroups]);
+
+  useEffect(() => {
+    setStaffSharingGroups(previous => previous.map(group =>
+      group.id === activeStaffSharingGroupId
+        ? {
+            ...group,
+            selectedUnits: staffSharingUnits,
+          }
+        : group
+    ));
+  }, [activeStaffSharingGroupId, staffSharingUnits]);
 
   const activeResourceSharingGroup =
     resourceSharingGroups.find(group => group.id === activeResourceSharingGroupId) ||
@@ -194,7 +289,9 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     if (onSettingsChange) {
       onSettingsChange({
         staffSharingEnabled,
-        staffSharingUnits,
+        staffSharingUnits: allStaffSharingUnits,
+        activeStaffSharingGroupId,
+        staffSharingGroups: persistedStaffSharingGroups,
         fleetSharingEnabled,
         allocationMode,
         selectedUnits,
@@ -204,7 +301,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         resourceSharingGroups: persistedResourceSharingGroups,
       });
     }
-  }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex, activeResourceSharingGroupId, persistedResourceSharingGroups]);
+  }, [staffSharingEnabled, allStaffSharingUnits, activeStaffSharingGroupId, persistedStaffSharingGroups, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex, activeResourceSharingGroupId, persistedResourceSharingGroups]);
   
   // Actual allocations (after pro-rata adjustment if needed)
   const [actualAllocations, setActualAllocations] = useState<Record<string, number>>({});
@@ -301,7 +398,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   const handleToggleStaffSharingUnit = (unitCode: string) => {
     const isCurrentlySelected = staffSharingUnits.includes(unitCode);
     const action = isCurrentlySelected ? 'removed from' : 'added to';
-    logAudit('Settings - Organisation', 'Edit', `Unit ${unitCode} ${action} Staff Sharing`);
+    logAudit('Settings - Organisation', 'Edit', `Unit ${unitCode} ${action} Staff Sharing arrangement ${activeStaffSharingGroup.name}`);
     setStaffSharingUnits(prev => {
       if (isCurrentlySelected) {
         return prev.filter(u => u !== unitCode);
@@ -309,6 +406,46 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         return [...prev, unitCode];
       }
     });
+  };
+
+  const loadStaffSharingGroup = (group: StaffSharingGroup) => {
+    setActiveStaffSharingGroupId(group.id);
+    setStaffSharingUnits(group.selectedUnits || []);
+  };
+
+  const handleSelectStaffSharingGroup = (groupId: string) => {
+    const group = persistedStaffSharingGroups.find(candidate => candidate.id === groupId);
+    if (!group) return;
+    loadStaffSharingGroup(group);
+    logAudit('Settings - Organisation', 'Edit', `Active staff sharing arrangement changed to ${group.name}`);
+  };
+
+  const handleAddStaffSharingGroup = () => {
+    const nextIndex = staffSharingGroups.length + 1;
+    const newGroup = createEmptyStaffSharingGroup(nextIndex);
+    const updatedGroups = [...persistedStaffSharingGroups, newGroup];
+    setStaffSharingGroups(updatedGroups);
+    loadStaffSharingGroup(newGroup);
+    logAudit('Settings - Organisation', 'Edit', `Staff sharing arrangement ${newGroup.name} added`);
+  };
+
+  const handleDeleteStaffSharingGroup = () => {
+    if (staffSharingGroups.length <= 1) return;
+    const deletedGroup = activeStaffSharingGroup;
+    const remainingGroups = persistedStaffSharingGroups.filter(group => group.id !== activeStaffSharingGroupId);
+    const nextGroup = remainingGroups[0] || createEmptyStaffSharingGroup(1);
+    setStaffSharingGroups(remainingGroups.length > 0 ? remainingGroups : [nextGroup]);
+    loadStaffSharingGroup(nextGroup);
+    logAudit('Settings - Organisation', 'Edit', `Staff sharing arrangement ${deletedGroup.name} deleted`);
+  };
+
+  const handleRenameStaffSharingGroup = (name: string) => {
+    setStaffSharingGroups(previous => previous.map(group =>
+      group.id === activeStaffSharingGroupId
+        ? { ...group, name }
+        : group
+    ));
+    logAudit('Settings - Organisation', 'Edit', `Staff sharing arrangement renamed to ${name || 'Unnamed arrangement'}`);
   };
 
   const loadResourceSharingGroup = (group: ResourceSharingGroup) => {
@@ -484,7 +621,8 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                     const newVal = e.target.checked;
                     setStaffSharingEnabled(newVal);
                     if (!newVal) {
-                      setStaffSharingUnits([]); // Clear units when disabled
+                      setStaffSharingUnits([]);
+                      setStaffSharingGroups(previous => previous.map(group => ({ ...group, selectedUnits: [] })));
                     }
                     logAudit('Settings - Organisation', 'Edit', `Staff Sharing ${newVal ? 'enabled' : 'disabled'}`);
                   }}
@@ -503,10 +641,10 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             <div className="flex items-center justify-between h-full">
               <div>
                 <h4 className="text-base font-medium text-white mb-1">Units Sharing Staff</h4>
-                <p className="text-xs text-gray-400">Number of units participating in staff sharing</p>
+                <p className="text-xs text-gray-400">Total units participating across all staff-sharing arrangements</p>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-sky-400">{staffSharingEnabled ? staffSharingUnits.length : 0}</div>
+                <div className="text-3xl font-bold text-sky-400">{staffSharingEnabled ? allStaffSharingUnits.length : 0}</div>
                 <div className="text-xs text-gray-400">Units</div>
               </div>
             </div>
@@ -515,6 +653,80 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
         {staffSharingEnabled && (
           <>
+            <div className="bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                <div className="flex-1">
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1">
+                    Staff Sharing Arrangement
+                  </label>
+                  <select
+                    value={activeStaffSharingGroupId}
+                    onChange={(event) => handleSelectStaffSharingGroup(event.target.value)}
+                    className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  >
+                    {persistedStaffSharingGroups.map(group => (
+                      <option key={group.id} value={group.id}>
+                        {group.name || 'Unnamed arrangement'}{group.selectedUnits.length > 1 ? ` (${group.selectedUnits.join('+')})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-sky-200 mb-1">
+                    Arrangement Name
+                  </label>
+                  <input
+                    type="text"
+                    value={activeStaffSharingGroup.name || ''}
+                    onChange={(event) => handleRenameStaffSharingGroup(event.target.value)}
+                    placeholder="e.g. YMES 1FTS/CFS staff sharing"
+                    className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddStaffSharingGroup}
+                    className="rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500"
+                  >
+                    Add Arrangement
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteStaffSharingGroup}
+                    disabled={staffSharingGroups.length <= 1}
+                    className={`rounded-md px-3 py-2 text-xs font-semibold ${
+                      staffSharingGroups.length <= 1
+                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                        : 'bg-red-600/80 text-white hover:bg-red-600'
+                    }`}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-gray-300">
+                Create one arrangement for each authorised staff-sharing group. NEO Build will only treat units as sharing staff when both the trainee and instructor belong to the same staff-sharing arrangement.
+              </p>
+              {persistedStaffSharingGroups.length > 1 && (
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {persistedStaffSharingGroups.map(group => (
+                    <div
+                      key={group.id}
+                      className={`rounded border px-3 py-2 text-xs ${
+                        group.id === activeStaffSharingGroupId
+                          ? 'border-sky-500/50 bg-sky-500/10 text-sky-100'
+                          : 'border-gray-700 bg-gray-900/60 text-gray-400'
+                      }`}
+                    >
+                      <span className="font-semibold">{group.name || 'Unnamed arrangement'}:</span>{' '}
+                      {group.selectedUnits.length > 0 ? group.selectedUnits.join(', ') : 'No units selected'}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Select Units Sharing Staff */}
             <div className="bg-gray-700/30 rounded-lg border border-gray-600 p-4">
               <h4 className="text-base font-medium text-white mb-2">Select Units Sharing Staff</h4>
@@ -560,15 +772,18 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             </div>
 
             {/* Staff Sharing Summary */}
-            {staffSharingUnits.length > 0 && (
+            {allStaffSharingUnits.length > 0 && (
               <div className="mt-4 p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg">
                 <h5 className="text-sky-400 font-semibold text-sm mb-2">Staff Sharing Summary</h5>
                 <div className="text-xs text-gray-300 space-y-1">
                   <div className="flex">
-                    <span><strong>Active Units:</strong> {staffSharingUnits.length}</span>
+                    <span><strong>Total Units:</strong> {allStaffSharingUnits.length}</span>
                   </div>
                   <div className="flex">
-                    <span><strong>Participating Units:</strong> {staffSharingUnits.join(', ')}</span>
+                    <span><strong>Active Arrangement:</strong> {activeStaffSharingGroup.name || 'Unnamed arrangement'} ({staffSharingUnits.length} units)</span>
+                  </div>
+                  <div className="flex">
+                    <span><strong>All Participating Units:</strong> {allStaffSharingUnits.join(', ')}</span>
                   </div>
                 </div>
               </div>

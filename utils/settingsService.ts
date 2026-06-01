@@ -101,6 +101,13 @@ export interface AppSettingsData {
   organisationSettings: {
     staffSharingEnabled: boolean;
     staffSharingUnits: string[];
+    activeStaffSharingGroupId?: string;
+    staffSharingGroups?: Array<{
+      id: string;
+      name: string;
+      selectedUnits: string[];
+      enabled?: boolean;
+    }>;
     fleetSharingEnabled: boolean;
     allocationMode: 'combined' | 'fixed';
     selectedUnits: string[];
@@ -317,6 +324,8 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     organisationSettings: state.organisationSettings || {
       staffSharingEnabled: false,
       staffSharingUnits: [],
+      activeStaffSharingGroupId: 'staff-sharing-1',
+      staffSharingGroups: [],
       fleetSharingEnabled: false,
       allocationMode: 'combined',
       selectedUnits: [],
