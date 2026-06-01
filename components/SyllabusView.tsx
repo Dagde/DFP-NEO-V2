@@ -1041,9 +1041,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 title={`${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ''}`}
                 className={`relative mb-2 h-[62px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${
                     isSelected
-                        ? 'border-sky-400 bg-sky-800/85 text-white shadow-sky-950/40'
-                        : 'border-gray-700 bg-gray-900 text-gray-200 shadow-black/15'
-                } ${isEditing ? 'cursor-not-allowed opacity-55' : 'hover:border-sky-500/70 hover:bg-gray-800'}`}
+                        ? 'border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40'
+                        : 'border-emerald-500/60 bg-gray-900 text-gray-200 shadow-black/15'
+                } ${isEditing ? 'cursor-not-allowed opacity-55' : 'hover:border-emerald-300/80 hover:bg-gray-800'}`}
               >
                 <span className={`absolute left-3 top-2 max-w-[38%] truncate text-[10px] font-bold uppercase ${isSelected ? 'text-sky-100' : 'text-gray-400'}`}>
                   P {phaseNum}
