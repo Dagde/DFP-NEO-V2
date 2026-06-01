@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
-import { createSyllabusItem, updateSyllabusItem, retireSyllabusItem } from '../lib/syllabusService';
+import { createSyllabusItem, updateSyllabusItem, retireSyllabusItem, clearSyllabusCache } from '../lib/syllabusService';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
@@ -860,6 +860,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           setUploadResult(data);
           // Reload syllabus data by triggering a page reload after short delay
           if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
+              clearSyllabusCache();
               localStorage.setItem('neo_lmp_details_active_tab', activeTab);
               localStorage.setItem('neo_lmp_details_selected_package', destinationCode);
               setTimeout(() => window.location.reload(), 2000);

@@ -32009,7 +32009,7 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "4";
+const CACHE_VERSION = "5";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
 function getCachedSyllabus() {
   try {
@@ -32928,6 +32928,7 @@ const SyllabusView = ({
       if (!resp.ok) throw new Error(data.error || data.message || `Upload failed (${resp.status} ${resp.statusText})`);
       setUploadResult(data);
       if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
+        clearSyllabusCache();
         localStorage.setItem("neo_lmp_details_active_tab", activeTab);
         localStorage.setItem("neo_lmp_details_selected_package", destinationCode);
         setTimeout(() => window.location.reload(), 2e3);
