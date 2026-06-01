@@ -489,6 +489,7 @@ const createLmpOrderKey = (index: number): string => String(index + 1).padStart(
 const REMEDIAL_EARLIEST_START = 10.0;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = 'neo_remedial_force_schedule_requests';
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = 'dfp_active_operational_context';
+const ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY = 'neo_context_selector_diag';
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 
 const isRemedialEventCode = (value?: string): boolean =>
@@ -9419,6 +9420,8 @@ const App: React.FC = () => {
     const [activeUnitCode, setActiveUnitCode] = useState<string>(initialOperationalContext.unit);
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
     const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
+    // Settings loaded flag is used by context restore diagnostics and availability fetches.
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
         staffSharingEnabled: false,
         staffSharingUnits: [],
@@ -9432,6 +9435,44 @@ const App: React.FC = () => {
         activeResourceSharingGroupId: 'resource-sharing-1',
         resourceSharingGroups: [],
     });
+
+    const pushContextSelectorDiag = useCallback((stage: string, details: Record<string, any> = {}) => {
+        const entry = {
+            ts: new Date().toISOString(),
+            stage,
+            school,
+            activeUnitCode,
+            settingsLoaded,
+            platformConfigLoaded,
+            fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
+            details,
+        };
+        try {
+            console.log(`[CTX-DIAG] ${stage}`, entry);
+            const existing = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-80);
+            localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY, JSON.stringify(next));
+            (window as any).neoContextSelectorDiag = next;
+        } catch (error) {
+            console.log(`[CTX-DIAG] ${stage}`, entry, error);
+            try {
+                localStorage.removeItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY);
+                (window as any).neoContextSelectorDiag = [entry];
+            } catch {
+                // ignore diagnostic storage failures
+            }
+        }
+    }, [activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
+
+    useEffect(() => {
+        pushContextSelectorDiag('restore:init', {
+            storageKey: ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
+            initialOperationalContext,
+            rawStoredContext: (() => {
+                try { return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY); } catch { return null; }
+            })(),
+        });
+    }, []);
     const [allInstructorsData, setInstructorsData] = useState<Instructor[]>([]);
 
 
@@ -9648,23 +9689,63 @@ const App: React.FC = () => {
     );
 
     useEffect(() => {
-        if (activeLocationUnitOptions.length === 0) return;
-        if (!activeLocationUnitOptions.some(unit => unit.code === activeUnitCode)) {
-            if (String(activeUnitCode || '').includes('+') && !organisationSettings.fleetSharingEnabled) return;
-            setActiveUnitCode(activeLocationUnitOptions[0].code);
+        pushContextSelectorDiag('options:active-location', {
+            optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
+            sharedOptions: activeLocationUnitOptions
+                .filter((unit: any) => unit.isSharedFleetContext)
+                .map((unit: any) => ({
+                    code: unit.code,
+                    name: unit.name,
+                    memberUnits: unit.memberUnits,
+                })),
+            activeUnitPresent: activeLocationUnitOptions.some(unit => unit.code === activeUnitCode),
+            resourceSharingGroups: organisationSettings.resourceSharingGroups,
+            selectedUnits: organisationSettings.selectedUnits,
+        });
+    }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
+
+    useEffect(() => {
+        if (activeLocationUnitOptions.length === 0) {
+            pushContextSelectorDiag('validate:skip-no-options');
+            return;
         }
-    }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled]);
+        if (!activeLocationUnitOptions.some(unit => unit.code === activeUnitCode)) {
+            if (String(activeUnitCode || '').includes('+') && !organisationSettings.fleetSharingEnabled) {
+                pushContextSelectorDiag('validate:hold-shared-until-settings', {
+                    activeUnitCode,
+                    optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
+                });
+                return;
+            }
+            const nextUnitCode = activeLocationUnitOptions[0].code;
+            pushContextSelectorDiag('validate:reset-unit', {
+                fromUnit: activeUnitCode,
+                toUnit: nextUnitCode,
+                optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
+                fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
+            });
+            setActiveUnitCode(nextUnitCode);
+        } else {
+            pushContextSelectorDiag('validate:keep-unit', {
+                activeUnitCode,
+                optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
+            });
+        }
+    }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled, pushContextSelectorDiag]);
 
     useEffect(() => {
         try {
-            localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify({
+            const payload = {
                 location: school,
                 unit: activeUnitCode,
-            }));
+            };
+            localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
+            pushContextSelectorDiag('persist:context', { payload });
         } catch (error) {
+            pushContextSelectorDiag('persist:error', { error: String(error) });
             // Ignore persistence failures; the selector remains functional for the active session.
         }
-    }, [school, activeUnitCode]);
+    }, [school, activeUnitCode, pushContextSelectorDiag]);
 
     const activeUnitContext = useMemo(
         () => activeLocationUnitOptions.find(unit => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
@@ -11988,10 +12069,6 @@ const App: React.FC = () => {
     // Track whether the events table has provided a value (prevents settings from overriding it)
     const availabilityLoadedFromEventsRef = useRef<boolean>(false);
 
-    // Settings loaded flag - declared here (before fetchCurrentAvailability) so we can depend on it
-    // This ensures fetchCurrentAvailability always runs AFTER loadSettings, overriding stale settings values
-    const [settingsLoaded, setSettingsLoaded] = useState(false);
-
     // Fetch current availability from database on startup
     // This ensures the availability persists across app restarts/hard refreshes
     // Depends on settingsLoaded so it always overrides any stale value from loadSettings
@@ -12434,16 +12511,24 @@ const App: React.FC = () => {
                 // The loadSyllabus useEffect above handles all syllabus loading.
                 if (saved.organisationSettings) {
                     console.log('[App] 🏢 Setting organisationSettings from DB:', JSON.stringify(saved.organisationSettings));
+                    pushContextSelectorDiag('settings:organisation-loaded', {
+                        fleetSharingEnabled: saved.organisationSettings.fleetSharingEnabled,
+                        selectedUnits: saved.organisationSettings.selectedUnits,
+                        resourceSharingGroups: saved.organisationSettings.resourceSharingGroups,
+                    });
                     setOrganisationSettings(saved.organisationSettings);
                 } else {
                     console.warn('[App] ⚠️ No organisationSettings found in DB data — saved.organisationSettings is:', saved.organisationSettings);
+                    pushContextSelectorDiag('settings:organisation-missing');
                 }
 
                 console.log('[Settings] ✅ All settings restored from DB');
             } catch (error) {
                 console.error('[Settings] ❌ Failed to load settings from DB:', error);
+                pushContextSelectorDiag('settings:load-error', { error: String(error) });
             } finally {
                 console.log('[App] 🏁 Setting settingsLoaded = true');
+                pushContextSelectorDiag('settings:loaded-flag-true');
                 setSettingsLoaded(true);
             }
         };

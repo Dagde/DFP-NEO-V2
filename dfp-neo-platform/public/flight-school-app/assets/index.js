@@ -57272,6 +57272,7 @@ const createLmpOrderKey = (index) => String(index + 1).padStart(5, "0");
 const REMEDIAL_EARLIEST_START = 10;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = "neo_remedial_force_schedule_requests";
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = "dfp_active_operational_context";
+const ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY = "neo_context_selector_diag";
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialEventCode = (value) => !!value && REMEDIAL_EVENT_CODE_REGEX.test(value);
 const getRemedialBaseEventCode = (item) => String(item.code || item.id || item.masterEventId || "").replace(REMEDIAL_EVENT_CODE_REGEX, "");
@@ -64077,6 +64078,7 @@ const App = () => {
   const [activeUnitCode, setActiveUnitCode] = reactExports.useState(initialOperationalContext.unit);
   const [platformConfig, setPlatformConfig] = reactExports.useState(null);
   const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
+  const [settingsLoaded, setSettingsLoaded] = reactExports.useState(false);
   const [organisationSettings, setOrganisationSettings] = reactExports.useState({
     staffSharingEnabled: false,
     staffSharingUnits: [],
@@ -64090,6 +64092,45 @@ const App = () => {
     activeResourceSharingGroupId: "resource-sharing-1",
     resourceSharingGroups: []
   });
+  const pushContextSelectorDiag = reactExports.useCallback((stage, details = {}) => {
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      school,
+      activeUnitCode,
+      settingsLoaded,
+      platformConfigLoaded,
+      fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
+      details
+    };
+    try {
+      console.log(`[CTX-DIAG] ${stage}`, entry);
+      const existing = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-80);
+      localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY, JSON.stringify(next));
+      window.neoContextSelectorDiag = next;
+    } catch (error) {
+      console.log(`[CTX-DIAG] ${stage}`, entry, error);
+      try {
+        localStorage.removeItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY);
+        window.neoContextSelectorDiag = [entry];
+      } catch {
+      }
+    }
+  }, [activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
+  reactExports.useEffect(() => {
+    pushContextSelectorDiag("restore:init", {
+      storageKey: ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
+      initialOperationalContext,
+      rawStoredContext: (() => {
+        try {
+          return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
+        } catch {
+          return null;
+        }
+      })()
+    });
+  }, []);
   const [allInstructorsData, setInstructorsData] = reactExports.useState([]);
   const [archivedInstructorsData, setArchivedInstructorsData] = reactExports.useState([]);
   const [allTraineesData, setTraineesData] = reactExports.useState([]);
@@ -64262,21 +64303,58 @@ const App = () => {
     [getUnitOptionsForLocation, school]
   );
   reactExports.useEffect(() => {
-    if (activeLocationUnitOptions.length === 0) return;
-    if (!activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode)) {
-      if (String(activeUnitCode || "").includes("+") && !organisationSettings.fleetSharingEnabled) return;
-      setActiveUnitCode(activeLocationUnitOptions[0].code);
+    pushContextSelectorDiag("options:active-location", {
+      optionCodes: activeLocationUnitOptions.map((unit) => unit.code),
+      sharedOptions: activeLocationUnitOptions.filter((unit) => unit.isSharedFleetContext).map((unit) => ({
+        code: unit.code,
+        name: unit.name,
+        memberUnits: unit.memberUnits
+      })),
+      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode),
+      resourceSharingGroups: organisationSettings.resourceSharingGroups,
+      selectedUnits: organisationSettings.selectedUnits
+    });
+  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
+  reactExports.useEffect(() => {
+    if (activeLocationUnitOptions.length === 0) {
+      pushContextSelectorDiag("validate:skip-no-options");
+      return;
     }
-  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled]);
+    if (!activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode)) {
+      if (String(activeUnitCode || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
+        pushContextSelectorDiag("validate:hold-shared-until-settings", {
+          activeUnitCode,
+          optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
+        });
+        return;
+      }
+      const nextUnitCode = activeLocationUnitOptions[0].code;
+      pushContextSelectorDiag("validate:reset-unit", {
+        fromUnit: activeUnitCode,
+        toUnit: nextUnitCode,
+        optionCodes: activeLocationUnitOptions.map((unit) => unit.code),
+        fleetSharingEnabled: organisationSettings.fleetSharingEnabled
+      });
+      setActiveUnitCode(nextUnitCode);
+    } else {
+      pushContextSelectorDiag("validate:keep-unit", {
+        activeUnitCode,
+        optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
+      });
+    }
+  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled, pushContextSelectorDiag]);
   reactExports.useEffect(() => {
     try {
-      localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify({
+      const payload = {
         location: school,
         unit: activeUnitCode
-      }));
+      };
+      localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
+      pushContextSelectorDiag("persist:context", { payload });
     } catch (error) {
+      pushContextSelectorDiag("persist:error", { error: String(error) });
     }
-  }, [school, activeUnitCode]);
+  }, [school, activeUnitCode, pushContextSelectorDiag]);
   const activeUnitContext = reactExports.useMemo(
     () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
     [activeLocationUnitOptions, activeUnitCode]
@@ -66116,7 +66194,6 @@ ${"=".repeat(60)}`);
   const [hasLoadedPersistedAvailability, setHasLoadedPersistedAvailability] = reactExports.useState(false);
   const loadedAvailabilityRef = reactExports.useRef(null);
   const availabilityLoadedFromEventsRef = reactExports.useRef(false);
-  const [settingsLoaded, setSettingsLoaded] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (!sessionUser?.userId) return;
     if (!settingsLoaded) return;
@@ -66483,15 +66560,23 @@ ${"=".repeat(60)}`);
         }
         if (saved.organisationSettings) {
           console.log("[App] 🏢 Setting organisationSettings from DB:", JSON.stringify(saved.organisationSettings));
+          pushContextSelectorDiag("settings:organisation-loaded", {
+            fleetSharingEnabled: saved.organisationSettings.fleetSharingEnabled,
+            selectedUnits: saved.organisationSettings.selectedUnits,
+            resourceSharingGroups: saved.organisationSettings.resourceSharingGroups
+          });
           setOrganisationSettings(saved.organisationSettings);
         } else {
           console.warn("[App] ⚠️ No organisationSettings found in DB data — saved.organisationSettings is:", saved.organisationSettings);
+          pushContextSelectorDiag("settings:organisation-missing");
         }
         console.log("[Settings] ✅ All settings restored from DB");
       } catch (error) {
         console.error("[Settings] ❌ Failed to load settings from DB:", error);
+        pushContextSelectorDiag("settings:load-error", { error: String(error) });
       } finally {
         console.log("[App] 🏁 Setting settingsLoaded = true");
+        pushContextSelectorDiag("settings:loaded-flag-true");
         setSettingsLoaded(true);
       }
     };
