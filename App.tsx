@@ -488,6 +488,7 @@ const getMasterEventId = (item: Partial<SyllabusItemDetail>): string =>
 const createLmpOrderKey = (index: number): string => String(index + 1).padStart(5, '0');
 const REMEDIAL_EARLIEST_START = 10.0;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = 'neo_remedial_force_schedule_requests';
+const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = 'dfp_active_operational_context';
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 
 const isRemedialEventCode = (value?: string): boolean =>
@@ -9395,9 +9396,27 @@ const App: React.FC = () => {
         return { staff: false, trainee: false, staffDb: true, traineeDb: true };
     });
 
+    const getStoredOperationalContext = (): { location: string; unit: string } => {
+        try {
+            const raw = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
+            if (!raw) return { location: 'ESL', unit: '1FTS' };
+            const parsed = JSON.parse(raw);
+            const location = String(parsed?.location || '').trim().toUpperCase();
+            const unit = String(parsed?.unit || '').trim().toUpperCase();
+            return {
+                location: location || 'ESL',
+                unit: unit || '1FTS',
+            };
+        } catch (error) {
+            return { location: 'ESL', unit: '1FTS' };
+        }
+    };
+
+    const initialOperationalContext = useMemo(() => getStoredOperationalContext(), []);
+
     // Data state
-    const [school, setSchool] = useState<string>('ESL');
-    const [activeUnitCode, setActiveUnitCode] = useState<string>('1FTS');
+    const [school, setSchool] = useState<string>(initialOperationalContext.location);
+    const [activeUnitCode, setActiveUnitCode] = useState<string>(initialOperationalContext.unit);
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
     const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
     const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
@@ -9631,9 +9650,21 @@ const App: React.FC = () => {
     useEffect(() => {
         if (activeLocationUnitOptions.length === 0) return;
         if (!activeLocationUnitOptions.some(unit => unit.code === activeUnitCode)) {
+            if (String(activeUnitCode || '').includes('+') && !organisationSettings.fleetSharingEnabled) return;
             setActiveUnitCode(activeLocationUnitOptions[0].code);
         }
-    }, [activeLocationUnitOptions, activeUnitCode]);
+    }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify({
+                location: school,
+                unit: activeUnitCode,
+            }));
+        } catch (error) {
+            // Ignore persistence failures; the selector remains functional for the active session.
+        }
+    }, [school, activeUnitCode]);
 
     const activeUnitContext = useMemo(
         () => activeLocationUnitOptions.find(unit => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
