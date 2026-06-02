@@ -102,7 +102,8 @@ import {
     FormationCallsign,
     CancellationCode,
     CancellationRecord,
-    StaffCallsignInfo
+    StaffCallsignInfo,
+    FlyingWindowExclusionPeriod
 } from './types';
 import { NewCourseData } from './components/AddCourseFlyout';
 
@@ -2251,6 +2252,39 @@ function generateDfpInternal(
     const getScheduledDayNightForStart = (startTime: number): 'Day' | 'Night' =>
         startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
 
+    const normalisedFlyingWindowExclusions = flyingWindowExclusions
+        .map(period => ({
+            ...period,
+            startTime: Number(period.startTime),
+            endTime: Number(period.endTime),
+            restriction: period.restriction || 'both',
+        }))
+        .filter(period => (
+            Number.isFinite(period.startTime)
+            && Number.isFinite(period.endTime)
+            && period.endTime > period.startTime
+        ));
+
+    const pointIsInsideExclusion = (time: number, period: FlyingWindowExclusionPeriod): boolean => (
+        time >= period.startTime - 0.001 && time < period.endTime - 0.001
+    );
+
+    const getFlightWindowExclusionViolation = (startTime: number, duration: number): { reason: string; period: FlyingWindowExclusionPeriod; checkedTime: number } | null => {
+        if (normalisedFlyingWindowExclusions.length === 0) return null;
+        const landTime = startTime + duration;
+        for (const period of normalisedFlyingWindowExclusions) {
+            const blocksDepartures = period.restriction === 'departures' || period.restriction === 'both';
+            const blocksArrivals = period.restriction === 'arrivals' || period.restriction === 'both';
+            if (blocksDepartures && pointIsInsideExclusion(startTime, period)) {
+                return { reason: 'DEPARTURE_EXCLUSION', period, checkedTime: startTime };
+            }
+            if (blocksArrivals && pointIsInsideExclusion(landTime, period)) {
+                return { reason: 'ARRIVAL_EXCLUSION', period, checkedTime: landTime };
+            }
+        }
+        return null;
+    };
+
     const canAssignPersonForScheduledWindow = (personName: string, startTime: number): boolean => {
         const proposedDayNight = getScheduledDayNightForStart(startTime);
         if (proposedDayNight === 'Night' && isPersonScheduledForDayEvents(personName)) return false;
@@ -4328,6 +4362,22 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
             return traceScheduleReject('REMEDIAL_BEFORE_1000');
+        }
+
+        if (type === 'flight') {
+            const exclusionViolation = getFlightWindowExclusionViolation(startTime, syllabusItem.duration);
+            if (exclusionViolation) {
+                if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, exclusionViolation.reason);
+                return traceScheduleReject('FLYING_WINDOW_EXCLUSION', {
+                    exclusionReason: exclusionViolation.reason,
+                    restriction: exclusionViolation.period.restriction,
+                    exclusionStart: exclusionViolation.period.startTime,
+                    exclusionEnd: exclusionViolation.period.endTime,
+                    checkedTime: exclusionViolation.checkedTime,
+                    departureTime: startTime,
+                    landingTime: startTime + syllabusItem.duration,
+                });
+            }
         }
 
         if (syllabusItem.dayNight === 'Night' && getScheduledDayNightForStart(startTime) !== 'Night') {
@@ -11694,6 +11744,7 @@ const App: React.FC = () => {
     const [allowNightFlying, setAllowNightFlying] = useState(true);
     const [commenceNightFlying, setCommenceNightFlying] = useState(18.5); // 18:30
     const [ceaseNightFlying, setCeaseNightFlying] = useState(23.5); // 23:30
+    const [flyingWindowExclusions, setFlyingWindowExclusions] = useState<FlyingWindowExclusionPeriod[]>([]);
 
     const classifyStartBySolarDaylight = useCallback((startTime: number, targetDate: string = date): 'Day' | 'Night' => {
         const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
@@ -12520,6 +12571,7 @@ const App: React.FC = () => {
                 if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
                 if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
                 if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
+                if (Array.isArray(saved.flyingWindowExclusions)) setFlyingWindowExclusions(saved.flyingWindowExclusions);
                 // NOTE: availableAircraftCount is intentionally NOT restored from settings here.
                 // It is always loaded from the AircraftAvailabilityEvent table via fetchCurrentAvailability
                 // (which runs after settingsLoaded becomes true), ensuring the events-table value always wins.
@@ -12633,6 +12685,7 @@ const App: React.FC = () => {
             allowNightFlying,
             commenceNightFlying,
             ceaseNightFlying,
+            flyingWindowExclusions,
             availableAircraftCount,
             neoAvailableAircraftCount,
             neoAircraftConfigCapacities,
@@ -12665,6 +12718,7 @@ const App: React.FC = () => {
         flightTurnaround, ftdTurnaround, cptTurnaround,
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
+        flyingWindowExclusions,
         availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, availableFtdCount, availableCptCount,
         timezoneOffset, showDepartureDensityOverlay, tileStatusSettings,
         sctEvents, formationCallsigns, courseColors,
@@ -22007,6 +22061,8 @@ updates.forEach(update => {
                     onUpdateCommenceNightFlying={setCommenceNightFlying}
                     ceaseNightFlying={ceaseNightFlying}
                     onUpdateCeaseNightFlying={setCeaseNightFlying}
+                    flyingWindowExclusions={flyingWindowExclusions}
+                    onUpdateFlyingWindowExclusions={setFlyingWindowExclusions}
                     instructorsData={instructorsData}
                     traineesData={traineesData}
                     buildDfpDate={buildDfpDate}

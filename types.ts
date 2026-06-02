@@ -243,6 +243,15 @@ export interface ScheduleEvent {
   forcedInstructorConflictDetails?: string[];
 }
 
+export type FlyingWindowExclusionRestriction = 'departures' | 'arrivals' | 'both';
+
+export interface FlyingWindowExclusionPeriod {
+  id: string;
+  startTime: number;
+  endTime: number;
+  restriction: FlyingWindowExclusionRestriction;
+}
+
 export interface EventSegment extends ScheduleEvent {
   segmentStartTime: number;
   segmentDuration: number;

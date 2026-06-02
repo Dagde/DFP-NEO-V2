@@ -6,6 +6,7 @@
 
 import { getAppApiBase } from './externalDataControls';
 import { DEFAULT_TILE_STATUS_SETTINGS, normaliseTileStatusSettings, type TileStatusSettings } from './tileStatusSettings';
+import type { FlyingWindowExclusionPeriod } from '../types';
 
 export interface ServiceDefinition {
   longName: string;   // e.g. "Air Force"
@@ -47,6 +48,7 @@ export interface AppSettingsData {
   allowNightFlying: boolean;
   commenceNightFlying: number;
   ceaseNightFlying: number;
+  flyingWindowExclusions: FlyingWindowExclusionPeriod[];
 
   // Aircraft Counts
   availableAircraftCount: number;
@@ -303,6 +305,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     allowNightFlying: state.allowNightFlying ?? true,
     commenceNightFlying: state.commenceNightFlying ?? 18.5,
     ceaseNightFlying: state.ceaseNightFlying ?? 23.5,
+    flyingWindowExclusions: Array.isArray(state.flyingWindowExclusions) ? state.flyingWindowExclusions : [],
     availableAircraftCount: state.availableAircraftCount ?? 15,
     availableFtdCount: state.availableFtdCount ?? 5,
     availableCptCount: state.availableCptCount ?? 4,

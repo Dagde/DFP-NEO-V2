@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PrioritiesView } from './PrioritiesView';
 import AuditButton from './AuditButton';
-import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest } from '../types';
+import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod } from '../types';
 import { InstructorPriorityConfig } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
@@ -35,6 +35,8 @@ interface PrioritiesViewWithMenuProps {
   onUpdateCommenceNightFlying: (time: number) => void;
   ceaseNightFlying: number;
   onUpdateCeaseNightFlying: (time: number) => void;
+  flyingWindowExclusions: FlyingWindowExclusionPeriod[];
+  onUpdateFlyingWindowExclusions: (periods: FlyingWindowExclusionPeriod[]) => void;
   instructorsData: Instructor[];
   traineesData: Trainee[];
   buildDfpDate: string;

@@ -1597,6 +1597,7 @@ const buildSettingsSnapshot = (state) => {
     allowNightFlying: state.allowNightFlying ?? true,
     commenceNightFlying: state.commenceNightFlying ?? 18.5,
     ceaseNightFlying: state.ceaseNightFlying ?? 23.5,
+    flyingWindowExclusions: Array.isArray(state.flyingWindowExclusions) ? state.flyingWindowExclusions : [],
     availableAircraftCount: state.availableAircraftCount ?? 15,
     availableFtdCount: state.availableFtdCount ?? 5,
     availableCptCount: state.availableCptCount ?? 4,
@@ -21399,6 +21400,8 @@ const PrioritiesView = ({
   onUpdateCommenceNightFlying,
   ceaseNightFlying,
   onUpdateCeaseNightFlying,
+  flyingWindowExclusions: flyingWindowExclusions2 = [],
+  onUpdateFlyingWindowExclusions,
   instructorsData,
   traineesData,
   buildDfpDate,
@@ -21488,7 +21491,7 @@ const PrioritiesView = ({
   };
   reactExports.useEffect(() => {
     setFlyingWindowTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
-  }, [flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, allowNightFlying]);
+  }, [flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, allowNightFlying, flyingWindowExclusions2]);
   const totalPercentage = reactExports.useMemo(() => {
     return Array.from(coursePercentages.values()).reduce((sum, p) => sum + p, 0);
   }, [coursePercentages]);
@@ -21503,6 +21506,61 @@ const PrioritiesView = ({
     }
     return options;
   }, []);
+  const exclusionTimeOptions = reactExports.useMemo(() => {
+    const options = [{ label: "00:01", value: 1 / 60 }, ...timeOptions, { label: "23:59", value: 23 + 59 / 60 }];
+    const seen = /* @__PURE__ */ new Set();
+    return options.filter((option) => {
+      const key = option.value.toFixed(6);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [timeOptions]);
+  const [showExclusionPlanner, setShowExclusionPlanner] = reactExports.useState(false);
+  const formatTimeLabel = (decimalHour) => {
+    const bounded = Math.max(0, Math.min(23 + 59 / 60, Number(decimalHour) || 0));
+    const hours = Math.floor(bounded);
+    const minutes = Math.round((bounded - hours) * 60);
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+  const getTimelineLeft = (time) => Math.max(0, Math.min(100, (time || 0) / 24 * 100));
+  const getTimelineWidth = (start, end) => Math.max(0.35, getTimelineLeft(end) - getTimelineLeft(start));
+  const addExclusionPeriod = () => {
+    const nextStart = Math.min(Math.max(flyingStartTime + flyingWindowExclusions2.length * 0.5, 1 / 60), 23.75);
+    const nextEnd = Math.min(nextStart + 0.5, 23 + 59 / 60);
+    const nextPeriod = {
+      id: v4(),
+      startTime: nextStart,
+      endTime: nextEnd,
+      restriction: "both"
+    };
+    logAudit("Priorities", "Edit", "Added flying window exclusion", `${formatTimeLabel(nextStart)}-${formatTimeLabel(nextEnd)} both`);
+    onUpdateFlyingWindowExclusions([...flyingWindowExclusions2, nextPeriod]);
+  };
+  const updateExclusionPeriod = (id, updates) => {
+    const nextPeriods = flyingWindowExclusions2.map((period) => {
+      if (period.id !== id) return period;
+      const nextPeriod = { ...period, ...updates };
+      if (nextPeriod.endTime <= nextPeriod.startTime) {
+        if (updates.startTime !== void 0) nextPeriod.endTime = Math.min(nextPeriod.startTime + 0.25, 23 + 59 / 60);
+        if (updates.endTime !== void 0) nextPeriod.startTime = Math.max(1 / 60, nextPeriod.endTime - 0.25);
+      }
+      return nextPeriod;
+    });
+    onUpdateFlyingWindowExclusions(nextPeriods);
+  };
+  const removeExclusionPeriod = (id) => {
+    const removed = flyingWindowExclusions2.find((period) => period.id === id);
+    if (removed) {
+      logAudit("Priorities", "Edit", "Removed flying window exclusion", `${formatTimeLabel(removed.startTime)}-${formatTimeLabel(removed.endTime)} ${removed.restriction}`);
+    }
+    onUpdateFlyingWindowExclusions(flyingWindowExclusions2.filter((period) => period.id !== id));
+  };
+  const restrictionLabel = (restriction) => {
+    if (restriction === "departures") return "No departures";
+    if (restriction === "arrivals") return "No arrivals";
+    return "No departures or arrivals";
+  };
   const [traineeCurrencyCourseSelection, setTraineeCurrencyCourseSelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [traineeCurrencySelection, setTraineeCurrencySelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [traineeCurrencyIncludeFlights, setTraineeCurrencyIncludeFlights] = reactExports.useState(true);
@@ -22028,7 +22086,16 @@ const PrioritiesView = ({
                 logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} → ${parseFloat(e.target.value)}`);
                 onUpdateFlyingEndTime(parseFloat(e.target.value));
               }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
-            ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setShowExclusionPlanner((value) => !value),
+                className: "mt-3 w-full rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18",
+                children: showExclusionPlanner ? "Hide Exclusions" : "Manage Exclusions"
+              }
+            )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-slate-300", children: [
@@ -22068,9 +22135,138 @@ const PrioritiesView = ({
                   onUpdateCeaseNightFlying(parseFloat(e.target.value));
                 }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
               ] })
-            ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setShowExclusionPlanner((value) => !value),
+                className: "mt-3 w-full rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18",
+                children: showExclusionPlanner ? "Hide Exclusions" : "Manage Exclusions"
+              }
+            )
           ] })
-        ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `overflow-hidden border-t border-slate-800 transition-all duration-300 ${showExclusionPlanner ? "max-h-[760px] opacity-100" : "max-h-0 opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4 pt-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Departure and Arrival Exclusions" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-400", children: "Exclusion periods prevent NEO Build from placing flight departures, arrivals, or both inside the selected time range." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: addExclusionPeriod,
+                className: "rounded-md border border-cyan-500/45 bg-cyan-500/12 px-3 py-2 text-xs font-semibold text-cyan-100 hover:border-cyan-300",
+                children: "Add Period"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-950 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-20 overflow-hidden rounded bg-slate-900", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-700" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: "absolute top-5 h-4 rounded bg-sky-400/30 ring-1 ring-sky-300/50",
+                  style: { left: `${getTimelineLeft(flyingStartTime)}%`, width: `${getTimelineWidth(flyingStartTime, flyingEndTime)}%` },
+                  title: `Day flying ${formatTimeLabel(flyingStartTime)}-${formatTimeLabel(flyingEndTime)}`
+                }
+              ),
+              allowNightFlying && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: "absolute top-11 h-4 rounded bg-indigo-400/30 ring-1 ring-indigo-300/50",
+                  style: { left: `${getTimelineLeft(commenceNightFlying)}%`, width: `${getTimelineWidth(commenceNightFlying, ceaseNightFlying)}%` },
+                  title: `Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`
+                }
+              ),
+              flyingWindowExclusions2.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: "absolute inset-y-2 rounded bg-rose-400/30 ring-1 ring-rose-300/60",
+                  style: { left: `${getTimelineLeft(period.startTime)}%`, width: `${getTimelineWidth(period.startTime, period.endTime)}%` },
+                  title: `${restrictionLabel(period.restriction)} ${formatTimeLabel(period.startTime)}-${formatTimeLabel(period.endTime)}`
+                },
+                period.id
+              )),
+              [0, 6, 12, 18, 24].map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-y-0 border-l border-slate-700/70", style: { left: `${hour / 24 * 100}%` }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute top-1 text-[10px] text-slate-500 ${hour === 24 ? "-translate-x-full" : "translate-x-1"}`, children: hour === 0 ? "00:01" : hour === 24 ? "23:59" : `${String(hour).padStart(2, "0")}:00` }) }, hour))
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-3 text-[11px] text-slate-400", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-sky-400/40" }),
+                " Day flying"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-indigo-400/40" }),
+                " Night flying"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-rose-400/40" }),
+                " Exclusion"
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
+            flyingWindowExclusions2.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-dashed border-slate-700 bg-slate-950/60 p-4 text-sm text-slate-400", children: "No departure or arrival exclusions configured." }),
+            flyingWindowExclusions2.map((period, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 rounded-md border border-slate-700 bg-slate-950/70 p-3 lg:grid-cols-[64px_1fr_1fr_1.3fr_auto] lg:items-end", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Period" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block rounded border border-slate-700 bg-slate-900 px-2 py-2 text-center text-sm font-bold text-white", children: index + 1 })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold text-slate-400", children: "Start" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "select",
+                  {
+                    value: period.startTime,
+                    onChange: (event) => updateExclusionPeriod(period.id, { startTime: parseFloat(event.target.value) }),
+                    className: "w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-white focus:outline-none focus:ring-cyan-500",
+                    children: exclusionTimeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `start-${opt.value}`))
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold text-slate-400", children: "End" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "select",
+                  {
+                    value: period.endTime,
+                    onChange: (event) => updateExclusionPeriod(period.id, { endTime: parseFloat(event.target.value) }),
+                    className: "w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-white focus:outline-none focus:ring-cyan-500",
+                    children: exclusionTimeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `end-${opt.value}`))
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold text-slate-400", children: "Restriction" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: period.restriction,
+                    onChange: (event) => updateExclusionPeriod(period.id, { restriction: event.target.value }),
+                    className: "w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-white focus:outline-none focus:ring-cyan-500",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "departures", children: "No departures" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "arrivals", children: "No arrivals" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "both", children: "No departures or arrivals" })
+                    ]
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => removeExclusionPeriod(period.id),
+                  className: "rounded-md border border-rose-500/40 px-3 py-2 text-xs font-semibold text-rose-200 hover:border-rose-300 hover:bg-rose-500/10",
+                  children: "Remove"
+                }
+              )
+            ] }, period.id))
+          ] })
+        ] }) }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
@@ -58708,6 +58904,28 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
   };
   const getScheduledDayNightForStart = (startTime) => startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
+  const normalisedFlyingWindowExclusions = flyingWindowExclusions.map((period) => ({
+    ...period,
+    startTime: Number(period.startTime),
+    endTime: Number(period.endTime),
+    restriction: period.restriction || "both"
+  })).filter((period) => Number.isFinite(period.startTime) && Number.isFinite(period.endTime) && period.endTime > period.startTime);
+  const pointIsInsideExclusion = (time, period) => time >= period.startTime - 1e-3 && time < period.endTime - 1e-3;
+  const getFlightWindowExclusionViolation = (startTime, duration) => {
+    if (normalisedFlyingWindowExclusions.length === 0) return null;
+    const landTime = startTime + duration;
+    for (const period of normalisedFlyingWindowExclusions) {
+      const blocksDepartures = period.restriction === "departures" || period.restriction === "both";
+      const blocksArrivals = period.restriction === "arrivals" || period.restriction === "both";
+      if (blocksDepartures && pointIsInsideExclusion(startTime, period)) {
+        return { reason: "DEPARTURE_EXCLUSION", period, checkedTime: startTime };
+      }
+      if (blocksArrivals && pointIsInsideExclusion(landTime, period)) {
+        return { reason: "ARRIVAL_EXCLUSION", period, checkedTime: landTime };
+      }
+    }
+    return null;
+  };
   const canAssignPersonForScheduledWindow = (personName, startTime) => {
     const proposedDayNight = getScheduledDayNightForStart(startTime);
     if (proposedDayNight === "Night" && isPersonScheduledForDayEvents(personName)) return false;
@@ -60391,6 +60609,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
       return traceScheduleReject("REMEDIAL_BEFORE_1000");
+    }
+    if (type === "flight") {
+      const exclusionViolation = getFlightWindowExclusionViolation(startTime, syllabusItem.duration);
+      if (exclusionViolation) {
+        if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, exclusionViolation.reason);
+        return traceScheduleReject("FLYING_WINDOW_EXCLUSION", {
+          exclusionReason: exclusionViolation.reason,
+          restriction: exclusionViolation.period.restriction,
+          exclusionStart: exclusionViolation.period.startTime,
+          exclusionEnd: exclusionViolation.period.endTime,
+          checkedTime: exclusionViolation.checkedTime,
+          departureTime: startTime,
+          landingTime: startTime + syllabusItem.duration
+        });
+      }
     }
     if (syllabusItem.dayNight === "Night" && getScheduledDayNightForStart(startTime) !== "Night") {
       return traceScheduleReject("DAY_NIGHT_MISMATCH", { required: "Night", proposed: getScheduledDayNightForStart(startTime) });
@@ -66221,6 +66454,7 @@ const App = () => {
   const [allowNightFlying, setAllowNightFlying] = reactExports.useState(true);
   const [commenceNightFlying, setCommenceNightFlying] = reactExports.useState(18.5);
   const [ceaseNightFlying, setCeaseNightFlying] = reactExports.useState(23.5);
+  const [flyingWindowExclusions2, setFlyingWindowExclusions] = reactExports.useState([]);
   const classifyStartBySolarDaylight = reactExports.useCallback((startTime, targetDate = date) => {
     const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
     const solarClassification = classifyDayNightBySunTimes(startTime, sunTimes);
@@ -66915,6 +67149,7 @@ ${"=".repeat(60)}`);
         if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
         if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
         if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
+        if (Array.isArray(saved.flyingWindowExclusions)) setFlyingWindowExclusions(saved.flyingWindowExclusions);
         if (saved.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
           setAvailableAircraftCount(saved.availableAircraftCount);
         }
@@ -67013,6 +67248,7 @@ ${"=".repeat(60)}`);
       allowNightFlying,
       commenceNightFlying,
       ceaseNightFlying,
+      flyingWindowExclusions: flyingWindowExclusions2,
       availableAircraftCount,
       neoAvailableAircraftCount,
       neoAircraftConfigCapacities,
@@ -67058,6 +67294,7 @@ ${"=".repeat(60)}`);
     allowNightFlying,
     commenceNightFlying,
     ceaseNightFlying,
+    flyingWindowExclusions2,
     availableAircraftCount,
     neoAvailableAircraftCount,
     neoAircraftConfigCapacities,
@@ -74495,6 +74732,8 @@ ${conflictLines.join("\n")}${moreText}`,
             onUpdateCommenceNightFlying: setCommenceNightFlying,
             ceaseNightFlying,
             onUpdateCeaseNightFlying: setCeaseNightFlying,
+            flyingWindowExclusions: flyingWindowExclusions2,
+            onUpdateFlyingWindowExclusions: setFlyingWindowExclusions,
             instructorsData,
             traineesData,
             buildDfpDate,
