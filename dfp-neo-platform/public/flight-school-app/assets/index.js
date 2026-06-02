@@ -21498,7 +21498,7 @@ const PrioritiesView = ({
   const timeOptions = reactExports.useMemo(() => {
     const options = [];
     for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 15) {
+      for (let m = 0; m < 60; m += 5) {
         const totalHours = h + m / 60;
         const label = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
         options.push({ label, value: totalHours });
