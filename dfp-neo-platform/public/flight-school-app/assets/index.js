@@ -58008,8 +58008,8 @@ const DfpSidePanelTimeline = ({
       window.removeEventListener("pointerup", handlePointerUp);
     };
   }, [activeDrag, flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, flyingWindowExclusions]);
-  const dayShade = "bg-cyan-400/26 ring-cyan-100/25";
-  const nightShade = "bg-violet-500/26 ring-violet-100/25";
+  const dayShade = "bg-cyan-400/30 ring-cyan-100/30";
+  const nightShade = "bg-violet-500/30 ring-violet-100/30";
   const exclusionShade = "bg-rose-500/30 ring-rose-200/30";
   const ticks = Array.from({ length: timelineEndHour - timelineStartHour + 1 }, (_, index) => timelineStartHour + index);
   const markers = [
@@ -58101,10 +58101,10 @@ const DfpSidePanelTimeline = ({
                   {
                     type: "button",
                     onPointerDown: (event) => startDrag(event, marker.target, marker.label, marker.time),
-                    className: "absolute inset-y-0 z-30 flex w-5 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200",
+                    className: "absolute inset-y-0 z-30 flex w-3 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200",
                     style: { left: `${getLeft(marker.time)}%` },
                     title: `Drag ${marker.label}: ${formatTime2(marker.time)}`,
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-full w-[3px] rounded-full ${marker.color} shadow-[0_0_12px_currentColor]` })
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-full w-px rounded-full ${marker.color} opacity-70 shadow-[0_0_5px_currentColor]` })
                   },
                   marker.key
                 )),
