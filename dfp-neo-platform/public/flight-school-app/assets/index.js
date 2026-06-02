@@ -21516,7 +21516,15 @@ const PrioritiesView = ({
       return true;
     });
   }, [timeOptions]);
-  const [showExclusionPlanner, setShowExclusionPlanner] = reactExports.useState(false);
+  const [showExclusionPlanner, setShowExclusionPlanner] = reactExports.useState(() => {
+    try {
+      const shouldOpen = localStorage.getItem("neo_open_departure_arrival_exclusions") === "1";
+      if (shouldOpen) localStorage.removeItem("neo_open_departure_arrival_exclusions");
+      return shouldOpen;
+    } catch {
+      return false;
+    }
+  });
   const formatTimeLabel = (decimalHour) => {
     const bounded = Math.max(0, Math.min(23 + 59 / 60, Number(decimalHour) || 0));
     const hours = Math.floor(bounded);
@@ -57850,6 +57858,298 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
 };
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
+const DfpSidePanelTimeline = ({
+  flyingStartTime,
+  flyingEndTime,
+  onUpdateFlyingStartTime,
+  onUpdateFlyingEndTime,
+  allowNightFlying,
+  commenceNightFlying,
+  ceaseNightFlying,
+  onUpdateCommenceNightFlying,
+  onUpdateCeaseNightFlying,
+  flyingWindowExclusions,
+  onUpdateFlyingWindowExclusions,
+  onOpenPrioritiesExclusions
+}) => {
+  const timelineStartHour = 6;
+  const timelineEndHour = 25;
+  const timelineSpanHours = timelineEndHour - timelineStartHour;
+  const visibleWindowHours = 5;
+  const timelineMinGap = 5 / 60;
+  const chartRef = reactExports.useRef(null);
+  const scrollRef = reactExports.useRef(null);
+  const [activeDrag, setActiveDrag] = reactExports.useState(null);
+  const normalizeHour = (time) => {
+    let value = Number(time) || 0;
+    if (value < timelineStartHour) value += 24;
+    return Math.max(timelineStartHour, Math.min(timelineEndHour, value));
+  };
+  const denormalizeHour = (time) => {
+    const bounded = Math.max(timelineStartHour, Math.min(timelineEndHour, time));
+    return bounded >= 24 ? Math.min(1, bounded - 24) : Math.min(23 + 45 / 60, bounded);
+  };
+  const snapHour = (time) => Math.round(time * 12) / 12;
+  const getLeft = (time) => (normalizeHour(time) - timelineStartHour) / timelineSpanHours * 100;
+  const getWidth = (start, end) => {
+    const startHour = normalizeHour(start);
+    let endHour = normalizeHour(end);
+    if (endHour <= startHour) endHour = Math.min(timelineEndHour, endHour + 24);
+    return Math.max(0.35, (Math.min(timelineEndHour, endHour) - startHour) / timelineSpanHours * 100);
+  };
+  const formatTime2 = (decimalHour) => {
+    const bounded = Math.max(0, Math.min(23 + 59 / 60, Number(decimalHour) || 0));
+    const hours = Math.floor(bounded);
+    const minutes = Math.round((bounded - hours) * 60);
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+  const formatCompactTime = (decimalHour) => formatTime2(decimalHour).replace(":", "");
+  const formatTick = (hour) => {
+    if (hour === 24) return "0000";
+    if (hour === 25) return "0100";
+    return `${String(hour).padStart(2, "0")}00`;
+  };
+  const getTimeFromPointer = (clientX) => {
+    const bounds = chartRef.current?.getBoundingClientRect();
+    if (!bounds || bounds.width <= 0) return timelineStartHour;
+    const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
+    return denormalizeHour(snapHour(timelineStartHour + ratio * timelineSpanHours));
+  };
+  const constrainTime = (target, nextTime) => {
+    const nextHour = normalizeHour(nextTime);
+    const constrain = (min, max) => denormalizeHour(Math.max(min, Math.min(max, nextHour)));
+    if (target.kind === "day") {
+      const startHour2 = normalizeHour(flyingStartTime);
+      const endHour2 = normalizeHour(flyingEndTime);
+      const dayWindowLatestHour = 23.75;
+      return target.edge === "start" ? constrain(timelineStartHour, Math.min(endHour2, dayWindowLatestHour) - timelineMinGap) : constrain(startHour2 + timelineMinGap, dayWindowLatestHour);
+    }
+    if (target.kind === "night") {
+      const startHour2 = normalizeHour(commenceNightFlying);
+      const endHour2 = normalizeHour(ceaseNightFlying);
+      return target.edge === "start" ? constrain(timelineStartHour, endHour2 - timelineMinGap) : constrain(startHour2 + timelineMinGap, timelineEndHour);
+    }
+    const period = flyingWindowExclusions.find((item) => item.id === target.id);
+    if (!period) return nextTime;
+    const startHour = normalizeHour(period.startTime);
+    const endHour = normalizeHour(period.endTime);
+    return target.edge === "start" ? constrain(timelineStartHour, endHour - timelineMinGap) : constrain(startHour + timelineMinGap, timelineEndHour);
+  };
+  const updateExclusionPeriod = (id, updates) => {
+    onUpdateFlyingWindowExclusions(flyingWindowExclusions.map((period) => {
+      if (period.id !== id) return period;
+      const nextPeriod = { ...period, ...updates };
+      const startHour = normalizeHour(nextPeriod.startTime);
+      const endHour = normalizeHour(nextPeriod.endTime);
+      if (endHour - startHour < timelineMinGap) {
+        if (updates.startTime !== void 0) nextPeriod.endTime = denormalizeHour(Math.min(startHour + timelineMinGap, timelineEndHour));
+        if (updates.endTime !== void 0) nextPeriod.startTime = denormalizeHour(Math.max(endHour - timelineMinGap, timelineStartHour));
+      }
+      return nextPeriod;
+    }));
+  };
+  const applyDrag = (target, nextTime) => {
+    const constrainedTime = constrainTime(target, nextTime);
+    if (target.kind === "day") {
+      if (target.edge === "start") onUpdateFlyingStartTime(constrainedTime);
+      else onUpdateFlyingEndTime(constrainedTime);
+    } else if (target.kind === "night") {
+      if (target.edge === "start") onUpdateCommenceNightFlying(constrainedTime);
+      else onUpdateCeaseNightFlying(constrainedTime);
+    } else {
+      updateExclusionPeriod(target.id, target.edge === "start" ? { startTime: constrainedTime } : { endTime: constrainedTime });
+    }
+    return constrainedTime;
+  };
+  const startDrag = (event, target, label, time) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const constrainedTime = constrainTime(target, time);
+    setActiveDrag({
+      ...target,
+      label,
+      originalTime: constrainedTime,
+      time: constrainedTime,
+      left: getLeft(constrainedTime)
+    });
+  };
+  reactExports.useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    const targetHour = Math.max(timelineStartHour, normalizeHour(flyingStartTime) - 0.75);
+    const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
+    scroller.scrollLeft = Math.max(0, ratio * scroller.scrollWidth - scroller.clientWidth * 0.15);
+  }, []);
+  reactExports.useEffect(() => {
+    if (!activeDrag) return void 0;
+    const handlePointerMove = (event) => {
+      event.preventDefault();
+      const nextTime = getTimeFromPointer(event.clientX);
+      const appliedTime = applyDrag(activeDrag, nextTime);
+      setActiveDrag((previous) => previous ? {
+        ...previous,
+        time: appliedTime,
+        left: getLeft(appliedTime)
+      } : previous);
+    };
+    const handlePointerUp = () => {
+      logAudit(
+        "DFP Side Panel",
+        "Edit",
+        `Dragged ${activeDrag.label}`,
+        `${formatTime2(activeDrag.originalTime)} → ${formatTime2(activeDrag.time)}`
+      );
+      setActiveDrag(null);
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [activeDrag, flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, flyingWindowExclusions]);
+  const dayShade = "bg-cyan-400/26 ring-cyan-100/25";
+  const nightShade = "bg-violet-500/26 ring-violet-100/25";
+  const exclusionShade = "bg-rose-500/30 ring-rose-200/30";
+  const ticks = Array.from({ length: timelineEndHour - timelineStartHour + 1 }, (_, index) => timelineStartHour + index);
+  const markers = [
+    { key: "day-start", time: flyingStartTime, label: "Day start", color: "bg-sky-100", target: { kind: "day", edge: "start" } },
+    { key: "day-end", time: flyingEndTime, label: "Day end", color: "bg-sky-100", target: { kind: "day", edge: "end" } },
+    ...allowNightFlying ? [
+      { key: "night-start", time: commenceNightFlying, label: "Night start", color: "bg-indigo-100", target: { kind: "night", edge: "start" } },
+      { key: "night-end", time: ceaseNightFlying, label: "Night end", color: "bg-indigo-100", target: { kind: "night", edge: "end" } }
+    ] : [],
+    ...flyingWindowExclusions.flatMap((period) => [
+      { key: `exclusion-${period.id}-start`, time: period.startTime, label: "Exclusion start", color: "bg-rose-100", target: { kind: "exclusion", id: period.id, edge: "start" } },
+      { key: `exclusion-${period.id}-end`, time: period.endTime, label: "Exclusion end", color: "bg-rose-100", target: { kind: "exclusion", id: period.id, edge: "end" } }
+    ])
+  ];
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-400/15 bg-slate-950/72 p-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200/60", children: "Flying Windows" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-sm font-semibold text-white", children: "Departure and Arrival Exclusions" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: onOpenPrioritiesExclusions,
+          className: "shrink-0 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200",
+          children: "Open Priorities"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        ref: scrollRef,
+        className: "overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-4 shadow-inner",
+        "aria-label": "Scrollable five hour flying window timeline",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "relative",
+            style: { width: `${timelineSpanHours / visibleWindowHours * 100}%`, minWidth: "1320px" },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-1 h-4", children: ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: `absolute text-[9px] font-semibold tracking-[0.08em] text-slate-200/80 ${hour === timelineEndHour ? "-translate-x-full" : "-translate-x-1/2"}`,
+                  style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` },
+                  children: formatTick(hour)
+                },
+                `mini-tick-${hour}`
+              )) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: chartRef, className: "relative h-20 overflow-visible rounded border border-slate-500/80 bg-slate-950", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-300/45" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayShade}`,
+                    style: { left: `${getLeft(flyingStartTime)}%`, width: `${getWidth(flyingStartTime, flyingEndTime)}%` },
+                    title: `Day flying ${formatTime2(flyingStartTime)}-${formatTime2(flyingEndTime)}`
+                  }
+                ),
+                allowNightFlying && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${nightShade}`,
+                    style: { left: `${getLeft(commenceNightFlying)}%`, width: `${getWidth(commenceNightFlying, ceaseNightFlying)}%` },
+                    title: `Night flying ${formatTime2(commenceNightFlying)}-${formatTime2(ceaseNightFlying)}`
+                  }
+                ),
+                flyingWindowExclusions.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${exclusionShade}`,
+                    style: { left: `${getLeft(period.startTime)}%`, width: `${getWidth(period.startTime, period.endTime)}%` },
+                    title: `Exclusion ${formatTime2(period.startTime)}-${formatTime2(period.endTime)}`
+                  },
+                  period.id
+                )),
+                ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: "absolute inset-y-0 z-10 border-l border-slate-400/28",
+                    style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` }
+                  },
+                  `mini-line-${hour}`
+                )),
+                markers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onPointerDown: (event) => startDrag(event, marker.target, marker.label, marker.time),
+                    className: "absolute inset-y-0 z-30 flex w-5 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200",
+                    style: { left: `${getLeft(marker.time)}%` },
+                    title: `Drag ${marker.label}: ${formatTime2(marker.time)}`,
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-full w-[3px] rounded-full ${marker.color} shadow-[0_0_12px_currentColor]` })
+                  },
+                  marker.key
+                )),
+                activeDrag && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "pointer-events-none absolute -top-10 z-40 -translate-x-1/2 rounded-md border border-cyan-200/70 bg-slate-950 px-2 py-1 text-[10px] font-semibold text-cyan-50 shadow-xl",
+                    style: { left: `${activeDrag.left}%` },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] uppercase tracking-[0.12em] text-cyan-200/70", children: activeDrag.label }),
+                      formatCompactTime(activeDrag.time)
+                    ]
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2 h-9", children: markers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: "absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-400/45 bg-slate-950/95 px-1.5 py-1 text-[9px] font-semibold text-slate-100 shadow",
+                  style: { left: `${getLeft(marker.time)}%` },
+                  children: formatCompactTime(marker.time)
+                },
+                `mini-label-${marker.key}`
+              )) })
+            ]
+          }
+        )
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-3 text-[10px] text-slate-300", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-3 w-4 rounded-sm ring-1 ring-inset ${dayShade}` }),
+        " Day"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-3 w-4 rounded-sm ring-1 ring-inset ${nightShade}` }),
+        " Night"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-3 w-4 rounded-sm ring-1 ring-inset ${exclusionShade}` }),
+        " Exclusion"
+      ] })
+    ] })
+  ] });
+};
 const normalisePersonnelRecord = (person) => {
   const preferences = person?.preferences && typeof person.preferences === "object" && !Array.isArray(person.preferences) ? person.preferences : {};
   return {
@@ -76766,7 +77066,30 @@ Do you want to replace the existing entry?`,
                     ]
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DfpSidePanelTimeline,
+                  {
+                    flyingStartTime,
+                    flyingEndTime,
+                    onUpdateFlyingStartTime: setFlyingStartTime,
+                    onUpdateFlyingEndTime: setFlyingEndTime,
+                    allowNightFlying,
+                    commenceNightFlying,
+                    ceaseNightFlying,
+                    onUpdateCommenceNightFlying: setCommenceNightFlying,
+                    onUpdateCeaseNightFlying: setCeaseNightFlying,
+                    flyingWindowExclusions,
+                    onUpdateFlyingWindowExclusions: setFlyingWindowExclusions,
+                    onOpenPrioritiesExclusions: () => {
+                      try {
+                        localStorage.setItem("neo_open_departure_arrival_exclusions", "1");
+                      } catch {
+                      }
+                      setShowDfpSidePanel(false);
+                      handleNavigation("Priorities");
+                    }
+                  }
+                ) })
               ]
             }
           ),

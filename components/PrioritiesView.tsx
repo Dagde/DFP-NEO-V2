@@ -314,7 +314,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     });
   }, [timeOptions]);
 
-  const [showExclusionPlanner, setShowExclusionPlanner] = useState(false);
+  const [showExclusionPlanner, setShowExclusionPlanner] = useState(() => {
+    try {
+      const shouldOpen = localStorage.getItem('neo_open_departure_arrival_exclusions') === '1';
+      if (shouldOpen) localStorage.removeItem('neo_open_departure_arrival_exclusions');
+      return shouldOpen;
+    } catch {
+      return false;
+    }
+  });
 
   const formatTimeLabel = (decimalHour: number): string => {
     const bounded = Math.max(0, Math.min(23 + 59 / 60, Number(decimalHour) || 0));

@@ -107,6 +107,337 @@ import {
 } from './types';
 import { NewCourseData } from './components/AddCourseFlyout';
 
+type DfpMiniTimelineDragTarget =
+    | { kind: 'day'; edge: 'start' | 'end' }
+    | { kind: 'night'; edge: 'start' | 'end' }
+    | { kind: 'exclusion'; id: string; edge: 'start' | 'end' };
+
+type DfpMiniTimelineDragState = DfpMiniTimelineDragTarget & {
+    label: string;
+    originalTime: number;
+    time: number;
+    left: number;
+};
+
+const DfpSidePanelTimeline: React.FC<{
+    flyingStartTime: number;
+    flyingEndTime: number;
+    onUpdateFlyingStartTime: (time: number) => void;
+    onUpdateFlyingEndTime: (time: number) => void;
+    allowNightFlying: boolean;
+    commenceNightFlying: number;
+    ceaseNightFlying: number;
+    onUpdateCommenceNightFlying: (time: number) => void;
+    onUpdateCeaseNightFlying: (time: number) => void;
+    flyingWindowExclusions: FlyingWindowExclusionPeriod[];
+    onUpdateFlyingWindowExclusions: (periods: FlyingWindowExclusionPeriod[]) => void;
+    onOpenPrioritiesExclusions: () => void;
+}> = ({
+    flyingStartTime,
+    flyingEndTime,
+    onUpdateFlyingStartTime,
+    onUpdateFlyingEndTime,
+    allowNightFlying,
+    commenceNightFlying,
+    ceaseNightFlying,
+    onUpdateCommenceNightFlying,
+    onUpdateCeaseNightFlying,
+    flyingWindowExclusions,
+    onUpdateFlyingWindowExclusions,
+    onOpenPrioritiesExclusions,
+}) => {
+    const timelineStartHour = 6;
+    const timelineEndHour = 25;
+    const timelineSpanHours = timelineEndHour - timelineStartHour;
+    const visibleWindowHours = 5;
+    const timelineMinGap = 5 / 60;
+    const chartRef = useRef<HTMLDivElement | null>(null);
+    const scrollRef = useRef<HTMLDivElement | null>(null);
+    const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
+
+    const normalizeHour = (time: number): number => {
+        let value = Number(time) || 0;
+        if (value < timelineStartHour) value += 24;
+        return Math.max(timelineStartHour, Math.min(timelineEndHour, value));
+    };
+
+    const denormalizeHour = (time: number): number => {
+        const bounded = Math.max(timelineStartHour, Math.min(timelineEndHour, time));
+        return bounded >= 24 ? Math.min(1, bounded - 24) : Math.min(23 + 45 / 60, bounded);
+    };
+
+    const snapHour = (time: number): number => Math.round(time * 12) / 12;
+    const getLeft = (time: number): number => ((normalizeHour(time) - timelineStartHour) / timelineSpanHours) * 100;
+    const getWidth = (start: number, end: number): number => {
+        const startHour = normalizeHour(start);
+        let endHour = normalizeHour(end);
+        if (endHour <= startHour) endHour = Math.min(timelineEndHour, endHour + 24);
+        return Math.max(0.35, ((Math.min(timelineEndHour, endHour) - startHour) / timelineSpanHours) * 100);
+    };
+
+    const formatTime = (decimalHour: number): string => {
+        const bounded = Math.max(0, Math.min(23 + 59 / 60, Number(decimalHour) || 0));
+        const hours = Math.floor(bounded);
+        const minutes = Math.round((bounded - hours) * 60);
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    };
+
+    const formatCompactTime = (decimalHour: number): string => formatTime(decimalHour).replace(':', '');
+    const formatTick = (hour: number): string => {
+        if (hour === 24) return '0000';
+        if (hour === 25) return '0100';
+        return `${String(hour).padStart(2, '0')}00`;
+    };
+
+    const getTimeFromPointer = (clientX: number): number => {
+        const bounds = chartRef.current?.getBoundingClientRect();
+        if (!bounds || bounds.width <= 0) return timelineStartHour;
+        const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
+        return denormalizeHour(snapHour(timelineStartHour + ratio * timelineSpanHours));
+    };
+
+    const constrainTime = (target: DfpMiniTimelineDragTarget, nextTime: number): number => {
+        const nextHour = normalizeHour(nextTime);
+        const constrain = (min: number, max: number) => denormalizeHour(Math.max(min, Math.min(max, nextHour)));
+
+        if (target.kind === 'day') {
+            const startHour = normalizeHour(flyingStartTime);
+            const endHour = normalizeHour(flyingEndTime);
+            const dayWindowLatestHour = 23.75;
+            return target.edge === 'start'
+                ? constrain(timelineStartHour, Math.min(endHour, dayWindowLatestHour) - timelineMinGap)
+                : constrain(startHour + timelineMinGap, dayWindowLatestHour);
+        }
+
+        if (target.kind === 'night') {
+            const startHour = normalizeHour(commenceNightFlying);
+            const endHour = normalizeHour(ceaseNightFlying);
+            return target.edge === 'start'
+                ? constrain(timelineStartHour, endHour - timelineMinGap)
+                : constrain(startHour + timelineMinGap, timelineEndHour);
+        }
+
+        const period = flyingWindowExclusions.find(item => item.id === target.id);
+        if (!period) return nextTime;
+        const startHour = normalizeHour(period.startTime);
+        const endHour = normalizeHour(period.endTime);
+        return target.edge === 'start'
+            ? constrain(timelineStartHour, endHour - timelineMinGap)
+            : constrain(startHour + timelineMinGap, timelineEndHour);
+    };
+
+    const updateExclusionPeriod = (id: string, updates: Partial<FlyingWindowExclusionPeriod>) => {
+        onUpdateFlyingWindowExclusions(flyingWindowExclusions.map(period => {
+            if (period.id !== id) return period;
+            const nextPeriod = { ...period, ...updates };
+            const startHour = normalizeHour(nextPeriod.startTime);
+            const endHour = normalizeHour(nextPeriod.endTime);
+            if (endHour - startHour < timelineMinGap) {
+                if (updates.startTime !== undefined) nextPeriod.endTime = denormalizeHour(Math.min(startHour + timelineMinGap, timelineEndHour));
+                if (updates.endTime !== undefined) nextPeriod.startTime = denormalizeHour(Math.max(endHour - timelineMinGap, timelineStartHour));
+            }
+            return nextPeriod;
+        }));
+    };
+
+    const applyDrag = (target: DfpMiniTimelineDragTarget, nextTime: number) => {
+        const constrainedTime = constrainTime(target, nextTime);
+        if (target.kind === 'day') {
+            if (target.edge === 'start') onUpdateFlyingStartTime(constrainedTime);
+            else onUpdateFlyingEndTime(constrainedTime);
+        } else if (target.kind === 'night') {
+            if (target.edge === 'start') onUpdateCommenceNightFlying(constrainedTime);
+            else onUpdateCeaseNightFlying(constrainedTime);
+        } else {
+            updateExclusionPeriod(target.id, target.edge === 'start' ? { startTime: constrainedTime } : { endTime: constrainedTime });
+        }
+        return constrainedTime;
+    };
+
+    const startDrag = (event: React.PointerEvent<HTMLElement>, target: DfpMiniTimelineDragTarget, label: string, time: number) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const constrainedTime = constrainTime(target, time);
+        setActiveDrag({
+            ...target,
+            label,
+            originalTime: constrainedTime,
+            time: constrainedTime,
+            left: getLeft(constrainedTime),
+        });
+    };
+
+    useEffect(() => {
+        const scroller = scrollRef.current;
+        if (!scroller) return;
+        const targetHour = Math.max(timelineStartHour, normalizeHour(flyingStartTime) - 0.75);
+        const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
+        scroller.scrollLeft = Math.max(0, ratio * scroller.scrollWidth - scroller.clientWidth * 0.15);
+    }, []);
+
+    useEffect(() => {
+        if (!activeDrag) return undefined;
+
+        const handlePointerMove = (event: PointerEvent) => {
+            event.preventDefault();
+            const nextTime = getTimeFromPointer(event.clientX);
+            const appliedTime = applyDrag(activeDrag, nextTime);
+            setActiveDrag(previous => previous ? {
+                ...previous,
+                time: appliedTime,
+                left: getLeft(appliedTime),
+            } : previous);
+        };
+
+        const handlePointerUp = () => {
+            logAudit(
+                'DFP Side Panel',
+                'Edit',
+                `Dragged ${activeDrag.label}`,
+                `${formatTime(activeDrag.originalTime)} → ${formatTime(activeDrag.time)}`,
+            );
+            setActiveDrag(null);
+        };
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp, { once: true });
+        return () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+        };
+    }, [activeDrag, flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, flyingWindowExclusions]);
+
+    const dayShade = 'bg-cyan-400/26 ring-cyan-100/25';
+    const nightShade = 'bg-violet-500/26 ring-violet-100/25';
+    const exclusionShade = 'bg-rose-500/30 ring-rose-200/30';
+    const ticks = Array.from({ length: timelineEndHour - timelineStartHour + 1 }, (_, index) => timelineStartHour + index);
+    const markers: Array<{
+        key: string;
+        time: number;
+        label: string;
+        color: string;
+        target: DfpMiniTimelineDragTarget;
+    }> = [
+        { key: 'day-start', time: flyingStartTime, label: 'Day start', color: 'bg-sky-100', target: { kind: 'day', edge: 'start' } },
+        { key: 'day-end', time: flyingEndTime, label: 'Day end', color: 'bg-sky-100', target: { kind: 'day', edge: 'end' } },
+        ...(allowNightFlying ? [
+            { key: 'night-start', time: commenceNightFlying, label: 'Night start', color: 'bg-indigo-100', target: { kind: 'night' as const, edge: 'start' as const } },
+            { key: 'night-end', time: ceaseNightFlying, label: 'Night end', color: 'bg-indigo-100', target: { kind: 'night' as const, edge: 'end' as const } },
+        ] : []),
+        ...flyingWindowExclusions.flatMap(period => ([
+            { key: `exclusion-${period.id}-start`, time: period.startTime, label: 'Exclusion start', color: 'bg-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'start' as const } },
+            { key: `exclusion-${period.id}-end`, time: period.endTime, label: 'Exclusion end', color: 'bg-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'end' as const } },
+        ])),
+    ];
+
+    return (
+        <div className="border-b border-cyan-400/15 bg-slate-950/72 p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200/60">Flying Windows</p>
+                    <h3 className="mt-1 text-sm font-semibold text-white">Departure and Arrival Exclusions</h3>
+                </div>
+                <button
+                    type="button"
+                    onClick={onOpenPrioritiesExclusions}
+                    className="shrink-0 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200"
+                >
+                    Open Priorities
+                </button>
+            </div>
+            <div
+                ref={scrollRef}
+                className="overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-4 shadow-inner"
+                aria-label="Scrollable five hour flying window timeline"
+            >
+                <div
+                    className="relative"
+                    style={{ width: `${(timelineSpanHours / visibleWindowHours) * 100}%`, minWidth: '1320px' }}
+                >
+                    <div className="relative mb-1 h-4">
+                        {ticks.map(hour => (
+                            <span
+                                key={`mini-tick-${hour}`}
+                                className={`absolute text-[9px] font-semibold tracking-[0.08em] text-slate-200/80 ${hour === timelineEndHour ? '-translate-x-full' : '-translate-x-1/2'}`}
+                                style={{ left: `${((hour - timelineStartHour) / timelineSpanHours) * 100}%` }}
+                            >
+                                {formatTick(hour)}
+                            </span>
+                        ))}
+                    </div>
+                    <div ref={chartRef} className="relative h-20 overflow-visible rounded border border-slate-500/80 bg-slate-950">
+                        <div className="absolute inset-x-0 top-1/2 h-px bg-slate-300/45" />
+                        <div
+                            className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayShade}`}
+                            style={{ left: `${getLeft(flyingStartTime)}%`, width: `${getWidth(flyingStartTime, flyingEndTime)}%` }}
+                            title={`Day flying ${formatTime(flyingStartTime)}-${formatTime(flyingEndTime)}`}
+                        />
+                        {allowNightFlying && (
+                            <div
+                                className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${nightShade}`}
+                                style={{ left: `${getLeft(commenceNightFlying)}%`, width: `${getWidth(commenceNightFlying, ceaseNightFlying)}%` }}
+                                title={`Night flying ${formatTime(commenceNightFlying)}-${formatTime(ceaseNightFlying)}`}
+                            />
+                        )}
+                        {flyingWindowExclusions.map(period => (
+                            <div
+                                key={period.id}
+                                className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${exclusionShade}`}
+                                style={{ left: `${getLeft(period.startTime)}%`, width: `${getWidth(period.startTime, period.endTime)}%` }}
+                                title={`Exclusion ${formatTime(period.startTime)}-${formatTime(period.endTime)}`}
+                            />
+                        ))}
+                        {ticks.map(hour => (
+                            <div
+                                key={`mini-line-${hour}`}
+                                className="absolute inset-y-0 z-10 border-l border-slate-400/28"
+                                style={{ left: `${((hour - timelineStartHour) / timelineSpanHours) * 100}%` }}
+                            />
+                        ))}
+                        {markers.map(marker => (
+                            <button
+                                key={marker.key}
+                                type="button"
+                                onPointerDown={(event) => startDrag(event, marker.target, marker.label, marker.time)}
+                                className="absolute inset-y-0 z-30 flex w-5 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                                style={{ left: `${getLeft(marker.time)}%` }}
+                                title={`Drag ${marker.label}: ${formatTime(marker.time)}`}
+                            >
+                                <span className={`h-full w-[3px] rounded-full ${marker.color} shadow-[0_0_12px_currentColor]`} />
+                            </button>
+                        ))}
+                        {activeDrag && (
+                            <div
+                                className="pointer-events-none absolute -top-10 z-40 -translate-x-1/2 rounded-md border border-cyan-200/70 bg-slate-950 px-2 py-1 text-[10px] font-semibold text-cyan-50 shadow-xl"
+                                style={{ left: `${activeDrag.left}%` }}
+                            >
+                                <span className="block text-[8px] uppercase tracking-[0.12em] text-cyan-200/70">{activeDrag.label}</span>
+                                {formatCompactTime(activeDrag.time)}
+                            </div>
+                        )}
+                    </div>
+                    <div className="relative mt-2 h-9">
+                        {markers.map(marker => (
+                            <span
+                                key={`mini-label-${marker.key}`}
+                                className="absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-400/45 bg-slate-950/95 px-1.5 py-1 text-[9px] font-semibold text-slate-100 shadow"
+                                style={{ left: `${getLeft(marker.time)}%` }}
+                            >
+                                {formatCompactTime(marker.time)}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-slate-300">
+                <span className="inline-flex items-center gap-1.5"><span className={`h-3 w-4 rounded-sm ring-1 ring-inset ${dayShade}`} /> Day</span>
+                <span className="inline-flex items-center gap-1.5"><span className={`h-3 w-4 rounded-sm ring-1 ring-inset ${nightShade}`} /> Night</span>
+                <span className="inline-flex items-center gap-1.5"><span className={`h-3 w-4 rounded-sm ring-1 ring-inset ${exclusionShade}`} /> Exclusion</span>
+            </div>
+        </div>
+    );
+};
+
 // Import components
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -24029,7 +24360,28 @@ updates.forEach(update => {
                                     }}
                                 />
                             </button>
-                            <div className="h-full border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" />
+                            <div className="h-full overflow-y-auto border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80">
+                                <DfpSidePanelTimeline
+                                    flyingStartTime={flyingStartTime}
+                                    flyingEndTime={flyingEndTime}
+                                    onUpdateFlyingStartTime={setFlyingStartTime}
+                                    onUpdateFlyingEndTime={setFlyingEndTime}
+                                    allowNightFlying={allowNightFlying}
+                                    commenceNightFlying={commenceNightFlying}
+                                    ceaseNightFlying={ceaseNightFlying}
+                                    onUpdateCommenceNightFlying={setCommenceNightFlying}
+                                    onUpdateCeaseNightFlying={setCeaseNightFlying}
+                                    flyingWindowExclusions={flyingWindowExclusions}
+                                    onUpdateFlyingWindowExclusions={setFlyingWindowExclusions}
+                                    onOpenPrioritiesExclusions={() => {
+                                        try {
+                                            localStorage.setItem('neo_open_departure_arrival_exclusions', '1');
+                                        } catch {}
+                                        setShowDfpSidePanel(false);
+                                        handleNavigation('Priorities');
+                                    }}
+                                />
+                            </div>
                         </aside>
                     )}
                     {showPausePanel && (
