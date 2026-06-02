@@ -385,9 +385,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (target.kind === 'day') {
       const startHour = normalizeTimelineHour(flyingStartTime);
       const endHour = normalizeTimelineHour(flyingEndTime);
+      const dayWindowLatestHour = 23.75;
       return target.edge === 'start'
-        ? constrain(timelineStartHour, endHour - timelineMinGap)
-        : constrain(startHour + timelineMinGap, timelineEndHour);
+        ? constrain(timelineStartHour, Math.min(endHour, dayWindowLatestHour) - timelineMinGap)
+        : constrain(startHour + timelineMinGap, dayWindowLatestHour);
     }
 
     if (target.kind === 'night') {

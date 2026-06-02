@@ -1982,15 +1982,32 @@ function generateDfpInternal(
     const {
         instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores,
         coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
-        courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
-        ftdStart: ftdStartTime, ftdEnd: ftdEndTime,
-        allowNightFlying, commenceNightFlying, ceaseNightFlying, buildDate,
+        courseColors, school, dayStart: rawFlyingStartTime, dayEnd: rawFlyingEndTime,
+        ftdStart: rawFtdStartTime, ftdEnd: rawFtdEndTime,
+        allowNightFlying, commenceNightFlying: rawCommenceNightFlying, ceaseNightFlying: rawCeaseNightFlying, buildDate,
         highestPriorityEvents, instructorPriority, traineeLMPs, flightTurnaround,
         ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
         eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
         getEventDayNightClassification,
         staffSharingEnabled, staffSharingUnits, staffSharingGroups
     } = config;
+
+    const normaliseBuildWindowStart = (value: number): number => Number.isFinite(Number(value)) ? Number(value) : 0;
+    const normaliseBuildWindowEnd = (start: number, end: number): number => {
+        const numericEnd = Number.isFinite(Number(end)) ? Number(end) : start;
+        return numericEnd <= start ? numericEnd + 24 : numericEnd;
+    };
+    const flyingStartTime = normaliseBuildWindowStart(rawFlyingStartTime);
+    const flyingEndTime = normaliseBuildWindowEnd(flyingStartTime, rawFlyingEndTime);
+    const ftdStartTime = normaliseBuildWindowStart(rawFtdStartTime);
+    const ftdEndTime = normaliseBuildWindowEnd(ftdStartTime, rawFtdEndTime);
+    const commenceNightFlying = normaliseBuildWindowStart(rawCommenceNightFlying);
+    const ceaseNightFlying = normaliseBuildWindowEnd(commenceNightFlying, rawCeaseNightFlying);
+    const windowNormalisationWarnings = [
+        rawFlyingEndTime <= rawFlyingStartTime ? `Day flying window wraps or is invalid (${rawFlyingStartTime} -> ${rawFlyingEndTime}); build uses ${flyingStartTime} -> ${flyingEndTime}.` : null,
+        rawFtdEndTime <= rawFtdStartTime ? `${ftdResourceLabel} window wraps or is invalid (${rawFtdStartTime} -> ${rawFtdEndTime}); build uses ${ftdStartTime} -> ${ftdEndTime}.` : null,
+        rawCeaseNightFlying <= rawCommenceNightFlying ? `Night flying window wraps (${rawCommenceNightFlying} -> ${rawCeaseNightFlying}); build uses ${commenceNightFlying} -> ${ceaseNightFlying}.` : null,
+    ].filter(Boolean);
 
     const aircraftConfigDefinitionsForBuild = config.aircraftConfigurationDefinitions?.length
         ? config.aircraftConfigurationDefinitions
@@ -2209,6 +2226,12 @@ function generateDfpInternal(
         if (personKey) intendedNightStaff.add(personKey);
     };
 
+    const isStartWithinNightWindow = (startTime: number): boolean => {
+        if (!allowNightFlying) return false;
+        const comparableStart = startTime < commenceNightFlying ? startTime + 24 : startTime;
+        return comparableStart >= commenceNightFlying && comparableStart < ceaseNightFlying;
+    };
+
     const getGeneratedEventDayNightClassification = (
         event: Omit<ScheduleEvent, 'date'> | ScheduleEvent
     ): 'Day' | 'Night' | 'Day/Night' => {
@@ -2216,7 +2239,7 @@ function generateDfpInternal(
             return event.dayNight;
         }
         if (typeof event.startTime === 'number') {
-            return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? 'Night' : 'Day';
+            return isStartWithinNightWindow(event.startTime) ? 'Night' : 'Day';
         }
         return getEventDayNightClassification(event, syllabusDetails, sctEvents);
     };
@@ -2249,22 +2272,28 @@ function generateDfpInternal(
         return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
     };
 
-    const getScheduledDayNightForStart = (startTime: number): 'Day' | 'Night' => {
-        if (!allowNightFlying) return 'Day';
-        if (ceaseNightFlying > commenceNightFlying) {
-            return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
-        }
-        const comparableStart = startTime < commenceNightFlying ? startTime + 24 : startTime;
-        return comparableStart >= commenceNightFlying && comparableStart < ceaseNightFlying + 24 ? 'Night' : 'Day';
-    };
+    const getScheduledDayNightForStart = (startTime: number): 'Day' | 'Night' =>
+        isStartWithinNightWindow(startTime) ? 'Night' : 'Day';
 
+    const normaliseTimelineClockForBuild = (time: number): number => {
+        const numericTime = Number(time);
+        if (!Number.isFinite(numericTime)) return NaN;
+        return numericTime < 6 ? numericTime + 24 : numericTime;
+    };
     const normalisedFlyingWindowExclusions = flyingWindowExclusions
-        .map(period => ({
-            ...period,
-            startTime: Number(period.startTime),
-            endTime: Number(period.endTime) <= Number(period.startTime) ? Number(period.endTime) + 24 : Number(period.endTime),
-            restriction: period.restriction || 'both',
-        }))
+        .map(period => {
+            const startTime = normaliseTimelineClockForBuild(period.startTime);
+            let endTime = normaliseTimelineClockForBuild(period.endTime);
+            if (Number.isFinite(startTime) && Number.isFinite(endTime) && endTime <= startTime) endTime += 24;
+            return {
+                ...period,
+                startTime,
+                endTime,
+                rawStartTime: Number(period.startTime),
+                rawEndTime: Number(period.endTime),
+                restriction: period.restriction || 'both',
+            };
+        })
         .filter(period => (
             Number.isFinite(period.startTime)
             && Number.isFinite(period.endTime)
@@ -2272,7 +2301,7 @@ function generateDfpInternal(
         ));
 
     const pointIsInsideExclusion = (time: number, period: FlyingWindowExclusionPeriod): boolean => {
-        const comparableTime = time < period.startTime && period.endTime > 24 ? time + 24 : time;
+        const comparableTime = time < 6 ? time + 24 : time;
         return comparableTime >= period.startTime - 0.001 && comparableTime < period.endTime - 0.001;
     };
 
@@ -2303,6 +2332,27 @@ function generateDfpInternal(
 
     recordProgress({ message: 'Initializing DFP build...', percentage: 0 });
     buildDebugLog('[SEQ-DIAG] generateDfpInternal entered');
+    if (windowNormalisationWarnings.length > 0) {
+        console.warn('[NEO-Build][WindowDiagnostics] Build window values were normalised before scheduling.', {
+            warnings: windowNormalisationWarnings,
+            raw: {
+                dayStart: rawFlyingStartTime,
+                dayEnd: rawFlyingEndTime,
+                ftdStart: rawFtdStartTime,
+                ftdEnd: rawFtdEndTime,
+                nightStart: rawCommenceNightFlying,
+                nightEnd: rawCeaseNightFlying,
+            },
+            effective: {
+                dayStart: flyingStartTime,
+                dayEnd: flyingEndTime,
+                ftdStart: ftdStartTime,
+                ftdEnd: ftdEndTime,
+                nightStart: commenceNightFlying,
+                nightEnd: ceaseNightFlying,
+            },
+        });
+    }
 
     // Preserve only explicitly fixed Active DFP events as build constraints.
     // Carrying the full previous schedule into a rebuild preserves old conflicts
@@ -2337,6 +2387,29 @@ function generateDfpInternal(
             remedialRequests: remedialRequests.length,
             forcedRemedialRequests: remedialRequests.filter(r => r.forceSchedule).length,
             activeDfpEvents: activeDfpEventsWithoutDate.length,
+            windows: {
+                raw: {
+                    dayStart: rawFlyingStartTime,
+                    dayEnd: rawFlyingEndTime,
+                    ftdStart: rawFtdStartTime,
+                    ftdEnd: rawFtdEndTime,
+                    allowNightFlying,
+                    nightStart: rawCommenceNightFlying,
+                    nightEnd: rawCeaseNightFlying,
+                    flyingWindowExclusions,
+                },
+                effective: {
+                    dayStart: flyingStartTime,
+                    dayEnd: flyingEndTime,
+                    ftdStart: ftdStartTime,
+                    ftdEnd: ftdEndTime,
+                    allowNightFlying,
+                    nightStart: commenceNightFlying,
+                    nightEnd: ceaseNightFlying,
+                    flyingWindowExclusions: normalisedFlyingWindowExclusions,
+                },
+                warnings: windowNormalisationWarnings,
+            },
         },
         activeTrainees: {
             total: 0,
@@ -3996,6 +4069,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             successes: 0,
             noSyllabusItem: 0,
             blockedPrimaryMissing: 0,
+            noSearchWindow: 0,
+            rejectionReasons: {} as Record<string, number>,
+            rejectionSamples: [] as any[],
             attemptSamples: [] as any[],
             sample: list.slice(0, 20).map(trainee => {
                 const nextEvents = traineeNextEventMap.get(trainee.fullName);
@@ -4112,10 +4188,47 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             const cappedLatestEventStart = typeof latestStartBefore === 'number'
                                 ? Math.min(latestEventStart, latestStartBefore - 0.001)
                                 : latestEventStart;
+                            if (cappedLatestEventStart < earliestEventStart - 0.001) {
+                                listDiag.noSearchWindow++;
+                                if (listDiag.rejectionSamples.length < 80) {
+                                    listDiag.rejectionSamples.push({
+                                        phase: 'slot-window',
+                                        reason: 'NO_SEARCH_WINDOW',
+                                        trainee: trainee.fullName,
+                                        event: syllabusItem.code,
+                                        type,
+                                        space,
+                                        earliestEventStart,
+                                        latestEventStart,
+                                        cappedLatestEventStart,
+                                        startTimeBoundary,
+                                        endTimeBoundary,
+                                        latestStartBefore,
+                                    });
+                                }
+                            }
 
                             for (let time = earliestEventStart; time <= cappedLatestEventStart; time += timeIncrement) {
                                 listDiag.attempts++;
-                                const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse);
+                                const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse, {
+                                    diagnosticTrace: (traceEntry) => {
+                                        if (traceEntry?.outcome !== 'rejected') return;
+                                        const reason = traceEntry.reason || 'UNKNOWN_REJECTION';
+                                        listDiag.rejectionReasons[reason] = (listDiag.rejectionReasons[reason] || 0) + 1;
+                                        if (listDiag.rejectionSamples.length < 80) {
+                                            listDiag.rejectionSamples.push({
+                                                reason,
+                                                trainee: traceEntry.trainee,
+                                                event: traceEntry.event,
+                                                type: traceEntry.type,
+                                                startTime: traceEntry.startTime,
+                                                displayTime: traceEntry.displayTime,
+                                                dayNight: traceEntry.dayNight,
+                                                details: traceEntry.details,
+                                            });
+                                        }
+                                    },
+                                });
                                 if (isMandatoryTraceList && listDiag.attemptSamples.length < 250) {
                                     listDiag.attemptSamples.push({
                                         trainee: trainee.fullName,
@@ -9120,6 +9233,26 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     };
     saveCurrencyPriorityDiagnostics('final');
     saveNeoBuildDiag('final');
+    if (sortedEvents.length === 0 || windowNormalisationWarnings.length > 0 || normalisedFlyingWindowExclusions.length > 0) {
+        console.info('[NEO-Build][ScheduleDiagnostics]', {
+            buildDate,
+            final: neoBuildDiag.final,
+            windows: neoBuildDiag.input.windows,
+            scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]: [string, any]) => [
+                name,
+                {
+                    input: diag.input,
+                    attempts: diag.attempts,
+                    successes: diag.successes,
+                    noSearchWindow: diag.noSearchWindow,
+                    noSyllabusItem: diag.noSyllabusItem,
+                    blockedPrimaryMissing: diag.blockedPrimaryMissing,
+                    rejectionReasons: diag.rejectionReasons,
+                    rejectionSamples: diag.rejectionSamples?.slice(0, 12),
+                }
+            ])),
+        });
+    }
     buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report". Run __downloadNeoBuildDiagnostic() in DevTools to export.', {
         activeTrainees: neoBuildDiag.activeTrainees,
         nextEventLists: neoBuildDiag.nextEventLists,
