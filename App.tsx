@@ -2410,6 +2410,15 @@ function generateDfpInternal(
                 },
                 warnings: windowNormalisationWarnings,
             },
+            resourceInventory: {
+                aircraft: availableAircraftCount,
+                ftd: ftdCount,
+                cpt: cptCount,
+                ground: 6,
+                aircraftConfigCapacities: config.aircraftConfigCapacities || null,
+                aircraftConfigIdsByResource,
+                aircraftConfigurationDefinitions: aircraftConfigDefinitionsForBuild,
+            },
         },
         activeTrainees: {
             total: 0,
@@ -2420,6 +2429,8 @@ function generateDfpInternal(
         nextEventLists: null,
         nextSamples: [],
         scheduleLists: {},
+        scheduleFlow: [] as any[],
+        finalCleanup: null,
         remedialDataMovement: {
             sourceTrace: config.remedialDataMovementTrace || [] as any[],
             buildInputRequests: [] as any[],
@@ -2483,6 +2494,18 @@ function generateDfpInternal(
                 ...neoBuildDiag,
                 storageCompacted: true,
                 storageCompactedReason: error instanceof Error ? error.message : String(error),
+                scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists || {}).map(([name, diag]: [string, any]) => [
+                    name,
+                    {
+                        ...diag,
+                        sample: diag.sample?.slice?.(0, 12) || [],
+                        unplaced: diag.unplaced?.slice?.(0, 20) || [],
+                        rejectionSamples: diag.rejectionSamples?.slice?.(0, 20) || [],
+                        attemptSamples: diag.attemptSamples?.slice?.(0, 30) || [],
+                        searchWindowSamples: diag.searchWindowSamples?.slice?.(0, 20) || [],
+                    }
+                ])),
+                scheduleFlow: (neoBuildDiag.scheduleFlow || []).slice(-80),
                 dayFlightGapDiagnostics: {
                     attempts: neoBuildDiag.dayFlightGapDiagnostics.attempts.slice(-500),
                     instructorTrace: neoBuildDiag.dayFlightGapDiagnostics.instructorTrace.slice(-500),
@@ -4067,12 +4090,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             input: list.length,
             attempts: 0,
             successes: 0,
+            generatedEventsAtStart: generatedEvents.length,
+            generatedEventsAtEnd: generatedEvents.length,
+            generatedDelta: 0,
+            candidateSlots: 0,
             noSyllabusItem: 0,
             blockedPrimaryMissing: 0,
             noSearchWindow: 0,
             rejectionReasons: {} as Record<string, number>,
             rejectionSamples: [] as any[],
             attemptSamples: [] as any[],
+            searchWindowSamples: [] as any[],
             sample: list.slice(0, 20).map(trainee => {
                 const nextEvents = traineeNextEventMap.get(trainee.fullName);
                 const item = !isPlusOne && syllabusOverrides?.has(trainee.fullName)
@@ -4188,6 +4216,35 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             const cappedLatestEventStart = typeof latestStartBefore === 'number'
                                 ? Math.min(latestEventStart, latestStartBefore - 0.001)
                                 : latestEventStart;
+                            const possibleSlotCount = cappedLatestEventStart >= earliestEventStart - 0.001
+                                ? Math.floor(((cappedLatestEventStart - earliestEventStart) / timeIncrement) + 0.001) + 1
+                                : 0;
+                            listDiag.candidateSlots += Math.max(0, possibleSlotCount);
+                            if (listDiag.searchWindowSamples.length < 80) {
+                                listDiag.searchWindowSamples.push({
+                                    trainee: trainee.fullName,
+                                    event: syllabusItem.code,
+                                    eventType: syllabusItem.type,
+                                    eventDayNight: syllabusItem.dayNight,
+                                    type,
+                                    isPlusOne,
+                                    isNightPass,
+                                    duration: syllabusItem.duration,
+                                    preFlightTime: syllabusItem.preFlightTime || 0,
+                                    postFlightTime: syllabusItem.postFlightTime || 0,
+                                    primaryOnly,
+                                    requireNightAircraftReuse,
+                                    searchStartTime,
+                                    startTimeBoundary,
+                                    endTimeBoundary,
+                                    latestStartBefore,
+                                    space,
+                                    earliestEventStart,
+                                    latestEventStart,
+                                    cappedLatestEventStart,
+                                    possibleSlotCount,
+                                });
+                            }
                             if (cappedLatestEventStart < earliestEventStart - 0.001) {
                                 listDiag.noSearchWindow++;
                                 if (listDiag.rejectionSamples.length < 80) {
@@ -4349,6 +4406,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
             }
             unplacedTrainees = remainingForNextPass;
+            listDiag.generatedEventsAtEnd = generatedEvents.length;
+            listDiag.generatedDelta = listDiag.generatedEventsAtEnd - listDiag.generatedEventsAtStart;
             listDiag.unplaced = unplacedTrainees.slice(0, 40).map(trainee => {
                 const nextEvents = traineeNextEventMap.get(trainee.fullName);
                 const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
@@ -4360,6 +4419,29 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             });
             saveNeoBuildDiag(`schedule-list-pass:${listName}`);
         }
+        listDiag.generatedEventsAtEnd = generatedEvents.length;
+        listDiag.generatedDelta = listDiag.generatedEventsAtEnd - listDiag.generatedEventsAtStart;
+        neoBuildDiag.scheduleFlow.push({
+            listName,
+            type,
+            isPlusOne,
+            isNightPass,
+            input: listDiag.input,
+            attempts: listDiag.attempts,
+            candidateSlots: listDiag.candidateSlots,
+            successes: listDiag.successes,
+            generatedEventsAtStart: listDiag.generatedEventsAtStart,
+            generatedEventsAtEnd: listDiag.generatedEventsAtEnd,
+            generatedDelta: listDiag.generatedDelta,
+            noSearchWindow: listDiag.noSearchWindow,
+            noSyllabusItem: listDiag.noSyllabusItem,
+            blockedPrimaryMissing: listDiag.blockedPrimaryMissing,
+            topRejectionReasons: Object.entries(listDiag.rejectionReasons)
+                .sort((a: any, b: any) => b[1] - a[1])
+                .slice(0, 8),
+            firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
+            firstRejectionSample: listDiag.rejectionSamples[0] || null,
+        });
         saveNeoBuildDiag(`schedule-list-end:${listName}`);
 
         // OLD STBY LOGIC REMOVED - Will be replaced with separate STBY pass after main build
@@ -8797,8 +8879,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return acceptedEvents;
     };
 
+    const generatedEventsBeforeFinalCleanup = generatedEvents.length;
     const dayNightSeparatedEvents = enforceBuildDayNightSeparation(generatedEvents);
     const conflictSafeEvents = repairGeneratedGroundConflicts(dayNightSeparatedEvents);
+    neoBuildDiag.finalCleanup = {
+        beforeDayNightGuard: generatedEventsBeforeFinalCleanup,
+        afterDayNightGuard: dayNightSeparatedEvents.length,
+        removedByDayNightGuard: generatedEventsBeforeFinalCleanup - dayNightSeparatedEvents.length,
+        afterGroundRepair: conflictSafeEvents.length,
+        removedByGroundRepair: dayNightSeparatedEvents.length - conflictSafeEvents.length,
+    };
 
     // Sort events by resource order, then by start time
     const sortedEvents = [...conflictSafeEvents].sort((a, b) => {
@@ -9236,19 +9326,33 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     if (sortedEvents.length === 0 || windowNormalisationWarnings.length > 0 || normalisedFlyingWindowExclusions.length > 0) {
         console.info('[NEO-Build][ScheduleDiagnostics]', {
             buildDate,
+            input: {
+                instructors: neoBuildDiag.input.instructors,
+                trainees: neoBuildDiag.input.trainees,
+                activeTrainees: neoBuildDiag.activeTrainees,
+                nextEventLists: neoBuildDiag.nextEventLists,
+                resourceInventory: neoBuildDiag.input.resourceInventory,
+            },
             final: neoBuildDiag.final,
+            finalCleanup: neoBuildDiag.finalCleanup,
             windows: neoBuildDiag.input.windows,
+            scheduleFlow: neoBuildDiag.scheduleFlow,
             scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]: [string, any]) => [
                 name,
                 {
                     input: diag.input,
                     attempts: diag.attempts,
                     successes: diag.successes,
+                    candidateSlots: diag.candidateSlots,
+                    generatedEventsAtStart: diag.generatedEventsAtStart,
+                    generatedEventsAtEnd: diag.generatedEventsAtEnd,
+                    generatedDelta: diag.generatedDelta,
                     noSearchWindow: diag.noSearchWindow,
                     noSyllabusItem: diag.noSyllabusItem,
                     blockedPrimaryMissing: diag.blockedPrimaryMissing,
                     rejectionReasons: diag.rejectionReasons,
                     rejectionSamples: diag.rejectionSamples?.slice(0, 12),
+                    searchWindowSamples: diag.searchWindowSamples?.slice(0, 6),
                 }
             ])),
         });

@@ -59254,6 +59254,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           flyingWindowExclusions: normalisedFlyingWindowExclusions
         },
         warnings: windowNormalisationWarnings
+      },
+      resourceInventory: {
+        aircraft: availableAircraftCount,
+        ftd: ftdCount,
+        cpt: cptCount,
+        ground: 6,
+        aircraftConfigCapacities: config.aircraftConfigCapacities || null,
+        aircraftConfigIdsByResource,
+        aircraftConfigurationDefinitions: aircraftConfigDefinitionsForBuild
       }
     },
     activeTrainees: {
@@ -59265,6 +59274,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     nextEventLists: null,
     nextSamples: [],
     scheduleLists: {},
+    scheduleFlow: [],
+    finalCleanup: null,
     remedialDataMovement: {
       sourceTrace: config.remedialDataMovementTrace || [],
       buildInputRequests: [],
@@ -59327,6 +59338,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ...neoBuildDiag,
         storageCompacted: true,
         storageCompactedReason: error instanceof Error ? error.message : String(error),
+        scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists || {}).map(([name, diag]) => [
+          name,
+          {
+            ...diag,
+            sample: diag.sample?.slice?.(0, 12) || [],
+            unplaced: diag.unplaced?.slice?.(0, 20) || [],
+            rejectionSamples: diag.rejectionSamples?.slice?.(0, 20) || [],
+            attemptSamples: diag.attemptSamples?.slice?.(0, 30) || [],
+            searchWindowSamples: diag.searchWindowSamples?.slice?.(0, 20) || []
+          }
+        ])),
+        scheduleFlow: (neoBuildDiag.scheduleFlow || []).slice(-80),
         dayFlightGapDiagnostics: {
           attempts: neoBuildDiag.dayFlightGapDiagnostics.attempts.slice(-500),
           instructorTrace: neoBuildDiag.dayFlightGapDiagnostics.instructorTrace.slice(-500),
@@ -60617,12 +60640,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       input: list.length,
       attempts: 0,
       successes: 0,
+      generatedEventsAtStart: generatedEvents.length,
+      generatedEventsAtEnd: generatedEvents.length,
+      generatedDelta: 0,
+      candidateSlots: 0,
       noSyllabusItem: 0,
       blockedPrimaryMissing: 0,
       noSearchWindow: 0,
       rejectionReasons: {},
       rejectionSamples: [],
       attemptSamples: [],
+      searchWindowSamples: [],
       sample: list.slice(0, 20).map((trainee) => {
         const nextEvents = traineeNextEventMap.get(trainee.fullName);
         const item = !isPlusOne && syllabusOverrides?.has(trainee.fullName) ? syllabusOverrides.get(trainee.fullName) : isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
@@ -60694,6 +60722,33 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               const earliestEventStart = mustFitFullBookingWindow ? space.start + (syllabusItem.preFlightTime || 0) : space.start;
               const latestEventStart = mustFitFullBookingWindow ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0) : space.end - syllabusItem.duration;
               const cappedLatestEventStart = typeof latestStartBefore === "number" ? Math.min(latestEventStart, latestStartBefore - 1e-3) : latestEventStart;
+              const possibleSlotCount = cappedLatestEventStart >= earliestEventStart - 1e-3 ? Math.floor((cappedLatestEventStart - earliestEventStart) / timeIncrement + 1e-3) + 1 : 0;
+              listDiag.candidateSlots += Math.max(0, possibleSlotCount);
+              if (listDiag.searchWindowSamples.length < 80) {
+                listDiag.searchWindowSamples.push({
+                  trainee: trainee.fullName,
+                  event: syllabusItem.code,
+                  eventType: syllabusItem.type,
+                  eventDayNight: syllabusItem.dayNight,
+                  type,
+                  isPlusOne,
+                  isNightPass,
+                  duration: syllabusItem.duration,
+                  preFlightTime: syllabusItem.preFlightTime || 0,
+                  postFlightTime: syllabusItem.postFlightTime || 0,
+                  primaryOnly,
+                  requireNightAircraftReuse,
+                  searchStartTime,
+                  startTimeBoundary,
+                  endTimeBoundary,
+                  latestStartBefore,
+                  space,
+                  earliestEventStart,
+                  latestEventStart,
+                  cappedLatestEventStart,
+                  possibleSlotCount
+                });
+              }
               if (cappedLatestEventStart < earliestEventStart - 1e-3) {
                 listDiag.noSearchWindow++;
                 if (listDiag.rejectionSamples.length < 80) {
@@ -60845,6 +60900,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
       }
       unplacedTrainees = remainingForNextPass;
+      listDiag.generatedEventsAtEnd = generatedEvents.length;
+      listDiag.generatedDelta = listDiag.generatedEventsAtEnd - listDiag.generatedEventsAtStart;
       listDiag.unplaced = unplacedTrainees.slice(0, 40).map((trainee) => {
         const nextEvents = traineeNextEventMap.get(trainee.fullName);
         const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
@@ -60856,6 +60913,27 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       saveNeoBuildDiag(`schedule-list-pass:${listName}`);
     }
+    listDiag.generatedEventsAtEnd = generatedEvents.length;
+    listDiag.generatedDelta = listDiag.generatedEventsAtEnd - listDiag.generatedEventsAtStart;
+    neoBuildDiag.scheduleFlow.push({
+      listName,
+      type,
+      isPlusOne,
+      isNightPass,
+      input: listDiag.input,
+      attempts: listDiag.attempts,
+      candidateSlots: listDiag.candidateSlots,
+      successes: listDiag.successes,
+      generatedEventsAtStart: listDiag.generatedEventsAtStart,
+      generatedEventsAtEnd: listDiag.generatedEventsAtEnd,
+      generatedDelta: listDiag.generatedDelta,
+      noSearchWindow: listDiag.noSearchWindow,
+      noSyllabusItem: listDiag.noSyllabusItem,
+      blockedPrimaryMissing: listDiag.blockedPrimaryMissing,
+      topRejectionReasons: Object.entries(listDiag.rejectionReasons).sort((a, b) => b[1] - a[1]).slice(0, 8),
+      firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
+      firstRejectionSample: listDiag.rejectionSamples[0] || null
+    });
     saveNeoBuildDiag(`schedule-list-end:${listName}`);
   };
   const scheduleEvent = (trainee, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false, requirePreferredNightAircraft = false, options = {}) => {
@@ -64366,8 +64444,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return acceptedEvents;
   };
+  const generatedEventsBeforeFinalCleanup = generatedEvents.length;
   const dayNightSeparatedEvents = enforceBuildDayNightSeparation(generatedEvents);
   const conflictSafeEvents = repairGeneratedGroundConflicts(dayNightSeparatedEvents);
+  neoBuildDiag.finalCleanup = {
+    beforeDayNightGuard: generatedEventsBeforeFinalCleanup,
+    afterDayNightGuard: dayNightSeparatedEvents.length,
+    removedByDayNightGuard: generatedEventsBeforeFinalCleanup - dayNightSeparatedEvents.length,
+    afterGroundRepair: conflictSafeEvents.length,
+    removedByGroundRepair: dayNightSeparatedEvents.length - conflictSafeEvents.length
+  };
   const sortedEvents = [...conflictSafeEvents].sort((a, b) => {
     const orderA = resourceOrderMap.get(a.resourceId) ?? 9999;
     const orderB = resourceOrderMap.get(b.resourceId) ?? 9999;
@@ -64762,19 +64848,33 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   if (sortedEvents.length === 0 || windowNormalisationWarnings.length > 0 || normalisedFlyingWindowExclusions.length > 0) {
     console.info("[NEO-Build][ScheduleDiagnostics]", {
       buildDate,
+      input: {
+        instructors: neoBuildDiag.input.instructors,
+        trainees: neoBuildDiag.input.trainees,
+        activeTrainees: neoBuildDiag.activeTrainees,
+        nextEventLists: neoBuildDiag.nextEventLists,
+        resourceInventory: neoBuildDiag.input.resourceInventory
+      },
       final: neoBuildDiag.final,
+      finalCleanup: neoBuildDiag.finalCleanup,
       windows: neoBuildDiag.input.windows,
+      scheduleFlow: neoBuildDiag.scheduleFlow,
       scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]) => [
         name,
         {
           input: diag.input,
           attempts: diag.attempts,
           successes: diag.successes,
+          candidateSlots: diag.candidateSlots,
+          generatedEventsAtStart: diag.generatedEventsAtStart,
+          generatedEventsAtEnd: diag.generatedEventsAtEnd,
+          generatedDelta: diag.generatedDelta,
           noSearchWindow: diag.noSearchWindow,
           noSyllabusItem: diag.noSyllabusItem,
           blockedPrimaryMissing: diag.blockedPrimaryMissing,
           rejectionReasons: diag.rejectionReasons,
-          rejectionSamples: diag.rejectionSamples?.slice(0, 12)
+          rejectionSamples: diag.rejectionSamples?.slice(0, 12),
+          searchWindowSamples: diag.searchWindowSamples?.slice(0, 6)
         }
       ]))
     });
