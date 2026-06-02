@@ -67409,6 +67409,7 @@ ${"=".repeat(60)}`);
   const [instructorRemediesForChoice, setInstructorRemediesForChoice] = reactExports.useState([]);
   const [showAircraftAvailability, setShowAircraftAvailability] = reactExports.useState(true);
   const [currentAircraftAvailability, setCurrentAircraftAvailability] = reactExports.useState(availableAircraftCount);
+  const [showDfpSidePanel, setShowDfpSidePanel] = reactExports.useState(false);
   const [showPauseFlightOps, setShowPauseFlightOps] = reactExports.useState(false);
   const [showPausePanel, setShowPausePanel] = reactExports.useState(false);
   const [pausePanelPhase, setPausePanelPhase] = reactExports.useState("configure");
@@ -76725,8 +76726,50 @@ Do you want to replace the existing entry?`,
             onShowChangePassword: () => setShowChangePassword(true)
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-hidden flex flex-row min-h-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 overflow-hidden flex flex-row min-h-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }),
+          activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => setShowDfpSidePanel((value) => !value),
+                "aria-label": showDfpSidePanel ? "Close DFP side panel" : "Open DFP side panel",
+                className: "absolute right-0 top-4 z-50 flex h-8 w-[118px] -translate-y-0 items-center justify-between rounded-l-md border border-r-0 border-slate-500/60 bg-slate-950/92 px-3 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "span",
+                    {
+                      className: "h-5 w-8 opacity-80",
+                      style: {
+                        backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                        backgroundSize: "8px 8px"
+                      }
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-base font-semibold leading-none", children: showDfpSidePanel ? ">" : "<" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "span",
+                    {
+                      className: "h-5 w-8 opacity-80",
+                      style: {
+                        backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                        backgroundSize: "8px 8px"
+                      }
+                    }
+                  )
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "aside",
+              {
+                className: `absolute inset-y-0 right-0 z-40 w-1/3 min-w-[320px] max-w-[560px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full pointer-events-none"}`,
+                "aria-hidden": !showDfpSidePanel,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" })
+              }
+            )
+          ] }),
           showPausePanel && /* @__PURE__ */ jsxRuntimeExports.jsx(
             PauseFlightOpsPanel,
             {
