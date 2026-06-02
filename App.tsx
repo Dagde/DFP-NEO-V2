@@ -24008,7 +24008,7 @@ updates.forEach(update => {
                                 type="button"
                                 onClick={() => setShowDfpSidePanel(value => !value)}
                                 aria-label={showDfpSidePanel ? 'Close DFP side panel' : 'Open DFP side panel'}
-                                className="absolute right-[-36px] top-1/2 z-50 flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
+                                className="fixed right-[96px] top-1/2 z-[90] flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
                             >
                                 <span
                                     className="h-4 w-7 opacity-80"
