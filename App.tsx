@@ -18041,6 +18041,7 @@ const App: React.FC = () => {
             allowNightFlying,
             commenceNightFlying,
             ceaseNightFlying,
+            flyingWindowExclusions,
             buildDate: buildDfpDate,
             highestPriorityEvents: eventsToUse,
             instructorPriority,

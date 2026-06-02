@@ -71757,6 +71757,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       allowNightFlying,
       commenceNightFlying,
       ceaseNightFlying,
+      flyingWindowExclusions,
       buildDate: buildDfpDate,
       highestPriorityEvents: eventsToUse,
       instructorPriority,
