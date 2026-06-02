@@ -893,6 +893,7 @@ interface DfpConfig {
   allowNightFlying: boolean;
   commenceNightFlying: number;
   ceaseNightFlying: number;
+  flyingWindowExclusions?: FlyingWindowExclusionPeriod[];
   highestPriorityEvents: ScheduleEvent[];
   instructorPriority: InstructorPriorityConfig;
   traineeLMPs: Map<string, SyllabusItemDetail[]>;
@@ -1988,6 +1989,7 @@ function generateDfpInternal(
         highestPriorityEvents, instructorPriority, traineeLMPs, flightTurnaround,
         ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
         eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
+        flyingWindowExclusions = [],
         getEventDayNightClassification,
         staffSharingEnabled, staffSharingUnits, staffSharingGroups
     } = config;

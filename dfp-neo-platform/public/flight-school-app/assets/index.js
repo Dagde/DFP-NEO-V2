@@ -21400,7 +21400,7 @@ const PrioritiesView = ({
   onUpdateCommenceNightFlying,
   ceaseNightFlying,
   onUpdateCeaseNightFlying,
-  flyingWindowExclusions: flyingWindowExclusions2 = [],
+  flyingWindowExclusions = [],
   onUpdateFlyingWindowExclusions,
   instructorsData,
   traineesData,
@@ -21491,7 +21491,7 @@ const PrioritiesView = ({
   };
   reactExports.useEffect(() => {
     setFlyingWindowTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
-  }, [flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, allowNightFlying, flyingWindowExclusions2]);
+  }, [flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, allowNightFlying, flyingWindowExclusions]);
   const totalPercentage = reactExports.useMemo(() => {
     return Array.from(coursePercentages.values()).reduce((sum, p) => sum + p, 0);
   }, [coursePercentages]);
@@ -21591,7 +21591,7 @@ const PrioritiesView = ({
       const endHour2 = normalizeTimelineHour(ceaseNightFlying);
       return target.edge === "start" ? constrain(timelineStartHour, endHour2 - timelineMinGap) : constrain(startHour2 + timelineMinGap, timelineEndHour);
     }
-    const period = flyingWindowExclusions2.find((item) => item.id === target.id);
+    const period = flyingWindowExclusions.find((item) => item.id === target.id);
     if (!period) return nextTime;
     const startHour = normalizeTimelineHour(period.startTime);
     const endHour = normalizeTimelineHour(period.endTime);
@@ -21623,7 +21623,7 @@ const PrioritiesView = ({
     });
   };
   const addExclusionPeriod = () => {
-    const nextStart = Math.min(Math.max(flyingStartTime + flyingWindowExclusions2.length * 0.5, 1 / 60), 23.75);
+    const nextStart = Math.min(Math.max(flyingStartTime + flyingWindowExclusions.length * 0.5, 1 / 60), 23.75);
     const nextEnd = Math.min(nextStart + 0.5, 23 + 59 / 60);
     const nextPeriod = {
       id: v4(),
@@ -21632,10 +21632,10 @@ const PrioritiesView = ({
       restriction: "both"
     };
     logAudit("Priorities", "Edit", "Added flying window exclusion", `${formatTimeLabel(nextStart)}-${formatTimeLabel(nextEnd)} both`);
-    onUpdateFlyingWindowExclusions([...flyingWindowExclusions2, nextPeriod]);
+    onUpdateFlyingWindowExclusions([...flyingWindowExclusions, nextPeriod]);
   };
   const updateExclusionPeriod = (id, updates) => {
-    const nextPeriods = flyingWindowExclusions2.map((period) => {
+    const nextPeriods = flyingWindowExclusions.map((period) => {
       if (period.id !== id) return period;
       const nextPeriod = { ...period, ...updates };
       const startHour = normalizeTimelineHour(nextPeriod.startTime);
@@ -21649,11 +21649,11 @@ const PrioritiesView = ({
     onUpdateFlyingWindowExclusions(nextPeriods);
   };
   const removeExclusionPeriod = (id) => {
-    const removed = flyingWindowExclusions2.find((period) => period.id === id);
+    const removed = flyingWindowExclusions.find((period) => period.id === id);
     if (removed) {
       logAudit("Priorities", "Edit", "Removed flying window exclusion", `${formatTimeLabel(removed.startTime)}-${formatTimeLabel(removed.endTime)} ${removed.restriction}`);
     }
-    onUpdateFlyingWindowExclusions(flyingWindowExclusions2.filter((period) => period.id !== id));
+    onUpdateFlyingWindowExclusions(flyingWindowExclusions.filter((period) => period.id !== id));
   };
   const restrictionLabel = (restriction) => {
     if (restriction === "departures") return "No departures";
@@ -22138,7 +22138,7 @@ const PrioritiesView = ({
       { key: "night-start", time: commenceNightFlying, label: "Night start", color: "bg-indigo-100", text: "text-indigo-100", target: { kind: "night", edge: "start" } },
       { key: "night-end", time: ceaseNightFlying, label: "Night end", color: "bg-indigo-100", text: "text-indigo-100", target: { kind: "night", edge: "end" } }
     ] : [],
-    ...flyingWindowExclusions2.flatMap((period, index) => [
+    ...flyingWindowExclusions.flatMap((period, index) => [
       { key: `exclusion-${period.id}-start`, time: period.startTime, label: "Exclusion start", color: getExclusionBoundaryColor(index), text: "text-rose-100", target: { kind: "exclusion", id: period.id, edge: "start" } },
       { key: `exclusion-${period.id}-end`, time: period.endTime, label: "Exclusion end", color: getExclusionBoundaryColor(index), text: "text-rose-100", target: { kind: "exclusion", id: period.id, edge: "end" } }
     ])
@@ -22354,7 +22354,7 @@ const PrioritiesView = ({
                   title: `Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`
                 }
               ),
-              flyingWindowExclusions2.map((period, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              flyingWindowExclusions.map((period, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
                   className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${getExclusionTimelineShade(index)}`,
@@ -22424,8 +22424,8 @@ const PrioritiesView = ({
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
-            flyingWindowExclusions2.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-dashed border-slate-600 bg-slate-950/60 p-4 text-sm text-slate-300", children: "No departure or arrival exclusions configured." }),
-            flyingWindowExclusions2.map((period, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 rounded-md border border-slate-700 bg-slate-950/70 p-3 lg:grid-cols-[64px_1fr_1fr_1.3fr_auto] lg:items-end", children: [
+            flyingWindowExclusions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-dashed border-slate-600 bg-slate-950/60 p-4 text-sm text-slate-300", children: "No departure or arrival exclusions configured." }),
+            flyingWindowExclusions.map((period, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 rounded-md border border-slate-700 bg-slate-950/70 p-3 lg:grid-cols-[64px_1fr_1fr_1.3fr_auto] lg:items-end", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Period" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block rounded border border-slate-700 bg-slate-900 px-2 py-2 text-center text-sm font-bold text-white", children: index + 1 })
@@ -58969,6 +58969,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     sctFlights,
     remedialRequests,
     sctEvents,
+    flyingWindowExclusions = [],
     getEventDayNightClassification: getEventDayNightClassification2,
     staffSharingEnabled,
     staffSharingUnits,
@@ -66909,7 +66910,7 @@ const App = () => {
   const [allowNightFlying, setAllowNightFlying] = reactExports.useState(true);
   const [commenceNightFlying, setCommenceNightFlying] = reactExports.useState(18.5);
   const [ceaseNightFlying, setCeaseNightFlying] = reactExports.useState(23.5);
-  const [flyingWindowExclusions2, setFlyingWindowExclusions] = reactExports.useState([]);
+  const [flyingWindowExclusions, setFlyingWindowExclusions] = reactExports.useState([]);
   const classifyStartBySolarDaylight = reactExports.useCallback((startTime, targetDate = date) => {
     const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
     const solarClassification = classifyDayNightBySunTimes(startTime, sunTimes);
@@ -67703,7 +67704,7 @@ ${"=".repeat(60)}`);
       allowNightFlying,
       commenceNightFlying,
       ceaseNightFlying,
-      flyingWindowExclusions: flyingWindowExclusions2,
+      flyingWindowExclusions,
       availableAircraftCount,
       neoAvailableAircraftCount,
       neoAircraftConfigCapacities,
@@ -67749,7 +67750,7 @@ ${"=".repeat(60)}`);
     allowNightFlying,
     commenceNightFlying,
     ceaseNightFlying,
-    flyingWindowExclusions2,
+    flyingWindowExclusions,
     availableAircraftCount,
     neoAvailableAircraftCount,
     neoAircraftConfigCapacities,
@@ -75187,7 +75188,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onUpdateCommenceNightFlying: setCommenceNightFlying,
             ceaseNightFlying,
             onUpdateCeaseNightFlying: setCeaseNightFlying,
-            flyingWindowExclusions: flyingWindowExclusions2,
+            flyingWindowExclusions,
             onUpdateFlyingWindowExclusions: setFlyingWindowExclusions,
             instructorsData,
             traineesData,
