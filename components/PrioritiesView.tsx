@@ -327,8 +327,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const timelineEndHour = 25;
   const timelineSpanHours = timelineEndHour - timelineStartHour;
   const timelineMinGap = 0.25;
+  const timelineBoundaryLabelWidthPx = 104;
+  const timelineBoundaryLabelGapPx = 5;
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const [activeTimelineDrag, setActiveTimelineDrag] = useState<TimelineDragState | null>(null);
+  const [timelineChartWidth, setTimelineChartWidth] = useState(0);
   const normalizeTimelineHour = (time: number): number => {
     let value = Number(time) || 0;
     if (value < timelineStartHour) value += 24;
@@ -359,6 +362,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return `${String(hour).padStart(2, '0')}00`;
   };
   const timelineTicks = [6, 9, 12, 15, 18, 21, 24, 25];
+  const exclusionTimelineShades = [
+    'bg-rose-400/30 ring-rose-200/24',
+    'bg-amber-300/26 ring-amber-100/24',
+    'bg-fuchsia-400/24 ring-fuchsia-100/24',
+    'bg-emerald-300/22 ring-emerald-100/22',
+    'bg-orange-300/24 ring-orange-100/22',
+  ];
+  const exclusionBoundaryColors = ['bg-rose-100', 'bg-amber-100', 'bg-fuchsia-100', 'bg-emerald-100', 'bg-orange-100'];
+  const getExclusionTimelineShade = (index: number): string => exclusionTimelineShades[index % exclusionTimelineShades.length];
+  const getExclusionBoundaryColor = (index: number): string => exclusionBoundaryColors[index % exclusionBoundaryColors.length];
+  const getTimelinePixelLeft = (time: number): number => (getTimelineLeft(time) / 100) * timelineChartWidth;
+  const boundaryLabelsOverlap = (firstTime: number, secondTime: number): boolean => {
+    if (timelineChartWidth <= 0) return Math.abs(getTimelineLeft(firstTime) - getTimelineLeft(secondTime)) < 9;
+    return Math.abs(getTimelinePixelLeft(firstTime) - getTimelinePixelLeft(secondTime)) < timelineBoundaryLabelWidthPx + timelineBoundaryLabelGapPx;
+  };
 
   const constrainTimelineTime = (target: TimelineDragTarget, nextTime: number): number => {
     const nextHour = normalizeTimelineHour(nextTime);
@@ -457,6 +475,25 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (restriction === 'arrivals') return 'No arrivals';
     return 'No departures or arrivals';
   };
+
+  useEffect(() => {
+    const timelineElement = timelineRef.current;
+    if (!timelineElement) return undefined;
+
+    const updateTimelineWidth = () => {
+      setTimelineChartWidth(timelineElement.getBoundingClientRect().width);
+    };
+    updateTimelineWidth();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateTimelineWidth);
+      return () => window.removeEventListener('resize', updateTimelineWidth);
+    }
+
+    const observer = new ResizeObserver(updateTimelineWidth);
+    observer.observe(timelineElement);
+    return () => observer.disconnect();
+  }, [showExclusionPlanner]);
 
   useEffect(() => {
     if (!activeTimelineDrag) return undefined;
@@ -1079,18 +1116,27 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       { key: 'night-start', time: commenceNightFlying, label: 'Night start', color: 'bg-indigo-100', text: 'text-indigo-100', target: { kind: 'night' as const, edge: 'start' as const } },
       { key: 'night-end', time: ceaseNightFlying, label: 'Night end', color: 'bg-indigo-100', text: 'text-indigo-100', target: { kind: 'night' as const, edge: 'end' as const } },
     ] : []),
-    ...flyingWindowExclusions.flatMap(period => ([
-      { key: `exclusion-${period.id}-start`, time: period.startTime, label: 'Exclusion start', color: 'bg-rose-100', text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'start' as const } },
-      { key: `exclusion-${period.id}-end`, time: period.endTime, label: 'Exclusion end', color: 'bg-rose-100', text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'end' as const } },
+    ...flyingWindowExclusions.flatMap((period, index) => ([
+      { key: `exclusion-${period.id}-start`, time: period.startTime, label: 'Exclusion start', color: getExclusionBoundaryColor(index), text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'start' as const } },
+      { key: `exclusion-${period.id}-end`, time: period.endTime, label: 'Exclusion end', color: getExclusionBoundaryColor(index), text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'end' as const } },
     ])),
   ];
 
-  const flyingWindowBoundaryLabels = [
-    { key: 'day-start-label', time: flyingStartTime, label: 'Day start', text: 'text-sky-100', border: 'border-sky-300/50', bg: 'bg-sky-400/12' },
-    { key: 'day-end-label', time: flyingEndTime, label: 'Day end', text: 'text-sky-100', border: 'border-sky-300/50', bg: 'bg-sky-400/12' },
+  const dayEndNightStartOverlap = allowNightFlying && boundaryLabelsOverlap(flyingEndTime, commenceNightFlying);
+  const flyingWindowBoundaryLabels: Array<{
+    key: string;
+    time: number;
+    label: string;
+    text: string;
+    border: string;
+    bg: string;
+    level: 'top' | 'lower';
+  }> = [
+    { key: 'day-start-label', time: flyingStartTime, label: 'Day start', text: 'text-sky-100', border: 'border-sky-300/55', bg: 'bg-sky-400/14', level: 'top' },
+    { key: 'day-end-label', time: flyingEndTime, label: 'Day end', text: 'text-sky-100', border: 'border-sky-300/55', bg: 'bg-sky-400/14', level: 'top' },
     ...(allowNightFlying ? [
-      { key: 'night-start-label', time: commenceNightFlying, label: 'Night start', text: 'text-indigo-100', border: 'border-indigo-300/50', bg: 'bg-indigo-400/14' },
-      { key: 'night-end-label', time: ceaseNightFlying, label: 'Night end', text: 'text-indigo-100', border: 'border-indigo-300/50', bg: 'bg-indigo-400/14' },
+      { key: 'night-start-label', time: commenceNightFlying, label: 'Night start', text: 'text-indigo-100', border: 'border-indigo-300/55', bg: 'bg-indigo-400/15', level: dayEndNightStartOverlap ? 'lower' as const : 'top' as const },
+      { key: 'night-end-label', time: ceaseNightFlying, label: 'Night end', text: 'text-indigo-100', border: 'border-indigo-300/55', bg: 'bg-indigo-400/15', level: 'top' as const },
     ] : []),
   ];
 
@@ -1269,21 +1315,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     <div ref={timelineRef} className="relative h-24 overflow-visible rounded border border-slate-500 bg-slate-900/90 shadow-inner">
                                         <div className="absolute inset-x-0 top-1/2 h-px bg-slate-300/60" />
                                         <div
-                                            className="absolute inset-y-0 rounded-sm bg-sky-300/24 ring-1 ring-inset ring-sky-200/20"
+                                            className="absolute inset-y-0 rounded-sm bg-cyan-300/16 ring-1 ring-inset ring-cyan-100/18"
                                             style={{ left: `${getTimelineLeft(flyingStartTime)}%`, width: `${getTimelineWidth(flyingStartTime, flyingEndTime)}%` }}
                                             title={`Day flying ${formatTimeLabel(flyingStartTime)}-${formatTimeLabel(flyingEndTime)}`}
                                         />
                                         {allowNightFlying && (
                                             <div
-                                                className="absolute inset-y-0 rounded-sm bg-indigo-400/22 ring-1 ring-inset ring-indigo-200/20"
+                                                className="absolute inset-y-0 rounded-sm bg-violet-300/16 ring-1 ring-inset ring-violet-100/18"
                                                 style={{ left: `${getTimelineLeft(commenceNightFlying)}%`, width: `${getTimelineWidth(commenceNightFlying, ceaseNightFlying)}%` }}
                                                 title={`Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`}
                                             />
                                         )}
-                                        {flyingWindowExclusions.map((period) => (
+                                        {flyingWindowExclusions.map((period, index) => (
                                             <div
                                                 key={period.id}
-                                                className="absolute inset-y-0 rounded-sm bg-rose-400/30 ring-1 ring-inset ring-rose-200/20"
+                                                className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${getExclusionTimelineShade(index)}`}
                                                 style={{ left: `${getTimelineLeft(period.startTime)}%`, width: `${getTimelineWidth(period.startTime, period.endTime)}%` }}
                                                 title={`${restrictionLabel(period.restriction)} ${formatTimeLabel(period.startTime)}-${formatTimeLabel(period.endTime)}`}
                                             />
@@ -1317,11 +1363,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             </div>
                                         )}
                                     </div>
-                                    <div className="relative mt-2 h-9">
-                                        {flyingWindowBoundaryLabels.map((marker, index) => (
+                                    <div className="relative mt-2 h-14">
+                                        {flyingWindowBoundaryLabels.map((marker) => (
                                             <span
                                                 key={marker.key}
-                                                className={`absolute top-0 -translate-x-1/2 whitespace-nowrap rounded border ${marker.border} ${marker.bg} px-1.5 py-1 text-[10px] font-semibold ${marker.text} ${index % 2 === 0 ? '' : 'mt-4'}`}
+                                                className={`absolute -translate-x-1/2 whitespace-nowrap rounded border ${marker.border} ${marker.bg} px-1.5 py-1 text-[10px] font-semibold ${marker.text} ${marker.level === 'lower' ? 'top-7' : 'top-0'}`}
                                                 style={{ left: `${getTimelineLeft(marker.time)}%` }}
                                             >
                                                 {marker.label} {formatCompactTimeLabel(marker.time)}
