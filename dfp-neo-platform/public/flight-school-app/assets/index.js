@@ -21523,8 +21523,21 @@ const PrioritiesView = ({
     const minutes = Math.round((bounded - hours) * 60);
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   };
-  const getTimelineLeft = (time) => Math.max(0, Math.min(100, (time || 0) / 24 * 100));
-  const getTimelineWidth = (start, end) => Math.max(0.35, getTimelineLeft(end) - getTimelineLeft(start));
+  const timelineStartHour = 6;
+  const timelineEndHour = 25;
+  const timelineSpanHours = timelineEndHour - timelineStartHour;
+  const normalizeTimelineHour = (time) => {
+    let value = Number(time) || 0;
+    if (value < timelineStartHour) value += 24;
+    return Math.max(timelineStartHour, Math.min(timelineEndHour, value));
+  };
+  const getTimelineLeft = (time) => (normalizeTimelineHour(time) - timelineStartHour) / timelineSpanHours * 100;
+  const getTimelineWidth = (start, end) => {
+    const startHour = normalizeTimelineHour(start);
+    let endHour = normalizeTimelineHour(end);
+    if (endHour <= startHour) endHour = Math.min(timelineEndHour, endHour + 24);
+    return Math.max(0.35, (Math.min(timelineEndHour, endHour) - startHour) / timelineSpanHours * 100);
+  };
   const addExclusionPeriod = () => {
     const nextStart = Math.min(Math.max(flyingStartTime + flyingWindowExclusions2.length * 0.5, 1 / 60), 23.75);
     const nextEnd = Math.min(nextStart + 0.5, 23 + 59 / 60);
@@ -22115,27 +22128,27 @@ const PrioritiesView = ({
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-3 flex cursor-pointer items-center space-x-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
-                onUpdateAllowNightFlying(e.target.checked);
-              }, className: "h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-cyan-300", children: "Allow Night Flying" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `transition-opacity duration-150 ${allowNightFlying ? "opacity-100" : "opacity-40 pointer-events-none"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[20px] items-center justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-slate-300", children: "Night Flying Window" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center space-x-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: commenceNightFlying, disabled: !allowNightFlying, onChange: (e) => {
-                  logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`);
-                  onUpdateCommenceNightFlying(parseFloat(e.target.value));
-                }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "to" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ceaseNightFlying, disabled: !allowNightFlying, onChange: (e) => {
-                  logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`);
-                  onUpdateCeaseNightFlying(parseFloat(e.target.value));
-                }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (e) => {
+                  logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
+                  onUpdateAllowNightFlying(e.target.checked);
+                }, className: "h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-cyan-300", children: "Allow Night Flying" })
               ] })
             ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-2 transition-opacity duration-150 ${allowNightFlying ? "opacity-100" : "opacity-40 pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: commenceNightFlying, disabled: !allowNightFlying, onChange: (e) => {
+                logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`);
+                onUpdateCommenceNightFlying(parseFloat(e.target.value));
+              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "to" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ceaseNightFlying, disabled: !allowNightFlying, onChange: (e) => {
+                logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`);
+                onUpdateCeaseNightFlying(parseFloat(e.target.value));
+              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
+            ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -22147,29 +22160,29 @@ const PrioritiesView = ({
             )
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `overflow-hidden border-t border-slate-800 transition-all duration-300 ${showExclusionPlanner ? "max-h-[760px] opacity-100" : "max-h-0 opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4 pt-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `overflow-hidden border-t border-slate-800 transition-all duration-300 ${showExclusionPlanner ? "max-h-[760px] opacity-100" : "max-h-0 opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4 pt-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-600 bg-slate-900/90 p-4 shadow-[0_14px_32px_rgba(0,0,0,0.22)]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Departure and Arrival Exclusions" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-400", children: "Exclusion periods prevent NEO Build from placing flight departures, arrivals, or both inside the selected time range." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-300", children: "Exclusion periods prevent NEO Build from placing flight departures, arrivals, or both inside the selected time range." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: addExclusionPeriod,
-                className: "rounded-md border border-cyan-500/45 bg-cyan-500/12 px-3 py-2 text-xs font-semibold text-cyan-100 hover:border-cyan-300",
+                className: "rounded-md border border-cyan-400/70 bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-50 hover:border-cyan-200",
                 children: "Add Period"
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-950 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-20 overflow-hidden rounded bg-slate-900", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-700" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600 bg-slate-800 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-28 overflow-hidden rounded border border-slate-600 bg-slate-900/90 shadow-inner", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-400/60" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute top-5 h-4 rounded bg-sky-400/30 ring-1 ring-sky-300/50",
+                  className: "absolute inset-y-0 bg-sky-400/18",
                   style: { left: `${getTimelineLeft(flyingStartTime)}%`, width: `${getTimelineWidth(flyingStartTime, flyingEndTime)}%` },
                   title: `Day flying ${formatTimeLabel(flyingStartTime)}-${formatTimeLabel(flyingEndTime)}`
                 }
@@ -22177,7 +22190,7 @@ const PrioritiesView = ({
               allowNightFlying && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute top-11 h-4 rounded bg-indigo-400/30 ring-1 ring-indigo-300/50",
+                  className: "absolute inset-y-0 bg-indigo-400/20",
                   style: { left: `${getTimelineLeft(commenceNightFlying)}%`, width: `${getTimelineWidth(commenceNightFlying, ceaseNightFlying)}%` },
                   title: `Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`
                 }
@@ -22185,31 +22198,52 @@ const PrioritiesView = ({
               flyingWindowExclusions2.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute inset-y-2 rounded bg-rose-400/30 ring-1 ring-rose-300/60",
+                  className: "absolute inset-y-0 bg-rose-400/26",
                   style: { left: `${getTimelineLeft(period.startTime)}%`, width: `${getTimelineWidth(period.startTime, period.endTime)}%` },
                   title: `${restrictionLabel(period.restriction)} ${formatTimeLabel(period.startTime)}-${formatTimeLabel(period.endTime)}`
                 },
                 period.id
               )),
-              [0, 6, 12, 18, 24].map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-y-0 border-l border-slate-700/70", style: { left: `${hour / 24 * 100}%` }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute top-1 text-[10px] text-slate-500 ${hour === 24 ? "-translate-x-full" : "translate-x-1"}`, children: hour === 0 ? "00:01" : hour === 24 ? "23:59" : `${String(hour).padStart(2, "0")}:00` }) }, hour))
+              [
+                { time: flyingStartTime, label: "Day start", color: "bg-sky-200", text: "text-sky-100" },
+                { time: flyingEndTime, label: "Day end", color: "bg-sky-200", text: "text-sky-100" },
+                ...allowNightFlying ? [
+                  { time: commenceNightFlying, label: "Night start", color: "bg-indigo-200", text: "text-indigo-100" },
+                  { time: ceaseNightFlying, label: "Night end", color: "bg-indigo-200", text: "text-indigo-100" }
+                ] : [],
+                ...flyingWindowExclusions2.flatMap((period) => [
+                  { time: period.startTime, label: "Exclusion start", color: "bg-rose-200", text: "text-rose-100" },
+                  { time: period.endTime, label: "Exclusion end", color: "bg-rose-200", text: "text-rose-100" }
+                ])
+              ].map((marker, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: `absolute inset-y-0 w-[2px] ${marker.color} shadow-[0_0_10px_currentColor]`,
+                  style: { left: `${getTimelineLeft(marker.time)}%` },
+                  title: `${marker.label}: ${formatTimeLabel(marker.time)}`,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute ${index % 2 === 0 ? "top-2" : "bottom-2"} left-1 rounded bg-slate-950/80 px-1.5 py-0.5 text-[10px] font-semibold ${marker.text}`, children: formatTimeLabel(marker.time) })
+                },
+                `${marker.label}-${marker.time}-${index}`
+              )),
+              [6, 12, 18, 24, 25].map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-y-0 border-l border-slate-500/70", style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute top-1 text-[10px] font-semibold text-slate-300 ${hour === 25 ? "-translate-x-full" : "translate-x-1"}`, children: hour === 24 ? "00:00" : hour === 25 ? "01:00" : `${String(hour).padStart(2, "0")}:00` }) }, hour))
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-3 text-[11px] text-slate-400", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-4 text-[11px] text-slate-300", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-sky-400/40" }),
-                " Day flying"
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-4 w-px bg-sky-200 shadow-[0_0_8px_rgba(186,230,253,0.9)]" }),
+                " Day flying boundary"
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-indigo-400/40" }),
-                " Night flying"
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-4 w-px bg-indigo-200 shadow-[0_0_8px_rgba(199,210,254,0.9)]" }),
+                " Night flying boundary"
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-rose-400/40" }),
-                " Exclusion"
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-4 w-px bg-rose-200 shadow-[0_0_8px_rgba(254,205,211,0.9)]" }),
+                " Exclusion boundary"
               ] })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
-            flyingWindowExclusions2.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-dashed border-slate-700 bg-slate-950/60 p-4 text-sm text-slate-400", children: "No departure or arrival exclusions configured." }),
+            flyingWindowExclusions2.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-dashed border-slate-600 bg-slate-950/60 p-4 text-sm text-slate-300", children: "No departure or arrival exclusions configured." }),
             flyingWindowExclusions2.map((period, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 rounded-md border border-slate-700 bg-slate-950/70 p-3 lg:grid-cols-[64px_1fr_1fr_1.3fr_auto] lg:items-end", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Period" }),

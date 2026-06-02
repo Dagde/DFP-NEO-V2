@@ -311,8 +311,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
 
-  const getTimelineLeft = (time: number): number => Math.max(0, Math.min(100, ((time || 0) / 24) * 100));
-  const getTimelineWidth = (start: number, end: number): number => Math.max(0.35, getTimelineLeft(end) - getTimelineLeft(start));
+  const timelineStartHour = 6;
+  const timelineEndHour = 25;
+  const timelineSpanHours = timelineEndHour - timelineStartHour;
+  const normalizeTimelineHour = (time: number): number => {
+    let value = Number(time) || 0;
+    if (value < timelineStartHour) value += 24;
+    return Math.max(timelineStartHour, Math.min(timelineEndHour, value));
+  };
+  const getTimelineLeft = (time: number): number => ((normalizeTimelineHour(time) - timelineStartHour) / timelineSpanHours) * 100;
+  const getTimelineWidth = (start: number, end: number): number => {
+    const startHour = normalizeTimelineHour(start);
+    let endHour = normalizeTimelineHour(end);
+    if (endHour <= startHour) endHour = Math.min(timelineEndHour, endHour + 24);
+    return Math.max(0.35, ((Math.min(timelineEndHour, endHour) - startHour) / timelineSpanHours) * 100);
+  };
 
   const addExclusionPeriod = () => {
     const nextStart = Math.min(Math.max(flyingStartTime + flyingWindowExclusions.length * 0.5, 1 / 60), 23.75);
@@ -1041,13 +1054,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </div>
 
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label className="mb-3 flex cursor-pointer items-center space-x-2">
-                                <input type="checkbox" checked={allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} \u2192 ${e.target.checked}`); onUpdateAllowNightFlying(e.target.checked); }} className="h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" />
-                                <span className="text-sm font-semibold text-cyan-300">Allow Night Flying</span>
-                            </label>
-                            <div className={`transition-opacity duration-150 ${allowNightFlying ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                            <div className="flex min-h-[20px] items-center justify-between gap-3">
                                 <label className="block text-sm font-medium text-slate-300">Night Flying Window</label>
-                                <div className="mt-2 flex items-center space-x-2">
+                                <label className="flex cursor-pointer items-center space-x-2">
+                                    <input type="checkbox" checked={allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} \u2192 ${e.target.checked}`); onUpdateAllowNightFlying(e.target.checked); }} className="h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" />
+                                    <span className="text-sm font-semibold text-cyan-300">Allow Night Flying</span>
+                                </label>
+                            </div>
+                            <div className={`mt-2 transition-opacity duration-150 ${allowNightFlying ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                <div className="flex items-center space-x-2">
                                     <select value={commenceNightFlying} disabled={!allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} \u2192 ${parseFloat(e.target.value)}`); onUpdateCommenceNightFlying(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed">
                                         {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                     </select>
@@ -1068,34 +1083,34 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                     <div className={`overflow-hidden border-t border-slate-800 transition-all duration-300 ${showExclusionPlanner ? 'max-h-[760px] opacity-100' : 'max-h-0 opacity-0'}`}>
                         <div className="space-y-4 p-4 pt-0">
-                            <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
+                            <div className="rounded-lg border border-slate-600 bg-slate-900/90 p-4 shadow-[0_14px_32px_rgba(0,0,0,0.22)]">
                                 <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <h3 className="text-sm font-semibold text-white">Departure and Arrival Exclusions</h3>
-                                        <p className="mt-1 text-xs leading-5 text-slate-400">
+                                        <p className="mt-1 text-xs leading-5 text-slate-300">
                                             Exclusion periods prevent NEO Build from placing flight departures, arrivals, or both inside the selected time range.
                                         </p>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={addExclusionPeriod}
-                                        className="rounded-md border border-cyan-500/45 bg-cyan-500/12 px-3 py-2 text-xs font-semibold text-cyan-100 hover:border-cyan-300"
+                                        className="rounded-md border border-cyan-400/70 bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-50 hover:border-cyan-200"
                                     >
                                         Add Period
                                     </button>
                                 </div>
 
-                                <div className="rounded-md border border-slate-700 bg-slate-950 p-3">
-                                    <div className="relative h-20 overflow-hidden rounded bg-slate-900">
-                                        <div className="absolute inset-x-0 top-1/2 h-px bg-slate-700" />
+                                <div className="rounded-md border border-slate-600 bg-slate-800 p-4">
+                                    <div className="relative h-28 overflow-hidden rounded border border-slate-600 bg-slate-900/90 shadow-inner">
+                                        <div className="absolute inset-x-0 top-1/2 h-px bg-slate-400/60" />
                                         <div
-                                            className="absolute top-5 h-4 rounded bg-sky-400/30 ring-1 ring-sky-300/50"
+                                            className="absolute inset-y-0 bg-sky-400/18"
                                             style={{ left: `${getTimelineLeft(flyingStartTime)}%`, width: `${getTimelineWidth(flyingStartTime, flyingEndTime)}%` }}
                                             title={`Day flying ${formatTimeLabel(flyingStartTime)}-${formatTimeLabel(flyingEndTime)}`}
                                         />
                                         {allowNightFlying && (
                                             <div
-                                                className="absolute top-11 h-4 rounded bg-indigo-400/30 ring-1 ring-indigo-300/50"
+                                                className="absolute inset-y-0 bg-indigo-400/20"
                                                 style={{ left: `${getTimelineLeft(commenceNightFlying)}%`, width: `${getTimelineWidth(commenceNightFlying, ceaseNightFlying)}%` }}
                                                 title={`Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`}
                                             />
@@ -1103,29 +1118,52 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         {flyingWindowExclusions.map((period) => (
                                             <div
                                                 key={period.id}
-                                                className="absolute inset-y-2 rounded bg-rose-400/30 ring-1 ring-rose-300/60"
+                                                className="absolute inset-y-0 bg-rose-400/26"
                                                 style={{ left: `${getTimelineLeft(period.startTime)}%`, width: `${getTimelineWidth(period.startTime, period.endTime)}%` }}
                                                 title={`${restrictionLabel(period.restriction)} ${formatTimeLabel(period.startTime)}-${formatTimeLabel(period.endTime)}`}
                                             />
                                         ))}
-                                        {[0, 6, 12, 18, 24].map((hour) => (
-                                            <div key={hour} className="absolute inset-y-0 border-l border-slate-700/70" style={{ left: `${(hour / 24) * 100}%` }}>
-                                                <span className={`absolute top-1 text-[10px] text-slate-500 ${hour === 24 ? '-translate-x-full' : 'translate-x-1'}`}>
-                                                    {hour === 0 ? '00:01' : hour === 24 ? '23:59' : `${String(hour).padStart(2, '0')}:00`}
+                                        {[
+                                            { time: flyingStartTime, label: 'Day start', color: 'bg-sky-200', text: 'text-sky-100' },
+                                            { time: flyingEndTime, label: 'Day end', color: 'bg-sky-200', text: 'text-sky-100' },
+                                            ...(allowNightFlying ? [
+                                                { time: commenceNightFlying, label: 'Night start', color: 'bg-indigo-200', text: 'text-indigo-100' },
+                                                { time: ceaseNightFlying, label: 'Night end', color: 'bg-indigo-200', text: 'text-indigo-100' },
+                                            ] : []),
+                                            ...flyingWindowExclusions.flatMap(period => ([
+                                                { time: period.startTime, label: 'Exclusion start', color: 'bg-rose-200', text: 'text-rose-100' },
+                                                { time: period.endTime, label: 'Exclusion end', color: 'bg-rose-200', text: 'text-rose-100' },
+                                            ])),
+                                        ].map((marker, index) => (
+                                            <div
+                                                key={`${marker.label}-${marker.time}-${index}`}
+                                                className={`absolute inset-y-0 w-[2px] ${marker.color} shadow-[0_0_10px_currentColor]`}
+                                                style={{ left: `${getTimelineLeft(marker.time)}%` }}
+                                                title={`${marker.label}: ${formatTimeLabel(marker.time)}`}
+                                            >
+                                                <span className={`absolute ${index % 2 === 0 ? 'top-2' : 'bottom-2'} left-1 rounded bg-slate-950/80 px-1.5 py-0.5 text-[10px] font-semibold ${marker.text}`}>
+                                                    {formatTimeLabel(marker.time)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {[6, 12, 18, 24, 25].map((hour) => (
+                                            <div key={hour} className="absolute inset-y-0 border-l border-slate-500/70" style={{ left: `${((hour - timelineStartHour) / timelineSpanHours) * 100}%` }}>
+                                                <span className={`absolute top-1 text-[10px] font-semibold text-slate-300 ${hour === 25 ? '-translate-x-full' : 'translate-x-1'}`}>
+                                                    {hour === 24 ? '00:00' : hour === 25 ? '01:00' : `${String(hour).padStart(2, '0')}:00`}
                                                 </span>
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-slate-400">
-                                        <span className="inline-flex items-center gap-1"><span className="h-2 w-5 rounded bg-sky-400/40" /> Day flying</span>
-                                        <span className="inline-flex items-center gap-1"><span className="h-2 w-5 rounded bg-indigo-400/40" /> Night flying</span>
-                                        <span className="inline-flex items-center gap-1"><span className="h-2 w-5 rounded bg-rose-400/40" /> Exclusion</span>
+                                    <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-slate-300">
+                                        <span className="inline-flex items-center gap-1"><span className="h-4 w-px bg-sky-200 shadow-[0_0_8px_rgba(186,230,253,0.9)]" /> Day flying boundary</span>
+                                        <span className="inline-flex items-center gap-1"><span className="h-4 w-px bg-indigo-200 shadow-[0_0_8px_rgba(199,210,254,0.9)]" /> Night flying boundary</span>
+                                        <span className="inline-flex items-center gap-1"><span className="h-4 w-px bg-rose-200 shadow-[0_0_8px_rgba(254,205,211,0.9)]" /> Exclusion boundary</span>
                                     </div>
                                 </div>
 
                                 <div className="mt-4 space-y-3">
                                     {flyingWindowExclusions.length === 0 && (
-                                        <div className="rounded-md border border-dashed border-slate-700 bg-slate-950/60 p-4 text-sm text-slate-400">
+                                        <div className="rounded-md border border-dashed border-slate-600 bg-slate-950/60 p-4 text-sm text-slate-300">
                                             No departure or arrival exclusions configured.
                                         </div>
                                     )}
