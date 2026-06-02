@@ -26716,6 +26716,7 @@ const verifyCurrentUserPassword = async (password) => {
   return response.ok && data.valid === true;
 };
 const isStaffMetricKey = (key) => key === "staffFlight" || key === "staffSimulator" || key === "staffTotal";
+const isUnitScopedMetricKey = (key) => key === "flight" || key === "flightHours" || key === "simulator" || key === "simulatorHours" || key === "total";
 const metricStrokeColor = (color) => {
   if (color.includes("cyan")) return "#22d3ee";
   if (color.includes("blue")) return "#60a5fa";
@@ -26730,7 +26731,7 @@ const metricStrokeColor = (color) => {
 };
 const TIMELINE_OPTIONS = [
   { key: "7d", label: "Last 7 days" },
-  { key: "1m", label: "Last month" },
+  { key: "1m", label: "4 weeks" },
   { key: "6m", label: "Last 6 months" },
   { key: "12m", label: "Last 12 months" },
   { key: "2y", label: "Last 2 years" },
@@ -26850,7 +26851,7 @@ const getTimelineRange = (anchorIso, timeline, periodSettings = DEFAULT_BLI_PERI
   const end = parseIsoDate(anchorIso);
   let start = new Date(end);
   if (timeline === "7d") start = addUtcDays(end, -6);
-  if (timeline === "1m") start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+  if (timeline === "1m") start = addUtcDays(end, -27);
   if (timeline === "6m") start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 5, 1));
   if (timeline === "12m") start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 11, 1));
   if (timeline === "2y") start = addUtcYears(end, -2);
@@ -26895,8 +26896,10 @@ const mergeAvailabilityHistory = (metrics, records) => {
     })
   };
 };
-const fetchBliMetrics = async (startDate, endDate, signal) => {
-  const query = `startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+const fetchBliMetrics = async (startDate, endDate, signal, unitCode) => {
+  const params = new URLSearchParams({ startDate, endDate });
+  if (unitCode) params.set("unit", unitCode);
+  const query = params.toString();
   const [bliResponse, availabilityResponse] = await Promise.all([
     fetch(`/api/bli/metrics?${query}`, { credentials: "include", signal }),
     fetch(`/api/aircraft-availability-history?${query}`, { credentials: "include", signal }).catch(() => null)
@@ -27013,6 +27016,21 @@ const staffSort = (a, b) => {
   return String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" });
 };
 const makeSeries = (dates, values) => dates.map((date) => ({ date, value: values[date] ?? 0 }));
+const normalizeUnitCode = (value) => String(value || "").trim().toUpperCase();
+const buildUnitScopeOptions = (context) => {
+  const memberUnits = Array.from(new Set(
+    (Array.isArray(context?.unitCodes) && context?.unitCodes.length > 0 ? context.unitCodes : String(context?.unitCode || "").split("+")).map(normalizeUnitCode).filter(Boolean)
+  ));
+  if (!context?.isSharedFleetContext || memberUnits.length <= 1) return [];
+  return [
+    { key: "combined", label: `${memberUnits.join("+")} combined` },
+    ...memberUnits.map((unitCode) => ({
+      key: `unit:${unitCode}`,
+      label: unitCode,
+      unitCode
+    }))
+  ];
+};
 const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff) => {
   const dates = metrics.dates.length > 0 ? metrics.dates : [date];
   const fallback = buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft);
@@ -27496,7 +27514,7 @@ const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraft
     ] })
   ] })
 ] });
-const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings }) => {
+const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange }) => {
   const [timeline, setTimeline] = reactExports.useState("7d");
   const [modalMetrics, setModalMetrics] = reactExports.useState(initialMetrics);
   const [selectedStaff, setSelectedStaff] = reactExports.useState(initialStaff);
@@ -27505,6 +27523,8 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
   const range = reactExports.useMemo(() => getTimelineRange(date, timeline, periodSettings), [date, periodSettings, timeline]);
   const dateRangeLabel = reactExports.useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
   const showStaffSelector = isStaffMetricKey(metric.key);
+  const showUnitSelector = isUnitScopedMetricKey(metric.key) && unitScopeOptions.length > 1;
+  const selectedUnitCode = showUnitSelector ? unitScopeOptions.find((option) => option.key === selectedUnitScopeKey)?.unitCode : void 0;
   reactExports.useEffect(() => {
     setSelectedStaff(initialStaff);
   }, [initialStaff, metric.key]);
@@ -27512,7 +27532,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchBliMetrics(range.startDate, range.endDate, controller.signal).then((data) => {
+    fetchBliMetrics(range.startDate, range.endDate, controller.signal, selectedUnitCode).then((data) => {
       setModalMetrics(data);
     }).catch((fetchError) => {
       if (fetchError.name === "AbortError") return;
@@ -27523,7 +27543,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [date, range.endDate, range.startDate]);
+  }, [date, range.endDate, range.startDate, selectedUnitCode]);
   const activeMetric = reactExports.useMemo(() => {
     return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff).find((candidate) => candidate.key === metric.key) || metric;
   }, [currentAircraftAvailable, date, events, metric, modalMetrics, selectedStaff, totalAircraft]);
@@ -27554,6 +27574,18 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
                   onChange: (event) => setTimeline(event.target.value),
                   className: "h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
                   children: TIMELINE_OPTIONS.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
+                }
+              )
+            ] }),
+            showUnitSelector && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Unit data" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: selectedUnitScopeKey,
+                  onChange: (event) => onUnitScopeChange(event.target.value),
+                  className: "h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
+                  children: unitScopeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
                 }
               )
             ] }),
@@ -27611,7 +27643,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
     }
   ) });
 };
-const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft }) => {
+const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext }) => {
   const [metrics, setMetrics] = reactExports.useState(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
@@ -27619,11 +27651,24 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
   const [periodSettings, setPeriodSettings] = reactExports.useState(() => loadBliPeriodSettings());
   const [editingPeriod, setEditingPeriod] = reactExports.useState(null);
   const [periodDraft, setPeriodDraft] = reactExports.useState(() => loadBliPeriodSettings());
+  const unitScopeOptions = reactExports.useMemo(() => buildUnitScopeOptions(operationalContext), [operationalContext]);
+  const [selectedUnitScopeKey, setSelectedUnitScopeKey] = reactExports.useState("combined");
+  const selectedUnitScope = unitScopeOptions.find((option) => option.key === selectedUnitScopeKey);
+  const selectedUnitCode = selectedUnitScope?.unitCode;
   const previewRange = reactExports.useMemo(() => getTimelineRange(date, "7d", periodSettings), [date, periodSettings]);
   const previewDateRangeLabel = reactExports.useMemo(
     () => formatDateRange(previewRange.startDate, previewRange.endDate),
     [previewRange.endDate, previewRange.startDate]
   );
+  reactExports.useEffect(() => {
+    if (unitScopeOptions.length === 0) {
+      setSelectedUnitScopeKey("combined");
+      return;
+    }
+    if (!unitScopeOptions.some((option) => option.key === selectedUnitScopeKey)) {
+      setSelectedUnitScopeKey(unitScopeOptions[0].key);
+    }
+  }, [selectedUnitScopeKey, unitScopeOptions]);
   const requestPeriodEdit = async (periodKey) => {
     const password = await showDarkPrompt({
       title: "Change BLI Year Dates",
@@ -27688,7 +27733,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal).then((data) => {
+    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal, selectedUnitCode).then((data) => {
       setMetrics(data);
     }).catch((fetchError) => {
       if (fetchError.name === "AbortError") return;
@@ -27699,7 +27744,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [date, previewRange.endDate, previewRange.startDate]);
+  }, [date, previewRange.endDate, previewRange.startDate, selectedUnitCode]);
   const staffGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     sortedStaff2.forEach((staff) => {
@@ -27727,7 +27772,10 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
         initialMetrics: metrics,
         staffGroups,
         initialStaff: previewStaff,
-        periodSettings
+        periodSettings,
+        unitScopeOptions,
+        selectedUnitScopeKey,
+        onUnitScopeChange: setSelectedUnitScopeKey
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
@@ -27772,6 +27820,18 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading published metrics..." : `${metrics.snapshotCount} published snapshots in range` }),
+        unitScopeOptions.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold uppercase tracking-[0.14em] text-slate-500", children: "Unit data" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              value: selectedUnitScopeKey,
+              onChange: (event) => setSelectedUnitScopeKey(event.target.value),
+              className: "h-8 min-w-[170px] rounded-md border border-slate-700 bg-slate-950 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none",
+              children: unitScopeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
+            }
+          )
+        ] }),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })
       ] })
     ] }),
@@ -29510,7 +29570,8 @@ const BuildIntelligenceView = (props) => {
           events: props.events,
           instructorsData: props.instructorsData,
           currentAircraftAvailable: props.currentAircraftAvailable,
-          totalAircraft: props.totalAircraft
+          totalAircraft: props.totalAircraft,
+          operationalContext: props.operationalContext
         }
       )
     ] }) })
@@ -64709,7 +64770,7 @@ const App = () => {
   const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
   const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
   const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
-  reactExports.useMemo(() => ({
+  const activeOperationalContext = reactExports.useMemo(() => ({
     locationCode: school,
     unitCode: activeUnitCode,
     unitName: activeUnitContext?.name || activeUnitCode,
@@ -74689,7 +74750,8 @@ ${conflictLines.join("\n")}${moreText}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             buildDate: buildDfpDate,
             analysis: lastBuildAnalysis,
-            resourceDisplayNames
+            resourceDisplayNames,
+            operationalContext: activeOperationalContext
           }
         );
       case "MyDashboard":

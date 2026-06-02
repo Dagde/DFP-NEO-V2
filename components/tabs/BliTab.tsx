@@ -19,6 +19,20 @@ type MetricKey = 'availability' | 'flight' | 'flightHours' | 'simulator' | 'simu
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 type PeriodKey = 'cy' | 'fy';
 
+interface BliOperationalContext {
+  locationCode?: string;
+  unitCode?: string;
+  unitName?: string;
+  unitCodes?: string[];
+  isSharedFleetContext?: boolean;
+}
+
+interface BliUnitScopeOption {
+  key: string;
+  label: string;
+  unitCode?: string;
+}
+
 interface DailyEventMetrics {
   date: string;
   flightEvents: number;
@@ -74,6 +88,7 @@ interface BliTabProps {
   instructorsData: Instructor[];
   currentAircraftAvailable?: number;
   totalAircraft?: number;
+  operationalContext?: BliOperationalContext;
 }
 
 interface ChartPoint {
@@ -115,6 +130,14 @@ const isStaffMetricKey = (key: MetricKey): boolean => (
   key === 'staffFlight' || key === 'staffSimulator' || key === 'staffTotal'
 );
 
+const isUnitScopedMetricKey = (key: MetricKey): boolean => (
+  key === 'flight'
+  || key === 'flightHours'
+  || key === 'simulator'
+  || key === 'simulatorHours'
+  || key === 'total'
+);
+
 const metricStrokeColor = (color: string): string => {
   if (color.includes('cyan')) return '#22d3ee';
   if (color.includes('blue')) return '#60a5fa';
@@ -130,7 +153,7 @@ const metricStrokeColor = (color: string): string => {
 
 const TIMELINE_OPTIONS: { key: TimelineKey; label: string }[] = [
   { key: '7d', label: 'Last 7 days' },
-  { key: '1m', label: 'Last month' },
+  { key: '1m', label: '4 weeks' },
   { key: '6m', label: 'Last 6 months' },
   { key: '12m', label: 'Last 12 months' },
   { key: '2y', label: 'Last 2 years' },
@@ -279,7 +302,7 @@ const getTimelineRange = (
   let start = new Date(end);
 
   if (timeline === '7d') start = addUtcDays(end, -6);
-  if (timeline === '1m') start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+  if (timeline === '1m') start = addUtcDays(end, -27);
   if (timeline === '6m') start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 5, 1));
   if (timeline === '12m') start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 11, 1));
   if (timeline === '2y') start = addUtcYears(end, -2);
@@ -344,8 +367,11 @@ const fetchBliMetrics = async (
   startDate: string,
   endDate: string,
   signal: AbortSignal,
+  unitCode?: string,
 ): Promise<BliMetricsResponse> => {
-  const query = `startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+  const params = new URLSearchParams({ startDate, endDate });
+  if (unitCode) params.set('unit', unitCode);
+  const query = params.toString();
   const [bliResponse, availabilityResponse] = await Promise.all([
     fetch(`/api/bli/metrics?${query}`, { credentials: 'include', signal }),
     fetch(`/api/aircraft-availability-history?${query}`, { credentials: 'include', signal }).catch(() => null),
@@ -504,6 +530,28 @@ const staffSort = (a: Instructor, b: Instructor): number => {
 
 const makeSeries = (dates: string[], values: Record<string, number | null>): ChartPoint[] =>
   dates.map(date => ({ date, value: values[date] ?? 0 }));
+
+const normalizeUnitCode = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+const buildUnitScopeOptions = (context?: BliOperationalContext): BliUnitScopeOption[] => {
+  const memberUnits = Array.from(new Set(
+    (Array.isArray(context?.unitCodes) && context?.unitCodes.length > 0
+      ? context.unitCodes
+      : String(context?.unitCode || '').split('+')
+    )
+      .map(normalizeUnitCode)
+      .filter(Boolean),
+  ));
+  if (!context?.isSharedFleetContext || memberUnits.length <= 1) return [];
+  return [
+    { key: 'combined', label: `${memberUnits.join('+')} combined` },
+    ...memberUnits.map(unitCode => ({
+      key: `unit:${unitCode}`,
+      label: unitCode,
+      unitCode,
+    })),
+  ];
+};
 
 const buildMetricDefinitions = (
   metrics: BliMetricsResponse,
@@ -1066,7 +1114,10 @@ const MetricModal: React.FC<{
   staffGroups: [string, Instructor[]][];
   initialStaff: string;
   periodSettings: BliPeriodSettings;
-}> = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings }) => {
+  unitScopeOptions: BliUnitScopeOption[];
+  selectedUnitScopeKey: string;
+  onUnitScopeChange: (key: string) => void;
+}> = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange }) => {
   const [timeline, setTimeline] = useState<TimelineKey>('7d');
   const [modalMetrics, setModalMetrics] = useState<BliMetricsResponse>(initialMetrics);
   const [selectedStaff, setSelectedStaff] = useState(initialStaff);
@@ -1075,6 +1126,10 @@ const MetricModal: React.FC<{
   const range = useMemo(() => getTimelineRange(date, timeline, periodSettings), [date, periodSettings, timeline]);
   const dateRangeLabel = useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
   const showStaffSelector = isStaffMetricKey(metric.key);
+  const showUnitSelector = isUnitScopedMetricKey(metric.key) && unitScopeOptions.length > 1;
+  const selectedUnitCode = showUnitSelector
+    ? unitScopeOptions.find(option => option.key === selectedUnitScopeKey)?.unitCode
+    : undefined;
 
   useEffect(() => {
     setSelectedStaff(initialStaff);
@@ -1085,7 +1140,7 @@ const MetricModal: React.FC<{
     setLoading(true);
     setError(null);
 
-    fetchBliMetrics(range.startDate, range.endDate, controller.signal)
+    fetchBliMetrics(range.startDate, range.endDate, controller.signal, selectedUnitCode)
       .then((data: BliMetricsResponse) => {
         setModalMetrics(data);
       })
@@ -1100,7 +1155,7 @@ const MetricModal: React.FC<{
       });
 
     return () => controller.abort();
-  }, [date, range.endDate, range.startDate]);
+  }, [date, range.endDate, range.startDate, selectedUnitCode]);
 
   const activeMetric = useMemo(() => {
     return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff)
@@ -1135,6 +1190,20 @@ const MetricModal: React.FC<{
                 ))}
               </select>
             </label>
+            {showUnitSelector && (
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Unit data</span>
+                <select
+                  value={selectedUnitScopeKey}
+                  onChange={event => onUnitScopeChange(event.target.value)}
+                  className="h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
+                >
+                  {unitScopeOptions.map(option => (
+                    <option key={option.key} value={option.key}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             {showStaffSelector && (
               <label className="block">
                 <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Staff</span>
@@ -1189,7 +1258,7 @@ const MetricModal: React.FC<{
   );
 };
 
-const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft }) => {
+const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext }) => {
   const [metrics, setMetrics] = useState<BliMetricsResponse>(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1197,12 +1266,26 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
   const [periodSettings, setPeriodSettings] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
   const [editingPeriod, setEditingPeriod] = useState<PeriodKey | null>(null);
   const [periodDraft, setPeriodDraft] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
+  const unitScopeOptions = useMemo(() => buildUnitScopeOptions(operationalContext), [operationalContext]);
+  const [selectedUnitScopeKey, setSelectedUnitScopeKey] = useState('combined');
+  const selectedUnitScope = unitScopeOptions.find(option => option.key === selectedUnitScopeKey);
+  const selectedUnitCode = selectedUnitScope?.unitCode;
 
   const previewRange = useMemo(() => getTimelineRange(date, '7d', periodSettings), [date, periodSettings]);
   const previewDateRangeLabel = useMemo(
     () => formatDateRange(previewRange.startDate, previewRange.endDate),
     [previewRange.endDate, previewRange.startDate],
   );
+
+  useEffect(() => {
+    if (unitScopeOptions.length === 0) {
+      setSelectedUnitScopeKey('combined');
+      return;
+    }
+    if (!unitScopeOptions.some(option => option.key === selectedUnitScopeKey)) {
+      setSelectedUnitScopeKey(unitScopeOptions[0].key);
+    }
+  }, [selectedUnitScopeKey, unitScopeOptions]);
 
   const requestPeriodEdit = async (periodKey: PeriodKey) => {
     const password = await showDarkPrompt({
@@ -1277,7 +1360,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
     setLoading(true);
     setError(null);
 
-    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal)
+    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal, selectedUnitCode)
       .then((data: BliMetricsResponse) => {
         setMetrics(data);
       })
@@ -1292,7 +1375,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
       });
 
     return () => controller.abort();
-  }, [date, previewRange.endDate, previewRange.startDate]);
+  }, [date, previewRange.endDate, previewRange.startDate, selectedUnitCode]);
 
   const staffGroups = useMemo(() => {
     const groups = new Map<string, Instructor[]>();
@@ -1327,6 +1410,9 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
           staffGroups={staffGroups}
           initialStaff={previewStaff}
           periodSettings={periodSettings}
+          unitScopeOptions={unitScopeOptions}
+          selectedUnitScopeKey={selectedUnitScopeKey}
+          onUnitScopeChange={setSelectedUnitScopeKey}
         />
       )}
 
@@ -1366,6 +1452,20 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
           <span>{loading ? 'Loading published metrics...' : `${metrics.snapshotCount} published snapshots in range`}</span>
+          {unitScopeOptions.length > 1 && (
+            <label className="flex items-center gap-2">
+              <span className="font-semibold uppercase tracking-[0.14em] text-slate-500">Unit data</span>
+              <select
+                value={selectedUnitScopeKey}
+                onChange={event => setSelectedUnitScopeKey(event.target.value)}
+                className="h-8 min-w-[170px] rounded-md border border-slate-700 bg-slate-950 px-2 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none"
+              >
+                {unitScopeOptions.map(option => (
+                  <option key={option.key} value={option.key}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+          )}
           {error && <span className="text-amber-300">{error}</span>}
         </div>
       </div>

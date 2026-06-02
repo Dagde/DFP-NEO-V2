@@ -22258,6 +22258,7 @@ updates.forEach(update => {
                             buildDate={buildDfpDate}
                             analysis={lastBuildAnalysis}
                             resourceDisplayNames={resourceDisplayNames}
+                            operationalContext={activeOperationalContext}
                         />;
             case 'MyDashboard':
                 // Get all events from published schedules for PT-051 lookup

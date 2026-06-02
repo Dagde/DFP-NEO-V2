@@ -84,6 +84,13 @@ interface BuildIntelligenceViewProps {
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   resourceDisplayNames?: ResourceDisplayNames;
+  operationalContext?: {
+    locationCode?: string;
+    unitCode?: string;
+    unitName?: string;
+    unitCodes?: string[];
+    isSharedFleetContext?: boolean;
+  };
   
   // From Build Analysis
   buildDate: string;
@@ -221,6 +228,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 instructorsData={props.instructorsData}
                 currentAircraftAvailable={props.currentAircraftAvailable}
                 totalAircraft={props.totalAircraft}
+                operationalContext={props.operationalContext}
               />
             )}
           </div>

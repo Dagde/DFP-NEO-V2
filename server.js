@@ -10599,6 +10599,83 @@ const eventStaffNames = (event) => {
   return [...new Set(names)];
 };
 
+const normalizeBliUnit = (value) => String(value || '').split('/')[0].trim().toUpperCase();
+
+const profileNameCandidates = (profile) => {
+  const firstName = String(profile?.firstName || '').trim();
+  const lastName = String(profile?.lastName || '').trim();
+  return [
+    profile?.fullName,
+    profile?.name,
+    profile?.displayName,
+    firstName && lastName ? `${lastName}, ${firstName}` : '',
+    firstName && lastName ? `${firstName} ${lastName}` : '',
+  ]
+    .map((name) => String(name || '').trim())
+    .filter(Boolean);
+};
+
+const addProfileUnits = (profiles, unitByName, unitById) => {
+  for (const profile of parseJsonArraySafe(profiles)) {
+    const unit = normalizeBliUnit(profile?.unit || profile?.unitCode || profile?.traineeUnit || profile?.staffUnit);
+    if (!unit) continue;
+    profileNameCandidates(profile).forEach((name) => {
+      unitByName.set(name.toUpperCase(), unit);
+    });
+    [profile?.id, profile?.idNumber, profile?.traineeId, profile?.staffId]
+      .map((id) => String(id ?? '').trim())
+      .filter(Boolean)
+      .forEach((id) => unitById.set(id, unit));
+  }
+};
+
+const addEventUnitToken = (units, value) => {
+  const unit = normalizeBliUnit(value);
+  if (unit) units.add(unit);
+};
+
+const eventMatchesBliUnit = (event, unitFilter, traineeUnitByName, staffUnitByName, traineeUnitById, staffUnitById) => {
+  const unit = normalizeBliUnit(unitFilter);
+  if (!unit) return true;
+  const units = new Set();
+
+  [
+    event?.unit,
+    event?.unitCode,
+    event?.traineeUnit,
+    event?.studentUnit,
+    event?.owningUnit,
+    event?.courseUnit,
+    event?.resourceUnit,
+    event?.staffUnit,
+    event?.instructorUnit,
+  ].forEach((value) => addEventUnitToken(units, value));
+
+  const traineeNames = [event?.student, event?.trainee, event?.group]
+    .map((name) => String(name || '').trim().toUpperCase())
+    .filter(Boolean);
+  traineeNames.forEach((name) => addEventUnitToken(units, traineeUnitByName.get(name)));
+
+  eventStaffNames(event)
+    .map((name) => name.toUpperCase())
+    .forEach((name) => addEventUnitToken(units, staffUnitByName.get(name)));
+
+  (Array.isArray(event?.groupTraineeIds) ? event.groupTraineeIds : [])
+    .map((id) => String(id ?? '').trim())
+    .filter(Boolean)
+    .forEach((id) => addEventUnitToken(units, traineeUnitById.get(id)));
+
+  [event?.traineeId, event?.staffId, event?.instructorId]
+    .map((id) => String(id ?? '').trim())
+    .filter(Boolean)
+    .forEach((id) => {
+      addEventUnitToken(units, traineeUnitById.get(id));
+      addEventUnitToken(units, staffUnitById.get(id));
+    });
+
+  return units.has(unit);
+};
+
 // GET /api/bli/metrics
 // Aggregates published daily snapshots into bounded Build Leadership Intelligence series.
 app.get('/api/bli/metrics', async (req, res) => {
@@ -10607,6 +10684,7 @@ app.get('/api/bli/metrics', async (req, res) => {
     const startDate = isoDateOnly(req.query.startDate);
     const endDate = isoDateOnly(req.query.endDate);
     const school = String(req.query.school || '').trim().toUpperCase();
+    const unitFilter = normalizeBliUnit(req.query.unit);
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
       return res.status(400).json({ error: 'startDate and endDate must be YYYY-MM-DD' });
@@ -10640,6 +10718,7 @@ app.get('/api/bli/metrics', async (req, res) => {
     const snapshotParams = [startDate, endDate];
     let snapshotSql = `
       SELECT date, "scheduleEvents", "baselineEvents"
+      , "traineeProfiles", "staffProfiles"
       FROM "DailySnapshot"
       WHERE substring(date from 1 for 10) >= $1::text
         AND substring(date from 1 for 10) <= $2::text
@@ -10665,18 +10744,34 @@ app.get('/api/bli/metrics', async (req, res) => {
       const events = parseJsonArraySafe(snapshot.scheduleEvents).length > 0
         ? parseJsonArraySafe(snapshot.scheduleEvents)
         : parseJsonArraySafe(snapshot.baselineEvents);
+      const traineeUnitByName = new Map();
+      const staffUnitByName = new Map();
+      const traineeUnitById = new Map();
+      const staffUnitById = new Map();
+      addProfileUnits(snapshot.traineeProfiles, traineeUnitByName, traineeUnitById);
+      addProfileUnits(snapshot.staffProfiles, staffUnitByName, staffUnitById);
 
       const day = seriesByDate.get(dateKey);
       for (const event of events) {
         const hours = eventMetricHours(event);
-        addMetricCount(day, 'totalEvents');
-        if (isFlightMetricEvent(event)) {
-          addMetricCount(day, 'flightEvents');
-          addMetricCount(day, 'flightHours', hours);
-        }
-        if (isSimulatorMetricEvent(event)) {
-          addMetricCount(day, 'simulatorEvents');
-          addMetricCount(day, 'simulatorHours', hours);
+        const includeInUnitScopedSeries = eventMatchesBliUnit(
+          event,
+          unitFilter,
+          traineeUnitByName,
+          staffUnitByName,
+          traineeUnitById,
+          staffUnitById
+        );
+        if (includeInUnitScopedSeries) {
+          addMetricCount(day, 'totalEvents');
+          if (isFlightMetricEvent(event)) {
+            addMetricCount(day, 'flightEvents');
+            addMetricCount(day, 'flightHours', hours);
+          }
+          if (isSimulatorMetricEvent(event)) {
+            addMetricCount(day, 'simulatorEvents');
+            addMetricCount(day, 'simulatorHours', hours);
+          }
         }
 
         for (const staffName of eventStaffNames(event)) {
