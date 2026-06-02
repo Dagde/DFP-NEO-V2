@@ -117,6 +117,18 @@ const AircraftConfigSelect: React.FC<{
   );
 };
 
+type TimelineDragTarget =
+  | { kind: 'day'; edge: 'start' | 'end' }
+  | { kind: 'night'; edge: 'start' | 'end' }
+  | { kind: 'exclusion'; id: string; edge: 'start' | 'end' };
+
+type TimelineDragState = TimelineDragTarget & {
+  label: string;
+  originalTime: number;
+  time: number;
+  left: number;
+};
+
 // FIX: Export component as a named const to fix module import error.
 export const PrioritiesView: React.FC<PrioritiesViewProps> = ({ 
   school = 'ESL',
@@ -314,17 +326,94 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const timelineStartHour = 6;
   const timelineEndHour = 25;
   const timelineSpanHours = timelineEndHour - timelineStartHour;
+  const timelineMinGap = 0.25;
+  const timelineRef = useRef<HTMLDivElement | null>(null);
+  const [activeTimelineDrag, setActiveTimelineDrag] = useState<TimelineDragState | null>(null);
   const normalizeTimelineHour = (time: number): number => {
     let value = Number(time) || 0;
     if (value < timelineStartHour) value += 24;
     return Math.max(timelineStartHour, Math.min(timelineEndHour, value));
   };
+  const denormalizeTimelineHour = (time: number): number => {
+    const bounded = Math.max(timelineStartHour, Math.min(timelineEndHour, time));
+    return bounded >= 24 ? Math.min(1, bounded - 24) : Math.min(23 + 45 / 60, bounded);
+  };
+  const snapTimelineHour = (time: number): number => Math.round(time * 4) / 4;
   const getTimelineLeft = (time: number): number => ((normalizeTimelineHour(time) - timelineStartHour) / timelineSpanHours) * 100;
   const getTimelineWidth = (start: number, end: number): number => {
     const startHour = normalizeTimelineHour(start);
     let endHour = normalizeTimelineHour(end);
     if (endHour <= startHour) endHour = Math.min(timelineEndHour, endHour + 24);
     return Math.max(0.35, ((Math.min(timelineEndHour, endHour) - startHour) / timelineSpanHours) * 100);
+  };
+  const getTimeFromTimelinePointer = (clientX: number): number => {
+    const bounds = timelineRef.current?.getBoundingClientRect();
+    if (!bounds || bounds.width <= 0) return timelineStartHour;
+    const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
+    return denormalizeTimelineHour(snapTimelineHour(timelineStartHour + ratio * timelineSpanHours));
+  };
+  const formatCompactTimeLabel = (decimalHour: number): string => formatTimeLabel(decimalHour).replace(':', '');
+  const formatTimelineTickLabel = (hour: number): string => {
+    if (hour === 24) return '0000';
+    if (hour === 25) return '0100';
+    return `${String(hour).padStart(2, '0')}00`;
+  };
+  const timelineTicks = [6, 9, 12, 15, 18, 21, 24, 25];
+
+  const constrainTimelineTime = (target: TimelineDragTarget, nextTime: number): number => {
+    const nextHour = normalizeTimelineHour(nextTime);
+    const constrain = (min: number, max: number) => denormalizeTimelineHour(Math.max(min, Math.min(max, nextHour)));
+
+    if (target.kind === 'day') {
+      const startHour = normalizeTimelineHour(flyingStartTime);
+      const endHour = normalizeTimelineHour(flyingEndTime);
+      return target.edge === 'start'
+        ? constrain(timelineStartHour, endHour - timelineMinGap)
+        : constrain(startHour + timelineMinGap, timelineEndHour);
+    }
+
+    if (target.kind === 'night') {
+      const startHour = normalizeTimelineHour(commenceNightFlying);
+      const endHour = normalizeTimelineHour(ceaseNightFlying);
+      return target.edge === 'start'
+        ? constrain(timelineStartHour, endHour - timelineMinGap)
+        : constrain(startHour + timelineMinGap, timelineEndHour);
+    }
+
+    const period = flyingWindowExclusions.find(item => item.id === target.id);
+    if (!period) return nextTime;
+    const startHour = normalizeTimelineHour(period.startTime);
+    const endHour = normalizeTimelineHour(period.endTime);
+    return target.edge === 'start'
+      ? constrain(timelineStartHour, endHour - timelineMinGap)
+      : constrain(startHour + timelineMinGap, timelineEndHour);
+  };
+
+  const applyTimelineDrag = (target: TimelineDragTarget, nextTime: number) => {
+    const constrainedTime = constrainTimelineTime(target, nextTime);
+    if (target.kind === 'day') {
+      if (target.edge === 'start') onUpdateFlyingStartTime(constrainedTime);
+      else onUpdateFlyingEndTime(constrainedTime);
+    } else if (target.kind === 'night') {
+      if (target.edge === 'start') onUpdateCommenceNightFlying(constrainedTime);
+      else onUpdateCeaseNightFlying(constrainedTime);
+    } else {
+      updateExclusionPeriod(target.id, target.edge === 'start' ? { startTime: constrainedTime } : { endTime: constrainedTime });
+    }
+    return constrainedTime;
+  };
+
+  const startTimelineDrag = (event: React.PointerEvent<HTMLElement>, target: TimelineDragTarget, label: string, time: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const constrainedTime = constrainTimelineTime(target, time);
+    setActiveTimelineDrag({
+      ...target,
+      label,
+      originalTime: constrainedTime,
+      time: constrainedTime,
+      left: getTimelineLeft(constrainedTime),
+    });
   };
 
   const addExclusionPeriod = () => {
@@ -344,9 +433,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const nextPeriods = flyingWindowExclusions.map(period => {
       if (period.id !== id) return period;
       const nextPeriod = { ...period, ...updates };
-      if (nextPeriod.endTime <= nextPeriod.startTime) {
-        if (updates.startTime !== undefined) nextPeriod.endTime = Math.min(nextPeriod.startTime + 0.25, 23 + 59 / 60);
-        if (updates.endTime !== undefined) nextPeriod.startTime = Math.max(1 / 60, nextPeriod.endTime - 0.25);
+      const startHour = normalizeTimelineHour(nextPeriod.startTime);
+      const endHour = normalizeTimelineHour(nextPeriod.endTime);
+      if (endHour - startHour < timelineMinGap) {
+        if (updates.startTime !== undefined) nextPeriod.endTime = denormalizeTimelineHour(Math.min(startHour + timelineMinGap, timelineEndHour));
+        if (updates.endTime !== undefined) nextPeriod.startTime = denormalizeTimelineHour(Math.max(endHour - timelineMinGap, timelineStartHour));
       }
       return nextPeriod;
     });
@@ -366,6 +457,38 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (restriction === 'arrivals') return 'No arrivals';
     return 'No departures or arrivals';
   };
+
+  useEffect(() => {
+    if (!activeTimelineDrag) return undefined;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      event.preventDefault();
+      const nextTime = getTimeFromTimelinePointer(event.clientX);
+      const appliedTime = applyTimelineDrag(activeTimelineDrag, nextTime);
+      setActiveTimelineDrag(previous => previous ? {
+        ...previous,
+        time: appliedTime,
+        left: getTimelineLeft(appliedTime),
+      } : previous);
+    };
+
+    const handlePointerUp = () => {
+      logAudit(
+        'Priorities',
+        'Edit',
+        `Dragged ${activeTimelineDrag.label}`,
+        `${formatTimeLabel(activeTimelineDrag.originalTime)} → ${formatTimeLabel(activeTimelineDrag.time)}`,
+      );
+      setActiveTimelineDrag(null);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [activeTimelineDrag]);
 
   const [traineeCurrencyCourseSelection, setTraineeCurrencyCourseSelection] = useState<Set<string>>(new Set());
   const [traineeCurrencySelection, setTraineeCurrencySelection] = useState<Set<number>>(new Set());
@@ -942,6 +1065,35 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       </div>
   );
   
+  const timelineBoundaryMarkers: Array<{
+    key: string;
+    time: number;
+    label: string;
+    color: string;
+    text: string;
+    target: TimelineDragTarget;
+  }> = [
+    { key: 'day-start', time: flyingStartTime, label: 'Day start', color: 'bg-sky-100', text: 'text-sky-100', target: { kind: 'day', edge: 'start' } },
+    { key: 'day-end', time: flyingEndTime, label: 'Day end', color: 'bg-sky-100', text: 'text-sky-100', target: { kind: 'day', edge: 'end' } },
+    ...(allowNightFlying ? [
+      { key: 'night-start', time: commenceNightFlying, label: 'Night start', color: 'bg-indigo-100', text: 'text-indigo-100', target: { kind: 'night' as const, edge: 'start' as const } },
+      { key: 'night-end', time: ceaseNightFlying, label: 'Night end', color: 'bg-indigo-100', text: 'text-indigo-100', target: { kind: 'night' as const, edge: 'end' as const } },
+    ] : []),
+    ...flyingWindowExclusions.flatMap(period => ([
+      { key: `exclusion-${period.id}-start`, time: period.startTime, label: 'Exclusion start', color: 'bg-rose-100', text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'start' as const } },
+      { key: `exclusion-${period.id}-end`, time: period.endTime, label: 'Exclusion end', color: 'bg-rose-100', text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'end' as const } },
+    ])),
+  ];
+
+  const flyingWindowBoundaryLabels = [
+    { key: 'day-start-label', time: flyingStartTime, label: 'Day start', text: 'text-sky-100', border: 'border-sky-300/50', bg: 'bg-sky-400/12' },
+    { key: 'day-end-label', time: flyingEndTime, label: 'Day end', text: 'text-sky-100', border: 'border-sky-300/50', bg: 'bg-sky-400/12' },
+    ...(allowNightFlying ? [
+      { key: 'night-start-label', time: commenceNightFlying, label: 'Night start', text: 'text-indigo-100', border: 'border-indigo-300/50', bg: 'bg-indigo-400/14' },
+      { key: 'night-end-label', time: ceaseNightFlying, label: 'Night end', text: 'text-indigo-100', border: 'border-indigo-300/50', bg: 'bg-indigo-400/14' },
+    ] : []),
+  ];
+
      return (
        <>
            <div className="section-course-demand space-y-6">
@@ -1021,7 +1173,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                     <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-3">
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label className="block text-sm font-medium text-slate-300">Day Flying Window</label>
+                            <div className="min-h-[20px]" />
+                            <label className="mt-2 block text-sm font-medium text-slate-300">Day Flying Window</label>
                             <div className="mt-2 flex items-center space-x-2">
                                 <select value={flyingStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFlyingStartTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
                                     {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -1041,7 +1194,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </div>
 
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label className="block text-sm font-medium text-slate-300">{ftdLabel} Operating Window</label>
+                            <div className="min-h-[20px]" />
+                            <label className="mt-2 block text-sm font-medium text-slate-300">{ftdLabel} Operating Window</label>
                             <div className="mt-2 flex items-center space-x-2">
                                 <select value={ftdStartTime} onChange={(e) => { logAudit("Priorities", "Edit", `Updated ${ftdLabel} start time`, `${ftdStartTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFtdStartTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
                                     {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -1054,13 +1208,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </div>
 
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <div className="flex min-h-[20px] items-center justify-between gap-3">
-                                <label className="block text-sm font-medium text-slate-300">Night Flying Window</label>
-                                <label className="flex cursor-pointer items-center space-x-2">
+                            <div className="flex min-h-[20px] items-center justify-end">
+                                <label className="flex cursor-pointer items-center space-x-2 whitespace-nowrap">
                                     <input type="checkbox" checked={allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} \u2192 ${e.target.checked}`); onUpdateAllowNightFlying(e.target.checked); }} className="h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" />
                                     <span className="text-sm font-semibold text-cyan-300">Allow Night Flying</span>
                                 </label>
                             </div>
+                            <label className="mt-2 block text-sm font-medium text-slate-300">Night Flying Window</label>
                             <div className={`mt-2 transition-opacity duration-150 ${allowNightFlying ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                                 <div className="flex items-center space-x-2">
                                     <select value={commenceNightFlying} disabled={!allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} \u2192 ${parseFloat(e.target.value)}`); onUpdateCommenceNightFlying(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed">
@@ -1101,16 +1255,27 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 </div>
 
                                 <div className="rounded-md border border-slate-600 bg-slate-800 p-4">
-                                    <div className="relative h-28 overflow-hidden rounded border border-slate-600 bg-slate-900/90 shadow-inner">
-                                        <div className="absolute inset-x-0 top-1/2 h-px bg-slate-400/60" />
+                                    <div className="relative mb-2 h-5">
+                                        {timelineTicks.map((hour) => (
+                                            <span
+                                                key={`tick-label-${hour}`}
+                                                className={`absolute text-[10px] font-semibold tracking-[0.08em] text-slate-200 ${hour === 25 ? '-translate-x-full' : '-translate-x-1/2'}`}
+                                                style={{ left: `${((hour - timelineStartHour) / timelineSpanHours) * 100}%` }}
+                                            >
+                                                {formatTimelineTickLabel(hour)}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div ref={timelineRef} className="relative h-24 overflow-visible rounded border border-slate-500 bg-slate-900/90 shadow-inner">
+                                        <div className="absolute inset-x-0 top-1/2 h-px bg-slate-300/60" />
                                         <div
-                                            className="absolute inset-y-0 bg-sky-400/18"
+                                            className="absolute inset-y-0 rounded-sm bg-sky-300/24 ring-1 ring-inset ring-sky-200/20"
                                             style={{ left: `${getTimelineLeft(flyingStartTime)}%`, width: `${getTimelineWidth(flyingStartTime, flyingEndTime)}%` }}
                                             title={`Day flying ${formatTimeLabel(flyingStartTime)}-${formatTimeLabel(flyingEndTime)}`}
                                         />
                                         {allowNightFlying && (
                                             <div
-                                                className="absolute inset-y-0 bg-indigo-400/20"
+                                                className="absolute inset-y-0 rounded-sm bg-indigo-400/22 ring-1 ring-inset ring-indigo-200/20"
                                                 style={{ left: `${getTimelineLeft(commenceNightFlying)}%`, width: `${getTimelineWidth(commenceNightFlying, ceaseNightFlying)}%` }}
                                                 title={`Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`}
                                             />
@@ -1118,40 +1283,49 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         {flyingWindowExclusions.map((period) => (
                                             <div
                                                 key={period.id}
-                                                className="absolute inset-y-0 bg-rose-400/26"
+                                                className="absolute inset-y-0 rounded-sm bg-rose-400/30 ring-1 ring-inset ring-rose-200/20"
                                                 style={{ left: `${getTimelineLeft(period.startTime)}%`, width: `${getTimelineWidth(period.startTime, period.endTime)}%` }}
                                                 title={`${restrictionLabel(period.restriction)} ${formatTimeLabel(period.startTime)}-${formatTimeLabel(period.endTime)}`}
                                             />
                                         ))}
-                                        {[
-                                            { time: flyingStartTime, label: 'Day start', color: 'bg-sky-200', text: 'text-sky-100' },
-                                            { time: flyingEndTime, label: 'Day end', color: 'bg-sky-200', text: 'text-sky-100' },
-                                            ...(allowNightFlying ? [
-                                                { time: commenceNightFlying, label: 'Night start', color: 'bg-indigo-200', text: 'text-indigo-100' },
-                                                { time: ceaseNightFlying, label: 'Night end', color: 'bg-indigo-200', text: 'text-indigo-100' },
-                                            ] : []),
-                                            ...flyingWindowExclusions.flatMap(period => ([
-                                                { time: period.startTime, label: 'Exclusion start', color: 'bg-rose-200', text: 'text-rose-100' },
-                                                { time: period.endTime, label: 'Exclusion end', color: 'bg-rose-200', text: 'text-rose-100' },
-                                            ])),
-                                        ].map((marker, index) => (
-                                            <div
-                                                key={`${marker.label}-${marker.time}-${index}`}
-                                                className={`absolute inset-y-0 w-[2px] ${marker.color} shadow-[0_0_10px_currentColor]`}
+                                        {timelineBoundaryMarkers.map((marker) => (
+                                            <button
+                                                key={marker.key}
+                                                type="button"
+                                                onPointerDown={(event) => startTimelineDrag(event, marker.target, marker.label, marker.time)}
+                                                className="absolute inset-y-0 z-30 flex w-5 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
                                                 style={{ left: `${getTimelineLeft(marker.time)}%` }}
-                                                title={`${marker.label}: ${formatTimeLabel(marker.time)}`}
+                                                title={`Drag ${marker.label}: ${formatTimeLabel(marker.time)}`}
                                             >
-                                                <span className={`absolute ${index % 2 === 0 ? 'top-2' : 'bottom-2'} left-1 rounded bg-slate-950/80 px-1.5 py-0.5 text-[10px] font-semibold ${marker.text}`}>
-                                                    {formatTimeLabel(marker.time)}
-                                                </span>
-                                            </div>
+                                                <span className={`h-full w-[3px] rounded-full ${marker.color} shadow-[0_0_12px_currentColor]`} />
+                                            </button>
                                         ))}
-                                        {[6, 12, 18, 24, 25].map((hour) => (
-                                            <div key={hour} className="absolute inset-y-0 border-l border-slate-500/70" style={{ left: `${((hour - timelineStartHour) / timelineSpanHours) * 100}%` }}>
-                                                <span className={`absolute top-1 text-[10px] font-semibold text-slate-300 ${hour === 25 ? '-translate-x-full' : 'translate-x-1'}`}>
-                                                    {hour === 24 ? '00:00' : hour === 25 ? '01:00' : `${String(hour).padStart(2, '0')}:00`}
-                                                </span>
+                                        {timelineTicks.map((hour) => (
+                                            <div
+                                                key={`tick-line-${hour}`}
+                                                className="absolute inset-y-0 z-10 border-l border-slate-400/50"
+                                                style={{ left: `${((hour - timelineStartHour) / timelineSpanHours) * 100}%` }}
+                                            />
+                                        ))}
+                                        {activeTimelineDrag && (
+                                            <div
+                                                className="pointer-events-none absolute -top-11 z-40 -translate-x-1/2 rounded-md border border-cyan-200/70 bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-cyan-50 shadow-xl"
+                                                style={{ left: `${activeTimelineDrag.left}%` }}
+                                            >
+                                                <span className="block text-[10px] uppercase tracking-[0.12em] text-cyan-200/70">{activeTimelineDrag.label}</span>
+                                                {formatCompactTimeLabel(activeTimelineDrag.time)}
                                             </div>
+                                        )}
+                                    </div>
+                                    <div className="relative mt-2 h-9">
+                                        {flyingWindowBoundaryLabels.map((marker, index) => (
+                                            <span
+                                                key={marker.key}
+                                                className={`absolute top-0 -translate-x-1/2 whitespace-nowrap rounded border ${marker.border} ${marker.bg} px-1.5 py-1 text-[10px] font-semibold ${marker.text} ${index % 2 === 0 ? '' : 'mt-4'}`}
+                                                style={{ left: `${getTimelineLeft(marker.time)}%` }}
+                                            >
+                                                {marker.label} {formatCompactTimeLabel(marker.time)}
+                                            </span>
                                         ))}
                                     </div>
                                     <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-slate-300">

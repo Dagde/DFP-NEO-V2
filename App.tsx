@@ -2249,14 +2249,20 @@ function generateDfpInternal(
         return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
     };
 
-    const getScheduledDayNightForStart = (startTime: number): 'Day' | 'Night' =>
-        startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
+    const getScheduledDayNightForStart = (startTime: number): 'Day' | 'Night' => {
+        if (!allowNightFlying) return 'Day';
+        if (ceaseNightFlying > commenceNightFlying) {
+            return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
+        }
+        const comparableStart = startTime < commenceNightFlying ? startTime + 24 : startTime;
+        return comparableStart >= commenceNightFlying && comparableStart < ceaseNightFlying + 24 ? 'Night' : 'Day';
+    };
 
     const normalisedFlyingWindowExclusions = flyingWindowExclusions
         .map(period => ({
             ...period,
             startTime: Number(period.startTime),
-            endTime: Number(period.endTime),
+            endTime: Number(period.endTime) <= Number(period.startTime) ? Number(period.endTime) + 24 : Number(period.endTime),
             restriction: period.restriction || 'both',
         }))
         .filter(period => (
@@ -2265,9 +2271,10 @@ function generateDfpInternal(
             && period.endTime > period.startTime
         ));
 
-    const pointIsInsideExclusion = (time: number, period: FlyingWindowExclusionPeriod): boolean => (
-        time >= period.startTime - 0.001 && time < period.endTime - 0.001
-    );
+    const pointIsInsideExclusion = (time: number, period: FlyingWindowExclusionPeriod): boolean => {
+        const comparableTime = time < period.startTime && period.endTime > 24 ? time + 24 : time;
+        return comparableTime >= period.startTime - 0.001 && comparableTime < period.endTime - 0.001;
+    };
 
     const getFlightWindowExclusionViolation = (startTime: number, duration: number): { reason: string; period: FlyingWindowExclusionPeriod; checkedTime: number } | null => {
         if (normalisedFlyingWindowExclusions.length === 0) return null;

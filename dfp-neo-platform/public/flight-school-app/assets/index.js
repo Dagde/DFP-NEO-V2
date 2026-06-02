@@ -21526,17 +21526,82 @@ const PrioritiesView = ({
   const timelineStartHour = 6;
   const timelineEndHour = 25;
   const timelineSpanHours = timelineEndHour - timelineStartHour;
+  const timelineMinGap = 0.25;
+  const timelineRef = reactExports.useRef(null);
+  const [activeTimelineDrag, setActiveTimelineDrag] = reactExports.useState(null);
   const normalizeTimelineHour = (time) => {
     let value = Number(time) || 0;
     if (value < timelineStartHour) value += 24;
     return Math.max(timelineStartHour, Math.min(timelineEndHour, value));
   };
+  const denormalizeTimelineHour = (time) => {
+    const bounded = Math.max(timelineStartHour, Math.min(timelineEndHour, time));
+    return bounded >= 24 ? Math.min(1, bounded - 24) : Math.min(23 + 45 / 60, bounded);
+  };
+  const snapTimelineHour = (time) => Math.round(time * 4) / 4;
   const getTimelineLeft = (time) => (normalizeTimelineHour(time) - timelineStartHour) / timelineSpanHours * 100;
   const getTimelineWidth = (start, end) => {
     const startHour = normalizeTimelineHour(start);
     let endHour = normalizeTimelineHour(end);
     if (endHour <= startHour) endHour = Math.min(timelineEndHour, endHour + 24);
     return Math.max(0.35, (Math.min(timelineEndHour, endHour) - startHour) / timelineSpanHours * 100);
+  };
+  const getTimeFromTimelinePointer = (clientX) => {
+    const bounds = timelineRef.current?.getBoundingClientRect();
+    if (!bounds || bounds.width <= 0) return timelineStartHour;
+    const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
+    return denormalizeTimelineHour(snapTimelineHour(timelineStartHour + ratio * timelineSpanHours));
+  };
+  const formatCompactTimeLabel = (decimalHour) => formatTimeLabel(decimalHour).replace(":", "");
+  const formatTimelineTickLabel = (hour) => {
+    if (hour === 24) return "0000";
+    if (hour === 25) return "0100";
+    return `${String(hour).padStart(2, "0")}00`;
+  };
+  const timelineTicks = [6, 9, 12, 15, 18, 21, 24, 25];
+  const constrainTimelineTime = (target, nextTime) => {
+    const nextHour = normalizeTimelineHour(nextTime);
+    const constrain = (min, max) => denormalizeTimelineHour(Math.max(min, Math.min(max, nextHour)));
+    if (target.kind === "day") {
+      const startHour2 = normalizeTimelineHour(flyingStartTime);
+      const endHour2 = normalizeTimelineHour(flyingEndTime);
+      return target.edge === "start" ? constrain(timelineStartHour, endHour2 - timelineMinGap) : constrain(startHour2 + timelineMinGap, timelineEndHour);
+    }
+    if (target.kind === "night") {
+      const startHour2 = normalizeTimelineHour(commenceNightFlying);
+      const endHour2 = normalizeTimelineHour(ceaseNightFlying);
+      return target.edge === "start" ? constrain(timelineStartHour, endHour2 - timelineMinGap) : constrain(startHour2 + timelineMinGap, timelineEndHour);
+    }
+    const period = flyingWindowExclusions2.find((item) => item.id === target.id);
+    if (!period) return nextTime;
+    const startHour = normalizeTimelineHour(period.startTime);
+    const endHour = normalizeTimelineHour(period.endTime);
+    return target.edge === "start" ? constrain(timelineStartHour, endHour - timelineMinGap) : constrain(startHour + timelineMinGap, timelineEndHour);
+  };
+  const applyTimelineDrag = (target, nextTime) => {
+    const constrainedTime = constrainTimelineTime(target, nextTime);
+    if (target.kind === "day") {
+      if (target.edge === "start") onUpdateFlyingStartTime(constrainedTime);
+      else onUpdateFlyingEndTime(constrainedTime);
+    } else if (target.kind === "night") {
+      if (target.edge === "start") onUpdateCommenceNightFlying(constrainedTime);
+      else onUpdateCeaseNightFlying(constrainedTime);
+    } else {
+      updateExclusionPeriod(target.id, target.edge === "start" ? { startTime: constrainedTime } : { endTime: constrainedTime });
+    }
+    return constrainedTime;
+  };
+  const startTimelineDrag = (event, target, label, time) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const constrainedTime = constrainTimelineTime(target, time);
+    setActiveTimelineDrag({
+      ...target,
+      label,
+      originalTime: constrainedTime,
+      time: constrainedTime,
+      left: getTimelineLeft(constrainedTime)
+    });
   };
   const addExclusionPeriod = () => {
     const nextStart = Math.min(Math.max(flyingStartTime + flyingWindowExclusions2.length * 0.5, 1 / 60), 23.75);
@@ -21554,9 +21619,11 @@ const PrioritiesView = ({
     const nextPeriods = flyingWindowExclusions2.map((period) => {
       if (period.id !== id) return period;
       const nextPeriod = { ...period, ...updates };
-      if (nextPeriod.endTime <= nextPeriod.startTime) {
-        if (updates.startTime !== void 0) nextPeriod.endTime = Math.min(nextPeriod.startTime + 0.25, 23 + 59 / 60);
-        if (updates.endTime !== void 0) nextPeriod.startTime = Math.max(1 / 60, nextPeriod.endTime - 0.25);
+      const startHour = normalizeTimelineHour(nextPeriod.startTime);
+      const endHour = normalizeTimelineHour(nextPeriod.endTime);
+      if (endHour - startHour < timelineMinGap) {
+        if (updates.startTime !== void 0) nextPeriod.endTime = denormalizeTimelineHour(Math.min(startHour + timelineMinGap, timelineEndHour));
+        if (updates.endTime !== void 0) nextPeriod.startTime = denormalizeTimelineHour(Math.max(endHour - timelineMinGap, timelineStartHour));
       }
       return nextPeriod;
     });
@@ -21574,6 +21641,34 @@ const PrioritiesView = ({
     if (restriction === "arrivals") return "No arrivals";
     return "No departures or arrivals";
   };
+  reactExports.useEffect(() => {
+    if (!activeTimelineDrag) return void 0;
+    const handlePointerMove = (event) => {
+      event.preventDefault();
+      const nextTime = getTimeFromTimelinePointer(event.clientX);
+      const appliedTime = applyTimelineDrag(activeTimelineDrag, nextTime);
+      setActiveTimelineDrag((previous) => previous ? {
+        ...previous,
+        time: appliedTime,
+        left: getTimelineLeft(appliedTime)
+      } : previous);
+    };
+    const handlePointerUp = () => {
+      logAudit(
+        "Priorities",
+        "Edit",
+        `Dragged ${activeTimelineDrag.label}`,
+        `${formatTimeLabel(activeTimelineDrag.originalTime)} → ${formatTimeLabel(activeTimelineDrag.time)}`
+      );
+      setActiveTimelineDrag(null);
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [activeTimelineDrag]);
   const [traineeCurrencyCourseSelection, setTraineeCurrencyCourseSelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [traineeCurrencySelection, setTraineeCurrencySelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [traineeCurrencyIncludeFlights, setTraineeCurrencyIncludeFlights] = reactExports.useState(true);
@@ -22002,6 +22097,26 @@ const PrioritiesView = ({
       ] }, event.id);
     }) })
   ] }) });
+  const timelineBoundaryMarkers = [
+    { key: "day-start", time: flyingStartTime, label: "Day start", color: "bg-sky-100", text: "text-sky-100", target: { kind: "day", edge: "start" } },
+    { key: "day-end", time: flyingEndTime, label: "Day end", color: "bg-sky-100", text: "text-sky-100", target: { kind: "day", edge: "end" } },
+    ...allowNightFlying ? [
+      { key: "night-start", time: commenceNightFlying, label: "Night start", color: "bg-indigo-100", text: "text-indigo-100", target: { kind: "night", edge: "start" } },
+      { key: "night-end", time: ceaseNightFlying, label: "Night end", color: "bg-indigo-100", text: "text-indigo-100", target: { kind: "night", edge: "end" } }
+    ] : [],
+    ...flyingWindowExclusions2.flatMap((period) => [
+      { key: `exclusion-${period.id}-start`, time: period.startTime, label: "Exclusion start", color: "bg-rose-100", text: "text-rose-100", target: { kind: "exclusion", id: period.id, edge: "start" } },
+      { key: `exclusion-${period.id}-end`, time: period.endTime, label: "Exclusion end", color: "bg-rose-100", text: "text-rose-100", target: { kind: "exclusion", id: period.id, edge: "end" } }
+    ])
+  ];
+  const flyingWindowBoundaryLabels = [
+    { key: "day-start-label", time: flyingStartTime, label: "Day start", text: "text-sky-100", border: "border-sky-300/50", bg: "bg-sky-400/12" },
+    { key: "day-end-label", time: flyingEndTime, label: "Day end", text: "text-sky-100", border: "border-sky-300/50", bg: "bg-sky-400/12" },
+    ...allowNightFlying ? [
+      { key: "night-start-label", time: commenceNightFlying, label: "Night start", text: "text-indigo-100", border: "border-indigo-300/50", bg: "bg-indigo-400/14" },
+      { key: "night-end-label", time: ceaseNightFlying, label: "Night end", text: "text-indigo-100", border: "border-indigo-300/50", bg: "bg-indigo-400/14" }
+    ] : []
+  ];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-course-demand space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
@@ -22088,7 +22203,8 @@ const PrioritiesView = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 p-4 lg:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-slate-300", children: "Day Flying Window" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[20px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mt-2 block text-sm font-medium text-slate-300", children: "Day Flying Window" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center space-x-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: flyingStartTime, onChange: (e) => {
                 logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} → ${parseFloat(e.target.value)}`);
@@ -22111,7 +22227,8 @@ const PrioritiesView = ({
             )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-slate-300", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[20px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mt-2 block text-sm font-medium text-slate-300", children: [
               ftdLabel,
               " Operating Window"
             ] }),
@@ -22128,16 +22245,14 @@ const PrioritiesView = ({
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[20px] items-center justify-between gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-slate-300", children: "Night Flying Window" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (e) => {
-                  logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
-                  onUpdateAllowNightFlying(e.target.checked);
-                }, className: "h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-cyan-300", children: "Allow Night Flying" })
-              ] })
-            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-h-[20px] items-center justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 whitespace-nowrap", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (e) => {
+                logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
+                onUpdateAllowNightFlying(e.target.checked);
+              }, className: "h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-cyan-300", children: "Allow Night Flying" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mt-2 block text-sm font-medium text-slate-300", children: "Night Flying Window" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-2 transition-opacity duration-150 ${allowNightFlying ? "opacity-100" : "opacity-40 pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: commenceNightFlying, disabled: !allowNightFlying, onChange: (e) => {
                 logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`);
@@ -22177,12 +22292,21 @@ const PrioritiesView = ({
             )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600 bg-slate-800 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-28 overflow-hidden rounded border border-slate-600 bg-slate-900/90 shadow-inner", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-400/60" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-2 h-5", children: timelineTicks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: `absolute text-[10px] font-semibold tracking-[0.08em] text-slate-200 ${hour === 25 ? "-translate-x-full" : "-translate-x-1/2"}`,
+                style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` },
+                children: formatTimelineTickLabel(hour)
+              },
+              `tick-label-${hour}`
+            )) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: timelineRef, className: "relative h-24 overflow-visible rounded border border-slate-500 bg-slate-900/90 shadow-inner", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-300/60" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute inset-y-0 bg-sky-400/18",
+                  className: "absolute inset-y-0 rounded-sm bg-sky-300/24 ring-1 ring-inset ring-sky-200/20",
                   style: { left: `${getTimelineLeft(flyingStartTime)}%`, width: `${getTimelineWidth(flyingStartTime, flyingEndTime)}%` },
                   title: `Day flying ${formatTimeLabel(flyingStartTime)}-${formatTimeLabel(flyingEndTime)}`
                 }
@@ -22190,7 +22314,7 @@ const PrioritiesView = ({
               allowNightFlying && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute inset-y-0 bg-indigo-400/20",
+                  className: "absolute inset-y-0 rounded-sm bg-indigo-400/22 ring-1 ring-inset ring-indigo-200/20",
                   style: { left: `${getTimelineLeft(commenceNightFlying)}%`, width: `${getTimelineWidth(commenceNightFlying, ceaseNightFlying)}%` },
                   title: `Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`
                 }
@@ -22198,35 +22322,57 @@ const PrioritiesView = ({
               flyingWindowExclusions2.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute inset-y-0 bg-rose-400/26",
+                  className: "absolute inset-y-0 rounded-sm bg-rose-400/30 ring-1 ring-inset ring-rose-200/20",
                   style: { left: `${getTimelineLeft(period.startTime)}%`, width: `${getTimelineWidth(period.startTime, period.endTime)}%` },
                   title: `${restrictionLabel(period.restriction)} ${formatTimeLabel(period.startTime)}-${formatTimeLabel(period.endTime)}`
                 },
                 period.id
               )),
-              [
-                { time: flyingStartTime, label: "Day start", color: "bg-sky-200", text: "text-sky-100" },
-                { time: flyingEndTime, label: "Day end", color: "bg-sky-200", text: "text-sky-100" },
-                ...allowNightFlying ? [
-                  { time: commenceNightFlying, label: "Night start", color: "bg-indigo-200", text: "text-indigo-100" },
-                  { time: ceaseNightFlying, label: "Night end", color: "bg-indigo-200", text: "text-indigo-100" }
-                ] : [],
-                ...flyingWindowExclusions2.flatMap((period) => [
-                  { time: period.startTime, label: "Exclusion start", color: "bg-rose-200", text: "text-rose-100" },
-                  { time: period.endTime, label: "Exclusion end", color: "bg-rose-200", text: "text-rose-100" }
-                ])
-              ].map((marker, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              timelineBoundaryMarkers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onPointerDown: (event) => startTimelineDrag(event, marker.target, marker.label, marker.time),
+                  className: "absolute inset-y-0 z-30 flex w-5 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200",
+                  style: { left: `${getTimelineLeft(marker.time)}%` },
+                  title: `Drag ${marker.label}: ${formatTimeLabel(marker.time)}`,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-full w-[3px] rounded-full ${marker.color} shadow-[0_0_12px_currentColor]` })
+                },
+                marker.key
+              )),
+              timelineTicks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: `absolute inset-y-0 w-[2px] ${marker.color} shadow-[0_0_10px_currentColor]`,
-                  style: { left: `${getTimelineLeft(marker.time)}%` },
-                  title: `${marker.label}: ${formatTimeLabel(marker.time)}`,
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute ${index % 2 === 0 ? "top-2" : "bottom-2"} left-1 rounded bg-slate-950/80 px-1.5 py-0.5 text-[10px] font-semibold ${marker.text}`, children: formatTimeLabel(marker.time) })
+                  className: "absolute inset-y-0 z-10 border-l border-slate-400/50",
+                  style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` }
                 },
-                `${marker.label}-${marker.time}-${index}`
+                `tick-line-${hour}`
               )),
-              [6, 12, 18, 24, 25].map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-y-0 border-l border-slate-500/70", style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute top-1 text-[10px] font-semibold text-slate-300 ${hour === 25 ? "-translate-x-full" : "translate-x-1"}`, children: hour === 24 ? "00:00" : hour === 25 ? "01:00" : `${String(hour).padStart(2, "0")}:00` }) }, hour))
+              activeTimelineDrag && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  className: "pointer-events-none absolute -top-11 z-40 -translate-x-1/2 rounded-md border border-cyan-200/70 bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-cyan-50 shadow-xl",
+                  style: { left: `${activeTimelineDrag.left}%` },
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] uppercase tracking-[0.12em] text-cyan-200/70", children: activeTimelineDrag.label }),
+                    formatCompactTimeLabel(activeTimelineDrag.time)
+                  ]
+                }
+              )
             ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2 h-9", children: flyingWindowBoundaryLabels.map((marker, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "span",
+              {
+                className: `absolute top-0 -translate-x-1/2 whitespace-nowrap rounded border ${marker.border} ${marker.bg} px-1.5 py-1 text-[10px] font-semibold ${marker.text} ${index % 2 === 0 ? "" : "mt-4"}`,
+                style: { left: `${getTimelineLeft(marker.time)}%` },
+                children: [
+                  marker.label,
+                  " ",
+                  formatCompactTimeLabel(marker.time)
+                ]
+              },
+              marker.key
+            )) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-4 text-[11px] text-slate-300", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-4 w-px bg-sky-200 shadow-[0_0_8px_rgba(186,230,253,0.9)]" }),
@@ -58937,14 +59083,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
   };
-  const getScheduledDayNightForStart = (startTime) => startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
+  const getScheduledDayNightForStart = (startTime) => {
+    if (!allowNightFlying) return "Day";
+    if (ceaseNightFlying > commenceNightFlying) {
+      return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
+    }
+    const comparableStart = startTime < commenceNightFlying ? startTime + 24 : startTime;
+    return comparableStart >= commenceNightFlying && comparableStart < ceaseNightFlying + 24 ? "Night" : "Day";
+  };
   const normalisedFlyingWindowExclusions = flyingWindowExclusions.map((period) => ({
     ...period,
     startTime: Number(period.startTime),
-    endTime: Number(period.endTime),
+    endTime: Number(period.endTime) <= Number(period.startTime) ? Number(period.endTime) + 24 : Number(period.endTime),
     restriction: period.restriction || "both"
   })).filter((period) => Number.isFinite(period.startTime) && Number.isFinite(period.endTime) && period.endTime > period.startTime);
-  const pointIsInsideExclusion = (time, period) => time >= period.startTime - 1e-3 && time < period.endTime - 1e-3;
+  const pointIsInsideExclusion = (time, period) => {
+    const comparableTime = time < period.startTime && period.endTime > 24 ? time + 24 : time;
+    return comparableTime >= period.startTime - 1e-3 && comparableTime < period.endTime - 1e-3;
+  };
   const getFlightWindowExclusionViolation = (startTime, duration) => {
     if (normalisedFlyingWindowExclusions.length === 0) return null;
     const landTime = startTime + duration;
