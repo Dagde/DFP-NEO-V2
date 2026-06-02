@@ -21563,11 +21563,11 @@ const PrioritiesView = ({
   };
   const timelineTicks = [6, 9, 12, 15, 18, 21, 24, 25];
   const exclusionTimelineShades = [
-    "bg-rose-400/30 ring-rose-200/24",
-    "bg-amber-300/26 ring-amber-100/24",
-    "bg-fuchsia-400/24 ring-fuchsia-100/24",
-    "bg-emerald-300/22 ring-emerald-100/22",
-    "bg-orange-300/24 ring-orange-100/22"
+    "bg-rose-500/30 ring-rose-200/30",
+    "bg-amber-400/30 ring-amber-100/30",
+    "bg-fuchsia-500/25 ring-fuchsia-100/30",
+    "bg-emerald-400/25 ring-emerald-100/30",
+    "bg-orange-400/30 ring-orange-100/30"
   ];
   const exclusionBoundaryColors = ["bg-rose-100", "bg-amber-100", "bg-fuchsia-100", "bg-emerald-100", "bg-orange-100"];
   const getExclusionTimelineShade = (index) => exclusionTimelineShades[index % exclusionTimelineShades.length];
@@ -22340,7 +22340,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute inset-y-0 rounded-sm bg-cyan-300/16 ring-1 ring-inset ring-cyan-100/18",
+                  className: "absolute inset-y-0 rounded-sm bg-cyan-400/30 ring-1 ring-inset ring-cyan-100/30",
                   style: { left: `${getTimelineLeft(flyingStartTime)}%`, width: `${getTimelineWidth(flyingStartTime, flyingEndTime)}%` },
                   title: `Day flying ${formatTimeLabel(flyingStartTime)}-${formatTimeLabel(flyingEndTime)}`
                 }
@@ -22348,7 +22348,7 @@ const PrioritiesView = ({
               allowNightFlying && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute inset-y-0 rounded-sm bg-violet-300/16 ring-1 ring-inset ring-violet-100/18",
+                  className: "absolute inset-y-0 rounded-sm bg-violet-500/30 ring-1 ring-inset ring-violet-100/30",
                   style: { left: `${getTimelineLeft(commenceNightFlying)}%`, width: `${getTimelineWidth(commenceNightFlying, ceaseNightFlying)}%` },
                   title: `Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`
                 }
