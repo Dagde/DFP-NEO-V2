@@ -326,7 +326,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const timelineStartHour = 6;
   const timelineEndHour = 25;
   const timelineSpanHours = timelineEndHour - timelineStartHour;
-  const timelineMinGap = 0.25;
+  const timelineMinGap = 5 / 60;
   const timelineBoundaryLabelWidthPx = 104;
   const timelineBoundaryLabelGapPx = 5;
   const timelineRef = useRef<HTMLDivElement | null>(null);
@@ -341,7 +341,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const bounded = Math.max(timelineStartHour, Math.min(timelineEndHour, time));
     return bounded >= 24 ? Math.min(1, bounded - 24) : Math.min(23 + 45 / 60, bounded);
   };
-  const snapTimelineHour = (time: number): number => Math.round(time * 4) / 4;
+  const snapTimelineHour = (time: number): number => Math.round(time * 12) / 12;
   const getTimelineLeft = (time: number): number => ((normalizeTimelineHour(time) - timelineStartHour) / timelineSpanHours) * 100;
   const getTimelineWidth = (start: number, end: number): number => {
     const startHour = normalizeTimelineHour(start);
@@ -362,16 +362,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return `${String(hour).padStart(2, '0')}00`;
   };
   const timelineTicks = [6, 9, 12, 15, 18, 21, 24, 25];
-  const exclusionTimelineShades = [
-    'bg-rose-500/30 ring-rose-200/30',
-    'bg-amber-400/30 ring-amber-100/30',
-    'bg-fuchsia-500/25 ring-fuchsia-100/30',
-    'bg-emerald-400/25 ring-emerald-100/30',
-    'bg-orange-400/30 ring-orange-100/30',
-  ];
-  const exclusionBoundaryColors = ['bg-rose-100', 'bg-amber-100', 'bg-fuchsia-100', 'bg-emerald-100', 'bg-orange-100'];
-  const getExclusionTimelineShade = (index: number): string => exclusionTimelineShades[index % exclusionTimelineShades.length];
-  const getExclusionBoundaryColor = (index: number): string => exclusionBoundaryColors[index % exclusionBoundaryColors.length];
+  const dayTimelineShade = 'bg-cyan-400/30 ring-cyan-100/30';
+  const nightTimelineShade = 'bg-violet-500/30 ring-violet-100/30';
+  const exclusionTimelineShade = 'bg-rose-500/30 ring-rose-200/30';
+  const exclusionBoundaryColor = 'bg-rose-100';
   const getTimelinePixelLeft = (time: number): number => (getTimelineLeft(time) / 100) * timelineChartWidth;
   const boundaryLabelsOverlap = (firstTime: number, secondTime: number): boolean => {
     if (timelineChartWidth <= 0) return Math.abs(getTimelineLeft(firstTime) - getTimelineLeft(secondTime)) < 9;
@@ -436,8 +430,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const addExclusionPeriod = () => {
-    const nextStart = Math.min(Math.max(flyingStartTime + flyingWindowExclusions.length * 0.5, 1 / 60), 23.75);
-    const nextEnd = Math.min(nextStart + 0.5, 23 + 59 / 60);
+    const latestExistingEnd = flyingWindowExclusions.length > 0
+      ? Math.max(...flyingWindowExclusions.map(period => normalizeTimelineHour(period.endTime)))
+      : normalizeTimelineHour(flyingStartTime) - 1;
+    const nextStartHour = Math.min(Math.max(latestExistingEnd + 1, timelineStartHour), timelineEndHour - timelineMinGap);
+    const nextEndHour = Math.min(nextStartHour + 0.5, timelineEndHour);
+    const nextStart = denormalizeTimelineHour(snapTimelineHour(nextStartHour));
+    const nextEnd = denormalizeTimelineHour(snapTimelineHour(nextEndHour));
     const nextPeriod: FlyingWindowExclusionPeriod = {
       id: uuidv4(),
       startTime: nextStart,
@@ -1117,9 +1116,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       { key: 'night-start', time: commenceNightFlying, label: 'Night start', color: 'bg-indigo-100', text: 'text-indigo-100', target: { kind: 'night' as const, edge: 'start' as const } },
       { key: 'night-end', time: ceaseNightFlying, label: 'Night end', color: 'bg-indigo-100', text: 'text-indigo-100', target: { kind: 'night' as const, edge: 'end' as const } },
     ] : []),
-    ...flyingWindowExclusions.flatMap((period, index) => ([
-      { key: `exclusion-${period.id}-start`, time: period.startTime, label: 'Exclusion start', color: getExclusionBoundaryColor(index), text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'start' as const } },
-      { key: `exclusion-${period.id}-end`, time: period.endTime, label: 'Exclusion end', color: getExclusionBoundaryColor(index), text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'end' as const } },
+    ...flyingWindowExclusions.flatMap((period) => ([
+      { key: `exclusion-${period.id}-start`, time: period.startTime, label: 'Exclusion start', color: exclusionBoundaryColor, text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'start' as const } },
+      { key: `exclusion-${period.id}-end`, time: period.endTime, label: 'Exclusion end', color: exclusionBoundaryColor, text: 'text-rose-100', target: { kind: 'exclusion' as const, id: period.id, edge: 'end' as const } },
     ])),
   ];
 
@@ -1297,7 +1296,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         onClick={addExclusionPeriod}
                                         className="rounded-md border border-cyan-400/70 bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-50 hover:border-cyan-200"
                                     >
-                                        Add Period
+                                                Add Exclusion Period
                                     </button>
                                 </div>
 
@@ -1316,21 +1315,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     <div ref={timelineRef} className="relative h-24 overflow-visible rounded border border-slate-500 bg-slate-900/90 shadow-inner">
                                         <div className="absolute inset-x-0 top-1/2 h-px bg-slate-300/60" />
                                         <div
-                                            className="absolute inset-y-0 rounded-sm bg-cyan-400/30 ring-1 ring-inset ring-cyan-100/30"
+                                            className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayTimelineShade}`}
                                             style={{ left: `${getTimelineLeft(flyingStartTime)}%`, width: `${getTimelineWidth(flyingStartTime, flyingEndTime)}%` }}
                                             title={`Day flying ${formatTimeLabel(flyingStartTime)}-${formatTimeLabel(flyingEndTime)}`}
                                         />
                                         {allowNightFlying && (
                                             <div
-                                                className="absolute inset-y-0 rounded-sm bg-violet-500/30 ring-1 ring-inset ring-violet-100/30"
+                                                className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${nightTimelineShade}`}
                                                 style={{ left: `${getTimelineLeft(commenceNightFlying)}%`, width: `${getTimelineWidth(commenceNightFlying, ceaseNightFlying)}%` }}
                                                 title={`Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`}
                                             />
                                         )}
-                                        {flyingWindowExclusions.map((period, index) => (
+                                        {flyingWindowExclusions.map((period) => (
                                             <div
                                                 key={period.id}
-                                                className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${getExclusionTimelineShade(index)}`}
+                                                className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${exclusionTimelineShade}`}
                                                 style={{ left: `${getTimelineLeft(period.startTime)}%`, width: `${getTimelineWidth(period.startTime, period.endTime)}%` }}
                                                 title={`${restrictionLabel(period.restriction)} ${formatTimeLabel(period.startTime)}-${formatTimeLabel(period.endTime)}`}
                                             />
@@ -1376,9 +1375,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         ))}
                                     </div>
                                     <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-slate-300">
-                                        <span className="inline-flex items-center gap-1"><span className="h-4 w-px bg-sky-200 shadow-[0_0_8px_rgba(186,230,253,0.9)]" /> Day flying boundary</span>
-                                        <span className="inline-flex items-center gap-1"><span className="h-4 w-px bg-indigo-200 shadow-[0_0_8px_rgba(199,210,254,0.9)]" /> Night flying boundary</span>
-                                        <span className="inline-flex items-center gap-1"><span className="h-4 w-px bg-rose-200 shadow-[0_0_8px_rgba(254,205,211,0.9)]" /> Exclusion boundary</span>
+                                        <span className="inline-flex items-center gap-1.5"><span className={`h-3.5 w-5 rounded-sm ring-1 ring-inset ${dayTimelineShade}`} /> Day flying period</span>
+                                        <span className="inline-flex items-center gap-1.5"><span className={`h-3.5 w-5 rounded-sm ring-1 ring-inset ${nightTimelineShade}`} /> Night flying period</span>
+                                        <span className="inline-flex items-center gap-1.5"><span className={`h-3.5 w-5 rounded-sm ring-1 ring-inset ${exclusionTimelineShade}`} /> Exclusion period</span>
                                     </div>
                                 </div>
 

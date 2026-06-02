@@ -21526,7 +21526,7 @@ const PrioritiesView = ({
   const timelineStartHour = 6;
   const timelineEndHour = 25;
   const timelineSpanHours = timelineEndHour - timelineStartHour;
-  const timelineMinGap = 0.25;
+  const timelineMinGap = 5 / 60;
   const timelineBoundaryLabelWidthPx = 104;
   const timelineBoundaryLabelGapPx = 5;
   const timelineRef = reactExports.useRef(null);
@@ -21541,7 +21541,7 @@ const PrioritiesView = ({
     const bounded = Math.max(timelineStartHour, Math.min(timelineEndHour, time));
     return bounded >= 24 ? Math.min(1, bounded - 24) : Math.min(23 + 45 / 60, bounded);
   };
-  const snapTimelineHour = (time) => Math.round(time * 4) / 4;
+  const snapTimelineHour = (time) => Math.round(time * 12) / 12;
   const getTimelineLeft = (time) => (normalizeTimelineHour(time) - timelineStartHour) / timelineSpanHours * 100;
   const getTimelineWidth = (start, end) => {
     const startHour = normalizeTimelineHour(start);
@@ -21562,16 +21562,10 @@ const PrioritiesView = ({
     return `${String(hour).padStart(2, "0")}00`;
   };
   const timelineTicks = [6, 9, 12, 15, 18, 21, 24, 25];
-  const exclusionTimelineShades = [
-    "bg-rose-500/30 ring-rose-200/30",
-    "bg-amber-400/30 ring-amber-100/30",
-    "bg-fuchsia-500/25 ring-fuchsia-100/30",
-    "bg-emerald-400/25 ring-emerald-100/30",
-    "bg-orange-400/30 ring-orange-100/30"
-  ];
-  const exclusionBoundaryColors = ["bg-rose-100", "bg-amber-100", "bg-fuchsia-100", "bg-emerald-100", "bg-orange-100"];
-  const getExclusionTimelineShade = (index) => exclusionTimelineShades[index % exclusionTimelineShades.length];
-  const getExclusionBoundaryColor = (index) => exclusionBoundaryColors[index % exclusionBoundaryColors.length];
+  const dayTimelineShade = "bg-cyan-400/30 ring-cyan-100/30";
+  const nightTimelineShade = "bg-violet-500/30 ring-violet-100/30";
+  const exclusionTimelineShade = "bg-rose-500/30 ring-rose-200/30";
+  const exclusionBoundaryColor = "bg-rose-100";
   const getTimelinePixelLeft = (time) => getTimelineLeft(time) / 100 * timelineChartWidth;
   const boundaryLabelsOverlap = (firstTime, secondTime) => {
     if (timelineChartWidth <= 0) return Math.abs(getTimelineLeft(firstTime) - getTimelineLeft(secondTime)) < 9;
@@ -21623,8 +21617,11 @@ const PrioritiesView = ({
     });
   };
   const addExclusionPeriod = () => {
-    const nextStart = Math.min(Math.max(flyingStartTime + flyingWindowExclusions.length * 0.5, 1 / 60), 23.75);
-    const nextEnd = Math.min(nextStart + 0.5, 23 + 59 / 60);
+    const latestExistingEnd = flyingWindowExclusions.length > 0 ? Math.max(...flyingWindowExclusions.map((period) => normalizeTimelineHour(period.endTime))) : normalizeTimelineHour(flyingStartTime) - 1;
+    const nextStartHour = Math.min(Math.max(latestExistingEnd + 1, timelineStartHour), timelineEndHour - timelineMinGap);
+    const nextEndHour = Math.min(nextStartHour + 0.5, timelineEndHour);
+    const nextStart = denormalizeTimelineHour(snapTimelineHour(nextStartHour));
+    const nextEnd = denormalizeTimelineHour(snapTimelineHour(nextEndHour));
     const nextPeriod = {
       id: v4(),
       startTime: nextStart,
@@ -22138,9 +22135,9 @@ const PrioritiesView = ({
       { key: "night-start", time: commenceNightFlying, label: "Night start", color: "bg-indigo-100", text: "text-indigo-100", target: { kind: "night", edge: "start" } },
       { key: "night-end", time: ceaseNightFlying, label: "Night end", color: "bg-indigo-100", text: "text-indigo-100", target: { kind: "night", edge: "end" } }
     ] : [],
-    ...flyingWindowExclusions.flatMap((period, index) => [
-      { key: `exclusion-${period.id}-start`, time: period.startTime, label: "Exclusion start", color: getExclusionBoundaryColor(index), text: "text-rose-100", target: { kind: "exclusion", id: period.id, edge: "start" } },
-      { key: `exclusion-${period.id}-end`, time: period.endTime, label: "Exclusion end", color: getExclusionBoundaryColor(index), text: "text-rose-100", target: { kind: "exclusion", id: period.id, edge: "end" } }
+    ...flyingWindowExclusions.flatMap((period) => [
+      { key: `exclusion-${period.id}-start`, time: period.startTime, label: "Exclusion start", color: exclusionBoundaryColor, text: "text-rose-100", target: { kind: "exclusion", id: period.id, edge: "start" } },
+      { key: `exclusion-${period.id}-end`, time: period.endTime, label: "Exclusion end", color: exclusionBoundaryColor, text: "text-rose-100", target: { kind: "exclusion", id: period.id, edge: "end" } }
     ])
   ];
   const dayEndNightStartOverlap = allowNightFlying && boundaryLabelsOverlap(flyingEndTime, commenceNightFlying);
@@ -22322,7 +22319,7 @@ const PrioritiesView = ({
                 type: "button",
                 onClick: addExclusionPeriod,
                 className: "rounded-md border border-cyan-400/70 bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-50 hover:border-cyan-200",
-                children: "Add Period"
+                children: "Add Exclusion Period"
               }
             )
           ] }),
@@ -22341,7 +22338,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute inset-y-0 rounded-sm bg-cyan-400/30 ring-1 ring-inset ring-cyan-100/30",
+                  className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayTimelineShade}`,
                   style: { left: `${getTimelineLeft(flyingStartTime)}%`, width: `${getTimelineWidth(flyingStartTime, flyingEndTime)}%` },
                   title: `Day flying ${formatTimeLabel(flyingStartTime)}-${formatTimeLabel(flyingEndTime)}`
                 }
@@ -22349,15 +22346,15 @@ const PrioritiesView = ({
               allowNightFlying && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute inset-y-0 rounded-sm bg-violet-500/30 ring-1 ring-inset ring-violet-100/30",
+                  className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${nightTimelineShade}`,
                   style: { left: `${getTimelineLeft(commenceNightFlying)}%`, width: `${getTimelineWidth(commenceNightFlying, ceaseNightFlying)}%` },
                   title: `Night flying ${formatTimeLabel(commenceNightFlying)}-${formatTimeLabel(ceaseNightFlying)}`
                 }
               ),
-              flyingWindowExclusions.map((period, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              flyingWindowExclusions.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${getExclusionTimelineShade(index)}`,
+                  className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${exclusionTimelineShade}`,
                   style: { left: `${getTimelineLeft(period.startTime)}%`, width: `${getTimelineWidth(period.startTime, period.endTime)}%` },
                   title: `${restrictionLabel(period.restriction)} ${formatTimeLabel(period.startTime)}-${formatTimeLabel(period.endTime)}`
                 },
@@ -22409,17 +22406,17 @@ const PrioritiesView = ({
               marker.key
             )) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-4 text-[11px] text-slate-300", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-4 w-px bg-sky-200 shadow-[0_0_8px_rgba(186,230,253,0.9)]" }),
-                " Day flying boundary"
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-3.5 w-5 rounded-sm ring-1 ring-inset ${dayTimelineShade}` }),
+                " Day flying period"
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-4 w-px bg-indigo-200 shadow-[0_0_8px_rgba(199,210,254,0.9)]" }),
-                " Night flying boundary"
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-3.5 w-5 rounded-sm ring-1 ring-inset ${nightTimelineShade}` }),
+                " Night flying period"
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-4 w-px bg-rose-200 shadow-[0_0_8px_rgba(254,205,211,0.9)]" }),
-                " Exclusion boundary"
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-3.5 w-5 rounded-sm ring-1 ring-inset ${exclusionTimelineShade}` }),
+                " Exclusion period"
               ] })
             ] })
           ] }),
