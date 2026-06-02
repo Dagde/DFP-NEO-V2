@@ -24003,12 +24003,15 @@ updates.forEach(update => {
                         {renderActiveView()}
                     </div>
                     {activeView === 'Program Schedule' && (
-                        <>
+                        <aside
+                            className={`absolute inset-y-0 right-0 z-40 w-[40%] min-w-[360px] max-w-[680px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
+                            aria-hidden={!showDfpSidePanel}
+                        >
                             <button
                                 type="button"
                                 onClick={() => setShowDfpSidePanel(value => !value)}
                                 aria-label={showDfpSidePanel ? 'Close DFP side panel' : 'Open DFP side panel'}
-                                className="fixed right-[96px] top-1/2 z-[90] flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
+                                className="absolute left-[-48px] top-1/2 z-50 flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100"
                             >
                                 <span
                                     className="h-4 w-7 opacity-80"
@@ -24026,13 +24029,8 @@ updates.forEach(update => {
                                     }}
                                 />
                             </button>
-                            <aside
-                                className={`absolute inset-y-0 right-0 z-40 w-[40%] min-w-[360px] max-w-[680px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}
-                                aria-hidden={!showDfpSidePanel}
-                            >
-                                <div className="h-full border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" />
-                            </aside>
-                        </>
+                            <div className="h-full border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" />
+                        </aside>
                     )}
                     {showPausePanel && (
                         <PauseFlightOpsPanel

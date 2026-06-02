@@ -76728,48 +76728,48 @@ Do you want to replace the existing entry?`,
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 overflow-hidden flex flex-row min-h-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }),
-          activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                type: "button",
-                onClick: () => setShowDfpSidePanel((value) => !value),
-                "aria-label": showDfpSidePanel ? "Close DFP side panel" : "Open DFP side panel",
-                className: "fixed right-[96px] top-1/2 z-[90] flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "span",
-                    {
-                      className: "h-4 w-7 opacity-80",
-                      style: {
-                        backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                        backgroundSize: "8px 8px"
-                      }
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showDfpSidePanel ? "v" : "^" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "span",
-                    {
-                      className: "h-4 w-7 opacity-80",
-                      style: {
-                        backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                        backgroundSize: "8px 8px"
-                      }
-                    }
-                  )
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "aside",
-              {
-                className: `absolute inset-y-0 right-0 z-40 w-[40%] min-w-[360px] max-w-[680px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full pointer-events-none"}`,
-                "aria-hidden": !showDfpSidePanel,
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" })
-              }
-            )
-          ] }),
+          activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "aside",
+            {
+              className: `absolute inset-y-0 right-0 z-40 w-[40%] min-w-[360px] max-w-[680px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+              "aria-hidden": !showDfpSidePanel,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setShowDfpSidePanel((value) => !value),
+                    "aria-label": showDfpSidePanel ? "Close DFP side panel" : "Open DFP side panel",
+                    className: "absolute left-[-48px] top-1/2 z-50 flex h-7 w-[96px] -translate-y-1/2 -rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "span",
+                        {
+                          className: "h-4 w-7 opacity-80",
+                          style: {
+                            backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                            backgroundSize: "8px 8px"
+                          }
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showDfpSidePanel ? "v" : "^" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "span",
+                        {
+                          className: "h-4 w-7 opacity-80",
+                          style: {
+                            backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                            backgroundSize: "8px 8px"
+                          }
+                        }
+                      )
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80" })
+              ]
+            }
+          ),
           showPausePanel && /* @__PURE__ */ jsxRuntimeExports.jsx(
             PauseFlightOpsPanel,
             {
