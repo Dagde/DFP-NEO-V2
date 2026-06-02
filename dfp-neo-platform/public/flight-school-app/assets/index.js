@@ -58026,10 +58026,7 @@ const DfpSidePanelTimeline = ({
   ];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-400/15 bg-slate-950/72 p-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200/60", children: "Flying Windows" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-sm font-semibold text-white", children: "Departure and Arrival Exclusions" })
-      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "NEO Assist" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {

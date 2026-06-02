@@ -334,8 +334,7 @@ const DfpSidePanelTimeline: React.FC<{
         <div className="border-b border-cyan-400/15 bg-slate-950/72 p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200/60">Flying Windows</p>
-                    <h3 className="mt-1 text-sm font-semibold text-white">Departure and Arrival Exclusions</h3>
+                    <h3 className="text-sm font-semibold text-white">NEO Assist</h3>
                 </div>
                 <button
                     type="button"
