@@ -21370,10 +21370,62 @@ const AircraftConfigSelect = ({ value, definitions, disabled = false, includeAny
     }
   );
 };
+const TASKING_AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
+const TASKING_AIRFIELD_SUGGESTION_LIMIT = 8;
+const emptyTaskingAirfieldLookup = {
+  searchable: []
+};
+const normaliseTaskingAirfieldToken = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+const getTaskingAirfieldCatalogueUrl = () => {
+  const baseUrl = new URL("./", window.location.href);
+  return new URL(TASKING_AIRFIELD_CATALOGUE_FILE, baseUrl).toString();
+};
+const getTaskingAirfieldPrimaryCode = (entry) => entry.c || entry.i || entry.l || "";
+const getTaskingAirfieldSuggestionLabel = (entry) => {
+  const codes = [entry.c, entry.i, entry.l].filter(Boolean).join(" / ");
+  const city = entry.m && entry.m !== entry.n ? `, ${entry.m}` : "";
+  const country = entry.y ? ` (${entry.y})` : "";
+  return `${codes || "No code"} - ${entry.n}${city}${country}`;
+};
+const buildTaskingAirfieldLookup = (entries) => ({
+  searchable: entries.map((entry) => {
+    const codeText = [entry.c, entry.i, entry.l].filter(Boolean).join(" ");
+    const nameText = [entry.n, entry.m, entry.y].filter(Boolean).join(" ");
+    return {
+      entry,
+      searchText: normaliseTaskingAirfieldToken(`${codeText} ${nameText}`),
+      codeText: normaliseTaskingAirfieldToken(codeText),
+      nameText: normaliseTaskingAirfieldToken(nameText)
+    };
+  })
+});
+const getTaskingAirfieldSuggestions = (value, lookup) => {
+  const query = normaliseTaskingAirfieldToken(value);
+  if (query.length < 2 || lookup.searchable.length === 0) return [];
+  const scored = lookup.searchable.map((item) => {
+    let score = 0;
+    if (item.codeText === query) score = 100;
+    else if (item.nameText === query) score = 95;
+    else if (item.codeText.startsWith(query)) score = 85;
+    else if (item.nameText.startsWith(query)) score = 75;
+    else if (item.searchText.includes(query)) score = 55;
+    return { ...item, score };
+  }).filter((item) => item.score > 0).sort((left, right) => right.score - left.score || getTaskingAirfieldPrimaryCode(left.entry).localeCompare(getTaskingAirfieldPrimaryCode(right.entry)) || left.entry.n.localeCompare(right.entry.n));
+  const seen = /* @__PURE__ */ new Set();
+  const suggestions = [];
+  scored.forEach(({ entry }) => {
+    const key = `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    suggestions.push(entry);
+  });
+  return suggestions.slice(0, TASKING_AIRFIELD_SUGGESTION_LIMIT);
+};
 const TaskingRequestTable = ({
   taskingRequests,
   timeOptions,
   aircraftConfigOptions,
+  airfieldLookup,
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
@@ -21396,6 +21448,10 @@ const TaskingRequestTable = ({
       taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 10, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
       taskingRequests.map((request) => {
         const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
+        const depPointListId = `tasking-dep-point-${request.id}`;
+        const arrivalPointListId = `tasking-arrival-point-${request.id}`;
+        const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
+        const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[180px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
@@ -21437,24 +21493,48 @@ const TaskingRequestTable = ({
               className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
             }
           ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: request.depPoint,
-              onChange: (event) => onUpdateTaskingRequest(request.id, { depPoint: event.target.value, submitted: false }),
-              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: request.arrivalPoint,
-              onChange: (event) => onUpdateTaskingRequest(request.id, { arrivalPoint: event.target.value, submitted: false }),
-              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-            }
-          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: request.depPoint,
+                list: depPointListId,
+                autoComplete: "off",
+                onChange: (event) => onUpdateTaskingRequest(request.id, { depPoint: event.target.value.toUpperCase(), submitted: false }),
+                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: depPointListId, children: depPointSuggestions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "option",
+              {
+                value: getTaskingAirfieldPrimaryCode(entry),
+                label: getTaskingAirfieldSuggestionLabel(entry)
+              },
+              `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`
+            )) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: request.arrivalPoint,
+                list: arrivalPointListId,
+                autoComplete: "off",
+                onChange: (event) => onUpdateTaskingRequest(request.id, { arrivalPoint: event.target.value.toUpperCase(), submitted: false }),
+                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: arrivalPointListId, children: arrivalPointSuggestions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "option",
+              {
+                value: getTaskingAirfieldPrimaryCode(entry),
+                label: getTaskingAirfieldSuggestionLabel(entry)
+              },
+              `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`
+            )) })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
@@ -21843,6 +21923,7 @@ const PrioritiesView = ({
   const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const currencyDraftStorageKey = "neoCurrencyDraftEvents";
   const taskingRequestStorageKey = "neoTaskingRequests";
+  const [taskingAirfieldCatalogue, setTaskingAirfieldCatalogue] = reactExports.useState([]);
   const [taskingRequests, setTaskingRequests] = reactExports.useState(() => {
     try {
       const stored = localStorage.getItem(taskingRequestStorageKey);
@@ -21909,6 +21990,33 @@ const PrioritiesView = ({
   reactExports.useEffect(() => {
     localStorage.setItem(taskingRequestStorageKey, JSON.stringify(taskingRequests));
   }, [taskingRequests]);
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    const loadTaskingAirfieldCatalogue = async () => {
+      try {
+        const res = await fetch(getTaskingAirfieldCatalogueUrl(), { cache: "force-cache" });
+        if (!res.ok) throw new Error(`Airfield catalogue load failed (${res.status})`);
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+        const entries = data.filter((entry) => entry && typeof entry.n === "string" && Number.isFinite(Number(entry.a)) && Number.isFinite(Number(entry.o)) && typeof entry.t === "string").map((entry) => ({
+          ...entry,
+          a: Number(entry.a),
+          o: Number(entry.o)
+        }));
+        if (!cancelled) setTaskingAirfieldCatalogue(entries);
+      } catch {
+        if (!cancelled) setTaskingAirfieldCatalogue([]);
+      }
+    };
+    loadTaskingAirfieldCatalogue();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const taskingAirfieldLookup = reactExports.useMemo(
+    () => taskingAirfieldCatalogue.length ? buildTaskingAirfieldLookup(taskingAirfieldCatalogue) : emptyTaskingAirfieldLookup,
+    [taskingAirfieldCatalogue]
+  );
   const addTaskingRequest = () => {
     const nextRequest = {
       id: v4(),
@@ -22882,6 +22990,7 @@ const PrioritiesView = ({
             taskingRequests,
             timeOptions,
             aircraftConfigOptions,
+            airfieldLookup: taskingAirfieldLookup,
             onAddTaskingRequest: addTaskingRequest,
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,

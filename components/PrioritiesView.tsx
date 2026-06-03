@@ -147,10 +147,109 @@ type TimeOption = {
   value: number;
 };
 
+type TaskingAirfieldCatalogueEntry = {
+  c?: string;
+  i?: string;
+  l?: string;
+  n: string;
+  m?: string;
+  y?: string;
+  a: number;
+  o: number;
+  t: string;
+};
+
+type TaskingAirfieldSearchItem = {
+  entry: TaskingAirfieldCatalogueEntry;
+  searchText: string;
+  codeText: string;
+  nameText: string;
+};
+
+type TaskingAirfieldLookup = {
+  searchable: TaskingAirfieldSearchItem[];
+};
+
+const TASKING_AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
+const TASKING_AIRFIELD_SUGGESTION_LIMIT = 8;
+
+const emptyTaskingAirfieldLookup: TaskingAirfieldLookup = {
+  searchable: [],
+};
+
+const normaliseTaskingAirfieldToken = (value: any): string => (
+  String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
+);
+
+const getTaskingAirfieldCatalogueUrl = (): string => {
+  const baseUrl = new URL((import.meta as any)?.env?.BASE_URL || './', window.location.href);
+  return new URL(TASKING_AIRFIELD_CATALOGUE_FILE, baseUrl).toString();
+};
+
+const getTaskingAirfieldPrimaryCode = (entry: TaskingAirfieldCatalogueEntry): string => (
+  entry.c || entry.i || entry.l || ''
+);
+
+const getTaskingAirfieldSuggestionLabel = (entry: TaskingAirfieldCatalogueEntry): string => {
+  const codes = [entry.c, entry.i, entry.l].filter(Boolean).join(' / ');
+  const city = entry.m && entry.m !== entry.n ? `, ${entry.m}` : '';
+  const country = entry.y ? ` (${entry.y})` : '';
+  return `${codes || 'No code'} - ${entry.n}${city}${country}`;
+};
+
+const buildTaskingAirfieldLookup = (entries: TaskingAirfieldCatalogueEntry[]): TaskingAirfieldLookup => ({
+  searchable: entries.map((entry) => {
+    const codeText = [entry.c, entry.i, entry.l].filter(Boolean).join(' ');
+    const nameText = [entry.n, entry.m, entry.y].filter(Boolean).join(' ');
+    return {
+      entry,
+      searchText: normaliseTaskingAirfieldToken(`${codeText} ${nameText}`),
+      codeText: normaliseTaskingAirfieldToken(codeText),
+      nameText: normaliseTaskingAirfieldToken(nameText),
+    };
+  }),
+});
+
+const getTaskingAirfieldSuggestions = (
+  value: any,
+  lookup: TaskingAirfieldLookup,
+): TaskingAirfieldCatalogueEntry[] => {
+  const query = normaliseTaskingAirfieldToken(value);
+  if (query.length < 2 || lookup.searchable.length === 0) return [];
+
+  const scored = lookup.searchable
+    .map((item) => {
+      let score = 0;
+      if (item.codeText === query) score = 100;
+      else if (item.nameText === query) score = 95;
+      else if (item.codeText.startsWith(query)) score = 85;
+      else if (item.nameText.startsWith(query)) score = 75;
+      else if (item.searchText.includes(query)) score = 55;
+      return { ...item, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => (
+      right.score - left.score
+      || getTaskingAirfieldPrimaryCode(left.entry).localeCompare(getTaskingAirfieldPrimaryCode(right.entry))
+      || left.entry.n.localeCompare(right.entry.n)
+    ));
+
+  const seen = new Set<string>();
+  const suggestions: TaskingAirfieldCatalogueEntry[] = [];
+  scored.forEach(({ entry }) => {
+    const key = `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    suggestions.push(entry);
+  });
+  return suggestions.slice(0, TASKING_AIRFIELD_SUGGESTION_LIMIT);
+};
+
 interface TaskingRequestTableProps {
   taskingRequests: TaskingRequest[];
   timeOptions: TimeOption[];
   aircraftConfigOptions: AircraftConfigurationDefinition[];
+  airfieldLookup: TaskingAirfieldLookup;
   onAddTaskingRequest: () => void;
   onUpdateTaskingRequest: (id: string, updates: Partial<TaskingRequest>) => void;
   onRemoveTaskingRequest: (id: string) => void;
@@ -161,6 +260,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   taskingRequests,
   timeOptions,
   aircraftConfigOptions,
+  airfieldLookup,
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
@@ -192,6 +292,10 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
         )}
         {taskingRequests.map(request => {
           const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
+          const depPointListId = `tasking-dep-point-${request.id}`;
+          const arrivalPointListId = `tasking-arrival-point-${request.id}`;
+          const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
+          const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
           return (
             <tr key={request.id}>
               <td className="py-1 px-2 min-w-[180px]">
@@ -235,17 +339,39 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 <input
                   type="text"
                   value={request.depPoint}
-                  onChange={event => onUpdateTaskingRequest(request.id, { depPoint: event.target.value, submitted: false })}
+                  list={depPointListId}
+                  autoComplete="off"
+                  onChange={event => onUpdateTaskingRequest(request.id, { depPoint: event.target.value.toUpperCase(), submitted: false })}
                   className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
                 />
+                <datalist id={depPointListId}>
+                  {depPointSuggestions.map((entry) => (
+                    <option
+                      key={`${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`}
+                      value={getTaskingAirfieldPrimaryCode(entry)}
+                      label={getTaskingAirfieldSuggestionLabel(entry)}
+                    />
+                  ))}
+                </datalist>
               </td>
               <td className="py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]">
                 <input
                   type="text"
                   value={request.arrivalPoint}
-                  onChange={event => onUpdateTaskingRequest(request.id, { arrivalPoint: event.target.value, submitted: false })}
+                  list={arrivalPointListId}
+                  autoComplete="off"
+                  onChange={event => onUpdateTaskingRequest(request.id, { arrivalPoint: event.target.value.toUpperCase(), submitted: false })}
                   className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
                 />
+                <datalist id={arrivalPointListId}>
+                  {arrivalPointSuggestions.map((entry) => (
+                    <option
+                      key={`${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`}
+                      value={getTaskingAirfieldPrimaryCode(entry)}
+                      label={getTaskingAirfieldSuggestionLabel(entry)}
+                    />
+                  ))}
+                </datalist>
               </td>
               <td className="py-1 px-2 w-28">
                 <input
@@ -716,6 +842,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
   const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
   const taskingRequestStorageKey = 'neoTaskingRequests';
+  const [taskingAirfieldCatalogue, setTaskingAirfieldCatalogue] = useState<TaskingAirfieldCatalogueEntry[]>([]);
   const [taskingRequests, setTaskingRequests] = useState<TaskingRequest[]>(() => {
     try {
       const stored = localStorage.getItem(taskingRequestStorageKey);
@@ -818,6 +945,40 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   useEffect(() => {
     localStorage.setItem(taskingRequestStorageKey, JSON.stringify(taskingRequests));
   }, [taskingRequests]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadTaskingAirfieldCatalogue = async () => {
+      try {
+        const res = await fetch(getTaskingAirfieldCatalogueUrl(), { cache: 'force-cache' });
+        if (!res.ok) throw new Error(`Airfield catalogue load failed (${res.status})`);
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+        const entries = data.filter((entry) => (
+          entry
+          && typeof entry.n === 'string'
+          && Number.isFinite(Number(entry.a))
+          && Number.isFinite(Number(entry.o))
+          && typeof entry.t === 'string'
+        )).map((entry) => ({
+          ...entry,
+          a: Number(entry.a),
+          o: Number(entry.o),
+        }));
+        if (!cancelled) setTaskingAirfieldCatalogue(entries);
+      } catch {
+        if (!cancelled) setTaskingAirfieldCatalogue([]);
+      }
+    };
+
+    loadTaskingAirfieldCatalogue();
+    return () => { cancelled = true; };
+  }, []);
+
+  const taskingAirfieldLookup = useMemo(
+    () => (taskingAirfieldCatalogue.length ? buildTaskingAirfieldLookup(taskingAirfieldCatalogue) : emptyTaskingAirfieldLookup),
+    [taskingAirfieldCatalogue],
+  );
 
   const addTaskingRequest = () => {
     const nextRequest: TaskingRequest = {
@@ -1898,6 +2059,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               taskingRequests={taskingRequests}
               timeOptions={timeOptions}
               aircraftConfigOptions={aircraftConfigOptions}
+              airfieldLookup={taskingAirfieldLookup}
               onAddTaskingRequest={addTaskingRequest}
               onUpdateTaskingRequest={updateTaskingRequest}
               onRemoveTaskingRequest={removeTaskingRequest}
