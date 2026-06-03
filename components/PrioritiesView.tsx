@@ -161,9 +161,10 @@ type TaskingAirfieldCatalogueEntry = {
 
 type TaskingAirfieldSearchItem = {
   entry: TaskingAirfieldCatalogueEntry;
-  searchText: string;
-  codeText: string;
-  nameText: string;
+  codeTokens: string[];
+  icaoText: string;
+  iataText: string;
+  localText: string;
 };
 
 type TaskingAirfieldLookup = {
@@ -171,6 +172,7 @@ type TaskingAirfieldLookup = {
 };
 
 const TASKING_AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
+const TASKING_AIRFIELD_MIN_SUGGESTIONS = 3;
 const TASKING_AIRFIELD_SUGGESTION_LIMIT = 8;
 
 const emptyTaskingAirfieldLookup: TaskingAirfieldLookup = {
@@ -190,18 +192,40 @@ const getTaskingAirfieldPrimaryCode = (entry: TaskingAirfieldCatalogueEntry): st
   entry.c || entry.i || entry.l || ''
 );
 
+const getTaskingAirfieldCodeLabel = (entry: TaskingAirfieldCatalogueEntry): string => {
+  const codes = [entry.c, entry.i].filter(Boolean);
+  return codes.length ? codes.join(' / ') : getTaskingAirfieldPrimaryCode(entry);
+};
+
 const buildTaskingAirfieldLookup = (entries: TaskingAirfieldCatalogueEntry[]): TaskingAirfieldLookup => ({
   searchable: entries.map((entry) => {
-    const codeText = [entry.c, entry.i, entry.l].filter(Boolean).join(' ');
-    const nameText = [entry.n, entry.m, entry.y].filter(Boolean).join(' ');
+    const icaoText = normaliseTaskingAirfieldToken(entry.c);
+    const iataText = normaliseTaskingAirfieldToken(entry.i);
+    const localText = normaliseTaskingAirfieldToken(entry.l);
+    const codeTokens = [icaoText, iataText, localText].filter(Boolean);
     return {
       entry,
-      searchText: normaliseTaskingAirfieldToken(`${codeText} ${nameText}`),
-      codeText: normaliseTaskingAirfieldToken(codeText),
-      nameText: normaliseTaskingAirfieldToken(nameText),
+      codeTokens,
+      icaoText,
+      iataText,
+      localText,
     };
   }),
 });
+
+const scoreTaskingAirfieldSuggestion = (
+  item: TaskingAirfieldSearchItem,
+  query: string,
+): number => {
+  if (item.icaoText === query) return 120;
+  if (item.iataText === query) return 115;
+  if (item.localText === query) return 105;
+  if (item.icaoText.startsWith(query)) return 95;
+  if (item.iataText.startsWith(query)) return 90;
+  if (item.localText.startsWith(query)) return 80;
+  if (item.codeTokens.some((token) => token.includes(query))) return 65;
+  return 0;
+};
 
 const getTaskingAirfieldSuggestions = (
   value: any,
@@ -209,32 +233,33 @@ const getTaskingAirfieldSuggestions = (
 ): TaskingAirfieldCatalogueEntry[] => {
   const query = normaliseTaskingAirfieldToken(value);
   if (query.length < 2 || lookup.searchable.length === 0) return [];
-
-  const scored = lookup.searchable
-    .map((item) => {
-      let score = 0;
-      if (item.codeText === query) score = 100;
-      else if (item.nameText === query) score = 95;
-      else if (item.codeText.startsWith(query)) score = 85;
-      else if (item.nameText.startsWith(query)) score = 75;
-      else if (item.searchText.includes(query)) score = 55;
-      return { ...item, score };
-    })
-    .filter((item) => item.score > 0)
-    .sort((left, right) => (
-      right.score - left.score
-      || getTaskingAirfieldPrimaryCode(left.entry).localeCompare(getTaskingAirfieldPrimaryCode(right.entry))
-      || left.entry.n.localeCompare(right.entry.n)
-    ));
+  const broadQuery = query.length > 2 ? query.slice(0, 2) : query;
 
   const seen = new Set<string>();
   const suggestions: TaskingAirfieldCatalogueEntry[] = [];
-  scored.forEach(({ entry }) => {
-    const key = `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    suggestions.push(entry);
-  });
+
+  const addMatches = (matchQuery: string, scoreOffset = 0) => {
+    lookup.searchable
+      .map((item) => ({ ...item, baseScore: scoreTaskingAirfieldSuggestion(item, matchQuery) }))
+      .filter((item) => item.baseScore > 0)
+      .map((item) => ({ ...item, score: item.baseScore + scoreOffset }))
+      .sort((left, right) => (
+        right.score - left.score
+        || getTaskingAirfieldPrimaryCode(left.entry).localeCompare(getTaskingAirfieldPrimaryCode(right.entry))
+        || left.entry.n.localeCompare(right.entry.n)
+      ))
+      .forEach(({ entry }) => {
+        const key = `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`;
+        if (seen.has(key) || suggestions.length >= TASKING_AIRFIELD_SUGGESTION_LIMIT) return;
+        seen.add(key);
+        suggestions.push(entry);
+      });
+  };
+
+  addMatches(query, 100);
+  if (suggestions.length < TASKING_AIRFIELD_MIN_SUGGESTIONS && broadQuery !== query) {
+    addMatches(broadQuery);
+  }
   return suggestions.slice(0, TASKING_AIRFIELD_SUGGESTION_LIMIT);
 };
 
@@ -268,25 +293,22 @@ const TaskingAirfieldCodeInput: React.FC<{
       />
       {showSuggestions && (
         <div className="absolute left-0 top-full z-50 mt-1 max-h-56 w-[156px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40">
-          {suggestions.map((entry) => {
-            const code = getTaskingAirfieldPrimaryCode(entry);
-            return (
-              <button
-                key={`${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`}
-                type="button"
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  selectSuggestion(entry);
-                }}
-                className="block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none"
-              >
-                <span className="block text-xs font-bold text-cyan-100">{code}</span>
-                <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                  {entry.n}{entry.m && entry.m !== entry.n ? `, ${entry.m}` : ''}{entry.y ? ` (${entry.y})` : ''}
-                </span>
-              </button>
-            );
-          })}
+          {suggestions.map((entry) => (
+            <button
+              key={`${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`}
+              type="button"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                selectSuggestion(entry);
+              }}
+              className="block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none"
+            >
+              <span className="block text-xs font-bold text-cyan-100">{getTaskingAirfieldCodeLabel(entry)}</span>
+              <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
+                {entry.n}{entry.m && entry.m !== entry.n ? `, ${entry.m}` : ''}{entry.y ? ` (${entry.y})` : ''}
+              </span>
+            </button>
+          ))}
         </div>
       )}
     </div>

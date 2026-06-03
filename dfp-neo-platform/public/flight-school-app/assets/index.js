@@ -21371,6 +21371,7 @@ const AircraftConfigSelect = ({ value, definitions, disabled = false, includeAny
   );
 };
 const TASKING_AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
+const TASKING_AIRFIELD_MIN_SUGGESTIONS = 3;
 const TASKING_AIRFIELD_SUGGESTION_LIMIT = 8;
 const emptyTaskingAirfieldLookup = {
   searchable: []
@@ -21381,38 +21382,53 @@ const getTaskingAirfieldCatalogueUrl = () => {
   return new URL(TASKING_AIRFIELD_CATALOGUE_FILE, baseUrl).toString();
 };
 const getTaskingAirfieldPrimaryCode = (entry) => entry.c || entry.i || entry.l || "";
+const getTaskingAirfieldCodeLabel = (entry) => {
+  const codes = [entry.c, entry.i].filter(Boolean);
+  return codes.length ? codes.join(" / ") : getTaskingAirfieldPrimaryCode(entry);
+};
 const buildTaskingAirfieldLookup = (entries) => ({
   searchable: entries.map((entry) => {
-    const codeText = [entry.c, entry.i, entry.l].filter(Boolean).join(" ");
-    const nameText = [entry.n, entry.m, entry.y].filter(Boolean).join(" ");
+    const icaoText = normaliseTaskingAirfieldToken(entry.c);
+    const iataText = normaliseTaskingAirfieldToken(entry.i);
+    const localText = normaliseTaskingAirfieldToken(entry.l);
+    const codeTokens = [icaoText, iataText, localText].filter(Boolean);
     return {
       entry,
-      searchText: normaliseTaskingAirfieldToken(`${codeText} ${nameText}`),
-      codeText: normaliseTaskingAirfieldToken(codeText),
-      nameText: normaliseTaskingAirfieldToken(nameText)
+      codeTokens,
+      icaoText,
+      iataText,
+      localText
     };
   })
 });
+const scoreTaskingAirfieldSuggestion = (item, query) => {
+  if (item.icaoText === query) return 120;
+  if (item.iataText === query) return 115;
+  if (item.localText === query) return 105;
+  if (item.icaoText.startsWith(query)) return 95;
+  if (item.iataText.startsWith(query)) return 90;
+  if (item.localText.startsWith(query)) return 80;
+  if (item.codeTokens.some((token) => token.includes(query))) return 65;
+  return 0;
+};
 const getTaskingAirfieldSuggestions = (value, lookup) => {
   const query = normaliseTaskingAirfieldToken(value);
   if (query.length < 2 || lookup.searchable.length === 0) return [];
-  const scored = lookup.searchable.map((item) => {
-    let score = 0;
-    if (item.codeText === query) score = 100;
-    else if (item.nameText === query) score = 95;
-    else if (item.codeText.startsWith(query)) score = 85;
-    else if (item.nameText.startsWith(query)) score = 75;
-    else if (item.searchText.includes(query)) score = 55;
-    return { ...item, score };
-  }).filter((item) => item.score > 0).sort((left, right) => right.score - left.score || getTaskingAirfieldPrimaryCode(left.entry).localeCompare(getTaskingAirfieldPrimaryCode(right.entry)) || left.entry.n.localeCompare(right.entry.n));
+  const broadQuery = query.length > 2 ? query.slice(0, 2) : query;
   const seen = /* @__PURE__ */ new Set();
   const suggestions = [];
-  scored.forEach(({ entry }) => {
-    const key = `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    suggestions.push(entry);
-  });
+  const addMatches = (matchQuery, scoreOffset = 0) => {
+    lookup.searchable.map((item) => ({ ...item, baseScore: scoreTaskingAirfieldSuggestion(item, matchQuery) })).filter((item) => item.baseScore > 0).map((item) => ({ ...item, score: item.baseScore + scoreOffset })).sort((left, right) => right.score - left.score || getTaskingAirfieldPrimaryCode(left.entry).localeCompare(getTaskingAirfieldPrimaryCode(right.entry)) || left.entry.n.localeCompare(right.entry.n)).forEach(({ entry }) => {
+      const key = `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`;
+      if (seen.has(key) || suggestions.length >= TASKING_AIRFIELD_SUGGESTION_LIMIT) return;
+      seen.add(key);
+      suggestions.push(entry);
+    });
+  };
+  addMatches(query, 100);
+  if (suggestions.length < TASKING_AIRFIELD_MIN_SUGGESTIONS && broadQuery !== query) {
+    addMatches(broadQuery);
+  }
   return suggestions.slice(0, TASKING_AIRFIELD_SUGGESTION_LIMIT);
 };
 const TaskingAirfieldCodeInput = ({ value, suggestions, onChange }) => {
@@ -21439,29 +21455,26 @@ const TaskingAirfieldCodeInput = ({ value, suggestions, onChange }) => {
         className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
       }
     ),
-    showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-50 mt-1 max-h-56 w-[156px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.map((entry) => {
-      const code = getTaskingAirfieldPrimaryCode(entry);
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
-        {
-          type: "button",
-          onMouseDown: (event) => {
-            event.preventDefault();
-            selectSuggestion(entry);
-          },
-          className: "block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: code }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
-              entry.n,
-              entry.m && entry.m !== entry.n ? `, ${entry.m}` : "",
-              entry.y ? ` (${entry.y})` : ""
-            ] })
-          ]
+    showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-50 mt-1 max-h-56 w-[156px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "button",
+      {
+        type: "button",
+        onMouseDown: (event) => {
+          event.preventDefault();
+          selectSuggestion(entry);
         },
-        `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`
-      );
-    }) })
+        className: "block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: getTaskingAirfieldCodeLabel(entry) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
+            entry.n,
+            entry.m && entry.m !== entry.n ? `, ${entry.m}` : "",
+            entry.y ? ` (${entry.y})` : ""
+          ] })
+        ]
+      },
+      `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`
+    )) })
   ] });
 };
 const TaskingRequestTable = ({
