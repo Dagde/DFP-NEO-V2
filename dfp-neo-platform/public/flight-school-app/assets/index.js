@@ -6167,7 +6167,7 @@ function calculateDailyAverageAvailability(availabilityTimeline, windowStart, wi
   console.log("=== END CALCULATION ===\n");
   return Math.round(averageAvailability * 10) / 10;
 }
-function formatDate$6(date) {
+function formatDate$5(date) {
   if (!date || isNaN(date.getTime())) {
     console.warn("[formatDate] Invalid date provided:", date);
     return "";
@@ -6213,7 +6213,7 @@ const AircraftAvailabilityOverlay = ({
   const makeDayStart = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
   reactExports.useEffect(() => {
     let cancelled = false;
-    const dateKey = dateString ?? formatDate$6(currentDate);
+    const dateKey = dateString ?? formatDate$5(currentDate);
     const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
     if (stored) {
       try {
@@ -6274,7 +6274,7 @@ const AircraftAvailabilityOverlay = ({
       dayFlyingStart.replace(":", ""),
       dayFlyingEnd.replace(":", "")
     );
-    const dateKey = dateString ?? formatDate$6(currentDate);
+    const dateKey = dateString ?? formatDate$5(currentDate);
     const record = {
       date: dateKey,
       snapshots,
@@ -11325,7 +11325,7 @@ const ExperienceInput$1 = ({ label, value, onChange }) => /* @__PURE__ */ jsxRun
     }
   )
 ] });
-const formatDate$5 = (dateString) => {
+const formatDate$4 = (dateString) => {
   if (!dateString) return "";
   const date = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -12022,12 +12022,12 @@ const TraineeProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (unavailability || []).length > 0 ? (unavailability || []).map((p) => {
                   let periodDisplay = "";
                   if (p.allDay) {
-                    const sd = formatDate$5(p.startDate);
-                    const ed = formatDate$5(p.endDate);
+                    const sd = formatDate$4(p.startDate);
+                    const ed = formatDate$4(p.endDate);
                     periodDisplay = p.startDate !== p.endDate ? `${sd} – ${ed} @ All Day` : `${sd} @ All Day`;
                   } else {
-                    const sd = `${formatMilitaryTime2(p.startTime)} ${formatDate$5(p.startDate)}`;
-                    const ed = `${formatMilitaryTime2(p.endTime)} ${formatDate$5(p.endDate)}`;
+                    const sd = `${formatMilitaryTime2(p.startTime)} ${formatDate$4(p.startDate)}`;
+                    const ed = `${formatMilitaryTime2(p.endTime)} ${formatDate$4(p.endDate)}`;
                     periodDisplay = p.startDate !== p.endDate ? `${sd} to ${ed}` : `${sd} - ${ed}`;
                   }
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
@@ -16461,7 +16461,7 @@ const formatTime$3 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const formatDate$4 = (dateStr) => {
+const formatDate$3 = (dateStr) => {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
   return `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
@@ -18074,7 +18074,7 @@ const AddFlightTileModal = ({
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Date" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$4(date) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) })
                     ] })
                   ] }),
                   locationType === "Land Away" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mt-3", children: [
@@ -20004,7 +20004,7 @@ const formatTime$2 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const formatDate$3 = (dateString) => {
+const formatDate$2 = (dateString) => {
   if (!dateString) return "-";
   try {
     const date = /* @__PURE__ */ new Date(dateString + "T00:00:00Z");
@@ -20086,7 +20086,7 @@ const MyDashboard = ({
         mySctRequests.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: mySctRequests.map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "p-2 bg-gray-700/50 rounded-md text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: req.event }),
-            req.dateRequested && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: formatDate$3(req.dateRequested) })
+            req.dateRequested && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: formatDate$2(req.dateRequested) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
             "Expires: ",
@@ -20107,7 +20107,7 @@ const MyDashboard = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$3(assessment.date) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(assessment.date) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Pending" })
               ] })
             ] })
@@ -21918,6 +21918,19 @@ const PrioritiesView = ({
     const minutes = Math.round((bounded - hours) * 60);
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   };
+  const formatPriorityDate = (dateString) => {
+    if (!dateString) return "Any";
+    try {
+      const parsedDate = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
+      if (Number.isNaN(parsedDate.getTime())) return "Any";
+      const day = String(parsedDate.getUTCDate()).padStart(2, "0");
+      const month = parsedDate.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
+      const year = String(parsedDate.getUTCFullYear()).slice(-2);
+      return `${day}${month}${year}`;
+    } catch {
+      return "Any";
+    }
+  };
   const timelineStartHour = 6;
   const timelineEndHour = 25;
   const timelineSpanHours = timelineEndHour - timelineStartHour;
@@ -22635,7 +22648,7 @@ const PrioritiesView = ({
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => onSelectEvent(event), className: "hover:bg-sky-900/50 transition-colors cursor-pointer", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: personName }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: event.flightNumber }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-mono`, children: event.date ? formatDate(event.date) : "Any" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-mono`, children: formatPriorityDate(event.date) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: event.soloOrDual || event.flightType || "N/A" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: event.currency || "N/A" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: getAircraftConfigSummary(event) }),
@@ -25048,7 +25061,7 @@ const trendColor = (dir) => {
   if (dir === "worsening") return "text-red-400";
   return "text-gray-400";
 };
-const formatDate$2 = (iso) => {
+const formatDate$1 = (iso) => {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
 };
@@ -26272,7 +26285,7 @@ const CourseTab = ({ summary, trainees, events }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm leading-relaxed whitespace-pre-line", children: summary.narrativeSummary }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-600 text-xs mt-3", children: [
         "Last analysed: ",
-        formatDate$2(summary.completedAt),
+        formatDate$1(summary.completedAt),
         " · ",
         summary.recordsProcessed,
         " records processed"
@@ -27272,7 +27285,7 @@ const TrainingIntelligenceTab = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: run.status === "complete" ? "text-emerald-500" : run.status === "failed" ? "text-red-500" : "text-yellow-500", children: "•" }),
         run.courseFilter || "All",
         " · ",
-        formatDate$2(run.completedAt),
+        formatDate$1(run.completedAt),
         " · ",
         run.recordsProcessed ?? "—",
         " records"
@@ -30803,7 +30816,7 @@ const CircularGauge = ({ title, mainValue, subItems, borderColor }) => {
     ] }, item.label)) })
   ] });
 };
-const formatDate$1 = (dateString) => {
+const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -31488,12 +31501,12 @@ const InstructorProfileFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1 mb-4 max-h-64 overflow-y-auto", children: unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map((p) => {
               let periodDisplay = "";
               if (p.allDay) {
-                const startDisplay = formatDate$1(p.startDate);
-                const endDisplay = formatDate$1(p.endDate);
+                const startDisplay = formatDate(p.startDate);
+                const endDisplay = formatDate(p.endDate);
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
               } else {
-                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate$1(p.startDate)}`;
-                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate$1(p.endDate)}`;
+                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate(p.startDate)}`;
+                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate(p.endDate)}`;
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
               }
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
@@ -31938,12 +31951,12 @@ const InstructorProfileFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1 max-h-32 overflow-y-auto", children: unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map((p) => {
               let periodDisplay = "";
               if (p.allDay) {
-                const startDisplay = formatDate$1(p.startDate);
-                const endDisplay = formatDate$1(p.endDate);
+                const startDisplay = formatDate(p.startDate);
+                const endDisplay = formatDate(p.endDate);
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
               } else {
-                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate$1(p.startDate)}`;
-                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate$1(p.endDate)}`;
+                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate(p.startDate)}`;
+                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate(p.endDate)}`;
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
               }
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [

@@ -771,6 +771,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
 
+  const formatPriorityDate = (dateString: string | undefined): string => {
+    if (!dateString) return 'Any';
+    try {
+      const parsedDate = new Date(`${dateString}T00:00:00Z`);
+      if (Number.isNaN(parsedDate.getTime())) return 'Any';
+      const day = String(parsedDate.getUTCDate()).padStart(2, '0');
+      const month = parsedDate.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+      const year = String(parsedDate.getUTCFullYear()).slice(-2);
+      return `${day}${month}${year}`;
+    } catch {
+      return 'Any';
+    }
+  };
+
   const timelineStartHour = 6;
   const timelineEndHour = 25;
   const timelineSpanHours = timelineEndHour - timelineStartHour;
@@ -1672,7 +1686,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <tr key={event.id} onClick={() => onSelectEvent(event)} className="hover:bg-sky-900/50 transition-colors cursor-pointer">
                         <td className={`py-2 px-2 ${rowText}`}>{personName}</td>
                         <td className={`py-2 px-2 ${rowText} font-semibold`}>{event.flightNumber}</td>
-                        <td className={`py-2 px-2 ${rowText} font-mono`}>{event.date ? formatDate(event.date) : 'Any'}</td>
+                        <td className={`py-2 px-2 ${rowText} font-mono`}>{formatPriorityDate(event.date)}</td>
                         <td className={`py-2 px-2 ${rowText}`}>{event.soloOrDual || event.flightType || 'N/A'}</td>
                         <td className={`py-2 px-2 ${rowText}`}>{event.currency || 'N/A'}</td>
                         <td className={`py-2 px-2 ${rowText} font-semibold`}>{getAircraftConfigSummary(event)}</td>
