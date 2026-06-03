@@ -21543,7 +21543,8 @@ const getTaskProfileSuggestions = (value, taskProfiles) => {
 const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onChange }) => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
   const suggestions = getTaskProfileSuggestions(value, taskProfiles);
-  const showSuggestions = isOpen && suggestions.length > 0;
+  const configuredProfileCount = taskProfiles.filter((profile) => String(profile || "").trim()).length;
+  const showSuggestions = isOpen;
   const selectProfile = (profile) => {
     onChange(profile);
     setIsOpen(false);
@@ -21565,7 +21566,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
         className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
       }
     ),
-    showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-50 mt-1 max-h-64 w-[280px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-[80] mt-1 max-h-64 w-[280px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.length > 0 ? suggestions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "button",
       {
         type: "button",
@@ -21583,7 +21584,10 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
         ]
       },
       profile
-    )) })
+    )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task profile" : "No task profiles configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this tasking manually." : `${operationalModelLabel} has no saved profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.` })
+    ] }) })
   ] });
 };
 const TaskingRequestTable = ({
@@ -21597,7 +21601,7 @@ const TaskingRequestTable = ({
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
   onSubmitTaskingRequest
-}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-x-auto", children: [
+}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-x-auto pb-24", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Tasking" }),
