@@ -21381,12 +21381,6 @@ const getTaskingAirfieldCatalogueUrl = () => {
   return new URL(TASKING_AIRFIELD_CATALOGUE_FILE, baseUrl).toString();
 };
 const getTaskingAirfieldPrimaryCode = (entry) => entry.c || entry.i || entry.l || "";
-const getTaskingAirfieldSuggestionLabel = (entry) => {
-  const codes = [entry.c, entry.i, entry.l].filter(Boolean).join(" / ");
-  const city = entry.m && entry.m !== entry.n ? `, ${entry.m}` : "";
-  const country = entry.y ? ` (${entry.y})` : "";
-  return `${codes || "No code"} - ${entry.n}${city}${country}`;
-};
 const buildTaskingAirfieldLookup = (entries) => ({
   searchable: entries.map((entry) => {
     const codeText = [entry.c, entry.i, entry.l].filter(Boolean).join(" ");
@@ -21421,6 +21415,55 @@ const getTaskingAirfieldSuggestions = (value, lookup) => {
   });
   return suggestions.slice(0, TASKING_AIRFIELD_SUGGESTION_LIMIT);
 };
+const TaskingAirfieldCodeInput = ({ value, suggestions, onChange }) => {
+  const [isOpen, setIsOpen] = reactExports.useState(false);
+  const showSuggestions = isOpen && suggestions.length > 0 && normaliseTaskingAirfieldToken(value).length >= 2;
+  const selectSuggestion = (entry) => {
+    const code = getTaskingAirfieldPrimaryCode(entry);
+    if (code) onChange(code);
+    setIsOpen(false);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        type: "text",
+        value,
+        autoComplete: "off",
+        onFocus: () => setIsOpen(true),
+        onBlur: () => setIsOpen(false),
+        onChange: (event) => {
+          onChange(event.target.value.toUpperCase());
+          setIsOpen(true);
+        },
+        className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+      }
+    ),
+    showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-50 mt-1 max-h-56 w-[156px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.map((entry) => {
+      const code = getTaskingAirfieldPrimaryCode(entry);
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          onMouseDown: (event) => {
+            event.preventDefault();
+            selectSuggestion(entry);
+          },
+          className: "block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: code }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
+              entry.n,
+              entry.m && entry.m !== entry.n ? `, ${entry.m}` : "",
+              entry.y ? ` (${entry.y})` : ""
+            ] })
+          ]
+        },
+        `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`
+      );
+    }) })
+  ] });
+};
 const TaskingRequestTable = ({
   taskingRequests,
   timeOptions,
@@ -21448,8 +21491,6 @@ const TaskingRequestTable = ({
       taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 10, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
       taskingRequests.map((request) => {
         const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
-        const depPointListId = `tasking-dep-point-${request.id}`;
-        const arrivalPointListId = `tasking-arrival-point-${request.id}`;
         const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
         const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -21493,48 +21534,22 @@ const TaskingRequestTable = ({
               className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
             }
           ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: request.depPoint,
-                list: depPointListId,
-                autoComplete: "off",
-                onChange: (event) => onUpdateTaskingRequest(request.id, { depPoint: event.target.value.toUpperCase(), submitted: false }),
-                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: depPointListId, children: depPointSuggestions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "option",
-              {
-                value: getTaskingAirfieldPrimaryCode(entry),
-                label: getTaskingAirfieldSuggestionLabel(entry)
-              },
-              `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`
-            )) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: request.arrivalPoint,
-                list: arrivalPointListId,
-                autoComplete: "off",
-                onChange: (event) => onUpdateTaskingRequest(request.id, { arrivalPoint: event.target.value.toUpperCase(), submitted: false }),
-                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: arrivalPointListId, children: arrivalPointSuggestions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "option",
-              {
-                value: getTaskingAirfieldPrimaryCode(entry),
-                label: getTaskingAirfieldSuggestionLabel(entry)
-              },
-              `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`
-            )) })
-          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TaskingAirfieldCodeInput,
+            {
+              value: request.depPoint,
+              suggestions: depPointSuggestions,
+              onChange: (depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false })
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TaskingAirfieldCodeInput,
+            {
+              value: request.arrivalPoint,
+              suggestions: arrivalPointSuggestions,
+              onChange: (arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false })
+            }
+          ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {

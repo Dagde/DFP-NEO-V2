@@ -190,13 +190,6 @@ const getTaskingAirfieldPrimaryCode = (entry: TaskingAirfieldCatalogueEntry): st
   entry.c || entry.i || entry.l || ''
 );
 
-const getTaskingAirfieldSuggestionLabel = (entry: TaskingAirfieldCatalogueEntry): string => {
-  const codes = [entry.c, entry.i, entry.l].filter(Boolean).join(' / ');
-  const city = entry.m && entry.m !== entry.n ? `, ${entry.m}` : '';
-  const country = entry.y ? ` (${entry.y})` : '';
-  return `${codes || 'No code'} - ${entry.n}${city}${country}`;
-};
-
 const buildTaskingAirfieldLookup = (entries: TaskingAirfieldCatalogueEntry[]): TaskingAirfieldLookup => ({
   searchable: entries.map((entry) => {
     const codeText = [entry.c, entry.i, entry.l].filter(Boolean).join(' ');
@@ -243,6 +236,61 @@ const getTaskingAirfieldSuggestions = (
     suggestions.push(entry);
   });
   return suggestions.slice(0, TASKING_AIRFIELD_SUGGESTION_LIMIT);
+};
+
+const TaskingAirfieldCodeInput: React.FC<{
+  value: string;
+  suggestions: TaskingAirfieldCatalogueEntry[];
+  onChange: (value: string) => void;
+}> = ({ value, suggestions, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const showSuggestions = isOpen && suggestions.length > 0 && normaliseTaskingAirfieldToken(value).length >= 2;
+
+  const selectSuggestion = (entry: TaskingAirfieldCatalogueEntry) => {
+    const code = getTaskingAirfieldPrimaryCode(entry);
+    if (code) onChange(code);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={value}
+        autoComplete="off"
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setIsOpen(false)}
+        onChange={event => {
+          onChange(event.target.value.toUpperCase());
+          setIsOpen(true);
+        }}
+        className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+      />
+      {showSuggestions && (
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-56 w-[156px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40">
+          {suggestions.map((entry) => {
+            const code = getTaskingAirfieldPrimaryCode(entry);
+            return (
+              <button
+                key={`${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`}
+                type="button"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  selectSuggestion(entry);
+                }}
+                className="block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none"
+              >
+                <span className="block text-xs font-bold text-cyan-100">{code}</span>
+                <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
+                  {entry.n}{entry.m && entry.m !== entry.n ? `, ${entry.m}` : ''}{entry.y ? ` (${entry.y})` : ''}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 };
 
 interface TaskingRequestTableProps {
@@ -292,8 +340,6 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
         )}
         {taskingRequests.map(request => {
           const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
-          const depPointListId = `tasking-dep-point-${request.id}`;
-          const arrivalPointListId = `tasking-arrival-point-${request.id}`;
           const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
           const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
           return (
@@ -335,43 +381,19 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                   className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
                 />
               </td>
-              <td className="py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]">
-                <input
-                  type="text"
+              <td className="relative py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]">
+                <TaskingAirfieldCodeInput
                   value={request.depPoint}
-                  list={depPointListId}
-                  autoComplete="off"
-                  onChange={event => onUpdateTaskingRequest(request.id, { depPoint: event.target.value.toUpperCase(), submitted: false })}
-                  className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                  suggestions={depPointSuggestions}
+                  onChange={(depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false })}
                 />
-                <datalist id={depPointListId}>
-                  {depPointSuggestions.map((entry) => (
-                    <option
-                      key={`${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`}
-                      value={getTaskingAirfieldPrimaryCode(entry)}
-                      label={getTaskingAirfieldSuggestionLabel(entry)}
-                    />
-                  ))}
-                </datalist>
               </td>
-              <td className="py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]">
-                <input
-                  type="text"
+              <td className="relative py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]">
+                <TaskingAirfieldCodeInput
                   value={request.arrivalPoint}
-                  list={arrivalPointListId}
-                  autoComplete="off"
-                  onChange={event => onUpdateTaskingRequest(request.id, { arrivalPoint: event.target.value.toUpperCase(), submitted: false })}
-                  className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                  suggestions={arrivalPointSuggestions}
+                  onChange={(arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false })}
                 />
-                <datalist id={arrivalPointListId}>
-                  {arrivalPointSuggestions.map((entry) => (
-                    <option
-                      key={`${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`}
-                      value={getTaskingAirfieldPrimaryCode(entry)}
-                      label={getTaskingAirfieldSuggestionLabel(entry)}
-                    />
-                  ))}
-                </datalist>
               </td>
               <td className="py-1 px-2 w-28">
                 <input
