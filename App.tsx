@@ -28,6 +28,7 @@ import {
     normaliseOperationalModel,
     PlatformConfig,
 } from './utils/platformConfigService';
+import { getTaskProfilesForModel } from './utils/taskProfiles';
 import {
     DEFAULT_RESOURCE_DISPLAY_NAMES,
     formatResourceLabel as formatConfiguredResourceLabel,
@@ -10460,6 +10461,10 @@ const App: React.FC = () => {
 
     const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel('flight_school');
     const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
+    const activeTaskProfiles = useMemo(
+        () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
+        [activeOperationalModel, platformConfig],
+    );
     const activeOperationalContext = useMemo(() => ({
         locationCode: school,
         unitCode: activeUnitCode,
@@ -22818,6 +22823,8 @@ updates.forEach(update => {
                     }}
                     currencyNames={currencyNames}
                     resourceDisplayNames={resourceDisplayNames}
+                    taskProfiles={activeTaskProfiles}
+                    operationalModelLabel={activeOperationalModelLabel}
                 />;
             case 'CourseProgress':
                 return <CourseProgressView

@@ -8,6 +8,11 @@ import {
   type PlatformPermissionProfile,
 } from '../utils/platformConfigService';
 import {
+  formatTaskProfileText,
+  normaliseTaskProfileConfig,
+  parseTaskProfileText,
+} from '../utils/taskProfiles';
+import {
   formatRankOrderText,
   normalisePersonnelDisplaySettings,
   parseRankOrderText,
@@ -1119,6 +1124,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes || null,
   );
+  const taskProfiles = normaliseTaskProfileConfig(
+    primaryOrganisationSettings.taskProfiles || null,
+  );
   const operationalSignals = [
     {
       label: 'Support owner',
@@ -1218,6 +1226,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
       insertEventTypes: normaliseInsertEventTypes(nextEventTypes),
+    }));
+  };
+
+  const updateTaskProfilesForModel = (model: string, text: string) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      taskProfiles: {
+        ...normaliseTaskProfileConfig(settings.taskProfiles || null),
+        [model]: parseTaskProfileText(text),
+      },
     }));
   };
 
@@ -2149,6 +2167,47 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             );
           })}
+        </div>
+      </section>
+
+      <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
+        <SectionHeader
+          title="Task Profiles"
+          subtitle="Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed."
+        />
+        <div className="space-y-4 p-4">
+          <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
+            Configure one task profile per line. The Tasking field in Build Priorities only shows the list for the active unit's selected model.
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {OPERATIONAL_MODEL_OPTIONS.map((option) => {
+              const profiles = taskProfiles[option.value] || [];
+              return (
+                <div key={option.value} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-white">{option.label}</h4>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {option.value === 'air_combat'
+                          ? 'Use this for Fighter / Strike model tasking.'
+                          : 'Shown when a unit is assigned this operational model.'}
+                      </p>
+                    </div>
+                    <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
+                      {profiles.length} profiles
+                    </span>
+                  </div>
+                  <TextAreaField
+                    label="Profiles"
+                    value={formatTaskProfileText(profiles)}
+                    disabled={!canEdit}
+                    onChange={(value) => updateTaskProfilesForModel(option.value, value)}
+                    info="One task profile per line. Commas and semicolons are also accepted when pasting."
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 

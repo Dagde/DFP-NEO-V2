@@ -62,6 +62,8 @@ interface PrioritiesViewWithMenuProps {
   onUpdateRemedialAircraftConfig?: (traineeId: number, eventCode: string, aircraftConfigId: string) => void;
   currencyNames: string[];
   resourceDisplayNames?: ResourceDisplayNames;
+  taskProfiles?: string[];
+  operationalModelLabel?: string;
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';

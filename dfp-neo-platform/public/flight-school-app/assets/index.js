@@ -2347,6 +2347,48 @@ const getResourcePoolCount = (pool, key, fallback) => {
   const value = Number(pool?.settings?.[key]);
   return Number.isFinite(value) && value >= 0 ? value : fallback;
 };
+const DEFAULT_TASK_PROFILE_CONFIG = OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => ({
+  ...config,
+  [option.value]: []
+}), {});
+const uniqueProfiles = (profiles) => {
+  const seen = /* @__PURE__ */ new Set();
+  const result = [];
+  profiles.forEach((profile) => {
+    const value = String(profile || "").trim();
+    if (!value) return;
+    const key = value.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(value);
+  });
+  return result;
+};
+const parseTaskProfileText = (text) => uniqueProfiles(String(text || "").split(/\r?\n|[,;]+/));
+const formatTaskProfileText = (profiles) => uniqueProfiles(profiles).join("\n");
+const normaliseTaskProfileConfig = (value) => {
+  const source = value && typeof value === "object" ? value : {};
+  return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
+    const aliases = [
+      option.value,
+      option.label,
+      option.label.replace(/\s+Model$/i, "")
+    ];
+    const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== void 0);
+    const profiles = Array.isArray(raw) ? uniqueProfiles(raw) : typeof raw === "string" ? parseTaskProfileText(raw) : [];
+    return {
+      ...config,
+      [option.value]: profiles
+    };
+  }, { ...DEFAULT_TASK_PROFILE_CONFIG });
+};
+const getTaskProfilesForModel = (config, model = DEFAULT_OPERATIONAL_MODEL) => {
+  const activeModel = normaliseOperationalModel(model);
+  const organisations = config?.organisations || [];
+  const primaryOrganisation = organisations.find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
+  const taskProfiles = normaliseTaskProfileConfig(primaryOrganisation?.settings?.taskProfiles || null);
+  return taskProfiles[activeModel] || [];
+};
 const DEFAULT_RESOURCE_DISPLAY_NAMES = {
   aircraft: "PC-21",
   ftd: "FTD",
@@ -21477,11 +21519,80 @@ const TaskingAirfieldCodeInput = ({ value, suggestions, onChange }) => {
     )) })
   ] });
 };
+const normaliseTaskProfileSearchText = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+const getTaskProfileSuggestions = (value, taskProfiles) => {
+  const query = normaliseTaskProfileSearchText(value);
+  const profiles = taskProfiles.filter((profile) => String(profile || "").trim());
+  const exactSeen = /* @__PURE__ */ new Set();
+  const uniqueProfiles2 = profiles.filter((profile) => {
+    const key = profile.trim().toLowerCase();
+    if (exactSeen.has(key)) return false;
+    exactSeen.add(key);
+    return true;
+  });
+  if (!query) return uniqueProfiles2.slice(0, 12);
+  return uniqueProfiles2.map((profile) => {
+    const token = normaliseTaskProfileSearchText(profile);
+    let score = 0;
+    if (token === query) score = 100;
+    else if (token.startsWith(query)) score = 85;
+    else if (token.includes(query)) score = 60;
+    return { profile, score };
+  }).filter((item) => item.score > 0).sort((left, right) => right.score - left.score || left.profile.localeCompare(right.profile)).slice(0, 12).map((item) => item.profile);
+};
+const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onChange }) => {
+  const [isOpen, setIsOpen] = reactExports.useState(false);
+  const suggestions = getTaskProfileSuggestions(value, taskProfiles);
+  const showSuggestions = isOpen && suggestions.length > 0;
+  const selectProfile = (profile) => {
+    onChange(profile);
+    setIsOpen(false);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        type: "text",
+        value,
+        autoComplete: "off",
+        onFocus: () => setIsOpen(true),
+        onBlur: () => setIsOpen(false),
+        onChange: (event) => {
+          onChange(event.target.value);
+          setIsOpen(true);
+        },
+        placeholder: "Tasking",
+        className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+      }
+    ),
+    showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-50 mt-1 max-h-64 w-[280px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "button",
+      {
+        type: "button",
+        onMouseDown: (event) => {
+          event.preventDefault();
+          selectProfile(profile);
+        },
+        className: "block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
+            operationalModelLabel,
+            " task profile"
+          ] })
+        ]
+      },
+      profile
+    )) })
+  ] });
+};
 const TaskingRequestTable = ({
   taskingRequests,
   timeOptions,
   aircraftConfigOptions,
   airfieldLookup,
+  taskProfiles,
+  operationalModelLabel,
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
@@ -21507,14 +21618,13 @@ const TaskingRequestTable = ({
         const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
         const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[180px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-1 px-2 min-w-[180px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TaskingProfileInput,
             {
-              type: "text",
               value: request.tasking,
-              onChange: (event) => onUpdateTaskingRequest(request.id, { tasking: event.target.value, submitted: false }),
-              placeholder: "Tasking",
-              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              taskProfiles,
+              operationalModelLabel,
+              onChange: (tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false })
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -21656,7 +21766,9 @@ const PrioritiesView = ({
   onUpdateRemedialAircraftConfig = (_traineeId, _eventCode, _aircraftConfigId) => {
   },
   currencyNames,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  taskProfiles = [],
+  operationalModelLabel = "Flight School Model"
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -23019,6 +23131,8 @@ const PrioritiesView = ({
             timeOptions,
             aircraftConfigOptions,
             airfieldLookup: taskingAirfieldLookup,
+            taskProfiles,
+            operationalModelLabel,
             onAddTaskingRequest: addTaskingRequest,
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,
@@ -46336,6 +46450,9 @@ const PlatformConfigurationSettings = ({
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes || null
   );
+  const taskProfiles = normaliseTaskProfileConfig(
+    primaryOrganisationSettings.taskProfiles || null
+  );
   const operationalSignals = [
     {
       label: "Support owner",
@@ -46421,6 +46538,15 @@ const PlatformConfigurationSettings = ({
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
       insertEventTypes: normaliseInsertEventTypes(nextEventTypes)
+    }));
+  };
+  const updateTaskProfilesForModel = (model, text) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      taskProfiles: {
+        ...normaliseTaskProfileConfig(settings.taskProfiles || null),
+        [model]: parseTaskProfileText(text)
+      }
     }));
   };
   const updateInsertEventType = (index, changes) => {
@@ -47179,6 +47305,43 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) }) })
         ] }, unit.id || unit.code || index);
       }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-task-profiles", className: getSectionClass("platform-task-profiles"), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Task Profiles",
+          subtitle: "Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed."
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Configure one task profile per line. The Tasking field in Build Priorities only shows the list for the active unit's selected model." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: OPERATIONAL_MODEL_OPTIONS.map((option) => {
+          const profiles = taskProfiles[option.value] || [];
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: option.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model tasking." : "Shown when a unit is assigned this operational model." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
+                profiles.length,
+                " profiles"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TextAreaField,
+              {
+                label: "Profiles",
+                value: formatTaskProfileText(profiles),
+                disabled: !canEdit,
+                onChange: (value) => updateTaskProfilesForModel(option.value, value),
+                info: "One task profile per line. Commas and semicolons are also accepted when pasting."
+              }
+            )
+          ] }, option.value);
+        }) })
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-resource-pools", className: getSectionClass("platform-resource-pools"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Aircraft Types & Resource Pools", subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources.", action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }) : null }),
@@ -48922,6 +49085,7 @@ const platformSectionTargets = {
   "platform-configuration-health": "platform-configuration-health",
   "platform-organisation-locations": "platform-organisation-locations",
   "platform-units": "platform-units",
+  "platform-task-profiles": "platform-task-profiles",
   "platform-resource-pools": "platform-resource-pools",
   "platform-unit-modules": "platform-unit-modules",
   "platform-deployment-readiness": "platform-deployment-readiness",
@@ -48962,6 +49126,7 @@ const sectionLabels = {
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
+  "platform-task-profiles": "Task Profiles",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
   "platform-deployment-readiness": "Deployment Readiness",
@@ -49097,6 +49262,7 @@ const sectionIcons = {
   "platform-configuration-health": platformConfigurationIcon,
   "platform-organisation-locations": platformConfigurationIcon,
   "platform-units": platformConfigurationIcon,
+  "platform-task-profiles": platformConfigurationIcon,
   "platform-resource-pools": platformConfigurationIcon,
   "platform-unit-modules": platformConfigurationIcon,
   "platform-deployment-readiness": platformConfigurationIcon,
@@ -49141,6 +49307,7 @@ const sectionDescriptions = {
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
+  "platform-task-profiles": "Model-specific tasking lists for Directed Events",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
   "platform-deployment-readiness": "SaaS, on-premise, offline and hybrid deployment posture",
@@ -49188,6 +49355,7 @@ const sectionColors = {
   "platform-configuration-health": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-organisation-locations": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-units": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
+  "platform-task-profiles": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-resource-pools": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-unit-modules": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-deployment-readiness": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -49212,6 +49380,7 @@ const sectionGroups = [
       "platform-configuration-health",
       "platform-organisation-locations",
       "platform-units",
+      "platform-task-profiles",
       "platform-resource-pools",
       "platform-unit-modules",
       "platform-deployment-readiness",
@@ -66078,6 +66247,10 @@ const App = () => {
   const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
   const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
   const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
+  const activeTaskProfiles = reactExports.useMemo(
+    () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
+    [activeOperationalModel, platformConfig]
+  );
   const activeOperationalContext = reactExports.useMemo(() => ({
     locationCode: school,
     unitCode: activeUnitCode,
@@ -75980,7 +76153,9 @@ ${conflictLines.join("\n")}${moreText}`,
               });
             },
             currencyNames,
-            resourceDisplayNames
+            resourceDisplayNames,
+            taskProfiles: activeTaskProfiles,
+            operationalModelLabel: activeOperationalModelLabel
           }
         );
       case "CourseProgress":

@@ -67,6 +67,8 @@ interface PrioritiesViewProps {
   onUpdateRemedialAircraftConfig?: (traineeId: number, eventCode: string, aircraftConfigId: string) => void;
   currencyNames: string[];
   resourceDisplayNames?: ResourceDisplayNames;
+  taskProfiles?: string[];
+  operationalModelLabel?: string;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
 
@@ -315,11 +317,97 @@ const TaskingAirfieldCodeInput: React.FC<{
   );
 };
 
+const normaliseTaskProfileSearchText = (value: any): string => (
+  String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
+);
+
+const getTaskProfileSuggestions = (value: string, taskProfiles: string[]): string[] => {
+  const query = normaliseTaskProfileSearchText(value);
+  const profiles = taskProfiles.filter((profile) => String(profile || '').trim());
+  const exactSeen = new Set<string>();
+  const uniqueProfiles = profiles.filter((profile) => {
+    const key = profile.trim().toLowerCase();
+    if (exactSeen.has(key)) return false;
+    exactSeen.add(key);
+    return true;
+  });
+  if (!query) return uniqueProfiles.slice(0, 12);
+  return uniqueProfiles
+    .map((profile) => {
+      const token = normaliseTaskProfileSearchText(profile);
+      let score = 0;
+      if (token === query) score = 100;
+      else if (token.startsWith(query)) score = 85;
+      else if (token.includes(query)) score = 60;
+      return { profile, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score || left.profile.localeCompare(right.profile))
+    .slice(0, 12)
+    .map((item) => item.profile);
+};
+
+const TaskingProfileInput: React.FC<{
+  value: string;
+  taskProfiles: string[];
+  operationalModelLabel: string;
+  onChange: (value: string) => void;
+}> = ({ value, taskProfiles, operationalModelLabel, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const suggestions = getTaskProfileSuggestions(value, taskProfiles);
+  const showSuggestions = isOpen && suggestions.length > 0;
+
+  const selectProfile = (profile: string) => {
+    onChange(profile);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={value}
+        autoComplete="off"
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setIsOpen(false)}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setIsOpen(true);
+        }}
+        placeholder="Tasking"
+        className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+      />
+      {showSuggestions && (
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-[280px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40">
+          {suggestions.map((profile) => (
+            <button
+              key={profile}
+              type="button"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                selectProfile(profile);
+              }}
+              className="block w-full border-b border-slate-800 px-2 py-1.5 text-left last:border-b-0 hover:bg-cyan-500/15 focus:bg-cyan-500/15 focus:outline-none"
+            >
+              <span className="block text-xs font-bold text-cyan-100">{profile}</span>
+              <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
+                {operationalModelLabel} task profile
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface TaskingRequestTableProps {
   taskingRequests: TaskingRequest[];
   timeOptions: TimeOption[];
   aircraftConfigOptions: AircraftConfigurationDefinition[];
   airfieldLookup: TaskingAirfieldLookup;
+  taskProfiles: string[];
+  operationalModelLabel: string;
   onAddTaskingRequest: () => void;
   onUpdateTaskingRequest: (id: string, updates: Partial<TaskingRequest>) => void;
   onRemoveTaskingRequest: (id: string) => void;
@@ -331,6 +419,8 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   timeOptions,
   aircraftConfigOptions,
   airfieldLookup,
+  taskProfiles,
+  operationalModelLabel,
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
@@ -366,13 +456,12 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
           return (
             <tr key={request.id}>
-              <td className="py-1 px-2 min-w-[180px]">
-                <input
-                  type="text"
+              <td className="relative py-1 px-2 min-w-[180px]">
+                <TaskingProfileInput
                   value={request.tasking}
-                  onChange={event => onUpdateTaskingRequest(request.id, { tasking: event.target.value, submitted: false })}
-                  placeholder="Tasking"
-                  className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                  taskProfiles={taskProfiles}
+                  operationalModelLabel={operationalModelLabel}
+                  onChange={(tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false })}
                 />
               </td>
               <td className="py-1 px-2 w-40">
@@ -522,6 +611,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onUpdateRemedialAircraftConfig = (_traineeId: number, _eventCode: string, _aircraftConfigId: string) => {},
   currencyNames,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  taskProfiles = [],
+  operationalModelLabel = 'Flight School Model',
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -2104,6 +2195,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               timeOptions={timeOptions}
               aircraftConfigOptions={aircraftConfigOptions}
               airfieldLookup={taskingAirfieldLookup}
+              taskProfiles={taskProfiles}
+              operationalModelLabel={operationalModelLabel}
               onAddTaskingRequest={addTaskingRequest}
               onUpdateTaskingRequest={updateTaskingRequest}
               onRemoveTaskingRequest={removeTaskingRequest}
