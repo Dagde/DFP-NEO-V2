@@ -134,6 +134,7 @@ interface TaskingRequest {
   tasking: string;
   date: string;
   takeoff: number;
+  duration: number;
   depPoint: string;
   arrivalPoint: string;
   aircraftCount: number;
@@ -573,6 +574,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             tasking: request.tasking || '',
             date: request.date || buildDfpDate,
             takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
+            duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
             depPoint: request.depPoint || school,
             arrivalPoint: request.arrivalPoint || school,
             aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || '1'), 10) || 1),
@@ -671,6 +673,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       tasking: '',
       date: buildDfpDate,
       takeoff: flyingStartTime,
+      duration: 1,
       depPoint: school,
       arrivalPoint: school,
       aircraftCount: 1,
@@ -965,6 +968,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       <th className="py-2 px-2 text-left">Tasking</th>
                       <th className="py-2 px-2 text-left">Date</th>
                       <th className="py-2 px-2 text-left">Takeoff</th>
+                      <th className="py-2 px-2 text-left">Duration</th>
                       <th className="py-2 px-2 text-left">Dep Point</th>
                       <th className="py-2 px-2 text-left">Arrival Point</th>
                       <th className="py-2 px-2 text-left">No. of Aircraft</th>
@@ -976,7 +980,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               <tbody className="divide-y divide-gray-700/50">
                   {taskingRequests.length === 0 && (
                       <tr>
-                          <td colSpan={9} className="py-4 px-2 text-sm italic text-gray-500">
+                          <td colSpan={10} className="py-4 px-2 text-sm italic text-gray-500">
                               No tasking requests configured.
                           </td>
                       </tr>
@@ -1011,6 +1015,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   >
                                       {timeOptions.map(opt => <option key={`tasking-takeoff-${opt.value}`} value={opt.value}>{opt.label}</option>)}
                                   </select>
+                              </td>
+                              <td className="py-1 px-2 w-28">
+                                  <input
+                                      type="number"
+                                      min={0.1}
+                                      step={0.1}
+                                      value={request.duration}
+                                      onChange={event => updateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false })}
+                                      className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                                  />
                               </td>
                               <td className="py-1 px-2 min-w-[130px]">
                                   <input

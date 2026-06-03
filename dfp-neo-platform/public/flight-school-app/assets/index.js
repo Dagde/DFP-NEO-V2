@@ -21733,6 +21733,7 @@ const PrioritiesView = ({
         tasking: request.tasking || "",
         date: request.date || buildDfpDate,
         takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
+        duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
         depPoint: request.depPoint || school,
         arrivalPoint: request.arrivalPoint || school,
         aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || "1"), 10) || 1),
@@ -21795,6 +21796,7 @@ const PrioritiesView = ({
       tasking: "",
       date: buildDfpDate,
       takeoff: flyingStartTime,
+      duration: 1,
       depPoint: school,
       arrivalPoint: school,
       aircraftCount: 1,
@@ -22045,6 +22047,7 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Tasking" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Takeoff" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Duration" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Dep Point" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Arrival Point" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "No. of Aircraft" }),
@@ -22053,7 +22056,7 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-1 text-right" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700/50", children: [
-        taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
+        taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 10, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
         taskingRequests.map((request) => {
           const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -22084,6 +22087,17 @@ const PrioritiesView = ({
                 onChange: (event) => updateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false }),
                 className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500",
                 children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `tasking-takeoff-${opt.value}`))
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: 0.1,
+                step: 0.1,
+                value: request.duration,
+                onChange: (event) => updateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false }),
+                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
               }
             ) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[130px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
