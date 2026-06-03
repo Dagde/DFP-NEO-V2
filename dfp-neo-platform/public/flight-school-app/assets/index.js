@@ -21370,6 +21370,125 @@ const AircraftConfigSelect = ({ value, definitions, disabled = false, includeAny
     }
   );
 };
+const TaskingRequestTable = ({
+  taskingRequests,
+  timeOptions,
+  aircraftConfigOptions,
+  onAddTaskingRequest,
+  onUpdateTaskingRequest,
+  onRemoveTaskingRequest,
+  onSubmitTaskingRequest
+}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-x-auto", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Tasking" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Takeoff" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Duration" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left w-[78px] max-w-[78px] whitespace-normal leading-tight", children: "Dep Point" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left w-[78px] max-w-[78px] whitespace-normal leading-tight", children: "Arrival Point" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "No. of Aircraft" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Status" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-1 text-right" })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700/50", children: [
+      taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 10, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
+      taskingRequests.map((request) => {
+        const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[180px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: request.tasking,
+              onChange: (event) => onUpdateTaskingRequest(request.id, { tasking: event.target.value, submitted: false }),
+              placeholder: "Tasking",
+              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "date",
+              value: request.date,
+              onChange: (event) => onUpdateTaskingRequest(request.id, { date: event.target.value, submitted: false }),
+              style: { colorScheme: "dark" },
+              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              value: request.takeoff,
+              onChange: (event) => onUpdateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false }),
+              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500",
+              children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `tasking-takeoff-${opt.value}`))
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: 0.1,
+              step: 0.1,
+              value: request.duration,
+              onChange: (event) => onUpdateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false }),
+              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: request.depPoint,
+              onChange: (event) => onUpdateTaskingRequest(request.id, { depPoint: event.target.value, submitted: false }),
+              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: request.arrivalPoint,
+              onChange: (event) => onUpdateTaskingRequest(request.id, { arrivalPoint: event.target.value, submitted: false }),
+              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: 1,
+              value: request.aircraftCount,
+              onChange: (event) => onUpdateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false }),
+              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            AircraftConfigSelect,
+            {
+              value: request.aircraftConfigId,
+              definitions: aircraftConfigOptions,
+              onChange: (aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false })
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: request.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 text-xs font-semibold", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => onSubmitTaskingRequest(request.id),
+              disabled: !canSubmit,
+              className: `px-2 py-1 text-xs rounded font-semibold ${canSubmit ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
+              children: "Submit"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-1 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveTaskingRequest(request.id), className: "p-1 text-gray-400 hover:text-red-400", "aria-label": "Remove tasking request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) }) })
+        ] }, request.id);
+      })
+    ] })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onAddTaskingRequest, className: "mt-2 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold", children: "+ Add Request" })
+] });
 const PrioritiesView = ({
   school = "ESL",
   coursePriorities,
@@ -22041,117 +22160,6 @@ const PrioritiesView = ({
       ] })
     ] });
   };
-  const TaskingRequestTable = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-x-auto", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Tasking" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Takeoff" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Duration" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Dep Point" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Arrival Point" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "No. of Aircraft" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Status" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-1 text-right" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700/50", children: [
-        taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 10, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
-        taskingRequests.map((request) => {
-          const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[180px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: request.tasking,
-                onChange: (event) => updateTaskingRequest(request.id, { tasking: event.target.value, submitted: false }),
-                placeholder: "Tasking",
-                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "date",
-                value: request.date,
-                onChange: (event) => updateTaskingRequest(request.id, { date: event.target.value, submitted: false }),
-                style: { colorScheme: "dark" },
-                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: request.takeoff,
-                onChange: (event) => updateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false }),
-                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500",
-                children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `tasking-takeoff-${opt.value}`))
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "number",
-                min: 0.1,
-                step: 0.1,
-                value: request.duration,
-                onChange: (event) => updateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false }),
-                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[130px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: request.depPoint,
-                onChange: (event) => updateTaskingRequest(request.id, { depPoint: event.target.value, submitted: false }),
-                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[130px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: request.arrivalPoint,
-                onChange: (event) => updateTaskingRequest(request.id, { arrivalPoint: event.target.value, submitted: false }),
-                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "number",
-                min: 1,
-                value: request.aircraftCount,
-                onChange: (event) => updateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false }),
-                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              AircraftConfigSelect,
-              {
-                value: request.aircraftConfigId,
-                definitions: aircraftConfigOptions,
-                onChange: (aircraftConfigId) => updateTaskingRequest(request.id, { aircraftConfigId, submitted: false })
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: request.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 text-xs font-semibold", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => submitTaskingRequest(request.id),
-                disabled: !canSubmit,
-                className: `px-2 py-1 text-xs rounded font-semibold ${canSubmit ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
-                children: "Submit"
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-1 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeTaskingRequest(request.id), className: "p-1 text-gray-400 hover:text-red-400", "aria-label": "Remove tasking request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) }) })
-          ] }, request.id);
-        })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addTaskingRequest, className: "mt-2 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold", children: "+ Add Request" })
-  ] });
   const SctRequestTable = ({ type, requests }) => {
     const calculateDaysToExpire = (expireDateStr) => {
       if (!expireDateStr) return null;
@@ -22868,7 +22876,18 @@ const PrioritiesView = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Tasking" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingRequestTable, {})
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TaskingRequestTable,
+          {
+            taskingRequests,
+            timeOptions,
+            aircraftConfigOptions,
+            onAddTaskingRequest: addTaskingRequest,
+            onUpdateTaskingRequest: updateTaskingRequest,
+            onRemoveTaskingRequest: removeTaskingRequest,
+            onSubmitTaskingRequest: submitTaskingRequest
+          }
+        )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Crew Currency Requests" }),
