@@ -213,6 +213,10 @@ export interface ScheduleEvent {
       
       // Event Category field (for progressive display)
       eventCategory?: 'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di' | 'currency';
+      isTaskingRequest?: boolean;
+      taskingRequestId?: string;
+      taskingAircraftIndex?: number;
+      taskingAircraftCount?: number;
       
       // Additional fields for enhanced priority events display
       dateCreated?: string;

@@ -1152,6 +1152,54 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     )));
   };
 
+  const buildTaskingPriorityEvents = (request: TaskingRequest): ScheduleEvent[] => {
+    const tasking = request.tasking.trim();
+    const depPoint = request.depPoint.trim().toUpperCase();
+    const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
+    const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
+    const aircraftConfigId = request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+    const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
+    const notes = [
+      `Tasking request: ${tasking}`,
+      `Date: ${request.date || 'Any build date'}`,
+      `Takeoff: ${formatTimeLabel(startTime)}`,
+      `Duration: ${request.duration.toFixed(1)}`,
+      `Dep Point: ${depPoint}`,
+      `Arrival Point: ${arrivalPoint}`,
+      `Aircraft requested: ${aircraftCount}`,
+    ].join('\n');
+
+    return Array.from({ length: aircraftCount }, (_, index): ScheduleEvent => ({
+      id: `tasking-${request.id}-${index + 1}`,
+      date: request.date || '',
+      type: 'flight',
+      instructor: '',
+      student: '',
+      pilot: '',
+      group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : 'Tasking',
+      flightNumber: tasking,
+      duration: Math.max(0.1, Number(request.duration) || 0.1),
+      startTime,
+      resourceId: '',
+      color: 'bg-cyan-500/80',
+      flightType: 'Dual',
+      soloOrDual: 'Dual',
+      locationType: depPoint !== arrivalPoint ? 'Land Away' : 'Local',
+      origin: depPoint,
+      destination: arrivalPoint,
+      isTimeFixed: true,
+      isTaskingRequest: true,
+      taskingRequestId: request.id,
+      taskingAircraftIndex: index + 1,
+      taskingAircraftCount: aircraftCount,
+      dateCreated: new Date().toISOString(),
+      notes,
+      priority: 'High',
+      aircraftConfigId,
+      acceptableAircraftConfigs: [aircraftConfigId],
+    }));
+  };
+
   const removeTaskingRequest = (id: string) => {
     const removed = taskingRequests.find(request => request.id === id);
     setTaskingRequests(prev => prev.filter(request => request.id !== id));
@@ -1161,8 +1209,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const submitTaskingRequest = (id: string) => {
     const request = taskingRequests.find(item => item.id === id);
     if (!request) return;
+    const priorityEvents = buildTaskingPriorityEvents(request);
+    onAddPriorityEvents(priorityEvents);
     updateTaskingRequest(id, { submitted: true });
-    logAudit('Priorities', 'Submit', 'Submitted tasking request', `${request.tasking || 'Untitled tasking'} on ${request.date}`);
+    logAudit('Priorities', 'Submit', 'Submitted tasking request', `${request.tasking || 'Untitled tasking'} on ${request.date || 'any build date'} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? '' : 's'})`);
   };
 
   useEffect(() => {
@@ -1600,6 +1650,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <tr>
                     <th className="py-2 px-2 text-left">Name</th>
                     <th className="py-2 px-2 text-left">Event</th>
+                    <th className="py-2 px-2 text-left">Date</th>
                     <th className="py-2 px-2 text-left">Solo/Dual</th>
                     <th className="py-2 px-2 text-left">Currency</th>
                     <th className="py-2 px-2 text-left">Config</th>
@@ -1609,7 +1660,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </thead>
             <tbody className="divide-y divide-gray-700/50">
                 {events.map(event => {
-                    const personName = event.instructor || event.pilot || event.student || 'N/A';
+                    const personName = event.isTaskingRequest
+                        ? event.group || 'Tasking'
+                        : event.instructor || event.pilot || event.student || 'N/A';
                         const isPublishedInActiveSchedule = activeScheduleEvents.some(activeEvent =>
                             activeEvent.id === event.id ||
                             (!!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId)
@@ -1619,6 +1672,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <tr key={event.id} onClick={() => onSelectEvent(event)} className="hover:bg-sky-900/50 transition-colors cursor-pointer">
                         <td className={`py-2 px-2 ${rowText}`}>{personName}</td>
                         <td className={`py-2 px-2 ${rowText} font-semibold`}>{event.flightNumber}</td>
+                        <td className={`py-2 px-2 ${rowText} font-mono`}>{event.date ? formatDate(event.date) : 'Any'}</td>
                         <td className={`py-2 px-2 ${rowText}`}>{event.soloOrDual || event.flightType || 'N/A'}</td>
                         <td className={`py-2 px-2 ${rowText}`}>{event.currency || 'N/A'}</td>
                         <td className={`py-2 px-2 ${rowText} font-semibold`}>{getAircraftConfigSummary(event)}</td>

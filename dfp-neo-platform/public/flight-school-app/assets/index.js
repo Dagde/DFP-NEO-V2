@@ -6167,7 +6167,7 @@ function calculateDailyAverageAvailability(availabilityTimeline, windowStart, wi
   console.log("=== END CALCULATION ===\n");
   return Math.round(averageAvailability * 10) / 10;
 }
-function formatDate$5(date) {
+function formatDate$6(date) {
   if (!date || isNaN(date.getTime())) {
     console.warn("[formatDate] Invalid date provided:", date);
     return "";
@@ -6213,7 +6213,7 @@ const AircraftAvailabilityOverlay = ({
   const makeDayStart = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
   reactExports.useEffect(() => {
     let cancelled = false;
-    const dateKey = dateString ?? formatDate$5(currentDate);
+    const dateKey = dateString ?? formatDate$6(currentDate);
     const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
     if (stored) {
       try {
@@ -6274,7 +6274,7 @@ const AircraftAvailabilityOverlay = ({
       dayFlyingStart.replace(":", ""),
       dayFlyingEnd.replace(":", "")
     );
-    const dateKey = dateString ?? formatDate$5(currentDate);
+    const dateKey = dateString ?? formatDate$6(currentDate);
     const record = {
       date: dateKey,
       snapshots,
@@ -11325,7 +11325,7 @@ const ExperienceInput$1 = ({ label, value, onChange }) => /* @__PURE__ */ jsxRun
     }
   )
 ] });
-const formatDate$4 = (dateString) => {
+const formatDate$5 = (dateString) => {
   if (!dateString) return "";
   const date = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -12022,12 +12022,12 @@ const TraineeProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (unavailability || []).length > 0 ? (unavailability || []).map((p) => {
                   let periodDisplay = "";
                   if (p.allDay) {
-                    const sd = formatDate$4(p.startDate);
-                    const ed = formatDate$4(p.endDate);
+                    const sd = formatDate$5(p.startDate);
+                    const ed = formatDate$5(p.endDate);
                     periodDisplay = p.startDate !== p.endDate ? `${sd} – ${ed} @ All Day` : `${sd} @ All Day`;
                   } else {
-                    const sd = `${formatMilitaryTime2(p.startTime)} ${formatDate$4(p.startDate)}`;
-                    const ed = `${formatMilitaryTime2(p.endTime)} ${formatDate$4(p.endDate)}`;
+                    const sd = `${formatMilitaryTime2(p.startTime)} ${formatDate$5(p.startDate)}`;
+                    const ed = `${formatMilitaryTime2(p.endTime)} ${formatDate$5(p.endDate)}`;
                     periodDisplay = p.startDate !== p.endDate ? `${sd} to ${ed}` : `${sd} - ${ed}`;
                   }
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
@@ -16461,7 +16461,7 @@ const formatTime$3 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const formatDate$3 = (dateStr) => {
+const formatDate$4 = (dateStr) => {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
   return `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
@@ -18074,7 +18074,7 @@ const AddFlightTileModal = ({
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Date" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$4(date) })
                     ] })
                   ] }),
                   locationType === "Land Away" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mt-3", children: [
@@ -20004,7 +20004,7 @@ const formatTime$2 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const formatDate$2 = (dateString) => {
+const formatDate$3 = (dateString) => {
   if (!dateString) return "-";
   try {
     const date = /* @__PURE__ */ new Date(dateString + "T00:00:00Z");
@@ -20086,7 +20086,7 @@ const MyDashboard = ({
         mySctRequests.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: mySctRequests.map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "p-2 bg-gray-700/50 rounded-md text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: req.event }),
-            req.dateRequested && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: formatDate$2(req.dateRequested) })
+            req.dateRequested && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: formatDate$3(req.dateRequested) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
             "Expires: ",
@@ -20107,7 +20107,7 @@ const MyDashboard = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(assessment.date) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$3(assessment.date) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Pending" })
               ] })
             ] })
@@ -22224,6 +22224,52 @@ const PrioritiesView = ({
   const updateTaskingRequest = (id, updates) => {
     setTaskingRequests((prev) => prev.map((request) => request.id === id ? { ...request, ...updates, submitted: updates.submitted ?? request.submitted } : request));
   };
+  const buildTaskingPriorityEvents = (request) => {
+    const tasking = request.tasking.trim();
+    const depPoint = request.depPoint.trim().toUpperCase();
+    const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
+    const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
+    const aircraftConfigId = request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+    const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
+    const notes = [
+      `Tasking request: ${tasking}`,
+      `Date: ${request.date || "Any build date"}`,
+      `Takeoff: ${formatTimeLabel(startTime)}`,
+      `Duration: ${request.duration.toFixed(1)}`,
+      `Dep Point: ${depPoint}`,
+      `Arrival Point: ${arrivalPoint}`,
+      `Aircraft requested: ${aircraftCount}`
+    ].join("\n");
+    return Array.from({ length: aircraftCount }, (_, index) => ({
+      id: `tasking-${request.id}-${index + 1}`,
+      date: request.date || "",
+      type: "flight",
+      instructor: "",
+      student: "",
+      pilot: "",
+      group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : "Tasking",
+      flightNumber: tasking,
+      duration: Math.max(0.1, Number(request.duration) || 0.1),
+      startTime,
+      resourceId: "",
+      color: "bg-cyan-500/80",
+      flightType: "Dual",
+      soloOrDual: "Dual",
+      locationType: depPoint !== arrivalPoint ? "Land Away" : "Local",
+      origin: depPoint,
+      destination: arrivalPoint,
+      isTimeFixed: true,
+      isTaskingRequest: true,
+      taskingRequestId: request.id,
+      taskingAircraftIndex: index + 1,
+      taskingAircraftCount: aircraftCount,
+      dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
+      notes,
+      priority: "High",
+      aircraftConfigId,
+      acceptableAircraftConfigs: [aircraftConfigId]
+    }));
+  };
   const removeTaskingRequest = (id) => {
     const removed = taskingRequests.find((request) => request.id === id);
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
@@ -22232,8 +22278,10 @@ const PrioritiesView = ({
   const submitTaskingRequest = (id) => {
     const request = taskingRequests.find((item) => item.id === id);
     if (!request) return;
+    const priorityEvents = buildTaskingPriorityEvents(request);
+    onAddPriorityEvents(priorityEvents);
     updateTaskingRequest(id, { submitted: true });
-    logAudit("Priorities", "Submit", "Submitted tasking request", `${request.tasking || "Untitled tasking"} on ${request.date}`);
+    logAudit("Priorities", "Submit", "Submitted tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? "" : "s"})`);
   };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
@@ -22571,6 +22619,7 @@ const PrioritiesView = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Solo/Dual" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
@@ -22578,7 +22627,7 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Action" })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: events.map((event) => {
-      const personName = event.instructor || event.pilot || event.student || "N/A";
+      const personName = event.isTaskingRequest ? event.group || "Tasking" : event.instructor || event.pilot || event.student || "N/A";
       const isPublishedInActiveSchedule = activeScheduleEvents.some(
         (activeEvent) => activeEvent.id === event.id || !!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId
       );
@@ -22586,6 +22635,7 @@ const PrioritiesView = ({
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => onSelectEvent(event), className: "hover:bg-sky-900/50 transition-colors cursor-pointer", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: personName }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: event.flightNumber }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-mono`, children: event.date ? formatDate(event.date) : "Any" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: event.soloOrDual || event.flightType || "N/A" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText}`, children: event.currency || "N/A" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 ${rowText} font-semibold`, children: getAircraftConfigSummary(event) }),
@@ -24998,7 +25048,7 @@ const trendColor = (dir) => {
   if (dir === "worsening") return "text-red-400";
   return "text-gray-400";
 };
-const formatDate$1 = (iso) => {
+const formatDate$2 = (iso) => {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
 };
@@ -26222,7 +26272,7 @@ const CourseTab = ({ summary, trainees, events }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm leading-relaxed whitespace-pre-line", children: summary.narrativeSummary }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-600 text-xs mt-3", children: [
         "Last analysed: ",
-        formatDate$1(summary.completedAt),
+        formatDate$2(summary.completedAt),
         " · ",
         summary.recordsProcessed,
         " records processed"
@@ -27222,7 +27272,7 @@ const TrainingIntelligenceTab = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: run.status === "complete" ? "text-emerald-500" : run.status === "failed" ? "text-red-500" : "text-yellow-500", children: "•" }),
         run.courseFilter || "All",
         " · ",
-        formatDate$1(run.completedAt),
+        formatDate$2(run.completedAt),
         " · ",
         run.recordsProcessed ?? "—",
         " records"
@@ -30753,7 +30803,7 @@ const CircularGauge = ({ title, mainValue, subItems, borderColor }) => {
     ] }, item.label)) })
   ] });
 };
-const formatDate = (dateString) => {
+const formatDate$1 = (dateString) => {
   if (!dateString) return "";
   const date = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -31438,12 +31488,12 @@ const InstructorProfileFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1 mb-4 max-h-64 overflow-y-auto", children: unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map((p) => {
               let periodDisplay = "";
               if (p.allDay) {
-                const startDisplay = formatDate(p.startDate);
-                const endDisplay = formatDate(p.endDate);
+                const startDisplay = formatDate$1(p.startDate);
+                const endDisplay = formatDate$1(p.endDate);
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
               } else {
-                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate(p.startDate)}`;
-                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate(p.endDate)}`;
+                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate$1(p.startDate)}`;
+                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate$1(p.endDate)}`;
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
               }
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
@@ -31888,12 +31938,12 @@ const InstructorProfileFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1 max-h-32 overflow-y-auto", children: unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map((p) => {
               let periodDisplay = "";
               if (p.allDay) {
-                const startDisplay = formatDate(p.startDate);
-                const endDisplay = formatDate(p.endDate);
+                const startDisplay = formatDate$1(p.startDate);
+                const endDisplay = formatDate$1(p.endDate);
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
               } else {
-                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate(p.startDate)}`;
-                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate(p.endDate)}`;
+                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate$1(p.startDate)}`;
+                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate$1(p.endDate)}`;
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
               }
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
@@ -60256,6 +60306,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog(`DEBUG Build Date: ${buildDate}`);
   let includedCount = 0;
   let skippedCount = 0;
+  const priorityEventMatchesBuildDate = (event, targetDate) => {
+    const eventDate = String(event.date || "").trim();
+    return !eventDate || eventDate === targetDate;
+  };
   const getPriorityTurnaround = (event) => {
     if (event.type === "flight") return flightTurnaround;
     if (event.type === "ftd") return ftdTurnaround;
@@ -60315,7 +60369,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const remedialInstructorOverrideKey = (traineeName, eventCode) => `${normalizeBuildPersonnelName(traineeName)}::${normalizeLmpEventId(eventCode || "")}`;
   const remedialInstructorOverrides = /* @__PURE__ */ new Map();
   highestPriorityEvents.forEach((event) => {
-    if (event.date !== buildDate || !event.isTimeFixed || !event.isRemedial) return;
+    if (!priorityEventMatchesBuildDate(event, buildDate) || !event.isTimeFixed || !event.isRemedial) return;
     const traineeName = event.student || event.pilot || "";
     const eventCode = event.flightNumber || "";
     const instructorName = (event.instructor || "").trim();
@@ -60424,7 +60478,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
   }
-  const isMandatoryRemedialFlight = (event) => event.date === buildDate && event.isTimeFixed === true && event.isRemedial === true && event.type === "flight";
+  const isMandatoryRemedialFlight = (event) => priorityEventMatchesBuildDate(event, buildDate) && event.isTimeFixed === true && event.isRemedial === true && event.type === "flight";
   const remedialPriorityEvents = highestPriorityEvents.filter(
     (event) => event.isRemedial || event.id?.startsWith("remedial-")
   );
@@ -60493,7 +60547,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   remedialPriorityEvents.forEach((event) => {
     const isMandatoryFlight = isMandatoryRemedialFlight(event);
     const exclusionReasons = [];
-    if (event.date !== buildDate) exclusionReasons.push("DATE_MISMATCH");
+    if (!priorityEventMatchesBuildDate(event, buildDate)) exclusionReasons.push("DATE_MISMATCH");
     if (event.isTimeFixed !== true) exclusionReasons.push("NOT_TIME_FIXED");
     if (event.isRemedial !== true) exclusionReasons.push("NOT_MARKED_REMEDIAL");
     if (event.type === "flight" && isMandatoryFlight) ;
@@ -60516,7 +60570,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       isTimeFixed: event.isTimeFixed === true,
       dayNight: event.dayNight || null,
       includedInMandatoryRemedialFlightQueue: isMandatoryFlight,
-      expectedSchedulerPath: isMandatoryFlight ? "mandatory-remedial-flight-queue" : event.date === buildDate && event.isTimeFixed ? "fixed-highest-priority-placement" : "excluded-before-placement",
+      expectedSchedulerPath: isMandatoryFlight ? "mandatory-remedial-flight-queue" : priorityEventMatchesBuildDate(event, buildDate) && event.isTimeFixed ? "fixed-highest-priority-placement" : "excluded-before-placement",
       exclusionReasons
     });
   });
@@ -60659,7 +60713,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   neoBuildDiag.mandatoryRemedialFlights.priorityQueueAudit = highestPriorityEvents.filter((event) => event.isRemedial || event.id?.startsWith("remedial-")).map((event) => {
     const includedInMandatoryFlightQueue = isMandatoryRemedialFlight(event);
     const exclusionReasons = [];
-    if (event.date !== buildDate) exclusionReasons.push("DATE_MISMATCH");
+    if (!priorityEventMatchesBuildDate(event, buildDate)) exclusionReasons.push("DATE_MISMATCH");
     if (event.isTimeFixed !== true) exclusionReasons.push("NOT_TIME_FIXED");
     if (event.isRemedial !== true) exclusionReasons.push("NOT_MARKED_REMEDIAL");
     if (event.type !== "flight") exclusionReasons.push("NOT_FLIGHT_TYPE");
@@ -60698,7 +60752,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   }
   highestPriorityEvents.forEach((event) => {
     buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} (ID: ${event.id})`);
-    buildDebugLog(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
+    buildDebugLog(`  - event.date: ${event.date || "Any"}, buildDate: ${buildDate}, match: ${priorityEventMatchesBuildDate(event, buildDate)}`);
     buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
     if (isCurrencyPriorityEvent(event)) {
       skippedCount++;
@@ -60722,7 +60776,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       return;
     }
-    if (event.date === buildDate && event.isTimeFixed) {
+    if (priorityEventMatchesBuildDate(event, buildDate) && event.isTimeFixed) {
       const { date, ...rawEventWithoutDate } = event;
       const eventWithoutDate = ensurePriorityResourceConfigCompatibility(placeRemedialPriorityEvent(rawEventWithoutDate));
       if (event.isRemedial || event.id?.startsWith("remedial-")) {
@@ -60799,7 +60853,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
     } else {
       skippedCount++;
-      buildDebugLog(`  ✗ DEBUG SKIPPED - Reason: ${event.date !== buildDate ? "date mismatch" : "isTimeFixed is false"}`);
+      buildDebugLog(`  ✗ DEBUG SKIPPED - Reason: ${!priorityEventMatchesBuildDate(event, buildDate) ? "date mismatch" : "isTimeFixed is false"}`);
       if (event.isRemedial || event.id?.startsWith("remedial-")) {
         traceRemedialMovement("priorityPlacementTrace", {
           phase: "highest-priority-remedial-skipped-before-placement",
@@ -60811,7 +60865,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           buildDate,
           isTimeFixed: event.isTimeFixed === true,
           outcome: "skipped",
-          reason: event.date !== buildDate ? "DATE_MISMATCH" : "NOT_TIME_FIXED"
+          reason: !priorityEventMatchesBuildDate(event, buildDate) ? "DATE_MISMATCH" : "NOT_TIME_FIXED"
         });
       }
     }
@@ -63041,7 +63095,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     buildDebugLog("WARNING: Night flying scheduled but no night duty supervisor available!");
   }
   const currencyPriorityEvents = highestPriorityEvents.filter(
-    (event) => isCurrencyPriorityEvent(event) && event.date === buildDate && (event.type === "flight" || event.type === "ftd")
+    (event) => isCurrencyPriorityEvent(event) && priorityEventMatchesBuildDate(event, buildDate) && (event.type === "flight" || event.type === "ftd")
   );
   const getCurrencyPriorityPerson = (event) => {
     const personName = event.student || event.pilot || event.instructor || "";
@@ -65741,7 +65795,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog(`DEBUG Total events in final build: ${sortedEvents.length}`);
   buildDebugLog("DEBUG Checking for originally locked events:");
   highestPriorityEvents.forEach((hpe) => {
-    if (hpe.date === buildDate && hpe.isTimeFixed) {
+    if (priorityEventMatchesBuildDate(hpe, buildDate) && hpe.isTimeFixed) {
       const found = sortedEvents.find((e) => e.id === hpe.id);
       if (found) {
         buildDebugLog(`  ✓ FOUND: ${hpe.flightNumber} - ${hpe.student || hpe.pilot || "N/A"} (ID: ${hpe.id})`);
@@ -76039,7 +76093,13 @@ ${conflictLines.join("\n")}${moreText}`,
             activeScheduleEvents: Object.values(publishedSchedules).flat(),
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             onAddPriorityEvents: (eventsToAdd) => {
-              setHighestPriorityEvents((prev) => [...prev, ...eventsToAdd]);
+              setHighestPriorityEvents((prev) => {
+                const incomingIds = new Set(eventsToAdd.map((event) => event.id));
+                return [
+                  ...prev.filter((event) => !incomingIds.has(event.id)),
+                  ...eventsToAdd
+                ];
+              });
             },
             onUpdatePriorityEvent: handleUpdatePriorityEvent,
             onDeletePriorityEvent: handleDeletePriorityEvent,

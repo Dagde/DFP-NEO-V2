@@ -2914,6 +2914,14 @@ function generateDfpInternal(
     let includedCount = 0;
     let skippedCount = 0;
 
+    const priorityEventMatchesBuildDate = (
+        event: Pick<ScheduleEvent, 'date'> | { date?: string | null },
+        targetDate: string
+    ): boolean => {
+        const eventDate = String(event.date || '').trim();
+        return !eventDate || eventDate === targetDate;
+    };
+
     const getPriorityTurnaround = (event: Omit<ScheduleEvent, 'date'>): number => {
         if (event.type === 'flight') return flightTurnaround;
         if (event.type === 'ftd') return ftdTurnaround;
@@ -3004,7 +3012,7 @@ function generateDfpInternal(
     }>();
 
     highestPriorityEvents.forEach(event => {
-        if (event.date !== buildDate || !event.isTimeFixed || !event.isRemedial) return;
+        if (!priorityEventMatchesBuildDate(event, buildDate) || !event.isTimeFixed || !event.isRemedial) return;
         const traineeName = event.student || event.pilot || '';
         const eventCode = event.flightNumber || '';
         const instructorName = (event.instructor || '').trim();
@@ -3154,7 +3162,7 @@ function generateDfpInternal(
     }
 
     const isMandatoryRemedialFlight = (event: ScheduleEvent): boolean =>
-        event.date === buildDate &&
+        priorityEventMatchesBuildDate(event, buildDate) &&
         event.isTimeFixed === true &&
         event.isRemedial === true &&
         event.type === 'flight';
@@ -3245,7 +3253,7 @@ function generateDfpInternal(
     remedialPriorityEvents.forEach(event => {
         const isMandatoryFlight = isMandatoryRemedialFlight(event);
         const exclusionReasons: string[] = [];
-        if (event.date !== buildDate) exclusionReasons.push('DATE_MISMATCH');
+        if (!priorityEventMatchesBuildDate(event, buildDate)) exclusionReasons.push('DATE_MISMATCH');
         if (event.isTimeFixed !== true) exclusionReasons.push('NOT_TIME_FIXED');
         if (event.isRemedial !== true) exclusionReasons.push('NOT_MARKED_REMEDIAL');
         if (event.type === 'flight' && isMandatoryFlight) {
@@ -3271,7 +3279,7 @@ function generateDfpInternal(
             includedInMandatoryRemedialFlightQueue: isMandatoryFlight,
             expectedSchedulerPath: isMandatoryFlight
                 ? 'mandatory-remedial-flight-queue'
-                : event.date === buildDate && event.isTimeFixed
+                : priorityEventMatchesBuildDate(event, buildDate) && event.isTimeFixed
                     ? 'fixed-highest-priority-placement'
                     : 'excluded-before-placement',
             exclusionReasons,
@@ -3437,7 +3445,7 @@ function generateDfpInternal(
         .map(event => {
             const includedInMandatoryFlightQueue = isMandatoryRemedialFlight(event);
             const exclusionReasons: string[] = [];
-            if (event.date !== buildDate) exclusionReasons.push('DATE_MISMATCH');
+            if (!priorityEventMatchesBuildDate(event, buildDate)) exclusionReasons.push('DATE_MISMATCH');
             if (event.isTimeFixed !== true) exclusionReasons.push('NOT_TIME_FIXED');
             if (event.isRemedial !== true) exclusionReasons.push('NOT_MARKED_REMEDIAL');
             if (event.type !== 'flight') exclusionReasons.push('NOT_FLIGHT_TYPE');
@@ -3477,7 +3485,7 @@ function generateDfpInternal(
 
     highestPriorityEvents.forEach(event => {
         buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'} (ID: ${event.id})`);
-        buildDebugLog(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
+        buildDebugLog(`  - event.date: ${event.date || 'Any'}, buildDate: ${buildDate}, match: ${priorityEventMatchesBuildDate(event, buildDate)}`);
         buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
 
         if (isCurrencyPriorityEvent(event)) {
@@ -3504,7 +3512,7 @@ function generateDfpInternal(
             return;
         }
 
-        if(event.date === buildDate && event.isTimeFixed) {
+        if (priorityEventMatchesBuildDate(event, buildDate) && event.isTimeFixed) {
             const { date, ...rawEventWithoutDate } = event;
             const eventWithoutDate = ensurePriorityResourceConfigCompatibility(placeRemedialPriorityEvent(rawEventWithoutDate));
             if (event.isRemedial || event.id?.startsWith('remedial-')) {
@@ -3579,7 +3587,7 @@ function generateDfpInternal(
             });
         } else {
             skippedCount++;
-            buildDebugLog(`  ✗ DEBUG SKIPPED - Reason: ${event.date !== buildDate ? 'date mismatch' : 'isTimeFixed is false'}`);
+            buildDebugLog(`  ✗ DEBUG SKIPPED - Reason: ${!priorityEventMatchesBuildDate(event, buildDate) ? 'date mismatch' : 'isTimeFixed is false'}`);
             if (event.isRemedial || event.id?.startsWith('remedial-')) {
                 traceRemedialMovement('priorityPlacementTrace', {
                     phase: 'highest-priority-remedial-skipped-before-placement',
@@ -3591,7 +3599,7 @@ function generateDfpInternal(
                     buildDate,
                     isTimeFixed: event.isTimeFixed === true,
                     outcome: 'skipped',
-                    reason: event.date !== buildDate ? 'DATE_MISMATCH' : 'NOT_TIME_FIXED',
+                    reason: !priorityEventMatchesBuildDate(event, buildDate) ? 'DATE_MISMATCH' : 'NOT_TIME_FIXED',
                 });
             }
         }
@@ -6357,7 +6365,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     const currencyPriorityEvents = highestPriorityEvents.filter(event =>
         isCurrencyPriorityEvent(event) &&
-        event.date === buildDate &&
+        priorityEventMatchesBuildDate(event, buildDate) &&
         (event.type === 'flight' || event.type === 'ftd')
     );
     const getCurrencyPriorityPerson = (event: ScheduleEvent): { trainee: Trainee; excludeInstructorNames: string[] } | null => {
@@ -9720,7 +9728,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // Check if the events we locked are in the final result
     highestPriorityEvents.forEach(hpe => {
-        if (hpe.date === buildDate && hpe.isTimeFixed) {
+        if (priorityEventMatchesBuildDate(hpe, buildDate) && hpe.isTimeFixed) {
             const found = sortedEvents.find(e => e.id === hpe.id);
             if (found) {
                 buildDebugLog(`  ✓ FOUND: ${hpe.flightNumber} - ${hpe.student || hpe.pilot || 'N/A'} (ID: ${hpe.id})`);
@@ -22653,7 +22661,13 @@ updates.forEach(update => {
                     activeScheduleEvents={Object.values(publishedSchedules).flat()}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     onAddPriorityEvents={(eventsToAdd) => {
-                        setHighestPriorityEvents(prev => [...prev, ...eventsToAdd]);
+                        setHighestPriorityEvents(prev => {
+                            const incomingIds = new Set(eventsToAdd.map(event => event.id));
+                            return [
+                                ...prev.filter(event => !incomingIds.has(event.id)),
+                                ...eventsToAdd,
+                            ];
+                        });
                     }}
                     onUpdatePriorityEvent={handleUpdatePriorityEvent}
                     onDeletePriorityEvent={handleDeletePriorityEvent}
