@@ -2202,7 +2202,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={formatTaskProfileText(profiles)}
                     disabled={!canEdit}
                     onChange={(value) => updateTaskProfilesForModel(option.value, value)}
-                    info="One task profile per line. Commas and semicolons are also accepted when pasting."
+                    info="One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );

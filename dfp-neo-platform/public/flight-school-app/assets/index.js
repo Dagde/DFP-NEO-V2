@@ -2347,10 +2347,50 @@ const getResourcePoolCount = (pool, key, fallback) => {
   const value = Number(pool?.settings?.[key]);
   return Number.isFinite(value) && value >= 0 ? value : fallback;
 };
-const DEFAULT_TASK_PROFILE_CONFIG = OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => ({
-  ...config,
-  [option.value]: []
-}), {});
+const DEFAULT_TASK_PROFILE_CONFIG = {
+  flight_school: [
+    "Transit",
+    "Ferry",
+    "Display",
+    "Fly Past"
+  ],
+  air_combat: [
+    "Air Defence Alert",
+    "Offensive Counter Air",
+    "Defensive Counter Air",
+    "Close Air Support",
+    "Surface Attack",
+    "Maritime Strike",
+    "Strategic Strike",
+    "Armed Reconnaissance",
+    "Combat Air Patrol",
+    "Composite Air Operation"
+  ],
+  fixed_crew: [
+    "Maritime Patrol",
+    "Airborne Early Warning & Control",
+    "Intelligence, Surveillance & Reconnaissance (ISR)",
+    "Electronic Surveillance",
+    "Anti-Submarine Warfare",
+    "Anti-Surface Warfare",
+    "Battle Management",
+    "Communications Relay",
+    "Border Security Patrol",
+    "Search and Rescue Coordination"
+  ],
+  air_mobility: [
+    "Tactical Airlift",
+    "Strategic Airlift",
+    "Personnel Transport",
+    "Cargo Resupply",
+    "Airborne Delivery",
+    "Aeromedical Evacuation",
+    "Air-to-Air Refuelling",
+    "Humanitarian Assistance",
+    "Disaster Relief",
+    "VIP Transport"
+  ]
+};
 const uniqueProfiles = (profiles) => {
   const seen = /* @__PURE__ */ new Set();
   const result = [];
@@ -2364,7 +2404,11 @@ const uniqueProfiles = (profiles) => {
   });
   return result;
 };
-const parseTaskProfileText = (text) => uniqueProfiles(String(text || "").split(/\r?\n|[,;]+/));
+const parseTaskProfileText = (text) => {
+  const sourceText = String(text || "");
+  const separator = sourceText.includes("\n") ? /\r?\n/ : /[,;]+/;
+  return uniqueProfiles(sourceText.split(separator));
+};
 const formatTaskProfileText = (profiles) => uniqueProfiles(profiles).join("\n");
 const normaliseTaskProfileConfig = (value) => {
   const source = value && typeof value === "object" ? value : {};
@@ -2375,7 +2419,7 @@ const normaliseTaskProfileConfig = (value) => {
       option.label.replace(/\s+Model$/i, "")
     ];
     const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== void 0);
-    const profiles = Array.isArray(raw) ? uniqueProfiles(raw) : typeof raw === "string" ? parseTaskProfileText(raw) : [];
+    const profiles = raw === void 0 ? DEFAULT_TASK_PROFILE_CONFIG[option.value] : Array.isArray(raw) ? uniqueProfiles(raw) : typeof raw === "string" ? parseTaskProfileText(raw) : [];
     return {
       ...config,
       [option.value]: profiles
@@ -47340,7 +47384,7 @@ const PlatformConfigurationSettings = ({
                 value: formatTaskProfileText(profiles),
                 disabled: !canEdit,
                 onChange: (value) => updateTaskProfilesForModel(option.value, value),
-                info: "One task profile per line. Commas and semicolons are also accepted when pasting."
+                info: "One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
               }
             )
           ] }, option.value);
