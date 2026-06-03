@@ -548,10 +548,14 @@ const isOverlapping = (f1: Omit<ScheduleEvent, 'date'>, f2: Omit<ScheduleEvent, 
 const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): string[] => {
     const personnel = new Set<string>();
 
-    // Check if this is an SCT event (formation flight)
+    const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
     const isSctEvent = event.flightNumber?.startsWith('SCT');
 
-    if (isSctEvent) {
+    if (isTaskingEvent) {
+        if (event.pilot) personnel.add(event.pilot);
+        if (event.crew) personnel.add(event.crew);
+        if (event.instructor) personnel.add(event.instructor);
+    } else if (isSctEvent) {
         // For SCT events: pilot (PIC) + crew (second pilot)
         if (event.pilot) personnel.add(event.pilot);
         if (event.crew) personnel.add(event.crew);
@@ -6406,6 +6410,65 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         let scheduledCount = 0;
         buildDebugLog(`DEBUG Scheduling Tasking priority events: ${orderedTaskingEvents.length}`);
 
+        const randomIndex = (maxExclusive: number): number => {
+            if (maxExclusive <= 1) return 0;
+            const cryptoApi = globalThis.crypto;
+            if (cryptoApi?.getRandomValues) {
+                const values = new Uint32Array(1);
+                cryptoApi.getRandomValues(values);
+                return values[0] % maxExclusive;
+            }
+            return Math.floor(Math.random() * maxExclusive);
+        };
+        const shuffleRandom = <T,>(items: T[]): T[] => {
+            const shuffled = [...items];
+            for (let index = shuffled.length - 1; index > 0; index--) {
+                const swapIndex = randomIndex(index + 1);
+                [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+            }
+            return shuffled;
+        };
+        const staffPool = instructors.filter(staff => (
+            Boolean(staff.name) && !staff.isAdminStaff
+        ));
+        const assignTaskingStaff = (
+            candidate: Omit<ScheduleEvent, 'date'>,
+            requiredStaffCount: number
+        ): { pilot: string; crew?: string; instructor?: string; rejectedStaff: number } | null => {
+            const availableStaff = shuffleRandom(staffPool).filter(staff => (
+                !isPersonStaticallyUnavailable(staff, candidate.startTime, candidate.startTime + candidate.duration, buildDate, 'flight')
+            ));
+            let rejectedStaff = staffPool.length - availableStaff.length;
+            for (const primaryStaff of availableStaff) {
+                const soloCandidate = {
+                    ...candidate,
+                    pilot: primaryStaff.name,
+                    crew: '',
+                    instructor: '',
+                };
+                if (requiredStaffCount === 1) {
+                    const conflict = generatedEvents.some(existing => priorityPersonnelConflict(soloCandidate, existing));
+                    if (!conflict) return { pilot: primaryStaff.name, rejectedStaff };
+                    rejectedStaff++;
+                    continue;
+                }
+                for (const secondaryStaff of shuffleRandom(availableStaff.filter(staff => staff.name !== primaryStaff.name))) {
+                    const dualCandidate = {
+                        ...candidate,
+                        pilot: primaryStaff.name,
+                        crew: secondaryStaff.name,
+                        instructor: '',
+                    };
+                    const conflict = generatedEvents.some(existing => priorityPersonnelConflict(dualCandidate, existing));
+                    if (!conflict) {
+                        return { pilot: primaryStaff.name, crew: secondaryStaff.name, rejectedStaff };
+                    }
+                    rejectedStaff++;
+                }
+            }
+            return null;
+        };
+
         orderedTaskingEvents.forEach(priorityEvent => {
             const requestedStart = Number.isFinite(Number(priorityEvent.startTime)) ? Number(priorityEvent.startTime) : flyingStartTime;
             const searchStart = Math.max(flyingStartTime, requestedStart);
@@ -6415,6 +6478,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const resourceOptions = getPriorityResourceOptions(priorityEvent);
             let placedEvent: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string }) | null = null;
             const attemptSummary: Array<Record<string, any>> = [];
+            const requiredStaffCount = priorityEvent.flightType === 'Solo' || priorityEvent.soloOrDual === 'Solo' ? 1 : 2;
 
             for (let time = searchStart; time + priorityEvent.duration <= searchEnd + 0.001 && !placedEvent; time += timeIncrement) {
                 const roundedTime = Math.round(time * 12) / 12;
@@ -6444,8 +6508,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         _isNext: true,
                         _traineeName: '',
                     };
-                    const conflict = generatedEvents.find(existing => priorityResourceConflict(candidate, existing));
-                    if (conflict) {
+                    const resourceConflict = generatedEvents.find(existing => priorityResourceConflict(candidate, existing));
+                    if (resourceConflict) {
                         if (attemptSummary.length < 12) {
                             attemptSummary.push({
                                 time: roundedTime,
@@ -6454,18 +6518,38 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                 outcome: 'rejected',
                                 reason: 'RESOURCE_CONFLICT',
                                 conflict: {
-                                    id: conflict.id,
-                                    flightNumber: conflict.flightNumber,
-                                    startTime: conflict.startTime,
-                                    duration: conflict.duration,
-                                    resourceId: conflict.resourceId,
-                                    source: (conflict as any)._source || null,
+                                    id: resourceConflict.id,
+                                    flightNumber: resourceConflict.flightNumber,
+                                    startTime: resourceConflict.startTime,
+                                    duration: resourceConflict.duration,
+                                    resourceId: resourceConflict.resourceId,
+                                    source: (resourceConflict as any)._source || null,
                                 },
                             });
                         }
                         continue;
                     }
-                    placedEvent = candidate;
+                    const assignedStaff = assignTaskingStaff(candidate, requiredStaffCount);
+                    if (!assignedStaff) {
+                        if (attemptSummary.length < 12) {
+                            attemptSummary.push({
+                                time: roundedTime,
+                                displayTime: _fmtT(roundedTime),
+                                resourceId,
+                                outcome: 'rejected',
+                                reason: requiredStaffCount === 1 ? 'NO_RANDOM_STAFF_AVAILABLE' : 'NO_RANDOM_STAFF_PAIR_AVAILABLE',
+                            });
+                        }
+                        continue;
+                    }
+                    placedEvent = {
+                        ...candidate,
+                        pilot: assignedStaff.pilot,
+                        crew: requiredStaffCount === 2 ? assignedStaff.crew || '' : '',
+                        instructor: '',
+                        flightType: requiredStaffCount === 1 ? 'Solo' : 'Dual',
+                        soloOrDual: requiredStaffCount === 1 ? 'Solo' : 'Dual',
+                    };
                     break;
                 }
             }
@@ -6491,6 +6575,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         startTime: placedEvent.startTime,
                         displayTime: _fmtT(placedEvent.startTime),
                         resourceId: placedEvent.resourceId,
+                        pilot: placedEvent.pilot || null,
+                        crew: placedEvent.crew || null,
                         aircraftConfigId: placedEvent.aircraftConfigId || null,
                         origin: placedEvent.origin,
                         destination: placedEvent.destination,

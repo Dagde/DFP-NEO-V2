@@ -21652,6 +21652,7 @@ const TaskingRequestTable = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Takeoff" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Duration" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Solo/Dual" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left w-[78px] max-w-[78px] whitespace-normal leading-tight", children: "Dep Point" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left w-[78px] max-w-[78px] whitespace-normal leading-tight", children: "Arrival Point" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "No. of Aircraft" }),
@@ -21660,7 +21661,7 @@ const TaskingRequestTable = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-1 text-right" })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700/50", children: [
-      taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 10, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
+      taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 11, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
       taskingRequests.map((request) => {
         const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
         const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -21703,6 +21704,18 @@ const TaskingRequestTable = ({
               value: request.duration,
               onChange: (event) => onUpdateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false }),
               className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: request.flightType || "Dual",
+              onChange: (event) => onUpdateTaskingRequest(request.id, { flightType: event.target.value, submitted: false }),
+              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
+              ]
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -22135,6 +22148,7 @@ const PrioritiesView = ({
         date: request.date || buildDfpDate,
         takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
         duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
+        flightType: request.flightType === "Solo" ? "Solo" : "Dual",
         depPoint: request.depPoint || school,
         arrivalPoint: request.arrivalPoint || school,
         aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || "1"), 10) || 1),
@@ -22225,6 +22239,7 @@ const PrioritiesView = ({
       date: buildDfpDate,
       takeoff: flyingStartTime,
       duration: 1,
+      flightType: "Dual",
       depPoint: school,
       arrivalPoint: school,
       aircraftCount: 1,
@@ -22244,11 +22259,13 @@ const PrioritiesView = ({
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
     const aircraftConfigId = request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
+    const flightType = request.flightType === "Solo" ? "Solo" : "Dual";
     const notes = [
       `Tasking request: ${tasking}`,
       `Date: ${request.date || "Any build date"}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
+      `Solo/Dual: ${flightType}`,
       `Dep Point: ${depPoint}`,
       `Arrival Point: ${arrivalPoint}`,
       `Aircraft requested: ${aircraftCount}`
@@ -22266,8 +22283,8 @@ const PrioritiesView = ({
       startTime,
       resourceId: "",
       color: "bg-cyan-500/80",
-      flightType: "Dual",
-      soloOrDual: "Dual",
+      flightType,
+      soloOrDual: flightType,
       locationType: depPoint !== arrivalPoint ? "Land Away" : "Local",
       origin: depPoint,
       destination: arrivalPoint,
@@ -58780,8 +58797,13 @@ const isOverlapping = (f1, f2) => {
 };
 const getPersonnel = (event) => {
   const personnel = /* @__PURE__ */ new Set();
+  const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = event.flightNumber?.startsWith("SCT");
-  if (isSctEvent) {
+  if (isTaskingEvent) {
+    if (event.pilot) personnel.add(event.pilot);
+    if (event.crew) personnel.add(event.crew);
+    if (event.instructor) personnel.add(event.instructor);
+  } else if (isSctEvent) {
     if (event.pilot) personnel.add(event.pilot);
     if (event.crew) personnel.add(event.crew);
   } else if (event.flightType === "Solo") {
@@ -63139,6 +63161,57 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     let scheduledCount = 0;
     buildDebugLog(`DEBUG Scheduling Tasking priority events: ${orderedTaskingEvents.length}`);
+    const randomIndex = (maxExclusive) => {
+      if (maxExclusive <= 1) return 0;
+      const cryptoApi = globalThis.crypto;
+      if (cryptoApi?.getRandomValues) {
+        const values = new Uint32Array(1);
+        cryptoApi.getRandomValues(values);
+        return values[0] % maxExclusive;
+      }
+      return Math.floor(Math.random() * maxExclusive);
+    };
+    const shuffleRandom = (items) => {
+      const shuffled = [...items];
+      for (let index = shuffled.length - 1; index > 0; index--) {
+        const swapIndex = randomIndex(index + 1);
+        [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+      }
+      return shuffled;
+    };
+    const staffPool = instructors.filter((staff) => Boolean(staff.name) && !staff.isAdminStaff);
+    const assignTaskingStaff = (candidate, requiredStaffCount) => {
+      const availableStaff = shuffleRandom(staffPool).filter((staff) => !isPersonStaticallyUnavailable(staff, candidate.startTime, candidate.startTime + candidate.duration, buildDate, "flight"));
+      let rejectedStaff = staffPool.length - availableStaff.length;
+      for (const primaryStaff of availableStaff) {
+        const soloCandidate = {
+          ...candidate,
+          pilot: primaryStaff.name,
+          crew: "",
+          instructor: ""
+        };
+        if (requiredStaffCount === 1) {
+          const conflict = generatedEvents.some((existing) => priorityPersonnelConflict(soloCandidate, existing));
+          if (!conflict) return { pilot: primaryStaff.name, rejectedStaff };
+          rejectedStaff++;
+          continue;
+        }
+        for (const secondaryStaff of shuffleRandom(availableStaff.filter((staff) => staff.name !== primaryStaff.name))) {
+          const dualCandidate = {
+            ...candidate,
+            pilot: primaryStaff.name,
+            crew: secondaryStaff.name,
+            instructor: ""
+          };
+          const conflict = generatedEvents.some((existing) => priorityPersonnelConflict(dualCandidate, existing));
+          if (!conflict) {
+            return { pilot: primaryStaff.name, crew: secondaryStaff.name, rejectedStaff };
+          }
+          rejectedStaff++;
+        }
+      }
+      return null;
+    };
     orderedTaskingEvents.forEach((priorityEvent) => {
       const requestedStart = Number.isFinite(Number(priorityEvent.startTime)) ? Number(priorityEvent.startTime) : flyingStartTime;
       const searchStart = Math.max(flyingStartTime, requestedStart);
@@ -63146,6 +63219,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const resourceOptions = getPriorityResourceOptions(priorityEvent);
       let placedEvent = null;
       const attemptSummary = [];
+      const requiredStaffCount = priorityEvent.flightType === "Solo" || priorityEvent.soloOrDual === "Solo" ? 1 : 2;
       for (let time = searchStart; time + priorityEvent.duration <= searchEnd + 1e-3 && !placedEvent; time += timeIncrement) {
         const roundedTime = Math.round(time * 12) / 12;
         const exclusionViolation = getFlightWindowExclusionViolation(roundedTime, priorityEvent.duration);
@@ -63173,8 +63247,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             _isNext: true,
             _traineeName: ""
           };
-          const conflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
-          if (conflict) {
+          const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
+          if (resourceConflict) {
             if (attemptSummary.length < 12) {
               attemptSummary.push({
                 time: roundedTime,
@@ -63183,18 +63257,38 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                 outcome: "rejected",
                 reason: "RESOURCE_CONFLICT",
                 conflict: {
-                  id: conflict.id,
-                  flightNumber: conflict.flightNumber,
-                  startTime: conflict.startTime,
-                  duration: conflict.duration,
-                  resourceId: conflict.resourceId,
-                  source: conflict._source || null
+                  id: resourceConflict.id,
+                  flightNumber: resourceConflict.flightNumber,
+                  startTime: resourceConflict.startTime,
+                  duration: resourceConflict.duration,
+                  resourceId: resourceConflict.resourceId,
+                  source: resourceConflict._source || null
                 }
               });
             }
             continue;
           }
-          placedEvent = candidate;
+          const assignedStaff = assignTaskingStaff(candidate, requiredStaffCount);
+          if (!assignedStaff) {
+            if (attemptSummary.length < 12) {
+              attemptSummary.push({
+                time: roundedTime,
+                displayTime: _fmtT(roundedTime),
+                resourceId,
+                outcome: "rejected",
+                reason: requiredStaffCount === 1 ? "NO_RANDOM_STAFF_AVAILABLE" : "NO_RANDOM_STAFF_PAIR_AVAILABLE"
+              });
+            }
+            continue;
+          }
+          placedEvent = {
+            ...candidate,
+            pilot: assignedStaff.pilot,
+            crew: requiredStaffCount === 2 ? assignedStaff.crew || "" : "",
+            instructor: "",
+            flightType: requiredStaffCount === 1 ? "Solo" : "Dual",
+            soloOrDual: requiredStaffCount === 1 ? "Solo" : "Dual"
+          };
           break;
         }
       }
@@ -63218,6 +63312,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             startTime: placedEvent.startTime,
             displayTime: _fmtT(placedEvent.startTime),
             resourceId: placedEvent.resourceId,
+            pilot: placedEvent.pilot || null,
+            crew: placedEvent.crew || null,
             aircraftConfigId: placedEvent.aircraftConfigId || null,
             origin: placedEvent.origin,
             destination: placedEvent.destination
