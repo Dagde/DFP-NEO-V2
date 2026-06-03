@@ -3000,6 +3000,10 @@ function generateDfpInternal(
         return event.eventCategory === 'currency' || !!event.currencyDraftId || event.flightNumber === 'CURR';
     };
 
+    const isTaskingPriorityEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean => (
+        event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-')
+    );
+
     const remedialInstructorOverrideKey = (traineeName?: string, eventCode?: string): string =>
         `${normalizeBuildPersonnelName(traineeName)}::${normalizeLmpEventId(eventCode || '')}`;
 
@@ -3491,6 +3495,12 @@ function generateDfpInternal(
         if (isCurrencyPriorityEvent(event)) {
             skippedCount++;
             buildDebugLog(`  ↷ DEBUG QUEUED currency priority event for normal rule scheduling: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'}`);
+            return;
+        }
+
+        if (isTaskingPriorityEvent(event)) {
+            skippedCount++;
+            buildDebugLog(`  ↷ DEBUG QUEUED tasking priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
             return;
         }
 
@@ -6368,6 +6378,136 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         priorityEventMatchesBuildDate(event, buildDate) &&
         (event.type === 'flight' || event.type === 'ftd')
     );
+    const taskingPriorityEvents = highestPriorityEvents.filter(event =>
+        isTaskingPriorityEvent(event) &&
+        priorityEventMatchesBuildDate(event, buildDate) &&
+        event.type === 'flight'
+    );
+    const getTaskingEventIdentity = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>) => ({
+        id: event.id,
+        taskingRequestId: event.taskingRequestId || null,
+        aircraftIndex: event.taskingAircraftIndex || null,
+        aircraftCount: event.taskingAircraftCount || null,
+        flightNumber: event.flightNumber,
+        requestedStartTime: event.startTime,
+        duration: event.duration,
+        origin: event.origin || null,
+        destination: event.destination || null,
+        requiredAircraftConfig: getAircraftConfigRequirementSummary(event),
+    });
+    const scheduleTaskingPriorityEvents = (eventsToSchedule: ScheduleEvent[]) => {
+        if (eventsToSchedule.length === 0) return;
+        const timeIncrement = 5 / 60;
+        const orderedTaskingEvents = [...eventsToSchedule].sort((left, right) =>
+            left.startTime - right.startTime ||
+            (left.taskingRequestId || '').localeCompare(right.taskingRequestId || '') ||
+            (left.taskingAircraftIndex || 0) - (right.taskingAircraftIndex || 0)
+        );
+        let scheduledCount = 0;
+        buildDebugLog(`DEBUG Scheduling Tasking priority events: ${orderedTaskingEvents.length}`);
+
+        orderedTaskingEvents.forEach(priorityEvent => {
+            const requestedStart = Number.isFinite(Number(priorityEvent.startTime)) ? Number(priorityEvent.startTime) : flyingStartTime;
+            const searchStart = Math.max(flyingStartTime, requestedStart);
+            const searchEnd = allowNightFlying && searchStart >= commenceNightFlying
+                ? ceaseNightFlying
+                : flyingEndTime;
+            const resourceOptions = getPriorityResourceOptions(priorityEvent);
+            let placedEvent: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string }) | null = null;
+            const attemptSummary: Array<Record<string, any>> = [];
+
+            for (let time = searchStart; time + priorityEvent.duration <= searchEnd + 0.001 && !placedEvent; time += timeIncrement) {
+                const roundedTime = Math.round(time * 12) / 12;
+                const exclusionViolation = getFlightWindowExclusionViolation(roundedTime, priorityEvent.duration);
+                if (exclusionViolation) {
+                    if (attemptSummary.length < 12) {
+                        attemptSummary.push({
+                            time: roundedTime,
+                            displayTime: _fmtT(roundedTime),
+                            outcome: 'rejected',
+                            reason: exclusionViolation.reason,
+                            restriction: exclusionViolation.period.restriction,
+                        });
+                    }
+                    continue;
+                }
+
+                for (const resourceId of resourceOptions) {
+                    const { date, ...eventWithoutDate } = priorityEvent;
+                    const candidate = {
+                        ...eventWithoutDate,
+                        startTime: roundedTime,
+                        resourceId,
+                        aircraftConfigId: getAircraftConfigIdForResource(resourceId),
+                        acceptableAircraftConfigs: normaliseAircraftConfigRequirement(priorityEvent),
+                        _source: 'highest-priority-tasking',
+                        _isNext: true,
+                        _traineeName: '',
+                    };
+                    const conflict = generatedEvents.find(existing => priorityResourceConflict(candidate, existing));
+                    if (conflict) {
+                        if (attemptSummary.length < 12) {
+                            attemptSummary.push({
+                                time: roundedTime,
+                                displayTime: _fmtT(roundedTime),
+                                resourceId,
+                                outcome: 'rejected',
+                                reason: 'RESOURCE_CONFLICT',
+                                conflict: {
+                                    id: conflict.id,
+                                    flightNumber: conflict.flightNumber,
+                                    startTime: conflict.startTime,
+                                    duration: conflict.duration,
+                                    resourceId: conflict.resourceId,
+                                    source: (conflict as any)._source || null,
+                                },
+                            });
+                        }
+                        continue;
+                    }
+                    placedEvent = candidate;
+                    break;
+                }
+            }
+
+            if (placedEvent) {
+                generatedEvents.push(placedEvent);
+                scheduledCount++;
+                buildDebugLog(`[Tasking Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ''}/${priorityEvent.taskingAircraftCount || ''} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
+            } else {
+                buildDebugLog(`[Tasking Priority] Unable to schedule ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ''}/${priorityEvent.taskingAircraftCount || ''}: no compatible aircraft slot from ${_fmtT(searchStart)} to ${_fmtT(searchEnd)}`);
+            }
+
+            try {
+                const existingReport = JSON.parse(localStorage.getItem('neo_tasking_priority_diag') || '[]');
+                const nextReport = Array.isArray(existingReport) ? existingReport.slice(-80) : [];
+                nextReport.push({
+                    timestamp: new Date().toISOString(),
+                    buildDate,
+                    priorityEvent: getTaskingEventIdentity(priorityEvent),
+                    scheduled: !!placedEvent,
+                    scheduledEvent: placedEvent ? {
+                        id: placedEvent.id,
+                        startTime: placedEvent.startTime,
+                        displayTime: _fmtT(placedEvent.startTime),
+                        resourceId: placedEvent.resourceId,
+                        aircraftConfigId: placedEvent.aircraftConfigId || null,
+                        origin: placedEvent.origin,
+                        destination: placedEvent.destination,
+                    } : null,
+                    searchStart,
+                    searchEnd,
+                    resourceOptions,
+                    attemptSummary,
+                });
+                localStorage.setItem('neo_tasking_priority_diag', JSON.stringify(nextReport));
+            } catch {
+                // Diagnostic storage is best-effort only.
+            }
+        });
+
+        buildDebugLog(`DEBUG Tasking priority scheduling complete: ${scheduledCount}/${orderedTaskingEvents.length} scheduled`);
+    };
     const getCurrencyPriorityPerson = (event: ScheduleEvent): { trainee: Trainee; excludeInstructorNames: string[] } | null => {
         const personName = event.student || event.pilot || event.instructor || '';
         if (!personName) return null;
@@ -6839,6 +6979,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     if (earlyCurrencyPriorityEvents.length > 0) {
         recordProgress({ message: 'Scheduling Currency FTD Priority Events...', percentage: 44 });
         scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
+    }
+    if (taskingPriorityEvents.length > 0) {
+        recordProgress({ message: 'Scheduling Tasking Priority Events...', percentage: 45 });
+        scheduleTaskingPriorityEvents(taskingPriorityEvents);
     }
 
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
