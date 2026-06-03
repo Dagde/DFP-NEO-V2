@@ -129,6 +129,18 @@ type TimelineDragState = TimelineDragTarget & {
   left: number;
 };
 
+interface TaskingRequest {
+  id: string;
+  tasking: string;
+  date: string;
+  takeoff: number;
+  depPoint: string;
+  arrivalPoint: string;
+  aircraftCount: number;
+  aircraftConfigId: string;
+  submitted: boolean;
+}
+
 // FIX: Export component as a named const to fix module import error.
 export const PrioritiesView: React.FC<PrioritiesViewProps> = ({ 
   school = 'ESL',
@@ -550,6 +562,28 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = useState(false);
   const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
   const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
+  const taskingRequestStorageKey = 'neoTaskingRequests';
+  const [taskingRequests, setTaskingRequests] = useState<TaskingRequest[]>(() => {
+    try {
+      const stored = localStorage.getItem(taskingRequestStorageKey);
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed)
+        ? parsed.map((request: any) => ({
+            id: request.id || uuidv4(),
+            tasking: request.tasking || '',
+            date: request.date || buildDfpDate,
+            takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
+            depPoint: request.depPoint || school,
+            arrivalPoint: request.arrivalPoint || school,
+            aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || '1'), 10) || 1),
+            aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+            submitted: Boolean(request.submitted),
+          }))
+        : [];
+    } catch {
+      return [];
+    }
+  });
   const [currencyDraftEvents, setCurrencyDraftEvents] = useState<Array<{
     id: string;
     audience: 'trainee' | 'staff';
@@ -626,6 +660,45 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   useEffect(() => {
     localStorage.setItem(currencyDraftStorageKey, JSON.stringify(currencyDraftEvents));
   }, [currencyDraftEvents]);
+
+  useEffect(() => {
+    localStorage.setItem(taskingRequestStorageKey, JSON.stringify(taskingRequests));
+  }, [taskingRequests]);
+
+  const addTaskingRequest = () => {
+    const nextRequest: TaskingRequest = {
+      id: uuidv4(),
+      tasking: '',
+      date: buildDfpDate,
+      takeoff: flyingStartTime,
+      depPoint: school,
+      arrivalPoint: school,
+      aircraftCount: 1,
+      aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+      submitted: false,
+    };
+    setTaskingRequests(prev => [...prev, nextRequest]);
+    logAudit('Priorities', 'Add', 'Added tasking request row', `Tasking request ${nextRequest.id}`);
+  };
+
+  const updateTaskingRequest = (id: string, updates: Partial<TaskingRequest>) => {
+    setTaskingRequests(prev => prev.map(request => (
+      request.id === id ? { ...request, ...updates, submitted: updates.submitted ?? request.submitted } : request
+    )));
+  };
+
+  const removeTaskingRequest = (id: string) => {
+    const removed = taskingRequests.find(request => request.id === id);
+    setTaskingRequests(prev => prev.filter(request => request.id !== id));
+    logAudit('Priorities', 'Delete', 'Removed tasking request', removed?.tasking || id);
+  };
+
+  const submitTaskingRequest = (id: string) => {
+    const request = taskingRequests.find(item => item.id === id);
+    if (!request) return;
+    updateTaskingRequest(id, { submitted: true });
+    logAudit('Priorities', 'Submit', 'Submitted tasking request', `${request.tasking || 'Untitled tasking'} on ${request.date}`);
+  };
 
   useEffect(() => {
     setTraineeCurrencySelection(prev => {
@@ -884,6 +957,124 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   
   
+  const TaskingRequestTable: React.FC = () => (
+      <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+              <thead className="text-xs text-gray-400 uppercase">
+                  <tr>
+                      <th className="py-2 px-2 text-left">Tasking</th>
+                      <th className="py-2 px-2 text-left">Date</th>
+                      <th className="py-2 px-2 text-left">Takeoff</th>
+                      <th className="py-2 px-2 text-left">Dep Point</th>
+                      <th className="py-2 px-2 text-left">Arrival Point</th>
+                      <th className="py-2 px-2 text-left">No. of Aircraft</th>
+                      <th className="py-2 px-2 text-left">Config</th>
+                      <th className="py-2 px-2 text-left">Status</th>
+                      <th className="py-2 px-1 text-right"></th>
+                  </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700/50">
+                  {taskingRequests.length === 0 && (
+                      <tr>
+                          <td colSpan={9} className="py-4 px-2 text-sm italic text-gray-500">
+                              No tasking requests configured.
+                          </td>
+                      </tr>
+                  )}
+                  {taskingRequests.map(request => {
+                      const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
+                      return (
+                          <tr key={request.id}>
+                              <td className="py-1 px-2 min-w-[180px]">
+                                  <input
+                                      type="text"
+                                      value={request.tasking}
+                                      onChange={event => updateTaskingRequest(request.id, { tasking: event.target.value, submitted: false })}
+                                      placeholder="Tasking"
+                                      className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                                  />
+                              </td>
+                              <td className="py-1 px-2 w-40">
+                                  <input
+                                      type="date"
+                                      value={request.date}
+                                      onChange={event => updateTaskingRequest(request.id, { date: event.target.value, submitted: false })}
+                                      style={{ colorScheme: 'dark' }}
+                                      className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                                  />
+                              </td>
+                              <td className="py-1 px-2 w-32">
+                                  <select
+                                      value={request.takeoff}
+                                      onChange={event => updateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false })}
+                                      className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                                  >
+                                      {timeOptions.map(opt => <option key={`tasking-takeoff-${opt.value}`} value={opt.value}>{opt.label}</option>)}
+                                  </select>
+                              </td>
+                              <td className="py-1 px-2 min-w-[130px]">
+                                  <input
+                                      type="text"
+                                      value={request.depPoint}
+                                      onChange={event => updateTaskingRequest(request.id, { depPoint: event.target.value, submitted: false })}
+                                      className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                                  />
+                              </td>
+                              <td className="py-1 px-2 min-w-[130px]">
+                                  <input
+                                      type="text"
+                                      value={request.arrivalPoint}
+                                      onChange={event => updateTaskingRequest(request.id, { arrivalPoint: event.target.value, submitted: false })}
+                                      className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                                  />
+                              </td>
+                              <td className="py-1 px-2 w-28">
+                                  <input
+                                      type="number"
+                                      min={1}
+                                      value={request.aircraftCount}
+                                      onChange={event => updateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false })}
+                                      className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                                  />
+                              </td>
+                              <td className="py-1 px-2 w-48">
+                                  <AircraftConfigSelect
+                                      value={request.aircraftConfigId}
+                                      definitions={aircraftConfigOptions}
+                                      onChange={(aircraftConfigId) => updateTaskingRequest(request.id, { aircraftConfigId, submitted: false })}
+                                  />
+                              </td>
+                              <td className="py-1 px-2 w-24">
+                                  {request.submitted ? (
+                                      <span className="text-green-400 text-xs font-semibold">Submitted</span>
+                                  ) : (
+                                      <button
+                                          onClick={() => submitTaskingRequest(request.id)}
+                                          disabled={!canSubmit}
+                                          className={`px-2 py-1 text-xs rounded font-semibold ${
+                                              canSubmit
+                                                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                                                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                          }`}
+                                      >
+                                          Submit
+                                      </button>
+                                  )}
+                              </td>
+                              <td className="py-1 px-1 text-right">
+                                  <button onClick={() => removeTaskingRequest(request.id)} className="p-1 text-gray-400 hover:text-red-400" aria-label="Remove tasking request">
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                                  </button>
+                              </td>
+                          </tr>
+                      );
+                  })}
+              </tbody>
+          </table>
+          <button onClick={addTaskingRequest} className="mt-2 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold">+ Add Request</button>
+      </div>
+  );
+
   const SctRequestTable: React.FC<{ type: 'flight' | 'ftd', requests: SctRequest[] }> = ({ type, requests }) => {
       
     const calculateDaysToExpire = (expireDateStr: string): { days: number; color: string } | null => {
@@ -1662,6 +1853,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Fourth Input</p>
             <h2 className="mt-1 text-xl font-semibold text-white">Directed Events</h2>
             <p className="mt-1 text-sm text-slate-300">Review hard requests and build exceptions after the normal course weighting is set.</p>
+        </div>
+
+        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+            <h2 className="text-xl font-semibold text-sky-400 mb-4">Tasking</h2>
+            <TaskingRequestTable />
         </div>
 
         <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">

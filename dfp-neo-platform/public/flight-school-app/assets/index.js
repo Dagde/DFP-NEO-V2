@@ -21723,6 +21723,26 @@ const PrioritiesView = ({
   const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = reactExports.useState(false);
   const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const currencyDraftStorageKey = "neoCurrencyDraftEvents";
+  const taskingRequestStorageKey = "neoTaskingRequests";
+  const [taskingRequests, setTaskingRequests] = reactExports.useState(() => {
+    try {
+      const stored = localStorage.getItem(taskingRequestStorageKey);
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed.map((request) => ({
+        id: request.id || v4(),
+        tasking: request.tasking || "",
+        date: request.date || buildDfpDate,
+        takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
+        depPoint: request.depPoint || school,
+        arrivalPoint: request.arrivalPoint || school,
+        aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || "1"), 10) || 1),
+        aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+        submitted: Boolean(request.submitted)
+      })) : [];
+    } catch {
+      return [];
+    }
+  });
   const [currencyDraftEvents, setCurrencyDraftEvents] = reactExports.useState(() => {
     try {
       const stored = localStorage.getItem(currencyDraftStorageKey);
@@ -21766,6 +21786,38 @@ const PrioritiesView = ({
   reactExports.useEffect(() => {
     localStorage.setItem(currencyDraftStorageKey, JSON.stringify(currencyDraftEvents));
   }, [currencyDraftEvents]);
+  reactExports.useEffect(() => {
+    localStorage.setItem(taskingRequestStorageKey, JSON.stringify(taskingRequests));
+  }, [taskingRequests]);
+  const addTaskingRequest = () => {
+    const nextRequest = {
+      id: v4(),
+      tasking: "",
+      date: buildDfpDate,
+      takeoff: flyingStartTime,
+      depPoint: school,
+      arrivalPoint: school,
+      aircraftCount: 1,
+      aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+      submitted: false
+    };
+    setTaskingRequests((prev) => [...prev, nextRequest]);
+    logAudit("Priorities", "Add", "Added tasking request row", `Tasking request ${nextRequest.id}`);
+  };
+  const updateTaskingRequest = (id, updates) => {
+    setTaskingRequests((prev) => prev.map((request) => request.id === id ? { ...request, ...updates, submitted: updates.submitted ?? request.submitted } : request));
+  };
+  const removeTaskingRequest = (id) => {
+    const removed = taskingRequests.find((request) => request.id === id);
+    setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
+    logAudit("Priorities", "Delete", "Removed tasking request", removed?.tasking || id);
+  };
+  const submitTaskingRequest = (id) => {
+    const request = taskingRequests.find((item) => item.id === id);
+    if (!request) return;
+    updateTaskingRequest(id, { submitted: true });
+    logAudit("Priorities", "Submit", "Submitted tasking request", `${request.tasking || "Untitled tasking"} on ${request.date}`);
+  };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
       const validIds = new Set(traineeCurrencyRows.map((row) => row.trainee.idNumber));
@@ -21987,6 +22039,105 @@ const PrioritiesView = ({
       ] })
     ] });
   };
+  const TaskingRequestTable = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-x-auto", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Tasking" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Takeoff" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Dep Point" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Arrival Point" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "No. of Aircraft" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Status" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-1 text-right" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700/50", children: [
+        taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
+        taskingRequests.map((request) => {
+          const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[180px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: request.tasking,
+                onChange: (event) => updateTaskingRequest(request.id, { tasking: event.target.value, submitted: false }),
+                placeholder: "Tasking",
+                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                value: request.date,
+                onChange: (event) => updateTaskingRequest(request.id, { date: event.target.value, submitted: false }),
+                style: { colorScheme: "dark" },
+                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: request.takeoff,
+                onChange: (event) => updateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false }),
+                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500",
+                children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `tasking-takeoff-${opt.value}`))
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[130px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: request.depPoint,
+                onChange: (event) => updateTaskingRequest(request.id, { depPoint: event.target.value, submitted: false }),
+                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[130px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: request.arrivalPoint,
+                onChange: (event) => updateTaskingRequest(request.id, { arrivalPoint: event.target.value, submitted: false }),
+                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: 1,
+                value: request.aircraftCount,
+                onChange: (event) => updateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false }),
+                className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              AircraftConfigSelect,
+              {
+                value: request.aircraftConfigId,
+                definitions: aircraftConfigOptions,
+                onChange: (aircraftConfigId) => updateTaskingRequest(request.id, { aircraftConfigId, submitted: false })
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: request.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 text-xs font-semibold", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => submitTaskingRequest(request.id),
+                disabled: !canSubmit,
+                className: `px-2 py-1 text-xs rounded font-semibold ${canSubmit ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
+                children: "Submit"
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-1 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => removeTaskingRequest(request.id), className: "p-1 text-gray-400 hover:text-red-400", "aria-label": "Remove tasking request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) }) })
+          ] }, request.id);
+        })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addTaskingRequest, className: "mt-2 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold", children: "+ Add Request" })
+  ] });
   const SctRequestTable = ({ type, requests }) => {
     const calculateDaysToExpire = (expireDateStr) => {
       if (!expireDateStr) return null;
@@ -22700,6 +22851,10 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Fourth Input" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Directed Events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Review hard requests and build exceptions after the normal course weighting is set." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Tasking" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingRequestTable, {})
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Crew Currency Requests" }),
