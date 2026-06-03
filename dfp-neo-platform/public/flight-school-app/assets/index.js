@@ -5436,11 +5436,12 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   }
   scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, scaledFontSize));
   const isSctEvent = event.eventCategory === "sct";
+  const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
-  const picName = isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
-  const studentName = event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
+  const picName = isTaskingEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
+  const studentName = isTaskingEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
   let displayPicNameForRender = picName;
   let displayStudentNameForRender = studentName;
   if (isStbyEvent) {
@@ -5492,6 +5493,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     }
     if (isSctEvent && event.flightType === "Dual" && event.student) {
       return event.student.split(" – ")[0];
+    }
+    if (isTaskingEvent && event.flightType === "Dual" && event.crew) {
+      return event.crew.split(" – ")[0];
     }
     if (event.pilot && event.student && event.pilot === event.student) {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" });
@@ -58873,8 +58877,12 @@ const getPersonnelIdentityRefs = (event) => {
     const ref = makePersonnelIdentityRef(label, role);
     if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
   };
+  const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = event.flightNumber?.startsWith("SCT");
-  if (isSctEvent) {
+  if (isTaskingEvent) {
+    addRef(event.pilot, "staff");
+    addRef(event.crew, "staff");
+  } else if (isSctEvent) {
     addRef(event.pilot, "staff");
     addRef(event.crew, "staff");
   } else if (event.flightType === "Solo") {
@@ -60354,9 +60362,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const getPriorityResourceOptions = (event) => {
     const resourcePrefix = event.type === "flight" ? "PC-21 " : event.type === "ftd" ? "FTD " : event.type === "cpt" ? "CPT " : "Ground ";
     const resourceCount = event.type === "flight" ? availableAircraftCount : event.type === "ftd" ? ftdCount : event.type === "cpt" ? cptCount : 6;
-    const resourceOptions = Array.from({ length: resourceCount }, (_, index) => `${resourcePrefix}${index + 1}`);
-    if (event.type !== "flight") return resourceOptions;
-    return resourceOptions.filter((resourceId) => eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)));
+    const resourceOptions2 = Array.from({ length: resourceCount }, (_, index) => `${resourcePrefix}${index + 1}`);
+    if (event.type !== "flight") return resourceOptions2;
+    return resourceOptions2.filter((resourceId) => eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)));
   };
   const ensurePriorityResourceConfigCompatibility = (event) => {
     if (event.type !== "flight") return event;
@@ -60624,9 +60632,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     const searchEnd = isNightRemedial ? ceaseNightFlying : isDayRemedial ? Math.min(normalEndTime, commenceNightFlying) : normalEndTime;
     const timeIncrement = event.type === "flight" ? 5 / 60 : 15 / 60;
-    const resourceOptions = getPriorityResourceOptions(event);
+    const resourceOptions2 = getPriorityResourceOptions(event);
     for (let startTime = searchStart; startTime + event.duration <= searchEnd + 1e-3; startTime += timeIncrement) {
-      for (const resourceId of resourceOptions) {
+      for (const resourceId of resourceOptions2) {
         const candidate = {
           ...event,
           startTime,
@@ -60700,7 +60708,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           aircraftConfigId: event.type === "flight" ? candidate.aircraftConfigId : null,
           aircraftConfigLabel: event.type === "flight" ? getAircraftConfigLabelForId(candidate.aircraftConfigId) : null,
           requiredAircraftConfig: event.type === "flight" ? getAircraftConfigRequirementSummary(event) : null,
-          resourcePoolTried: resourceOptions,
+          resourcePoolTried: resourceOptions2,
           remedialInstructor,
           outcome: conflicts ? "rejected" : "placed",
           conflictReason: conflictReason || null,
@@ -63180,6 +63188,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return shuffled;
     };
     const staffPool = instructors.filter((staff) => Boolean(staff.name) && !staff.isAdminStaff);
+    const getTaskingResourceOptionsForFlow = (priorityEvent, startTime) => {
+      const resourceOptions2 = getPriorityResourceOptions(priorityEvent);
+      if (resourceOptions2.length <= 1) return resourceOptions2;
+      const waveOffset = Math.max(0, Math.round((startTime - flyingStartTime) / timeIncrement));
+      const preferredIndex = waveOffset % resourceOptions2.length;
+      return [
+        ...resourceOptions2.slice(preferredIndex),
+        ...resourceOptions2.slice(0, preferredIndex)
+      ];
+    };
     const assignTaskingStaff = (candidate, requiredStaffCount) => {
       const availableStaff = shuffleRandom(staffPool).filter((staff) => !isPersonStaticallyUnavailable(staff, candidate.startTime, candidate.startTime + candidate.duration, buildDate, "flight"));
       let rejectedStaff = staffPool.length - availableStaff.length;
@@ -63216,7 +63234,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const requestedStart = Number.isFinite(Number(priorityEvent.startTime)) ? Number(priorityEvent.startTime) : flyingStartTime;
       const searchStart = Math.max(flyingStartTime, requestedStart);
       const searchEnd = allowNightFlying && searchStart >= commenceNightFlying ? ceaseNightFlying : flyingEndTime;
-      const resourceOptions = getPriorityResourceOptions(priorityEvent);
       let placedEvent = null;
       const attemptSummary = [];
       const requiredStaffCount = priorityEvent.flightType === "Solo" || priorityEvent.soloOrDual === "Solo" ? 1 : 2;
@@ -63235,7 +63252,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           continue;
         }
-        for (const resourceId of resourceOptions) {
+        for (const resourceId of getTaskingResourceOptionsForFlow(priorityEvent, roundedTime)) {
           const { date, ...eventWithoutDate } = priorityEvent;
           const candidate = {
             ...eventWithoutDate,
@@ -63294,6 +63311,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       if (placedEvent) {
         generatedEvents.push(placedEvent);
+        [placedEvent.pilot, placedEvent.crew].filter(Boolean).forEach((staffName) => {
+          const staffCounts = eventCounts.get(staffName);
+          if (staffCounts) staffCounts.flightFtd++;
+        });
         scheduledCount++;
         buildDebugLog(`[Tasking Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
       } else {

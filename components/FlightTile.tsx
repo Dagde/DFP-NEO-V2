@@ -367,6 +367,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
   // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
   const isSctEvent = event.eventCategory === 'sct';
+  const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
   const isTwrDiEvent = event.eventCategory === 'twr_di';
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
   const aircraftNumberDisplay = event.aircraftNumber
@@ -375,8 +376,12 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   
   
   
-  const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
-  const studentName = event.flightType === 'Solo' ? '' : (isSctEvent ? event.student : event.student || '');
+  const picName = isTaskingEvent ? event.pilot : (isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor));
+  const studentName = isTaskingEvent
+      ? (event.flightType === 'Solo' ? '' : event.crew || event.student || '')
+      : event.flightType === 'Solo'
+          ? ''
+          : (isSctEvent ? event.student : event.student || '');
 
   // For STBY events, show "TBA" for instructor and ensure trainee name is displayed
   let displayPicNameForRender = picName;
@@ -458,6 +463,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       // For SCT Dual events, show crew name from student field
       if (isSctEvent && event.flightType === 'Dual' && event.student) {
           return event.student.split(' – ')[0];
+      }
+
+      if (isTaskingEvent && event.flightType === 'Dual' && event.crew) {
+          return event.crew.split(' – ')[0];
       }
 
         // FALLBACK: Detect SOLO flights by checking if pilot and student are the same person
