@@ -928,6 +928,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [airfieldCatalogue, setAirfieldCatalogue] = useState<AirfieldCatalogueEntry[]>([]);
   const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [airfieldCatalogueError, setAirfieldCatalogueError] = useState('');
+  const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
+  const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const locationRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingLocationScrollIdRef = useRef<string | null>(null);
 
@@ -1018,6 +1020,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     load();
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (config.units.length === 0) {
+      setSelectedUnitIndex(0);
+      setEditingUnitIndex(null);
+      return;
+    }
+    setSelectedUnitIndex((current) => Math.min(Math.max(current, 0), config.units.length - 1));
+    setEditingUnitIndex((current) => (
+      current === null ? null : Math.min(Math.max(current, 0), config.units.length - 1)
+    ));
+  }, [config.units.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1431,9 +1445,103 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
+  const platformActionButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
+
+  const rewriteUnitCodesInSettings = (settings: Record<string, any> = {}, oldCode: string, nextCode: string | null): Record<string, any> => {
+    const normalise = (value: unknown) => String(value || '').trim();
+    const replaceUnitList = (units: unknown): string[] => {
+      const values = Array.isArray(units) ? units : [];
+      const next = values
+        .map((unitCode) => {
+          const code = normalise(unitCode);
+          if (!code) return '';
+          if (code === oldCode) return nextCode || '';
+          return code;
+        })
+        .filter(Boolean);
+      return Array.from(new Set(next));
+    };
+    const rewriteDesiredAllocations = (allocations: Record<string, any> = {}) => {
+      if (!oldCode || !Object.prototype.hasOwnProperty.call(allocations, oldCode)) return allocations;
+      const nextAllocations = { ...allocations };
+      const oldValue = nextAllocations[oldCode];
+      delete nextAllocations[oldCode];
+      if (nextCode) nextAllocations[nextCode] = oldValue;
+      return nextAllocations;
+    };
+    const rewriteSharingGroups = (groups: unknown) => (
+      Array.isArray(groups)
+        ? groups.map((group) => ({
+            ...group,
+            selectedUnits: replaceUnitList(group?.selectedUnits),
+            desiredAllocations: rewriteDesiredAllocations(group?.desiredAllocations || {}),
+          }))
+        : groups
+    );
+
+    return {
+      ...settings,
+      selectedUnits: replaceUnitList(settings.selectedUnits),
+      staffSharingUnits: replaceUnitList(settings.staffSharingUnits),
+      desiredAllocations: rewriteDesiredAllocations(settings.desiredAllocations || {}),
+      resourceSharingGroups: rewriteSharingGroups(settings.resourceSharingGroups),
+      staffSharingGroups: rewriteSharingGroups(settings.staffSharingGroups),
+      masterLmpAccess: Array.isArray(settings.masterLmpAccess)
+        ? settings.masterLmpAccess
+            .map((rule: any) => (
+              normalise(rule?.unitCode) === oldCode
+                ? { ...rule, unitCode: nextCode || '' }
+                : rule
+            ))
+            .filter((rule: any) => nextCode || normalise(rule?.unitCode) !== '')
+        : settings.masterLmpAccess,
+    };
+  };
+
+  const updateUnitCode = (index: number, value: string) => {
+    const nextCode = String(value || '').trim();
+    setConfig((prev) => {
+      const oldCode = String(prev.units[index]?.code || '').trim();
+      if (!oldCode || !nextCode || oldCode === nextCode) {
+        return {
+          ...prev,
+          units: prev.units.map((unit, unitIndex) => (
+            unitIndex === index ? { ...unit, code: value } : unit
+          )),
+        };
+      }
+      return {
+        ...prev,
+        units: prev.units.map((unit, unitIndex) => (
+          unitIndex === index ? { ...unit, code: value } : unit
+        )),
+        unitModules: prev.unitModules.map((item) => (
+          String(item.unitCode || '').trim() === oldCode ? { ...item, unitCode: nextCode } : item
+        )),
+        resourcePools: prev.resourcePools.map((pool) => (
+          String(pool.unitCode || '').trim() === oldCode ? { ...pool, unitCode: nextCode } : pool
+        )),
+        userAccess: prev.userAccess.map((access) => (
+          String(access.unitCode || '').trim() === oldCode ? { ...access, unitCode: nextCode } : access
+        )),
+        schedulingRuleSets: prev.schedulingRuleSets.map((ruleSet) => (
+          String(ruleSet.unitCode || '').trim() === oldCode ? { ...ruleSet, unitCode: nextCode } : ruleSet
+        )),
+        organisations: prev.organisations.map((organisation) => ({
+          ...organisation,
+          settings: rewriteUnitCodesInSettings(organisation.settings || {}, oldCode, nextCode),
+        })),
+      };
+    });
+  };
+
   const addUnit = () => {
+    if (!canEdit) return;
     const defaultLocation = config.locations[0]?.code || 'ESL';
     const newUnitId = createClientRecordId('unit');
+    const nextUnitIndex = config.units.length;
+    setSelectedUnitIndex(nextUnitIndex);
+    setEditingUnitIndex(nextUnitIndex);
     setConfig((prev) => ({
       ...prev,
       units: [
@@ -1450,6 +1558,82 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         },
       ],
     }));
+  };
+
+  const editSelectedUnit = async () => {
+    if (!canEdit) return;
+    if (config.units.length === 0) {
+      await showDarkAlert('Add a unit before editing unit details.', 'No Unit Selected', 'warning');
+      return;
+    }
+    setEditingUnitIndex(Math.min(selectedUnitIndex, config.units.length - 1));
+  };
+
+  const deleteSelectedUnit = async () => {
+    if (!canEdit) return;
+    if (config.units.length === 0) {
+      await showDarkAlert('There are no units to delete.', 'No Unit Selected', 'warning');
+      return;
+    }
+    if (config.units.length <= 1) {
+      await showDarkAlert('At least one unit must remain configured.', 'Cannot Delete Unit', 'warning');
+      return;
+    }
+
+    const unitIndex = Math.min(selectedUnitIndex, config.units.length - 1);
+    const unit = config.units[unitIndex];
+    const unitCode = String(unit?.code || '').trim();
+    const unitLabel = `${unitCode || 'Unnamed Unit'}${unit?.name ? ` - ${unit.name}` : ''}`;
+    const password = await showDarkPrompt({
+      title: 'Delete Unit',
+      message: `Enter your password to delete ${unitLabel}. Unit module assignments will be removed and dependent resource, access and scheduling scopes will be cleared.`,
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!password) return;
+
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert('The password was not accepted. The unit was not deleted.', 'Password Required', 'warning');
+        return;
+      }
+    } catch {
+      await showDarkAlert('The app could not verify your password. The unit was not deleted.', 'Password Check Failed', 'error');
+      return;
+    }
+
+    setConfig((prev) => {
+      const removed = prev.units[unitIndex];
+      const removedCode = String(removed?.code || '').trim();
+      const nextUnits = prev.units.filter((_, itemIndex) => itemIndex !== unitIndex);
+      return {
+        ...prev,
+        units: nextUnits,
+        unitModules: prev.unitModules.filter((item) => String(item.unitCode || '').trim() !== removedCode),
+        resourcePools: prev.resourcePools.map((pool) => (
+          removedCode && String(pool.unitCode || '').trim() === removedCode ? { ...pool, unitCode: null } : pool
+        )),
+        userAccess: prev.userAccess.map((access) => (
+          removedCode && String(access.unitCode || '').trim() === removedCode ? { ...access, unitCode: null } : access
+        )),
+        schedulingRuleSets: prev.schedulingRuleSets.map((ruleSet) => (
+          removedCode && String(ruleSet.unitCode || '').trim() === removedCode ? { ...ruleSet, unitCode: null } : ruleSet
+        )),
+        organisations: prev.organisations.map((organisation) => ({
+          ...organisation,
+          settings: removedCode
+            ? rewriteUnitCodesInSettings(organisation.settings || {}, removedCode, null)
+            : organisation.settings,
+        })),
+      };
+    });
+    setSelectedUnitIndex(Math.max(0, unitIndex - 1));
+    setEditingUnitIndex(null);
   };
 
   const addResourcePool = () => {
@@ -2183,30 +2367,46 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Units"
           subtitle="Unit is the centre of configuration: model, type, location, enabled modules and future UI behaviour."
-          action={canEdit ? <button type="button" onClick={addUnit} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Unit</button> : null}
+          action={canEdit ? (
+            <div className="flex items-center gap-[1px]">
+              <button type="button" onClick={editSelectedUnit} disabled={config.units.length === 0} className={platformActionButtonClass}>EDIT</button>
+              <button type="button" onClick={deleteSelectedUnit} disabled={config.units.length === 0} className={platformActionButtonClass}>Delete</button>
+              <button type="button" onClick={addUnit} className={platformActionButtonClass}>
+                <span className="leading-tight">Add<br />Unit</span>
+              </button>
+            </div>
+          ) : null}
         />
         <div className="space-y-3 p-4">
           {config.units.map((unit, index) => {
             const unitSettings = unit.settings || {};
+            const isSelectedUnit = selectedUnitIndex === index;
+            const isUnitEditing = canEdit && editingUnitIndex === index;
             return (
-              <div key={unit.id || `platform-unit-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12">
+              <div
+                key={unit.id || `platform-unit-${index}`}
+                onClick={() => setSelectedUnitIndex(index)}
+                className={`grid cursor-pointer gap-3 rounded border bg-gray-900 p-3 transition-colors md:grid-cols-12 ${
+                  isSelectedUnit ? 'border-cyan-400/70 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]' : 'border-gray-700 hover:border-gray-500'
+                }`}
+              >
                 <div className="md:col-span-1">
-                  <Field label="Unit" value={unit.code} disabled={!canEdit} onChange={(value) => updateRow('units', index, { code: value })} />
+                  <Field label="Unit" value={unit.code} disabled={!isUnitEditing} onChange={(value) => updateUnitCode(index, value)} />
                 </div>
                 <div className="md:col-span-2">
-                  <Field label="Unit Name" value={unit.name} disabled={!canEdit} onChange={(value) => updateRow('units', index, { name: value })} />
+                  <Field label="Unit Name" value={unit.name} disabled={!isUnitEditing} onChange={(value) => updateRow('units', index, { name: value })} />
                 </div>
                 <div className="md:col-span-2">
-                  <SelectField label="Location" value={unit.locationCode || ''} disabled={!canEdit} options={config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
+                  <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
                 </div>
                 <div className="md:col-span-2">
-                  <SelectField label="Unit Type" value={unit.unitType || 'Training'} disabled={!canEdit} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateRow('units', index, { unitType: value })} />
+                  <SelectField label="Unit Type" value={unit.unitType || 'Training'} disabled={!isUnitEditing} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational']} onChange={(value) => updateRow('units', index, { unitType: value })} />
                 </div>
                 <div className="md:col-span-3">
                   <SelectField
                     label="Model"
                     value={getUnitOperationalModel(unit)}
-                    disabled={!canEdit}
+                    disabled={!isUnitEditing}
                     options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)}
                     optionLabels={Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]))}
                     onChange={(value) => updateRow('units', index, {
@@ -2218,7 +2418,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <SelectField label="Status" value={unit.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('units', index, { status: value })} />
+                  <SelectField label="Status" value={unit.status || 'ACTIVE'} disabled={!isUnitEditing} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('units', index, { status: value })} />
                 </div>
               </div>
             );
