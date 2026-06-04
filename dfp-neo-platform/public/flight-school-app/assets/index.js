@@ -11508,17 +11508,15 @@ const TraineeProfileFlyout = ({
       unitCode: unit || trainee.unit,
       operationalModel: "flight_school"
     }, "Assign");
-    if (lmpType && !allowed.includes(lmpType)) allowed.push(lmpType);
     return allowed.sort();
-  }, [lmpType, platformConfig, syllabusDetails, trainee.unit, unit]);
+  }, [platformConfig, syllabusDetails, trainee.unit, unit]);
   const academicLmpCourses = reactExports.useMemo(() => {
     const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
       unitCode: unit || trainee.unit,
       operationalModel: "flight_school"
     }, "Assign");
-    if (academicLmpType && !allowed.includes(academicLmpType)) allowed.push(academicLmpType);
     return allowed.sort();
-  }, [academicLmpType, allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
+  }, [allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
@@ -53643,9 +53641,8 @@ const EditCourseFlyout = ({
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
-    if (academicLmpType && !allowed.includes(academicLmpType)) allowed.push(academicLmpType);
     return allowed.sort();
-  }, [academicLmpType, platformConfig, syllabusDetails, unit]);
+  }, [platformConfig, syllabusDetails, unit]);
   const assignableMasterLmps = reactExports.useMemo(() => {
     const courseCodes = new Set(COURSE_MASTER_LMPS.filter((lmp) => lmp !== "Staff CAT"));
     syllabusDetails.forEach((s) => {
@@ -53656,9 +53653,8 @@ const EditCourseFlyout = ({
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
-    if (lmpType && !allowed.includes(lmpType)) allowed.push(lmpType);
     return allowed.sort();
-  }, [lmpType, platformConfig, syllabusDetails, unit]);
+  }, [platformConfig, syllabusDetails, unit]);
   reactExports.useEffect(() => {
     setStartDate(initialStartDate);
     setGradDate(initialGradDate);
@@ -66825,6 +66821,10 @@ const App = () => {
     });
   }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
   reactExports.useEffect(() => {
+    if (!platformConfigLoaded) {
+      pushContextSelectorDiag("validate:skip-platform-loading");
+      return;
+    }
     if (activeLocationUnitOptions.length === 0) {
       pushContextSelectorDiag("validate:skip-no-options");
       return;
@@ -66853,7 +66853,7 @@ const App = () => {
         optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
       });
     }
-  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled, pushContextSelectorDiag]);
+  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag]);
   reactExports.useEffect(() => {
     try {
       const payload = {
@@ -66896,6 +66896,30 @@ const App = () => {
     operationalModel: activeOperationalModel,
     operationalModelLabel: activeOperationalModelLabel
   }), [activeContextUnitCodes, activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
+  const getOperationalModelForUnitCode = reactExports.useCallback((unitCode) => {
+    const normalisedUnit = String(unitCode || "").trim().toUpperCase();
+    const unit = (platformConfig?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
+    return unit ? getUnitOperationalModel(unit) : activeOperationalModel;
+  }, [activeOperationalModel, platformConfig]);
+  const getSyllabusMasterLmpCodes = reactExports.useCallback((item) => {
+    const courses2 = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
+    if (courses2.length > 0) return courses2;
+    return item.type === "Academics" || item.lmpType === "Staff CAT" ? [] : ["BPC+IPC"];
+  }, []);
+  const hasMasterLmpUnitAccess = reactExports.useCallback((lmpCode, unitCode, requiredAccess = "View") => {
+    if (!platformConfigLoaded) return false;
+    const contextUnitCode = unitCode || activeUnitCode;
+    return hasMasterLmpAccess(platformConfig, lmpCode, {
+      unitCode: contextUnitCode,
+      operationalModel: getOperationalModelForUnitCode(contextUnitCode)
+    }, requiredAccess);
+  }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded]);
+  const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => items.filter((item) => {
+    if (item.lmpType === "Staff CAT") return true;
+    const lmpCodes = getSyllabusMasterLmpCodes(item);
+    if (lmpCodes.length === 0) return true;
+    return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
+  }), [getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess]);
   const activePlatformResourcePool = reactExports.useMemo(
     () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
     [activeResourcePoolUnitCode, platformConfig, school]
@@ -67298,6 +67322,10 @@ const App = () => {
   const [syllabusDetails, setSyllabusDetails] = reactExports.useState([]);
   const [syllabusLoading, setSyllabusLoading] = reactExports.useState(false);
   const [syllabusError, setSyllabusError] = reactExports.useState(null);
+  const visibleSyllabusDetails = reactExports.useMemo(
+    () => filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode),
+    [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]
+  );
   reactExports.useEffect(() => {
     const loadSyllabus = async () => {
       setSyllabusLoading(true);
@@ -67329,6 +67357,7 @@ const App = () => {
     loadSyllabus();
   }, []);
   reactExports.useEffect(() => {
+    if (!platformConfigLoaded) return;
     try {
       const stored = localStorage.getItem("dataSourceSettings");
       if (stored) {
@@ -67369,10 +67398,11 @@ const App = () => {
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
           try {
-            const bpcIpcSyllabus = syllabusDetails.filter(
+            const assignableSyncSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
+            const bpcIpcSyllabus = assignableSyncSyllabus.filter(
               (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
             );
-            const ficSyllabus = syllabusDetails.filter(
+            const ficSyllabus = assignableSyncSyllabus.filter(
               (item) => item.courses && item.courses.includes("FIC")
             );
             const syllabusData = {
@@ -67419,6 +67449,13 @@ const App = () => {
                   setTraineeLMPs((prev) => {
                     const newLMPs = new Map(prev);
                     lmps.forEach((lmp) => {
+                      const traineeForLmp = data.trainees.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
+                      const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
+                      if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
+                        newLMPs.delete(lmp.traineeFullName);
+                        console.log(`[LMP Sync] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
+                        return;
+                      }
                       const existingLMP = newLMPs.get(lmp.traineeFullName);
                       if (!existingLMP && (!lmp.events || lmp.events.length === 0)) return;
                       const normalizedCompletedIds = lmp.completedEventIds.map((id) => id.replace("*", ""));
@@ -67503,10 +67540,16 @@ const App = () => {
                 }
               }
               if (!lmpType) lmpType = "BPC+IPC";
+              const traineeUnitCode = trainee.unit || activeUnitCode;
+              if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
+                newLMPs.delete(trainee.fullName);
+                console.log(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
+                return;
+              }
               const isFicTrainee = lmpType === "FIC";
               const alreadySet = newLMPs.has(trainee.fullName);
               if (!alreadySet || isFicTrainee) {
-                const masterLMP = syllabusDetails.filter((item) => {
+                const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", traineeUnitCode).filter((item) => {
                   if (lmpType === "BPC+IPC") {
                     return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
                   }
@@ -67566,9 +67609,9 @@ const App = () => {
       }
     };
     loadInitialData();
-  }, []);
+  }, [platformConfigLoaded]);
   reactExports.useEffect(() => {
-    if (!syllabusDetails.length || !allTraineesData.length) return;
+    if (!platformConfigLoaded || !syllabusDetails.length || !allTraineesData.length) return;
     console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
     setTraineeLMPs((prev) => {
       const newLMPs = new Map(prev);
@@ -67582,8 +67625,14 @@ const App = () => {
         }
         const isFicTrainee = lmpType === "FIC";
         const alreadySet = newLMPs.has(trainee.fullName);
+        const traineeUnitCode = trainee.unit || activeUnitCode;
+        if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
+          newLMPs.delete(trainee.fullName);
+          console.log(`[LMP Re-init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
+          return;
+        }
         if (!alreadySet || isFicTrainee) {
-          const masterLMP = syllabusDetails.filter((item) => {
+          const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", traineeUnitCode).filter((item) => {
             if (lmpType === "BPC+IPC") {
               return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
             }
@@ -67593,15 +67642,15 @@ const App = () => {
             newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
             console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => ${lmpType} LMP (${masterLMP.length} events)`);
           } else {
-            newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), syllabusDetails));
-            console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => fallback to full syllabus (${syllabusDetails.length} events)`);
+            newLMPs.delete(trainee.fullName);
+            console.log(`[LMP Re-init] No authorised ${lmpType} Master LMP found for ${trainee.fullName}; Individual LMP cleared`);
           }
         }
       });
       console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
       return newLMPs;
     });
-  }, [syllabusDetails, allTraineesData]);
+  }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, syllabusDetails]);
   reactExports.useEffect(() => {
     let cancelled = false;
     const requestedSchool = school;
@@ -70327,6 +70376,17 @@ ${"=".repeat(60)}`);
       const data = await response.json();
       const persistedLmp = data?.lmp?.events;
       if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return null;
+      const persistedLmpType = data?.lmp?.lmpType || trainee.lmpType || "BPC+IPC";
+      const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
+      if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, "Assign")) {
+        setTraineeLMPs((prev) => {
+          const updated = new Map(prev);
+          updated.delete(trainee.fullName);
+          return updated;
+        });
+        console.log(`[Individual LMP] Blocked persisted ${persistedLmpType} LMP for ${trainee.fullName}; ${traineeUnitCode || "unit"} is not authorised to assign it`);
+        return null;
+      }
       setTraineeLMPs((prev) => {
         const updated = new Map(prev);
         updated.set(trainee.fullName, persistedLmp);
@@ -70338,7 +70398,7 @@ ${"=".repeat(60)}`);
       console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
       return null;
     }
-  }, [allTraineesData]);
+  }, [activeUnitCode, allTraineesData, hasMasterLmpUnitAccess]);
   const loadPersistedPt051Assessment = reactExports.useCallback(async (trainee, event) => {
     const loadKey = `${event.id}-${trainee.fullName}`;
     try {
@@ -70532,7 +70592,12 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (courseObj?.lmpType) lmpType = courseObj.lmpType;
     }
     if (!lmpType) lmpType = "BPC+IPC";
-    const masterLMP = syllabusDetails.filter((item) => {
+    const traineeUnitCode = newTrainee.unit || activeUnitCode;
+    if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
+      setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
+      return;
+    }
+    const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", traineeUnitCode).filter((item) => {
       if (lmpType === "BPC+IPC") {
         return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
       }
@@ -70547,7 +70612,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
     }
     setSuccessMessage("New Trainee Added!");
-  }, [syllabusDetails]);
+  }, [activeUnitCode, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails]);
   const handleUpdateTrainee = reactExports.useCallback(async (data) => {
     console.log("📝 [APP] handleUpdateTrainee called");
     console.log("📝 [APP] Trainee data received:", {
@@ -73126,10 +73191,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     let buildTraineeLMPs = traineeLMPs;
     try {
       const apiBase2 = getApiBaseUrl();
-      const bpcIpcSyllabus = syllabusDetails.filter(
+      const assignableBuildSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
+      const bpcIpcSyllabus = assignableBuildSyllabus.filter(
         (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
       );
-      const ficSyllabus = syllabusDetails.filter(
+      const ficSyllabus = assignableBuildSyllabus.filter(
         (item) => item.courses && item.courses.includes("FIC")
       );
       const syllabusData = {
@@ -73162,6 +73228,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         let freshEventCount = 0;
         (lmpData.lmps || []).forEach((lmp) => {
           if (lmp.traineeFullName && Array.isArray(lmp.events)) {
+            const traineeForLmp = traineesData.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
+            const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
+            if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
+              console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
+              return;
+            }
             freshLMPs.set(lmp.traineeFullName, lmp.events);
             freshEventCount += lmp.events.length;
           }
@@ -74409,8 +74481,8 @@ ${conflictLines.join("\n")}${moreText}`,
     return syllabusDetails.map((item) => item.id);
   }, [syllabusDetails]);
   const addTileSyllabusOptions = reactExports.useMemo(() => {
-    console.log("addTileSyllabusOptions filtering syllabusDetails:", syllabusDetails);
-    const filtered = syllabusDetails.filter(
+    console.log("addTileSyllabusOptions filtering visibleSyllabusDetails:", visibleSyllabusDetails);
+    const filtered = visibleSyllabusDetails.filter(
       (item) => item.type === "Flight" || item.type === "FTD" || item.type === "Ground School" && item.code.includes("CPT")
     );
     console.log("Filtered items:", filtered);
@@ -74419,7 +74491,7 @@ ${conflictLines.join("\n")}${moreText}`,
       options.push("SCT FORM");
     }
     return options;
-  }, [syllabusDetails]);
+  }, [visibleSyllabusDetails]);
   const handleAuthorise = async (eventId, notes, role, isVerbal, selectedPersonName) => {
     const authEventDate = eventForAuth?.date || Object.entries(publishedSchedules).find(([, eventsList]) => eventsList.some((e) => e.id === eventId))?.[0];
     if (isPastDfpDate(authEventDate)) {
@@ -77311,7 +77383,7 @@ ${conflictLines.join("\n")}${moreText}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           SyllabusView,
           {
-            syllabusDetails,
+            syllabusDetails: visibleSyllabusDetails,
             onBack: () => {
               handleNavigation(syllabusBackTarget);
               setInitialSyllabusId(null);

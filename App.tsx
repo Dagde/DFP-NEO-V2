@@ -10700,6 +10700,10 @@ const App: React.FC = () => {
     }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
 
     useEffect(() => {
+        if (!platformConfigLoaded) {
+            pushContextSelectorDiag('validate:skip-platform-loading');
+            return;
+        }
         if (activeLocationUnitOptions.length === 0) {
             pushContextSelectorDiag('validate:skip-no-options');
             return;
@@ -10728,7 +10732,7 @@ const App: React.FC = () => {
                 optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
             });
         }
-    }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled, pushContextSelectorDiag]);
+    }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag]);
 
     useEffect(() => {
         try {
@@ -10782,6 +10786,46 @@ const App: React.FC = () => {
         operationalModel: activeOperationalModel,
         operationalModelLabel: activeOperationalModelLabel,
     }), [activeContextUnitCodes, activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
+
+    const getOperationalModelForUnitCode = useCallback((unitCode?: string | null) => {
+        const normalisedUnit = String(unitCode || '').trim().toUpperCase();
+        const unit = (platformConfig?.units || [])
+            .filter((candidate: any) => candidate.status !== 'INACTIVE')
+            .find((candidate: any) => String(candidate.code || '').trim().toUpperCase() === normalisedUnit);
+        return unit ? getUnitOperationalModel(unit) : activeOperationalModel;
+    }, [activeOperationalModel, platformConfig]);
+
+    const getSyllabusMasterLmpCodes = useCallback((item: SyllabusItemDetail): string[] => {
+        const courses = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
+        if (courses.length > 0) return courses;
+        return item.type === 'Academics' || item.lmpType === 'Staff CAT' ? [] : ['BPC+IPC'];
+    }, []);
+
+    const hasMasterLmpUnitAccess = useCallback((
+        lmpCode: string,
+        unitCode?: string | null,
+        requiredAccess: 'View' | 'Assign' | 'Manage' = 'View',
+    ) => {
+        if (!platformConfigLoaded) return false;
+        const contextUnitCode = unitCode || activeUnitCode;
+        return hasMasterLmpAccess(platformConfig, lmpCode, {
+            unitCode: contextUnitCode,
+            operationalModel: getOperationalModelForUnitCode(contextUnitCode),
+        }, requiredAccess);
+    }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded]);
+
+    const filterSyllabusForMasterLmpAccess = useCallback((
+        items: SyllabusItemDetail[],
+        requiredAccess: 'View' | 'Assign' | 'Manage' = 'View',
+        unitCode?: string | null,
+    ) => (
+        items.filter((item) => {
+            if (item.lmpType === 'Staff CAT') return true;
+            const lmpCodes = getSyllabusMasterLmpCodes(item);
+            if (lmpCodes.length === 0) return true;
+            return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
+        })
+    ), [getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess]);
 
     const activePlatformResourcePool = useMemo(
         () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
@@ -11348,6 +11392,10 @@ const App: React.FC = () => {
     const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>([]);
     const [syllabusLoading, setSyllabusLoading] = useState<boolean>(false);
     const [syllabusError, setSyllabusError] = useState<string | null>(null);
+    const visibleSyllabusDetails = useMemo(
+        () => filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', activeUnitCode),
+        [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails],
+    );
 
 // Load syllabus from DB on mount — DB only, no mock data fallback
     useEffect(() => {
@@ -11383,6 +11431,7 @@ const App: React.FC = () => {
 
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
+        if (!platformConfigLoaded) return;
         // One-time migration: reset mock data toggles to OFF if they were previously defaulted ON
         // This prevents mock data contaminating real staff/trainee lists after DB is populated
         try {
@@ -11440,10 +11489,11 @@ const App: React.FC = () => {
                     try {
                         // Build syllabusData payload — master syllabus split by lmpType
                         // The backend has no knowledge of syllabus structure, so we send it from the frontend.
-                        const bpcIpcSyllabus = syllabusDetails.filter(
+                        const assignableSyncSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', activeUnitCode);
+                        const bpcIpcSyllabus = assignableSyncSyllabus.filter(
                             (item: any) => (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics'
                         );
-                        const ficSyllabus = syllabusDetails.filter(
+                        const ficSyllabus = assignableSyncSyllabus.filter(
                             (item: any) => item.courses && item.courses.includes('FIC')
                         );
                         const syllabusData: Record<string, any[]> = {
@@ -11516,6 +11566,13 @@ const App: React.FC = () => {
                                     setTraineeLMPs(prev => {
                                         const newLMPs = new Map(prev);
                                         lmps.forEach(lmp => {
+                                            const traineeForLmp = data.trainees.find((candidate: any) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
+                                            const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
+                                            if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'Assign')) {
+                                                newLMPs.delete(lmp.traineeFullName);
+                                                console.log(`[LMP Sync] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
+                                                return;
+                                            }
                                             const existingLMP = newLMPs.get(lmp.traineeFullName);
                                             if (!existingLMP && (!lmp.events || lmp.events.length === 0)) return;
 
@@ -11621,6 +11678,12 @@ const App: React.FC = () => {
                                 }
                             }
                             if (!lmpType) lmpType = 'BPC+IPC';
+                            const traineeUnitCode = trainee.unit || activeUnitCode;
+                            if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'Assign')) {
+                                newLMPs.delete(trainee.fullName);
+                                console.log(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
+                                return;
+                            }
 
                             // For FIC trainees: always assign correct FIC LMP (overwrite any incorrect BPC+IPC LMP)
                             // For non-FIC trainees: only initialize if not already set
@@ -11628,7 +11691,7 @@ const App: React.FC = () => {
                             const alreadySet = newLMPs.has(trainee.fullName);
 
                             if (!alreadySet || isFicTrainee) {
-                                const masterLMP = syllabusDetails.filter(item => {
+                                const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', traineeUnitCode).filter(item => {
                                     if (lmpType === 'BPC+IPC') {
                                         return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
                                     }
@@ -11694,12 +11757,12 @@ const App: React.FC = () => {
             }
         };
         loadInitialData();
-    }, []);
+    }, [platformConfigLoaded]);
 
     // Re-initialize traineeLMPs whenever syllabusDetails loads (fixes race condition where
     // loadInitialData runs before syllabusDetails is populated, leaving all LMPs empty)
     useEffect(() => {
-        if (!syllabusDetails.length || !allTraineesData.length) return;
+        if (!platformConfigLoaded || !syllabusDetails.length || !allTraineesData.length) return;
         console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
         setTraineeLMPs(prev => {
             const newLMPs = new Map(prev);
@@ -11714,9 +11777,15 @@ const App: React.FC = () => {
                 }
                 const isFicTrainee = lmpType === 'FIC';
                 const alreadySet = newLMPs.has(trainee.fullName);
+                const traineeUnitCode = trainee.unit || activeUnitCode;
+                if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'Assign')) {
+                    newLMPs.delete(trainee.fullName);
+                    console.log(`[LMP Re-init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
+                    return;
+                }
                 // Always set for FIC trainees; set for others only if not yet initialized
                 if (!alreadySet || isFicTrainee) {
-                    const masterLMP = syllabusDetails.filter(item => {
+                    const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', traineeUnitCode).filter(item => {
                         if (lmpType === 'BPC+IPC') {
                             return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
                         }
@@ -11726,16 +11795,15 @@ const App: React.FC = () => {
                         newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
                         console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => ${lmpType} LMP (${masterLMP.length} events)`);
                     } else {
-                        // Fallback: use entire syllabus if no specific match
-                        newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), syllabusDetails));
-                        console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => fallback to full syllabus (${syllabusDetails.length} events)`);
+                        newLMPs.delete(trainee.fullName);
+                        console.log(`[LMP Re-init] No authorised ${lmpType} Master LMP found for ${trainee.fullName}; Individual LMP cleared`);
                     }
                 }
             });
             console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
             return newLMPs;
         });
-    }, [syllabusDetails, allTraineesData]);
+    }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, syllabusDetails]);
 
     // Load persisted daily snapshots (last 5 days) + legacy historical data from DB
     useEffect(() => {
@@ -15184,6 +15252,17 @@ const App: React.FC = () => {
             const data = await response.json();
             const persistedLmp = data?.lmp?.events;
             if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return null;
+            const persistedLmpType = data?.lmp?.lmpType || trainee.lmpType || 'BPC+IPC';
+            const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
+            if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, 'Assign')) {
+                setTraineeLMPs(prev => {
+                    const updated = new Map(prev);
+                    updated.delete(trainee.fullName);
+                    return updated;
+                });
+                console.log(`[Individual LMP] Blocked persisted ${persistedLmpType} LMP for ${trainee.fullName}; ${traineeUnitCode || 'unit'} is not authorised to assign it`);
+                return null;
+            }
 
             setTraineeLMPs(prev => {
                 const updated = new Map(prev);
@@ -15196,7 +15275,7 @@ const App: React.FC = () => {
             console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
             return null;
         }
-    }, [allTraineesData]);
+    }, [activeUnitCode, allTraineesData, hasMasterLmpUnitAccess]);
 
     const loadPersistedPt051Assessment = useCallback(async (
         trainee: Trainee,
@@ -15422,7 +15501,12 @@ const App: React.FC = () => {
             if (courseObj?.lmpType) lmpType = courseObj.lmpType;
         }
         if (!lmpType) lmpType = 'BPC+IPC';
-        const masterLMP = syllabusDetails.filter(item => {
+        const traineeUnitCode = newTrainee.unit || activeUnitCode;
+        if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'Assign')) {
+            setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || 'new trainee'} with Master LMP "${lmpType}" for ${traineeUnitCode || 'this unit'}.`);
+            return;
+        }
+        const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', traineeUnitCode).filter(item => {
             if (lmpType === 'BPC+IPC') {
                 return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
             }
@@ -15439,7 +15523,7 @@ const App: React.FC = () => {
         }
 
         setSuccessMessage('New Trainee Added!');
-    }, [syllabusDetails]);
+    }, [activeUnitCode, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails]);
 
     // Shared trainee update handler — updates in-memory state AND persists to DB if record is a DB trainee
     const handleUpdateTrainee = useCallback(async (data: Trainee) => {
@@ -18622,10 +18706,11 @@ const App: React.FC = () => {
         let buildTraineeLMPs = traineeLMPs;
         try {
             const apiBase = getApiBaseUrl();
-            const bpcIpcSyllabus = syllabusDetails.filter(
+            const assignableBuildSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', activeUnitCode);
+            const bpcIpcSyllabus = assignableBuildSyllabus.filter(
                 (item: any) => (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics'
             );
-            const ficSyllabus = syllabusDetails.filter(
+            const ficSyllabus = assignableBuildSyllabus.filter(
                 (item: any) => item.courses && item.courses.includes('FIC')
             );
             const syllabusData: Record<string, any[]> = {
@@ -18660,6 +18745,12 @@ const App: React.FC = () => {
                 let freshEventCount = 0;
                 (lmpData.lmps || []).forEach((lmp: any) => {
                     if (lmp.traineeFullName && Array.isArray(lmp.events)) {
+                        const traineeForLmp = traineesData.find((candidate: any) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
+                        const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
+                        if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'Assign')) {
+                            console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
+                            return;
+                        }
                         freshLMPs.set(lmp.traineeFullName, lmp.events);
                         freshEventCount += lmp.events.length;
                     }
@@ -20199,8 +20290,8 @@ updates.forEach(update => {
     }, [syllabusDetails]);
 
     const addTileSyllabusOptions = useMemo(() => {
-        console.log('addTileSyllabusOptions filtering syllabusDetails:', syllabusDetails);
-        const filtered = syllabusDetails.filter(item =>
+        console.log('addTileSyllabusOptions filtering visibleSyllabusDetails:', visibleSyllabusDetails);
+        const filtered = visibleSyllabusDetails.filter(item =>
             item.type === 'Flight' ||
             item.type === 'FTD' ||
             (item.type === 'Ground School' && item.code.includes('CPT'))
@@ -20214,7 +20305,7 @@ updates.forEach(update => {
         }
 
         return options;
-    }, [syllabusDetails]);
+    }, [visibleSyllabusDetails]);
 
     const handleAuthorise = async (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean, selectedPersonName: string) => {
         const authEventDate = eventForAuth?.date || Object.entries(publishedSchedules).find(([, eventsList]) => (
@@ -23673,7 +23764,7 @@ updates.forEach(update => {
                             />;
              case 'Syllabus':
                 return <SyllabusView
-                           syllabusDetails={syllabusDetails}
+                           syllabusDetails={visibleSyllabusDetails}
                            onBack={() => {
                                handleNavigation(syllabusBackTarget);
                                setInitialSyllabusId(null);

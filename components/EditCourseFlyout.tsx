@@ -91,9 +91,8 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
             unitCode: unit,
             operationalModel: 'flight_school',
         }, 'Assign');
-        if (academicLmpType && !allowed.includes(academicLmpType)) allowed.push(academicLmpType);
         return allowed.sort();
-    }, [academicLmpType, platformConfig, syllabusDetails, unit]);
+    }, [platformConfig, syllabusDetails, unit]);
 
     const assignableMasterLmps = useMemo(() => {
         const courseCodes = new Set<string>(COURSE_MASTER_LMPS.filter(lmp => lmp !== 'Staff CAT'));
@@ -105,9 +104,8 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
             unitCode: unit,
             operationalModel: 'flight_school',
         }, 'Assign');
-        if (lmpType && !allowed.includes(lmpType)) allowed.push(lmpType);
         return allowed.sort();
-    }, [lmpType, platformConfig, syllabusDetails, unit]);
+    }, [platformConfig, syllabusDetails, unit]);
 
     // Sync if props change
     useEffect(() => {

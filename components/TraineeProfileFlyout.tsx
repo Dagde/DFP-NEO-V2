@@ -407,18 +407,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             unitCode: unit || trainee.unit,
             operationalModel: 'flight_school',
         }, 'Assign');
-        if (lmpType && !allowed.includes(lmpType)) allowed.push(lmpType);
         return allowed.sort();
-    }, [lmpType, platformConfig, syllabusDetails, trainee.unit, unit]);
+    }, [platformConfig, syllabusDetails, trainee.unit, unit]);
 
     const academicLmpCourses = useMemo(() => {
         const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
             unitCode: unit || trainee.unit,
             operationalModel: 'flight_school',
         }, 'Assign');
-        if (academicLmpType && !allowed.includes(academicLmpType)) allowed.push(academicLmpType);
         return allowed.sort();
-    }, [academicLmpType, allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
+    }, [allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
     const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
     const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
