@@ -32793,6 +32793,58 @@ const InstructorListView = ({
     },
     instructor.name
   )) });
+  const renderInstructorUnitCard = (unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400", children: unit }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: [
+        qfisByUnit[unit].length,
+        " Staff"
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(qfisByUnit[unit]) })
+  ] }, unit);
+  const renderFlightCard = (flight) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-cyan-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-bold text-cyan-400", children: [
+          flight,
+          " Flight"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Flight staff" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: qfisByFlight[flight].length })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(qfisByFlight[flight]) })
+  ] }, `flight-${flight}`);
+  const renderSupportStaffCards = () => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    simIps.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-teal-400", children: "SIM IP" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: simIps.length })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(simIps) })
+    ] }),
+    sortedOfiUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-purple-400", children: "OFIs" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: unit })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: ofisByUnit[unit].length })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(ofisByUnit[unit]) })
+    ] }, `ofi-${unit}`)),
+    sortedOtherStaffUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-orange-400", children: "Other Staff" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: unit })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: otherStaffByUnit[unit].length })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(otherStaffByUnit[unit]) })
+    ] }, `other-${unit}`))
+  ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -32827,57 +32879,15 @@ const InstructorListView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Staff" })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 p-6 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1920px] mx-auto", children: [
-        sortedUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400", children: unit }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: [
-              qfisByUnit[unit].length,
-              " Staff"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(qfisByUnit[unit]) })
-        ] }, unit)),
-        isAirCombatModel && sortedFlightGroups.map((flight) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-cyan-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-bold text-cyan-400", children: [
-                flight,
-                " Flight"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Flight staff" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: qfisByFlight[flight].length })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(qfisByFlight[flight]) })
-        ] }, `flight-${flight}`)),
-        simIps.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-teal-400", children: "SIM IP" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: simIps.length })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(simIps) })
-        ] }),
-        sortedOfiUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-purple-400", children: "OFIs" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: unit })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: ofisByUnit[unit].length })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(ofisByUnit[unit]) })
-        ] }, `ofi-${unit}`)),
-        sortedOtherStaffUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-orange-400", children: "Other Staff" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: unit })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: otherStaffByUnit[unit].length })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(otherStaffByUnit[unit]) })
-        ] }, `other-${unit}`))
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 p-6 overflow-y-auto", children: isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col xl:flex-row gap-6 max-w-[1920px] mx-auto", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:block xl:w-[360px] xl:flex-shrink-0 gap-6 xl:space-y-6", children: sortedUnits.map(renderInstructorUnitCard) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 space-y-6 min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6", children: sortedFlightGroups.map(renderFlightCard) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6", children: renderSupportStaffCards() })
+        ] })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1920px] mx-auto", children: [
+        sortedUnits.map(renderInstructorUnitCard),
+        renderSupportStaffCards()
       ] }) })
     ] }),
     (selectedInstructor || isAddingNew && newInstructorTemplate) && /* @__PURE__ */ jsxRuntimeExports.jsx(

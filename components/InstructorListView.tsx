@@ -454,6 +454,82 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     </ul>
   );
 
+  const renderInstructorUnitCard = (unit: string) => (
+    <div key={unit} className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+        <div className="p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+            <h3 className="text-lg font-bold text-sky-400">{unit}</h3>
+            <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} Staff</span>
+        </div>
+        <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+            {renderInstructorList(qfisByUnit[unit])}
+        </div>
+    </div>
+  );
+
+  const renderFlightCard = (flight: string) => (
+    <div key={`flight-${flight}`} className="bg-gray-800 border border-cyan-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+        <div className="p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+            <div>
+                <h3 className="text-lg font-bold text-cyan-400">{flight} Flight</h3>
+                <p className="text-xs text-gray-400">Flight staff</p>
+            </div>
+            <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByFlight[flight].length}</span>
+        </div>
+        <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+            {renderInstructorList(qfisByFlight[flight])}
+        </div>
+    </div>
+  );
+
+  const renderSupportStaffCards = () => (
+    <>
+        {/* SIM IPs - single combined card regardless of unit */}
+        {simIps.length > 0 && (
+            <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                    <h3 className="text-lg font-bold text-teal-400">SIM IP</h3>
+                    <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
+                </div>
+                <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+                    {renderInstructorList(simIps)}
+                </div>
+            </div>
+        )}
+
+        {/* OFIs */}
+        {sortedOfiUnits.map(unit => (
+            <div key={`ofi-${unit}`} className="bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                <div className="p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                    <div>
+                        <h3 className="text-lg font-bold text-purple-400">OFIs</h3>
+                        <p className="text-xs text-gray-400">{unit}</p>
+                    </div>
+                    <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{ofisByUnit[unit].length}</span>
+                </div>
+                <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+                    {renderInstructorList(ofisByUnit[unit])}
+                </div>
+            </div>
+        ))}
+
+        {/* Other Staff - All staff who don't fit into instructor, SIM IP, or OFI categories */}
+        {sortedOtherStaffUnits.map(unit => (
+            <div key={`other-${unit}`} className="bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                <div className="p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                    <div>
+                        <h3 className="text-lg font-bold text-orange-400">Other Staff</h3>
+                        <p className="text-xs text-gray-400">{unit}</p>
+                    </div>
+                    <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{otherStaffByUnit[unit].length}</span>
+                </div>
+                <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+                    {renderInstructorList(otherStaffByUnit[unit])}
+                </div>
+            </div>
+        ))}
+    </>
+  );
+
   return (
     <>
       <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
@@ -489,80 +565,26 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
             {/* Grid Content */}
             <div className="flex-1 p-6 overflow-y-auto">
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1920px] mx-auto">
-                    {/* Instructor units */}
-                    {sortedUnits.map(unit => (
-                        <div key={unit} className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                            <div className="p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                                <h3 className="text-lg font-bold text-sky-400">{unit}</h3>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} Staff</span>
+                 {isAirCombatModel ? (
+                    <div className="flex flex-col xl:flex-row gap-6 max-w-[1920px] mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:block xl:w-[360px] xl:flex-shrink-0 gap-6 xl:space-y-6">
+                            {sortedUnits.map(renderInstructorUnitCard)}
+                        </div>
+                        <div className="flex-1 space-y-6 min-w-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {sortedFlightGroups.map(renderFlightCard)}
                             </div>
-                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                                {renderInstructorList(qfisByUnit[unit])}
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {renderSupportStaffCards()}
                             </div>
                         </div>
-                    ))}
-
-                    {isAirCombatModel && sortedFlightGroups.map(flight => (
-                        <div key={`flight-${flight}`} className="bg-gray-800 border border-cyan-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                            <div className="p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                                <div>
-                                    <h3 className="text-lg font-bold text-cyan-400">{flight} Flight</h3>
-                                    <p className="text-xs text-gray-400">Flight staff</p>
-                                </div>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByFlight[flight].length}</span>
-                            </div>
-                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                                {renderInstructorList(qfisByFlight[flight])}
-                            </div>
-                        </div>
-                    ))}
-
-                    {/* SIM IPs - single combined card regardless of unit */}
-                    {simIps.length > 0 && (
-                        <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                            <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                                <h3 className="text-lg font-bold text-teal-400">SIM IP</h3>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
-                            </div>
-                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                                {renderInstructorList(simIps)}
-                            </div>
-                        </div>
-                    )}
-
-                       {/* OFIs */}
-                       {sortedOfiUnits.map(unit => (
-                        <div key={`ofi-${unit}`} className="bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                           <div className="p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                                <div>
-                                    <h3 className="text-lg font-bold text-purple-400">OFIs</h3>
-                                    <p className="text-xs text-gray-400">{unit}</p>
-                                </div>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{ofisByUnit[unit].length}</span>
-                           </div>
-                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                                {renderInstructorList(ofisByUnit[unit])}
-                           </div>
-                       </div>
-                       ))}
-
-                       {/* Other Staff - All staff who don't fit into instructor, SIM IP, or OFI categories */}
-                       {sortedOtherStaffUnits.map(unit => (
-                        <div key={`other-${unit}`} className="bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                           <div className="p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                                <div>
-                                    <h3 className="text-lg font-bold text-orange-400">Other Staff</h3>
-                                    <p className="text-xs text-gray-400">{unit}</p>
-                                </div>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{otherStaffByUnit[unit].length}</span>
-                           </div>
-                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                                {renderInstructorList(otherStaffByUnit[unit])}
-                           </div>
-                       </div>
-                       ))}
-                 </div>
+                    </div>
+                 ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1920px] mx-auto">
+                        {sortedUnits.map(renderInstructorUnitCard)}
+                        {renderSupportStaffCards()}
+                    </div>
+                 )}
             </div>
       </div>
 
