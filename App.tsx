@@ -6391,6 +6391,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         priorityEventMatchesBuildDate(event, buildDate) &&
         event.type === 'flight'
     );
+    const scheduledTaskingPriorityEventIds = new Set<string>();
     const getTaskingEventIdentity = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>) => ({
         id: event.id,
         taskingRequestId: event.taskingRequestId || null,
@@ -6406,7 +6407,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const scheduleTaskingPriorityEvents = (eventsToSchedule: ScheduleEvent[]) => {
         if (eventsToSchedule.length === 0) return;
         const timeIncrement = 5 / 60;
-        const orderedTaskingEvents = [...eventsToSchedule].sort((left, right) =>
+        const orderedTaskingEvents = eventsToSchedule.filter(event => !scheduledTaskingPriorityEventIds.has(event.id)).sort((left, right) =>
             left.startTime - right.startTime ||
             (left.taskingRequestId || '').localeCompare(right.taskingRequestId || '') ||
             (left.taskingAircraftIndex || 0) - (right.taskingAircraftIndex || 0)
@@ -6569,6 +6570,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             if (placedEvent) {
                 generatedEvents.push(placedEvent);
+                scheduledTaskingPriorityEventIds.add(priorityEvent.id);
                 [placedEvent.pilot, placedEvent.crew].filter(Boolean).forEach(staffName => {
                     const staffCounts = eventCounts.get(staffName as string);
                     if (staffCounts) staffCounts.flightFtd++;
@@ -7082,10 +7084,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     if (earlyCurrencyPriorityEvents.length > 0) {
         recordProgress({ message: 'Scheduling Currency FTD Priority Events...', percentage: 44 });
         scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
-    }
-    if (taskingPriorityEvents.length > 0) {
-        recordProgress({ message: 'Scheduling Tasking Priority Events...', percentage: 45 });
-        scheduleTaskingPriorityEvents(taskingPriorityEvents);
     }
 
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
@@ -7689,6 +7687,60 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         flushPendingNormals();
     };
+    const getTaskingRequestedStart = (event: ScheduleEvent): number => {
+        const requestedStart = Number.isFinite(Number(event.startTime)) ? Number(event.startTime) : flyingStartTime;
+        return Math.max(flyingStartTime, Math.round(requestedStart * 12) / 12);
+    };
+    const schedulePrioritizedDualsAndFormationsWithTaskingBreaks = (
+        prioritizedFlightList: Trainee[],
+        startTimeBoundary: number,
+        endTimeBoundary: number,
+        normalLabel: string,
+        formationLabel: string,
+        latestStartBefore?: number
+    ) => {
+        const pendingTaskingEvents = () => taskingPriorityEvents.filter(event => !scheduledTaskingPriorityEventIds.has(event.id));
+        const segmentEnd = typeof latestStartBefore === 'number'
+            ? Math.min(endTimeBoundary, latestStartBefore)
+            : endTimeBoundary;
+        const taskingTimes = Array.from(new Set(
+            pendingTaskingEvents()
+                .map(getTaskingRequestedStart)
+                .filter(time => time >= startTimeBoundary - 0.001 && time <= segmentEnd + 0.001)
+                .map(time => Math.round(time * 12) / 12)
+        )).sort((a, b) => a - b);
+
+        let currentStart = startTimeBoundary;
+        let segment = 1;
+        for (const taskingTime of taskingTimes) {
+            if (taskingTime > currentStart + 0.001) {
+                _schedulePrioritizedDualsAndFormations(
+                    prioritizedFlightList,
+                    currentStart,
+                    endTimeBoundary,
+                    `${normalLabel} Before Tasking ${segment}`,
+                    `${formationLabel} Before Tasking ${segment}`,
+                    taskingTime
+                );
+            }
+            const dueTaskingEvents = pendingTaskingEvents().filter(event => getTaskingRequestedStart(event) <= taskingTime + 0.001);
+            if (dueTaskingEvents.length > 0) {
+                recordProgress({ message: 'Scheduling Tasking Priority Events...', percentage: 45 });
+                scheduleTaskingPriorityEvents(dueTaskingEvents);
+            }
+            currentStart = Math.max(currentStart, taskingTime);
+            segment++;
+        }
+
+        _schedulePrioritizedDualsAndFormations(
+            prioritizedFlightList,
+            currentStart,
+            endTimeBoundary,
+            normalLabel,
+            formationLabel,
+            latestStartBefore
+        );
+    };
     neoBuildDiag.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map(event => {
         const eventTrainee = event.student || event.pilot || '';
         const trainee = activeTrainees.find(t => t.fullName === eventTrainee) || null;
@@ -7750,7 +7802,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     if (_mandatoryDayFlightList.length > 0) {
         const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + (5 / 60);
         if (flyingStartTime < REMEDIAL_EARLIEST_START) {
-            _schedulePrioritizedDualsAndFormations(
+            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 flyingStartTime,
                 flyingEndTime,
@@ -7786,7 +7838,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
         if (currencyInsertionStart !== null && currencyInsertionStart > alignedPostMandatoryStart + 0.001) {
-            _schedulePrioritizedDualsAndFormations(
+            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 alignedPostMandatoryStart,
                 flyingEndTime,
@@ -7796,7 +7848,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             );
         }
         scheduleDeferredCurrencyFlights();
-        _schedulePrioritizedDualsAndFormations(
+        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
             _allFlightList,
             Math.max(alignedPostMandatoryStart, currencyInsertionStart ?? alignedPostMandatoryStart),
             flyingEndTime,
@@ -7806,7 +7858,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     } else {
         const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
         if (currencyInsertionStart !== null && currencyInsertionStart > flyingStartTime + 0.001) {
-            _schedulePrioritizedDualsAndFormations(
+            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 flyingStartTime,
                 flyingEndTime,
@@ -7815,7 +7867,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 currencyInsertionStart
             );
             scheduleDeferredCurrencyFlights();
-            _schedulePrioritizedDualsAndFormations(
+            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 currencyInsertionStart,
                 flyingEndTime,
@@ -7824,7 +7876,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             );
         } else {
             scheduleDeferredCurrencyFlights();
-            _schedulePrioritizedDualsAndFormations(
+            schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
                 flyingStartTime,
                 flyingEndTime,

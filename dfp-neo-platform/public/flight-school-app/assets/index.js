@@ -63149,6 +63149,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const taskingPriorityEvents = highestPriorityEvents.filter(
     (event) => isTaskingPriorityEvent(event) && priorityEventMatchesBuildDate(event, buildDate) && event.type === "flight"
   );
+  const scheduledTaskingPriorityEventIds = /* @__PURE__ */ new Set();
   const getTaskingEventIdentity = (event) => ({
     id: event.id,
     taskingRequestId: event.taskingRequestId || null,
@@ -63164,7 +63165,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const scheduleTaskingPriorityEvents = (eventsToSchedule) => {
     if (eventsToSchedule.length === 0) return;
     const timeIncrement = 5 / 60;
-    const orderedTaskingEvents = [...eventsToSchedule].sort(
+    const orderedTaskingEvents = eventsToSchedule.filter((event) => !scheduledTaskingPriorityEventIds.has(event.id)).sort(
       (left, right) => left.startTime - right.startTime || (left.taskingRequestId || "").localeCompare(right.taskingRequestId || "") || (left.taskingAircraftIndex || 0) - (right.taskingAircraftIndex || 0)
     );
     let scheduledCount = 0;
@@ -63311,6 +63312,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       if (placedEvent) {
         generatedEvents.push(placedEvent);
+        scheduledTaskingPriorityEventIds.add(priorityEvent.id);
         [placedEvent.pilot, placedEvent.crew].filter(Boolean).forEach((staffName) => {
           const staffCounts = eventCounts.get(staffName);
           if (staffCounts) staffCounts.flightFtd++;
@@ -63802,10 +63804,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   if (earlyCurrencyPriorityEvents.length > 0) {
     recordProgress({ message: "Scheduling Currency FTD Priority Events...", percentage: 44 });
     scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
-  }
-  if (taskingPriorityEvents.length > 0) {
-    recordProgress({ message: "Scheduling Tasking Priority Events...", percentage: 45 });
-    scheduleTaskingPriorityEvents(taskingPriorityEvents);
   }
   recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
   recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
@@ -64318,6 +64316,46 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     flushPendingNormals();
   };
+  const getTaskingRequestedStart = (event) => {
+    const requestedStart = Number.isFinite(Number(event.startTime)) ? Number(event.startTime) : flyingStartTime;
+    return Math.max(flyingStartTime, Math.round(requestedStart * 12) / 12);
+  };
+  const schedulePrioritizedDualsAndFormationsWithTaskingBreaks = (prioritizedFlightList, startTimeBoundary, endTimeBoundary, normalLabel, formationLabel, latestStartBefore) => {
+    const pendingTaskingEvents = () => taskingPriorityEvents.filter((event) => !scheduledTaskingPriorityEventIds.has(event.id));
+    const segmentEnd = typeof latestStartBefore === "number" ? Math.min(endTimeBoundary, latestStartBefore) : endTimeBoundary;
+    const taskingTimes = Array.from(new Set(
+      pendingTaskingEvents().map(getTaskingRequestedStart).filter((time) => time >= startTimeBoundary - 1e-3 && time <= segmentEnd + 1e-3).map((time) => Math.round(time * 12) / 12)
+    )).sort((a, b) => a - b);
+    let currentStart = startTimeBoundary;
+    let segment = 1;
+    for (const taskingTime of taskingTimes) {
+      if (taskingTime > currentStart + 1e-3) {
+        _schedulePrioritizedDualsAndFormations(
+          prioritizedFlightList,
+          currentStart,
+          endTimeBoundary,
+          `${normalLabel} Before Tasking ${segment}`,
+          `${formationLabel} Before Tasking ${segment}`,
+          taskingTime
+        );
+      }
+      const dueTaskingEvents = pendingTaskingEvents().filter((event) => getTaskingRequestedStart(event) <= taskingTime + 1e-3);
+      if (dueTaskingEvents.length > 0) {
+        recordProgress({ message: "Scheduling Tasking Priority Events...", percentage: 45 });
+        scheduleTaskingPriorityEvents(dueTaskingEvents);
+      }
+      currentStart = Math.max(currentStart, taskingTime);
+      segment++;
+    }
+    _schedulePrioritizedDualsAndFormations(
+      prioritizedFlightList,
+      currentStart,
+      endTimeBoundary,
+      normalLabel,
+      formationLabel,
+      latestStartBefore
+    );
+  };
   neoBuildDiag.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map((event) => {
     const eventTrainee = event.student || event.pilot || "";
     const trainee = activeTrainees.find((t) => t.fullName === eventTrainee) || null;
@@ -64372,7 +64410,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   if (_mandatoryDayFlightList.length > 0) {
     const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
     if (flyingStartTime < REMEDIAL_EARLIEST_START) {
-      _schedulePrioritizedDualsAndFormations(
+      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
         _allFlightList,
         flyingStartTime,
         flyingEndTime,
@@ -64403,7 +64441,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
     if (currencyInsertionStart !== null && currencyInsertionStart > alignedPostMandatoryStart + 1e-3) {
-      _schedulePrioritizedDualsAndFormations(
+      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
         _allFlightList,
         alignedPostMandatoryStart,
         flyingEndTime,
@@ -64413,7 +64451,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       );
     }
     scheduleDeferredCurrencyFlights();
-    _schedulePrioritizedDualsAndFormations(
+    schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
       _allFlightList,
       Math.max(alignedPostMandatoryStart, currencyInsertionStart ?? alignedPostMandatoryStart),
       flyingEndTime,
@@ -64423,7 +64461,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   } else {
     const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
     if (currencyInsertionStart !== null && currencyInsertionStart > flyingStartTime + 1e-3) {
-      _schedulePrioritizedDualsAndFormations(
+      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
         _allFlightList,
         flyingStartTime,
         flyingEndTime,
@@ -64432,7 +64470,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         currencyInsertionStart
       );
       scheduleDeferredCurrencyFlights();
-      _schedulePrioritizedDualsAndFormations(
+      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
         _allFlightList,
         currencyInsertionStart,
         flyingEndTime,
@@ -64441,7 +64479,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       );
     } else {
       scheduleDeferredCurrencyFlights();
-      _schedulePrioritizedDualsAndFormations(
+      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
         _allFlightList,
         flyingStartTime,
         flyingEndTime,
