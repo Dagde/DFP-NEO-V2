@@ -46488,6 +46488,8 @@ const PlatformConfigurationSettings = ({
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
   const locationRowRefs = reactExports.useRef({});
   const pendingLocationScrollIdRef = reactExports.useRef(null);
+  const unitRowRefs = reactExports.useRef({});
+  const pendingUnitScrollIdRef = reactExports.useRef(null);
   const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.("settings.rankTerminology.edit") ?? canEdit;
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
@@ -46625,6 +46627,26 @@ const PlatformConfigurationSettings = ({
       target.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 40);
   }, [config.locations.length]);
+  const scrollUnitRowIntoView = (unitIndex) => {
+    const unit = config.units[unitIndex];
+    if (!unit) return;
+    const rowKey = unit.id || `platform-unit-${unitIndex}`;
+    const target = unitRowRefs.current[rowKey];
+    if (!target) return;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 40);
+  };
+  reactExports.useEffect(() => {
+    const pendingUnitId = pendingUnitScrollIdRef.current;
+    if (!pendingUnitId) return;
+    const target = unitRowRefs.current[pendingUnitId];
+    if (!target) return;
+    pendingUnitScrollIdRef.current = null;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 40);
+  }, [config.units.length]);
   reactExports.useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
     const frame = window.requestAnimationFrame(() => {
@@ -46995,6 +47017,7 @@ const PlatformConfigurationSettings = ({
     const defaultLocation = config.locations[0]?.code || "ESL";
     const newUnitId = createClientRecordId("unit");
     const nextUnitIndex = config.units.length;
+    pendingUnitScrollIdRef.current = newUnitId;
     setSelectedUnitIndex(nextUnitIndex);
     setEditingUnitIndex(nextUnitIndex);
     setConfig((prev) => ({
@@ -47020,7 +47043,9 @@ const PlatformConfigurationSettings = ({
       await showDarkAlert("Add a unit before editing unit details.", "No Unit Selected", "warning");
       return;
     }
-    setEditingUnitIndex(Math.min(selectedUnitIndex, config.units.length - 1));
+    const unitIndex = Math.min(selectedUnitIndex, config.units.length - 1);
+    scrollUnitRowIntoView(unitIndex);
+    setEditingUnitIndex(unitIndex);
   };
   const deleteSelectedUnit = async () => {
     if (!canEdit) return;
@@ -47033,6 +47058,7 @@ const PlatformConfigurationSettings = ({
       return;
     }
     const unitIndex = Math.min(selectedUnitIndex, config.units.length - 1);
+    scrollUnitRowIntoView(unitIndex);
     const unit = config.units[unitIndex];
     const unitCode = String(unit?.code || "").trim();
     const unitLabel = `${unitCode || "Unnamed Unit"}${unit?.name ? ` - ${unit.name}` : ""}`;
@@ -47493,8 +47519,9 @@ const PlatformConfigurationSettings = ({
       type: "button",
       onClick: () => save(),
       disabled: !canEdit || saving || applyingChanges,
-      className: "ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
-      children: applyingChanges ? "Applying..." : saving ? "Saving..." : "Save"
+      className: `${platformActionButtonClass} ml-auto`,
+      title: applyingChanges ? "Applying changes" : saving ? "Saving platform configuration" : "Save platform configuration",
+      children: "Save"
     }
   );
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", children: [
@@ -47689,9 +47716,13 @@ const PlatformConfigurationSettings = ({
         const unitSettings = unit.settings || {};
         const isSelectedUnit = selectedUnitIndex === index;
         const isUnitEditing = canEdit && editingUnitIndex === index;
+        const rowKey = unit.id || `platform-unit-${index}`;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
+            ref: (node) => {
+              unitRowRefs.current[rowKey] = node;
+            },
             onClick: () => setSelectedUnitIndex(index),
             className: `grid cursor-pointer gap-3 rounded border bg-gray-900 p-3 transition-colors md:grid-cols-12 ${isSelectedUnit ? "border-cyan-400/70 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]" : "border-gray-700 hover:border-gray-500"}`,
             children: [
@@ -47718,7 +47749,7 @@ const PlatformConfigurationSettings = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !isUnitEditing, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) }) })
             ]
           },
-          unit.id || `platform-unit-${index}`
+          rowKey
         );
       }) })
     ] }),

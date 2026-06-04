@@ -932,6 +932,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const locationRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingLocationScrollIdRef = useRef<string | null>(null);
+  const unitRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const pendingUnitScrollIdRef = useRef<string | null>(null);
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
@@ -1081,6 +1083,28 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 40);
   }, [config.locations.length]);
+
+  const scrollUnitRowIntoView = (unitIndex: number) => {
+    const unit = config.units[unitIndex];
+    if (!unit) return;
+    const rowKey = unit.id || `platform-unit-${unitIndex}`;
+    const target = unitRowRefs.current[rowKey];
+    if (!target) return;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 40);
+  };
+
+  useEffect(() => {
+    const pendingUnitId = pendingUnitScrollIdRef.current;
+    if (!pendingUnitId) return;
+    const target = unitRowRefs.current[pendingUnitId];
+    if (!target) return;
+    pendingUnitScrollIdRef.current = null;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 40);
+  }, [config.units.length]);
 
   useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
@@ -1540,6 +1564,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const defaultLocation = config.locations[0]?.code || 'ESL';
     const newUnitId = createClientRecordId('unit');
     const nextUnitIndex = config.units.length;
+    pendingUnitScrollIdRef.current = newUnitId;
     setSelectedUnitIndex(nextUnitIndex);
     setEditingUnitIndex(nextUnitIndex);
     setConfig((prev) => ({
@@ -1566,7 +1591,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       await showDarkAlert('Add a unit before editing unit details.', 'No Unit Selected', 'warning');
       return;
     }
-    setEditingUnitIndex(Math.min(selectedUnitIndex, config.units.length - 1));
+    const unitIndex = Math.min(selectedUnitIndex, config.units.length - 1);
+    scrollUnitRowIntoView(unitIndex);
+    setEditingUnitIndex(unitIndex);
   };
 
   const deleteSelectedUnit = async () => {
@@ -1581,6 +1608,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
 
     const unitIndex = Math.min(selectedUnitIndex, config.units.length - 1);
+    scrollUnitRowIntoView(unitIndex);
     const unit = config.units[unitIndex];
     const unitCode = String(unit?.code || '').trim();
     const unitLabel = `${unitCode || 'Unnamed Unit'}${unit?.name ? ` - ${unit.name}` : ''}`;
@@ -2129,9 +2157,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       type="button"
       onClick={() => save()}
       disabled={!canEdit || saving || applyingChanges}
-      className="ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+      className={`${platformActionButtonClass} ml-auto`}
+      title={applyingChanges ? 'Applying changes' : saving ? 'Saving platform configuration' : 'Save platform configuration'}
     >
-      {applyingChanges ? 'Applying...' : saving ? 'Saving...' : 'Save'}
+      Save
     </button>
   );
 
@@ -2382,9 +2411,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             const unitSettings = unit.settings || {};
             const isSelectedUnit = selectedUnitIndex === index;
             const isUnitEditing = canEdit && editingUnitIndex === index;
+            const rowKey = unit.id || `platform-unit-${index}`;
             return (
               <div
-                key={unit.id || `platform-unit-${index}`}
+                key={rowKey}
+                ref={(node) => { unitRowRefs.current[rowKey] = node; }}
                 onClick={() => setSelectedUnitIndex(index)}
                 className={`grid cursor-pointer gap-3 rounded border bg-gray-900 p-3 transition-colors md:grid-cols-12 ${
                   isSelectedUnit ? 'border-cyan-400/70 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]' : 'border-gray-700 hover:border-gray-500'
