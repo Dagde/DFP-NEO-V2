@@ -1383,11 +1383,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addUnit = () => {
     const defaultLocation = config.locations[0]?.code || 'ESL';
+    const newUnitId = createClientRecordId('unit');
     setConfig((prev) => ({
       ...prev,
       units: [
         ...prev.units,
         {
+          id: newUnitId,
           code: `UNIT-${prev.units.length + 1}`,
           name: 'New Unit',
           organisationCode: prev.organisations[0]?.code || 'DEFAULT',
@@ -1402,11 +1404,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addResourcePool = () => {
     const defaultLocation = config.locations[0]?.code || 'ESL';
+    const newPoolId = createClientRecordId('pool');
     setConfig((prev) => ({
       ...prev,
       resourcePools: [
         ...prev.resourcePools,
         {
+          id: newPoolId,
           code: `POOL-${prev.resourcePools.length + 1}`,
           name: 'New Resource Pool',
           organisationCode: prev.organisations[0]?.code || 'DEFAULT',
@@ -1438,6 +1442,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const addLicense = () => {
     setConfig((prev) => {
       const organisationCode = prev.organisations[0]?.code || 'DEFAULT';
+      const newLicenseId = createClientRecordId('license');
       const activeModuleCodes = prev.modules
         .filter((module) => String(module.status || 'ACTIVE').toUpperCase() === 'ACTIVE')
         .map((module) => module.code)
@@ -1447,6 +1452,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         licenses: [
           ...prev.licenses,
           {
+            id: newLicenseId,
             organisationCode,
             licenseKey: `${organisationCode}-LIC-${prev.licenses.length + 1}`,
             licenseName: 'New Licence',
@@ -2029,7 +2035,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           {config.organisations.map((org, index) => (
-            <div key={org.id || org.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
+            <div key={org.id || `platform-organisation-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
               <Field label="Organisation Code" value={org.code} disabled={!canEdit} onChange={(value) => updateRow('organisations', index, { code: value })} />
               <Field label="Organisation Name" value={org.name} disabled={!canEdit} onChange={(value) => updateRow('organisations', index, { name: value })} />
               <SelectField label="Status" value={org.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('organisations', index, { status: value })} />
@@ -2133,7 +2139,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           {config.units.map((unit, index) => {
             const unitSettings = unit.settings || {};
             return (
-              <div key={unit.id || unit.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12">
+              <div key={unit.id || `platform-unit-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-12">
                 <div className="md:col-span-1">
                   <Field label="Unit" value={unit.code} disabled={!canEdit} onChange={(value) => updateRow('units', index, { code: value })} />
                 </div>
@@ -2216,7 +2222,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <div className="space-y-3">
             {config.aircraftTypes.map((aircraft, index) => (
-              <div key={aircraft.id || aircraft.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
+              <div key={aircraft.id || `platform-aircraft-type-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
                 <Field label="Code" value={aircraft.code} disabled={!canEdit} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
                 <Field label="Name" value={aircraft.name} disabled={!canEdit} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
                 <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEdit} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
@@ -2228,7 +2234,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
               const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
               return (
-              <div key={pool.id || pool.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2">
+              <div key={pool.id || `platform-resource-pool-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2">
                 <Field label="Pool Code" value={pool.code} disabled={!canEdit} onChange={(value) => updateRow('resourcePools', index, { code: value })} />
                 <Field label="Pool Name" value={pool.name} disabled={!canEdit} onChange={(value) => updateRow('resourcePools', index, { name: value })} />
                 <SelectField label="Location" value={pool.locationCode || ''} disabled={!canEdit} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('resourcePools', index, { locationCode: value || null })} />
@@ -2267,7 +2273,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       />
                       <div className="space-y-2">
                         {aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => (
-                          <div key={`${prefix}-${prefixIndex}`} className="flex items-end gap-2">
+                          <div key={`aircraft-number-prefix-${prefixIndex}`} className="flex items-end gap-2">
                             <div className="flex-1">
                               <Field
                                 label={`Prefix ${prefixIndex + 1}`}
@@ -2736,7 +2742,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             )).length;
             const offlineMode = ['Fully Offline', 'Hybrid Offline Sync'].includes(license.deploymentMode || '');
             return (
-              <div key={license.id || license.licenseKey || index} className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+              <div key={license.id || `platform-license-${index}`} className="rounded-lg border border-gray-700 bg-gray-900 p-4">
                 <div className="mb-4 grid gap-3 xl:grid-cols-[1fr,230px,230px,230px]">
                   <div>
                     <h5 className="text-sm font-bold text-white">{license.licenseName || 'Licence'}</h5>

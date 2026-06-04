@@ -1033,11 +1033,11 @@ const LocaleSettingsSection: React.FC<{
             )}
 
             <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
-                {displayedLocations.map(location => {
+                {displayedLocations.map((location, locationIndex) => {
                     const assignedUnits = displayedUnits.filter(unit => displayedUnitLocations[unit] === location);
                     const trainingAreas = displayedOpAreas[location] || [];
                     return (
-                        <section key={location} className="rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
+                        <section key={`settings-location-${locationIndex}`} className="rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
                             <div className="border-b border-gray-700 bg-gray-900/45 px-4 py-3">
                                 <div className="flex flex-wrap items-start gap-3">
                                     <div className="min-w-0 flex-1">

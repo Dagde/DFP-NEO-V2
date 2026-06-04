@@ -46799,11 +46799,13 @@ const PlatformConfigurationSettings = ({
   };
   const addUnit = () => {
     const defaultLocation = config.locations[0]?.code || "ESL";
+    const newUnitId = createClientRecordId("unit");
     setConfig((prev) => ({
       ...prev,
       units: [
         ...prev.units,
         {
+          id: newUnitId,
           code: `UNIT-${prev.units.length + 1}`,
           name: "New Unit",
           organisationCode: prev.organisations[0]?.code || "DEFAULT",
@@ -46817,11 +46819,13 @@ const PlatformConfigurationSettings = ({
   };
   const addResourcePool = () => {
     const defaultLocation = config.locations[0]?.code || "ESL";
+    const newPoolId = createClientRecordId("pool");
     setConfig((prev) => ({
       ...prev,
       resourcePools: [
         ...prev.resourcePools,
         {
+          id: newPoolId,
           code: `POOL-${prev.resourcePools.length + 1}`,
           name: "New Resource Pool",
           organisationCode: prev.organisations[0]?.code || "DEFAULT",
@@ -46852,12 +46856,14 @@ const PlatformConfigurationSettings = ({
   const addLicense = () => {
     setConfig((prev) => {
       const organisationCode = prev.organisations[0]?.code || "DEFAULT";
+      const newLicenseId = createClientRecordId("license");
       const activeModuleCodes = prev.modules.filter((module) => String(module.status || "ACTIVE").toUpperCase() === "ACTIVE").map((module) => module.code).filter(Boolean);
       return {
         ...prev,
         licenses: [
           ...prev.licenses,
           {
+            id: newLicenseId,
             organisationCode,
             licenseKey: `${organisationCode}-LIC-${prev.licenses.length + 1}`,
             licenseName: "New Licence",
@@ -47324,7 +47330,7 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { code: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { name: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) })
-        ] }, org.id || org.code || index)),
+        ] }, org.id || `platform-organisation-${index}`)),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: [
           "Offline airfield catalogue:",
           " ",
@@ -47435,7 +47441,7 @@ const PlatformConfigurationSettings = ({
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) }) })
-        ] }, unit.id || unit.code || index);
+        ] }, unit.id || `platform-unit-${index}`);
       }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-task-profiles", className: getSectionClass("platform-task-profiles"), children: [
@@ -47482,7 +47488,7 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) })
-        ] }, aircraft.id || aircraft.code || index)) }),
+        ] }, aircraft.id || `platform-aircraft-type-${index}`)) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.resourcePools.map((pool, index) => {
           const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
           const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
@@ -47547,7 +47553,7 @@ const PlatformConfigurationSettings = ({
                       children: "Delete"
                     }
                   )
-                ] }, `${prefix}-${prefixIndex}`)) }),
+                ] }, `aircraft-number-prefix-${prefixIndex}`)) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
@@ -47634,7 +47640,7 @@ const PlatformConfigurationSettings = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
             ] })
-          ] }, pool.id || pool.code || index);
+          ] }, pool.id || `platform-resource-pool-${index}`);
         }) })
       ] })
     ] }),
@@ -48093,7 +48099,7 @@ const PlatformConfigurationSettings = ({
                 ] })
               ] }, module.code)) })
             ] })
-          ] }, license.id || license.licenseKey || index);
+          ] }, license.id || `platform-license-${index}`);
         })
       ] })
     ] }),
@@ -49867,7 +49873,7 @@ const LocaleSettingsSection = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addLocation, className: "rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700", children: "Add Location" })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-4 2xl:grid-cols-2", children: displayedLocations.map((location) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-4 2xl:grid-cols-2", children: displayedLocations.map((location, locationIndex) => {
       const assignedUnits = displayedUnits.filter((unit) => displayedUnitLocations[unit] === location);
       const trainingAreas = displayedOpAreas[location] || [];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
@@ -49972,7 +49978,7 @@ const LocaleSettingsSection = ({
             ] })
           ] })
         ] })
-      ] }, location);
+      ] }, `settings-location-${locationIndex}`);
     }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 bg-gray-900/45 px-4 py-3", children: [
