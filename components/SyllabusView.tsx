@@ -506,7 +506,6 @@ const DetailView: React.FC<{
 
 type LmpDetailsTab = 'master' | 'packages';
 
-const STATIC_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh'];
 const STATIC_TRAINING_PACKAGES: string[] = [];
 
 const getItemLmpDetailsTab = (item: SyllabusItemDetail): LmpDetailsTab =>
@@ -516,7 +515,7 @@ const getActiveLmpType = (tab: LmpDetailsTab): NonNullable<SyllabusItemDetail['l
     tab === 'packages' ? 'Staff CAT' : 'Master LMP';
 
 const getDefaultLmpSelection = (tab: LmpDetailsTab): string =>
-    tab === 'packages' ? (STATIC_TRAINING_PACKAGES[0] || '') : STATIC_MASTER_LMPS[0];
+    tab === 'packages' ? (STATIC_TRAINING_PACKAGES[0] || '') : '';
 
 const getPackageCodeFromTitle = (title: string): string => {
     const words = title.trim().split(/\s+/).filter(Boolean);
@@ -554,16 +553,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const activeCollectionTitle = isTrainingPackagesTab ? 'Training Packages' : 'Master LMP';
   const activeCollectionSelectLabel = isTrainingPackagesTab ? 'Package:' : 'Course:';
 
-  // Dynamic course list: union of static list + any courses found in active syllabusDetails
+  // Dynamic course list: only courses found in the currently visible syllabusDetails.
+  // App-level unit access filtering happens before this view is rendered.
   const courseLMPs = useMemo(() => {
     const fromSyllabus = new Set<string>();
     syllabusDetails.filter(item => item.isActive !== false).forEach(item => {
       if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach(c => { if (c) fromSyllabus.add(c); });
     });
-    const staticItems = activeTab === 'packages' ? STATIC_TRAINING_PACKAGES : STATIC_MASTER_LMPS;
-    const all = new Set([...staticItems, ...Array.from(fromSyllabus)]);
-    return Array.from(all).sort();
+    return Array.from(fromSyllabus).sort();
   }, [activeTab, syllabusDetails]);
 
   // Map from course code → full display title (uses module field of first item in that course)
@@ -634,7 +632,16 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     }, []);
 
   useEffect(() => {
-    if (courseLMPs.length === 0) return;
+    if (courseLMPs.length === 0) {
+        if (selectedCourseType) {
+            setSelectedCourseType('');
+            setSelectedItem(null);
+            setHoveredItem(null);
+            setIsEditing(false);
+            setEditedItem(null);
+        }
+        return;
+    }
     if (!courseLMPs.includes(selectedCourseType)) {
         setSelectedCourseType(courseLMPs[0]);
         setSelectedItem(null);
@@ -1100,6 +1107,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     }}
                     className="bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8"
                 >
+                    {courseLMPs.length === 0 && <option value="">No Master LMP available</option>}
                     {courseLMPs.map(c => <option key={`${activeTab}-${c}`} value={c}>{getCourseTitle(c)}</option>)}
                 </select>
             </div>

@@ -33748,11 +33748,9 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
     ) })
   ] });
 };
-const STATIC_MASTER_LMPS = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh"];
-const STATIC_TRAINING_PACKAGES = [];
 const getItemLmpDetailsTab = (item) => item.lmpType === "Staff CAT" ? "packages" : "master";
 const getActiveLmpType = (tab) => tab === "packages" ? "Staff CAT" : "Master LMP";
-const getDefaultLmpSelection = (tab) => tab === "packages" ? "" : STATIC_MASTER_LMPS[0];
+const getDefaultLmpSelection = (tab) => tab === "packages" ? "" : "";
 const getPackageCodeFromTitle = (title) => {
   const words = title.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return "";
@@ -33793,9 +33791,7 @@ const SyllabusView = ({
         if (c) fromSyllabus.add(c);
       });
     });
-    const staticItems = activeTab === "packages" ? STATIC_TRAINING_PACKAGES : STATIC_MASTER_LMPS;
-    const all = /* @__PURE__ */ new Set([...staticItems, ...Array.from(fromSyllabus)]);
-    return Array.from(all).sort();
+    return Array.from(fromSyllabus).sort();
   }, [activeTab, syllabusDetails]);
   const courseTitleMap = reactExports.useMemo(() => {
     const map = {};
@@ -33848,7 +33844,16 @@ const SyllabusView = ({
     });
   }, []);
   reactExports.useEffect(() => {
-    if (courseLMPs.length === 0) return;
+    if (courseLMPs.length === 0) {
+      if (selectedCourseType) {
+        setSelectedCourseType("");
+        setSelectedItem(null);
+        setHoveredItem(null);
+        setIsEditing(false);
+        setEditedItem(null);
+      }
+      return;
+    }
     if (!courseLMPs.includes(selectedCourseType)) {
       setSelectedCourseType(courseLMPs[0]);
       setSelectedItem(null);
@@ -34258,7 +34263,7 @@ const SyllabusView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4 pt-1", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 bg-gray-700 p-1 rounded-md", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "course-select", className: "text-xs text-gray-300 font-medium pl-2", children: activeCollectionSelectLabel }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
               {
                 id: "course-select",
@@ -34268,7 +34273,10 @@ const SyllabusView = ({
                   setSelectedItem(null);
                 },
                 className: "bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8",
-                children: courseLMPs.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: getCourseTitle(c) }, `${activeTab}-${c}`))
+                children: [
+                  courseLMPs.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No Master LMP available" }),
+                  courseLMPs.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: getCourseTitle(c) }, `${activeTab}-${c}`))
+                ]
               }
             )
           ] }),
