@@ -456,7 +456,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const renderInstructorUnitCard = (unit: string) => (
     <div key={unit} className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-        <div className="p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+        <div className="p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
             <h3 className="text-lg font-bold text-sky-400">{unit}</h3>
             <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} Staff</span>
         </div>
@@ -468,7 +468,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const renderFlightCard = (flight: string) => (
     <div key={`flight-${flight}`} className="bg-gray-800 border border-cyan-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-        <div className="p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+        <div className="p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
             <div>
                 <h3 className="text-lg font-bold text-cyan-400">{flight} Flight</h3>
                 <p className="text-xs text-gray-400">Flight staff</p>
@@ -486,7 +486,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         {/* SIM IPs - single combined card regardless of unit */}
         {simIps.length > 0 && (
             <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
                     <h3 className="text-lg font-bold text-teal-400">SIM IP</h3>
                     <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
                 </div>
@@ -499,7 +499,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         {/* OFIs */}
         {sortedOfiUnits.map(unit => (
             <div key={`ofi-${unit}`} className="bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                <div className="p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                <div className="p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
                     <div>
                         <h3 className="text-lg font-bold text-purple-400">OFIs</h3>
                         <p className="text-xs text-gray-400">{unit}</p>
@@ -515,7 +515,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         {/* Other Staff - All staff who don't fit into instructor, SIM IP, or OFI categories */}
         {sortedOtherStaffUnits.map(unit => (
             <div key={`other-${unit}`} className="bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                <div className="p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                <div className="p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
                     <div>
                         <h3 className="text-lg font-bold text-orange-400">Other Staff</h3>
                         <p className="text-xs text-gray-400">{unit}</p>
