@@ -12405,6 +12405,63 @@ const App: React.FC = () => {
     const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
     const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
 
+    const hasConfiguredCourseUnitScope = useMemo(
+        () => (platformConfig?.units || []).some((unit: any) => unit.status !== 'INACTIVE'),
+        [platformConfig],
+    );
+
+    const getCourseUnitCodes = useCallback((course: Course): string[] => {
+        const rawUnit = String(course.unit || '').trim();
+        if (!rawUnit) return [];
+        return Array.from(new Set(
+            rawUnit
+                .split(/[+,/]/)
+                .map(unit => unit.trim().toUpperCase())
+                .filter(Boolean)
+        ));
+    }, []);
+
+    const courseMatchesActiveContext = useCallback((course: Course): boolean => {
+        const courseUnits = getCourseUnitCodes(course);
+        const hasCourseUnit = courseUnits.length > 0;
+        const courseLocation = String(course.location || '').trim();
+        const hasCourseLocation = courseLocation.length > 0;
+
+        if (hasConfiguredCourseUnitScope && !hasCourseUnit) {
+            return false;
+        }
+
+        if (hasCourseUnit && activeContextUnitCodeSet.size > 0) {
+            const unitMatches = courseUnits.some(unitCode => activeContextUnitCodeSet.has(unitCode));
+            if (!unitMatches) return false;
+        }
+
+        if (hasCourseLocation && !isActiveLocationAlias(courseLocation)) {
+            return false;
+        }
+
+        if (!hasConfiguredCourseUnitScope && !hasCourseUnit && !hasCourseLocation) {
+            return true;
+        }
+
+        return hasCourseUnit || hasCourseLocation;
+    }, [activeContextUnitCodeSet, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
+
+    const scopedCourses = useMemo(
+        () => courses.filter(courseMatchesActiveContext),
+        [courseMatchesActiveContext, courses],
+    );
+
+    const scopedCourseNameSet = useMemo(
+        () => new Set(scopedCourses.map(course => course.name)),
+        [scopedCourses],
+    );
+
+    const scopedCourseColors = useMemo(() => {
+        const entries = Object.entries(courseColors).filter(([courseName]) => scopedCourseNameSet.has(courseName));
+        return Object.fromEntries(entries);
+    }, [courseColors, scopedCourseNameSet]);
+
     // Auto-populate coursePriorities & coursePercentages from traineesData (locality-filtered).
     // traineesData is already filtered by the active school (ESL/PEA), so only courses
     // belonging to the current locality are included. If saved priorities exist (from DB
@@ -22541,7 +22598,7 @@ updates.forEach(update => {
                             showValidation={showValidation}
                             unavailabilityConflicts={unavailabilityConflicts}
                             onSelectTrainee={handleSelectTraineeFromSchedule}
-                            courseColors={courseColors}
+                            courseColors={scopedCourseColors}
                             aircraftNumberSettings={aircraftNumberSettings}
                        />;
             case 'InstructorSchedule':
@@ -22648,14 +22705,14 @@ updates.forEach(update => {
                     onSelectTrainee={handleSelectTraineeFromSchedule}
                     buildDfpDate={buildDfpDate}
                     onDateChange={handleBuildDateChange}
-                    courseColors={courseColors}
+                    courseColors={scopedCourseColors}
                     aircraftNumberSettings={aircraftNumberSettings}
                 />;
             case 'Trainee':
                 return <TraineeView
                             events={events}
                             traineesData={traineesData}
-                            courseColors={courseColors}
+                            courseColors={scopedCourseColors}
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
@@ -22812,7 +22869,7 @@ updates.forEach(update => {
                 return <CourseRosterView
                             events={events}
                             traineesData={traineesData}
-                            courseColors={courseColors}
+                            courseColors={scopedCourseColors}
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
@@ -23264,9 +23321,9 @@ updates.forEach(update => {
                 />;
             case 'CourseProgress':
                 return <CourseProgressView
-                            courses={courses}
+                            courses={scopedCourses}
                             traineesData={traineesData}
-                            courseColors={courseColors}
+                            courseColors={scopedCourseColors}
                             scores={scores}
                             pt051Assessments={pt051Assessments}
                             traineeLMPs={traineeLMPs}
@@ -23275,8 +23332,8 @@ updates.forEach(update => {
                         />;
             case 'TrainingRecords':
                 return <TrainingRecordsView
-                    courses={courses}
-                    courseColors={courseColors}
+                    courses={scopedCourses}
+                    courseColors={scopedCourseColors}
                     archivedCourses={archivedCourses}
                     onAddCourse={handleAddCourseFromTrainingRecords}
                     onDeleteCourse={handleDeleteCourseFromTrainingRecords}
@@ -23313,7 +23370,7 @@ updates.forEach(update => {
                             events={nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}))}
                             instructorsData={instructorsData}
                             traineesData={traineesData}
-                            activeCourses={coursePriorities.length > 0 ? coursePriorities : [...new Set(traineesData.map(t => t.course).filter(c => c && courseColors[c]))]}
+                            activeCourses={coursePriorities.length > 0 ? coursePriorities.filter(course => scopedCourseColors[course]) : [...new Set(traineesData.map(t => t.course).filter(c => c && scopedCourseColors[c]))]}
                             onNavigateAndSelectPerson={(name) => {
                                 const person = [...allInstructorsData, ...allTraineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
                                 if (person) {
@@ -23324,7 +23381,7 @@ updates.forEach(update => {
                             scores={scores}
                             syllabusDetails={syllabusDetails}
                             traineeLMPs={traineeLMPs}
-                            courseColors={courseColors}
+                            courseColors={scopedCourseColors}
                             currentUserRole={currentUserPermission}
                             currentUserId={getCurrentUserId() ?? undefined}
                             cancellationRecords={cancellationRecords}
@@ -24655,7 +24712,7 @@ updates.forEach(update => {
             <Sidebar
                 activeView={activeView}
                 onNavigate={handleNavigation}
-                courseColors={courseColors}
+                courseColors={scopedCourseColors}
                 onAddCourse={(data) => setCourseColors(prev => ({ ...prev, [data.number]: data.color }))}
                 onArchiveCourse={(courseNumber) => {
                     const color = courseColors[courseNumber];
@@ -24902,7 +24959,7 @@ updates.forEach(update => {
             <RightSidebar
                 activeView={activeView}
                 onNavigate={handleNavigation}
-                courseColors={courseColors}
+                courseColors={scopedCourseColors}
                 onBuildDfpClick={handleBuildDfp}
                 isSupervisor={true}
                 onPublish={handlePublish}
@@ -24933,7 +24990,7 @@ updates.forEach(update => {
                     school={school}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
-                    courseColors={courseColors}
+                    courseColors={scopedCourseColors}
                     date={selectedEvent.date || date}
                     traineeLMPs={traineeLMPs}
                     scores={scores}
@@ -24970,7 +25027,7 @@ updates.forEach(update => {
                     traineesData={traineesData}
                     instructorsData={instructorsData}
                     personnelDisplaySettings={personnelDisplaySettings}
-                    courseColors={courseColors}
+                    courseColors={scopedCourseColors}
                     eventsForDate={eventsForDate}
                     onNavigateToHateSheet={(trainee) => {
                         setSelectedEvent(null);
@@ -25231,7 +25288,7 @@ updates.forEach(update => {
                     onSave={handleSaveGroundEvent}
                     onSaveAcademic={handleSaveAcademicEvent}
                     groundSyllabus={syllabusDetails.filter(s => s.type === 'Ground School')}
-                    activeCourses={courseColors}
+                    activeCourses={scopedCourseColors}
                     allTraineesByCourse={allTraineesByCourse}
                     instructors={instructorsData.map(i => i.name)}
                     traineesData={traineesData}
@@ -25240,7 +25297,7 @@ updates.forEach(update => {
                     traineeLMPs={traineeLMPs}
                     events={events}
                     date={buildDfpDate || new Date().toISOString().split('T')[0]}
-                    courseColors={courseColors}
+                    courseColors={scopedCourseColors}
                     school={school}
                     locationAbbreviations={locationAbbreviations}
                     courseAcademicProgress={courseAcademicProgress}

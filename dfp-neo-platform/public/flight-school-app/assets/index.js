@@ -68160,6 +68160,49 @@ const App = () => {
   const [coursePriorities, setCoursePriorities] = reactExports.useState([]);
   const [coursePercentages, setCoursePercentages] = reactExports.useState(/* @__PURE__ */ new Map());
   const [traineeLMPs, setTraineeLMPs] = reactExports.useState(/* @__PURE__ */ new Map());
+  const hasConfiguredCourseUnitScope = reactExports.useMemo(
+    () => (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE"),
+    [platformConfig]
+  );
+  const getCourseUnitCodes = reactExports.useCallback((course) => {
+    const rawUnit = String(course.unit || "").trim();
+    if (!rawUnit) return [];
+    return Array.from(new Set(
+      rawUnit.split(/[+,/]/).map((unit) => unit.trim().toUpperCase()).filter(Boolean)
+    ));
+  }, []);
+  const courseMatchesActiveContext = reactExports.useCallback((course) => {
+    const courseUnits = getCourseUnitCodes(course);
+    const hasCourseUnit = courseUnits.length > 0;
+    const courseLocation = String(course.location || "").trim();
+    const hasCourseLocation = courseLocation.length > 0;
+    if (hasConfiguredCourseUnitScope && !hasCourseUnit) {
+      return false;
+    }
+    if (hasCourseUnit && activeContextUnitCodeSet.size > 0) {
+      const unitMatches = courseUnits.some((unitCode) => activeContextUnitCodeSet.has(unitCode));
+      if (!unitMatches) return false;
+    }
+    if (hasCourseLocation && !isActiveLocationAlias(courseLocation)) {
+      return false;
+    }
+    if (!hasConfiguredCourseUnitScope && !hasCourseUnit && !hasCourseLocation) {
+      return true;
+    }
+    return hasCourseUnit || hasCourseLocation;
+  }, [activeContextUnitCodeSet, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
+  const scopedCourses = reactExports.useMemo(
+    () => courses.filter(courseMatchesActiveContext),
+    [courseMatchesActiveContext, courses]
+  );
+  const scopedCourseNameSet = reactExports.useMemo(
+    () => new Set(scopedCourses.map((course) => course.name)),
+    [scopedCourses]
+  );
+  const scopedCourseColors = reactExports.useMemo(() => {
+    const entries = Object.entries(courseColors).filter(([courseName]) => scopedCourseNameSet.has(courseName));
+    return Object.fromEntries(entries);
+  }, [courseColors, scopedCourseNameSet]);
   reactExports.useEffect(() => {
     const localityCourseNames = [...new Set(
       traineesData.map((t) => t.course).filter((c) => c && courseColors[c])
@@ -76219,7 +76262,7 @@ ${conflictLines.join("\n")}${moreText}`,
             showValidation,
             unavailabilityConflicts,
             onSelectTrainee: handleSelectTraineeFromSchedule,
-            courseColors,
+            courseColors: scopedCourseColors,
             aircraftNumberSettings
           }
         );
@@ -76322,7 +76365,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onSelectTrainee: handleSelectTraineeFromSchedule,
             buildDfpDate,
             onDateChange: handleBuildDateChange,
-            courseColors,
+            courseColors: scopedCourseColors,
             aircraftNumberSettings
           }
         );
@@ -76332,7 +76375,7 @@ ${conflictLines.join("\n")}${moreText}`,
           {
             events,
             traineesData,
-            courseColors,
+            courseColors: scopedCourseColors,
             archivedCourses,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
@@ -76480,7 +76523,7 @@ ${conflictLines.join("\n")}${moreText}`,
           {
             events,
             traineesData,
-            courseColors,
+            courseColors: scopedCourseColors,
             archivedCourses,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
@@ -76913,9 +76956,9 @@ ${conflictLines.join("\n")}${moreText}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           CourseProgressView,
           {
-            courses,
+            courses: scopedCourses,
             traineesData,
-            courseColors,
+            courseColors: scopedCourseColors,
             scores,
             pt051Assessments,
             traineeLMPs,
@@ -76927,8 +76970,8 @@ ${conflictLines.join("\n")}${moreText}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           TrainingRecordsView,
           {
-            courses,
-            courseColors,
+            courses: scopedCourses,
+            courseColors: scopedCourseColors,
             archivedCourses,
             onAddCourse: handleAddCourseFromTrainingRecords,
             onDeleteCourse: handleDeleteCourseFromTrainingRecords,
@@ -76971,7 +77014,7 @@ ${conflictLines.join("\n")}${moreText}`,
             events: nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })),
             instructorsData,
             traineesData,
-            activeCourses: coursePriorities.length > 0 ? coursePriorities : [...new Set(traineesData.map((t) => t.course).filter((c) => c && courseColors[c]))],
+            activeCourses: coursePriorities.length > 0 ? coursePriorities.filter((course) => scopedCourseColors[course]) : [...new Set(traineesData.map((t) => t.course).filter((c) => c && scopedCourseColors[c]))],
             onNavigateAndSelectPerson: (name) => {
               const person = [...allInstructorsData, ...allTraineesData].find((p) => p.name === name || "fullName" in p && p.fullName === name);
               if (person) {
@@ -76982,7 +77025,7 @@ ${conflictLines.join("\n")}${moreText}`,
             scores,
             syllabusDetails,
             traineeLMPs,
-            courseColors,
+            courseColors: scopedCourseColors,
             currentUserRole: currentUserPermission,
             currentUserId: getCurrentUserId() ?? void 0,
             cancellationRecords,
@@ -78159,7 +78202,7 @@ Do you want to replace the existing entry?`,
         {
           activeView,
           onNavigate: handleNavigation,
-          courseColors,
+          courseColors: scopedCourseColors,
           onAddCourse: (data) => setCourseColors((prev) => ({ ...prev, [data.number]: data.color })),
           onArchiveCourse: (courseNumber) => {
             const color = courseColors[courseNumber];
@@ -78421,7 +78464,7 @@ Do you want to replace the existing entry?`,
         {
           activeView,
           onNavigate: handleNavigation,
-          courseColors,
+          courseColors: scopedCourseColors,
           onBuildDfpClick: handleBuildDfp,
           isSupervisor: true,
           onPublish: handlePublish,
@@ -78453,7 +78496,7 @@ Do you want to replace the existing entry?`,
           school,
           traineesData,
           instructorsData,
-          courseColors,
+          courseColors: scopedCourseColors,
           date: selectedEvent.date || date,
           traineeLMPs,
           scores,
@@ -78490,7 +78533,7 @@ Do you want to replace the existing entry?`,
           traineesData,
           instructorsData,
           personnelDisplaySettings,
-          courseColors,
+          courseColors: scopedCourseColors,
           eventsForDate,
           onNavigateToHateSheet: (trainee) => {
             setSelectedEvent(null);
@@ -78726,7 +78769,7 @@ Do you want to replace the existing entry?`,
           onSave: handleSaveGroundEvent,
           onSaveAcademic: handleSaveAcademicEvent,
           groundSyllabus: syllabusDetails.filter((s) => s.type === "Ground School"),
-          activeCourses: courseColors,
+          activeCourses: scopedCourseColors,
           allTraineesByCourse,
           instructors: instructorsData.map((i) => i.name),
           traineesData,
@@ -78735,7 +78778,7 @@ Do you want to replace the existing entry?`,
           traineeLMPs,
           events,
           date: buildDfpDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
-          courseColors,
+          courseColors: scopedCourseColors,
           school,
           locationAbbreviations,
           courseAcademicProgress,
