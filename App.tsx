@@ -22,6 +22,7 @@ import {
     getPlatformPermissionProfiles,
     getResourcePoolCount,
     getUnitOperationalModel,
+    hasMasterLmpAccess,
     hasPlatformPermission,
     hasPlatformModuleAccess,
     loadPlatformConfigFromDB,
@@ -15452,6 +15453,22 @@ const App: React.FC = () => {
             unavailabilityLength: data.unavailability?.length || 0
         });
 
+        const traineeUnitCode = data.unit || activeUnitCode;
+        const requestedLmpType = data.lmpType || '';
+        const requestedAcademicLmpType = (data as any).academicLmpType || '';
+        const lmpAccessContext = {
+            unitCode: traineeUnitCode,
+            operationalModel: activeOperationalModel,
+        };
+        if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, 'Assign')) {
+            setErrorMessage(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || 'this unit'}. Check Settings → Platform & Deployment → Master LMP Access.`);
+            return;
+        }
+        if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, 'Assign')) {
+            setErrorMessage(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || 'this unit'}. Check Settings → Platform & Deployment → Master LMP Access.`);
+            return;
+        }
+
         // Update in-memory state immediately
         setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
 
@@ -15532,7 +15549,7 @@ const App: React.FC = () => {
         } else {
             console.log('⚠️ [APP] Skipping DB update - not a DB trainee or no ID');
         }
-    }, []);
+    }, [activeOperationalModel, activeUnitCode, platformConfig]);
 
     const buildRemedialPackageLmp = (
         originalTraineeLMP: SyllabusItemDetail[],
@@ -16278,6 +16295,20 @@ const App: React.FC = () => {
         courseName: string,
         data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }
     ) => {
+        const courseUnitCode = data.unit || activeUnitCode;
+        const lmpAccessContext = {
+            unitCode: courseUnitCode,
+            operationalModel: activeOperationalModel,
+        };
+        if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, 'Assign')) {
+            setErrorMessage(`Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || 'this unit'}. Check Settings → Platform & Deployment → Master LMP Access.`);
+            return;
+        }
+        if (data.academicLmpType && !hasMasterLmpAccess(platformConfig, data.academicLmpType, lmpAccessContext, 'Assign')) {
+            setErrorMessage(`Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || 'this unit'}. Check Settings → Platform & Deployment → Master LMP Access.`);
+            return;
+        }
+
         // Update local state - courses array with all new fields
         setCourses(prevCourses =>
             prevCourses.map(course =>
@@ -22684,6 +22715,7 @@ updates.forEach(update => {
                             pt051Assessments={pt051Assessments}
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
+                            platformConfig={platformConfig}
                         />;
             case 'CourseRoster':
                 return <CourseRosterView
@@ -23173,6 +23205,7 @@ updates.forEach(update => {
                     onSavePT051Assessment={onSavePT051Assessment}
                     locations={locations}
                     units={units}
+                    platformConfig={platformConfig}
                     resourceDisplayNames={resourceDisplayNames}
                     instructorLabel={instructorLabel}
                 />;

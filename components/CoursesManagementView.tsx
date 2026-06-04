@@ -4,6 +4,7 @@ import { Course, SyllabusItemDetail } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
 import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
+import type { PlatformConfig } from '../utils/platformConfigService';
 
 interface CoursesManagementViewProps {
     courses: Course[];
@@ -18,6 +19,7 @@ interface CoursesManagementViewProps {
     locations?: string[];
     units?: string[];
     syllabusDetails?: SyllabusItemDetail[];
+    platformConfig?: PlatformConfig | null;
 }
 
 const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
@@ -33,6 +35,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     locations = [],
     units = [],
     syllabusDetails = [],
+    platformConfig = null,
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
     const { isFrozen } = useSystemFreeze();
@@ -320,6 +323,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     locations={locations}
                     units={units}
                     syllabusDetails={syllabusDetails}
+                    platformConfig={platformConfig}
                     onClose={() => {
                         setShowEditFlyout(false);
                         setCourseToEdit(null);

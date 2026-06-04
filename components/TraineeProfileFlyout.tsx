@@ -32,6 +32,10 @@ import {
   setTraineeSuspendedMarker,
 } from '../utils/traineeStatus';
 import { isExternalDataAllowed } from '../utils/externalDataControls';
+import {
+  filterMasterLmpCodesForAccess,
+  type PlatformConfig,
+} from '../utils/platformConfigService';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -81,6 +85,7 @@ interface TraineeProfileFlyoutProps {
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
   trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
+  platformConfig?: PlatformConfig | null;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -319,13 +324,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+  platformConfig = null,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
 
     // Dynamic Academic LMP courses: extract unique course codes from Academics-type syllabus items (DB only)
-    const academicLmpCourses = useMemo(() => {
+    const allAcademicLmpCourses = useMemo(() => {
         const courseCodes = new Set<string>();
         syllabusDetails.forEach(s => {
             if (s.type === 'Academics' && s.courses) {
@@ -390,6 +396,29 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [phoneNumber, setPhoneNumber] = useState(trainee.phoneNumber || '');
     const [email, setEmail] = useState(trainee.email || '');
     const [traineeCallsign, setTraineeCallsign] = useState(trainee.traineeCallsign || '');
+
+    const assignableMasterLmps = useMemo(() => {
+        const courseCodes = new Set<string>(COURSE_MASTER_LMPS.filter(lmp => lmp !== 'Staff CAT'));
+        syllabusDetails.forEach(s => {
+            if (s.type === 'Academics' || s.lmpType === 'Staff CAT') return;
+            (s.courses || []).forEach(c => courseCodes.add(c));
+        });
+        const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+            unitCode: unit || trainee.unit,
+            operationalModel: 'flight_school',
+        }, 'Assign');
+        if (lmpType && !allowed.includes(lmpType)) allowed.push(lmpType);
+        return allowed.sort();
+    }, [lmpType, platformConfig, syllabusDetails, trainee.unit, unit]);
+
+    const academicLmpCourses = useMemo(() => {
+        const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
+            unitCode: unit || trainee.unit,
+            operationalModel: 'flight_school',
+        }, 'Assign');
+        if (academicLmpType && !allowed.includes(academicLmpType)) allowed.push(academicLmpType);
+        return allowed.sort();
+    }, [academicLmpType, allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
     const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
     const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
@@ -1279,7 +1308,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 {(activeCourses || []).length > 0 ? (activeCourses || []).map(c => <option key={c} value={c}>{c}</option>) : <option disabled>No courses</option>}
                               </Dropdown>
                               <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
-                                {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
+                                {assignableMasterLmps.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
                               </Dropdown>
                               <Dropdown label="Academic LMP" value={academicLmpType} onChange={e => setAcademicLmpType(e.target.value)}>
                                 <option value="">None</option>

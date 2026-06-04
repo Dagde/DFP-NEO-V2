@@ -8,6 +8,7 @@ import type { TrainingReportTerminology } from '../utils/trainingReportTerminolo
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import type { PlatformConfig } from '../utils/platformConfigService';
 
 interface TraineeViewProps {
   // Props for CourseRosterView
@@ -62,6 +63,7 @@ interface TraineeViewProps {
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
   trainingReportTerminology?: TrainingReportTerminology;
+  platformConfig?: PlatformConfig | null;
 
   // Props for TraineeScheduleView
   date: string;
@@ -143,6 +145,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onSelectPt051ForEvent={props.onSelectPt051ForEvent}
             locations={props.locations}
             units={props.units}
+            platformConfig={props.platformConfig}
             selectedPersonForProfile={props.selectedPersonForProfile}
             selectedProfileInitialTab={props.selectedProfileInitialTab}
             onProfileOpened={props.onProfileOpened}

@@ -16,6 +16,7 @@ import type { TrainingReportTerminology } from '../utils/trainingReportTerminolo
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import type { PlatformConfig } from '../utils/platformConfigService';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -70,6 +71,7 @@ interface CourseRosterViewProps {
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
     trainingReportTerminology?: TrainingReportTerminology;
+    platformConfig?: PlatformConfig | null;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -150,6 +152,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
     trainingReportTerminology,
+    platformConfig = null,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -509,6 +512,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     resourceDisplayNames={resourceDisplayNames}
                     personnelDisplaySettings={personnelDisplaySettings}
                     trainingReportTerminology={trainingReportTerminology}
+                    platformConfig={platformConfig}
                     pt051Assessments={pt051Assessments}
                     pt051PerformanceLoading={pt051PerformanceLoading}
                     traineeLMPs={traineeLMPs}

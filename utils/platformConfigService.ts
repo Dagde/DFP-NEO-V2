@@ -246,6 +246,39 @@ export interface PlatformDataScope {
   allUnits: boolean;
 }
 
+export type MasterLmpAccessLevel = 'View' | 'Assign' | 'Manage';
+
+export interface PlatformMasterLmpAccessRule {
+  id?: string;
+  lmpCode: string;
+  organisationCode?: string | null;
+  locationCode?: string | null;
+  unitCode?: string | null;
+  operationalModel?: OperationalModelCode | string | null;
+  accessLevel?: MasterLmpAccessLevel | string | null;
+  status?: string | null;
+}
+
+export interface MasterLmpAccessContext {
+  organisationCode?: string | null;
+  locationCode?: string | null;
+  unitCode?: string | null;
+  unitCodes?: string[];
+  operationalModel?: OperationalModelCode | string | null;
+}
+
+export const DEFAULT_MASTER_LMP_ACCESS_RULES: PlatformMasterLmpAccessRule[] = [
+  { id: 'master-lmp-bpc-ipc-1fts', lmpCode: 'BPC+IPC', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: '1FTS', accessLevel: 'Manage', status: 'ACTIVE' },
+  { id: 'master-lmp-bpc-ipc-2fts', lmpCode: 'BPC+IPC', organisationCode: 'DEFAULT', locationCode: 'YPEA', unitCode: '2FTS', accessLevel: 'Manage', status: 'ACTIVE' },
+  { id: 'master-lmp-bpc-ipc-cfs', lmpCode: 'BPC+IPC', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: 'CFS', accessLevel: 'View', status: 'ACTIVE' },
+  { id: 'master-lmp-fic-cfs', lmpCode: 'FIC', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: 'CFS', accessLevel: 'Manage', status: 'ACTIVE' },
+  { id: 'master-lmp-fic-1fts', lmpCode: 'FIC', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: '1FTS', accessLevel: 'View', status: 'ACTIVE' },
+  { id: 'master-lmp-fic-2fts', lmpCode: 'FIC', organisationCode: 'DEFAULT', locationCode: 'YPEA', unitCode: '2FTS', accessLevel: 'View', status: 'ACTIVE' },
+  { id: 'master-lmp-pc21-ground-school-1fts', lmpCode: 'PC-21 Ground School', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: '1FTS', accessLevel: 'Manage', status: 'ACTIVE' },
+  { id: 'master-lmp-pc21-ground-school-2fts', lmpCode: 'PC-21 Ground School', organisationCode: 'DEFAULT', locationCode: 'YPEA', unitCode: '2FTS', accessLevel: 'Manage', status: 'ACTIVE' },
+  { id: 'master-lmp-pc21-ground-school-cfs', lmpCode: 'PC-21 Ground School', organisationCode: 'DEFAULT', locationCode: 'YMES', unitCode: 'CFS', accessLevel: 'View', status: 'ACTIVE' },
+];
+
 const emptyPlatformConfig: PlatformConfig = {
   organisations: [],
   locations: [],
@@ -358,6 +391,88 @@ export const getLocationCodesForCurrentRuntime = (
 };
 
 const normaliseAccessValue = (value: unknown): string => String(value || '').trim().toLowerCase();
+
+const normaliseAccessLevel = (value: unknown): MasterLmpAccessLevel => {
+  const token = String(value || '').trim().toLowerCase();
+  if (token === 'manage' || token === 'admin' || token === 'manage/edit' || token === 'edit') return 'Manage';
+  if (token === 'assign' || token === 'write') return 'Assign';
+  return 'View';
+};
+
+const masterLmpAccessWeight = (level: MasterLmpAccessLevel): number => (
+  level === 'Manage' ? 3 : level === 'Assign' ? 2 : 1
+);
+
+export const normaliseMasterLmpAccessRules = (config: PlatformConfig | null): PlatformMasterLmpAccessRule[] => {
+  const configured = config?.organisations?.[0]?.settings?.masterLmpAccess;
+  const source = Array.isArray(configured)
+    ? configured
+    : DEFAULT_MASTER_LMP_ACCESS_RULES;
+
+  return source
+    .map((rule: any, index: number) => ({
+      id: String(rule.id || `master-lmp-access-${index + 1}`),
+      lmpCode: String(rule.lmpCode || rule.masterLmp || rule.course || '').trim(),
+      organisationCode: rule.organisationCode || 'DEFAULT',
+      locationCode: rule.locationCode || null,
+      unitCode: rule.unitCode || null,
+      operationalModel: rule.operationalModel || null,
+      accessLevel: normaliseAccessLevel(rule.accessLevel),
+      status: String(rule.status || 'ACTIVE').toUpperCase(),
+    }))
+    .filter((rule) => rule.lmpCode);
+};
+
+export const getMasterLmpAccessLevel = (
+  config: PlatformConfig | null,
+  lmpCode: string,
+  context: MasterLmpAccessContext = {},
+): MasterLmpAccessLevel | null => {
+  if (!config) return 'Manage';
+  const targetLmp = normaliseAccessValue(lmpCode);
+  const targetOrganisation = normaliseAccessValue(context.organisationCode || 'DEFAULT');
+  const targetLocation = normaliseAccessValue(context.locationCode);
+  const targetUnits = [
+    ...(Array.isArray(context.unitCodes) ? context.unitCodes : []),
+    context.unitCode,
+  ]
+    .flatMap((unit) => String(unit || '').split('+'))
+    .map(normaliseAccessValue)
+    .filter(Boolean);
+  const targetUnitSet = new Set(targetUnits);
+  const targetModel = normaliseOperationalModel(context.operationalModel);
+
+  const matchingLevels = normaliseMasterLmpAccessRules(config)
+    .filter((rule) => String(rule.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+    .filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp)
+    .filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation)
+    .filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation)
+    .filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode)))
+    .filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel)
+    .map((rule) => normaliseAccessLevel(rule.accessLevel));
+
+  if (matchingLevels.length === 0) return null;
+  return matchingLevels.sort((a, b) => masterLmpAccessWeight(b) - masterLmpAccessWeight(a))[0];
+};
+
+export const hasMasterLmpAccess = (
+  config: PlatformConfig | null,
+  lmpCode: string,
+  context: MasterLmpAccessContext,
+  requiredAccess: MasterLmpAccessLevel = 'View',
+): boolean => {
+  const level = getMasterLmpAccessLevel(config, lmpCode, context);
+  return Boolean(level && masterLmpAccessWeight(level) >= masterLmpAccessWeight(requiredAccess));
+};
+
+export const filterMasterLmpCodesForAccess = (
+  config: PlatformConfig | null,
+  lmpCodes: string[],
+  context: MasterLmpAccessContext,
+  requiredAccess: MasterLmpAccessLevel = 'View',
+): string[] => (
+  lmpCodes.filter((lmpCode) => hasMasterLmpAccess(config, lmpCode, context, requiredAccess))
+);
 
 const parseSettingsObject = (settings: unknown): Record<string, any> => {
   if (!settings) return {};

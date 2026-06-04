@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SyllabusItemDetail } from '../types';
+import {
+    filterMasterLmpCodesForAccess,
+    type PlatformConfig,
+} from '../utils/platformConfigService';
 
 const COURSE_MASTER_LMPS = [
     'BPC+IPC',
@@ -41,6 +45,7 @@ interface EditCourseFlyoutProps {
     locations: string[];
     units: string[];
     syllabusDetails?: SyllabusItemDetail[];
+    platformConfig?: PlatformConfig | null;
     onClose: () => void;
     onSave: (data: {
         startDate: string;
@@ -63,6 +68,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     locations = [],
     units = [],
     syllabusDetails = [],
+    platformConfig = null,
     onClose,
     onSave,
 }) => {
@@ -81,8 +87,27 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                 s.courses.forEach(c => courseCodes.add(c));
             }
         });
-        return Array.from(courseCodes).sort();
-    }, [syllabusDetails]);
+        const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+            unitCode: unit,
+            operationalModel: 'flight_school',
+        }, 'Assign');
+        if (academicLmpType && !allowed.includes(academicLmpType)) allowed.push(academicLmpType);
+        return allowed.sort();
+    }, [academicLmpType, platformConfig, syllabusDetails, unit]);
+
+    const assignableMasterLmps = useMemo(() => {
+        const courseCodes = new Set<string>(COURSE_MASTER_LMPS.filter(lmp => lmp !== 'Staff CAT'));
+        syllabusDetails.forEach(s => {
+            if (s.type === 'Academics' || s.lmpType === 'Staff CAT') return;
+            (s.courses || []).forEach(c => courseCodes.add(c));
+        });
+        const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+            unitCode: unit,
+            operationalModel: 'flight_school',
+        }, 'Assign');
+        if (lmpType && !allowed.includes(lmpType)) allowed.push(lmpType);
+        return allowed.sort();
+    }, [lmpType, platformConfig, syllabusDetails, unit]);
 
     // Sync if props change
     useEffect(() => {
@@ -208,7 +233,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                             onChange={(e) => setLmpType(e.target.value)}
                             className={fieldClass}
                         >
-                            {COURSE_MASTER_LMPS.map(lmp => (
+                            {assignableMasterLmps.map(lmp => (
                                 <option key={lmp} value={lmp}>{lmp}</option>
                             ))}
                         </select>

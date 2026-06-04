@@ -2017,6 +2017,17 @@ const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
     permissions: ALL_PLATFORM_PERMISSION_IDS
   }
 ];
+const DEFAULT_MASTER_LMP_ACCESS_RULES = [
+  { id: "master-lmp-bpc-ipc-1fts", lmpCode: "BPC+IPC", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "1FTS", accessLevel: "Manage", status: "ACTIVE" },
+  { id: "master-lmp-bpc-ipc-2fts", lmpCode: "BPC+IPC", organisationCode: "DEFAULT", locationCode: "YPEA", unitCode: "2FTS", accessLevel: "Manage", status: "ACTIVE" },
+  { id: "master-lmp-bpc-ipc-cfs", lmpCode: "BPC+IPC", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "CFS", accessLevel: "View", status: "ACTIVE" },
+  { id: "master-lmp-fic-cfs", lmpCode: "FIC", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "CFS", accessLevel: "Manage", status: "ACTIVE" },
+  { id: "master-lmp-fic-1fts", lmpCode: "FIC", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "1FTS", accessLevel: "View", status: "ACTIVE" },
+  { id: "master-lmp-fic-2fts", lmpCode: "FIC", organisationCode: "DEFAULT", locationCode: "YPEA", unitCode: "2FTS", accessLevel: "View", status: "ACTIVE" },
+  { id: "master-lmp-pc21-ground-school-1fts", lmpCode: "PC-21 Ground School", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "1FTS", accessLevel: "Manage", status: "ACTIVE" },
+  { id: "master-lmp-pc21-ground-school-2fts", lmpCode: "PC-21 Ground School", organisationCode: "DEFAULT", locationCode: "YPEA", unitCode: "2FTS", accessLevel: "Manage", status: "ACTIVE" },
+  { id: "master-lmp-pc21-ground-school-cfs", lmpCode: "PC-21 Ground School", organisationCode: "DEFAULT", locationCode: "YMES", unitCode: "CFS", accessLevel: "View", status: "ACTIVE" }
+];
 const emptyPlatformConfig = {
   organisations: [],
   locations: [],
@@ -2101,6 +2112,47 @@ const getLocationCodesForCurrentRuntime = (config, supportedCodes = ["ESL", "PEA
   return configuredCodes.length > 0 ? configuredCodes : supportedCodes;
 };
 const normaliseAccessValue = (value) => String(value || "").trim().toLowerCase();
+const normaliseAccessLevel = (value) => {
+  const token = String(value || "").trim().toLowerCase();
+  if (token === "manage" || token === "admin" || token === "manage/edit" || token === "edit") return "Manage";
+  if (token === "assign" || token === "write") return "Assign";
+  return "View";
+};
+const masterLmpAccessWeight = (level) => level === "Manage" ? 3 : level === "Assign" ? 2 : 1;
+const normaliseMasterLmpAccessRules = (config) => {
+  const configured = config?.organisations?.[0]?.settings?.masterLmpAccess;
+  const source = Array.isArray(configured) ? configured : DEFAULT_MASTER_LMP_ACCESS_RULES;
+  return source.map((rule, index) => ({
+    id: String(rule.id || `master-lmp-access-${index + 1}`),
+    lmpCode: String(rule.lmpCode || rule.masterLmp || rule.course || "").trim(),
+    organisationCode: rule.organisationCode || "DEFAULT",
+    locationCode: rule.locationCode || null,
+    unitCode: rule.unitCode || null,
+    operationalModel: rule.operationalModel || null,
+    accessLevel: normaliseAccessLevel(rule.accessLevel),
+    status: String(rule.status || "ACTIVE").toUpperCase()
+  })).filter((rule) => rule.lmpCode);
+};
+const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
+  if (!config) return "Manage";
+  const targetLmp = normaliseAccessValue(lmpCode);
+  const targetOrganisation = normaliseAccessValue(context.organisationCode || "DEFAULT");
+  const targetLocation = normaliseAccessValue(context.locationCode);
+  const targetUnits = [
+    ...Array.isArray(context.unitCodes) ? context.unitCodes : [],
+    context.unitCode
+  ].flatMap((unit) => String(unit || "").split("+")).map(normaliseAccessValue).filter(Boolean);
+  const targetUnitSet = new Set(targetUnits);
+  const targetModel = normaliseOperationalModel(context.operationalModel);
+  const matchingLevels = normaliseMasterLmpAccessRules(config).filter((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp).filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
+  if (matchingLevels.length === 0) return null;
+  return matchingLevels.sort((a, b) => masterLmpAccessWeight(b) - masterLmpAccessWeight(a))[0];
+};
+const hasMasterLmpAccess = (config, lmpCode, context, requiredAccess = "View") => {
+  const level = getMasterLmpAccessLevel(config, lmpCode, context);
+  return Boolean(level && masterLmpAccessWeight(level) >= masterLmpAccessWeight(requiredAccess));
+};
+const filterMasterLmpCodesForAccess = (config, lmpCodes, context, requiredAccess = "View") => lmpCodes.filter((lmpCode) => hasMasterLmpAccess(config, lmpCode, context, requiredAccess));
 const parseSettingsObject = (settings) => {
   if (!settings) return {};
   if (typeof settings === "object" && !Array.isArray(settings)) return settings;
@@ -11389,12 +11441,13 @@ const TraineeProfileFlyout = ({
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
-  trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY
+  trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+  platformConfig = null
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
-  const academicLmpCourses = reactExports.useMemo(() => {
+  const allAcademicLmpCourses = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
     syllabusDetails.forEach((s) => {
       if (s.type === "Academics" && s.courses) {
@@ -11445,6 +11498,27 @@ const TraineeProfileFlyout = ({
   const [phoneNumber, setPhoneNumber] = reactExports.useState(trainee.phoneNumber || "");
   const [email, setEmail] = reactExports.useState(trainee.email || "");
   const [traineeCallsign, setTraineeCallsign] = reactExports.useState(trainee.traineeCallsign || "");
+  const assignableMasterLmps = reactExports.useMemo(() => {
+    const courseCodes = new Set(COURSE_MASTER_LMPS$1.filter((lmp) => lmp !== "Staff CAT"));
+    syllabusDetails.forEach((s) => {
+      if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
+      (s.courses || []).forEach((c) => courseCodes.add(c));
+    });
+    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+      unitCode: unit || trainee.unit,
+      operationalModel: "flight_school"
+    }, "Assign");
+    if (lmpType && !allowed.includes(lmpType)) allowed.push(lmpType);
+    return allowed.sort();
+  }, [lmpType, platformConfig, syllabusDetails, trainee.unit, unit]);
+  const academicLmpCourses = reactExports.useMemo(() => {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
+      unitCode: unit || trainee.unit,
+      operationalModel: "flight_school"
+    }, "Assign");
+    if (academicLmpType && !allowed.includes(academicLmpType)) allowed.push(academicLmpType);
+    return allowed.sort();
+  }, [academicLmpType, allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
@@ -12165,7 +12239,7 @@ const TraineeProfileFlyout = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ARA", children: "ARA" })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Course", value: course, onChange: (e) => handleCourseChange(e.target.value), children: (activeCourses || []).length > 0 ? (activeCourses || []).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No courses" }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "LMP", value: lmpType, onChange: (e) => handleLmpTypeChange(e.target.value), children: COURSE_MASTER_LMPS$1.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp)) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "LMP", value: lmpType, onChange: (e) => handleLmpTypeChange(e.target.value), children: assignableMasterLmps.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp)) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Academic LMP", value: academicLmpType, onChange: (e) => setAcademicLmpType(e.target.value), children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
                       academicLmpCourses.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
@@ -13090,7 +13164,8 @@ const CourseRosterView = ({
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
-  trainingReportTerminology
+  trainingReportTerminology,
+  platformConfig = null
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -13380,6 +13455,7 @@ const CourseRosterView = ({
         resourceDisplayNames,
         personnelDisplaySettings,
         trainingReportTerminology,
+        platformConfig,
         pt051Assessments,
         pt051PerformanceLoading,
         traineeLMPs,
@@ -32928,6 +33004,7 @@ const TraineeView = (props) => {
           onSelectPt051ForEvent: props.onSelectPt051ForEvent,
           locations: props.locations,
           units: props.units,
+          platformConfig: props.platformConfig,
           selectedPersonForProfile: props.selectedPersonForProfile,
           selectedProfileInitialTab: props.selectedProfileInitialTab,
           onProfileOpened: props.onProfileOpened,
@@ -46585,6 +46662,16 @@ const PlatformConfigurationSettings = ({
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null
   );
+  const masterLmpAccessRules = reactExports.useMemo(
+    () => normaliseMasterLmpAccessRules(config),
+    [config.organisations]
+  );
+  const masterLmpOptions = reactExports.useMemo(() => Array.from(/* @__PURE__ */ new Set([
+    ...DEFAULT_MASTER_LMP_ACCESS_RULES.map((rule) => rule.lmpCode),
+    "BPC+IPC",
+    "FIC",
+    "PC-21 Ground School"
+  ])).filter(Boolean).sort(), []);
   const operationalSignals = [
     {
       label: "Support owner",
@@ -46680,6 +46767,35 @@ const PlatformConfigurationSettings = ({
         [model]: parseTaskProfileText(text)
       }
     }));
+  };
+  const updateMasterLmpAccessRules = (rules) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      masterLmpAccess: rules
+    }));
+  };
+  const updateMasterLmpAccessRule = (index, changes) => {
+    updateMasterLmpAccessRules(masterLmpAccessRules.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, ...changes } : rule));
+  };
+  const addMasterLmpAccessRule = () => {
+    const activeUnits = config.units.filter(isActiveRecord);
+    const defaultUnit = activeUnits.find((unit) => unit.code === "1FTS") || activeUnits[0];
+    updateMasterLmpAccessRules([
+      ...masterLmpAccessRules,
+      {
+        id: createClientRecordId("master-lmp-access"),
+        lmpCode: masterLmpOptions[0] || "BPC+IPC",
+        organisationCode: primaryOrganisation?.code || "DEFAULT",
+        locationCode: defaultUnit?.locationCode || config.locations[0]?.code || "",
+        unitCode: defaultUnit?.code || "",
+        operationalModel: "",
+        accessLevel: "View",
+        status: "ACTIVE"
+      }
+    ]);
+  };
+  const removeMasterLmpAccessRule = (index) => {
+    updateMasterLmpAccessRules(masterLmpAccessRules.filter((_, ruleIndex) => ruleIndex !== index));
   };
   const updateInsertEventType = (index, changes) => {
     const next = insertEventTypes.map((eventType, eventTypeIndex) => eventTypeIndex === index ? { ...eventType, ...changes } : eventType);
@@ -47479,6 +47595,94 @@ const PlatformConfigurationSettings = ({
             )
           ] }, option.value);
         }) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-master-lmp-access", className: getSectionClass("platform-master-lmp-access"), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Master LMP Access",
+          subtitle: "Restrict which locations and units can view, assign or manage each Master LMP. Empty location or unit values apply broadly.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpAccessRule, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Access" }) : null
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees." }),
+        masterLmpAccessRules.map((rule, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectField,
+            {
+              label: "Master LMP",
+              value: rule.lmpCode,
+              disabled: !canEdit,
+              options: masterLmpOptions,
+              onChange: (value) => updateMasterLmpAccessRule(index, { lmpCode: value })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectField,
+            {
+              label: "Location",
+              value: rule.locationCode || "",
+              disabled: !canEdit,
+              options: ["", ...config.locations.map((location) => location.code)],
+              emptyLabel: "All Locations",
+              onChange: (value) => updateMasterLmpAccessRule(index, { locationCode: value || null })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectField,
+            {
+              label: "Unit",
+              value: rule.unitCode || "",
+              disabled: !canEdit,
+              options: ["", ...config.units.map((unit) => unit.code)],
+              emptyLabel: "All Units",
+              onChange: (value) => updateMasterLmpAccessRule(index, { unitCode: value || null })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectField,
+            {
+              label: "Model",
+              value: rule.operationalModel || "",
+              disabled: !canEdit,
+              options: ["", ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)],
+              emptyLabel: "Any Model",
+              onChange: (value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectField,
+            {
+              label: "Access",
+              value: rule.accessLevel || "View",
+              disabled: !canEdit,
+              options: ["View", "Assign", "Manage"],
+              onChange: (value) => updateMasterLmpAccessRule(index, { accessLevel: value })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectField,
+            {
+              label: "Status",
+              value: rule.status || "ACTIVE",
+              disabled: !canEdit,
+              options: ["ACTIVE", "INACTIVE"],
+              onChange: (value) => updateMasterLmpAccessRule(index, { status: value })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              disabled: !canEdit,
+              onClick: () => removeMasterLmpAccessRule(index),
+              className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50",
+              children: "Remove"
+            }
+          ) })
+        ] }, rule.id || `master-lmp-access-${index}`))
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-resource-pools", className: getSectionClass("platform-resource-pools"), children: [
@@ -49224,6 +49428,7 @@ const platformSectionTargets = {
   "platform-organisation-locations": "platform-organisation-locations",
   "platform-units": "platform-units",
   "platform-task-profiles": "platform-task-profiles",
+  "platform-master-lmp-access": "platform-master-lmp-access",
   "platform-resource-pools": "platform-resource-pools",
   "platform-unit-modules": "platform-unit-modules",
   "platform-deployment-readiness": "platform-deployment-readiness",
@@ -49265,6 +49470,7 @@ const sectionLabels = {
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
   "platform-task-profiles": "Task Profiles",
+  "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
   "platform-deployment-readiness": "Deployment Readiness",
@@ -49401,6 +49607,7 @@ const sectionIcons = {
   "platform-organisation-locations": platformConfigurationIcon,
   "platform-units": platformConfigurationIcon,
   "platform-task-profiles": platformConfigurationIcon,
+  "platform-master-lmp-access": platformConfigurationIcon,
   "platform-resource-pools": platformConfigurationIcon,
   "platform-unit-modules": platformConfigurationIcon,
   "platform-deployment-readiness": platformConfigurationIcon,
@@ -49446,6 +49653,7 @@ const sectionDescriptions = {
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
   "platform-task-profiles": "Model-specific tasking lists for Directed Events",
+  "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
   "platform-deployment-readiness": "SaaS, on-premise, offline and hybrid deployment posture",
@@ -49494,6 +49702,7 @@ const sectionColors = {
   "platform-organisation-locations": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-units": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-task-profiles": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
+  "platform-master-lmp-access": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-resource-pools": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-unit-modules": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-deployment-readiness": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -49519,6 +49728,7 @@ const sectionGroups = [
       "platform-organisation-locations",
       "platform-units",
       "platform-task-profiles",
+      "platform-master-lmp-access",
       "platform-resource-pools",
       "platform-unit-modules",
       "platform-deployment-readiness",
@@ -53412,6 +53622,7 @@ const EditCourseFlyout = ({
   locations = [],
   units = [],
   syllabusDetails = [],
+  platformConfig = null,
   onClose,
   onSave
 }) => {
@@ -53428,8 +53639,26 @@ const EditCourseFlyout = ({
         s.courses.forEach((c) => courseCodes.add(c));
       }
     });
-    return Array.from(courseCodes).sort();
-  }, [syllabusDetails]);
+    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+      unitCode: unit,
+      operationalModel: "flight_school"
+    }, "Assign");
+    if (academicLmpType && !allowed.includes(academicLmpType)) allowed.push(academicLmpType);
+    return allowed.sort();
+  }, [academicLmpType, platformConfig, syllabusDetails, unit]);
+  const assignableMasterLmps = reactExports.useMemo(() => {
+    const courseCodes = new Set(COURSE_MASTER_LMPS.filter((lmp) => lmp !== "Staff CAT"));
+    syllabusDetails.forEach((s) => {
+      if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
+      (s.courses || []).forEach((c) => courseCodes.add(c));
+    });
+    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+      unitCode: unit,
+      operationalModel: "flight_school"
+    }, "Assign");
+    if (lmpType && !allowed.includes(lmpType)) allowed.push(lmpType);
+    return allowed.sort();
+  }, [lmpType, platformConfig, syllabusDetails, unit]);
   reactExports.useEffect(() => {
     setStartDate(initialStartDate);
     setGradDate(initialGradDate);
@@ -53537,7 +53766,7 @@ const EditCourseFlyout = ({
                     value: lmpType,
                     onChange: (e) => setLmpType(e.target.value),
                     className: fieldClass2,
-                    children: COURSE_MASTER_LMPS.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
+                    children: assignableMasterLmps.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
                   }
                 ),
                 lmpType && LMP_DESCRIPTIONS[lmpType] && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: LMP_DESCRIPTIONS[lmpType] })
@@ -53647,7 +53876,8 @@ const CoursesManagementView = ({
   onUpdateCourse,
   locations = [],
   units = [],
-  syllabusDetails = []
+  syllabusDetails = [],
+  platformConfig = null
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   useSystemFreeze();
@@ -53913,6 +54143,7 @@ const CoursesManagementView = ({
         locations,
         units,
         syllabusDetails,
+        platformConfig,
         onClose: () => {
           setShowEditFlyout(false);
           setCourseToEdit(null);
@@ -55576,6 +55807,7 @@ const TrainingRecordsView = ({
   onSavePT051Assessment,
   locations = [],
   units = [],
+  platformConfig = null,
   resourceDisplayNames,
   instructorLabel = "QFI"
 }) => {
@@ -55623,7 +55855,8 @@ const TrainingRecordsView = ({
           onUpdateCourse,
           locations,
           units,
-          syllabusDetails
+          syllabusDetails,
+          platformConfig
         }
       ),
       activeTab === "export" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -70325,6 +70558,21 @@ ${error instanceof Error ? error.message : String(error)}`,
       unavailability: data.unavailability,
       unavailabilityLength: data.unavailability?.length || 0
     });
+    const traineeUnitCode = data.unit || activeUnitCode;
+    const requestedLmpType = data.lmpType || "";
+    const requestedAcademicLmpType = data.academicLmpType || "";
+    const lmpAccessContext = {
+      unitCode: traineeUnitCode,
+      operationalModel: activeOperationalModel
+    };
+    if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, "Assign")) {
+      setErrorMessage(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
+      return;
+    }
+    if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
+      setErrorMessage(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
+      return;
+    }
     setTraineesData((prev) => prev.map((t) => t.idNumber === data.idNumber ? data : t));
     const dbId = data.id;
     console.log("📝 [APP] DB ID:", dbId);
@@ -70397,7 +70645,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     } else {
       console.log("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
     }
-  }, []);
+  }, [activeOperationalModel, activeUnitCode, platformConfig]);
   const buildRemedialPackageLmp = (originalTraineeLMP, eventToRemediate, newEvents) => {
     let lastNewEventId = eventToRemediate.id;
     const remedialPackageItems = [];
@@ -71029,6 +71277,19 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
   };
   const handleUpdateCourseFromTrainingRecords = async (courseName, data) => {
+    const courseUnitCode = data.unit || activeUnitCode;
+    const lmpAccessContext = {
+      unitCode: courseUnitCode,
+      operationalModel: activeOperationalModel
+    };
+    if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, "Assign")) {
+      setErrorMessage(`Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
+      return;
+    }
+    if (data.academicLmpType && !hasMasterLmpAccess(platformConfig, data.academicLmpType, lmpAccessContext, "Assign")) {
+      setErrorMessage(`Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
+      return;
+    }
     setCourses(
       (prevCourses) => prevCourses.map(
         (course) => course.name === courseName ? { ...course, startDate: data.startDate, gradDate: data.gradDate, location: data.location, unit: data.unit, lmpType: data.lmpType, academicLmpType: data.academicLmpType } : course
@@ -76129,7 +76390,8 @@ ${conflictLines.join("\n")}${moreText}`,
             trainingReportTerminology,
             pt051Assessments,
             pt051PerformanceLoading,
-            userProfile: currentUser2
+            userProfile: currentUser2,
+            platformConfig
           }
         );
       case "CourseRoster":
@@ -76606,6 +76868,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onSavePT051Assessment,
             locations,
             units,
+            platformConfig,
             resourceDisplayNames,
             instructorLabel
           }

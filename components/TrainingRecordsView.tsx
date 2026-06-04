@@ -5,6 +5,7 @@ import TrainingRecordsExportView from './TrainingRecordsExportView';
 import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, Pt051Assessment } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import type { PlatformConfig } from '../utils/platformConfigService';
 
 interface TrainingRecordsViewProps {
     courses: Course[];
@@ -28,6 +29,7 @@ interface TrainingRecordsViewProps {
     onSavePT051Assessment: (assessment: Pt051Assessment) => void;
     locations?: string[];
     units?: string[];
+    platformConfig?: PlatformConfig | null;
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
 }
@@ -56,6 +58,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onSavePT051Assessment,
     locations = [],
     units = [],
+    platformConfig = null,
     resourceDisplayNames,
     instructorLabel = 'QFI',
 }) => {
@@ -114,6 +117,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         locations={locations}
                         units={units}
                         syllabusDetails={syllabusDetails}
+                        platformConfig={platformConfig}
                     />
                 )}
                 {activeTab === 'export' && (

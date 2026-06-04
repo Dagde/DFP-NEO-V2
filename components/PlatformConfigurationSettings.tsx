@@ -4,7 +4,10 @@ import {
   DEFAULT_OPERATIONAL_MODEL,
   OPERATIONAL_MODEL_OPTIONS,
   PLATFORM_PERMISSION_CATALOG,
+  DEFAULT_MASTER_LMP_ACCESS_RULES,
   getUnitOperationalModel,
+  normaliseMasterLmpAccessRules,
+  type PlatformMasterLmpAccessRule,
   type PlatformPermissionProfile,
 } from '../utils/platformConfigService';
 import {
@@ -1127,6 +1130,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null,
   );
+  const masterLmpAccessRules = useMemo(
+    () => normaliseMasterLmpAccessRules(config as any),
+    [config.organisations],
+  );
+  const masterLmpOptions = useMemo(() => (
+    Array.from(new Set([
+      ...DEFAULT_MASTER_LMP_ACCESS_RULES.map((rule) => rule.lmpCode),
+      'BPC+IPC',
+      'FIC',
+      'PC-21 Ground School',
+    ])).filter(Boolean).sort()
+  ), []);
   const operationalSignals = [
     {
       label: 'Support owner',
@@ -1237,6 +1252,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         [model]: parseTaskProfileText(text),
       },
     }));
+  };
+
+  const updateMasterLmpAccessRules = (rules: PlatformMasterLmpAccessRule[]) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      masterLmpAccess: rules,
+    }));
+  };
+
+  const updateMasterLmpAccessRule = (index: number, changes: Partial<PlatformMasterLmpAccessRule>) => {
+    updateMasterLmpAccessRules(masterLmpAccessRules.map((rule, ruleIndex) => (
+      ruleIndex === index ? { ...rule, ...changes } : rule
+    )));
+  };
+
+  const addMasterLmpAccessRule = () => {
+    const activeUnits = config.units.filter(isActiveRecord);
+    const defaultUnit = activeUnits.find((unit) => unit.code === '1FTS') || activeUnits[0];
+    updateMasterLmpAccessRules([
+      ...masterLmpAccessRules,
+      {
+        id: createClientRecordId('master-lmp-access'),
+        lmpCode: masterLmpOptions[0] || 'BPC+IPC',
+        organisationCode: primaryOrganisation?.code || 'DEFAULT',
+        locationCode: defaultUnit?.locationCode || config.locations[0]?.code || '',
+        unitCode: defaultUnit?.code || '',
+        operationalModel: '',
+        accessLevel: 'View',
+        status: 'ACTIVE',
+      },
+    ]);
+  };
+
+  const removeMasterLmpAccessRule = (index: number) => {
+    updateMasterLmpAccessRules(masterLmpAccessRules.filter((_, ruleIndex) => ruleIndex !== index));
   };
 
   const updateInsertEventType = (index: number, changes: Partial<InsertEventTypeConfig>) => {
@@ -2214,6 +2264,78 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               );
             })}
           </div>
+        </div>
+      </section>
+
+      <section id="platform-master-lmp-access" className={getSectionClass('platform-master-lmp-access')}>
+        <SectionHeader
+          title="Master LMP Access"
+          subtitle="Restrict which locations and units can view, assign or manage each Master LMP. Empty location or unit values apply broadly."
+          action={canEdit ? <button type="button" onClick={addMasterLmpAccessRule} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Access</button> : null}
+        />
+        <div className="space-y-3 p-4">
+          <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
+            Access level order is View, Assign, then Manage. Manage allows assignment and editing. These rules are evaluated against the selected unit before LMPs can be assigned to courses or trainees.
+          </div>
+          {masterLmpAccessRules.map((rule, index) => (
+            <div key={rule.id || `master-lmp-access-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_0.8fr_auto]">
+              <SelectField
+                label="Master LMP"
+                value={rule.lmpCode}
+                disabled={!canEdit}
+                options={masterLmpOptions}
+                onChange={(value) => updateMasterLmpAccessRule(index, { lmpCode: value })}
+              />
+              <SelectField
+                label="Location"
+                value={rule.locationCode || ''}
+                disabled={!canEdit}
+                options={['', ...config.locations.map((location) => location.code)]}
+                emptyLabel="All Locations"
+                onChange={(value) => updateMasterLmpAccessRule(index, { locationCode: value || null })}
+              />
+              <SelectField
+                label="Unit"
+                value={rule.unitCode || ''}
+                disabled={!canEdit}
+                options={['', ...config.units.map((unit) => unit.code)]}
+                emptyLabel="All Units"
+                onChange={(value) => updateMasterLmpAccessRule(index, { unitCode: value || null })}
+              />
+              <SelectField
+                label="Model"
+                value={rule.operationalModel || ''}
+                disabled={!canEdit}
+                options={['', ...OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)]}
+                emptyLabel="Any Model"
+                onChange={(value) => updateMasterLmpAccessRule(index, { operationalModel: value || null })}
+              />
+              <SelectField
+                label="Access"
+                value={rule.accessLevel || 'View'}
+                disabled={!canEdit}
+                options={['View', 'Assign', 'Manage']}
+                onChange={(value) => updateMasterLmpAccessRule(index, { accessLevel: value })}
+              />
+              <SelectField
+                label="Status"
+                value={rule.status || 'ACTIVE'}
+                disabled={!canEdit}
+                options={['ACTIVE', 'INACTIVE']}
+                onChange={(value) => updateMasterLmpAccessRule(index, { status: value })}
+              />
+              <div className="flex items-end justify-end">
+                <button
+                  type="button"
+                  disabled={!canEdit}
+                  onClick={() => removeMasterLmpAccessRule(index)}
+                  className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
