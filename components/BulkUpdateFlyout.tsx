@@ -38,6 +38,64 @@ const getValueFromRow = (row: any, possibleKeys: string[]): any => {
     return undefined;
 };
 
+const getStringFromRow = (row: any, possibleKeys: string[]): string => {
+    const value = getValueFromRow(row, possibleKeys);
+    return value === undefined || value === null ? '' : String(value).trim();
+};
+
+const splitListValue = (value: string): string[] =>
+    value
+        .split(/\r?\n|;|,/)
+        .map(item => item.trim())
+        .filter(Boolean);
+
+const normaliseService = (value: string): Instructor['service'] | undefined => {
+    const cleanValue = value.trim().toLowerCase();
+    if (!cleanValue) return undefined;
+    if (['raaf', 'air force', 'airforce', 'royal australian air force'].includes(cleanValue)) return 'RAAF';
+    if (['ran', 'navy', 'royal australian navy'].includes(cleanValue)) return 'RAN';
+    if (['ara', 'army', 'australian army'].includes(cleanValue)) return 'ARA';
+    return value as Instructor['service'];
+};
+
+const normaliseCategory = (value: string): InstructorCategory | undefined => {
+    const cleanValue = value.trim().toLowerCase();
+    if (!cleanValue) return undefined;
+    if (['u', 'uncat', 'un cat', 'uncategorised', 'uncategorized'].includes(cleanValue)) return 'UnCat';
+    const upperValue = value.trim().toUpperCase();
+    if (['A', 'B', 'C', 'D'].includes(upperValue)) return upperValue as InstructorCategory;
+    return value as InstructorCategory;
+};
+
+const normaliseSeatConfig = (value: string): SeatConfig | undefined => {
+    const cleanValue = value.trim().toLowerCase();
+    if (!cleanValue) return undefined;
+    if (['n', 'normal', 'norm'].includes(cleanValue)) return 'Normal';
+    if (['fwd/short', 'forward/short', 'fwd short', 'forward short', 'fwd', 'front'].includes(cleanValue)) return 'FWD/SHORT';
+    if (['rear/short', 'rear short', 'rear'].includes(cleanValue)) return 'REAR/SHORT';
+    if (['fwd/long', 'forward/long', 'fwd long', 'forward long', 'long'].includes(cleanValue)) return 'FWD/LONG';
+    return value as SeatConfig;
+};
+
+const applyQualificationRoles = (parsedData: Partial<Instructor>, rolesValue: string): void => {
+    if (!rolesValue) return;
+    const roleTokens = splitListValue(rolesValue);
+    const rolesLower = roleTokens.join(' ').toLowerCase();
+    parsedData.isExecutive = rolesLower.includes('exec') || rolesLower.includes('executive');
+    parsedData.isFlyingSupervisor = rolesLower.includes('fly sup') || rolesLower.includes('flying supervisor') || rolesLower.includes('supervisor');
+    parsedData.isTestingOfficer = rolesLower.includes('testing') || rolesLower.includes('test officer');
+    parsedData.isIRE = rolesLower.includes('ire');
+    parsedData.isCFI = rolesLower.includes('cfi');
+    parsedData.isOFI = rolesLower.includes('ofi');
+    parsedData.isQFI = rolesLower.includes('qfi') || rolesLower.includes('pilot');
+    parsedData.isAdminStaff = rolesLower.includes('admin');
+    if (rolesLower.includes('sim ip')) {
+        parsedData.role = 'SIM IP';
+    } else if (rolesLower.includes('qfi') || rolesLower.includes('pilot') || rolesLower.includes('instructor')) {
+        parsedData.role = 'QFI';
+    }
+};
+
 
 const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({ 
   onClose, 
@@ -112,41 +170,62 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 const existingInstructor = existingInstructorsMap.get(idNumber);
                 const parsedData: Partial<Instructor> = {};
 
-                const surname = getValueFromRow(row, ['Srname', 'Surname', 'Last Name']);
-                const firstname = getValueFromRow(row, ['First name', 'Firstname', 'Given Name']);
+                const surname = getStringFromRow(row, ['Srname', 'Surname', 'Last Name']);
+                const firstname = getStringFromRow(row, ['First name', 'Firstname', 'Given Name']);
                 if (surname && firstname) {
                     parsedData.name = `${surname}, ${firstname}`;
                 } else {
-                    const fullName = getValueFromRow(row, ['Name', 'Full Name']);
+                    const fullName = getStringFromRow(row, [
+                        'Name',
+                        'Full Name',
+                        'Name (Surname, FirstName)',
+                        'Name (Surname. FirstName)',
+                        'Name [Surname, Firstname]',
+                    ]);
                     if(fullName) parsedData.name = fullName;
                 }
 
-                const rank = getValueFromRow(row, ['Rank']);
+                const rank = getStringFromRow(row, ['Rank']);
                 if (rank) parsedData.rank = rank as InstructorRank;
                 
-                const role = getValueFromRow(row, ['Role']);
+                const role = getStringFromRow(row, ['Role']);
                 if (role) parsedData.role = role as 'QFI' | 'SIM IP';
                 
                 const callsign = getValueFromRow(row, ['callsign number', 'callsignnumber', 'Callsign No', 'Callsign Number']);
                 if (callsign !== undefined) parsedData.callsignNumber = Number(callsign) || 0;
 
-                const service = getValueFromRow(row, ['Service']);
-                if (service) parsedData.service = service as 'RAAF' | 'RAN' | 'ARA';
+                const service = getStringFromRow(row, ['Service']);
+                const normalisedService = normaliseService(service);
+                if (normalisedService) parsedData.service = normalisedService;
 
-                const category = getValueFromRow(row, ['Category']);
-                if (category) parsedData.category = category as InstructorCategory;
+                const category = getStringFromRow(row, ['Category']);
+                const normalisedCategory = normaliseCategory(category);
+                if (normalisedCategory) parsedData.category = normalisedCategory;
 
-                const seatConfig = getValueFromRow(row, ['Seat config', 'Seatconfig', 'Seat Configuration']);
-                if (seatConfig) parsedData.seatConfig = seatConfig as SeatConfig;
+                const location = getStringFromRow(row, ['Location', 'Base', 'Location Code']);
+                if (location) parsedData.location = location;
 
-                const rolesStr = getValueFromRow(row, ['Roles']);
-                if (rolesStr !== undefined && rolesStr !== null) {
-                    const rolesLower = String(rolesStr).toLowerCase();
-                    parsedData.isExecutive = rolesLower.includes('executive');
-                    parsedData.isFlyingSupervisor = rolesLower.includes('flying supervisor');
-                    parsedData.isTestingOfficer = rolesLower.includes('testing officer');
-                    parsedData.isIRE = rolesLower.includes('ire');
-                }
+                const unit = getStringFromRow(row, ['Unit', 'Unit Code']);
+                if (unit) parsedData.unit = unit;
+
+                const flight = getStringFromRow(row, ['Flight', 'Flight/Sqn', 'Section']);
+                if (flight) parsedData.flight = flight;
+
+                const seatConfig = getStringFromRow(row, ['Seat config', 'Seatconfig', 'Seat Configuration']);
+                const normalisedSeatConfig = normaliseSeatConfig(seatConfig);
+                if (normalisedSeatConfig) parsedData.seatConfig = normalisedSeatConfig;
+
+                const phoneNumber = getStringFromRow(row, ['Phone Number', 'Phone', 'Mobile', 'phoneNumber']);
+                if (phoneNumber) parsedData.phoneNumber = phoneNumber;
+
+                const email = getStringFromRow(row, ['Email', 'Email Address']);
+                if (email) parsedData.email = email;
+
+                const permissions = getStringFromRow(row, ['Permissions', 'Permission']);
+                if (permissions) parsedData.permissions = splitListValue(permissions);
+
+                const rolesStr = getStringFromRow(row, ['Roles', 'Qualifications and Roles', 'Qualifications & Roles', 'Qualifications']);
+                applyQualificationRoles(parsedData, rolesStr);
 
                 if (existingInstructor) {
                     const updatedInstructor = { ...existingInstructor, ...parsedData, idNumber };

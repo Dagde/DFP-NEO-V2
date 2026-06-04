@@ -1267,6 +1267,58 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         return String(val).split(';').map(s => s.trim()).filter(Boolean);
     };
 
+    const splitImportList = (value: string): string[] =>
+        value
+            .split(/\r?\n|;|,/)
+            .map(item => item.trim())
+            .filter(Boolean);
+
+    const normaliseImportedService = (value: string): Instructor['service'] | undefined => {
+        const cleanValue = value.trim().toLowerCase();
+        if (!cleanValue) return undefined;
+        if (['raaf', 'air force', 'airforce', 'royal australian air force'].includes(cleanValue)) return 'RAAF';
+        if (['ran', 'navy', 'royal australian navy'].includes(cleanValue)) return 'RAN';
+        if (['ara', 'army', 'australian army'].includes(cleanValue)) return 'ARA';
+        return value as Instructor['service'];
+    };
+
+    const normaliseImportedCategory = (value: string): InstructorCategory | undefined => {
+        const cleanValue = value.trim().toLowerCase();
+        if (!cleanValue) return undefined;
+        if (['u', 'uncat', 'un cat', 'uncategorised', 'uncategorized'].includes(cleanValue)) return 'UnCat';
+        const upperValue = value.trim().toUpperCase();
+        if (['A', 'B', 'C', 'D'].includes(upperValue)) return upperValue as InstructorCategory;
+        return value as InstructorCategory;
+    };
+
+    const normaliseImportedSeatConfig = (value: string): SeatConfig | undefined => {
+        const cleanValue = value.trim().toLowerCase();
+        if (!cleanValue) return undefined;
+        if (['n', 'normal', 'norm'].includes(cleanValue)) return 'Normal';
+        if (['fwd/short', 'forward/short', 'fwd short', 'forward short', 'fwd', 'front'].includes(cleanValue)) return 'FWD/SHORT';
+        if (['rear/short', 'rear short', 'rear'].includes(cleanValue)) return 'REAR/SHORT';
+        if (['fwd/long', 'forward/long', 'fwd long', 'forward long', 'long'].includes(cleanValue)) return 'FWD/LONG';
+        return value as SeatConfig;
+    };
+
+    const applyImportedQualifications = (parsed: Partial<Instructor>, value?: string): void => {
+        if (!value) return;
+        const rolesLower = splitImportList(value).join(' ').toLowerCase();
+        parsed.isExecutive = rolesLower.includes('exec') || rolesLower.includes('executive');
+        parsed.isFlyingSupervisor = rolesLower.includes('fly sup') || rolesLower.includes('flying supervisor') || rolesLower.includes('supervisor');
+        parsed.isTestingOfficer = rolesLower.includes('testing') || rolesLower.includes('test officer');
+        parsed.isIRE = rolesLower.includes('ire');
+        parsed.isCFI = rolesLower.includes('cfi');
+        parsed.isOFI = rolesLower.includes('ofi');
+        parsed.isQFI = rolesLower.includes('qfi') || rolesLower.includes('pilot');
+        parsed.isAdminStaff = rolesLower.includes('admin');
+        if (rolesLower.includes('sim ip')) {
+            parsed.role = 'SIM IP';
+        } else if (rolesLower.includes('qfi') || rolesLower.includes('pilot') || rolesLower.includes('instructor')) {
+            parsed.role = 'QFI';
+        }
+    };
+
     const parseInstructorRow = (row: any): Partial<Instructor> | null => {
         const idValue = getNum(row, ['PMKeys/ID', 'idNumber']);
         if (idValue === undefined) return null;
@@ -1275,22 +1327,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         
         const surname = getStr(row, ['Srname', 'Surname', 'Last Name']);
         const firstname = getStr(row, ['First name', 'Firstname', 'Given Name']);
-        if (surname && firstname) parsed.name = `${surname}, ${firstname}`;
+        if (surname && firstname) {
+            parsed.name = `${surname}, ${firstname}`;
+        } else {
+            const fullName = getStr(row, [
+                'Name',
+                'Full Name',
+                'Name (Surname, FirstName)',
+                'Name (Surname. FirstName)',
+                'Name [Surname, Firstname]',
+            ]);
+            if (fullName) parsed.name = fullName;
+        }
 
         const rank = getStr(row, ['Rank']); if (rank) parsed.rank = rank as InstructorRank;
-        const callsign = getNum(row, ['callsign number', 'callsignnumber']); if (callsign !== undefined) parsed.callsignNumber = callsign;
-        const service = getStr(row, ['Service']); if (service) parsed.service = service as 'RAAF' | 'RAN' | 'ARA';
-        const category = getStr(row, ['Category']); if (category) parsed.category = category as InstructorCategory;
-        const seatConfig = getStr(row, ['Seat config', 'seatConfig']); if (seatConfig) parsed.seatConfig = seatConfig as SeatConfig;
+        const role = getStr(row, ['Role']); if (role) parsed.role = role as 'QFI' | 'SIM IP';
+        const callsign = getNum(row, ['callsign number', 'callsignnumber', 'Callsign No', 'Callsign Number', 'Callsign']); if (callsign !== undefined) parsed.callsignNumber = callsign;
+        const service = getStr(row, ['Service']);
+        const normalisedService = service ? normaliseImportedService(service) : undefined;
+        if (normalisedService) parsed.service = normalisedService;
+        const category = getStr(row, ['Category']);
+        const normalisedCategory = category ? normaliseImportedCategory(category) : undefined;
+        if (normalisedCategory) parsed.category = normalisedCategory;
+        const location = getStr(row, ['Location', 'Base', 'Location Code']); if (location) parsed.location = location;
+        const unit = getStr(row, ['Unit', 'Unit Code']); if (unit) parsed.unit = unit;
+        const flight = getStr(row, ['Flight', 'flight', 'Flight/Sqn', 'Section']); if (flight) parsed.flight = flight;
+        const seatConfig = getStr(row, ['Seat config', 'seatConfig', 'Seat Configuration']);
+        const normalisedSeatConfig = seatConfig ? normaliseImportedSeatConfig(seatConfig) : undefined;
+        if (normalisedSeatConfig) parsed.seatConfig = normalisedSeatConfig;
+        const phone = getStr(row, ['Phone Number', 'phoneNumber', 'Phone', 'Mobile']); if (phone) parsed.phoneNumber = phone;
+        const email = getStr(row, ['Email', 'Email Address']); if (email) parsed.email = email;
+        const permissions = getStr(row, ['Permissions', 'permissions', 'Permission']);
+        if (permissions) parsed.permissions = splitImportList(permissions);
         
-        const rolesStr = getStr(row, ['Roles']);
-        if (rolesStr) {
-            const rolesLower = rolesStr.toLowerCase();
-            parsed.isExecutive = rolesLower.includes('executive');
-            parsed.isFlyingSupervisor = rolesLower.includes('supervisor');
-            parsed.isTestingOfficer = rolesLower.includes('testing');
-            parsed.isIRE = rolesLower.includes('ire');
-        }
+        const rolesStr = getStr(row, ['Roles', 'Qualifications and Roles', 'Qualifications & Roles', 'Qualifications']);
+        applyImportedQualifications(parsed, rolesStr);
 
         return parsed;
     };
