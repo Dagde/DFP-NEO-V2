@@ -6,7 +6,7 @@ declare var XLSX: any;
 
 interface BulkUpdateFlyoutProps {
   onClose: () => void;
-  onBulkUpdateInstructors: (instructors: Instructor[]) => void;
+  onBulkUpdateInstructors: (instructors: Instructor[]) => void | Promise<void>;
   instructorsData?: Instructor[]; // Optional for trainee bulk updates
   traineesData?: Trainee[]; // For trainee bulk updates
   isTraineeMode?: boolean; // Toggle between instructor and trainee mode
@@ -258,7 +258,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
             }
 
             if (instructorsToProcess.length > 0) {
-                onBulkUpdateInstructors(instructorsToProcess);
+                await onBulkUpdateInstructors(instructorsToProcess);
             }
             
             let finalMessage = 'Process complete. ';

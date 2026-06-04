@@ -20550,15 +20550,74 @@ updates.forEach(update => {
         setShowAuthFlyout(false);
     };
 
-    const handleBulkUpdateInstructors = useCallback((updatedInstructors: Instructor[]) => {
-        const updatedMap = new Map(updatedInstructors.map(i => [i.idNumber, i]));
+    const handleBulkUpdateInstructors = useCallback(async (updatedInstructors: Instructor[]) => {
+        const normaliseImportedInstructor = (instructor: Instructor): Instructor => {
+            const roleText = String(instructor.role || '').trim().toLowerCase();
+            const inferredQfi = roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor';
+            const nextInstructor: Instructor = {
+                ...instructor,
+                role: roleText === 'sim ip' ? 'SIM IP' : 'QFI',
+                isQFI: instructor.isQFI ?? inferredQfi,
+                isOFI: instructor.isOFI ?? false,
+                isCFI: instructor.isCFI ?? false,
+                isAdminStaff: instructor.isAdminStaff ?? false,
+                isTestingOfficer: instructor.isTestingOfficer ?? false,
+                isExecutive: instructor.isExecutive ?? false,
+                isFlyingSupervisor: instructor.isFlyingSupervisor ?? false,
+                isIRE: instructor.isIRE ?? false,
+                unavailability: instructor.unavailability || [],
+            };
+            return nextInstructor;
+        };
+
+        const normalisedInstructors = updatedInstructors.map(normaliseImportedInstructor);
+        const updatedMap = new Map(normalisedInstructors.map(i => [i.idNumber, i]));
 
         setInstructorsData(prevInstructors => {
             const existingIds = new Set(prevInstructors.map(i => i.idNumber));
             const updatedExisting = prevInstructors.map(i => updatedMap.get(i.idNumber) || i);
-            const newToAdd = updatedInstructors.filter(ui => !existingIds.has(ui.idNumber));
+            const newToAdd = normalisedInstructors.filter(ui => !existingIds.has(ui.idNumber));
             return [...updatedExisting, ...newToAdd];
         });
+
+        const persistedInstructors: Instructor[] = [];
+        for (const importedInstructor of normalisedInstructors) {
+            const existingInstructor = allInstructorsDataRef.current.find(i => i.idNumber === importedInstructor.idNumber);
+            const dbId = (existingInstructor as any)?.id || (importedInstructor as any).id;
+            const payload = {
+                ...existingInstructor,
+                ...importedInstructor,
+                id: undefined,
+                _dataSource: undefined,
+            };
+
+            const response = await fetch(dbId ? `/api/personnel/${dbId}` : '/api/personnel', {
+                method: dbId ? 'PATCH' : 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || data.details || `Failed to save staff ${importedInstructor.name || importedInstructor.idNumber}`);
+            }
+            const savedPersonnel = data.personnel || data.updatedPersonnel || data.newPersonnel;
+            if (savedPersonnel) {
+                persistedInstructors.push({
+                    ...normalisePersonnelRecord(savedPersonnel),
+                    currencyStatus: savedPersonnel.qualifications?.currencyStatus || savedPersonnel.currencyStatus || [],
+                    _dataSource: 'database' as const,
+                });
+            }
+        }
+
+        if (persistedInstructors.length > 0) {
+            setInstructorsData(prevInstructors => {
+                const persistedIds = new Set(persistedInstructors.map(i => i.idNumber));
+                const withoutPersisted = prevInstructors.filter(i => !persistedIds.has(i.idNumber));
+                return [...withoutPersisted, ...persistedInstructors];
+            });
+        }
     }, []);
 
     // Callbacks for StaffView/InstructorListView to prevent render loop
