@@ -68,6 +68,7 @@ interface InstructorListViewProps {
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
   instructorLabel?: string;
+  operationalModel?: string;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -99,13 +100,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
     instructorLabel = 'QFI',
+    operationalModel = 'flight_school',
 }) => {
   // Track which prop changed to diagnose render loop
   const prevPropsRef = React.useRef<any>({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -204,6 +206,32 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
           return a.localeCompare(b);
       }),
   [qfisByUnit]);
+
+  const isAirCombatModel = operationalModel === 'air_combat';
+
+  const qfisByFlight = useMemo(() => {
+      if (!isAirCombatModel) return {};
+      const groups: { [key: string]: Instructor[] } = {};
+      qfis.forEach(instructor => {
+          const flight = String(instructor.flight || '').trim().toUpperCase();
+          if (!flight) return;
+          if (!groups[flight]) {
+              groups[flight] = [];
+          }
+          groups[flight].push(instructor);
+      });
+      return groups;
+  }, [isAirCombatModel, qfis]);
+
+  const sortedFlightGroups = useMemo(() =>
+      Object.keys(qfisByFlight).sort((a, b) => {
+          const simpleFlightPattern = /^[A-Z]$/;
+          if (simpleFlightPattern.test(a) && simpleFlightPattern.test(b)) return a.localeCompare(b);
+          if (simpleFlightPattern.test(a)) return -1;
+          if (simpleFlightPattern.test(b)) return 1;
+          return a.localeCompare(b, undefined, { numeric: true });
+      }),
+  [qfisByFlight]);
 
   const simIps = useMemo(() => {
         console.log('🔍 [SIM IP FILTER] instructorsData length:', instructorsData.length);
@@ -470,6 +498,21 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                             </div>
                             <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
                                 {renderInstructorList(qfisByUnit[unit])}
+                            </div>
+                        </div>
+                    ))}
+
+                    {isAirCombatModel && sortedFlightGroups.map(flight => (
+                        <div key={`flight-${flight}`} className="bg-gray-800 border border-cyan-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                            <div className="p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                                <div>
+                                    <h3 className="text-lg font-bold text-cyan-400">{flight} Flight</h3>
+                                    <p className="text-xs text-gray-400">Flight staff</p>
+                                </div>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByFlight[flight].length}</span>
+                            </div>
+                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+                                {renderInstructorList(qfisByFlight[flight])}
                             </div>
                         </div>
                     ))}

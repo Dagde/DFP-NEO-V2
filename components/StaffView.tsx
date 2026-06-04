@@ -34,6 +34,7 @@ interface StaffViewProps {
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
   instructorLabel?: string;
+  operationalModel?: string;
 
   // Props for InstructorScheduleView
   date: string;
@@ -133,6 +134,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             resourceDisplayNames={props.resourceDisplayNames}
             personnelDisplaySettings={props.personnelDisplaySettings}
             instructorLabel={props.instructorLabel}
+            operationalModel={props.operationalModel}
           />
         )}
         {activeTab === 'schedule' && (

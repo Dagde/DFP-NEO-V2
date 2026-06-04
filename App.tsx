@@ -23852,6 +23852,7 @@ updates.forEach(update => {
                             resourceDisplayNames={resourceDisplayNames}
                             personnelDisplaySettings={personnelDisplaySettings}
                             instructorLabel={instructorLabel}
+                            operationalModel={activeOperationalModel}
                         />;
             case 'Instructors':
                 return <InstructorListView
@@ -23970,6 +23971,7 @@ updates.forEach(update => {
                             resourceDisplayNames={resourceDisplayNames}
                             personnelDisplaySettings={personnelDisplaySettings}
                             instructorLabel={instructorLabel}
+                            operationalModel={activeOperationalModel}
                         />;
                 case 'Trainees':
                     return <TraineeListView

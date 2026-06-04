@@ -32500,13 +32500,14 @@ const InstructorListView = ({
   currentUserName,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
-  instructorLabel = "QFI"
+  instructorLabel = "QFI",
+  operationalModel = "flight_school"
 }) => {
   const prevPropsRef = React.useRef({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -32583,6 +32584,30 @@ const InstructorListView = ({
       return a.localeCompare(b);
     }),
     [qfisByUnit]
+  );
+  const isAirCombatModel = operationalModel === "air_combat";
+  const qfisByFlight = reactExports.useMemo(() => {
+    if (!isAirCombatModel) return {};
+    const groups = {};
+    qfis.forEach((instructor) => {
+      const flight = String(instructor.flight || "").trim().toUpperCase();
+      if (!flight) return;
+      if (!groups[flight]) {
+        groups[flight] = [];
+      }
+      groups[flight].push(instructor);
+    });
+    return groups;
+  }, [isAirCombatModel, qfis]);
+  const sortedFlightGroups = reactExports.useMemo(
+    () => Object.keys(qfisByFlight).sort((a, b) => {
+      const simpleFlightPattern = /^[A-Z]$/;
+      if (simpleFlightPattern.test(a) && simpleFlightPattern.test(b)) return a.localeCompare(b);
+      if (simpleFlightPattern.test(a)) return -1;
+      if (simpleFlightPattern.test(b)) return 1;
+      return a.localeCompare(b, void 0, { numeric: true });
+    }),
+    [qfisByFlight]
   );
   const simIps = reactExports.useMemo(() => {
     console.log("🔍 [SIM IP FILTER] instructorsData length:", instructorsData.length);
@@ -32813,6 +32838,19 @@ const InstructorListView = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(qfisByUnit[unit]) })
         ] }, unit)),
+        isAirCombatModel && sortedFlightGroups.map((flight) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-cyan-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-bold text-cyan-400", children: [
+                flight,
+                " Flight"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Flight staff" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: qfisByFlight[flight].length })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(qfisByFlight[flight]) })
+        ] }, `flight-${flight}`)),
         simIps.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-teal-400", children: "SIM IP" }),
@@ -32987,7 +33025,8 @@ const StaffView = (props) => {
           currentUserName: props.currentUserName,
           resourceDisplayNames: props.resourceDisplayNames,
           personnelDisplaySettings: props.personnelDisplaySettings,
-          instructorLabel: props.instructorLabel
+          instructorLabel: props.instructorLabel,
+          operationalModel: props.operationalModel
         }
       ),
       activeTab === "schedule" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -77755,7 +77794,8 @@ ${conflictLines.join("\n")}${moreText}`,
             currentUserName,
             resourceDisplayNames,
             personnelDisplaySettings,
-            instructorLabel
+            instructorLabel,
+            operationalModel: activeOperationalModel
           }
         );
       case "Instructors":
@@ -77866,7 +77906,8 @@ ${conflictLines.join("\n")}${moreText}`,
             currentUserName,
             resourceDisplayNames,
             personnelDisplaySettings,
-            instructorLabel
+            instructorLabel,
+            operationalModel: activeOperationalModel
           }
         );
       case "Trainees":
