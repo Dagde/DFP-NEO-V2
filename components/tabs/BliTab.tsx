@@ -1269,7 +1269,8 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
   const unitScopeOptions = useMemo(() => buildUnitScopeOptions(operationalContext), [operationalContext]);
   const [selectedUnitScopeKey, setSelectedUnitScopeKey] = useState('combined');
   const selectedUnitScope = unitScopeOptions.find(option => option.key === selectedUnitScopeKey);
-  const selectedUnitCode = selectedUnitScope?.unitCode;
+  const selectedUnitCode = selectedUnitScope?.unitCode
+    || (!operationalContext?.isSharedFleetContext ? normalizeUnitCode(operationalContext?.unitCode) : undefined);
 
   const previewRange = useMemo(() => getTimelineRange(date, '7d', periodSettings), [date, periodSettings]);
   const previewDateRangeLabel = useMemo(

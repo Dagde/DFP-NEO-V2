@@ -28715,7 +28715,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
   const unitScopeOptions = reactExports.useMemo(() => buildUnitScopeOptions(operationalContext), [operationalContext]);
   const [selectedUnitScopeKey, setSelectedUnitScopeKey] = reactExports.useState("combined");
   const selectedUnitScope = unitScopeOptions.find((option) => option.key === selectedUnitScopeKey);
-  const selectedUnitCode = selectedUnitScope?.unitCode;
+  const selectedUnitCode = selectedUnitScope?.unitCode || (!operationalContext?.isSharedFleetContext ? normalizeUnitCode(operationalContext?.unitCode) : void 0);
   const previewRange = reactExports.useMemo(() => getTimelineRange(date, "7d", periodSettings), [date, periodSettings]);
   const previewDateRangeLabel = reactExports.useMemo(
     () => formatDateRange(previewRange.startDate, previewRange.endDate),
@@ -76128,6 +76128,106 @@ ${conflictLines.join("\n")}${moreText}`,
   const handleCurrencyBack = () => {
     handleNavigation(previousView);
   };
+  const buildIntelligenceActiveCourses = reactExports.useMemo(() => {
+    const priorityCourses = coursePriorities.filter((course) => scopedCourseColors[course]);
+    if (priorityCourses.length > 0) return priorityCourses;
+    return [...new Set(
+      traineesData.map((trainee) => trainee.course).filter((course) => course && scopedCourseColors[course])
+    )];
+  }, [coursePriorities, scopedCourseColors, traineesData]);
+  const buildIntelligenceCourseSet = reactExports.useMemo(
+    () => new Set(buildIntelligenceActiveCourses),
+    [buildIntelligenceActiveCourses]
+  );
+  const buildIntelligencePersonnelSet = reactExports.useMemo(() => {
+    const names = /* @__PURE__ */ new Set();
+    instructorsData.forEach((instructor) => {
+      if (instructor.name) names.add(instructor.name);
+    });
+    traineesData.forEach((trainee) => {
+      if (trainee.fullName) names.add(trainee.fullName);
+      if (trainee.name) names.add(trainee.name);
+    });
+    return names;
+  }, [instructorsData, traineesData]);
+  const buildIntelligenceTraineeCourseLookup = reactExports.useMemo(() => {
+    const lookup = /* @__PURE__ */ new Map();
+    traineesData.forEach((trainee) => {
+      if (trainee.fullName && trainee.course) lookup.set(trainee.fullName, trainee.course);
+      if (trainee.name && trainee.course) lookup.set(trainee.name, trainee.course);
+    });
+    return lookup;
+  }, [traineesData]);
+  const getBuildIntelligenceEventCourse = reactExports.useCallback((event) => {
+    const traineeName = event.student || event.pilot || "";
+    if (!traineeName) return null;
+    const directCourse = buildIntelligenceTraineeCourseLookup.get(traineeName);
+    if (directCourse) return directCourse;
+    const legacyCourseMatch = traineeName.match(/ \u2013 (.*)$/);
+    return legacyCourseMatch ? legacyCourseMatch[1] : null;
+  }, [buildIntelligenceTraineeCourseLookup]);
+  const eventMatchesBuildIntelligenceScope = reactExports.useCallback((event) => {
+    const eventCourse = getBuildIntelligenceEventCourse(event);
+    if (eventCourse) return buildIntelligenceCourseSet.has(eventCourse);
+    return getPersonnel(event).some((person) => buildIntelligencePersonnelSet.has(person));
+  }, [buildIntelligenceCourseSet, buildIntelligencePersonnelSet, getBuildIntelligenceEventCourse]);
+  const buildIntelligenceEvents = reactExports.useMemo(
+    () => nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate })).filter(eventMatchesBuildIntelligenceScope),
+    [buildDfpDate, eventMatchesBuildIntelligenceScope, nextDayBuildEvents]
+  );
+  const buildIntelligenceAnalysis = reactExports.useMemo(() => {
+    if (!lastBuildAnalysis) return null;
+    const scopedCourseAnalysis = (lastBuildAnalysis.courseAnalysis || []).filter((course) => buildIntelligenceCourseSet.has(course.courseName));
+    const scheduledEvents = buildIntelligenceEvents.filter((event) => {
+      if (event.flightNumber.includes("Duty Sup")) return false;
+      if (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY")) return false;
+      return true;
+    });
+    const totalEvents = scheduledEvents.length;
+    const eventsByHour = /* @__PURE__ */ new Map();
+    for (let hour = 0; hour < 24; hour++) eventsByHour.set(hour, 0);
+    scheduledEvents.forEach((event) => {
+      const hour = Math.floor(event.startTime);
+      eventsByHour.set(hour, (eventsByHour.get(hour) || 0) + 1);
+    });
+    const averageEventsPerHour = totalEvents > 0 ? totalEvents / 24 : 0;
+    let clusteringScore = 0;
+    if (totalEvents > 0) {
+      eventsByHour.forEach((count) => {
+        clusteringScore += Math.abs(count - averageEventsPerHour);
+      });
+      clusteringScore = clusteringScore / (totalEvents * 2);
+    }
+    const flightEvents = scheduledEvents.filter((event) => event.type === "flight").length;
+    const standbyCount = buildIntelligenceEvents.filter(
+      (event) => event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY")
+    ).length;
+    const aircraftUtilization = lastBuildAnalysis.availableAircraft > 0 ? flightEvents / lastBuildAnalysis.availableAircraft * 100 : 0;
+    return {
+      ...lastBuildAnalysis,
+      totalEvents,
+      courseAnalysis: scopedCourseAnalysis,
+      timeDistribution: {
+        eventsByHour,
+        clusteringScore,
+        uniformityScore: 1 - clusteringScore
+      },
+      resourceUtilization: {
+        ...lastBuildAnalysis.resourceUtilization,
+        aircraftUtilization,
+        standbyCount
+      },
+      insights: lastBuildAnalysis.insights || []
+    };
+  }, [buildIntelligenceCourseSet, buildIntelligenceEvents, lastBuildAnalysis]);
+  const buildIntelligenceCancellationRecords = reactExports.useMemo(() => {
+    const scopedEventIds = new Set(buildIntelligenceEvents.map((event) => event.id));
+    return cancellationRecords.filter((record) => {
+      if (record.eventId && scopedEventIds.has(record.eventId)) return true;
+      const affectedPersonnel = String(record.personnelAffected || "").split(/[,;\n]/).map((person) => person.trim()).filter(Boolean);
+      return affectedPersonnel.some((person) => buildIntelligencePersonnelSet.has(person));
+    });
+  }, [buildIntelligenceEvents, buildIntelligencePersonnelSet, cancellationRecords]);
   const renderActiveView = () => {
     switch (activeView) {
       case "Program Schedule":
@@ -77011,10 +77111,10 @@ ${conflictLines.join("\n")}${moreText}`,
           BuildIntelligenceView,
           {
             date: buildDfpDate,
-            events: nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })),
+            events: buildIntelligenceEvents,
             instructorsData,
             traineesData,
-            activeCourses: coursePriorities.length > 0 ? coursePriorities.filter((course) => scopedCourseColors[course]) : [...new Set(traineesData.map((t) => t.course).filter((c) => c && scopedCourseColors[c]))],
+            activeCourses: buildIntelligenceActiveCourses,
             onNavigateAndSelectPerson: (name) => {
               const person = [...allInstructorsData, ...allTraineesData].find((p) => p.name === name || "fullName" in p && p.fullName === name);
               if (person) {
@@ -77028,14 +77128,14 @@ ${conflictLines.join("\n")}${moreText}`,
             courseColors: scopedCourseColors,
             currentUserRole: currentUserPermission,
             currentUserId: getCurrentUserId() ?? void 0,
-            cancellationRecords,
+            cancellationRecords: buildIntelligenceCancellationRecords,
             currentAircraftAvailable: availableAircraftCount,
             totalAircraft: configuredAirframeCount,
             timezoneOffset,
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             buildDate: buildDfpDate,
-            analysis: lastBuildAnalysis,
+            analysis: buildIntelligenceAnalysis,
             resourceDisplayNames,
             operationalContext: activeOperationalContext
           }
