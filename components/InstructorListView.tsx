@@ -11,6 +11,7 @@ import ArchivedInstructorsFlyout from './ArchivedInstructorsFlyout';
 import AuditButton from './AuditButton';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import { normaliseOperationalModel } from '../utils/platformConfigService';
 
 // Helper to generate a unique random ID for new instructors
 const generateRandomIdNumber = (): number => {
@@ -207,7 +208,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       }),
   [qfisByUnit]);
 
-  const isAirCombatModel = operationalModel === 'air_combat';
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
 
   const qfisByFlight = useMemo(() => {
       if (!isAirCombatModel) return {};

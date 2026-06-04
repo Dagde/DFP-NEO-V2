@@ -32585,7 +32585,7 @@ const InstructorListView = ({
     }),
     [qfisByUnit]
   );
-  const isAirCombatModel = operationalModel === "air_combat";
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
   const qfisByFlight = reactExports.useMemo(() => {
     if (!isAirCombatModel) return {};
     const groups = {};
