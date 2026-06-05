@@ -2918,6 +2918,33 @@ function generateDfpInternal(
             finalAssignments: [] as any[],
             summary: null,
         },
+        airCombatPriority: {
+            enabled: activeOperationalModel === 'air_combat',
+            model: activeOperationalModel,
+            context: {
+                locationCode: school,
+                unitCode: activeUnitCode,
+                buildDate,
+            },
+            inputs: {
+                staffTotal: originalInstructors.length,
+                pilotRoleStaff: originalInstructors.filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name)).length,
+                highestPriorityEvents: highestPriorityEvents.length,
+                syllabusItems: syllabusDetails.length,
+                generatedEventsAtBuildStart: generatedEvents.length,
+            },
+            stageTrace: [{
+                stage: 'build-start-preflight',
+                timestamp: new Date().toISOString(),
+                generatedEvents: generatedEvents.length,
+            }],
+            conclusion: activeOperationalModel === 'air_combat'
+                ? ['Build report was saved before the Air Combat scheduler stage completed. Check runtimeError and stageTrace for the earlier failure point.']
+                : [`Air Combat scheduler did not run because active model was ${activeOperationalModel || 'blank'}.`],
+            rejectionReasons: {},
+            skipReasons: [],
+            placements: [],
+        },
         final: null,
     };
 
@@ -19832,11 +19859,37 @@ const App: React.FC = () => {
                     localStorage.setItem('neo_build_runtime_error_report', JSON.stringify(runtimeErrorReport));
                     const existingDiagRaw = localStorage.getItem('neo_build_diag_report');
                     const existingDiag = existingDiagRaw ? JSON.parse(existingDiagRaw) : {};
+                    const fallbackAirCombatPriority = existingDiag.airCombatPriority || {
+                        enabled: activeOperationalModel === 'air_combat',
+                        model: activeOperationalModel,
+                        context: {
+                            locationCode: school,
+                            unitCode: activeUnitCode,
+                            buildDate: buildDfpDate,
+                        },
+                        inputs: {
+                            staffTotal: instructorsData.length,
+                            pilotRoleStaff: instructorsData.filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name)).length,
+                            highestPriorityEvents: config.highestPriorityEvents.length,
+                            syllabusItems: syllabusDetails.length,
+                        },
+                        stageTrace: [{
+                            stage: 'runtime-error-before-air-combat-diagnostics',
+                            timestamp: runtimeErrorReport.timestamp,
+                        }],
+                        conclusion: activeOperationalModel === 'air_combat'
+                            ? ['Build failed before the Air Combat scheduler diagnostics completed. See runtimeError for the exact exception.']
+                            : [`Air Combat scheduler did not run because active model was ${activeOperationalModel || 'blank'}.`],
+                        rejectionReasons: {},
+                        skipReasons: [],
+                        placements: [],
+                    };
                     localStorage.setItem('neo_build_diag_report', JSON.stringify({
                         ...existingDiag,
                         stage: 'build-error',
                         updatedAt: runtimeErrorReport.timestamp,
                         runtimeError: runtimeErrorReport,
+                        airCombatPriority: fallbackAirCombatPriority,
                     }));
                 } catch (diagError) {
                     console.warn('[NEO-BUILD-DIAG] Failed to persist runtime error diagnostic:', diagError);
