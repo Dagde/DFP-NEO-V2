@@ -32793,8 +32793,8 @@ const InstructorListView = ({
     },
     instructor.name
   )) });
-  const renderInstructorUnitCard = (unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm", children: [
+  const renderInstructorUnitCard = (unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${isAirCombatModel ? "border-emerald-400/80 shadow-emerald-500/20" : "border-gray-700"}`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-3 border-b bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm ${isAirCombatModel ? "border-emerald-400/40" : "border-gray-700"}`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400", children: unit }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: [
         qfisByUnit[unit].length,

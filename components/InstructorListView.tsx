@@ -455,8 +455,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   );
 
   const renderInstructorUnitCard = (unit: string) => (
-    <div key={unit} className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-        <div className="p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
+    <div key={unit} className={`bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${isAirCombatModel ? 'border-emerald-400/80 shadow-emerald-500/20' : 'border-gray-700'}`}>
+        <div className={`p-3 border-b bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm ${isAirCombatModel ? 'border-emerald-400/40' : 'border-gray-700'}`}>
             <h3 className="text-lg font-bold text-sky-400">{unit}</h3>
             <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} Staff</span>
         </div>
