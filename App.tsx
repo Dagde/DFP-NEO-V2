@@ -6547,7 +6547,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return airCombatRandomTieBreaks.get(name)!;
     };
     const publishedHistoryEvents = Object.values(publishedSchedules || {}).flat() as ScheduleEvent[];
-    const airCombatHistoryEvents = [...publishedHistoryEvents, ...events, ...generatedEvents];
+    const airCombatHistoryEvents = [...publishedHistoryEvents, ...generatedEvents];
     const getAirCombatStaffEvents = (staffName: string, sourceEvents?: ScheduleEvent[]): ScheduleEvent[] =>
         (sourceEvents || [...airCombatHistoryEvents, ...generatedEvents]).filter(event => eventHasPerson(event, staffName));
     const getAirCombatTaskingEvents = (staffName: string): ScheduleEvent[] =>

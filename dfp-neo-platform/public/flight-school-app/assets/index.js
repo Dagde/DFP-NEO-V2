@@ -3166,7 +3166,7 @@ const DataRow = ({ row, isEven }) => {
     ] })
   ] });
 };
-const LogbookView = ({ person, events: events2, onBack, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const LogbookView = ({ person, events, onBack, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const [rows, setRows] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
@@ -6194,7 +6194,7 @@ const getCategory = (res) => {
   if (res.startsWith("Ground")) return "Ground";
   return "Other";
 };
-const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events: events2 = [], formatResourceLabel: formatResourceLabel2, aircraftConfigLabelsByResource = {} }) => {
+const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel: formatResourceLabel2, aircraftConfigLabelsByResource = {} }) => {
   const [draggedIndex, setDraggedIndex] = reactExports.useState(null);
   const handleDragStart = (index) => {
     setDraggedIndex(index);
@@ -6884,7 +6884,7 @@ const ScheduleView = ({
   onDateChange,
   onDateSelect,
   snapshotDates = [],
-  events: events2,
+  events,
   resources,
   instructors,
   traineesData,
@@ -7101,7 +7101,7 @@ const ScheduleView = ({
       };
       if (isMultiSelectMode && selectedEventIds.has(event.id)) {
         selectedEventIds.forEach((id) => {
-          const ev = events2.find((e2) => e2.id === id);
+          const ev = events.find((e2) => e2.id === id);
           if (ev) processEvent(ev);
         });
       } else {
@@ -7165,7 +7165,7 @@ const ScheduleView = ({
         const rectTop = y;
         const rectBottom = y + height;
         const newSelectedIds = /* @__PURE__ */ new Set();
-        events2.forEach((ev) => {
+        events.forEach((ev) => {
           const rowIndex = resources.indexOf(ev.resourceId);
           if (rowIndex === -1) return;
           const tileTop = rowIndex * ROW_HEIGHT$5;
@@ -7189,11 +7189,11 @@ const ScheduleView = ({
       const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$5 / 2) / ROW_HEIGHT$5) - mainEventInitialPos.rowIndex;
       console.log("Drag calculation - timeShift:", timeShift, "rowShift:", rowShift, "xInGrid:", xInGrid, "yInGrid:", yInGrid);
       const updates = [];
-      const tempEvents = [...events2];
+      const tempEvents = [...events];
       let resourceConflictId = null;
       let tempCptConflict = null;
       for (const [id, initialPos] of draggingState.initialPositions.entries()) {
-        const eventData = events2.find((ev) => ev.id === id);
+        const eventData = events.find((ev) => ev.id === id);
         if (!eventData) continue;
         let newStartTime = initialPos.startTime + timeShift;
         let newRowIndex = initialPos.rowIndex + rowShift;
@@ -7208,7 +7208,7 @@ const ScheduleView = ({
         if (tempEventIndex !== -1) {
           tempEvents[tempEventIndex] = { ...tempEvents[tempEventIndex], startTime: snappedStartTime, resourceId: newResourceId };
         }
-        const conflictingEvent = events2.find(
+        const conflictingEvent = events.find(
           (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$2({ ...eventData, startTime: snappedStartTime }, ev)
         );
         if (conflictingEvent) {
@@ -7471,7 +7471,7 @@ const ScheduleView = ({
     if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
     const windowStart = validateOverlayTime - 0.5;
     const windowEnd = validateOverlayTime + 0.5;
-    const flightCount = events2.filter((event) => {
+    const flightCount = events.filter((event) => {
       if (event.type !== "flight") return false;
       if (event.resourceId?.startsWith("STBY") || event.resourceId?.startsWith("BNF-STBY")) return false;
       if (event.isCancelled) return false;
@@ -7523,7 +7523,7 @@ const ScheduleView = ({
   };
   const renderEvents = () => {
     return resources.flatMap((resource, rowIndex) => {
-      const resourceEvents = events2.filter((e) => e.resourceId === resource).sort((a, b) => {
+      const resourceEvents = events.filter((e) => e.resourceId === resource).sort((a, b) => {
         if (a.type === "deployment" && b.type !== "deployment") return -1;
         if (a.type !== "deployment" && b.type === "deployment") return 1;
         return a.startTime - b.startTime;
@@ -7729,7 +7729,7 @@ const ScheduleView = ({
             standbyCount,
             ftdCount,
             cptCount,
-            events: events2,
+            events,
             formatResourceLabel: formatResourceLabel2,
             aircraftConfigLabelsByResource
           }
@@ -8031,10 +8031,10 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   });
   return unavailabilityEvents;
 };
-const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events: events2, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings }) => {
+const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings }) => {
   console.log("🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:");
   console.log("  - date:", date);
-  console.log("  - events count:", events2?.length);
+  console.log("  - events count:", events?.length);
   console.log("  - instructors count:", instructors?.length);
   console.log("  - instructorsData count:", instructorsData?.length);
   console.log("  - traineesData count:", traineesData?.length);
@@ -8062,11 +8062,11 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     console.error("❌ Error stack:", error.stack);
   }
   if (!date) console.error("❌ CRITICAL: date is undefined");
-  if (!events2) console.error("❌ CRITICAL: events is undefined");
+  if (!events) console.error("❌ CRITICAL: events is undefined");
   if (!instructors) console.error("❌ CRITICAL: instructors is undefined");
   if (!daylightTimes) console.error("❌ CRITICAL: daylightTimes is undefined");
-  if (events2?.length > 0) {
-    console.log("🔍 Sample event structure:", events2[0]);
+  if (events?.length > 0) {
+    console.log("🔍 Sample event structure:", events[0]);
   }
   if (instructors?.length > 0) {
     console.log("🔍 Sample instructor structure:", instructors[0]);
@@ -8105,8 +8105,8 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
   }, [date]);
   const eventsWithUnavailability = reactExports.useMemo(() => {
     const unavailabilityEvents = createUnavailabilityEvents$1(date, instructorsData, true);
-    return [...events2, ...unavailabilityEvents];
-  }, [date, events2, instructorsData]);
+    return [...events, ...unavailabilityEvents];
+  }, [date, events, instructorsData]);
   reactExports.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
@@ -8730,7 +8730,7 @@ const createUnavailabilityEvents = (date, personnelData) => {
   });
   return unavailabilityEvents;
 };
-const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events: events2, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
+const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
@@ -8765,8 +8765,8 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
   }, [date]);
   const eventsWithUnavailability = reactExports.useMemo(() => {
     const unavailabilityEvents = createUnavailabilityEvents(date, traineesData);
-    return [...events2, ...unavailabilityEvents];
-  }, [date, events2, traineesData]);
+    return [...events, ...unavailabilityEvents];
+  }, [date, events, traineesData]);
   reactExports.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
@@ -9100,7 +9100,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                 ) : null;
                 const barsForThisRow = [];
                 if (showValidation) {
-                  const traineeEventsForBars = events2.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee || e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)).sort((a, b) => a.startTime - b.startTime);
+                  const traineeEventsForBars = events.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee || e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)).sort((a, b) => a.startTime - b.startTime);
                   for (let i = 0; i < traineeEventsForBars.length; i++) {
                     const currentEvent = traineeEventsForBars[i];
                     const prevEvent = traineeEventsForBars[i - 1];
@@ -11524,7 +11524,7 @@ const TraineeProfileFlyout = ({
   trainee,
   onClose,
   onUpdateTrainee,
-  events: events2,
+  events,
   school,
   onNavigateToHateSheet,
   onAddRemedialPackage,
@@ -11768,8 +11768,8 @@ const TraineeProfileFlyout = ({
     }
   }, []);
   const traineeHasEventsToday = reactExports.useMemo(() => {
-    return events2.some((e) => e.student === trainee.fullName || e.pilot === trainee.fullName);
-  }, [events2, trainee.fullName]);
+    return events.some((e) => e.student === trainee.fullName || e.pilot === trainee.fullName);
+  }, [events, trainee.fullName]);
   const handlePauseToggle = () => {
     if (!isPaused && traineeHasEventsToday) {
       setShowScheduleWarning(true);
@@ -12696,7 +12696,7 @@ const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
     ] })
   ] }) });
 };
-const FlightInfoFlyout = ({ events: events2, position, personName, personType, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const FlightInfoFlyout = ({ events, position, personName, personType, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
     const minutes = Math.round(time % 1 * 60);
@@ -12710,7 +12710,7 @@ const FlightInfoFlyout = ({ events: events2, position, personName, personType, r
       "aria-live": "polite",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400 mb-2 border-b border-gray-700 pb-2", children: personName }),
-        events2.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: events2.sort((a, b) => a.startTime - b.startTime).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `p-2 rounded-md border-l-4 ${event.color.replace("bg-", "border-")}`, children: [
+        events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: events.sort((a, b) => a.startTime - b.startTime).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `p-2 rounded-md border-l-4 ${event.color.replace("bg-", "border-")}`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center font-semibold text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               event.flightNumber,
@@ -13235,7 +13235,7 @@ const generateNewTraineeTemplate = () => ({
   }
 });
 const CourseRosterView = ({
-  events: events2,
+  events,
   traineesData,
   courseColors,
   archivedCourses,
@@ -13364,7 +13364,7 @@ const CourseRosterView = ({
   };
   const handleMouseEnter = (e, traineeFullName) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const traineeEvents = events2.filter(
+    const traineeEvents = events.filter(
       (event) => event.student === traineeFullName || event.flightType === "Solo" && event.pilot === traineeFullName
     );
     setHoveredTrainee({ name: traineeFullName.split(" – ")[0], events: traineeEvents });
@@ -13552,7 +13552,7 @@ const CourseRosterView = ({
           setNewTraineeTemplate(null);
         },
         onUpdateTrainee: isCreatingNew ? onAddTrainee : onUpdateTrainee,
-        events: events2,
+        events,
         school,
         onNavigateToHateSheet,
         onAddRemedialPackage,
@@ -18726,14 +18726,14 @@ function groupByModule(items) {
     return { moduleKey: key, label, items: groups[key] };
   });
 }
-function getTraineeStatus(trainee, events2, date) {
+function getTraineeStatus(trainee, events, date) {
   if (trainee.isPaused) return { status: "paused", reason: "Trainee is currently paused" };
   for (const u of trainee.unavailability || []) {
     if (date >= u.startDate && date <= u.endDate) {
       return { status: "unavailable", reason: `Unavailable: ${u.reason}` };
     }
   }
-  const todayEvents = events2.filter((e) => e.date === date);
+  const todayEvents = events.filter((e) => e.date === date);
   for (const e of todayEvents) {
     const attendees = [e.student, e.instructor, e.pilot, ...e.attendees || []].filter(Boolean);
     if (attendees.includes(trainee.fullName)) {
@@ -18748,7 +18748,7 @@ const AcademicsTab = ({
   traineesData,
   scores,
   traineeLMPs,
-  events: events2,
+  events,
   date,
   courseColors,
   school,
@@ -18815,10 +18815,10 @@ const AcademicsTab = ({
   );
   const traineeStatuses = reactExports.useMemo(
     () => courseTrainees.reduce((acc, t) => {
-      acc[t.fullName] = getTraineeStatus(t, events2, selectedDate);
+      acc[t.fullName] = getTraineeStatus(t, events, selectedDate);
       return acc;
     }, {}),
-    [courseTrainees, events2, selectedDate]
+    [courseTrainees, events, selectedDate]
   );
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   reactExports.useEffect(() => {
@@ -19601,7 +19601,7 @@ const AddGroundEventFlyout = ({
   syllabusDetails,
   scores,
   traineeLMPs,
-  events: events2,
+  events,
   date,
   courseColors,
   school,
@@ -19872,7 +19872,7 @@ const AddGroundEventFlyout = ({
                     traineesData,
                     scores: scores || /* @__PURE__ */ new Map(),
                     traineeLMPs: traineeLMPs || /* @__PURE__ */ new Map(),
-                    events: events2 || [],
+                    events: events || [],
                     date: date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
                     courseColors: courseColors || activeCourses,
                     school: school || "ESL",
@@ -20221,7 +20221,7 @@ const formatDate$2 = (dateString) => {
 const MyDashboard = ({
   userName,
   userRank,
-  events: events2,
+  events,
   onSelectEvent,
   onNavigate,
   onSelectMyProfile,
@@ -20231,7 +20231,7 @@ const MyDashboard = ({
   pt051Assessments,
   onSelectPt051
 }) => {
-  const sortedEvents = [...events2].sort((a, b) => a.startTime - b.startTime);
+  const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
   const mySctRequests = sctRequests.filter((req) => req.name === userName.split(" ").reverse().join(", "));
   const incompletePt051s = React.useMemo(() => {
     const fullUserName = `${userName.split(" ").reverse().join(", ")}`;
@@ -20586,14 +20586,14 @@ const formatTime$1 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const SupervisorDashboard = ({ instructorsData, traineesData, date, events: events2, school, currentLocation, onNavigate, onOpenAuth }) => {
+const SupervisorDashboard = ({ instructorsData, traineesData, date, events, school, currentLocation, onNavigate, onOpenAuth }) => {
   const flightsNeedingAuth = reactExports.useMemo(() => {
     const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
-    return events2.filter(
+    return events.filter(
       (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
       // Only show flights that haven't ended
     ).sort((a, b) => a.startTime - b.startTime).slice(0, 5);
-  }, [events2]);
+  }, [events]);
   const activeInstructors = instructorsData.filter((i) => !i.isPaused).length;
   const onLeaveInstructors = instructorsData.filter((i) => i.isPaused).length;
   const tmufInstructors = instructorsData.filter((i) => i.unavailability?.some((u) => u.reason?.includes("TMUF") || u.reason?.includes("Medical"))).length;
@@ -20786,7 +20786,7 @@ const getResourceCategory = (res) => {
 const NextDayBuildView = ({
   date,
   onDateChange,
-  events: events2,
+  events,
   resources,
   instructors,
   airframeCount,
@@ -20928,7 +20928,7 @@ const NextDayBuildView = ({
       };
       if (isMultiSelectMode && selectedEventIds.has(event.id)) {
         selectedEventIds.forEach((id) => {
-          const ev = events2.find((e2) => e2.id === id);
+          const ev = events.find((e2) => e2.id === id);
           if (ev) processEvent(ev);
         });
       } else {
@@ -20983,7 +20983,7 @@ const NextDayBuildView = ({
       const rectTop = y;
       const rectBottom = y + height;
       const newSelectedIds = /* @__PURE__ */ new Set();
-      events2.forEach((ev) => {
+      events.forEach((ev) => {
         const rowIndex = resources.indexOf(ev.resourceId);
         if (rowIndex === -1) return;
         const tileTop = rowIndex * ROW_HEIGHT$2;
@@ -21003,11 +21003,11 @@ const NextDayBuildView = ({
     const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$2 - mainEventInitialPos.startTime;
     const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$2 / 2) / ROW_HEIGHT$2) - mainEventInitialPos.rowIndex;
     const updates = [];
-    const tempEvents = [...events2];
+    const tempEvents = [...events];
     let resourceConflictId = null;
     let tempCptConflict = null;
     for (const [id, initialPos] of draggingState.initialPositions.entries()) {
-      const eventData = events2.find((ev) => ev.id === id);
+      const eventData = events.find((ev) => ev.id === id);
       if (!eventData) continue;
       let newStartTime = initialPos.startTime + timeShift;
       let newRowIndex = initialPos.rowIndex + rowShift;
@@ -21018,7 +21018,7 @@ const NextDayBuildView = ({
       const snappedStartTime = Math.round(newStartTime * 12) / 12;
       const newResourceId = resources[newRowIndex];
       updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
-      const conflictingEvent = events2.find(
+      const conflictingEvent = events.find(
         (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$1({ ...eventData, startTime: snappedStartTime }, ev)
       );
       if (conflictingEvent) {
@@ -21280,7 +21280,7 @@ const NextDayBuildView = ({
     if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
     const windowStart = validateOverlayTime - 0.5;
     const windowEnd = validateOverlayTime + 0.5;
-    const flightCount = events2.filter((event) => {
+    const flightCount = events.filter((event) => {
       if (event.type !== "flight") return false;
       if (event.resourceId?.startsWith("STBY") || event.resourceId?.startsWith("BNF-STBY")) return false;
       if (event.isCancelled) return false;
@@ -21365,7 +21365,7 @@ const NextDayBuildView = ({
   };
   const renderEvents = () => {
     const seenIds = /* @__PURE__ */ new Set();
-    const uniqueEvents = events2.filter((e) => {
+    const uniqueEvents = events.filter((e) => {
       if (seenIds.has(e.id)) return false;
       seenIds.add(e.id);
       return true;
@@ -21520,7 +21520,7 @@ const NextDayBuildView = ({
             standbyCount,
             ftdCount,
             cptCount,
-            events: events2,
+            events,
             formatResourceLabel: formatResourceLabel2,
             aircraftConfigLabelsByResource
           }
@@ -22551,7 +22551,7 @@ const PrioritiesView = ({
     return next;
   };
   const buildCurrencyDraftEvents = (audience, people, includeFlights, includeSims, crewMode) => {
-    const events2 = [];
+    const events = [];
     people.forEach((person, personIndex) => {
       const displayName = person.fullName || person.name;
       const modeList = [
@@ -22559,7 +22559,7 @@ const PrioritiesView = ({
         ...includeSims ? ["ftd"] : []
       ];
       modeList.forEach((type, typeIndex) => {
-        events2.push({
+        events.push({
           id: `currency-draft-${audience}-${type}-${person.idNumber}-${buildDfpDate}-${v4()}`,
           audience,
           personId: person.idNumber,
@@ -22577,7 +22577,7 @@ const PrioritiesView = ({
         });
       });
     });
-    return events2;
+    return events;
   };
   const buildCurrencyPriorityEventsFromDrafts = (drafts) => {
     return drafts.map((draft, index) => {
@@ -22616,17 +22616,17 @@ const PrioritiesView = ({
   };
   const addTraineeCurrencyEventsToPriority = () => {
     const selectedPeople = traineeCurrencyRows.filter((row) => traineeCurrencySelection.has(row.trainee.idNumber)).map((row) => ({ idNumber: row.trainee.idNumber, personKey: String(row.trainee.idNumber), name: row.trainee.name, fullName: row.trainee.fullName, course: row.trainee.course, dueCurrencies: row.dueCurrencies }));
-    const events2 = buildCurrencyDraftEvents("trainee", selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
-    if (events2.length === 0) return;
-    setCurrencyDraftEvents((prev) => [...prev, ...events2]);
-    logAudit("Priorities", "Build", "Built trainee currency event review list", `${events2.length} Currency event(s) staged`);
+    const events = buildCurrencyDraftEvents("trainee", selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
+    if (events.length === 0) return;
+    setCurrencyDraftEvents((prev) => [...prev, ...events]);
+    logAudit("Priorities", "Build", "Built trainee currency event review list", `${events.length} Currency event(s) staged`);
   };
   const addStaffCurrencyEventsToPriority = () => {
     const selectedPeople = staffCurrencyRows.filter((row) => staffCurrencySelection.has(row.personKey)).map((row) => ({ idNumber: row.instructor.idNumber, personKey: row.personKey, name: row.instructor.name, rank: row.instructor.rank, dueCurrencies: row.dueCurrencies }));
-    const events2 = buildCurrencyDraftEvents("staff", selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
-    if (events2.length === 0) return;
-    setCurrencyDraftEvents((prev) => [...prev, ...events2]);
-    logAudit("Priorities", "Build", "Built staff currency event review list", `${events2.length} Currency event(s) staged`);
+    const events = buildCurrencyDraftEvents("staff", selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
+    if (events.length === 0) return;
+    setCurrencyDraftEvents((prev) => [...prev, ...events]);
+    logAudit("Priorities", "Build", "Built staff currency event review list", `${events.length} Currency event(s) staged`);
   };
   const pushSelectedCurrencyDraftsToPriority = () => {
     const selectedDrafts = currencyDraftEvents.filter((event) => event.selected);
@@ -22861,7 +22861,7 @@ const PrioritiesView = ({
     });
     return list.sort((a, b) => a.trainee.name.localeCompare(b.trainee.name));
   }, [traineesData, traineeLMPs, scores, syllabusDetails]);
-  const PriorityEventTable = ({ events: events2 }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
+  const PriorityEventTable = ({ events }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
@@ -22872,7 +22872,7 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Action" })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: events2.map((event) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: events.map((event) => {
       const personName = event.isTaskingRequest ? event.group || "Tasking" : event.instructor || event.pilot || event.student || "N/A";
       const isPublishedInActiveSchedule = activeScheduleEvents.some(
         (activeEvent) => activeEvent.id === event.id || !!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId
@@ -24205,7 +24205,7 @@ const ListCard = ({ title, trainees }) => {
 };
 const PeopleTab = ({
   date,
-  events: events2,
+  events,
   instructorsData,
   traineesData,
   onNavigateAndSelectPerson,
@@ -24258,11 +24258,11 @@ const PeopleTab = ({
     return waitingList.sort((a, b) => (a.trainee?.name ?? "Unknown").localeCompare(b.trainee?.name ?? "Unknown"));
   }, [traineesData, traineeLMPs, scores]);
   const stats = reactExports.useMemo(() => {
-    const flightOrFtdEvents = events2.filter(
+    const flightOrFtdEvents = events.filter(
       (e) => (e.type === "flight" || e.type === "ftd") && !e.resourceId?.startsWith("STBY") && !e.resourceId?.startsWith("FTD-STBY") && !e.resourceId?.startsWith("BNF-STBY")
     );
     const instructorEventCounts = /* @__PURE__ */ new Map();
-    events2.forEach((e) => {
+    events.forEach((e) => {
       if (e.instructor) {
         instructorEventCounts.set(e.instructor, (instructorEventCounts.get(e.instructor) || 0) + 1);
       }
@@ -24353,7 +24353,7 @@ const PeopleTab = ({
       traineesWithInstructorFromFlightList: Array.from(traineesWithInstructorFromFlight).sort(),
       traineesWithOtherInstructorsList: Array.from(traineesWithOtherInstructors).sort()
     };
-  }, [date, events2, instructorsData, traineesData]);
+  }, [date, events, instructorsData, traineesData]);
   const { nextEventLists, nextPlusOneLists } = reactExports.useMemo(() => {
     const nextEventLists2 = { flight: [], ftd: [], cpt: [], ground: [] };
     const nextPlusOneLists2 = { flight: [], ftd: [], cpt: [], ground: [] };
@@ -24863,7 +24863,7 @@ const PieChart = ({ data, title }) => {
 };
 const CourseMetricsTab = ({
   date,
-  events: events2,
+  events,
   traineesData,
   activeCourses,
   onNavigateAndSelectPerson,
@@ -24913,7 +24913,7 @@ const CourseMetricsTab = ({
       });
       availableTraineesPerCourse.set(course, availableCount);
     });
-    events2.forEach((e) => {
+    events.forEach((e) => {
       if (e.flightNumber !== "Ground School") {
         const course = getCourseFromStudent(e.student || "") || getCourseFromStudent(e.pilot || "");
         if (course && eventsPerCourse.has(course)) {
@@ -24933,7 +24933,7 @@ const CourseMetricsTab = ({
       personnelPerCourseLists,
       availableTraineesPerCourse
     };
-  }, [date, events2, traineesData, activeCourses, traineeCourseLookup]);
+  }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Events per Course (Excl. Ground School)" }) }),
@@ -25153,7 +25153,7 @@ const InsightsSection = ({ insights }) => {
   ] });
 };
 const BuildAnalyticsTab = ({
-  events: events2,
+  events,
   analysis,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
@@ -25174,16 +25174,16 @@ const BuildAnalyticsTab = ({
     }).replace(/ /g, "-");
   }, [analysis?.buildDate]);
   const tilesStats = reactExports.useMemo(() => {
-    const flightTiles = events2.filter((e) => e.type === "flight").length;
-    const ftdTiles = events2.filter((e) => e.type === "ftd").length;
-    const standbyEvents = events2.filter((e) => e.resourceId?.startsWith("STBY")).length;
+    const flightTiles = events.filter((e) => e.type === "flight").length;
+    const ftdTiles = events.filter((e) => e.type === "ftd").length;
+    const standbyEvents = events.filter((e) => e.resourceId?.startsWith("STBY")).length;
     return {
       flightTiles,
       ftdTiles,
       combinedTiles: flightTiles + ftdTiles,
       standbyEvents
     };
-  }, [events2]);
+  }, [events]);
   if (!analysis) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: sectionClass2, children: [
@@ -26317,7 +26317,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
     }
   ) });
 };
-const CourseTab = ({ summary, trainees, events: events2 }) => {
+const CourseTab = ({ summary, trainees, events }) => {
   const { thresholds } = useThresholds();
   const [eventAvgExpanded, setEventAvgExpanded] = reactExports.useState(false);
   const evaluatedRisks = trainees.map((t) => evaluateTraineeRisk(t, thresholds).riskLevel);
@@ -26331,11 +26331,11 @@ const CourseTab = ({ summary, trainees, events: events2 }) => {
   const skillEntries = Object.entries(skillHeatmap).sort((a, b) => a[1] - b[1]);
   const bottleneckEvents = parseJ(summary.bottleneckEvents, []);
   const overServicedEventsFromSummary = parseJ(summary.overServicedEvents, []);
-  const overServicedFromEvents = events2.filter((ev) => ev.overServiceIndicator === true || ev.overServiceIndicator === "true" || ev.overServiceIndicator === 1).map((ev) => ev.eventCode);
+  const overServicedFromEvents = events.filter((ev) => ev.overServiceIndicator === true || ev.overServiceIndicator === "true" || ev.overServiceIndicator === 1).map((ev) => ev.eventCode);
   const overServicedEvents = overServicedEventsFromSummary.length > 0 ? overServicedEventsFromSummary : overServicedFromEvents;
-  const eventsByDiff = [...events2].filter((ev) => safeN(ev.avgOverallGrade) > 0).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade));
-  const topByAttempts = [...events2].sort((a, b) => safeN(b.totalAttempts) - safeN(a.totalAttempts)).slice(0, 12);
-  const allSkills = Array.from(new Set(events2.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
+  const eventsByDiff = [...events].filter((ev) => safeN(ev.avgOverallGrade) > 0).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade));
+  const topByAttempts = [...events].sort((a, b) => safeN(b.totalAttempts) - safeN(a.totalAttempts)).slice(0, 12);
+  const allSkills = Array.from(new Set(events.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Avg Score", value: safe(avgGrade, 2), color: gradeColor(avgGrade), sub: "course average" }),
@@ -26362,7 +26362,7 @@ const CourseTab = ({ summary, trainees, events: events2 }) => {
         StatCard,
         {
           label: "Events",
-          value: events2.length,
+          value: events.length,
           sub: `${bottleneckEvents.length} bottleneck`,
           color: bottleneckEvents.length > 0 ? "text-orange-400" : "text-white"
         }
@@ -26454,7 +26454,7 @@ const CourseTab = ({ summary, trainees, events: events2 }) => {
         " tries"
       ] }),
       safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0", children: "BOTTLENECK" })
-    ] }, ev.id || ev.eventCode)) }) : events2.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "Event grades not yet computed — run analytics to populate" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No event data — run analytics first" }) }),
+    ] }, ev.id || ev.eventCode)) }) : events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "Event grades not yet computed — run analytics to populate" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No event data — run analytics first" }) }),
     topByAttempts.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       eventAvgExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4", onClick: () => setEventAvgExpanded(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 border border-gray-600 rounded-xl shadow-2xl w-full max-w-6xl p-6", style: { maxHeight: "90vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", children: [
@@ -26496,13 +26496,13 @@ const CourseTab = ({ summary, trainees, events: events2 }) => {
         overServicedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No over-serviced events detected" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: overServicedEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: e, type: "green" }, e)) })
       ] })
     ] }),
-    events2.length > 0 && allSkills.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Skill Weakness Heatmap (Event x Skill Family)", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "text-xs", children: [
+    events.length > 0 && allSkills.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Skill Weakness Heatmap (Event x Skill Family)", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "text-xs", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left text-gray-400 pr-4 py-1 whitespace-nowrap", children: "Event" }),
         allSkills.map((sk) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: sk }, sk)),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: "Overall" })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: events2.map((ev) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: events.map((ev) => {
         const sf = parseJ(ev.skillFamilyScores, {});
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700/50 hover:bg-gray-700/20", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "text-gray-300 pr-4 py-1.5 whitespace-nowrap font-medium", children: ev.eventCode }),
@@ -26801,7 +26801,7 @@ const TraineeTab = ({ trainees }) => {
     ] })
   ] });
 };
-const EventsTab = ({ events: events2 }) => {
+const EventsTab = ({ events }) => {
   const { thresholds } = useThresholds();
   const [selected, setSelected] = reactExports.useState(null);
   const [sortKey, setSortKey] = reactExports.useState("avgOverallGrade");
@@ -26830,7 +26830,7 @@ const EventsTab = ({ events: events2 }) => {
       setSortAsc(true);
     }
   };
-  const sorted = [...events2].sort((a, b) => {
+  const sorted = [...events].sort((a, b) => {
     const av = safeN(a[sortKey]);
     const bv = safeN(b[sortKey]);
     return sortAsc ? av - bv : bv - av;
@@ -26846,21 +26846,21 @@ const EventsTab = ({ events: events2 }) => {
       ]
     }
   );
-  if (events2.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-8 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500", children: "No event data available for this course" }) });
+  if (events.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-8 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500", children: "No event data available for this course" }) });
   const isFlightOrFTD = (code) => {
     const tokens = code.toUpperCase().split(/[\s_\-]+/);
     return !tokens.some(
       (t) => t === "TUT" || t.startsWith("TUT") || t === "CPT" || t.startsWith("CPT") || t === "MB" || t.startsWith("MB")
     );
   };
-  const flightFtdEvents = events2.filter((ev) => isFlightOrFTD(ev.eventCode) && safeN(ev.avgOverallGrade) > 0);
-  const hardest = flightFtdEvents.length > 0 ? flightFtdEvents.reduce((h, ev) => safeN(ev.avgOverallGrade) < safeN(h.avgOverallGrade) ? ev : h, flightFtdEvents[0]) : events2[0];
-  const easiest = flightFtdEvents.length > 0 ? flightFtdEvents.reduce((e, ev) => safeN(ev.avgOverallGrade) > safeN(e.avgOverallGrade) ? ev : e, flightFtdEvents[0]) : events2[0];
-  const mostAttempts = events2.reduce((m, ev) => safeN(ev.totalAttempts) > safeN(m.totalAttempts) ? ev : m, events2[0]);
-  const mostVariable = events2.reduce((m, ev) => safeN(ev.gradeVariance) > safeN(m.gradeVariance) ? ev : m, events2[0]);
-  const top5Struggle = [...events2].filter((ev) => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode)).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).slice(0, 5);
-  const top5Excel = [...events2].filter((ev) => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode)).sort((a, b) => safeN(b.avgOverallGrade) - safeN(a.avgOverallGrade)).slice(0, 5);
-  const allSkills = Array.from(new Set(events2.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
+  const flightFtdEvents = events.filter((ev) => isFlightOrFTD(ev.eventCode) && safeN(ev.avgOverallGrade) > 0);
+  const hardest = flightFtdEvents.length > 0 ? flightFtdEvents.reduce((h, ev) => safeN(ev.avgOverallGrade) < safeN(h.avgOverallGrade) ? ev : h, flightFtdEvents[0]) : events[0];
+  const easiest = flightFtdEvents.length > 0 ? flightFtdEvents.reduce((e, ev) => safeN(ev.avgOverallGrade) > safeN(e.avgOverallGrade) ? ev : e, flightFtdEvents[0]) : events[0];
+  const mostAttempts = events.reduce((m, ev) => safeN(ev.totalAttempts) > safeN(m.totalAttempts) ? ev : m, events[0]);
+  const mostVariable = events.reduce((m, ev) => safeN(ev.gradeVariance) > safeN(m.gradeVariance) ? ev : m, events[0]);
+  const top5Struggle = [...events].filter((ev) => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode)).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).slice(0, 5);
+  const top5Excel = [...events].filter((ev) => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode)).sort((a, b) => safeN(b.avgOverallGrade) - safeN(a.avgOverallGrade)).slice(0, 5);
+  const allSkills = Array.from(new Set(events.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
   const selSkills = selected ? parseJ(selected.skillFamilyScores, {}) : {};
   const selWeak = selected ? parseJ(selected.weakElementsByAvg, []) : [];
   const selStrong = selected ? parseJ(selected.strongElementsByAvg, []) : [];
@@ -27130,7 +27130,7 @@ const EventsTab = ({ events: events2 }) => {
               onClick: () => {
                 setChartTimelineZoom(0);
                 setChartScoreZoom(0);
-                const data = [...events2].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
+                const data = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
                   label: ev.eventCode,
                   value: getPassRate(ev),
                   color: getPassRate(ev) >= 80 ? "#10b981" : getPassRate(ev) >= 60 ? "#eab308" : "#ef4444"
@@ -27143,7 +27143,7 @@ const EventsTab = ({ events: events2 }) => {
               ] }), children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 ColChart,
                 {
-                  data: [...events2].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
+                  data: [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
                     label: ev.eventCode,
                     value: getPassRate(ev),
                     color: getPassRate(ev) >= 80 ? "#10b981" : getPassRate(ev) >= 60 ? "#eab308" : "#ef4444"
@@ -27162,12 +27162,12 @@ const EventsTab = ({ events: events2 }) => {
               onClick: () => {
                 setChartTimelineZoom(0);
                 setChartScoreZoom(0);
-                const data = [...events2].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
+                const data = [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
                   label: ev.eventCode,
                   value: safeN(ev.gradeVariance),
                   color: safeN(ev.gradeVariance) > 1.5 ? "#ef4444" : safeN(ev.gradeVariance) > 0.8 ? "#eab308" : "#3b82f6"
                 }));
-                const maxVal = Math.max(1, ...events2.map((e) => safeN(e.gradeVariance)));
+                const maxVal = Math.max(1, ...events.map((e) => safeN(e.gradeVariance)));
                 setChartModal({ title: "Grade Variance by Event (spread indicator)", data, max: maxVal });
               },
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
@@ -27176,12 +27176,12 @@ const EventsTab = ({ events: events2 }) => {
               ] }), children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 ColChart,
                 {
-                  data: [...events2].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
+                  data: [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
                     label: ev.eventCode,
                     value: safeN(ev.gradeVariance),
                     color: safeN(ev.gradeVariance) > 1.5 ? "#ef4444" : safeN(ev.gradeVariance) > 0.8 ? "#eab308" : "#3b82f6"
                   })),
-                  max: Math.max(1, ...events2.map((e) => safeN(e.gradeVariance))),
+                  max: Math.max(1, ...events.map((e) => safeN(e.gradeVariance))),
                   height: 120
                 }
               ) }) })
@@ -27195,7 +27195,7 @@ const EventsTab = ({ events: events2 }) => {
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: "Ovrl" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: "Pass%" })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: [...events2].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map((ev) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: [...events].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map((ev) => {
             const sf = parseJ(ev.skillFamilyScores, {});
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "tr",
@@ -27278,7 +27278,7 @@ const TrainingIntelligenceTab = () => {
   const [activeTab, setActiveTab] = reactExports.useState("course");
   const [summary, setSummary] = reactExports.useState(null);
   const [trainees, setTrainees] = reactExports.useState([]);
-  const [events2, setEvents] = reactExports.useState([]);
+  const [events, setEvents] = reactExports.useState([]);
   const [findings, setFindings] = reactExports.useState([]);
   const [error, setError] = reactExports.useState(null);
   const [loading, setLoading] = reactExports.useState(false);
@@ -27438,7 +27438,7 @@ const TrainingIntelligenceTab = () => {
     if (pollRef.current) clearInterval(pollRef.current);
   }, []);
   const atRiskBadge = trainees.filter((t) => evaluateTraineeRisk(t, thresholds).riskLevel === "at_risk").length;
-  const bottleneckBadge = events2.filter((e) => safeN(e.bottleneckScore) > 0.5).length;
+  const bottleneckBadge = events.filter((e) => safeN(e.bottleneckScore) > 0.5).length;
   const tabs = [
     { id: "course", label: "Course" },
     { id: "trainee", label: "Trainee", badge: atRiskBadge || void 0 },
@@ -27548,9 +27548,9 @@ const TrainingIntelligenceTab = () => {
         },
         tab.id
       )) }),
-      activeTab === "course" && /* @__PURE__ */ jsxRuntimeExports.jsx(CourseTab, { summary, trainees, events: events2 }),
+      activeTab === "course" && /* @__PURE__ */ jsxRuntimeExports.jsx(CourseTab, { summary, trainees, events }),
       activeTab === "trainee" && /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeTab, { trainees }),
-      activeTab === "events" && /* @__PURE__ */ jsxRuntimeExports.jsx(EventsTab, { events: events2 })
+      activeTab === "events" && /* @__PURE__ */ jsxRuntimeExports.jsx(EventsTab, { events })
     ] })
   ] }) });
 };
@@ -28155,13 +28155,13 @@ const eventStaffNames = (event) => {
   ].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name));
   return [...new Set(names)];
 };
-const buildFallbackMetrics = (date, events2, currentAircraftAvailable, totalAircraft) => {
-  const flightEvents = events2.filter((event) => event.type === "flight").length;
-  const simulatorEvents = events2.filter((event) => event.type === "ftd").length;
-  const flightHours = events2.reduce((sum, event) => sum + (event.type === "flight" ? eventMetricHours(event) : 0), 0);
-  const simulatorHours = events2.reduce((sum, event) => sum + (event.type === "ftd" ? eventMetricHours(event) : 0), 0);
+const buildFallbackMetrics = (date, events, currentAircraftAvailable, totalAircraft) => {
+  const flightEvents = events.filter((event) => event.type === "flight").length;
+  const simulatorEvents = events.filter((event) => event.type === "ftd").length;
+  const flightHours = events.reduce((sum, event) => sum + (event.type === "flight" ? eventMetricHours(event) : 0), 0);
+  const simulatorHours = events.reduce((sum, event) => sum + (event.type === "ftd" ? eventMetricHours(event) : 0), 0);
   const staffSeries = {};
-  events2.forEach((event) => {
+  events.forEach((event) => {
     eventStaffNames(event).forEach((staffName) => {
       if (!staffSeries[staffName]) {
         staffSeries[staffName] = [{ date, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }];
@@ -28178,7 +28178,7 @@ const buildFallbackMetrics = (date, events2, currentAircraftAvailable, totalAirc
     });
   });
   const cancellationMap = /* @__PURE__ */ new Map();
-  events2.forEach((event) => {
+  events.forEach((event) => {
     if (!(event.isCancelled || event.cancellationCode)) return;
     const category = event.type === "flight" ? "Flight" : event.type === "ftd" ? "Simulator" : event.type === "cpt" ? "CPT" : event.type === "ground" ? "Ground" : event.type === "deployment" ? "Deployment" : "Other";
     const code = String(event.cancellationCode || "UNSPECIFIED");
@@ -28195,7 +28195,7 @@ const buildFallbackMetrics = (date, events2, currentAircraftAvailable, totalAirc
     endDate: date,
     snapshotCount: 0,
     dates: [date],
-    eventSeries: [{ date, flightEvents, simulatorEvents, totalEvents: events2.length, flightHours, simulatorHours }],
+    eventSeries: [{ date, flightEvents, simulatorEvents, totalEvents: events.length, flightHours, simulatorHours }],
     availabilitySeries: [{
       date,
       availableAverage: currentAircraftAvailable ?? null,
@@ -28230,9 +28230,9 @@ const buildUnitScopeOptions = (context) => {
     }))
   ];
 };
-const buildMetricDefinitions = (metrics, date, events2, currentAircraftAvailable, totalAircraft, selectedStaff) => {
+const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff) => {
   const dates = metrics.dates.length > 0 ? metrics.dates : [date];
-  const fallback = buildFallbackMetrics(date, events2, currentAircraftAvailable, totalAircraft);
+  const fallback = buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft);
   const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : fallback.eventSeries;
   const staffDays = selectedStaff ? metrics.staffSeries?.[selectedStaff] || dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 })) : dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }));
   const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
@@ -28713,7 +28713,7 @@ const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraft
     ] })
   ] })
 ] });
-const MetricModal = ({ metric, onClose, date, events: events2, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange }) => {
+const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange }) => {
   const [timeline, setTimeline] = reactExports.useState("7d");
   const [modalMetrics, setModalMetrics] = reactExports.useState(initialMetrics);
   const [selectedStaff, setSelectedStaff] = reactExports.useState(initialStaff);
@@ -28737,15 +28737,15 @@ const MetricModal = ({ metric, onClose, date, events: events2, currentAircraftAv
       if (fetchError.name === "AbortError") return;
       console.error("Failed to load expanded BLI metrics:", fetchError);
       setError("Published metrics could not be loaded for this graph. Showing the current DFP day only.");
-      setModalMetrics(buildFallbackMetrics(date, events2, currentAircraftAvailable, totalAircraft));
+      setModalMetrics(buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
   }, [date, range.endDate, range.startDate, selectedUnitCode]);
   const activeMetric = reactExports.useMemo(() => {
-    return buildMetricDefinitions(modalMetrics, date, events2, currentAircraftAvailable, totalAircraft, selectedStaff).find((candidate) => candidate.key === metric.key) || metric;
-  }, [currentAircraftAvailable, date, events2, metric, modalMetrics, selectedStaff, totalAircraft]);
+    return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff).find((candidate) => candidate.key === metric.key) || metric;
+  }, [currentAircraftAvailable, date, events, metric, modalMetrics, selectedStaff, totalAircraft]);
   const metricStatusText = activeMetric.key === "availability" ? `${activeMetric.series.length} AC History availability records in this graph` : `${modalMetrics.snapshotCount} published snapshots in this graph`;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8", onMouseDown: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
@@ -28842,8 +28842,8 @@ const MetricModal = ({ metric, onClose, date, events: events2, currentAircraftAv
     }
   ) });
 };
-const BliTab = ({ date, events: events2, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext }) => {
-  const [metrics, setMetrics] = reactExports.useState(() => buildFallbackMetrics(date, events2, currentAircraftAvailable, totalAircraft));
+const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext }) => {
+  const [metrics, setMetrics] = reactExports.useState(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
   const [openMetric, setOpenMetric] = reactExports.useState(null);
@@ -28938,7 +28938,7 @@ const BliTab = ({ date, events: events2, instructorsData, currentAircraftAvailab
       if (fetchError.name === "AbortError") return;
       console.error("Failed to load BLI metrics:", fetchError);
       setError("Published historical metrics could not be loaded. Showing the current DFP day only.");
-      setMetrics(buildFallbackMetrics(date, events2, currentAircraftAvailable, totalAircraft));
+      setMetrics(buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
@@ -28957,7 +28957,7 @@ const BliTab = ({ date, events: events2, instructorsData, currentAircraftAvailab
     const activeStaff = sortedStaff2.find((staff) => metrics.staffSeries?.[staff.name]?.some((day) => day.totalEvents > 0));
     return activeStaff?.name || sortedStaff2[0]?.name || "";
   }, [metrics.staffSeries, sortedStaff2]);
-  const metricsList = reactExports.useMemo(() => buildMetricDefinitions(metrics, date, events2, currentAircraftAvailable, totalAircraft, previewStaff), [currentAircraftAvailable, date, events2, metrics, previewStaff, totalAircraft]);
+  const metricsList = reactExports.useMemo(() => buildMetricDefinitions(metrics, date, events, currentAircraftAvailable, totalAircraft, previewStaff), [currentAircraftAvailable, date, events, metrics, previewStaff, totalAircraft]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     openMetric && /* @__PURE__ */ jsxRuntimeExports.jsx(
       MetricModal,
@@ -28965,7 +28965,7 @@ const BliTab = ({ date, events: events2, instructorsData, currentAircraftAvailab
         metric: openMetric,
         onClose: () => setOpenMetric(null),
         date,
-        events: events2,
+        events,
         currentAircraftAvailable,
         totalAircraft,
         initialMetrics: metrics,
@@ -32636,7 +32636,7 @@ const generateNewInstructorTemplate = () => ({
 });
 const InstructorListView = ({
   onClose,
-  events: events2,
+  events,
   traineesData,
   instructorsData,
   archivedInstructorsData,
@@ -32669,7 +32669,7 @@ const InstructorListView = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events: events2, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -33090,7 +33090,7 @@ const InstructorListView = ({
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
       FlightInfoFlyout,
       {
-        events: events2.filter((f) => f.instructor === hoveredInstructor),
+        events: events.filter((f) => f.instructor === hoveredInstructor),
         position: flyoutPosition,
         personName: hoveredInstructor,
         personType: "Instructor"
@@ -33337,7 +33337,7 @@ const TraineeView = (props) => {
     ] })
   ] });
 };
-const TraineeListView = ({ onClose, events: events2, traineesData, onUpdateTrainee, personnelDisplaySettings }) => {
+const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee, personnelDisplaySettings }) => {
   const [hoveredTrainee, setHoveredTrainee] = reactExports.useState(null);
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
@@ -33357,7 +33357,7 @@ const TraineeListView = ({ onClose, events: events2, traineesData, onUpdateTrain
   const handleTraineeClick = (trainee) => {
     setSelectedTrainee(trainee);
   };
-  const hoveredEvents = hoveredTrainee ? events2.filter((f) => f.student === hoveredTrainee || f.flightType === "Solo" && f.pilot === hoveredTrainee) : [];
+  const hoveredEvents = hoveredTrainee ? events.filter((f) => f.student === hoveredTrainee || f.flightType === "Solo" && f.pilot === hoveredTrainee) : [];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
@@ -36095,7 +36095,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events: events2, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
   const trainingReportName = (trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name;
   const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
   const { checkAndWarn } = useSystemFreeze$1();
@@ -44921,7 +44921,7 @@ const generateFullSchedule = (instructors, trainees, courses, aircraftCount, loc
   return newEvents;
 };
 const generateHistoricalEvents = (instructors, trainees, syllabus) => {
-  const events2 = [];
+  const events = [];
   const today = /* @__PURE__ */ new Date();
   const startHistoryDate = new Date(today.getFullYear(), today.getMonth() - 24, 1);
   const flightSyllabus = syllabus.filter((s) => s.type === "Flight" && !s.code.includes("MB"));
@@ -44939,7 +44939,7 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
         const dayOfMonth = Math.floor(Math.random() * daysInMonth) + 1;
         const dateStr = new Date(monthDate.getFullYear(), monthDate.getMonth(), dayOfMonth).toISOString().split("T")[0];
         const startTime = 8 + Math.floor(Math.random() * 13);
-        events2.push({
+        events.push({
           id: v4(),
           date: dateStr,
           type: isFlight ? "flight" : "ftd",
@@ -44958,7 +44958,7 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
       }
     }
   });
-  return events2;
+  return events;
 };
 const eslCourses = [
   { name: "ADF301", color: "bg-sky-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
@@ -44996,9 +44996,9 @@ const generateDataSet = (location) => {
     return `${year}-${month}-${day}`;
   };
   const todayStr = getLocalDateString();
-  let events2 = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
+  let events = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
   const historicalEvents = generateHistoricalEvents(instructors, allocatedTrainees, INITIAL_SYLLABUS_DETAILS);
-  events2 = [...events2, ...historicalEvents];
+  events = [...events, ...historicalEvents];
   const courseColors = {};
   const coursePriorities = [];
   const coursePercentages = /* @__PURE__ */ new Map();
@@ -45021,7 +45021,7 @@ const generateDataSet = (location) => {
     coursePriorities,
     coursePercentages,
     traineeLMPs,
-    events: events2
+    events
   };
 };
 const ESL_DATA = generateDataSet("ESL");
@@ -53147,9 +53147,9 @@ const getCompletedEventDates = (trainee, validEventCodes, eventIdToCode, pt051As
   });
   return completed;
 };
-const getEventAtCount = (events2, count) => {
+const getEventAtCount = (events, count) => {
   if (count <= 0) return "Not Started";
-  return events2[Math.min(count - 1, events2.length - 1)]?.code || "N/A";
+  return events[Math.min(count - 1, events.length - 1)]?.code || "N/A";
 };
 const getRiskLabel = (requiredPace, thresholds) => {
   if (requiredPace <= thresholds.onTrackMax) return "On Track";
@@ -55135,7 +55135,7 @@ const TrainingRecordsExportView = ({
   instructorsData,
   archivedTraineesData,
   archivedInstructorsData,
-  events: events2,
+  events,
   courses,
   archivedCourses,
   scores,
@@ -55189,10 +55189,10 @@ const TrainingRecordsExportView = ({
     return `${day} ${month} ${year}`;
   };
   const allEvents = reactExports.useMemo(() => {
-    const events22 = Object.values(publishedSchedules).flat();
-    console.log("📊 Export View - All events from published schedules:", events22.length);
+    const events2 = Object.values(publishedSchedules).flat();
+    console.log("📊 Export View - All events from published schedules:", events2.length);
     console.log("📊 Export View - Published schedule dates:", Object.keys(publishedSchedules));
-    return events22;
+    return events2;
   }, [publishedSchedules]);
   const allTrainees = reactExports.useMemo(() => {
     const combined = [...traineesData, ...archivedTraineesData];
@@ -56695,7 +56695,7 @@ const TrainingRecordsView = ({
   instructorsData,
   archivedTraineesData,
   archivedInstructorsData,
-  events: events2,
+  events,
   scores,
   publishedSchedules,
   syllabusDetails,
@@ -56762,7 +56762,7 @@ const TrainingRecordsView = ({
           instructorsData,
           archivedTraineesData,
           archivedInstructorsData,
-          events: events2,
+          events,
           courses,
           archivedCourses,
           scores,
@@ -57169,7 +57169,7 @@ const UnavailabilityReportModal = ({
   date,
   instructors,
   trainees,
-  events: events2
+  events
 }) => {
   if (!isOpen) return null;
   const { unavailableStaff, unavailableTrainees, pausedTrainees } = reactExports.useMemo(() => {
@@ -57178,7 +57178,7 @@ const UnavailabilityReportModal = ({
       (instructor.unavailability || []).forEach((period) => {
         const isInDateRange = period.allDay ? date >= period.startDate && date < period.endDate : date >= period.startDate && date <= period.endDate;
         if (isInDateRange) {
-          const scheduledEvents = events2.filter(
+          const scheduledEvents = events.filter(
             (e) => e.instructor === instructor.name || e.student === instructor.name || e.attendees?.includes(instructor.name)
           );
           staff.push({ name: instructor.name, rank: instructor.rank, period, scheduledEvents });
@@ -57188,7 +57188,7 @@ const UnavailabilityReportModal = ({
     const traineesUnavailable = [];
     const paused = [];
     trainees.forEach((trainee) => {
-      const scheduledEvents = events2.filter(
+      const scheduledEvents = events.filter(
         (e) => e.student === trainee.fullName || e.pilot === trainee.fullName || e.attendees?.includes(trainee.fullName)
       );
       if (trainee.isPaused) {
@@ -57207,7 +57207,7 @@ const UnavailabilityReportModal = ({
       unavailableTrainees: traineesUnavailable.sort((a, b) => a.name.localeCompare(b.name)),
       pausedTrainees: paused.sort((a, b) => a.name.localeCompare(b.name))
     };
-  }, [instructors, trainees, date, events2]);
+  }, [instructors, trainees, date, events]);
   const formattedHeaderDate = reactExports.useMemo(() => {
     const [year, month, day] = date.split("-").map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
@@ -57455,7 +57455,7 @@ const getValidationEventKey$1 = (event) => [
   event.crew || ""
 ].join("|");
 const NextDayInstructorScheduleView = ({
-  events: events2,
+  events,
   instructors,
   onSelectEvent,
   onUpdateEvent,
@@ -57557,14 +57557,14 @@ const NextDayInstructorScheduleView = ({
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$1 + START_HOUR$1;
-    const eventData = events2.find((ev) => ev.id === draggingState.mainEventId);
+    const eventData = events.find((ev) => ev.id === draggingState.mainEventId);
     if (!eventData) return;
     let clampedStartTime = newStartTime;
     if (clampedStartTime < START_HOUR$1) clampedStartTime = START_HOUR$1;
     if (clampedStartTime + eventData.duration > END_HOUR$1) clampedStartTime = END_HOUR$1 - eventData.duration;
     const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
     const proposedEvent = { ...eventData, startTime: snappedStartTime };
-    const otherEvents = events2.filter((event) => event.id !== draggingState.mainEventId);
+    const otherEvents = events.filter((event) => event.id !== draggingState.mainEventId);
     const conflict = findConflict([proposedEvent], otherEvents);
     setRealtimeConflict(conflict ? { conflictingEventId: conflict.conflictingEvent.id, conflictedPersonName: conflict.personName } : null);
     if (snappedStartTime !== eventData.startTime) {
@@ -57626,7 +57626,7 @@ const NextDayInstructorScheduleView = ({
   const renderPrePostBars = () => {
     const bars = [];
     const seenPrePostIds = /* @__PURE__ */ new Set();
-    const uniqueEventsForBars = events2.filter((e) => {
+    const uniqueEventsForBars = events.filter((e) => {
       if (seenPrePostIds.has(e.id)) return false;
       seenPrePostIds.add(e.id);
       return true;
@@ -57802,7 +57802,7 @@ const NextDayInstructorScheduleView = ({
               renderPrePostBars(),
               (() => {
                 const seenIds = /* @__PURE__ */ new Set();
-                const uniqueEvents = events2.filter((e) => {
+                const uniqueEvents = events.filter((e) => {
                   if (seenIds.has(e.id)) return false;
                   seenIds.add(e.id);
                   return true;
@@ -57913,7 +57913,7 @@ const getValidationEventKey = (event) => [
   event.crew || ""
 ].join("|");
 const NextDayTraineeScheduleView = ({
-  events: events2,
+  events,
   trainees,
   onSelectEvent,
   onUpdateEvent,
@@ -58068,14 +58068,14 @@ const NextDayTraineeScheduleView = ({
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR + START_HOUR;
-    const eventData = events2.find((ev) => ev.id === draggingState.mainEventId);
+    const eventData = events.find((ev) => ev.id === draggingState.mainEventId);
     if (!eventData) return;
     let clampedStartTime = newStartTime;
     if (clampedStartTime < START_HOUR) clampedStartTime = START_HOUR;
     if (clampedStartTime + eventData.duration > END_HOUR) clampedStartTime = END_HOUR - eventData.duration;
     const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
     const proposedEvent = { ...eventData, startTime: snappedStartTime };
-    const otherEvents = events2.filter((event) => event.id !== draggingState.mainEventId);
+    const otherEvents = events.filter((event) => event.id !== draggingState.mainEventId);
     const conflict = findConflict([proposedEvent], otherEvents);
     setRealtimeConflict(conflict ? {
       conflictingEventId: conflict.conflictingEvent.id,
@@ -58251,7 +58251,7 @@ const NextDayTraineeScheduleView = ({
               renderDaylightLines(),
               (() => {
                 const seenIds = /* @__PURE__ */ new Set();
-                const uniqueEvents = events2.filter((e) => {
+                const uniqueEvents = events.filter((e) => {
                   if (seenIds.has(e.id)) return false;
                   seenIds.add(e.id);
                   return true;
@@ -59193,7 +59193,7 @@ async function initializeData() {
   let trainees = [];
   let aircraft = [];
   let scores = {};
-  let events2 = [];
+  let events = [];
   try {
     console.log("🌐 Initializing data from API...");
     console.log("👨‍🏫 Fetching instructors from API...");
@@ -59228,8 +59228,8 @@ async function initializeData() {
     scores = await fetchScores();
     console.log("✅ Scores loaded:", Object.keys(scores).length, "trainees with scores");
     console.log("📅 Fetching schedule from API...");
-    events2 = await fetchSchedule();
-    console.log("✅ Schedule loaded:", events2.length);
+    events = await fetchSchedule();
+    console.log("✅ Schedule loaded:", events.length);
     console.log("🎓 Fetching courses from API...");
     const courses = await fetchCourses();
     console.log("✅ Courses loaded:", courses.length);
@@ -59248,7 +59248,7 @@ async function initializeData() {
       trainees: trainees.length,
       aircraft: aircraft.length,
       scores: Object.keys(scores).length,
-      events: events2.length,
+      events: events.length,
       courses: courses.length
     });
     return {
@@ -59256,7 +59256,7 @@ async function initializeData() {
       trainees,
       aircraft,
       scores,
-      events: events2,
+      events,
       courses
     };
   } catch (error) {
@@ -60367,8 +60367,8 @@ const formatDecimalHourToString = (decimalHour) => {
   const minutes = Math.round(decimalHour % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const calculateProjectedDuty = (instructorName, events2, newEvent, syllabusDetails = []) => {
-  const instructorEvents = [...events2.filter((e) => eventHasPerson(e, instructorName)), newEvent];
+const calculateProjectedDuty = (instructorName, events, newEvent, syllabusDetails = []) => {
+  const instructorEvents = [...events.filter((e) => eventHasPerson(e, instructorName)), newEvent];
   if (instructorEvents.length === 0) return 0;
   const sortedWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
   const firstEventStart = sortedWindows[0].start;
@@ -60607,8 +60607,8 @@ function countPossibleEvents(allTraineesData, coursePriorities, traineeLMPs, sco
   });
   return possibleEventCounts;
 }
-function analyzeBuildResults(events2, coursePercentages, coursePriorities, availableAircraft, buildDate, allTraineesData, traineeLMPs, scores, syllabusDetails, publishedSchedules) {
-  const scheduledEvents = events2.filter((e) => {
+function analyzeBuildResults(events, coursePercentages, coursePriorities, availableAircraft, buildDate, allTraineesData, traineeLMPs, scores, syllabusDetails, publishedSchedules) {
+  const scheduledEvents = events.filter((e) => {
     if (e.flightNumber.includes("Duty Sup")) return false;
     if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
     return true;
@@ -60700,7 +60700,7 @@ function analyzeBuildResults(events2, coursePercentages, coursePriorities, avail
   const uniformityScore = 1 - clusteringScore;
   const flightEvents = scheduledEvents.filter((e) => e.type === "flight").length;
   scheduledEvents.filter((e) => e.type === "ftd").length;
-  const standbyCount = events2.filter(
+  const standbyCount = events.filter(
     (e) => e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")
   ).length;
   const aircraftUtilization = availableAircraft > 0 ? flightEvents / availableAircraft * 100 : 0;
@@ -64411,7 +64411,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return airCombatRandomTieBreaks.get(name);
   };
   const publishedHistoryEvents = Object.values(publishedSchedules || {}).flat();
-  const airCombatHistoryEvents = [...publishedHistoryEvents, ...events, ...generatedEvents];
+  const airCombatHistoryEvents = [...publishedHistoryEvents, ...generatedEvents];
   const getAirCombatStaffEvents = (staffName, sourceEvents) => (sourceEvents || [...airCombatHistoryEvents, ...generatedEvents]).filter((event) => eventHasPerson(event, staffName));
   const getAirCombatTaskingEvents = (staffName) => getAirCombatStaffEvents(staffName).filter((event) => isTaskingPriorityEvent(event));
   const getMostRecentEventDateValue = (items) => items.reduce((latest, event) => {
@@ -66509,47 +66509,47 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     false
   );
   recordProgress({ message: "Scheduling STBY flights...", percentage: 88 });
-  const hasFlightStartTime = (time, events2) => {
-    return events2.some(
+  const hasFlightStartTime = (time, events) => {
+    return events.some(
       (e) => e.type === "flight" && Math.abs(e.startTime - time) < 0.01
       // Within 0.6 minutes
     );
   };
-  const countFlightStartsInWindow = (windowStart, windowEnd, events2) => {
-    return events2.filter(
+  const countFlightStartsInWindow = (windowStart, windowEnd, events) => {
+    return events.filter(
       (e) => e.type === "flight" && e.startTime > windowStart && e.startTime <= windowEnd
     ).length;
   };
-  const wouldViolate8PerHourRule = (time, events2) => {
+  const wouldViolate8PerHourRule = (time, events) => {
     const oneHourBefore = time - 1;
-    const flightsInPreviousHour = countFlightStartsInWindow(oneHourBefore, time, events2);
+    const flightsInPreviousHour = countFlightStartsInWindow(oneHourBefore, time, events);
     if (flightsInPreviousHour >= 8) return true;
     const oneHourAfter = time + 1;
-    const futureDfpFlights = events2.filter(
+    const futureDfpFlights = events.filter(
       (e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && e.startTime > time && e.startTime <= oneHourAfter
     );
     for (const dfpFlight of futureDfpFlights) {
       const windowStart = dfpFlight.startTime - 1;
       const windowEnd = dfpFlight.startTime;
-      const flightsInWindow = countFlightStartsInWindow(windowStart, windowEnd, events2);
+      const flightsInWindow = countFlightStartsInWindow(windowStart, windowEnd, events);
       if (time > windowStart && time <= windowEnd) {
         if (flightsInWindow >= 8) return true;
       }
     }
     return false;
   };
-  const isInstructorAvailableForStby = (instructorName, startTime, duration, syllabusItem, events2) => {
+  const isInstructorAvailableForStby = (instructorName, startTime, duration, syllabusItem, events) => {
     const preTime = syllabusItem.preFlightTime || 0;
     const postTime = syllabusItem.postFlightTime || 0;
     const stbyStart = startTime - preTime;
     const stbyEnd = startTime + duration + postTime;
-    return !events2.some((e) => {
+    return !events.some((e) => {
       if (!getPersonnel(e).includes(instructorName)) return false;
       const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
       return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
     });
   };
-  const findBestInstructorForStby = (trainee, syllabusItem, startTime, duration, type, events2) => {
+  const findBestInstructorForStby = (trainee, syllabusItem, startTime, duration, type, events) => {
     let candidates = [];
     const locationFullName = config.school === "ESL" ? "East Sale" : "Pearce";
     const locationShortCode1 = config.school === "ESL" ? "ESL" : "PEA";
@@ -66571,12 +66571,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const afterUnitFilter = candidates.filter((ip) => isInstructorEligibleByUnit(ip, trainee));
     candidates = afterUnitFilter;
     const available = candidates.filter(
-      (ip) => canAssignPersonForScheduledWindow(ip.name, startTime) && isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events2)
+      (ip) => canAssignPersonForScheduledWindow(ip.name, startTime) && isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events)
     );
     if (available.length === 0) return null;
     const instructorEventCounts = available.map((ip) => ({
       instructor: ip,
-      count: events2.filter((e) => e.instructor === ip.name).length
+      count: events.filter((e) => e.instructor === ip.name).length
     }));
     const minCount = Math.min(...instructorEventCounts.map((ic) => ic.count));
     const withMinCount = instructorEventCounts.filter((ic) => ic.count === minCount);
@@ -66600,8 +66600,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
     });
     for (let lineNum = 1; lineNum <= Math.max(4, lineEvents.size); lineNum++) {
-      const events2 = lineEvents.get(lineNum) || [];
-      const hasConflict = events2.some(
+      const events = lineEvents.get(lineNum) || [];
+      const hasConflict = events.some(
         (e) => startTime < e.end && eventEnd > e.start
       );
       if (!hasConflict) return lineNum;
@@ -67294,9 +67294,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   resourceOrder.forEach((resource, index) => {
     resourceOrderMap.set(resource, index);
   });
-  const enforceBuildDayNightSeparation = (events2) => {
+  const enforceBuildDayNightSeparation = (events) => {
     const eventsByPerson = /* @__PURE__ */ new Map();
-    events2.forEach((event) => {
+    events.forEach((event) => {
       const classification = getGeneratedEventDayNightClassification(event);
       if (classification === "Day/Night") return;
       getPersonnel(event).forEach((personName) => {
@@ -67355,13 +67355,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         );
       }
     });
-    return events2.filter((event) => !removeEventIds.has(event.id));
+    return events.filter((event) => !removeEventIds.has(event.id));
   };
-  const repairGeneratedGroundConflicts = (events2) => {
+  const repairGeneratedGroundConflicts = (events) => {
     const isGeneratedGround = (event) => event.type === "ground" && event._source === "generated";
     const groundResourceCount = Math.max(
       6,
-      ...events2.map((event) => event.resourceId?.match(/^Ground (\d+)$/)?.[1]).filter((value) => !!value).map((value) => Number(value)).filter((value) => Number.isFinite(value))
+      ...events.map((event) => event.resourceId?.match(/^Ground (\d+)$/)?.[1]).filter((value) => !!value).map((value) => Number(value)).filter((value) => Number.isFinite(value))
     );
     const groundResources = Array.from({ length: groundResourceCount }, (_, index) => `Ground ${index + 1}`);
     const timeIncrement = 15 / 60;
@@ -67465,8 +67465,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return null;
     };
-    const acceptedEvents = events2.filter((event) => !isGeneratedGround(event));
-    const generatedGroundEvents = events2.filter(isGeneratedGround);
+    const acceptedEvents = events.filter((event) => !isGeneratedGround(event));
+    const generatedGroundEvents = events.filter(isGeneratedGround);
     let moved = 0;
     let dropped = 0;
     generatedGroundEvents.forEach((event) => {
@@ -67574,7 +67574,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
     }
   }
-  const generateBuildConflictDiagnostic = (events2) => {
+  const generateBuildConflictDiagnostic = (events) => {
     const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails);
     const resourceTurnaroundFor = (event) => {
       if (event.type === "flight") return flightTurnaround;
@@ -67609,7 +67609,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const conflicts = [];
     const invalidWindows = [];
-    events2.forEach((event) => {
+    events.forEach((event) => {
       const window2 = eventWindow(event);
       if (!Number.isFinite(window2.start) || !Number.isFinite(window2.end)) {
         invalidWindows.push({
@@ -67619,11 +67619,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
       }
     });
-    for (let i = 0; i < events2.length; i++) {
-      const a = events2[i];
+    for (let i = 0; i < events.length; i++) {
+      const a = events[i];
       const aWindow = eventWindow(a);
-      for (let j = i + 1; j < events2.length; j++) {
-        const b = events2[j];
+      for (let j = i + 1; j < events.length; j++) {
+        const b = events[j];
         const bWindow = eventWindow(b);
         if (a.resourceId === b.resourceId && !isStbyResource(a.resourceId) && !isStbyResource(b.resourceId)) {
           if (a.startTime < b.startTime + b.duration && a.startTime + a.duration > b.startTime) {
@@ -67716,7 +67716,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const report = {
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       buildDate,
-      totalEvents: events2.length,
+      totalEvents: events.length,
       totalConflicts: conflicts.length,
       totalInvalidWindows: invalidWindows.length,
       summaryByType: conflicts.reduce((acc, conflict) => {
@@ -68161,7 +68161,7 @@ const App = () => {
     return getLocalDateString();
   });
   const isViewingPastDfp = isPastDfpDate(date);
-  const [events2, setEvents] = reactExports.useState([]);
+  const [events, setEvents] = reactExports.useState([]);
   const [selectedEvent, setSelectedEvent] = reactExports.useState(null);
   const [isEditingDefault, setIsEditingDefault] = reactExports.useState(false);
   const [highlightedField, setHighlightedField] = reactExports.useState(null);
@@ -69357,10 +69357,10 @@ const App = () => {
                 const merged = { ...prev };
                 snapshots.forEach((snap2) => {
                   const dateKey = getDailySnapshotDate(snap2.date);
-                  const events3 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
+                  const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
                   const existingNonSeed = (merged[dateKey] || []).filter((e) => !e.isHistoricalSeed);
-                  if (existingNonSeed.length === 0 && events3.length > 0) {
-                    merged[dateKey] = events3;
+                  if (existingNonSeed.length === 0 && events2.length > 0) {
+                    merged[dateKey] = events2;
                   }
                 });
                 return merged;
@@ -69513,17 +69513,17 @@ const App = () => {
   }, []);
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
-    const events3 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
+    const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
     pushDfpDataDiag("snapshot:apply", {
       targetDate,
       snapshotSchool,
       snapshotUnit,
       source,
       replace,
-      eventCount: events3.length,
+      eventCount: events2.length,
       existingCount: (publishedSchedulesRef.current[targetDate] || []).length,
       snapKey: snap2.date,
-      sampleEvents: events3.slice(0, 8).map((event) => ({
+      sampleEvents: events2.slice(0, 8).map((event) => ({
         id: event.id,
         date: event.date,
         type: event.type,
@@ -69534,19 +69534,19 @@ const App = () => {
         student: event.student
       }))
     });
-    if (events3.length > 0) {
+    if (events2.length > 0) {
       setPublishedSchedules((prev) => {
         const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
         if (!replace && existingNonSeed.length > 0) return prev;
-        return { ...prev, [targetDate]: events3 };
+        return { ...prev, [targetDate]: events2 };
       });
-      const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events3;
+      const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
       setBaselineSchedules((prev) => {
         const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
         if (!replace && prev[baselineKey]) return prev;
         return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
       });
-      console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events3.length} events`);
+      console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events2.length} events`);
     }
     if (snap2.pt051Assessments && Object.keys(snap2.pt051Assessments).length > 0) {
       console.log(`[Snapshot] Ignored ${Object.keys(snap2.pt051Assessments).length} PT-051 snapshot records for ${targetDate}; TraineePerformance is authoritative`);
@@ -69561,7 +69561,7 @@ const App = () => {
         [baselineKey]: snap2.aircraftConfigState
       }));
     }
-    return events3.length;
+    return events2.length;
   }, [activeUnitCode]);
   const getDailySnapshotLocationAliases = React.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
@@ -69933,8 +69933,8 @@ const App = () => {
   function getDailySnapshotDate(snapshotDate) {
     return String(snapshotDate || "").replace(/__[A-Za-z0-9_-]+(?:__[A-Za-z0-9_-]+)?$/i, "");
   }
-  function getSnapshotEventsSignature(events3 = []) {
-    return events3.map((e) => [
+  function getSnapshotEventsSignature(events2 = []) {
+    return events2.map((e) => [
       e.id,
       e.type || "",
       e.resourceId || "",
@@ -71035,13 +71035,13 @@ ${"=".repeat(60)}`);
     publishedSchedules,
     nextDayBuildEvents
   ]);
-  reactExports.useCallback((events3, allResources) => {
-    if (!events3 || events3.length === 0) {
+  reactExports.useCallback((events2, allResources) => {
+    if (!events2 || events2.length === 0) {
       console.log("No events, returning empty resources");
       return [];
     }
     const resourceLabels = [];
-    for (const event of events3) {
+    for (const event of events2) {
       if (!event || !event.resourceId) {
         console.warn("Skipping invalid event:", event);
         continue;
@@ -71141,16 +71141,16 @@ ${"=".repeat(60)}`);
     console.log("🟡 eventsForDate memo recalculating");
     console.log("🟡 date:", date);
     console.log("🟡 publishedSchedules keys:", Object.keys(publishedSchedules));
-    const events3 = publishedSchedules[date] || [];
-    console.log("🟡 eventsForDate count:", events3.length);
+    const events2 = publishedSchedules[date] || [];
+    console.log("🟡 eventsForDate count:", events2.length);
     pushDfpDataDiag("render:events-for-date", {
       renderedDate: date,
-      eventCount: events3.length,
+      eventCount: events2.length,
       publishedScheduleDateCount: Object.keys(publishedSchedules).length,
       publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 80),
       snapshotDateCount: snapshotDates.length,
       snapshotDates: snapshotDates.slice(0, 80),
-      sampleEvents: events3.slice(0, 8).map((event) => ({
+      sampleEvents: events2.slice(0, 8).map((event) => ({
         id: event.id,
         date: event.date,
         type: event.type,
@@ -71161,7 +71161,7 @@ ${"=".repeat(60)}`);
         student: event.student
       }))
     });
-    const sctEvents2 = events3.filter((e) => e.flightNumber === "SCT FORM");
+    const sctEvents2 = events2.filter((e) => e.flightNumber === "SCT FORM");
     if (sctEvents2.length > 0) {
       console.log("🟡 SCT FORM events in eventsForDate:", sctEvents2.map((e) => ({
         id: e.id,
@@ -71169,7 +71169,7 @@ ${"=".repeat(60)}`);
         pilot: e.pilot
       })));
     }
-    return events3;
+    return events2;
   }, [date, publishedSchedules, snapshotDates]);
   const eventsForStaffTraineeSchedule = reactExports.useMemo(() => {
     return eventsForDate.filter((e) => !e.resourceId.startsWith("STBY"));
@@ -73622,25 +73622,25 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             }
             eventsByDate.get(eventDate).push(event);
           });
-          console.log("🟢 Events grouped by date:", Array.from(eventsByDate.entries()).map(([date2, events3]) => ({
+          console.log("🟢 Events grouped by date:", Array.from(eventsByDate.entries()).map(([date2, events2]) => ({
             date: date2,
-            count: events3.length,
-            eventIds: events3.map((e) => e.id),
-            instructors: events3.map((e) => e.instructor)
+            count: events2.length,
+            eventIds: events2.map((e) => e.id),
+            instructors: events2.map((e) => e.instructor)
           })));
-          eventsByDate.forEach((events3, eventDate) => {
+          eventsByDate.forEach((events2, eventDate) => {
             const currentScheduleForDate = newSchedules[eventDate] || [];
             console.log(`🟢 Processing date ${eventDate}:`, {
               currentEventsCount: currentScheduleForDate.length,
-              eventsToSaveCount: events3.length
+              eventsToSaveCount: events2.length
             });
-            const existingEventIds = new Set(events3.map((e) => e.id));
+            const existingEventIds = new Set(events2.map((e) => e.id));
             const otherEvents = currentScheduleForDate.filter((e) => !existingEventIds.has(e.id));
             console.log(`🟢 Filtered out ${currentScheduleForDate.length - otherEvents.length} existing events`);
-            newSchedules[eventDate] = [...otherEvents, ...events3];
-            console.log(`🟢 Saved ${events3.length} events to date ${eventDate}`);
+            newSchedules[eventDate] = [...otherEvents, ...events2];
+            console.log(`🟢 Saved ${events2.length} events to date ${eventDate}`);
             console.log(`🟢 New total for ${eventDate}:`, newSchedules[eventDate].length);
-            const savedEvent = newSchedules[eventDate].find((e) => e.id === events3[0].id);
+            const savedEvent = newSchedules[eventDate].find((e) => e.id === events2[0].id);
             console.log(`🟢 Saved event details:`, {
               id: savedEvent?.id,
               instructor: savedEvent?.instructor,
@@ -73952,7 +73952,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   const handleSendAlert = async (eventId, recipients, description = "") => {
     const apiBase2 = "/api";
     const userId = getCurrentUserId() || currentUserName;
-    const eventForAlert = events2.find((e) => e.id === eventId) || selectedEvent;
+    const eventForAlert = events.find((e) => e.id === eventId) || selectedEvent;
     if (isPastDfpDate(eventForAlert?.date || date)) {
       denyPastDfpEdit("send alerts");
       return false;
@@ -75769,8 +75769,8 @@ ${conflictLines.join("\n")}${moreText}`,
         ...publishedSchedules,
         [buildDfpDate]: newEventsForDate
       };
-      Object.entries(allPublishedForLogbook).forEach(([dateKey, events3]) => {
-        events3.forEach((e) => {
+      Object.entries(allPublishedForLogbook).forEach(([dateKey, events2]) => {
+        events2.forEach((e) => {
           if (e.isLogbook === true || e.type === "logbook") {
             const instName = e.instructor || "";
             if (!staffLogbookMap[instName]) staffLogbookMap[instName] = [];
@@ -77629,10 +77629,10 @@ ${conflictLines.join("\n")}${moreText}`,
       return { instructor, availableWindows: [] };
     });
     const traineesAnalysis = allTraineesData.map((trainee) => {
-      const events3 = currentEvents.filter((e) => getPersonnel(e).includes(trainee.fullName));
-      const hasFtd = events3.some((e) => e.type === "ftd" && e.date === analysisDate);
-      const hasFlight = events3.some((e) => e.type === "flight" && e.date === analysisDate);
-      const groundEventsToday = events3.filter((e) => e.type === "ground" && e.date === analysisDate).length;
+      const events2 = currentEvents.filter((e) => getPersonnel(e).includes(trainee.fullName));
+      const hasFtd = events2.some((e) => e.type === "ftd" && e.date === analysisDate);
+      const hasFlight = events2.some((e) => e.type === "flight" && e.date === analysisDate);
+      const groundEventsToday = events2.filter((e) => e.type === "ground" && e.date === analysisDate).length;
       const nextSyllabusEvent = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate).next;
       let isEligible = nextSyllabusEvent?.type === "Flight";
       if (trainee.isPaused) {
@@ -78212,7 +78212,7 @@ ${conflictLines.join("\n")}${moreText}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           TraineeView,
           {
-            events: events2,
+            events,
             traineesData,
             courseColors: scopedCourseColors,
             archivedCourses,
@@ -78360,7 +78360,7 @@ ${conflictLines.join("\n")}${moreText}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           CourseRosterView,
           {
-            events: events2,
+            events,
             traineesData,
             courseColors: scopedCourseColors,
             archivedCourses,
@@ -78822,7 +78822,7 @@ ${conflictLines.join("\n")}${moreText}`,
             instructorsData,
             archivedTraineesData,
             archivedInstructorsData,
-            events: events2,
+            events,
             scores,
             publishedSchedules,
             syllabusDetails,
@@ -79014,7 +79014,7 @@ ${conflictLines.join("\n")}${moreText}`,
             currentLocation: school === "ESL" ? "East Sale" : "Pearce",
             onNavigate: handleNavigation,
             onOpenAuth: (e) => {
-              const latestEvent = events2.find((ev) => ev.id === e.id) || e;
+              const latestEvent = events.find((ev) => ev.id === e.id) || e;
               setEventForAuth(latestEvent);
               setShowAuthFlyout(true);
             }
@@ -79026,7 +79026,7 @@ ${conflictLines.join("\n")}${moreText}`,
           StaffView,
           {
             onClose: handleCloseStaffView,
-            events: events2,
+            events,
             traineesData,
             instructorsData,
             archivedInstructorsData,
@@ -79133,7 +79133,7 @@ ${conflictLines.join("\n")}${moreText}`,
           InstructorListView,
           {
             onClose: () => handleNavigation("Program Schedule"),
-            events: events2,
+            events,
             traineesData,
             instructorsData,
             archivedInstructorsData,
@@ -79245,7 +79245,7 @@ ${conflictLines.join("\n")}${moreText}`,
           TraineeListView,
           {
             onClose: () => handleNavigation("Program Schedule"),
-            events: events2,
+            events,
             traineesData,
             instructorsData,
             archivedTraineesData,
@@ -79611,7 +79611,7 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
               },
               instructors: instructorsData,
               pt051Assessments,
-              events: events2,
+              events,
               lmpScores: scores.get(selectedTraineeForHateSheet.fullName) || [],
               syllabusDetails,
               registerDirtyCheck,
@@ -79999,7 +79999,7 @@ Do you want to replace the existing entry?`,
             LogbookView,
             {
               person: selectedPersonForLogbook,
-              events: events2,
+              events,
               resourceDisplayNames,
               onBack: () => {
                 if ("role" in selectedPersonForLogbook) {
@@ -80292,10 +80292,10 @@ Do you want to replace the existing entry?`,
               onSelectModeChange: (active) => setPauseIsSelectingCompleted(active),
               completedEventIds: pauseCompletedEventIds,
               onCompletedEventIdsChange: setPauseCompletedEventIds,
-              onStagedEventsReady: (events3) => {
-                if (events3 !== null) {
+              onStagedEventsReady: (events2) => {
+                if (events2 !== null) {
                   const seenIds = /* @__PURE__ */ new Set();
-                  const deduped = events3.filter((e) => {
+                  const deduped = events2.filter((e) => {
                     if (seenIds.has(e.id)) return false;
                     seenIds.add(e.id);
                     return true;
@@ -80355,8 +80355,8 @@ Do you want to replace the existing entry?`,
             setSelectedEvent(null);
             setIsAddingTile(false);
           },
-          onSave: (events3) => {
-            handleSaveEvents(events3, false);
+          onSave: (events2) => {
+            handleSaveEvents(events2, false);
             setSelectedEvent(null);
             setIsAddingTile(false);
           },
@@ -80387,7 +80387,7 @@ Do you want to replace the existing entry?`,
             setOracleContextForModal(null);
             setIsAddingTile(false);
           },
-          onSave: (events3) => handleSaveEvents(events3, isPriorityEventCreation),
+          onSave: (events2) => handleSaveEvents(events2, isPriorityEventCreation),
           onDeleteRequest: handleDeleteEvent,
           isEditingDefault,
           instructors: instructorsData.map((i) => i.name),
@@ -80423,7 +80423,7 @@ Do you want to replace the existing entry?`,
             handleNavigation("PT051");
           },
           onOpenAuth: (e) => {
-            const latestEvent = events2.find((ev) => ev.id === e.id) || e;
+            const latestEvent = events.find((ev) => ev.id === e.id) || e;
             setEventForAuth(latestEvent);
             setShowAuthFlyout(true);
           },
@@ -80646,7 +80646,7 @@ Do you want to replace the existing entry?`,
           syllabusDetails,
           scores,
           traineeLMPs,
-          events: events2,
+          events,
           date: buildDfpDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
           courseColors: scopedCourseColors,
           school,
