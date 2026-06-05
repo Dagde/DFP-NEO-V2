@@ -152,6 +152,35 @@ export interface Instructor {
   priorExperience?: LogbookExperience;
   callsign?: string;           // Primary callsign string (e.g. "ROLR042")
   secondaryCallsign?: string;  // Secondary callsign string (e.g. "VIPR007")
+  preferences?: PersonnelPreferences;
+}
+
+export interface AirCombatTrainingAssignment {
+  assignmentId: string;
+  kind: 'course' | 'training_package';
+  trainingKey: string;
+  lmpType: 'Master LMP' | 'Staff CAT';
+  code: string;
+  title: string;
+  locationCode: string;
+  unitCode: string;
+  operationalModel: 'air_combat';
+  assignedAt: string;
+  assignedBy?: string;
+}
+
+export interface AirCombatTrainingAssignments {
+  courses: AirCombatTrainingAssignment[];
+  trainingPackages: AirCombatTrainingAssignment[];
+}
+
+export interface PersonnelPreferences {
+  callsign?: string | null;
+  secondaryCallsign?: string | null;
+  airCombat?: {
+    trainingAssignments?: AirCombatTrainingAssignments;
+  };
+  [key: string]: any;
 }
 
 export interface StaffCallsignInfo {
@@ -217,6 +246,7 @@ export interface ScheduleEvent {
       taskingRequestId?: string;
       taskingAircraftIndex?: number;
       taskingAircraftCount?: number;
+      isMandatoryTasking?: boolean;
       
       // Additional fields for enhanced priority events display
       dateCreated?: string;

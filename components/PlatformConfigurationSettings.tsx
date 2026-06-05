@@ -40,6 +40,10 @@ import {
   type InsertEventSyllabusType,
 } from '../utils/insertEventTypes';
 import {
+  DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS,
+  normaliseAirCombatSchedulingWeights,
+} from '../utils/airCombatTraining';
+import {
   DEFAULT_AIRFIELD_SOLAR_PROFILES,
   getDefaultAirfieldSolarProfile,
   isValidLatitude,
@@ -1168,6 +1172,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null,
   );
+  const airCombatScheduling = {
+    ...(primaryOrganisationSettings.airCombatScheduling || {}),
+    defaultWeights: normaliseAirCombatSchedulingWeights(primaryOrganisationSettings.airCombatScheduling?.defaultWeights),
+  };
   const masterLmpAccessRules = useMemo(
     () => normaliseMasterLmpAccessRules(config as any),
     [config.organisations],
@@ -1288,6 +1296,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       taskProfiles: {
         ...normaliseTaskProfileConfig(settings.taskProfiles || null),
         [model]: parseTaskProfileText(text),
+      },
+    }));
+  };
+
+  const updateAirCombatSchedulingWeights = (courseWeight: number) => {
+    const courses = Math.max(0, Math.min(100, Math.round(courseWeight)));
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      airCombatScheduling: {
+        ...(settings.airCombatScheduling || {}),
+        version: 1,
+        defaultWeights: {
+          courses,
+          trainingPackages: 100 - courses,
+        },
       },
     }));
   };
@@ -3548,6 +3571,46 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-scheduling-rule-sets" className={getSectionClass('platform-scheduling-rule-sets')}>
         <SectionHeader title="Scheduling Rule Sets" subtitle="Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." />
         <div className="space-y-4 p-4">
+          <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-emerald-100">Air Combat Priority Mix</h5>
+                <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
+                  Sets how remaining Air Combat capacity is shared after mandatory tasking is attempted.
+                </p>
+              </div>
+              <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100">
+                Courses {airCombatScheduling.defaultWeights.courses}% / Training Packages {airCombatScheduling.defaultWeights.trainingPackages}%
+              </span>
+            </div>
+            <div className="grid gap-3 md:grid-cols-[1fr_120px_120px]">
+              <div>
+                <FieldLabel label="Course Weight" info="Training Package weight is automatically balanced to make the pair total 100%." />
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  disabled={!canEdit}
+                  value={airCombatScheduling.defaultWeights.courses}
+                  onChange={(event) => updateAirCombatSchedulingWeights(Number(event.target.value))}
+                  className="mt-3 w-full accent-emerald-500 disabled:opacity-50"
+                />
+              </div>
+              <NumberField
+                label="Courses"
+                value={airCombatScheduling.defaultWeights.courses}
+                disabled={!canEdit}
+                onChange={updateAirCombatSchedulingWeights}
+              />
+              <NumberField
+                label="Training Packages"
+                value={airCombatScheduling.defaultWeights.trainingPackages}
+                disabled
+                onChange={() => {}}
+              />
+            </div>
+          </div>
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3">
             <div className="mb-3 flex flex-wrap items-center gap-3">
               <div>

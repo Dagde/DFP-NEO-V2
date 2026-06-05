@@ -622,6 +622,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     resourceDisplayNames={resourceDisplayNames}
                     personnelDisplaySettings={personnelDisplaySettings}
                     instructorLabel={instructorLabel}
+                    operationalModel={operationalModel}
                 />
         )}
 

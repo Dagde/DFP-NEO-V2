@@ -142,6 +142,7 @@ interface TaskingRequest {
   arrivalPoint: string;
   aircraftCount: number;
   aircraftConfigId: string;
+  isMandatory: boolean;
   submitted: boolean;
 }
 
@@ -454,6 +455,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           <th className="py-2 px-2 text-left w-[78px] max-w-[78px] whitespace-normal leading-tight">Arrival Point</th>
           <th className="py-2 px-2 text-left">No. of Aircraft</th>
           <th className="py-2 px-2 text-left">Config</th>
+          <th className="py-2 px-2 text-left">Mandatory</th>
           <th className="py-2 px-2 text-left">Status</th>
           <th className="py-2 px-1 text-right"></th>
         </tr>
@@ -461,7 +463,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       <tbody className="divide-y divide-gray-700/50">
         {taskingRequests.length === 0 && (
           <tr>
-            <td colSpan={11} className="py-4 px-2 text-sm italic text-gray-500">
+            <td colSpan={12} className="py-4 px-2 text-sm italic text-gray-500">
               No tasking requests configured.
             </td>
           </tr>
@@ -547,6 +549,17 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                   definitions={aircraftConfigOptions}
                   onChange={(aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false })}
                 />
+              </td>
+              <td className="py-1 px-2 w-24">
+                <label className="inline-flex items-center justify-center gap-2 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white">
+                  <input
+                    type="checkbox"
+                    checked={request.isMandatory !== false}
+                    onChange={event => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false })}
+                    className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                  />
+                  Yes
+                </label>
               </td>
               <td className="py-1 px-2 w-24">
                 {request.submitted ? (
@@ -1168,6 +1181,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       arrivalPoint: school,
       aircraftCount: 1,
       aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+      isMandatory: true,
       submitted: false,
     };
     setTaskingRequests(prev => [...prev, nextRequest]);
@@ -1219,6 +1233,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       destination: arrivalPoint,
       isTimeFixed: true,
       isTaskingRequest: true,
+      isMandatoryTasking: request.isMandatory !== false,
       taskingRequestId: request.id,
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,

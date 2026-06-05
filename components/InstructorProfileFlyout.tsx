@@ -14,6 +14,8 @@ import {
   getRankOptionsForGroup,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
+import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { normaliseAirCombatTrainingAssignments } from '../utils/airCombatTraining';
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -40,6 +42,7 @@ interface InstructorProfileFlyoutProps {
   resourceDisplayNames?: ResourceDisplayNames;
   instructorLabel?: string;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
+  operationalModel?: string;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -150,6 +153,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel = 'QFI',
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  operationalModel = 'flight_school',
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -255,6 +259,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     }).sort((a, b) => a.name.localeCompare(b.name));
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
+  const assignedTraining = useMemo(
+    () => normaliseAirCombatTrainingAssignments(instructor.preferences),
+    [instructor.preferences],
+  );
 
   const callsignData = useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
   const displayCallsign = useMemo(() => {
@@ -1044,8 +1053,35 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 )}
               </div>
 
-              {/* ── SECTION 2: ASSIGNED TRAINEES (always visible, not editing) ── */}
-              {!isEditing && !isCreating && (
+              {/* ── SECTION 2: ASSIGNED TRAINING / TRAINEES (always visible, not editing) ── */}
+              {!isEditing && !isCreating && isAirCombatModel && (
+                <div className={card3d + " p-3"} style={card3dStyle}>
+                  <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Training</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { title: 'Courses', items: assignedTraining.courses },
+                      { title: 'Training Packages', items: assignedTraining.trainingPackages },
+                    ].map(group => (
+                      <div key={group.title} className={card3d + " p-3"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                        <div className="text-[9px] text-sky-400 font-semibold mb-2">{group.title}</div>
+                        {group.items.length > 0 ? (
+                          <div className="space-y-1">
+                            {group.items.map(item => (
+                              <div key={item.trainingKey} className="rounded border border-gray-700 bg-gray-900/60 px-2 py-1">
+                                <div className="text-[10px] font-semibold text-white">{item.code}</div>
+                                <div className="text-[9px] text-gray-400 truncate">{item.title}</div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-[10px] italic">Nil</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!isEditing && !isCreating && !isAirCombatModel && (
                 <div className={card3d + " p-3"} style={card3dStyle}>
                   <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Trainees</h4>
                   <div className="grid grid-cols-4 gap-2">

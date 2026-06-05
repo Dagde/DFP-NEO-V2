@@ -1,7 +1,7 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { SyllabusItemDetail } from '../types';
+import { Instructor, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { createSyllabusItem, updateSyllabusItem, retireSyllabusItem, clearSyllabusCache } from '../lib/syllabusService';
@@ -13,6 +13,12 @@ import {
     normaliseSelectedAircraftConfigurations,
     type AircraftConfigurationDefinition,
 } from '../utils/aircraftConfigurationSettings';
+import { normaliseOperationalModel } from '../utils/platformConfigService';
+import {
+    getAirCombatAssignmentFromItem,
+    staffHasAirCombatAssignment,
+    setAirCombatTrainingAssignment,
+} from '../utils/airCombatTraining';
 
 interface SyllabusViewProps {
   syllabusDetails: SyllabusItemDetail[];
@@ -25,6 +31,10 @@ interface SyllabusViewProps {
   activeLocationCode?: string;
   activeUnitCode?: string;
   trainingPackageTemplates?: SyllabusItemDetail[];
+  instructorsData?: Instructor[];
+  onUpdateInstructor?: (data: Instructor) => void | Promise<void>;
+  operationalModel?: string;
+  currentUserName?: string;
 }
 
 // Reusable components for view mode
@@ -150,6 +160,61 @@ const AircraftConfigSelector: React.FC<{
         </div>
     );
 };
+
+const AssignTrainingModal: React.FC<{
+    title: string;
+    staff: Instructor[];
+    selectedStaffIds: Set<number>;
+    saving: boolean;
+    onToggle: (idNumber: number) => void;
+    onSelectAll: () => void;
+    onDeselectAll: () => void;
+    onCancel: () => void;
+    onSave: () => void;
+}> = ({ title, staff, selectedStaffIds, saving, onToggle, onSelectAll, onDeselectAll, onCancel, onSave }) => (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4">
+        <div className="w-full max-w-2xl rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3">
+                <div>
+                    <h2 className="text-lg font-bold text-white">Assign Training</h2>
+                    <p className="mt-1 text-xs text-gray-400">{title}</p>
+                </div>
+                <button type="button" onClick={onCancel} className="rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white">Close</button>
+            </div>
+            <div className="p-4">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={onSelectAll} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Select All</button>
+                    <button type="button" onClick={onDeselectAll} className="rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700">Deselect All</button>
+                    <span className="ml-auto text-xs text-gray-400">{selectedStaffIds.size} selected</span>
+                </div>
+                <div className="max-h-[420px] overflow-y-auto rounded border border-gray-700">
+                    {staff.length === 0 ? (
+                        <div className="p-4 text-sm italic text-gray-500">No active squadron staff available for this unit.</div>
+                    ) : staff.map(person => (
+                        <label key={person.idNumber} className="flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70">
+                            <input
+                                type="checkbox"
+                                checked={selectedStaffIds.has(person.idNumber)}
+                                onChange={() => onToggle(person.idNumber)}
+                                className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                            />
+                            <span className="min-w-0 flex-1">
+                                <span className="block truncate font-semibold text-white">{person.rank} {person.name}</span>
+                                <span className="block text-xs text-gray-400">{person.role || 'No role'} · {person.flight || 'No flight'}</span>
+                            </span>
+                        </label>
+                    ))}
+                </div>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-700 px-4 py-3">
+                <button type="button" onClick={onCancel} className="rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700">Cancel</button>
+                <button type="button" onClick={onSave} disabled={saving} className="rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60">
+                    {saving ? 'Saving...' : 'Save Assignments'}
+                </button>
+            </div>
+        </div>
+    </div>
+);
 
 const getMasterLmpDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
     if (syllabusItem.type === 'Flight') return 'Flight';
@@ -539,6 +604,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     activeLocationCode = '',
     activeUnitCode = '',
     trainingPackageTemplates = [],
+    instructorsData = [],
+    onUpdateInstructor,
+    operationalModel = 'flight_school',
+    currentUserName,
 }) => {
     const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -558,6 +627,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const activeCollectionNoun = isTrainingPackagesTab ? 'package' : 'course';
   const activeCollectionTitle = isTrainingPackagesTab ? 'Training Packages' : 'Master LMP';
   const activeCollectionSelectLabel = isTrainingPackagesTab ? 'Package:' : 'Course:';
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
+  const [showAssignTrainingModal, setShowAssignTrainingModal] = useState(false);
+  const [assignTrainingSelection, setAssignTrainingSelection] = useState<Set<number>>(new Set());
+  const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = useState(false);
 
   // Dynamic course list: only courses found in the currently visible syllabusDetails.
   // App-level unit access filtering happens before this view is rendered.
@@ -669,6 +742,60 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           return item.courses.includes(selectedCourseType);
       });
   }, [activeTab, syllabusDetails, selectedCourseType]);
+
+  const activeTrainingAssignmentItem = useMemo(() => (
+      filteredSyllabusDetails[0] || selectedItem || null
+  ), [filteredSyllabusDetails, selectedItem]);
+
+  const activeTrainingAssignment = useMemo(() => {
+      if (!activeTrainingAssignmentItem || !selectedCourseType) return null;
+      return getAirCombatAssignmentFromItem(
+          { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
+          activeLocationCode,
+          activeUnitCode,
+          currentUserName,
+      );
+  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode, currentUserName, selectedCourseType]);
+
+  const assignableAirCombatStaff = useMemo(() => {
+      const targetUnit = String(activeUnitCode || '').trim().toUpperCase();
+      return instructorsData
+          .filter(staff => staff && staff.name && !staff.isAdminStaff)
+          .filter(staff => !targetUnit || String(staff.unit || '').trim().toUpperCase() === targetUnit)
+          .sort((a, b) => a.name.localeCompare(b.name));
+  }, [activeUnitCode, instructorsData]);
+
+  const openAssignTraining = () => {
+      if (!activeTrainingAssignment) return;
+      setAssignTrainingSelection(new Set(
+          assignableAirCombatStaff
+              .filter(staff => staffHasAirCombatAssignment(staff, activeTrainingAssignment))
+              .map(staff => staff.idNumber)
+      ));
+      setShowAssignTrainingModal(true);
+  };
+
+  const saveAssignTraining = async () => {
+      if (!activeTrainingAssignment || !onUpdateInstructor) return;
+      setIsSavingTrainingAssignments(true);
+      try {
+          for (const staff of assignableAirCombatStaff) {
+              const shouldAssign = assignTrainingSelection.has(staff.idNumber);
+              const currentlyAssigned = staffHasAirCombatAssignment(staff, activeTrainingAssignment);
+              if (shouldAssign === currentlyAssigned) continue;
+              await onUpdateInstructor(setAirCombatTrainingAssignment(staff, activeTrainingAssignment, shouldAssign));
+          }
+          logAudit({
+              action: 'Update',
+              description: `Updated Air Combat training assignment for ${activeTrainingAssignment.code}`,
+              changes: `${assignTrainingSelection.size} staff selected`,
+              page: 'LMP/Event Details',
+          });
+          setShowAssignTrainingModal(false);
+      } finally {
+          setIsSavingTrainingAssignments(false);
+      }
+  };
 
     // Log view on component mount
     useEffect(() => {
@@ -1258,6 +1385,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             Del<br />{isTrainingPackagesTab ? 'Package' : 'Course'}
                         </span>
                     </button>
+                    {isAirCombatModel && (
+                        <button onClick={openAssignTraining} disabled={isFrozen || !activeTrainingAssignment || !onUpdateInstructor} className="w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span>Assign<br />Training</span>
+                        </button>
+                    )}
                     <button onClick={() => { setUploadFile(null); setUploadResult(null); setUploadMode(selectedCourseType ? 'update' : 'create'); setNewUploadPackageName(''); setShowUploadModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed">Upload</button>
                     <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
@@ -1747,6 +1879,26 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 </div>
             </div>
         </div>
+    )}
+    {showAssignTrainingModal && activeTrainingAssignment && (
+        <AssignTrainingModal
+            title={`${activeTrainingAssignment.kind === 'course' ? 'Course' : 'Training Package'}: ${activeTrainingAssignment.title || activeTrainingAssignment.code}`}
+            staff={assignableAirCombatStaff}
+            selectedStaffIds={assignTrainingSelection}
+            saving={isSavingTrainingAssignments}
+            onToggle={(idNumber) => {
+                setAssignTrainingSelection(prev => {
+                    const next = new Set(prev);
+                    if (next.has(idNumber)) next.delete(idNumber);
+                    else next.add(idNumber);
+                    return next;
+                });
+            }}
+            onSelectAll={() => setAssignTrainingSelection(new Set(assignableAirCombatStaff.map(staff => staff.idNumber)))}
+            onDeselectAll={() => setAssignTrainingSelection(new Set())}
+            onCancel={() => setShowAssignTrainingModal(false)}
+            onSave={saveAssignTraining}
+        />
     )}
     </>
   );

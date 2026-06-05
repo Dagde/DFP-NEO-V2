@@ -2866,6 +2866,110 @@ const getStaffCallsignAssignments = (instructors, settings) => {
   return assignments;
 };
 const getStaffCallsignKey = personKey;
+const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
+  courses: 60,
+  trainingPackages: 40
+};
+const normaliseCode = (value) => String(value || "").trim().toUpperCase();
+const getAirCombatTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
+const getAirCombatTrainingKey = (kind, code, locationCode, unitCode) => [
+  "air_combat",
+  normaliseCode(locationCode) || "GLOBAL",
+  normaliseCode(unitCode) || "GLOBAL",
+  kind,
+  normaliseCode(code)
+].join(":");
+const getAirCombatTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
+const getAirCombatTrainingTitleFromItem = (item) => {
+  const code = getAirCombatTrainingCodeFromItem(item);
+  return item.module && item.module !== code ? item.module : item.eventDescription || code;
+};
+const getAirCombatAssignmentFromItem = (item, locationCode, unitCode, assignedBy) => {
+  const kind = getAirCombatTrainingKindForLmpType(item.lmpType);
+  const code = getAirCombatTrainingCodeFromItem(item);
+  const assignmentLocation = normaliseCode(locationCode || item.location);
+  const assignmentUnit = normaliseCode(unitCode || item.unit);
+  const trainingKey = getAirCombatTrainingKey(kind, code, assignmentLocation, assignmentUnit);
+  return {
+    assignmentId: trainingKey,
+    kind,
+    trainingKey,
+    lmpType: kind === "training_package" ? "Staff CAT" : "Master LMP",
+    code,
+    title: getAirCombatTrainingTitleFromItem(item),
+    locationCode: assignmentLocation,
+    unitCode: assignmentUnit,
+    operationalModel: "air_combat",
+    assignedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    assignedBy
+  };
+};
+const normaliseAirCombatTrainingAssignments = (preferences) => {
+  const raw = preferences?.airCombat?.trainingAssignments || {};
+  const normaliseList = (items, kind) => (Array.isArray(items) ? items : []).map((item) => {
+    const code = String(item.code || "").trim();
+    if (!code) return null;
+    const locationCode = normaliseCode(item.locationCode);
+    const unitCode = normaliseCode(item.unitCode);
+    const trainingKey = String(item.trainingKey || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
+    return {
+      assignmentId: String(item.assignmentId || trainingKey),
+      kind,
+      trainingKey,
+      lmpType: kind === "training_package" ? "Staff CAT" : "Master LMP",
+      code,
+      title: String(item.title || code),
+      locationCode,
+      unitCode,
+      operationalModel: "air_combat",
+      assignedAt: String(item.assignedAt || ""),
+      assignedBy: item.assignedBy ? String(item.assignedBy) : void 0
+    };
+  }).filter(Boolean);
+  return {
+    courses: normaliseList(raw.courses, "course"),
+    trainingPackages: normaliseList(raw.trainingPackages, "training_package")
+  };
+};
+const setAirCombatTrainingAssignment = (instructor, assignment, assigned) => {
+  const preferences = { ...instructor.preferences || {} };
+  const current = normaliseAirCombatTrainingAssignments(preferences);
+  const field = assignment.kind === "training_package" ? "trainingPackages" : "courses";
+  const nextList = assigned ? [
+    ...current[field].filter((item) => item.trainingKey !== assignment.trainingKey),
+    assignment
+  ] : current[field].filter((item) => item.trainingKey !== assignment.trainingKey);
+  return {
+    ...instructor,
+    preferences: {
+      ...preferences,
+      airCombat: {
+        ...preferences.airCombat || {},
+        trainingAssignments: {
+          ...current,
+          [field]: nextList
+        }
+      }
+    }
+  };
+};
+const staffHasAirCombatAssignment = (instructor, assignment) => {
+  const assignments = normaliseAirCombatTrainingAssignments(instructor.preferences);
+  const list = assignment.kind === "training_package" ? assignments.trainingPackages : assignments.courses;
+  return list.some((item) => item.trainingKey === assignment.trainingKey);
+};
+const normaliseAirCombatSchedulingWeights = (value) => {
+  const courses = Number(value?.courses);
+  const trainingPackages = Number(value?.trainingPackages);
+  if (!Number.isFinite(courses) || !Number.isFinite(trainingPackages) || courses + trainingPackages <= 0) {
+    return DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS;
+  }
+  const total = courses + trainingPackages;
+  return {
+    courses: Math.round(courses / total * 100),
+    trainingPackages: 100 - Math.round(courses / total * 100)
+  };
+};
 const pendingAudits = /* @__PURE__ */ new Map();
 const debouncedAuditLog = (key, params, logFunction) => {
   const existing = pendingAudits.get(key);
@@ -3062,7 +3166,7 @@ const DataRow = ({ row, isEven }) => {
     ] })
   ] });
 };
-const LogbookView = ({ person, events, onBack, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const LogbookView = ({ person, events: events2, onBack, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const [rows, setRows] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
@@ -6090,7 +6194,7 @@ const getCategory = (res) => {
   if (res.startsWith("Ground")) return "Ground";
   return "Other";
 };
-const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel: formatResourceLabel2, aircraftConfigLabelsByResource = {} }) => {
+const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events: events2 = [], formatResourceLabel: formatResourceLabel2, aircraftConfigLabelsByResource = {} }) => {
   const [draggedIndex, setDraggedIndex] = reactExports.useState(null);
   const handleDragStart = (index) => {
     setDraggedIndex(index);
@@ -6780,7 +6884,7 @@ const ScheduleView = ({
   onDateChange,
   onDateSelect,
   snapshotDates = [],
-  events,
+  events: events2,
   resources,
   instructors,
   traineesData,
@@ -6997,7 +7101,7 @@ const ScheduleView = ({
       };
       if (isMultiSelectMode && selectedEventIds.has(event.id)) {
         selectedEventIds.forEach((id) => {
-          const ev = events.find((e2) => e2.id === id);
+          const ev = events2.find((e2) => e2.id === id);
           if (ev) processEvent(ev);
         });
       } else {
@@ -7061,7 +7165,7 @@ const ScheduleView = ({
         const rectTop = y;
         const rectBottom = y + height;
         const newSelectedIds = /* @__PURE__ */ new Set();
-        events.forEach((ev) => {
+        events2.forEach((ev) => {
           const rowIndex = resources.indexOf(ev.resourceId);
           if (rowIndex === -1) return;
           const tileTop = rowIndex * ROW_HEIGHT$5;
@@ -7085,11 +7189,11 @@ const ScheduleView = ({
       const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$5 / 2) / ROW_HEIGHT$5) - mainEventInitialPos.rowIndex;
       console.log("Drag calculation - timeShift:", timeShift, "rowShift:", rowShift, "xInGrid:", xInGrid, "yInGrid:", yInGrid);
       const updates = [];
-      const tempEvents = [...events];
+      const tempEvents = [...events2];
       let resourceConflictId = null;
       let tempCptConflict = null;
       for (const [id, initialPos] of draggingState.initialPositions.entries()) {
-        const eventData = events.find((ev) => ev.id === id);
+        const eventData = events2.find((ev) => ev.id === id);
         if (!eventData) continue;
         let newStartTime = initialPos.startTime + timeShift;
         let newRowIndex = initialPos.rowIndex + rowShift;
@@ -7104,7 +7208,7 @@ const ScheduleView = ({
         if (tempEventIndex !== -1) {
           tempEvents[tempEventIndex] = { ...tempEvents[tempEventIndex], startTime: snappedStartTime, resourceId: newResourceId };
         }
-        const conflictingEvent = events.find(
+        const conflictingEvent = events2.find(
           (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$2({ ...eventData, startTime: snappedStartTime }, ev)
         );
         if (conflictingEvent) {
@@ -7367,7 +7471,7 @@ const ScheduleView = ({
     if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
     const windowStart = validateOverlayTime - 0.5;
     const windowEnd = validateOverlayTime + 0.5;
-    const flightCount = events.filter((event) => {
+    const flightCount = events2.filter((event) => {
       if (event.type !== "flight") return false;
       if (event.resourceId?.startsWith("STBY") || event.resourceId?.startsWith("BNF-STBY")) return false;
       if (event.isCancelled) return false;
@@ -7419,7 +7523,7 @@ const ScheduleView = ({
   };
   const renderEvents = () => {
     return resources.flatMap((resource, rowIndex) => {
-      const resourceEvents = events.filter((e) => e.resourceId === resource).sort((a, b) => {
+      const resourceEvents = events2.filter((e) => e.resourceId === resource).sort((a, b) => {
         if (a.type === "deployment" && b.type !== "deployment") return -1;
         if (a.type !== "deployment" && b.type === "deployment") return 1;
         return a.startTime - b.startTime;
@@ -7625,7 +7729,7 @@ const ScheduleView = ({
             standbyCount,
             ftdCount,
             cptCount,
-            events,
+            events: events2,
             formatResourceLabel: formatResourceLabel2,
             aircraftConfigLabelsByResource
           }
@@ -7927,10 +8031,10 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   });
   return unavailabilityEvents;
 };
-const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings }) => {
+const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events: events2, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings }) => {
   console.log("🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:");
   console.log("  - date:", date);
-  console.log("  - events count:", events?.length);
+  console.log("  - events count:", events2?.length);
   console.log("  - instructors count:", instructors?.length);
   console.log("  - instructorsData count:", instructorsData?.length);
   console.log("  - traineesData count:", traineesData?.length);
@@ -7958,11 +8062,11 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     console.error("❌ Error stack:", error.stack);
   }
   if (!date) console.error("❌ CRITICAL: date is undefined");
-  if (!events) console.error("❌ CRITICAL: events is undefined");
+  if (!events2) console.error("❌ CRITICAL: events is undefined");
   if (!instructors) console.error("❌ CRITICAL: instructors is undefined");
   if (!daylightTimes) console.error("❌ CRITICAL: daylightTimes is undefined");
-  if (events?.length > 0) {
-    console.log("🔍 Sample event structure:", events[0]);
+  if (events2?.length > 0) {
+    console.log("🔍 Sample event structure:", events2[0]);
   }
   if (instructors?.length > 0) {
     console.log("🔍 Sample instructor structure:", instructors[0]);
@@ -8001,8 +8105,8 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
   }, [date]);
   const eventsWithUnavailability = reactExports.useMemo(() => {
     const unavailabilityEvents = createUnavailabilityEvents$1(date, instructorsData, true);
-    return [...events, ...unavailabilityEvents];
-  }, [date, events, instructorsData]);
+    return [...events2, ...unavailabilityEvents];
+  }, [date, events2, instructorsData]);
   reactExports.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
@@ -8626,7 +8730,7 @@ const createUnavailabilityEvents = (date, personnelData) => {
   });
   return unavailabilityEvents;
 };
-const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
+const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events: events2, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
@@ -8661,8 +8765,8 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
   }, [date]);
   const eventsWithUnavailability = reactExports.useMemo(() => {
     const unavailabilityEvents = createUnavailabilityEvents(date, traineesData);
-    return [...events, ...unavailabilityEvents];
-  }, [date, events, traineesData]);
+    return [...events2, ...unavailabilityEvents];
+  }, [date, events2, traineesData]);
   reactExports.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
@@ -8996,7 +9100,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                 ) : null;
                 const barsForThisRow = [];
                 if (showValidation) {
-                  const traineeEventsForBars = events.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee || e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)).sort((a, b) => a.startTime - b.startTime);
+                  const traineeEventsForBars = events2.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee || e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)).sort((a, b) => a.startTime - b.startTime);
                   for (let i = 0; i < traineeEventsForBars.length; i++) {
                     const currentEvent = traineeEventsForBars[i];
                     const prevEvent = traineeEventsForBars[i - 1];
@@ -11420,7 +11524,7 @@ const TraineeProfileFlyout = ({
   trainee,
   onClose,
   onUpdateTrainee,
-  events,
+  events: events2,
   school,
   onNavigateToHateSheet,
   onAddRemedialPackage,
@@ -11461,7 +11565,7 @@ const TraineeProfileFlyout = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
-  platformConfig = null
+  platformConfig: platformConfig2 = null
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -11523,19 +11627,19 @@ const TraineeProfileFlyout = ({
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
     });
-    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig2, Array.from(courseCodes), {
       unitCode: unit || trainee.unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig, syllabusDetails, trainee.unit, unit]);
+  }, [platformConfig2, syllabusDetails, trainee.unit, unit]);
   const academicLmpCourses = reactExports.useMemo(() => {
-    const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig2, allAcademicLmpCourses, {
       unitCode: unit || trainee.unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
+  }, [allAcademicLmpCourses, platformConfig2, trainee.unit, unit]);
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
@@ -11664,8 +11768,8 @@ const TraineeProfileFlyout = ({
     }
   }, []);
   const traineeHasEventsToday = reactExports.useMemo(() => {
-    return events.some((e) => e.student === trainee.fullName || e.pilot === trainee.fullName);
-  }, [events, trainee.fullName]);
+    return events2.some((e) => e.student === trainee.fullName || e.pilot === trainee.fullName);
+  }, [events2, trainee.fullName]);
   const handlePauseToggle = () => {
     if (!isPaused && traineeHasEventsToday) {
       setShowScheduleWarning(true);
@@ -12592,7 +12696,7 @@ const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
     ] })
   ] }) });
 };
-const FlightInfoFlyout = ({ events, position, personName, personType, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const FlightInfoFlyout = ({ events: events2, position, personName, personType, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
     const minutes = Math.round(time % 1 * 60);
@@ -12606,7 +12710,7 @@ const FlightInfoFlyout = ({ events, position, personName, personType, resourceDi
       "aria-live": "polite",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400 mb-2 border-b border-gray-700 pb-2", children: personName }),
-        events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: events.sort((a, b) => a.startTime - b.startTime).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `p-2 rounded-md border-l-4 ${event.color.replace("bg-", "border-")}`, children: [
+        events2.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: events2.sort((a, b) => a.startTime - b.startTime).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `p-2 rounded-md border-l-4 ${event.color.replace("bg-", "border-")}`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center font-semibold text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               event.flightNumber,
@@ -13131,7 +13235,7 @@ const generateNewTraineeTemplate = () => ({
   }
 });
 const CourseRosterView = ({
-  events,
+  events: events2,
   traineesData,
   courseColors,
   archivedCourses,
@@ -13182,7 +13286,7 @@ const CourseRosterView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
   trainingReportTerminology,
-  platformConfig = null
+  platformConfig: platformConfig2 = null
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -13260,7 +13364,7 @@ const CourseRosterView = ({
   };
   const handleMouseEnter = (e, traineeFullName) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const traineeEvents = events.filter(
+    const traineeEvents = events2.filter(
       (event) => event.student === traineeFullName || event.flightType === "Solo" && event.pilot === traineeFullName
     );
     setHoveredTrainee({ name: traineeFullName.split(" – ")[0], events: traineeEvents });
@@ -13448,7 +13552,7 @@ const CourseRosterView = ({
           setNewTraineeTemplate(null);
         },
         onUpdateTrainee: isCreatingNew ? onAddTrainee : onUpdateTrainee,
-        events,
+        events: events2,
         school,
         onNavigateToHateSheet,
         onAddRemedialPackage,
@@ -13472,7 +13576,7 @@ const CourseRosterView = ({
         resourceDisplayNames,
         personnelDisplaySettings,
         trainingReportTerminology,
-        platformConfig,
+        platformConfig: platformConfig2,
         pt051Assessments,
         pt051PerformanceLoading,
         traineeLMPs,
@@ -18622,14 +18726,14 @@ function groupByModule(items) {
     return { moduleKey: key, label, items: groups[key] };
   });
 }
-function getTraineeStatus(trainee, events, date) {
+function getTraineeStatus(trainee, events2, date) {
   if (trainee.isPaused) return { status: "paused", reason: "Trainee is currently paused" };
   for (const u of trainee.unavailability || []) {
     if (date >= u.startDate && date <= u.endDate) {
       return { status: "unavailable", reason: `Unavailable: ${u.reason}` };
     }
   }
-  const todayEvents = events.filter((e) => e.date === date);
+  const todayEvents = events2.filter((e) => e.date === date);
   for (const e of todayEvents) {
     const attendees = [e.student, e.instructor, e.pilot, ...e.attendees || []].filter(Boolean);
     if (attendees.includes(trainee.fullName)) {
@@ -18644,7 +18748,7 @@ const AcademicsTab = ({
   traineesData,
   scores,
   traineeLMPs,
-  events,
+  events: events2,
   date,
   courseColors,
   school,
@@ -18711,10 +18815,10 @@ const AcademicsTab = ({
   );
   const traineeStatuses = reactExports.useMemo(
     () => courseTrainees.reduce((acc, t) => {
-      acc[t.fullName] = getTraineeStatus(t, events, selectedDate);
+      acc[t.fullName] = getTraineeStatus(t, events2, selectedDate);
       return acc;
     }, {}),
-    [courseTrainees, events, selectedDate]
+    [courseTrainees, events2, selectedDate]
   );
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   reactExports.useEffect(() => {
@@ -19497,7 +19601,7 @@ const AddGroundEventFlyout = ({
   syllabusDetails,
   scores,
   traineeLMPs,
-  events,
+  events: events2,
   date,
   courseColors,
   school,
@@ -19768,7 +19872,7 @@ const AddGroundEventFlyout = ({
                     traineesData,
                     scores: scores || /* @__PURE__ */ new Map(),
                     traineeLMPs: traineeLMPs || /* @__PURE__ */ new Map(),
-                    events: events || [],
+                    events: events2 || [],
                     date: date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
                     courseColors: courseColors || activeCourses,
                     school: school || "ESL",
@@ -20117,7 +20221,7 @@ const formatDate$2 = (dateString) => {
 const MyDashboard = ({
   userName,
   userRank,
-  events,
+  events: events2,
   onSelectEvent,
   onNavigate,
   onSelectMyProfile,
@@ -20127,7 +20231,7 @@ const MyDashboard = ({
   pt051Assessments,
   onSelectPt051
 }) => {
-  const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
+  const sortedEvents = [...events2].sort((a, b) => a.startTime - b.startTime);
   const mySctRequests = sctRequests.filter((req) => req.name === userName.split(" ").reverse().join(", "));
   const incompletePt051s = React.useMemo(() => {
     const fullUserName = `${userName.split(" ").reverse().join(", ")}`;
@@ -20482,14 +20586,14 @@ const formatTime$1 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const SupervisorDashboard = ({ instructorsData, traineesData, date, events, school, currentLocation, onNavigate, onOpenAuth }) => {
+const SupervisorDashboard = ({ instructorsData, traineesData, date, events: events2, school, currentLocation, onNavigate, onOpenAuth }) => {
   const flightsNeedingAuth = reactExports.useMemo(() => {
     const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
-    return events.filter(
+    return events2.filter(
       (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
       // Only show flights that haven't ended
     ).sort((a, b) => a.startTime - b.startTime).slice(0, 5);
-  }, [events]);
+  }, [events2]);
   const activeInstructors = instructorsData.filter((i) => !i.isPaused).length;
   const onLeaveInstructors = instructorsData.filter((i) => i.isPaused).length;
   const tmufInstructors = instructorsData.filter((i) => i.unavailability?.some((u) => u.reason?.includes("TMUF") || u.reason?.includes("Medical"))).length;
@@ -20682,7 +20786,7 @@ const getResourceCategory = (res) => {
 const NextDayBuildView = ({
   date,
   onDateChange,
-  events,
+  events: events2,
   resources,
   instructors,
   airframeCount,
@@ -20824,7 +20928,7 @@ const NextDayBuildView = ({
       };
       if (isMultiSelectMode && selectedEventIds.has(event.id)) {
         selectedEventIds.forEach((id) => {
-          const ev = events.find((e2) => e2.id === id);
+          const ev = events2.find((e2) => e2.id === id);
           if (ev) processEvent(ev);
         });
       } else {
@@ -20879,7 +20983,7 @@ const NextDayBuildView = ({
       const rectTop = y;
       const rectBottom = y + height;
       const newSelectedIds = /* @__PURE__ */ new Set();
-      events.forEach((ev) => {
+      events2.forEach((ev) => {
         const rowIndex = resources.indexOf(ev.resourceId);
         if (rowIndex === -1) return;
         const tileTop = rowIndex * ROW_HEIGHT$2;
@@ -20899,11 +21003,11 @@ const NextDayBuildView = ({
     const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$2 - mainEventInitialPos.startTime;
     const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$2 / 2) / ROW_HEIGHT$2) - mainEventInitialPos.rowIndex;
     const updates = [];
-    const tempEvents = [...events];
+    const tempEvents = [...events2];
     let resourceConflictId = null;
     let tempCptConflict = null;
     for (const [id, initialPos] of draggingState.initialPositions.entries()) {
-      const eventData = events.find((ev) => ev.id === id);
+      const eventData = events2.find((ev) => ev.id === id);
       if (!eventData) continue;
       let newStartTime = initialPos.startTime + timeShift;
       let newRowIndex = initialPos.rowIndex + rowShift;
@@ -20914,7 +21018,7 @@ const NextDayBuildView = ({
       const snappedStartTime = Math.round(newStartTime * 12) / 12;
       const newResourceId = resources[newRowIndex];
       updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
-      const conflictingEvent = events.find(
+      const conflictingEvent = events2.find(
         (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$1({ ...eventData, startTime: snappedStartTime }, ev)
       );
       if (conflictingEvent) {
@@ -21176,7 +21280,7 @@ const NextDayBuildView = ({
     if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
     const windowStart = validateOverlayTime - 0.5;
     const windowEnd = validateOverlayTime + 0.5;
-    const flightCount = events.filter((event) => {
+    const flightCount = events2.filter((event) => {
       if (event.type !== "flight") return false;
       if (event.resourceId?.startsWith("STBY") || event.resourceId?.startsWith("BNF-STBY")) return false;
       if (event.isCancelled) return false;
@@ -21261,7 +21365,7 @@ const NextDayBuildView = ({
   };
   const renderEvents = () => {
     const seenIds = /* @__PURE__ */ new Set();
-    const uniqueEvents = events.filter((e) => {
+    const uniqueEvents = events2.filter((e) => {
       if (seenIds.has(e.id)) return false;
       seenIds.add(e.id);
       return true;
@@ -21416,7 +21520,7 @@ const NextDayBuildView = ({
             standbyCount,
             ftdCount,
             cptCount,
-            events,
+            events: events2,
             formatResourceLabel: formatResourceLabel2,
             aircraftConfigLabelsByResource
           }
@@ -21754,11 +21858,12 @@ const TaskingRequestTable = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left w-[78px] max-w-[78px] whitespace-normal leading-tight", children: "Arrival Point" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "No. of Aircraft" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Mandatory" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Status" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-1 text-right" })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700/50", children: [
-      taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 11, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
+      taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 12, className: "py-4 px-2 text-sm italic text-gray-500", children: "No tasking requests configured." }) }),
       taskingRequests.map((request) => {
         const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
         const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -21849,6 +21954,18 @@ const TaskingRequestTable = ({
               onChange: (aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false })
             }
           ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center justify-center gap-2 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: request.isMandatory !== false,
+                onChange: (event) => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false }),
+                className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+              }
+            ),
+            "Yes"
+          ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: request.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 text-xs font-semibold", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -22341,6 +22458,7 @@ const PrioritiesView = ({
       arrivalPoint: school,
       aircraftCount: 1,
       aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+      isMandatory: true,
       submitted: false
     };
     setTaskingRequests((prev) => [...prev, nextRequest]);
@@ -22387,6 +22505,7 @@ const PrioritiesView = ({
       destination: arrivalPoint,
       isTimeFixed: true,
       isTaskingRequest: true,
+      isMandatoryTasking: request.isMandatory !== false,
       taskingRequestId: request.id,
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,
@@ -22432,7 +22551,7 @@ const PrioritiesView = ({
     return next;
   };
   const buildCurrencyDraftEvents = (audience, people, includeFlights, includeSims, crewMode) => {
-    const events = [];
+    const events2 = [];
     people.forEach((person, personIndex) => {
       const displayName = person.fullName || person.name;
       const modeList = [
@@ -22440,7 +22559,7 @@ const PrioritiesView = ({
         ...includeSims ? ["ftd"] : []
       ];
       modeList.forEach((type, typeIndex) => {
-        events.push({
+        events2.push({
           id: `currency-draft-${audience}-${type}-${person.idNumber}-${buildDfpDate}-${v4()}`,
           audience,
           personId: person.idNumber,
@@ -22458,7 +22577,7 @@ const PrioritiesView = ({
         });
       });
     });
-    return events;
+    return events2;
   };
   const buildCurrencyPriorityEventsFromDrafts = (drafts) => {
     return drafts.map((draft, index) => {
@@ -22497,17 +22616,17 @@ const PrioritiesView = ({
   };
   const addTraineeCurrencyEventsToPriority = () => {
     const selectedPeople = traineeCurrencyRows.filter((row) => traineeCurrencySelection.has(row.trainee.idNumber)).map((row) => ({ idNumber: row.trainee.idNumber, personKey: String(row.trainee.idNumber), name: row.trainee.name, fullName: row.trainee.fullName, course: row.trainee.course, dueCurrencies: row.dueCurrencies }));
-    const events = buildCurrencyDraftEvents("trainee", selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
-    if (events.length === 0) return;
-    setCurrencyDraftEvents((prev) => [...prev, ...events]);
-    logAudit("Priorities", "Build", "Built trainee currency event review list", `${events.length} Currency event(s) staged`);
+    const events2 = buildCurrencyDraftEvents("trainee", selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
+    if (events2.length === 0) return;
+    setCurrencyDraftEvents((prev) => [...prev, ...events2]);
+    logAudit("Priorities", "Build", "Built trainee currency event review list", `${events2.length} Currency event(s) staged`);
   };
   const addStaffCurrencyEventsToPriority = () => {
     const selectedPeople = staffCurrencyRows.filter((row) => staffCurrencySelection.has(row.personKey)).map((row) => ({ idNumber: row.instructor.idNumber, personKey: row.personKey, name: row.instructor.name, rank: row.instructor.rank, dueCurrencies: row.dueCurrencies }));
-    const events = buildCurrencyDraftEvents("staff", selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
-    if (events.length === 0) return;
-    setCurrencyDraftEvents((prev) => [...prev, ...events]);
-    logAudit("Priorities", "Build", "Built staff currency event review list", `${events.length} Currency event(s) staged`);
+    const events2 = buildCurrencyDraftEvents("staff", selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
+    if (events2.length === 0) return;
+    setCurrencyDraftEvents((prev) => [...prev, ...events2]);
+    logAudit("Priorities", "Build", "Built staff currency event review list", `${events2.length} Currency event(s) staged`);
   };
   const pushSelectedCurrencyDraftsToPriority = () => {
     const selectedDrafts = currencyDraftEvents.filter((event) => event.selected);
@@ -22742,7 +22861,7 @@ const PrioritiesView = ({
     });
     return list.sort((a, b) => a.trainee.name.localeCompare(b.trainee.name));
   }, [traineesData, traineeLMPs, scores, syllabusDetails]);
-  const PriorityEventTable = ({ events }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
+  const PriorityEventTable = ({ events: events2 }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
@@ -22753,7 +22872,7 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Action" })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: events.map((event) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: events2.map((event) => {
       const personName = event.isTaskingRequest ? event.group || "Tasking" : event.instructor || event.pilot || event.student || "N/A";
       const isPublishedInActiveSchedule = activeScheduleEvents.some(
         (activeEvent) => activeEvent.id === event.id || !!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId
@@ -24086,7 +24205,7 @@ const ListCard = ({ title, trainees }) => {
 };
 const PeopleTab = ({
   date,
-  events,
+  events: events2,
   instructorsData,
   traineesData,
   onNavigateAndSelectPerson,
@@ -24139,11 +24258,11 @@ const PeopleTab = ({
     return waitingList.sort((a, b) => (a.trainee?.name ?? "Unknown").localeCompare(b.trainee?.name ?? "Unknown"));
   }, [traineesData, traineeLMPs, scores]);
   const stats = reactExports.useMemo(() => {
-    const flightOrFtdEvents = events.filter(
+    const flightOrFtdEvents = events2.filter(
       (e) => (e.type === "flight" || e.type === "ftd") && !e.resourceId?.startsWith("STBY") && !e.resourceId?.startsWith("FTD-STBY") && !e.resourceId?.startsWith("BNF-STBY")
     );
     const instructorEventCounts = /* @__PURE__ */ new Map();
-    events.forEach((e) => {
+    events2.forEach((e) => {
       if (e.instructor) {
         instructorEventCounts.set(e.instructor, (instructorEventCounts.get(e.instructor) || 0) + 1);
       }
@@ -24234,7 +24353,7 @@ const PeopleTab = ({
       traineesWithInstructorFromFlightList: Array.from(traineesWithInstructorFromFlight).sort(),
       traineesWithOtherInstructorsList: Array.from(traineesWithOtherInstructors).sort()
     };
-  }, [date, events, instructorsData, traineesData]);
+  }, [date, events2, instructorsData, traineesData]);
   const { nextEventLists, nextPlusOneLists } = reactExports.useMemo(() => {
     const nextEventLists2 = { flight: [], ftd: [], cpt: [], ground: [] };
     const nextPlusOneLists2 = { flight: [], ftd: [], cpt: [], ground: [] };
@@ -24744,7 +24863,7 @@ const PieChart = ({ data, title }) => {
 };
 const CourseMetricsTab = ({
   date,
-  events,
+  events: events2,
   traineesData,
   activeCourses,
   onNavigateAndSelectPerson,
@@ -24794,7 +24913,7 @@ const CourseMetricsTab = ({
       });
       availableTraineesPerCourse.set(course, availableCount);
     });
-    events.forEach((e) => {
+    events2.forEach((e) => {
       if (e.flightNumber !== "Ground School") {
         const course = getCourseFromStudent(e.student || "") || getCourseFromStudent(e.pilot || "");
         if (course && eventsPerCourse.has(course)) {
@@ -24814,7 +24933,7 @@ const CourseMetricsTab = ({
       personnelPerCourseLists,
       availableTraineesPerCourse
     };
-  }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
+  }, [date, events2, traineesData, activeCourses, traineeCourseLookup]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Events per Course (Excl. Ground School)" }) }),
@@ -25034,7 +25153,7 @@ const InsightsSection = ({ insights }) => {
   ] });
 };
 const BuildAnalyticsTab = ({
-  events,
+  events: events2,
   analysis,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
@@ -25055,16 +25174,16 @@ const BuildAnalyticsTab = ({
     }).replace(/ /g, "-");
   }, [analysis?.buildDate]);
   const tilesStats = reactExports.useMemo(() => {
-    const flightTiles = events.filter((e) => e.type === "flight").length;
-    const ftdTiles = events.filter((e) => e.type === "ftd").length;
-    const standbyEvents = events.filter((e) => e.resourceId?.startsWith("STBY")).length;
+    const flightTiles = events2.filter((e) => e.type === "flight").length;
+    const ftdTiles = events2.filter((e) => e.type === "ftd").length;
+    const standbyEvents = events2.filter((e) => e.resourceId?.startsWith("STBY")).length;
     return {
       flightTiles,
       ftdTiles,
       combinedTiles: flightTiles + ftdTiles,
       standbyEvents
     };
-  }, [events]);
+  }, [events2]);
   if (!analysis) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: sectionClass2, children: [
@@ -26198,7 +26317,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
     }
   ) });
 };
-const CourseTab = ({ summary, trainees, events }) => {
+const CourseTab = ({ summary, trainees, events: events2 }) => {
   const { thresholds } = useThresholds();
   const [eventAvgExpanded, setEventAvgExpanded] = reactExports.useState(false);
   const evaluatedRisks = trainees.map((t) => evaluateTraineeRisk(t, thresholds).riskLevel);
@@ -26212,11 +26331,11 @@ const CourseTab = ({ summary, trainees, events }) => {
   const skillEntries = Object.entries(skillHeatmap).sort((a, b) => a[1] - b[1]);
   const bottleneckEvents = parseJ(summary.bottleneckEvents, []);
   const overServicedEventsFromSummary = parseJ(summary.overServicedEvents, []);
-  const overServicedFromEvents = events.filter((ev) => ev.overServiceIndicator === true || ev.overServiceIndicator === "true" || ev.overServiceIndicator === 1).map((ev) => ev.eventCode);
+  const overServicedFromEvents = events2.filter((ev) => ev.overServiceIndicator === true || ev.overServiceIndicator === "true" || ev.overServiceIndicator === 1).map((ev) => ev.eventCode);
   const overServicedEvents = overServicedEventsFromSummary.length > 0 ? overServicedEventsFromSummary : overServicedFromEvents;
-  const eventsByDiff = [...events].filter((ev) => safeN(ev.avgOverallGrade) > 0).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade));
-  const topByAttempts = [...events].sort((a, b) => safeN(b.totalAttempts) - safeN(a.totalAttempts)).slice(0, 12);
-  const allSkills = Array.from(new Set(events.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
+  const eventsByDiff = [...events2].filter((ev) => safeN(ev.avgOverallGrade) > 0).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade));
+  const topByAttempts = [...events2].sort((a, b) => safeN(b.totalAttempts) - safeN(a.totalAttempts)).slice(0, 12);
+  const allSkills = Array.from(new Set(events2.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Avg Score", value: safe(avgGrade, 2), color: gradeColor(avgGrade), sub: "course average" }),
@@ -26243,7 +26362,7 @@ const CourseTab = ({ summary, trainees, events }) => {
         StatCard,
         {
           label: "Events",
-          value: events.length,
+          value: events2.length,
           sub: `${bottleneckEvents.length} bottleneck`,
           color: bottleneckEvents.length > 0 ? "text-orange-400" : "text-white"
         }
@@ -26335,7 +26454,7 @@ const CourseTab = ({ summary, trainees, events }) => {
         " tries"
       ] }),
       safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0", children: "BOTTLENECK" })
-    ] }, ev.id || ev.eventCode)) }) : events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "Event grades not yet computed — run analytics to populate" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No event data — run analytics first" }) }),
+    ] }, ev.id || ev.eventCode)) }) : events2.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "Event grades not yet computed — run analytics to populate" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No event data — run analytics first" }) }),
     topByAttempts.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       eventAvgExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4", onClick: () => setEventAvgExpanded(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 border border-gray-600 rounded-xl shadow-2xl w-full max-w-6xl p-6", style: { maxHeight: "90vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", children: [
@@ -26377,13 +26496,13 @@ const CourseTab = ({ summary, trainees, events }) => {
         overServicedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No over-serviced events detected" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: overServicedEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: e, type: "green" }, e)) })
       ] })
     ] }),
-    events.length > 0 && allSkills.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Skill Weakness Heatmap (Event x Skill Family)", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "text-xs", children: [
+    events2.length > 0 && allSkills.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Skill Weakness Heatmap (Event x Skill Family)", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "text-xs", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left text-gray-400 pr-4 py-1 whitespace-nowrap", children: "Event" }),
         allSkills.map((sk) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: sk }, sk)),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: "Overall" })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: events.map((ev) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: events2.map((ev) => {
         const sf = parseJ(ev.skillFamilyScores, {});
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700/50 hover:bg-gray-700/20", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "text-gray-300 pr-4 py-1.5 whitespace-nowrap font-medium", children: ev.eventCode }),
@@ -26682,7 +26801,7 @@ const TraineeTab = ({ trainees }) => {
     ] })
   ] });
 };
-const EventsTab = ({ events }) => {
+const EventsTab = ({ events: events2 }) => {
   const { thresholds } = useThresholds();
   const [selected, setSelected] = reactExports.useState(null);
   const [sortKey, setSortKey] = reactExports.useState("avgOverallGrade");
@@ -26711,7 +26830,7 @@ const EventsTab = ({ events }) => {
       setSortAsc(true);
     }
   };
-  const sorted = [...events].sort((a, b) => {
+  const sorted = [...events2].sort((a, b) => {
     const av = safeN(a[sortKey]);
     const bv = safeN(b[sortKey]);
     return sortAsc ? av - bv : bv - av;
@@ -26727,21 +26846,21 @@ const EventsTab = ({ events }) => {
       ]
     }
   );
-  if (events.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-8 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500", children: "No event data available for this course" }) });
+  if (events2.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-8 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500", children: "No event data available for this course" }) });
   const isFlightOrFTD = (code) => {
     const tokens = code.toUpperCase().split(/[\s_\-]+/);
     return !tokens.some(
       (t) => t === "TUT" || t.startsWith("TUT") || t === "CPT" || t.startsWith("CPT") || t === "MB" || t.startsWith("MB")
     );
   };
-  const flightFtdEvents = events.filter((ev) => isFlightOrFTD(ev.eventCode) && safeN(ev.avgOverallGrade) > 0);
-  const hardest = flightFtdEvents.length > 0 ? flightFtdEvents.reduce((h, ev) => safeN(ev.avgOverallGrade) < safeN(h.avgOverallGrade) ? ev : h, flightFtdEvents[0]) : events[0];
-  const easiest = flightFtdEvents.length > 0 ? flightFtdEvents.reduce((e, ev) => safeN(ev.avgOverallGrade) > safeN(e.avgOverallGrade) ? ev : e, flightFtdEvents[0]) : events[0];
-  const mostAttempts = events.reduce((m, ev) => safeN(ev.totalAttempts) > safeN(m.totalAttempts) ? ev : m, events[0]);
-  const mostVariable = events.reduce((m, ev) => safeN(ev.gradeVariance) > safeN(m.gradeVariance) ? ev : m, events[0]);
-  const top5Struggle = [...events].filter((ev) => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode)).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).slice(0, 5);
-  const top5Excel = [...events].filter((ev) => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode)).sort((a, b) => safeN(b.avgOverallGrade) - safeN(a.avgOverallGrade)).slice(0, 5);
-  const allSkills = Array.from(new Set(events.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
+  const flightFtdEvents = events2.filter((ev) => isFlightOrFTD(ev.eventCode) && safeN(ev.avgOverallGrade) > 0);
+  const hardest = flightFtdEvents.length > 0 ? flightFtdEvents.reduce((h, ev) => safeN(ev.avgOverallGrade) < safeN(h.avgOverallGrade) ? ev : h, flightFtdEvents[0]) : events2[0];
+  const easiest = flightFtdEvents.length > 0 ? flightFtdEvents.reduce((e, ev) => safeN(ev.avgOverallGrade) > safeN(e.avgOverallGrade) ? ev : e, flightFtdEvents[0]) : events2[0];
+  const mostAttempts = events2.reduce((m, ev) => safeN(ev.totalAttempts) > safeN(m.totalAttempts) ? ev : m, events2[0]);
+  const mostVariable = events2.reduce((m, ev) => safeN(ev.gradeVariance) > safeN(m.gradeVariance) ? ev : m, events2[0]);
+  const top5Struggle = [...events2].filter((ev) => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode)).sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).slice(0, 5);
+  const top5Excel = [...events2].filter((ev) => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode)).sort((a, b) => safeN(b.avgOverallGrade) - safeN(a.avgOverallGrade)).slice(0, 5);
+  const allSkills = Array.from(new Set(events2.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
   const selSkills = selected ? parseJ(selected.skillFamilyScores, {}) : {};
   const selWeak = selected ? parseJ(selected.weakElementsByAvg, []) : [];
   const selStrong = selected ? parseJ(selected.strongElementsByAvg, []) : [];
@@ -27011,7 +27130,7 @@ const EventsTab = ({ events }) => {
               onClick: () => {
                 setChartTimelineZoom(0);
                 setChartScoreZoom(0);
-                const data = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
+                const data = [...events2].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
                   label: ev.eventCode,
                   value: getPassRate(ev),
                   color: getPassRate(ev) >= 80 ? "#10b981" : getPassRate(ev) >= 60 ? "#eab308" : "#ef4444"
@@ -27024,7 +27143,7 @@ const EventsTab = ({ events }) => {
               ] }), children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 ColChart,
                 {
-                  data: [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
+                  data: [...events2].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
                     label: ev.eventCode,
                     value: getPassRate(ev),
                     color: getPassRate(ev) >= 80 ? "#10b981" : getPassRate(ev) >= 60 ? "#eab308" : "#ef4444"
@@ -27043,12 +27162,12 @@ const EventsTab = ({ events }) => {
               onClick: () => {
                 setChartTimelineZoom(0);
                 setChartScoreZoom(0);
-                const data = [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
+                const data = [...events2].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
                   label: ev.eventCode,
                   value: safeN(ev.gradeVariance),
                   color: safeN(ev.gradeVariance) > 1.5 ? "#ef4444" : safeN(ev.gradeVariance) > 0.8 ? "#eab308" : "#3b82f6"
                 }));
-                const maxVal = Math.max(1, ...events.map((e) => safeN(e.gradeVariance)));
+                const maxVal = Math.max(1, ...events2.map((e) => safeN(e.gradeVariance)));
                 setChartModal({ title: "Grade Variance by Event (spread indicator)", data, max: maxVal });
               },
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
@@ -27057,12 +27176,12 @@ const EventsTab = ({ events }) => {
               ] }), children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 ColChart,
                 {
-                  data: [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
+                  data: [...events2].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
                     label: ev.eventCode,
                     value: safeN(ev.gradeVariance),
                     color: safeN(ev.gradeVariance) > 1.5 ? "#ef4444" : safeN(ev.gradeVariance) > 0.8 ? "#eab308" : "#3b82f6"
                   })),
-                  max: Math.max(1, ...events.map((e) => safeN(e.gradeVariance))),
+                  max: Math.max(1, ...events2.map((e) => safeN(e.gradeVariance))),
                   height: 120
                 }
               ) }) })
@@ -27076,7 +27195,7 @@ const EventsTab = ({ events }) => {
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: "Ovrl" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: "Pass%" })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: [...events].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map((ev) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: [...events2].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map((ev) => {
             const sf = parseJ(ev.skillFamilyScores, {});
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "tr",
@@ -27159,7 +27278,7 @@ const TrainingIntelligenceTab = () => {
   const [activeTab, setActiveTab] = reactExports.useState("course");
   const [summary, setSummary] = reactExports.useState(null);
   const [trainees, setTrainees] = reactExports.useState([]);
-  const [events, setEvents] = reactExports.useState([]);
+  const [events2, setEvents] = reactExports.useState([]);
   const [findings, setFindings] = reactExports.useState([]);
   const [error, setError] = reactExports.useState(null);
   const [loading, setLoading] = reactExports.useState(false);
@@ -27319,7 +27438,7 @@ const TrainingIntelligenceTab = () => {
     if (pollRef.current) clearInterval(pollRef.current);
   }, []);
   const atRiskBadge = trainees.filter((t) => evaluateTraineeRisk(t, thresholds).riskLevel === "at_risk").length;
-  const bottleneckBadge = events.filter((e) => safeN(e.bottleneckScore) > 0.5).length;
+  const bottleneckBadge = events2.filter((e) => safeN(e.bottleneckScore) > 0.5).length;
   const tabs = [
     { id: "course", label: "Course" },
     { id: "trainee", label: "Trainee", badge: atRiskBadge || void 0 },
@@ -27429,9 +27548,9 @@ const TrainingIntelligenceTab = () => {
         },
         tab.id
       )) }),
-      activeTab === "course" && /* @__PURE__ */ jsxRuntimeExports.jsx(CourseTab, { summary, trainees, events }),
+      activeTab === "course" && /* @__PURE__ */ jsxRuntimeExports.jsx(CourseTab, { summary, trainees, events: events2 }),
       activeTab === "trainee" && /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeTab, { trainees }),
-      activeTab === "events" && /* @__PURE__ */ jsxRuntimeExports.jsx(EventsTab, { events })
+      activeTab === "events" && /* @__PURE__ */ jsxRuntimeExports.jsx(EventsTab, { events: events2 })
     ] })
   ] }) });
 };
@@ -28036,13 +28155,13 @@ const eventStaffNames = (event) => {
   ].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name));
   return [...new Set(names)];
 };
-const buildFallbackMetrics = (date, events, currentAircraftAvailable, totalAircraft) => {
-  const flightEvents = events.filter((event) => event.type === "flight").length;
-  const simulatorEvents = events.filter((event) => event.type === "ftd").length;
-  const flightHours = events.reduce((sum, event) => sum + (event.type === "flight" ? eventMetricHours(event) : 0), 0);
-  const simulatorHours = events.reduce((sum, event) => sum + (event.type === "ftd" ? eventMetricHours(event) : 0), 0);
+const buildFallbackMetrics = (date, events2, currentAircraftAvailable, totalAircraft) => {
+  const flightEvents = events2.filter((event) => event.type === "flight").length;
+  const simulatorEvents = events2.filter((event) => event.type === "ftd").length;
+  const flightHours = events2.reduce((sum, event) => sum + (event.type === "flight" ? eventMetricHours(event) : 0), 0);
+  const simulatorHours = events2.reduce((sum, event) => sum + (event.type === "ftd" ? eventMetricHours(event) : 0), 0);
   const staffSeries = {};
-  events.forEach((event) => {
+  events2.forEach((event) => {
     eventStaffNames(event).forEach((staffName) => {
       if (!staffSeries[staffName]) {
         staffSeries[staffName] = [{ date, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }];
@@ -28059,7 +28178,7 @@ const buildFallbackMetrics = (date, events, currentAircraftAvailable, totalAircr
     });
   });
   const cancellationMap = /* @__PURE__ */ new Map();
-  events.forEach((event) => {
+  events2.forEach((event) => {
     if (!(event.isCancelled || event.cancellationCode)) return;
     const category = event.type === "flight" ? "Flight" : event.type === "ftd" ? "Simulator" : event.type === "cpt" ? "CPT" : event.type === "ground" ? "Ground" : event.type === "deployment" ? "Deployment" : "Other";
     const code = String(event.cancellationCode || "UNSPECIFIED");
@@ -28076,7 +28195,7 @@ const buildFallbackMetrics = (date, events, currentAircraftAvailable, totalAircr
     endDate: date,
     snapshotCount: 0,
     dates: [date],
-    eventSeries: [{ date, flightEvents, simulatorEvents, totalEvents: events.length, flightHours, simulatorHours }],
+    eventSeries: [{ date, flightEvents, simulatorEvents, totalEvents: events2.length, flightHours, simulatorHours }],
     availabilitySeries: [{
       date,
       availableAverage: currentAircraftAvailable ?? null,
@@ -28111,9 +28230,9 @@ const buildUnitScopeOptions = (context) => {
     }))
   ];
 };
-const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff) => {
+const buildMetricDefinitions = (metrics, date, events2, currentAircraftAvailable, totalAircraft, selectedStaff) => {
   const dates = metrics.dates.length > 0 ? metrics.dates : [date];
-  const fallback = buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft);
+  const fallback = buildFallbackMetrics(date, events2, currentAircraftAvailable, totalAircraft);
   const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : fallback.eventSeries;
   const staffDays = selectedStaff ? metrics.staffSeries?.[selectedStaff] || dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 })) : dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }));
   const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
@@ -28594,7 +28713,7 @@ const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraft
     ] })
   ] })
 ] });
-const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange }) => {
+const MetricModal = ({ metric, onClose, date, events: events2, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange }) => {
   const [timeline, setTimeline] = reactExports.useState("7d");
   const [modalMetrics, setModalMetrics] = reactExports.useState(initialMetrics);
   const [selectedStaff, setSelectedStaff] = reactExports.useState(initialStaff);
@@ -28618,15 +28737,15 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
       if (fetchError.name === "AbortError") return;
       console.error("Failed to load expanded BLI metrics:", fetchError);
       setError("Published metrics could not be loaded for this graph. Showing the current DFP day only.");
-      setModalMetrics(buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
+      setModalMetrics(buildFallbackMetrics(date, events2, currentAircraftAvailable, totalAircraft));
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
   }, [date, range.endDate, range.startDate, selectedUnitCode]);
   const activeMetric = reactExports.useMemo(() => {
-    return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff).find((candidate) => candidate.key === metric.key) || metric;
-  }, [currentAircraftAvailable, date, events, metric, modalMetrics, selectedStaff, totalAircraft]);
+    return buildMetricDefinitions(modalMetrics, date, events2, currentAircraftAvailable, totalAircraft, selectedStaff).find((candidate) => candidate.key === metric.key) || metric;
+  }, [currentAircraftAvailable, date, events2, metric, modalMetrics, selectedStaff, totalAircraft]);
   const metricStatusText = activeMetric.key === "availability" ? `${activeMetric.series.length} AC History availability records in this graph` : `${modalMetrics.snapshotCount} published snapshots in this graph`;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8", onMouseDown: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
@@ -28723,8 +28842,8 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
     }
   ) });
 };
-const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext }) => {
-  const [metrics, setMetrics] = reactExports.useState(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
+const BliTab = ({ date, events: events2, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext }) => {
+  const [metrics, setMetrics] = reactExports.useState(() => buildFallbackMetrics(date, events2, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
   const [openMetric, setOpenMetric] = reactExports.useState(null);
@@ -28819,7 +28938,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
       if (fetchError.name === "AbortError") return;
       console.error("Failed to load BLI metrics:", fetchError);
       setError("Published historical metrics could not be loaded. Showing the current DFP day only.");
-      setMetrics(buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
+      setMetrics(buildFallbackMetrics(date, events2, currentAircraftAvailable, totalAircraft));
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
@@ -28838,7 +28957,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
     const activeStaff = sortedStaff2.find((staff) => metrics.staffSeries?.[staff.name]?.some((day) => day.totalEvents > 0));
     return activeStaff?.name || sortedStaff2[0]?.name || "";
   }, [metrics.staffSeries, sortedStaff2]);
-  const metricsList = reactExports.useMemo(() => buildMetricDefinitions(metrics, date, events, currentAircraftAvailable, totalAircraft, previewStaff), [currentAircraftAvailable, date, events, metrics, previewStaff, totalAircraft]);
+  const metricsList = reactExports.useMemo(() => buildMetricDefinitions(metrics, date, events2, currentAircraftAvailable, totalAircraft, previewStaff), [currentAircraftAvailable, date, events2, metrics, previewStaff, totalAircraft]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     openMetric && /* @__PURE__ */ jsxRuntimeExports.jsx(
       MetricModal,
@@ -28846,7 +28965,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
         metric: openMetric,
         onClose: () => setOpenMetric(null),
         date,
-        events,
+        events: events2,
         currentAircraftAvailable,
         totalAircraft,
         initialMetrics: metrics,
@@ -30972,7 +31091,8 @@ const InstructorProfileFlyout = ({
   currentUserName,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel = "QFI",
-  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  operationalModel = "flight_school"
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -31062,6 +31182,11 @@ const InstructorProfileFlyout = ({
     }).sort((a, b) => a.name.localeCompare(b.name));
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
+  const assignedTraining = reactExports.useMemo(
+    () => normaliseAirCombatTrainingAssignments(instructor.preferences),
+    [instructor.preferences]
+  );
   const callsignData = reactExports.useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
   const displayCallsign = reactExports.useMemo(() => {
     if (callsignData?.callsign) return callsignData.callsign;
@@ -31869,7 +31994,20 @@ const InstructorProfileFlyout = ({
               ] }) })
             ] })
           ) }),
-          !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
+          !isEditing && !isCreating && isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Training" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-3", children: [
+              { title: "Courses", items: assignedTraining.courses },
+              { title: "Training Packages", items: assignedTraining.trainingPackages }
+            ].map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-2", children: group.title }),
+              group.items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.items.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-2 py-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold text-white", children: item.code }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-gray-400 truncate", children: item.title })
+              ] }, item.trainingKey)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "Nil" })
+            ] }, group.title)) })
+          ] }),
+          !isEditing && !isCreating && !isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Trainees" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-4 gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
@@ -32498,7 +32636,7 @@ const generateNewInstructorTemplate = () => ({
 });
 const InstructorListView = ({
   onClose,
-  events,
+  events: events2,
   traineesData,
   instructorsData,
   archivedInstructorsData,
@@ -32531,7 +32669,7 @@ const InstructorListView = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
+  const currentProps = { onClose, events: events2, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -32945,13 +33083,14 @@ const InstructorListView = ({
         currentUserName,
         resourceDisplayNames,
         personnelDisplaySettings,
-        instructorLabel
+        instructorLabel,
+        operationalModel
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
       FlightInfoFlyout,
       {
-        events: events.filter((f) => f.instructor === hoveredInstructor),
+        events: events2.filter((f) => f.instructor === hoveredInstructor),
         position: flyoutPosition,
         personName: hoveredInstructor,
         personType: "Instructor"
@@ -33198,7 +33337,7 @@ const TraineeView = (props) => {
     ] })
   ] });
 };
-const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee, personnelDisplaySettings }) => {
+const TraineeListView = ({ onClose, events: events2, traineesData, onUpdateTrainee, personnelDisplaySettings }) => {
   const [hoveredTrainee, setHoveredTrainee] = reactExports.useState(null);
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
@@ -33218,7 +33357,7 @@ const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee, perso
   const handleTraineeClick = (trainee) => {
     setSelectedTrainee(trainee);
   };
-  const hoveredEvents = hoveredTrainee ? events.filter((f) => f.student === hoveredTrainee || f.flightType === "Solo" && f.pilot === hoveredTrainee) : [];
+  const hoveredEvents = hoveredTrainee ? events2.filter((f) => f.student === hoveredTrainee || f.flightType === "Solo" && f.pilot === hoveredTrainee) : [];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
@@ -33528,6 +33667,52 @@ const AircraftConfigSelector = ({ value, definitions, onChange }) => {
     ] })
   ] });
 };
+const AssignTrainingModal = ({ title, staff, selectedStaffIds, saving, onToggle, onSelectAll, onDeselectAll, onCancel, onSave }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-2xl rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 border-b border-gray-700 px-4 py-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Assign Training" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: title })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded px-2 py-1 text-sm text-gray-300 hover:bg-gray-800 hover:text-white", children: "Close" })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSelectAll, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Select All" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onDeselectAll, className: "rounded border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-100 hover:bg-gray-700", children: "Deselect All" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs text-gray-400", children: [
+        selectedStaffIds.size,
+        " selected"
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[420px] overflow-y-auto rounded border border-gray-700", children: staff.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-sm italic text-gray-500", children: "No active squadron staff available for this unit." }) : staff.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-3 border-b border-gray-800 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-800/70", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          type: "checkbox",
+          checked: selectedStaffIds.has(person.idNumber),
+          onChange: () => onToggle(person.idNumber),
+          className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block truncate font-semibold text-white", children: [
+          person.rank,
+          " ",
+          person.name
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-xs text-gray-400", children: [
+          person.role || "No role",
+          " · ",
+          person.flight || "No flight"
+        ] })
+      ] })
+    ] }, person.idNumber)) })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-4 py-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "rounded border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700", children: "Cancel" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onSave, disabled: saving, className: "rounded border border-sky-500 bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60", children: saving ? "Saving..." : "Save Assignments" })
+  ] })
+] }) });
 const getMasterLmpDisplayType = (syllabusItem) => {
   if (syllabusItem.type === "Flight") return "Flight";
   if (syllabusItem.type === "FTD") return "FTD";
@@ -33901,8 +34086,12 @@ const SyllabusView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   aircraftConfigurations = [],
   activeLocationCode = "",
-  activeUnitCode = "",
-  trainingPackageTemplates = []
+  activeUnitCode: activeUnitCode2 = "",
+  trainingPackageTemplates = [],
+  instructorsData = [],
+  onUpdateInstructor,
+  operationalModel = "flight_school",
+  currentUserName
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -33922,6 +34111,10 @@ const SyllabusView = ({
   const activeCollectionNoun = isTrainingPackagesTab ? "package" : "course";
   const activeCollectionTitle = isTrainingPackagesTab ? "Training Packages" : "Master LMP";
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
+  const [showAssignTrainingModal, setShowAssignTrainingModal] = reactExports.useState(false);
+  const [assignTrainingSelection, setAssignTrainingSelection] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = reactExports.useState(false);
   const courseLMPs = reactExports.useMemo(() => {
     const fromSyllabus = /* @__PURE__ */ new Set();
     syllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
@@ -33946,7 +34139,7 @@ const SyllabusView = ({
   }, [activeTab, syllabusDetails]);
   const getCourseTitle = (code) => courseTitleMap[code] || code;
   const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-  const activeUnitNormalised = normaliseContextCode(activeUnitCode);
+  const activeUnitNormalised = normaliseContextCode(activeUnitCode2);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
   const getPackageSourceKey = (item) => {
     const packageCode = (item.courses || [])[0] || item.code;
@@ -34006,6 +34199,48 @@ const SyllabusView = ({
       return item.courses.includes(selectedCourseType);
     });
   }, [activeTab, syllabusDetails, selectedCourseType]);
+  const activeTrainingAssignmentItem = reactExports.useMemo(() => filteredSyllabusDetails[0] || selectedItem || null, [filteredSyllabusDetails, selectedItem]);
+  const activeTrainingAssignment = reactExports.useMemo(() => {
+    if (!activeTrainingAssignmentItem || !selectedCourseType) return null;
+    return getAirCombatAssignmentFromItem(
+      { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
+      activeLocationCode,
+      activeUnitCode2,
+      currentUserName
+    );
+  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode2, currentUserName, selectedCourseType]);
+  const assignableAirCombatStaff = reactExports.useMemo(() => {
+    const targetUnit = String(activeUnitCode2 || "").trim().toUpperCase();
+    return instructorsData.filter((staff) => staff && staff.name && !staff.isAdminStaff).filter((staff) => !targetUnit || String(staff.unit || "").trim().toUpperCase() === targetUnit).sort((a, b) => a.name.localeCompare(b.name));
+  }, [activeUnitCode2, instructorsData]);
+  const openAssignTraining = () => {
+    if (!activeTrainingAssignment) return;
+    setAssignTrainingSelection(new Set(
+      assignableAirCombatStaff.filter((staff) => staffHasAirCombatAssignment(staff, activeTrainingAssignment)).map((staff) => staff.idNumber)
+    ));
+    setShowAssignTrainingModal(true);
+  };
+  const saveAssignTraining = async () => {
+    if (!activeTrainingAssignment || !onUpdateInstructor) return;
+    setIsSavingTrainingAssignments(true);
+    try {
+      for (const staff of assignableAirCombatStaff) {
+        const shouldAssign = assignTrainingSelection.has(staff.idNumber);
+        const currentlyAssigned = staffHasAirCombatAssignment(staff, activeTrainingAssignment);
+        if (shouldAssign === currentlyAssigned) continue;
+        await onUpdateInstructor(setAirCombatTrainingAssignment(staff, activeTrainingAssignment, shouldAssign));
+      }
+      logAudit({
+        action: "Update",
+        description: `Updated Air Combat training assignment for ${activeTrainingAssignment.code}`,
+        changes: `${assignTrainingSelection.size} staff selected`,
+        page: "LMP/Event Details"
+      });
+      setShowAssignTrainingModal(false);
+    } finally {
+      setIsSavingTrainingAssignments(false);
+    }
+  };
   reactExports.useEffect(() => {
     logAudit({
       action: "View",
@@ -34549,6 +34784,11 @@ const SyllabusView = ({
               "Del",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               isTrainingPackagesTab ? "Package" : "Course"
+            ] }) }),
+            isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: openAssignTraining, disabled: isFrozen || !activeTrainingAssignment || !onUpdateInstructor, className: "w-[68px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              "Assign",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Training"
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setUploadFile(null);
@@ -35243,6 +35483,27 @@ const SyllabusView = ({
           }
         )
       }
+    ),
+    showAssignTrainingModal && activeTrainingAssignment && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AssignTrainingModal,
+      {
+        title: `${activeTrainingAssignment.kind === "course" ? "Course" : "Training Package"}: ${activeTrainingAssignment.title || activeTrainingAssignment.code}`,
+        staff: assignableAirCombatStaff,
+        selectedStaffIds: assignTrainingSelection,
+        saving: isSavingTrainingAssignments,
+        onToggle: (idNumber) => {
+          setAssignTrainingSelection((prev) => {
+            const next = new Set(prev);
+            if (next.has(idNumber)) next.delete(idNumber);
+            else next.add(idNumber);
+            return next;
+          });
+        },
+        onSelectAll: () => setAssignTrainingSelection(new Set(assignableAirCombatStaff.map((staff) => staff.idNumber))),
+        onDeselectAll: () => setAssignTrainingSelection(/* @__PURE__ */ new Set()),
+        onCancel: () => setShowAssignTrainingModal(false),
+        onSave: saveAssignTraining
+      }
     )
   ] });
 };
@@ -35834,7 +36095,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events: events2, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
   const trainingReportName = (trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name;
   const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
   const { checkAndWarn } = useSystemFreeze$1();
@@ -44660,7 +44921,7 @@ const generateFullSchedule = (instructors, trainees, courses, aircraftCount, loc
   return newEvents;
 };
 const generateHistoricalEvents = (instructors, trainees, syllabus) => {
-  const events = [];
+  const events2 = [];
   const today = /* @__PURE__ */ new Date();
   const startHistoryDate = new Date(today.getFullYear(), today.getMonth() - 24, 1);
   const flightSyllabus = syllabus.filter((s) => s.type === "Flight" && !s.code.includes("MB"));
@@ -44678,7 +44939,7 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
         const dayOfMonth = Math.floor(Math.random() * daysInMonth) + 1;
         const dateStr = new Date(monthDate.getFullYear(), monthDate.getMonth(), dayOfMonth).toISOString().split("T")[0];
         const startTime = 8 + Math.floor(Math.random() * 13);
-        events.push({
+        events2.push({
           id: v4(),
           date: dateStr,
           type: isFlight ? "flight" : "ftd",
@@ -44697,7 +44958,7 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
       }
     }
   });
-  return events;
+  return events2;
 };
 const eslCourses = [
   { name: "ADF301", color: "bg-sky-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
@@ -44735,9 +44996,9 @@ const generateDataSet = (location) => {
     return `${year}-${month}-${day}`;
   };
   const todayStr = getLocalDateString();
-  let events = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
+  let events2 = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
   const historicalEvents = generateHistoricalEvents(instructors, allocatedTrainees, INITIAL_SYLLABUS_DETAILS);
-  events = [...events, ...historicalEvents];
+  events2 = [...events2, ...historicalEvents];
   const courseColors = {};
   const coursePriorities = [];
   const coursePercentages = /* @__PURE__ */ new Map();
@@ -44760,7 +45021,7 @@ const generateDataSet = (location) => {
     coursePriorities,
     coursePercentages,
     traineeLMPs,
-    events
+    events: events2
   };
 };
 const ESL_DATA = generateDataSet("ESL");
@@ -47075,6 +47336,10 @@ const PlatformConfigurationSettings = ({
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null
   );
+  const airCombatScheduling = {
+    ...primaryOrganisationSettings.airCombatScheduling || {},
+    defaultWeights: normaliseAirCombatSchedulingWeights(primaryOrganisationSettings.airCombatScheduling?.defaultWeights)
+  };
   const masterLmpAccessRules = reactExports.useMemo(
     () => normaliseMasterLmpAccessRules(config),
     [config.organisations]
@@ -47178,6 +47443,20 @@ const PlatformConfigurationSettings = ({
       taskProfiles: {
         ...normaliseTaskProfileConfig(settings.taskProfiles || null),
         [model]: parseTaskProfileText(text)
+      }
+    }));
+  };
+  const updateAirCombatSchedulingWeights = (courseWeight) => {
+    const courses = Math.max(0, Math.min(100, Math.round(courseWeight)));
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      airCombatScheduling: {
+        ...settings.airCombatScheduling || {},
+        version: 1,
+        defaultWeights: {
+          courses,
+          trainingPackages: 100 - courses
+        }
       }
     }));
   };
@@ -49208,6 +49487,58 @@ const PlatformConfigurationSettings = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-scheduling-rule-sets", className: getSectionClass("platform-scheduling-rule-sets"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Scheduling Rule Sets", subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-emerald-100", children: "Air Combat Priority Mix" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Sets how remaining Air Combat capacity is shared after mandatory tasking is attempted." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100", children: [
+              "Courses ",
+              airCombatScheduling.defaultWeights.courses,
+              "% / Training Packages ",
+              airCombatScheduling.defaultWeights.trainingPackages,
+              "%"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_120px_120px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: "Course Weight", info: "Training Package weight is automatically balanced to make the pair total 100%." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "range",
+                  min: 0,
+                  max: 100,
+                  step: 5,
+                  disabled: !canEdit,
+                  value: airCombatScheduling.defaultWeights.courses,
+                  onChange: (event) => updateAirCombatSchedulingWeights(Number(event.target.value)),
+                  className: "mt-3 w-full accent-emerald-500 disabled:opacity-50"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              NumberField,
+              {
+                label: "Courses",
+                value: airCombatScheduling.defaultWeights.courses,
+                disabled: !canEdit,
+                onChange: updateAirCombatSchedulingWeights
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              NumberField,
+              {
+                label: "Training Packages",
+                value: airCombatScheduling.defaultWeights.trainingPackages,
+                disabled: true,
+                onChange: () => {
+                }
+              }
+            )
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -52816,9 +53147,9 @@ const getCompletedEventDates = (trainee, validEventCodes, eventIdToCode, pt051As
   });
   return completed;
 };
-const getEventAtCount = (events, count) => {
+const getEventAtCount = (events2, count) => {
   if (count <= 0) return "Not Started";
-  return events[Math.min(count - 1, events.length - 1)]?.code || "N/A";
+  return events2[Math.min(count - 1, events2.length - 1)]?.code || "N/A";
 };
 const getRiskLabel = (requiredPace, thresholds) => {
   if (requiredPace <= thresholds.onTrackMax) return "On Track";
@@ -54189,7 +54520,7 @@ const EditCourseFlyout = ({
   locations = [],
   units = [],
   syllabusDetails = [],
-  platformConfig = null,
+  platformConfig: platformConfig2 = null,
   onClose,
   onSave
 }) => {
@@ -54206,24 +54537,24 @@ const EditCourseFlyout = ({
         s.courses.forEach((c) => courseCodes.add(c));
       }
     });
-    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig2, Array.from(courseCodes), {
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig, syllabusDetails, unit]);
+  }, [platformConfig2, syllabusDetails, unit]);
   const assignableMasterLmps = reactExports.useMemo(() => {
     const courseCodes = new Set(COURSE_MASTER_LMPS.filter((lmp) => lmp !== "Staff CAT"));
     syllabusDetails.forEach((s) => {
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
     });
-    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig2, Array.from(courseCodes), {
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig, syllabusDetails, unit]);
+  }, [platformConfig2, syllabusDetails, unit]);
   reactExports.useEffect(() => {
     setStartDate(initialStartDate);
     setGradDate(initialGradDate);
@@ -54442,7 +54773,7 @@ const CoursesManagementView = ({
   locations = [],
   units = [],
   syllabusDetails = [],
-  platformConfig = null
+  platformConfig: platformConfig2 = null
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   useSystemFreeze();
@@ -54708,7 +55039,7 @@ const CoursesManagementView = ({
         locations,
         units,
         syllabusDetails,
-        platformConfig,
+        platformConfig: platformConfig2,
         onClose: () => {
           setShowEditFlyout(false);
           setCourseToEdit(null);
@@ -54804,7 +55135,7 @@ const TrainingRecordsExportView = ({
   instructorsData,
   archivedTraineesData,
   archivedInstructorsData,
-  events,
+  events: events2,
   courses,
   archivedCourses,
   scores,
@@ -54858,10 +55189,10 @@ const TrainingRecordsExportView = ({
     return `${day} ${month} ${year}`;
   };
   const allEvents = reactExports.useMemo(() => {
-    const events2 = Object.values(publishedSchedules).flat();
-    console.log("📊 Export View - All events from published schedules:", events2.length);
+    const events22 = Object.values(publishedSchedules).flat();
+    console.log("📊 Export View - All events from published schedules:", events22.length);
     console.log("📊 Export View - Published schedule dates:", Object.keys(publishedSchedules));
-    return events2;
+    return events22;
   }, [publishedSchedules]);
   const allTrainees = reactExports.useMemo(() => {
     const combined = [...traineesData, ...archivedTraineesData];
@@ -56364,7 +56695,7 @@ const TrainingRecordsView = ({
   instructorsData,
   archivedTraineesData,
   archivedInstructorsData,
-  events,
+  events: events2,
   scores,
   publishedSchedules,
   syllabusDetails,
@@ -56372,7 +56703,7 @@ const TrainingRecordsView = ({
   onSavePT051Assessment,
   locations = [],
   units = [],
-  platformConfig = null,
+  platformConfig: platformConfig2 = null,
   resourceDisplayNames,
   instructorLabel = "QFI"
 }) => {
@@ -56421,7 +56752,7 @@ const TrainingRecordsView = ({
           locations,
           units,
           syllabusDetails,
-          platformConfig
+          platformConfig: platformConfig2
         }
       ),
       activeTab === "export" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -56431,7 +56762,7 @@ const TrainingRecordsView = ({
           instructorsData,
           archivedTraineesData,
           archivedInstructorsData,
-          events,
+          events: events2,
           courses,
           archivedCourses,
           scores,
@@ -56838,7 +57169,7 @@ const UnavailabilityReportModal = ({
   date,
   instructors,
   trainees,
-  events
+  events: events2
 }) => {
   if (!isOpen) return null;
   const { unavailableStaff, unavailableTrainees, pausedTrainees } = reactExports.useMemo(() => {
@@ -56847,7 +57178,7 @@ const UnavailabilityReportModal = ({
       (instructor.unavailability || []).forEach((period) => {
         const isInDateRange = period.allDay ? date >= period.startDate && date < period.endDate : date >= period.startDate && date <= period.endDate;
         if (isInDateRange) {
-          const scheduledEvents = events.filter(
+          const scheduledEvents = events2.filter(
             (e) => e.instructor === instructor.name || e.student === instructor.name || e.attendees?.includes(instructor.name)
           );
           staff.push({ name: instructor.name, rank: instructor.rank, period, scheduledEvents });
@@ -56857,7 +57188,7 @@ const UnavailabilityReportModal = ({
     const traineesUnavailable = [];
     const paused = [];
     trainees.forEach((trainee) => {
-      const scheduledEvents = events.filter(
+      const scheduledEvents = events2.filter(
         (e) => e.student === trainee.fullName || e.pilot === trainee.fullName || e.attendees?.includes(trainee.fullName)
       );
       if (trainee.isPaused) {
@@ -56876,7 +57207,7 @@ const UnavailabilityReportModal = ({
       unavailableTrainees: traineesUnavailable.sort((a, b) => a.name.localeCompare(b.name)),
       pausedTrainees: paused.sort((a, b) => a.name.localeCompare(b.name))
     };
-  }, [instructors, trainees, date, events]);
+  }, [instructors, trainees, date, events2]);
   const formattedHeaderDate = reactExports.useMemo(() => {
     const [year, month, day] = date.split("-").map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
@@ -57124,7 +57455,7 @@ const getValidationEventKey$1 = (event) => [
   event.crew || ""
 ].join("|");
 const NextDayInstructorScheduleView = ({
-  events,
+  events: events2,
   instructors,
   onSelectEvent,
   onUpdateEvent,
@@ -57226,14 +57557,14 @@ const NextDayInstructorScheduleView = ({
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$1 + START_HOUR$1;
-    const eventData = events.find((ev) => ev.id === draggingState.mainEventId);
+    const eventData = events2.find((ev) => ev.id === draggingState.mainEventId);
     if (!eventData) return;
     let clampedStartTime = newStartTime;
     if (clampedStartTime < START_HOUR$1) clampedStartTime = START_HOUR$1;
     if (clampedStartTime + eventData.duration > END_HOUR$1) clampedStartTime = END_HOUR$1 - eventData.duration;
     const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
     const proposedEvent = { ...eventData, startTime: snappedStartTime };
-    const otherEvents = events.filter((event) => event.id !== draggingState.mainEventId);
+    const otherEvents = events2.filter((event) => event.id !== draggingState.mainEventId);
     const conflict = findConflict([proposedEvent], otherEvents);
     setRealtimeConflict(conflict ? { conflictingEventId: conflict.conflictingEvent.id, conflictedPersonName: conflict.personName } : null);
     if (snappedStartTime !== eventData.startTime) {
@@ -57295,7 +57626,7 @@ const NextDayInstructorScheduleView = ({
   const renderPrePostBars = () => {
     const bars = [];
     const seenPrePostIds = /* @__PURE__ */ new Set();
-    const uniqueEventsForBars = events.filter((e) => {
+    const uniqueEventsForBars = events2.filter((e) => {
       if (seenPrePostIds.has(e.id)) return false;
       seenPrePostIds.add(e.id);
       return true;
@@ -57471,7 +57802,7 @@ const NextDayInstructorScheduleView = ({
               renderPrePostBars(),
               (() => {
                 const seenIds = /* @__PURE__ */ new Set();
-                const uniqueEvents = events.filter((e) => {
+                const uniqueEvents = events2.filter((e) => {
                   if (seenIds.has(e.id)) return false;
                   seenIds.add(e.id);
                   return true;
@@ -57582,7 +57913,7 @@ const getValidationEventKey = (event) => [
   event.crew || ""
 ].join("|");
 const NextDayTraineeScheduleView = ({
-  events,
+  events: events2,
   trainees,
   onSelectEvent,
   onUpdateEvent,
@@ -57737,14 +58068,14 @@ const NextDayTraineeScheduleView = ({
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR + START_HOUR;
-    const eventData = events.find((ev) => ev.id === draggingState.mainEventId);
+    const eventData = events2.find((ev) => ev.id === draggingState.mainEventId);
     if (!eventData) return;
     let clampedStartTime = newStartTime;
     if (clampedStartTime < START_HOUR) clampedStartTime = START_HOUR;
     if (clampedStartTime + eventData.duration > END_HOUR) clampedStartTime = END_HOUR - eventData.duration;
     const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
     const proposedEvent = { ...eventData, startTime: snappedStartTime };
-    const otherEvents = events.filter((event) => event.id !== draggingState.mainEventId);
+    const otherEvents = events2.filter((event) => event.id !== draggingState.mainEventId);
     const conflict = findConflict([proposedEvent], otherEvents);
     setRealtimeConflict(conflict ? {
       conflictingEventId: conflict.conflictingEvent.id,
@@ -57920,7 +58251,7 @@ const NextDayTraineeScheduleView = ({
               renderDaylightLines(),
               (() => {
                 const seenIds = /* @__PURE__ */ new Set();
-                const uniqueEvents = events.filter((e) => {
+                const uniqueEvents = events2.filter((e) => {
                   if (seenIds.has(e.id)) return false;
                   seenIds.add(e.id);
                   return true;
@@ -58862,7 +59193,7 @@ async function initializeData() {
   let trainees = [];
   let aircraft = [];
   let scores = {};
-  let events = [];
+  let events2 = [];
   try {
     console.log("🌐 Initializing data from API...");
     console.log("👨‍🏫 Fetching instructors from API...");
@@ -58897,8 +59228,8 @@ async function initializeData() {
     scores = await fetchScores();
     console.log("✅ Scores loaded:", Object.keys(scores).length, "trainees with scores");
     console.log("📅 Fetching schedule from API...");
-    events = await fetchSchedule();
-    console.log("✅ Schedule loaded:", events.length);
+    events2 = await fetchSchedule();
+    console.log("✅ Schedule loaded:", events2.length);
     console.log("🎓 Fetching courses from API...");
     const courses = await fetchCourses();
     console.log("✅ Courses loaded:", courses.length);
@@ -58917,7 +59248,7 @@ async function initializeData() {
       trainees: trainees.length,
       aircraft: aircraft.length,
       scores: Object.keys(scores).length,
-      events: events.length,
+      events: events2.length,
       courses: courses.length
     });
     return {
@@ -58925,7 +59256,7 @@ async function initializeData() {
       trainees,
       aircraft,
       scores,
-      events,
+      events: events2,
       courses
     };
   } catch (error) {
@@ -59310,6 +59641,7 @@ const DfpSidePanelTimeline = ({
   const chartRef = reactExports.useRef(null);
   const scrollRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
+  const [airCombatPriorityDiag, setAirCombatPriorityDiag] = reactExports.useState(null);
   const normalizeHour = (time) => {
     let value = Number(time) || 0;
     if (value < timelineStartHour) value += 24;
@@ -59409,6 +59741,28 @@ const DfpSidePanelTimeline = ({
     const targetHour = Math.max(timelineStartHour, normalizeHour(flyingStartTime) - 0.75);
     const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
     scroller.scrollLeft = Math.max(0, ratio * scroller.scrollWidth - scroller.clientWidth * 0.15);
+  }, []);
+  reactExports.useEffect(() => {
+    const loadAirCombatPriorityDiag = () => {
+      try {
+        const raw = localStorage.getItem("neo_build_diag_report");
+        if (!raw) {
+          setAirCombatPriorityDiag(null);
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        setAirCombatPriorityDiag(parsed?.airCombatPriority?.enabled ? parsed.airCombatPriority : null);
+      } catch {
+        setAirCombatPriorityDiag(null);
+      }
+    };
+    loadAirCombatPriorityDiag();
+    const refreshTimer = window.setInterval(loadAirCombatPriorityDiag, 2e3);
+    window.addEventListener("storage", loadAirCombatPriorityDiag);
+    return () => {
+      window.clearInterval(refreshTimer);
+      window.removeEventListener("storage", loadAirCombatPriorityDiag);
+    };
   }, []);
   reactExports.useEffect(() => {
     if (!activeDrag) return void 0;
@@ -59573,6 +59927,44 @@ const DfpSidePanelTimeline = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-3 w-4 rounded-sm ring-1 ring-inset ${exclusionShade}` }),
         " Exclusion"
+      ] })
+    ] }),
+    airCombatPriorityDiag && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-md border border-emerald-400/25 bg-emerald-950/20 p-3 text-[11px] text-slate-200", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-emerald-100", children: "Air Combat Priority Lists" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] font-semibold text-emerald-200/80", children: [
+          "Courses ",
+          airCombatPriorityDiag.weights?.courses ?? 60,
+          "% / Packages ",
+          airCombatPriorityDiag.weights?.trainingPackages ?? 40,
+          "%"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[9px] uppercase tracking-[0.08em] text-slate-400", children: "Task" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-white", children: airCombatPriorityDiag.taskStaffPriorityList?.length || 0 })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[9px] uppercase tracking-[0.08em] text-slate-400", children: "Course" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-white", children: airCombatPriorityDiag.courseStaffPriorityLists?.length || 0 })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[9px] uppercase tracking-[0.08em] text-slate-400", children: "Package" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-white", children: airCombatPriorityDiag.trainingPackageStaffPriorityLists?.length || 0 })
+        ] })
+      ] }),
+      (airCombatPriorityDiag.placements?.length || 0) > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: airCombatPriorityDiag.placements.length }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 text-slate-400", children: "priority placements this build" })
+      ] }),
+      (airCombatPriorityDiag.skipReasons?.length || 0) > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400", children: "Latest skips" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: airCombatPriorityDiag.skipReasons.slice(-4).map((skip, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700/80 bg-slate-950/45 px-2 py-1 text-[10px] text-slate-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: skip.staffName || skip.staff || "Staff" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-500", children: " - " }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: skip.reason || "Skipped" })
+        ] }, `${skip.staffName || skip.staff || "staff"}-${skip.reason || "skip"}-${index}`)) })
       ] })
     ] })
   ] });
@@ -59963,8 +60355,8 @@ const formatDecimalHourToString = (decimalHour) => {
   const minutes = Math.round(decimalHour % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const calculateProjectedDuty = (instructorName, events, newEvent, syllabusDetails = []) => {
-  const instructorEvents = [...events.filter((e) => eventHasPerson(e, instructorName)), newEvent];
+const calculateProjectedDuty = (instructorName, events2, newEvent, syllabusDetails = []) => {
+  const instructorEvents = [...events2.filter((e) => eventHasPerson(e, instructorName)), newEvent];
   if (instructorEvents.length === 0) return 0;
   const sortedWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
   const firstEventStart = sortedWindows[0].start;
@@ -60203,8 +60595,8 @@ function countPossibleEvents(allTraineesData, coursePriorities, traineeLMPs, sco
   });
   return possibleEventCounts;
 }
-function analyzeBuildResults(events, coursePercentages, coursePriorities, availableAircraft, buildDate, allTraineesData, traineeLMPs, scores, syllabusDetails, publishedSchedules) {
-  const scheduledEvents = events.filter((e) => {
+function analyzeBuildResults(events2, coursePercentages, coursePriorities, availableAircraft, buildDate, allTraineesData, traineeLMPs, scores, syllabusDetails, publishedSchedules) {
+  const scheduledEvents = events2.filter((e) => {
     if (e.flightNumber.includes("Duty Sup")) return false;
     if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
     return true;
@@ -60296,7 +60688,7 @@ function analyzeBuildResults(events, coursePercentages, coursePriorities, availa
   const uniformityScore = 1 - clusteringScore;
   const flightEvents = scheduledEvents.filter((e) => e.type === "flight").length;
   scheduledEvents.filter((e) => e.type === "ftd").length;
-  const standbyCount = events.filter(
+  const standbyCount = events2.filter(
     (e) => e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")
   ).length;
   const aircraftUtilization = availableAircraft > 0 ? flightEvents / availableAircraft * 100 : 0;
@@ -63954,6 +64346,46 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     (event) => isTaskingPriorityEvent(event) && priorityEventMatchesBuildDate(event, buildDate) && event.type === "flight"
   );
   const scheduledTaskingPriorityEventIds = /* @__PURE__ */ new Set();
+  const isAirCombatBuild = activeOperationalModel === "air_combat";
+  const airCombatMandatoryTaskingEvents = taskingPriorityEvents.filter((event) => event.isMandatoryTasking !== false);
+  const activeTaskingPriorityEvents = isAirCombatBuild ? airCombatMandatoryTaskingEvents : taskingPriorityEvents;
+  const airCombatWeights = normaliseAirCombatSchedulingWeights(
+    platformConfig?.organisations?.[0]?.settings?.airCombatScheduling?.defaultWeights
+  );
+  const airCombatRandomTieBreaks = /* @__PURE__ */ new Map();
+  const getAirCombatTieBreak = (name) => {
+    if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, Math.random());
+    return airCombatRandomTieBreaks.get(name);
+  };
+  const publishedHistoryEvents = Object.values(publishedSchedules || {}).flat();
+  const airCombatHistoryEvents = [...publishedHistoryEvents, ...events, ...generatedEvents];
+  const getAirCombatStaffEvents = (staffName, sourceEvents) => (sourceEvents || [...airCombatHistoryEvents, ...generatedEvents]).filter((event) => eventHasPerson(event, staffName));
+  const getAirCombatTaskingEvents = (staffName) => getAirCombatStaffEvents(staffName).filter((event) => isTaskingPriorityEvent(event));
+  const getMostRecentEventDateValue = (items) => items.reduce((latest, event) => {
+    const rawDate = event.date || event.eventDate || "";
+    const timestamp = rawDate ? (/* @__PURE__ */ new Date(`${rawDate}T00:00:00`)).getTime() : 0;
+    return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
+  }, 0);
+  const getTaskStaffPriorityList = () => instructors.filter((staff) => staff.role === "Pilot" && !staff.isAdminStaff && Boolean(staff.name)).map((staff) => {
+    const taskingEvents = getAirCombatTaskingEvents(staff.name);
+    return {
+      staff,
+      taskingCompleted: taskingEvents.length,
+      lastTaskingDateValue: getMostRecentEventDateValue(taskingEvents),
+      tieBreak: getAirCombatTieBreak(staff.name)
+    };
+  }).sort(
+    (left, right) => left.taskingCompleted - right.taskingCompleted || left.lastTaskingDateValue - right.lastTaskingDateValue || left.tieBreak - right.tieBreak
+  );
+  neoBuildDiag.airCombatPriority = {
+    enabled: isAirCombatBuild,
+    weights: airCombatWeights,
+    taskStaffPriorityList: [],
+    courseStaffPriorityLists: [],
+    trainingPackageStaffPriorityLists: [],
+    skipReasons: [],
+    placements: []
+  };
   const getTaskingEventIdentity = (event) => ({
     id: event.id,
     taskingRequestId: event.taskingRequestId || null,
@@ -64004,6 +64436,62 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ];
     };
     const assignTaskingStaff = (candidate, requiredStaffCount) => {
+      if (isAirCombatBuild) {
+        const priorityList = getTaskStaffPriorityList();
+        neoBuildDiag.airCombatPriority.taskStaffPriorityList = priorityList.map((entry) => ({
+          name: entry.staff.name,
+          role: entry.staff.role,
+          taskingCompleted: entry.taskingCompleted,
+          lastTaskingDateValue: entry.lastTaskingDateValue || null
+        }));
+        let rejectedStaff2 = 0;
+        const isValidForTasking = (staff, proposed) => {
+          if (staff.role !== "Pilot") return "ROLE_NOT_PILOT";
+          if (staff.isAdminStaff) return "ADMIN_STAFF";
+          if (isPersonStaticallyUnavailable(staff, proposed.startTime, proposed.startTime + proposed.duration, buildDate, "flight")) return "STATIC_UNAVAILABLE";
+          if (generatedEvents.some((existing) => priorityPersonnelConflict({ ...proposed, pilot: staff.name, crew: "" }, existing))) return "PERSONNEL_CONFLICT";
+          const counts = eventCounts.get(staff.name);
+          if (counts && counts.flightFtd >= eventLimits.instructor.maxFlightFtd) return "FLIGHT_FTD_LIMIT";
+          if (counts && counts.flightFtd + counts.ground + counts.cpt + counts.dutySup >= eventLimits.instructor.maxTotal) return "TOTAL_EVENT_LIMIT";
+          return null;
+        };
+        for (const primaryEntry of priorityList) {
+          const primaryReason = isValidForTasking(primaryEntry.staff, candidate);
+          if (primaryReason) {
+            rejectedStaff2++;
+            neoBuildDiag.airCombatPriority.skipReasons.push({
+              list: "task",
+              staff: primaryEntry.staff.name,
+              event: candidate.flightNumber,
+              reason: primaryReason,
+              startTime: candidate.startTime
+            });
+            continue;
+          }
+          if (requiredStaffCount === 1) {
+            return { pilot: primaryEntry.staff.name, crew: "", instructor: "", rejectedStaff: rejectedStaff2 };
+          }
+          const secondaryList = getTaskStaffPriorityList().filter((entry) => entry.staff.name !== primaryEntry.staff.name);
+          for (const secondaryEntry of secondaryList) {
+            const dualCandidate = { ...candidate, pilot: primaryEntry.staff.name, crew: secondaryEntry.staff.name, instructor: "" };
+            const secondaryReason = isValidForTasking(secondaryEntry.staff, dualCandidate) || (generatedEvents.some((existing) => priorityPersonnelConflict(dualCandidate, existing)) ? "PERSONNEL_CONFLICT" : null);
+            if (secondaryReason) {
+              rejectedStaff2++;
+              neoBuildDiag.airCombatPriority.skipReasons.push({
+                list: "task",
+                staff: secondaryEntry.staff.name,
+                event: candidate.flightNumber,
+                reason: secondaryReason,
+                startTime: candidate.startTime
+              });
+              continue;
+            }
+            return { pilot: primaryEntry.staff.name, crew: secondaryEntry.staff.name, instructor: "", rejectedStaff: rejectedStaff2 };
+          }
+          rejectedStaff2++;
+        }
+        return null;
+      }
       const availableStaff = shuffleRandom(staffPool).filter((staff) => !isPersonStaticallyUnavailable(staff, candidate.startTime, candidate.startTime + candidate.duration, buildDate, "flight"));
       let rejectedStaff = staffPool.length - availableStaff.length;
       for (const primaryStaff of availableStaff) {
@@ -64037,8 +64525,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     orderedTaskingEvents.forEach((priorityEvent) => {
       const requestedStart = Number.isFinite(Number(priorityEvent.startTime)) ? Number(priorityEvent.startTime) : flyingStartTime;
-      const searchStart = Math.max(flyingStartTime, requestedStart);
-      const searchEnd = allowNightFlying && searchStart >= commenceNightFlying ? ceaseNightFlying : flyingEndTime;
+      const searchStart = isAirCombatBuild ? Math.round(requestedStart * 12) / 12 : Math.max(flyingStartTime, requestedStart);
+      const activeWindowEnd = allowNightFlying && searchStart >= commenceNightFlying ? ceaseNightFlying : flyingEndTime;
+      if (isAirCombatBuild && (searchStart < flyingStartTime - 1e-3 || searchStart + priorityEvent.duration > activeWindowEnd + 1e-3)) {
+        neoBuildDiag.airCombatPriority.skipReasons.push({
+          list: "task",
+          staff: "Tasking",
+          event: priorityEvent.flightNumber,
+          reason: "EXACT_TIME_OUTSIDE_FLYING_WINDOW",
+          startTime: searchStart
+        });
+        return;
+      }
+      const searchEnd = isAirCombatBuild ? searchStart + priorityEvent.duration : activeWindowEnd;
       let placedEvent = null;
       const attemptSummary = [];
       const requiredStaffCount = priorityEvent.flightType === "Solo" || priorityEvent.soloOrDual === "Solo" ? 1 : 2;
@@ -64121,6 +64620,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const staffCounts = eventCounts.get(staffName);
           if (staffCounts) staffCounts.flightFtd++;
         });
+        if (isAirCombatBuild) {
+          neoBuildDiag.airCombatPriority.placements.push({
+            kind: "task",
+            event: placedEvent.flightNumber,
+            startTime: placedEvent.startTime,
+            resourceId: placedEvent.resourceId,
+            pilot: placedEvent.pilot || null,
+            crew: placedEvent.crew || null
+          });
+        }
         scheduledCount++;
         buildDebugLog(`[Tasking Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
       } else {
@@ -64155,6 +64664,174 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     });
     buildDebugLog(`DEBUG Tasking priority scheduling complete: ${scheduledCount}/${orderedTaskingEvents.length} scheduled`);
+  };
+  const scheduleAirCombatTrainingPriorityEvents = () => {
+    if (!isAirCombatBuild) return;
+    const slotIncrement = 5 / 60;
+    const sortedTrainingItems = (kind, code) => syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort((left, right) => (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code));
+    const getCompletedTrainingEvents = (staffName, code, kind) => {
+      const validCodes = new Set(sortedTrainingItems(kind, code).map((item) => item.code));
+      return getAirCombatStaffEvents(staffName).filter((event) => validCodes.has(event.flightNumber));
+    };
+    const getNextTrainingItem = (staffName, code, kind) => {
+      const items = sortedTrainingItems(kind, code);
+      const completed = new Set(getCompletedTrainingEvents(staffName, code, kind).map((event) => event.flightNumber));
+      return items.find((item) => !completed.has(item.code)) || null;
+    };
+    const getTrainingPriorityList = (kind, code) => instructors.filter((staff) => staff.role === "Pilot" && !staff.isAdminStaff && Boolean(staff.name)).filter((staff) => {
+      const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      const list = kind === "training_package" ? assignments.trainingPackages : assignments.courses;
+      const expectedKey = getAirCombatTrainingKey(kind, code, school, activeUnitCode);
+      return list.some((item) => item.trainingKey === expectedKey || item.code === code);
+    }).map((staff) => {
+      const completedEvents = getCompletedTrainingEvents(staff.name, code, kind);
+      return {
+        staff,
+        completedCount: completedEvents.length,
+        lastEventDateValue: getMostRecentEventDateValue(completedEvents),
+        nextItem: getNextTrainingItem(staff.name, code, kind),
+        tieBreak: getAirCombatTieBreak(`${kind}:${code}:${staff.name}`)
+      };
+    }).filter((entry) => !!entry.nextItem).sort(
+      (left, right) => left.completedCount - right.completedCount || left.lastEventDateValue - right.lastEventDateValue || left.tieBreak - right.tieBreak
+    );
+    const assignmentCodes = (kind) => Array.from(new Set(
+      instructors.flatMap((staff) => {
+        const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+        return (kind === "training_package" ? assignments.trainingPackages : assignments.courses).filter((item) => !activeUnitCode || item.unitCode === activeUnitCode).map((item) => item.code);
+      })
+    )).filter(Boolean).sort();
+    const courseCodes = assignmentCodes("course");
+    const packageCodes = assignmentCodes("training_package");
+    const placementLimit = Math.max(0, courseCodes.length + packageCodes.length + instructors.length);
+    const pickNextKind = (coursePlaced2, packagePlaced2) => {
+      if (courseCodes.length === 0 && packageCodes.length === 0) return null;
+      if (courseCodes.length === 0) return "training_package";
+      if (packageCodes.length === 0) return "course";
+      const total = coursePlaced2 + packagePlaced2 + 1;
+      const courseDeficit = airCombatWeights.courses / 100 * total - coursePlaced2;
+      const packageDeficit = airCombatWeights.trainingPackages / 100 * total - packagePlaced2;
+      return courseDeficit >= packageDeficit ? "course" : "training_package";
+    };
+    const findResourceForTraining = (item, type, startTime) => {
+      const prefix = type === "flight" ? "PC-21 " : type === "ftd" ? "FTD " : type === "cpt" ? "CPT " : "Ground ";
+      const count = type === "flight" ? availableAircraftCount : type === "ftd" ? ftdCount : type === "cpt" ? cptCount : 6;
+      for (let index = 1; index <= count; index++) {
+        const resourceId = `${prefix}${index}`;
+        const aircraftConfigId = type === "flight" ? getAircraftConfigIdForResource(resourceId) : void 0;
+        if (type === "flight" && !eventAcceptsResourceConfig(item, aircraftConfigId)) continue;
+        const candidate = { startTime, duration: item.duration, resourceId, flightNumber: item.code, type };
+        if (generatedEvents.some((existing) => priorityResourceConflict(candidate, existing))) continue;
+        const area = type === "flight" ? findAvailableArea(startTime, item.duration, generatedEvents) : void 0;
+        if (type === "flight" && !area) return null;
+        return { resourceId, area, aircraftConfigId };
+      }
+      return null;
+    };
+    const placeTrainingForKind = (kind) => {
+      const codes = kind === "training_package" ? packageCodes : courseCodes;
+      for (const code of codes) {
+        const priorityList = getTrainingPriorityList(kind, code);
+        const diagKey = kind === "training_package" ? "trainingPackageStaffPriorityLists" : "courseStaffPriorityLists";
+        neoBuildDiag.airCombatPriority[diagKey].push({
+          code,
+          list: priorityList.map((entry) => ({
+            name: entry.staff.name,
+            completedCount: entry.completedCount,
+            lastEventDateValue: entry.lastEventDateValue || null,
+            nextEvent: entry.nextItem?.code || null
+          }))
+        });
+        for (const entry of priorityList) {
+          const item = entry.nextItem;
+          const type = item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.toUpperCase().includes("CPT") ? "cpt" : "ground";
+          const windowEnd = type === "ftd" ? ftdEndTime : flyingEndTime;
+          for (let time = flyingStartTime; time + item.duration <= windowEnd + 1e-3; time += slotIncrement) {
+            const startTime = Math.round(time * 12) / 12;
+            if (type === "flight") {
+              const exclusion = getFlightWindowExclusionViolation(startTime, item.duration);
+              if (exclusion) continue;
+            }
+            const bookingStart = startTime - (item.preFlightTime || 0);
+            const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
+            const counts = eventCounts.get(entry.staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0 };
+            const limitReached = type === "flight" || type === "ftd" ? counts.flightFtd >= eventLimits.instructor.maxFlightFtd : false;
+            if (limitReached || counts.flightFtd + counts.ground + counts.cpt + counts.dutySup >= eventLimits.instructor.maxTotal) {
+              neoBuildDiag.airCombatPriority.skipReasons.push({ list: kind, staff: entry.staff.name, event: item.code, reason: "DUTY_LIMIT", startTime });
+              break;
+            }
+            if (isPersonStaticallyUnavailable(entry.staff, bookingStart, bookingEnd, buildDate, type)) {
+              neoBuildDiag.airCombatPriority.skipReasons.push({ list: kind, staff: entry.staff.name, event: item.code, reason: "STATIC_UNAVAILABLE", startTime });
+              continue;
+            }
+            const resource = findResourceForTraining(item, type, startTime);
+            if (!resource) continue;
+            const candidate = {
+              id: v4(),
+              date: buildDate,
+              type,
+              instructor: "",
+              student: "",
+              pilot: entry.staff.name,
+              crew: "",
+              flightNumber: item.code,
+              duration: item.duration,
+              startTime,
+              resourceId: resource.resourceId,
+              color: kind === "training_package" ? "bg-emerald-500/70" : "bg-sky-500/70",
+              flightType: "Solo",
+              soloOrDual: "Solo",
+              locationType: "Local",
+              origin: school,
+              destination: school,
+              area: resource.area,
+              preStart: item.preFlightTime,
+              postEnd: item.postFlightTime,
+              dayNight: item.dayNight,
+              aircraftConfigId: resource.aircraftConfigId,
+              acceptableAircraftConfigs: type === "flight" ? normaliseAircraftConfigRequirement(item) : void 0,
+              notes: `Air Combat ${kind === "training_package" ? "training package" : "course"} allocation: ${code}`
+            };
+            if (generatedEvents.some((existing) => priorityPersonnelConflict(candidate, existing))) {
+              neoBuildDiag.airCombatPriority.skipReasons.push({ list: kind, staff: entry.staff.name, event: item.code, reason: "PERSONNEL_CONFLICT", startTime });
+              continue;
+            }
+            generatedEvents.push(candidate);
+            if (!eventCounts.has(entry.staff.name)) eventCounts.set(entry.staff.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
+            const nextCounts = eventCounts.get(entry.staff.name);
+            if (type === "flight" || type === "ftd") nextCounts.flightFtd++;
+            else if (type === "cpt") nextCounts.cpt++;
+            else nextCounts.ground++;
+            neoBuildDiag.airCombatPriority.placements.push({
+              kind,
+              code,
+              event: item.code,
+              staff: entry.staff.name,
+              startTime,
+              resourceId: resource.resourceId
+            });
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+    let coursePlaced = 0;
+    let packagePlaced = 0;
+    for (let attempt = 0; attempt < placementLimit; attempt++) {
+      const preferredKind = pickNextKind(coursePlaced, packagePlaced);
+      if (!preferredKind) break;
+      let placedKind = null;
+      if (placeTrainingForKind(preferredKind)) {
+        placedKind = preferredKind;
+      } else {
+        const fallbackKind = preferredKind === "course" ? "training_package" : "course";
+        if (placeTrainingForKind(fallbackKind)) placedKind = fallbackKind;
+      }
+      if (!placedKind) break;
+      if (placedKind === "course") coursePlaced++;
+      else packagePlaced++;
+    }
   };
   const getCurrencyPriorityPerson = (event) => {
     const personName = event.student || event.pilot || event.instructor || "";
@@ -65125,7 +65802,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return Math.max(flyingStartTime, Math.round(requestedStart * 12) / 12);
   };
   const schedulePrioritizedDualsAndFormationsWithTaskingBreaks = (prioritizedFlightList, startTimeBoundary, endTimeBoundary, normalLabel, formationLabel, latestStartBefore) => {
-    const pendingTaskingEvents = () => taskingPriorityEvents.filter((event) => !scheduledTaskingPriorityEventIds.has(event.id));
+    const pendingTaskingEvents = () => activeTaskingPriorityEvents.filter((event) => !scheduledTaskingPriorityEventIds.has(event.id));
     const segmentEnd = typeof latestStartBefore === "number" ? Math.min(endTimeBoundary, latestStartBefore) : endTimeBoundary;
     const taskingTimes = Array.from(new Set(
       pendingTaskingEvents().map(getTaskingRequestedStart).filter((time) => time >= startTimeBoundary - 1e-3 && time <= segmentEnd + 1e-3).map((time) => Math.round(time * 12) / 12)
@@ -65211,6 +65888,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
 🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees (${_mandatoryDayFlightList.length} day, ${_mandatoryNightFlightList.length} night), Formation groups: ${_formationFlightGroups.length}, Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
   buildDebugLog("[MANDATORY-REMEDIAL-DIAG] Match audit:", neoBuildDiag.mandatoryRemedialFlights.matchAudit);
   window.__fbFlightListSize = _allFlightList.length;
+  if (isAirCombatBuild) {
+    if (activeTaskingPriorityEvents.length > 0) {
+      recordProgress({ message: "Scheduling Air Combat mandatory tasking...", percentage: 45 });
+      scheduleTaskingPriorityEvents(activeTaskingPriorityEvents);
+    }
+    recordProgress({ message: "Scheduling Air Combat priority lists...", percentage: 55 });
+    scheduleAirCombatTrainingPriorityEvents();
+  }
   if (_mandatoryDayFlightList.length > 0) {
     const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
     if (flyingStartTime < REMEDIAL_EARLIEST_START) {
@@ -65449,47 +66134,47 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     false
   );
   recordProgress({ message: "Scheduling STBY flights...", percentage: 88 });
-  const hasFlightStartTime = (time, events) => {
-    return events.some(
+  const hasFlightStartTime = (time, events2) => {
+    return events2.some(
       (e) => e.type === "flight" && Math.abs(e.startTime - time) < 0.01
       // Within 0.6 minutes
     );
   };
-  const countFlightStartsInWindow = (windowStart, windowEnd, events) => {
-    return events.filter(
+  const countFlightStartsInWindow = (windowStart, windowEnd, events2) => {
+    return events2.filter(
       (e) => e.type === "flight" && e.startTime > windowStart && e.startTime <= windowEnd
     ).length;
   };
-  const wouldViolate8PerHourRule = (time, events) => {
+  const wouldViolate8PerHourRule = (time, events2) => {
     const oneHourBefore = time - 1;
-    const flightsInPreviousHour = countFlightStartsInWindow(oneHourBefore, time, events);
+    const flightsInPreviousHour = countFlightStartsInWindow(oneHourBefore, time, events2);
     if (flightsInPreviousHour >= 8) return true;
     const oneHourAfter = time + 1;
-    const futureDfpFlights = events.filter(
+    const futureDfpFlights = events2.filter(
       (e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && e.startTime > time && e.startTime <= oneHourAfter
     );
     for (const dfpFlight of futureDfpFlights) {
       const windowStart = dfpFlight.startTime - 1;
       const windowEnd = dfpFlight.startTime;
-      const flightsInWindow = countFlightStartsInWindow(windowStart, windowEnd, events);
+      const flightsInWindow = countFlightStartsInWindow(windowStart, windowEnd, events2);
       if (time > windowStart && time <= windowEnd) {
         if (flightsInWindow >= 8) return true;
       }
     }
     return false;
   };
-  const isInstructorAvailableForStby = (instructorName, startTime, duration, syllabusItem, events) => {
+  const isInstructorAvailableForStby = (instructorName, startTime, duration, syllabusItem, events2) => {
     const preTime = syllabusItem.preFlightTime || 0;
     const postTime = syllabusItem.postFlightTime || 0;
     const stbyStart = startTime - preTime;
     const stbyEnd = startTime + duration + postTime;
-    return !events.some((e) => {
+    return !events2.some((e) => {
       if (!getPersonnel(e).includes(instructorName)) return false;
       const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
       return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
     });
   };
-  const findBestInstructorForStby = (trainee, syllabusItem, startTime, duration, type, events) => {
+  const findBestInstructorForStby = (trainee, syllabusItem, startTime, duration, type, events2) => {
     let candidates = [];
     const locationFullName = config.school === "ESL" ? "East Sale" : "Pearce";
     const locationShortCode1 = config.school === "ESL" ? "ESL" : "PEA";
@@ -65511,12 +66196,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const afterUnitFilter = candidates.filter((ip) => isInstructorEligibleByUnit(ip, trainee));
     candidates = afterUnitFilter;
     const available = candidates.filter(
-      (ip) => canAssignPersonForScheduledWindow(ip.name, startTime) && isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events)
+      (ip) => canAssignPersonForScheduledWindow(ip.name, startTime) && isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events2)
     );
     if (available.length === 0) return null;
     const instructorEventCounts = available.map((ip) => ({
       instructor: ip,
-      count: events.filter((e) => e.instructor === ip.name).length
+      count: events2.filter((e) => e.instructor === ip.name).length
     }));
     const minCount = Math.min(...instructorEventCounts.map((ic) => ic.count));
     const withMinCount = instructorEventCounts.filter((ic) => ic.count === minCount);
@@ -65540,8 +66225,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
     });
     for (let lineNum = 1; lineNum <= Math.max(4, lineEvents.size); lineNum++) {
-      const events = lineEvents.get(lineNum) || [];
-      const hasConflict = events.some(
+      const events2 = lineEvents.get(lineNum) || [];
+      const hasConflict = events2.some(
         (e) => startTime < e.end && eventEnd > e.start
       );
       if (!hasConflict) return lineNum;
@@ -66234,9 +66919,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   resourceOrder.forEach((resource, index) => {
     resourceOrderMap.set(resource, index);
   });
-  const enforceBuildDayNightSeparation = (events) => {
+  const enforceBuildDayNightSeparation = (events2) => {
     const eventsByPerson = /* @__PURE__ */ new Map();
-    events.forEach((event) => {
+    events2.forEach((event) => {
       const classification = getGeneratedEventDayNightClassification(event);
       if (classification === "Day/Night") return;
       getPersonnel(event).forEach((personName) => {
@@ -66295,13 +66980,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         );
       }
     });
-    return events.filter((event) => !removeEventIds.has(event.id));
+    return events2.filter((event) => !removeEventIds.has(event.id));
   };
-  const repairGeneratedGroundConflicts = (events) => {
+  const repairGeneratedGroundConflicts = (events2) => {
     const isGeneratedGround = (event) => event.type === "ground" && event._source === "generated";
     const groundResourceCount = Math.max(
       6,
-      ...events.map((event) => event.resourceId?.match(/^Ground (\d+)$/)?.[1]).filter((value) => !!value).map((value) => Number(value)).filter((value) => Number.isFinite(value))
+      ...events2.map((event) => event.resourceId?.match(/^Ground (\d+)$/)?.[1]).filter((value) => !!value).map((value) => Number(value)).filter((value) => Number.isFinite(value))
     );
     const groundResources = Array.from({ length: groundResourceCount }, (_, index) => `Ground ${index + 1}`);
     const timeIncrement = 15 / 60;
@@ -66405,8 +67090,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return null;
     };
-    const acceptedEvents = events.filter((event) => !isGeneratedGround(event));
-    const generatedGroundEvents = events.filter(isGeneratedGround);
+    const acceptedEvents = events2.filter((event) => !isGeneratedGround(event));
+    const generatedGroundEvents = events2.filter(isGeneratedGround);
     let moved = 0;
     let dropped = 0;
     generatedGroundEvents.forEach((event) => {
@@ -66487,7 +67172,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
     }
   }
-  const generateBuildConflictDiagnostic = (events) => {
+  const generateBuildConflictDiagnostic = (events2) => {
     const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails);
     const resourceTurnaroundFor = (event) => {
       if (event.type === "flight") return flightTurnaround;
@@ -66522,7 +67207,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const conflicts = [];
     const invalidWindows = [];
-    events.forEach((event) => {
+    events2.forEach((event) => {
       const window2 = eventWindow(event);
       if (!Number.isFinite(window2.start) || !Number.isFinite(window2.end)) {
         invalidWindows.push({
@@ -66532,11 +67217,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
       }
     });
-    for (let i = 0; i < events.length; i++) {
-      const a = events[i];
+    for (let i = 0; i < events2.length; i++) {
+      const a = events2[i];
       const aWindow = eventWindow(a);
-      for (let j = i + 1; j < events.length; j++) {
-        const b = events[j];
+      for (let j = i + 1; j < events2.length; j++) {
+        const b = events2[j];
         const bWindow = eventWindow(b);
         if (a.resourceId === b.resourceId && !isStbyResource(a.resourceId) && !isStbyResource(b.resourceId)) {
           if (a.startTime < b.startTime + b.duration && a.startTime + a.duration > b.startTime) {
@@ -66629,7 +67314,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const report = {
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       buildDate,
-      totalEvents: events.length,
+      totalEvents: events2.length,
       totalConflicts: conflicts.length,
       totalInvalidWindows: invalidWindows.length,
       summaryByType: conflicts.reduce((acc, conflict) => {
@@ -67074,7 +67759,7 @@ const App = () => {
     return getLocalDateString();
   });
   const isViewingPastDfp = isPastDfpDate(date);
-  const [events, setEvents] = reactExports.useState([]);
+  const [events2, setEvents] = reactExports.useState([]);
   const [selectedEvent, setSelectedEvent] = reactExports.useState(null);
   const [isEditingDefault, setIsEditingDefault] = reactExports.useState(false);
   const [highlightedField, setHighlightedField] = reactExports.useState(null);
@@ -67121,8 +67806,8 @@ const App = () => {
   };
   const initialOperationalContext = reactExports.useMemo(() => getStoredOperationalContext(), []);
   const [school, setSchool] = reactExports.useState(initialOperationalContext.location);
-  const [activeUnitCode, setActiveUnitCode] = reactExports.useState(initialOperationalContext.unit);
-  const [platformConfig, setPlatformConfig] = reactExports.useState(null);
+  const [activeUnitCode2, setActiveUnitCode] = reactExports.useState(initialOperationalContext.unit);
+  const [platformConfig2, setPlatformConfig] = reactExports.useState(null);
   const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
   const [settingsLoaded, setSettingsLoaded] = reactExports.useState(false);
   const [organisationSettings, setOrganisationSettings] = reactExports.useState({
@@ -67143,7 +67828,7 @@ const App = () => {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       stage,
       school,
-      activeUnitCode,
+      activeUnitCode: activeUnitCode2,
       settingsLoaded,
       platformConfigLoaded,
       fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
@@ -67163,7 +67848,7 @@ const App = () => {
       } catch {
       }
     }
-  }, [activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
+  }, [activeUnitCode2, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
   reactExports.useEffect(() => {
     pushContextSelectorDiag("restore:init", {
       storageKey: ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
@@ -67254,21 +67939,21 @@ const App = () => {
     return [...new Set([...directAliases, ...profileAliases].map((alias) => alias.toUpperCase()).filter(Boolean))];
   }, [knownDfpLocationAliases]);
   const baseSelectableLocationCodes = reactExports.useMemo(() => {
-    const activeLocations = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE");
-    const activeUnitLocationCodes = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim()).filter(Boolean);
+    const activeLocations = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE");
+    const activeUnitLocationCodes = (platformConfig2?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim()).filter(Boolean);
     const configuredLocationsWithUnits = activeUnitLocationCodes.filter((unitLocationCode, index, allCodes) => {
       const normalisedUnitLocation = unitLocationCode.toUpperCase();
       if (allCodes.findIndex((code) => code.toUpperCase() === normalisedUnitLocation) !== index) return false;
       return activeLocations.some((location) => getLocationSelectorAliases(location).includes(normalisedUnitLocation));
     });
-    return configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]);
-  }, [getLocationSelectorAliases, platformConfig]);
+    return configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig2, ["ESL", "PEA"]);
+  }, [getLocationSelectorAliases, platformConfig2]);
   const getUnitOptionsForLocation = reactExports.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+    const activeLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
     const locationAliases = new Set(activeLocation ? getLocationSelectorAliases(activeLocation) : [normalisedLocationCode]);
     const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
-    const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
+    const configuredUnits = (platformConfig2?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
       code: String(unit.code || "").trim(),
       name: String(unit.name || unit.code || "").trim(),
       model: getUnitOperationalModel(unit)
@@ -67316,7 +68001,7 @@ const App = () => {
       });
       return [...configuredUnitsWithSharedContextLock, ...sharedContextOptions];
     }
-    const hasConfiguredPlatformUnits = (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE");
+    const hasConfiguredPlatformUnits = (platformConfig2?.units || []).some((unit) => unit.status !== "INACTIVE");
     if (hasConfiguredPlatformUnits) return [];
     const fallbackCodes = normalisedLocationCode === "PEA" ? ["2FTS"] : ["1FTS", "CFS"];
     const fallbackUnits = fallbackCodes.map((code) => ({
@@ -67370,7 +68055,7 @@ const App = () => {
     organisationSettings.remainderUnitIndex,
     organisationSettings.resourceSharingGroups,
     organisationSettings.selectedUnits,
-    platformConfig
+    platformConfig2
   ]);
   const activeLocationUnitOptions = reactExports.useMemo(
     () => getUnitOptionsForLocation(school),
@@ -67384,11 +68069,11 @@ const App = () => {
         name: unit.name,
         memberUnits: unit.memberUnits
       })),
-      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode),
+      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode2),
       resourceSharingGroups: organisationSettings.resourceSharingGroups,
       selectedUnits: organisationSettings.selectedUnits
     });
-  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
+  }, [activeLocationUnitOptions, activeUnitCode2, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) {
       pushContextSelectorDiag("validate:skip-platform-loading");
@@ -67398,18 +68083,18 @@ const App = () => {
       pushContextSelectorDiag("validate:skip-no-options");
       return;
     }
-    const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode);
+    const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode2);
     if (!activeUnitOption || activeUnitOption.disabled) {
-      if (String(activeUnitCode || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
+      if (String(activeUnitCode2 || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
         pushContextSelectorDiag("validate:hold-shared-until-settings", {
-          activeUnitCode,
+          activeUnitCode: activeUnitCode2,
           optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
         });
         return;
       }
       const nextUnitCode = (activeLocationUnitOptions.find((unit) => !unit.disabled) || activeLocationUnitOptions[0]).code;
       pushContextSelectorDiag("validate:reset-unit", {
-        fromUnit: activeUnitCode,
+        fromUnit: activeUnitCode2,
         toUnit: nextUnitCode,
         optionCodes: activeLocationUnitOptions.map((unit) => unit.code),
         disabledOption: activeUnitOption?.disabled === true,
@@ -67418,58 +68103,58 @@ const App = () => {
       setActiveUnitCode(nextUnitCode);
     } else {
       pushContextSelectorDiag("validate:keep-unit", {
-        activeUnitCode,
+        activeUnitCode: activeUnitCode2,
         optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
       });
     }
-  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag]);
+  }, [activeLocationUnitOptions, activeUnitCode2, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag]);
   reactExports.useEffect(() => {
     try {
       const payload = {
         location: school,
-        unit: activeUnitCode
+        unit: activeUnitCode2
       };
       localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
       pushContextSelectorDiag("persist:context", { payload });
     } catch (error) {
       pushContextSelectorDiag("persist:error", { error: String(error) });
     }
-  }, [school, activeUnitCode, pushContextSelectorDiag]);
+  }, [school, activeUnitCode2, pushContextSelectorDiag]);
   const activeUnitContext = reactExports.useMemo(
-    () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
-    [activeLocationUnitOptions, activeUnitCode]
+    () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode2) || activeLocationUnitOptions[0] || null,
+    [activeLocationUnitOptions, activeUnitCode2]
   );
   const activeContextUnitCodes = reactExports.useMemo(() => {
     const memberUnits = activeUnitContext?.memberUnits;
-    const rawUnits = Array.isArray(memberUnits) && memberUnits.length > 0 ? memberUnits : String(activeUnitCode || "").split("+");
+    const rawUnits = Array.isArray(memberUnits) && memberUnits.length > 0 ? memberUnits : String(activeUnitCode2 || "").split("+");
     return Array.from(new Set(rawUnits.map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean)));
-  }, [activeUnitCode, activeUnitContext]);
+  }, [activeUnitCode2, activeUnitContext]);
   const activeContextUnitCodeSet = reactExports.useMemo(
     () => new Set(activeContextUnitCodes),
     [activeContextUnitCodes]
   );
   const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
-  const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
-  const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
-  const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
+  const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode2;
+  const activeOperationalModel2 = activeUnitContext?.model || normaliseOperationalModel("flight_school");
+  const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel2);
   const activeTaskProfiles = reactExports.useMemo(
-    () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
-    [activeOperationalModel, platformConfig]
+    () => getTaskProfilesForModel(platformConfig2, activeOperationalModel2),
+    [activeOperationalModel2, platformConfig2]
   );
   const activeOperationalContext = reactExports.useMemo(() => ({
     locationCode: school,
-    unitCode: activeUnitCode,
-    unitName: activeUnitContext?.name || activeUnitCode,
+    unitCode: activeUnitCode2,
+    unitName: activeUnitContext?.name || activeUnitCode2,
     unitCodes: activeContextUnitCodes,
     isSharedFleetContext: isSharedFleetOperationalContext,
-    operationalModel: activeOperationalModel,
+    operationalModel: activeOperationalModel2,
     operationalModelLabel: activeOperationalModelLabel
-  }), [activeContextUnitCodes, activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
+  }), [activeContextUnitCodes, activeOperationalModel2, activeOperationalModelLabel, activeUnitCode2, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
   const getOperationalModelForUnitCode = reactExports.useCallback((unitCode) => {
     const normalisedUnit = String(unitCode || "").trim().toUpperCase();
-    const unit = (platformConfig?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
-    return unit ? getUnitOperationalModel(unit) : activeOperationalModel;
-  }, [activeOperationalModel, platformConfig]);
+    const unit = (platformConfig2?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
+    return unit ? getUnitOperationalModel(unit) : activeOperationalModel2;
+  }, [activeOperationalModel2, platformConfig2]);
   const getSyllabusMasterLmpCodes = reactExports.useCallback((item) => {
     const courses2 = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
     if (courses2.length > 0) return courses2;
@@ -67477,12 +68162,12 @@ const App = () => {
   }, []);
   const hasMasterLmpUnitAccess = reactExports.useCallback((lmpCode, unitCode, requiredAccess = "View") => {
     if (!platformConfigLoaded) return false;
-    const contextUnitCode = unitCode || activeUnitCode;
-    return hasMasterLmpAccess(platformConfig, lmpCode, {
+    const contextUnitCode = unitCode || activeUnitCode2;
+    return hasMasterLmpAccess(platformConfig2, lmpCode, {
       unitCode: contextUnitCode,
       operationalModel: getOperationalModelForUnitCode(contextUnitCode)
     }, requiredAccess);
-  }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded]);
+  }, [activeUnitCode2, getOperationalModelForUnitCode, platformConfig2, platformConfigLoaded]);
   const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => items.filter((item) => {
     if (item.lmpType === "Staff CAT") return true;
     const lmpCodes = getSyllabusMasterLmpCodes(item);
@@ -67490,12 +68175,12 @@ const App = () => {
     return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
   }), [getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess]);
   const activePlatformResourcePool = reactExports.useMemo(
-    () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
-    [activeResourcePoolUnitCode, platformConfig, school]
+    () => getLocationResourcePool(platformConfig2, school, activeResourcePoolUnitCode),
+    [activeResourcePoolUnitCode, platformConfig2, school]
   );
   const activeLocationSolarProfile = reactExports.useMemo(() => {
     const normalisedSchool = String(school || "").trim().toUpperCase();
-    const configuredLocation = (platformConfig?.locations || []).find((location) => getLocationSelectorAliases(location).includes(normalisedSchool));
+    const configuredLocation = (platformConfig2?.locations || []).find((location) => getLocationSelectorAliases(location).includes(normalisedSchool));
     const fallbackProfile = getDefaultAirfieldSolarProfile(configuredLocation?.code) || getDefaultAirfieldSolarProfile(configuredLocation?.name) || getDefaultAirfieldSolarProfile(school);
     const latitude = configuredLocation?.latitude ?? configuredLocation?.settings?.latitude ?? fallbackProfile?.latitude ?? null;
     const longitude = configuredLocation?.longitude ?? configuredLocation?.settings?.longitude ?? fallbackProfile?.longitude ?? null;
@@ -67507,7 +68192,7 @@ const App = () => {
       longitude: longitude === null || longitude === "" ? null : Number(longitude),
       timezone: timezone ? String(timezone) : null
     };
-  }, [platformConfig, school]);
+  }, [platformConfig2, school]);
   const getSunTimesForDate = reactExports.useCallback((targetDate) => {
     const { latitude, longitude, timezone } = activeLocationSolarProfile;
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !timezone) {
@@ -67533,11 +68218,11 @@ const App = () => {
     const normaliseToken = (value) => String(value || "").trim().toUpperCase();
     const selectedAliases = knownDfpLocationAliases(school);
     const selectedAliasSet = new Set(selectedAliases.map(normaliseToken).filter(Boolean));
-    const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliasSet.has(normaliseToken(alias))));
+    const configuredLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliasSet.has(normaliseToken(alias))));
     const configuredAliases = configuredLocation ? getLocationSelectorAliases(configuredLocation) : [];
     const expandedAliases = [school, ...selectedAliases, ...configuredAliases].flatMap((alias) => [alias, ...knownDfpLocationAliases(alias)]).map(normaliseToken).filter(Boolean);
     return new Set(expandedAliases);
-  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig2, school]);
   const isActiveLocationAlias = reactExports.useCallback((value) => {
     const directToken = String(value || "").trim().toUpperCase();
     if (!directToken) return false;
@@ -67550,19 +68235,19 @@ const App = () => {
     if (personLocation && isActiveLocationAlias(personLocation)) return true;
     const unitCode = personUnit.split("/")[0].trim().toUpperCase();
     if (!unitCode) return !personLocation;
-    const configuredUnit = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => String(unit.code || "").trim().toUpperCase() === unitCode);
+    const configuredUnit = (platformConfig2?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => String(unit.code || "").trim().toUpperCase() === unitCode);
     if (configuredUnit?.locationCode && isActiveLocationAlias(configuredUnit.locationCode)) return true;
     if (unitCode.startsWith("2FTS")) return isActiveLocationAlias("PEA");
     if (unitCode.startsWith("1FTS") || unitCode.startsWith("CFS")) return isActiveLocationAlias("ESL");
     return !personLocation;
-  }, [isActiveLocationAlias, platformConfig]);
+  }, [isActiveLocationAlias, platformConfig2]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     if (activePlatformResourcePool) {
       console.log("[PlatformConfig] Active location resource context:", {
         school,
-        unit: activeUnitCode,
-        operationalModel: activeOperationalModel,
+        unit: activeUnitCode2,
+        operationalModel: activeOperationalModel2,
         pool: activePlatformResourcePool.code,
         poolType: activePlatformResourcePool.poolType,
         aircraftType: activePlatformResourcePool.aircraftTypeCode,
@@ -67570,9 +68255,9 @@ const App = () => {
         settings: activePlatformResourcePool.settings
       });
     } else {
-      console.log("[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.", { school, unit: activeUnitCode, operationalModel: activeOperationalModel });
+      console.log("[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.", { school, unit: activeUnitCode2, operationalModel: activeOperationalModel2 });
     }
-  }, [activePlatformResourcePool, activeOperationalModel, activeUnitCode, platformConfigLoaded, school]);
+  }, [activePlatformResourcePool, activeOperationalModel2, activeUnitCode2, platformConfigLoaded, school]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     const locationFiltered = allInstructorsData.filter(personMatchesActiveLocation);
@@ -67754,7 +68439,7 @@ const App = () => {
   const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
   const currentUser2 = instructorsData.find((inst) => inst.name === currentUserName) || instructorsData[0];
   const [sessionUser, setSessionUser] = reactExports.useState(null);
-  const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
+  const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig2, [
     authUser?.id,
     authUser?.userId,
     authUser?.username,
@@ -67762,7 +68447,7 @@ const App = () => {
     sessionUser?.userId,
     sessionUser?.username,
     currentUserName
-  ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
+  ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig2, baseSelectableLocationCodes]);
   const hasRuntimePlatformWideAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(authUser?.role || "").toUpperCase()) || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin;
   const selectableLocationCodes = reactExports.useMemo(
     () => hasRuntimePlatformWideAccess ? baseSelectableLocationCodes : platformAccessContext.accessibleLocations,
@@ -67781,7 +68466,7 @@ const App = () => {
   );
   const platformDataScopeQuery = reactExports.useMemo(() => {
     const scope = hasRuntimePlatformWideAccess ? { organisationCodes: [], locationCode: school, unitCodes: [], allUnits: true } : getPlatformDataScopeForLocation(platformAccessContext, school);
-    const requestedUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : activeUnitCode ? [activeUnitCode] : [];
+    const requestedUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : activeUnitCode2 ? [activeUnitCode2] : [];
     const requestedUnitCodeSet = new Set(requestedUnitCodes.map((unitCode) => String(unitCode || "").trim().toUpperCase()));
     const scopedUnitCodes = requestedUnitCodes.length > 0 ? scope.allUnits || scope.unitCodes.length === 0 ? requestedUnitCodes : scope.unitCodes.filter((unitCode) => requestedUnitCodeSet.has(String(unitCode || "").trim().toUpperCase())) : scope.unitCodes;
     return buildPlatformDataScopeQuery({
@@ -67789,7 +68474,7 @@ const App = () => {
       unitCodes: scopedUnitCodes,
       allUnits: requestedUnitCodes.length === 0 && scope.allUnits
     });
-  }, [activeContextUnitCodes, activeUnitCode, hasRuntimePlatformWideAccess, platformAccessContext, school]);
+  }, [activeContextUnitCodes, activeUnitCode2, hasRuntimePlatformWideAccess, platformAccessContext, school]);
   const scopedApiPath = reactExports.useCallback((path, extraParams) => {
     const params = new URLSearchParams(platformDataScopeQuery);
     Object.entries(extraParams || {}).forEach(([key, value]) => {
@@ -67807,7 +68492,7 @@ const App = () => {
       stage,
       date,
       school,
-      unit: activeUnitCode,
+      unit: activeUnitCode2,
       activeView,
       details
     };
@@ -67828,14 +68513,14 @@ const App = () => {
   }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
-      platformLocations: (platformConfig?.locations || []).map((location) => ({
+      platformLocations: (platformConfig2?.locations || []).map((location) => ({
         code: location.code,
         iataCode: location.iataCode,
         name: location.name,
         status: location.status,
         aliases: getLocationSelectorAliases(location)
       })),
-      platformUnits: (platformConfig?.units || []).map((unit) => ({
+      platformUnits: (platformConfig2?.units || []).map((unit) => ({
         code: unit.code,
         locationCode: unit.locationCode,
         status: unit.status,
@@ -67856,7 +68541,7 @@ const App = () => {
     hasRuntimePlatformWideAccess,
     operationalContextOptions,
     platformAccessContext,
-    platformConfig,
+    platformConfig2,
     platformDataScopeQuery,
     selectableLocationCodes
   ]);
@@ -67866,21 +68551,21 @@ const App = () => {
     const normalisedSchool = String(school || "").trim().toUpperCase();
     const aliasMatchedLocation = selectableLocationCodes.find((locationCode) => {
       const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-      const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+      const configuredLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
       const aliases = configuredLocation ? getLocationSelectorAliases(configuredLocation) : [normalisedLocationCode];
       return aliases.includes(normalisedSchool);
     });
     if (aliasMatchedLocation) {
       const nextUnits = getUnitOptionsForLocation(aliasMatchedLocation);
       setSchool(aliasMatchedLocation);
-      if (nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode)) {
+      if (nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode2)) {
         setActiveUnitCode(nextUnits[0].code);
       }
     } else {
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformConfig, platformConfigLoaded, selectableLocationCodes, school]);
+  }, [activeUnitCode2, getLocationSelectorAliases, getUnitOptionsForLocation, platformConfig2, platformConfigLoaded, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
@@ -67893,13 +68578,13 @@ const App = () => {
   const [syllabusError, setSyllabusError] = reactExports.useState(null);
   const visibleSyllabusDetails = reactExports.useMemo(() => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-    const activeUnit = normaliseContextCode(activeUnitCode);
-    return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode).filter((item) => {
+    const activeUnit = normaliseContextCode(activeUnitCode2);
+    return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode2).filter((item) => {
       if (item.lmpType !== "Staff CAT") return true;
       const packageUnit = normaliseContextCode(item.unit);
       return !packageUnit || packageUnit === activeUnit;
     });
-  }, [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+  }, [activeUnitCode2, filterSyllabusForMasterLmpAccess, syllabusDetails]);
   reactExports.useEffect(() => {
     const loadSyllabus = async () => {
       setSyllabusLoading(true);
@@ -67972,7 +68657,7 @@ const App = () => {
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
           try {
-            const assignableSyncSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
+            const assignableSyncSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode2);
             const bpcIpcSyllabus = assignableSyncSyllabus.filter(
               (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
             );
@@ -68024,7 +68709,7 @@ const App = () => {
                     const newLMPs = new Map(prev);
                     lmps.forEach((lmp) => {
                       const traineeForLmp = data.trainees.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
-                      const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
+                      const traineeUnitCode = traineeForLmp?.unit || activeUnitCode2;
                       if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
                         newLMPs.delete(lmp.traineeFullName);
                         console.log(`[LMP Sync] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
@@ -68114,7 +68799,7 @@ const App = () => {
                 }
               }
               if (!lmpType) lmpType = "BPC+IPC";
-              const traineeUnitCode = trainee.unit || activeUnitCode;
+              const traineeUnitCode = trainee.unit || activeUnitCode2;
               if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
                 newLMPs.delete(trainee.fullName);
                 console.log(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
@@ -68199,7 +68884,7 @@ const App = () => {
         }
         const isFicTrainee = lmpType === "FIC";
         const alreadySet = newLMPs.has(trainee.fullName);
-        const traineeUnitCode = trainee.unit || activeUnitCode;
+        const traineeUnitCode = trainee.unit || activeUnitCode2;
         if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
           newLMPs.delete(trainee.fullName);
           console.log(`[LMP Re-init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
@@ -68224,11 +68909,11 @@ const App = () => {
       console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
       return newLMPs;
     });
-  }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, syllabusDetails]);
+  }, [activeUnitCode2, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, syllabusDetails]);
   reactExports.useEffect(() => {
     let cancelled = false;
     const requestedSchool = school;
-    const requestedUnit = activeUnitCode;
+    const requestedUnit = activeUnitCode2;
     const loadHistoricalData = async () => {
       try {
         const apiBase2 = getAppApiBase();
@@ -68270,10 +68955,10 @@ const App = () => {
                 const merged = { ...prev };
                 snapshots.forEach((snap2) => {
                   const dateKey = getDailySnapshotDate(snap2.date);
-                  const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
+                  const events3 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
                   const existingNonSeed = (merged[dateKey] || []).filter((e) => !e.isHistoricalSeed);
-                  if (existingNonSeed.length === 0 && events2.length > 0) {
-                    merged[dateKey] = events2;
+                  if (existingNonSeed.length === 0 && events3.length > 0) {
+                    merged[dateKey] = events3;
                   }
                 });
                 return merged;
@@ -68396,7 +69081,7 @@ const App = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeUnitCode, school]);
+  }, [activeUnitCode2, school]);
   reactExports.useEffect(() => {
     const loadSnapshotDates = async () => {
       try {
@@ -68426,17 +69111,17 @@ const App = () => {
   }, []);
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
-    const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
+    const events3 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
     pushDfpDataDiag("snapshot:apply", {
       targetDate,
       snapshotSchool,
       snapshotUnit,
       source,
       replace,
-      eventCount: events2.length,
+      eventCount: events3.length,
       existingCount: (publishedSchedulesRef.current[targetDate] || []).length,
       snapKey: snap2.date,
-      sampleEvents: events2.slice(0, 8).map((event) => ({
+      sampleEvents: events3.slice(0, 8).map((event) => ({
         id: event.id,
         date: event.date,
         type: event.type,
@@ -68447,19 +69132,19 @@ const App = () => {
         student: event.student
       }))
     });
-    if (events2.length > 0) {
+    if (events3.length > 0) {
       setPublishedSchedules((prev) => {
         const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
         if (!replace && existingNonSeed.length > 0) return prev;
-        return { ...prev, [targetDate]: events2 };
+        return { ...prev, [targetDate]: events3 };
       });
-      const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
+      const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events3;
       setBaselineSchedules((prev) => {
         const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
         if (!replace && prev[baselineKey]) return prev;
         return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
       });
-      console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events2.length} events`);
+      console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events3.length} events`);
     }
     if (snap2.pt051Assessments && Object.keys(snap2.pt051Assessments).length > 0) {
       console.log(`[Snapshot] Ignored ${Object.keys(snap2.pt051Assessments).length} PT-051 snapshot records for ${targetDate}; TraineePerformance is authoritative`);
@@ -68474,21 +69159,21 @@ const App = () => {
         [baselineKey]: snap2.aircraftConfigState
       }));
     }
-    return events2.length;
-  }, [activeUnitCode]);
+    return events3.length;
+  }, [activeUnitCode2]);
   const getDailySnapshotLocationAliases = React.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-    const matchingLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+    const matchingLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
     return [
       normalisedLocationCode,
       ...knownDfpLocationAliases(normalisedLocationCode),
       ...matchingLocation ? getLocationSelectorAliases(matchingLocation) : []
     ].map((alias) => String(alias || "").trim().toUpperCase()).filter((alias, index, aliases) => Boolean(alias) && aliases.indexOf(alias) === index);
-  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig2]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
     const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
     const snapshotSchool = schoolOverride ?? school;
-    const snapshotUnit = unitOverride ?? activeUnitCode;
+    const snapshotUnit = unitOverride ?? activeUnitCode2;
     const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
     const snapshotLocationAliases = getDailySnapshotLocationAliases(snapshotSchool);
     const cacheKey = `dfp_snapshot_cache_${snapshotKey}`;
@@ -68675,11 +69360,11 @@ const App = () => {
     } finally {
       loadingSnapshotDates.current.delete(snapshotKey);
     }
-  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
+  }, [activeUnitCode2, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
   reactExports.useEffect(() => {
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true });
-  }, [activeUnitCode, date, school, loadSnapshotForDate]);
+  }, [activeUnitCode2, date, school, loadSnapshotForDate]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -68727,8 +69412,8 @@ const App = () => {
   const [coursePercentages, setCoursePercentages] = reactExports.useState(/* @__PURE__ */ new Map());
   const [traineeLMPs, setTraineeLMPs] = reactExports.useState(/* @__PURE__ */ new Map());
   const hasConfiguredCourseUnitScope = reactExports.useMemo(
-    () => (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE"),
-    [platformConfig]
+    () => (platformConfig2?.units || []).some((unit) => unit.status !== "INACTIVE"),
+    [platformConfig2]
   );
   const getCourseUnitCodes = reactExports.useCallback((course) => {
     const rawUnit = String(course.unit || "").trim();
@@ -68838,7 +69523,7 @@ const App = () => {
     }, 700);
     return () => window.clearTimeout(noticeTimer);
   }, [date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAuthenticated]);
-  function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode) {
+  function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode2) {
     const safeUnit = String(targetUnit || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
     const safeSchool = String(targetSchool || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
     return safeUnit ? `${targetDate}__${safeSchool}__${safeUnit}` : `${targetDate}__${safeSchool}`;
@@ -68846,8 +69531,8 @@ const App = () => {
   function getDailySnapshotDate(snapshotDate) {
     return String(snapshotDate || "").replace(/__[A-Za-z0-9_-]+(?:__[A-Za-z0-9_-]+)?$/i, "");
   }
-  function getSnapshotEventsSignature(events2 = []) {
-    return events2.map((e) => [
+  function getSnapshotEventsSignature(events3 = []) {
+    return events3.map((e) => [
       e.id,
       e.type || "",
       e.resourceId || "",
@@ -68933,16 +69618,16 @@ const App = () => {
     ...aircraftConfigurations.filter((definition) => definition.id !== "CONFIG-0")
   ], [aircraftConfigurations]);
   const personnelDisplaySettings = reactExports.useMemo(
-    () => getPersonnelDisplaySettings(platformConfig),
-    [platformConfig]
+    () => getPersonnelDisplaySettings(platformConfig2),
+    [platformConfig2]
   );
   const trainingReportTerminology = reactExports.useMemo(
-    () => getTrainingReportTerminology(platformConfig),
-    [platformConfig]
+    () => getTrainingReportTerminology(platformConfig2),
+    [platformConfig2]
   );
   const insertEventTypes = reactExports.useMemo(
-    () => getInsertEventTypes(platformConfig),
-    [platformConfig]
+    () => getInsertEventTypes(platformConfig2),
+    [platformConfig2]
   );
   const instructorLabel = personnelDisplaySettings.instructorLabel;
   const formatResourceDisplayLabel = reactExports.useCallback(
@@ -69948,13 +70633,13 @@ ${"=".repeat(60)}`);
     publishedSchedules,
     nextDayBuildEvents
   ]);
-  reactExports.useCallback((events2, allResources) => {
-    if (!events2 || events2.length === 0) {
+  reactExports.useCallback((events3, allResources) => {
+    if (!events3 || events3.length === 0) {
       console.log("No events, returning empty resources");
       return [];
     }
     const resourceLabels = [];
-    for (const event of events2) {
+    for (const event of events3) {
       if (!event || !event.resourceId) {
         console.warn("Skipping invalid event:", event);
         continue;
@@ -70054,16 +70739,16 @@ ${"=".repeat(60)}`);
     console.log("🟡 eventsForDate memo recalculating");
     console.log("🟡 date:", date);
     console.log("🟡 publishedSchedules keys:", Object.keys(publishedSchedules));
-    const events2 = publishedSchedules[date] || [];
-    console.log("🟡 eventsForDate count:", events2.length);
+    const events3 = publishedSchedules[date] || [];
+    console.log("🟡 eventsForDate count:", events3.length);
     pushDfpDataDiag("render:events-for-date", {
       renderedDate: date,
-      eventCount: events2.length,
+      eventCount: events3.length,
       publishedScheduleDateCount: Object.keys(publishedSchedules).length,
       publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 80),
       snapshotDateCount: snapshotDates.length,
       snapshotDates: snapshotDates.slice(0, 80),
-      sampleEvents: events2.slice(0, 8).map((event) => ({
+      sampleEvents: events3.slice(0, 8).map((event) => ({
         id: event.id,
         date: event.date,
         type: event.type,
@@ -70074,7 +70759,7 @@ ${"=".repeat(60)}`);
         student: event.student
       }))
     });
-    const sctEvents2 = events2.filter((e) => e.flightNumber === "SCT FORM");
+    const sctEvents2 = events3.filter((e) => e.flightNumber === "SCT FORM");
     if (sctEvents2.length > 0) {
       console.log("🟡 SCT FORM events in eventsForDate:", sctEvents2.map((e) => ({
         id: e.id,
@@ -70082,7 +70767,7 @@ ${"=".repeat(60)}`);
         pilot: e.pilot
       })));
     }
-    return events2;
+    return events3;
   }, [date, publishedSchedules, snapshotDates]);
   const eventsForStaffTraineeSchedule = reactExports.useMemo(() => {
     return eventsForDate.filter((e) => !e.resourceId.startsWith("STBY"));
@@ -70802,8 +71487,8 @@ ${"=".repeat(60)}`);
         return Array.isArray(settings?.permissionProfileIds) ? settings.permissionProfileIds : [];
       })
     ].map((value) => normalisePermissionId(String(value))).filter(Boolean));
-    return new Set(getPlatformPermissionProfiles(platformConfig).filter((profile) => profileIds.has(normalisePermissionId(profile.id)) || profileIds.has(normalisePermissionId(profile.name))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
-  }, [platformAccessContext, platformConfig, normalisePermissionId]);
+    return new Set(getPlatformPermissionProfiles(platformConfig2).filter((profile) => profileIds.has(normalisePermissionId(profile.id)) || profileIds.has(normalisePermissionId(profile.name))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
+  }, [platformAccessContext, platformConfig2, normalisePermissionId]);
   const canUsePlatformPermission = reactExports.useCallback((permissionId) => {
     if (platformAccessContext.isSuperAdmin) return true;
     if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
@@ -70817,10 +71502,10 @@ ${"=".repeat(60)}`);
   const canRunValidation = canUsePlatformPermission("dfp.validation");
   const canPublishDfp = canUsePlatformPermission("dfp.publish");
   const canRunNeoBuild = canUsePlatformPermission("neo.run");
-  const isNeoCapableOperationalModel = activeOperationalModel === "flight_school" || activeOperationalModel === "air_combat";
+  const isNeoCapableOperationalModel = activeOperationalModel2 === "flight_school" || activeOperationalModel2 === "air_combat";
   const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
-  const modelUnavailableLeftViews = activeOperationalModel === "air_combat" ? ["Trainee"] : [];
-  const modelUnavailableRightViews = activeOperationalModel === "air_combat" ? ["NextDayTraineeSchedule"] : [];
+  const modelUnavailableLeftViews = activeOperationalModel2 === "air_combat" ? ["Trainee"] : [];
+  const modelUnavailableRightViews = activeOperationalModel2 === "air_combat" ? ["NextDayTraineeSchedule"] : [];
   const canViewOwnTraineeProfile = canUsePlatformPermission("trainee.profile.own");
   const canViewOtherTraineeProfiles = canUsePlatformPermission("trainee.profile.others");
   const canViewOwnPt051 = canUsePlatformPermission("trainee.pt051.own");
@@ -70997,7 +71682,7 @@ ${"=".repeat(60)}`);
       const persistedLmp = data?.lmp?.events;
       if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return null;
       const persistedLmpType = data?.lmp?.lmpType || trainee.lmpType || "BPC+IPC";
-      const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
+      const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode2;
       if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, "Assign")) {
         setTraineeLMPs((prev) => {
           const updated = new Map(prev);
@@ -71018,7 +71703,7 @@ ${"=".repeat(60)}`);
       console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
       return null;
     }
-  }, [activeUnitCode, allTraineesData, hasMasterLmpUnitAccess]);
+  }, [activeUnitCode2, allTraineesData, hasMasterLmpUnitAccess]);
   const loadPersistedPt051Assessment = reactExports.useCallback(async (trainee, event) => {
     const loadKey = `${event.id}-${trainee.fullName}`;
     try {
@@ -71212,7 +71897,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (courseObj?.lmpType) lmpType = courseObj.lmpType;
     }
     if (!lmpType) lmpType = "BPC+IPC";
-    const traineeUnitCode = newTrainee.unit || activeUnitCode;
+    const traineeUnitCode = newTrainee.unit || activeUnitCode2;
     if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
       setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
       return;
@@ -71232,7 +71917,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
     }
     setSuccessMessage("New Trainee Added!");
-  }, [activeUnitCode, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails]);
+  }, [activeUnitCode2, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails]);
   const handleUpdateTrainee = reactExports.useCallback(async (data) => {
     console.log("📝 [APP] handleUpdateTrainee called");
     console.log("📝 [APP] Trainee data received:", {
@@ -71243,18 +71928,18 @@ ${error instanceof Error ? error.message : String(error)}`,
       unavailability: data.unavailability,
       unavailabilityLength: data.unavailability?.length || 0
     });
-    const traineeUnitCode = data.unit || activeUnitCode;
+    const traineeUnitCode = data.unit || activeUnitCode2;
     const requestedLmpType = data.lmpType || "";
     const requestedAcademicLmpType = data.academicLmpType || "";
     const lmpAccessContext = {
       unitCode: traineeUnitCode,
-      operationalModel: activeOperationalModel
+      operationalModel: activeOperationalModel2
     };
-    if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, "Assign")) {
+    if (requestedLmpType && !hasMasterLmpAccess(platformConfig2, requestedLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
-    if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
+    if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig2, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
@@ -71330,7 +72015,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     } else {
       console.log("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
     }
-  }, [activeOperationalModel, activeUnitCode, platformConfig]);
+  }, [activeOperationalModel2, activeUnitCode2, platformConfig2]);
   const buildRemedialPackageLmp = (originalTraineeLMP, eventToRemediate, newEvents) => {
     let lastNewEventId = eventToRemediate.id;
     const remedialPackageItems = [];
@@ -71962,16 +72647,16 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
   };
   const handleUpdateCourseFromTrainingRecords = async (courseName, data) => {
-    const courseUnitCode = data.unit || activeUnitCode;
+    const courseUnitCode = data.unit || activeUnitCode2;
     const lmpAccessContext = {
       unitCode: courseUnitCode,
-      operationalModel: activeOperationalModel
+      operationalModel: activeOperationalModel2
     };
-    if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, "Assign")) {
+    if (data.lmpType && !hasMasterLmpAccess(platformConfig2, data.lmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
-    if (data.academicLmpType && !hasMasterLmpAccess(platformConfig, data.academicLmpType, lmpAccessContext, "Assign")) {
+    if (data.academicLmpType && !hasMasterLmpAccess(platformConfig2, data.academicLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
@@ -72322,8 +73007,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       isPaused: !!inst.isPaused,
       currencyStatus: inst.currencyStatus || [],
       snapshotSchool: school,
-      snapshotUnit: activeUnitCode,
-      operationalModel: activeOperationalModel,
+      snapshotUnit: activeUnitCode2,
+      operationalModel: activeOperationalModel2,
       snapshotDate: targetDate
     }));
     const lmpCompletedIdsMap = {};
@@ -72339,8 +73024,8 @@ ${error instanceof Error ? error.message : String(error)}`,
     const snapshotPayload = {
       date: snapshotKey,
       locationCode: school,
-      unitCode: activeUnitCode,
-      operationalModel: activeOperationalModel,
+      unitCode: activeUnitCode2,
+      operationalModel: activeOperationalModel2,
       scheduleEvents: allEventsForDate,
       staffEvents: staffEventsForDate,
       traineeEvents: traineeEventsForDate,
@@ -72352,7 +73037,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       aircraftConfigState: currentAircraftConfigState,
       savedBy
     };
-    console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
+    console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
     fetch(`${apiBase2}/daily-snapshot/save`, {
       method: "POST",
@@ -72362,7 +73047,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (result.success) {
         loadedSnapshotDates.current.add(snapshotKey);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events`);
+        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events`);
       } else {
         console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
       }
@@ -72535,25 +73220,25 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             }
             eventsByDate.get(eventDate).push(event);
           });
-          console.log("🟢 Events grouped by date:", Array.from(eventsByDate.entries()).map(([date2, events2]) => ({
+          console.log("🟢 Events grouped by date:", Array.from(eventsByDate.entries()).map(([date2, events3]) => ({
             date: date2,
-            count: events2.length,
-            eventIds: events2.map((e) => e.id),
-            instructors: events2.map((e) => e.instructor)
+            count: events3.length,
+            eventIds: events3.map((e) => e.id),
+            instructors: events3.map((e) => e.instructor)
           })));
-          eventsByDate.forEach((events2, eventDate) => {
+          eventsByDate.forEach((events3, eventDate) => {
             const currentScheduleForDate = newSchedules[eventDate] || [];
             console.log(`🟢 Processing date ${eventDate}:`, {
               currentEventsCount: currentScheduleForDate.length,
-              eventsToSaveCount: events2.length
+              eventsToSaveCount: events3.length
             });
-            const existingEventIds = new Set(events2.map((e) => e.id));
+            const existingEventIds = new Set(events3.map((e) => e.id));
             const otherEvents = currentScheduleForDate.filter((e) => !existingEventIds.has(e.id));
             console.log(`🟢 Filtered out ${currentScheduleForDate.length - otherEvents.length} existing events`);
-            newSchedules[eventDate] = [...otherEvents, ...events2];
-            console.log(`🟢 Saved ${events2.length} events to date ${eventDate}`);
+            newSchedules[eventDate] = [...otherEvents, ...events3];
+            console.log(`🟢 Saved ${events3.length} events to date ${eventDate}`);
             console.log(`🟢 New total for ${eventDate}:`, newSchedules[eventDate].length);
-            const savedEvent = newSchedules[eventDate].find((e) => e.id === events2[0].id);
+            const savedEvent = newSchedules[eventDate].find((e) => e.id === events3[0].id);
             console.log(`🟢 Saved event details:`, {
               id: savedEvent?.id,
               instructor: savedEvent?.instructor,
@@ -72865,7 +73550,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   const handleSendAlert = async (eventId, recipients, description = "") => {
     const apiBase2 = "/api";
     const userId = getCurrentUserId() || currentUserName;
-    const eventForAlert = events.find((e) => e.id === eventId) || selectedEvent;
+    const eventForAlert = events2.find((e) => e.id === eventId) || selectedEvent;
     if (isPastDfpDate(eventForAlert?.date || date)) {
       denyPastDfpEdit("send alerts");
       return false;
@@ -72888,8 +73573,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         date: snapshotDate,
         eventDate: date,
         school,
-        unit: activeUnitCode,
-        operationalModel: activeOperationalModel,
+        unit: activeUnitCode2,
+        operationalModel: activeOperationalModel2,
         eventId,
         sentBy: userId,
         recipients,
@@ -73734,7 +74419,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       return;
     }
     if (!isNeoCapableOperationalModel) {
-      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build is not available for this operational model yet.`);
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode2}. NEO Build is not available for this operational model yet.`);
       return;
     }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
@@ -73811,7 +74496,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     let buildTraineeLMPs = traineeLMPs;
     try {
       const apiBase2 = getApiBaseUrl();
-      const assignableBuildSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
+      const assignableBuildSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode2);
       const bpcIpcSyllabus = assignableBuildSyllabus.filter(
         (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
       );
@@ -73849,7 +74534,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         (lmpData.lmps || []).forEach((lmp) => {
           if (lmp.traineeFullName && Array.isArray(lmp.events)) {
             const traineeForLmp = traineesData.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
-            const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
+            const traineeUnitCode = traineeForLmp?.unit || activeUnitCode2;
             if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
               console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
               return;
@@ -74655,8 +75340,8 @@ ${conflictLines.join("\n")}${moreText}`,
         ...publishedSchedules,
         [buildDfpDate]: newEventsForDate
       };
-      Object.entries(allPublishedForLogbook).forEach(([dateKey, events2]) => {
-        events2.forEach((e) => {
+      Object.entries(allPublishedForLogbook).forEach(([dateKey, events3]) => {
+        events3.forEach((e) => {
           if (e.isLogbook === true || e.type === "logbook") {
             const instName = e.instructor || "";
             if (!staffLogbookMap[instName]) staffLogbookMap[instName] = [];
@@ -74714,8 +75399,8 @@ ${conflictLines.join("\n")}${moreText}`,
         isPaused: !!inst.isPaused,
         currencyStatus: inst.currencyStatus || [],
         snapshotSchool: school,
-        snapshotUnit: activeUnitCode,
-        operationalModel: activeOperationalModel,
+        snapshotUnit: activeUnitCode2,
+        operationalModel: activeOperationalModel2,
         snapshotDate: buildDfpDate
       }));
       const lmpCompletedIdsMap = {};
@@ -74732,8 +75417,8 @@ ${conflictLines.join("\n")}${moreText}`,
       const snapshotPayload = {
         date: snapshotKey,
         locationCode: school,
-        unitCode: activeUnitCode,
-        operationalModel: activeOperationalModel,
+        unitCode: activeUnitCode2,
+        operationalModel: activeOperationalModel2,
         scheduleEvents: newEventsForDate,
         staffEvents: staffEventsForDate,
         traineeEvents: traineeEventsForDate,
@@ -74755,7 +75440,7 @@ ${conflictLines.join("\n")}${moreText}`,
         body: JSON.stringify(snapshotPayload)
       }).then((res) => res.json()).then((result) => {
         if (result.success) {
-          console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
+          console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode2}), ${newEventsForDate.length} events`);
           loadedSnapshotDates.current.add(snapshotKey);
           cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
         } else {
@@ -76515,10 +77200,10 @@ ${conflictLines.join("\n")}${moreText}`,
       return { instructor, availableWindows: [] };
     });
     const traineesAnalysis = allTraineesData.map((trainee) => {
-      const events2 = currentEvents.filter((e) => getPersonnel(e).includes(trainee.fullName));
-      const hasFtd = events2.some((e) => e.type === "ftd" && e.date === analysisDate);
-      const hasFlight = events2.some((e) => e.type === "flight" && e.date === analysisDate);
-      const groundEventsToday = events2.filter((e) => e.type === "ground" && e.date === analysisDate).length;
+      const events3 = currentEvents.filter((e) => getPersonnel(e).includes(trainee.fullName));
+      const hasFtd = events3.some((e) => e.type === "ftd" && e.date === analysisDate);
+      const hasFlight = events3.some((e) => e.type === "flight" && e.date === analysisDate);
+      const groundEventsToday = events3.filter((e) => e.type === "ground" && e.date === analysisDate).length;
       const nextSyllabusEvent = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate).next;
       let isEligible = nextSyllabusEvent?.type === "Flight";
       if (trainee.isPaused) {
@@ -76561,7 +77246,7 @@ ${conflictLines.join("\n")}${moreText}`,
       return;
     }
     if (!isNeoCapableOperationalModel) {
-      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO tile assistance is not available for this operational model yet.`);
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode2}. NEO tile assistance is not available for this operational model yet.`);
       return;
     }
     const isNextDay = ["NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "Priorities", "ProgramData"].includes(activeView);
@@ -76572,7 +77257,7 @@ ${conflictLines.join("\n")}${moreText}`,
       setOraclePreviewEvent(null);
     }
     setIsOracleMode((prev) => !prev);
-  }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
+  }, [activeOperationalModel2, activeOperationalModelLabel, activeUnitCode2, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
   reactExports.useEffect(() => {
     if (isOracleMode) {
       runOracleAnalysis();
@@ -77098,7 +77783,7 @@ ${conflictLines.join("\n")}${moreText}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           TraineeView,
           {
-            events,
+            events: events2,
             traineesData,
             courseColors: scopedCourseColors,
             archivedCourses,
@@ -77239,14 +77924,14 @@ ${conflictLines.join("\n")}${moreText}`,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,
-            platformConfig
+            platformConfig: platformConfig2
           }
         );
       case "CourseRoster":
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           CourseRosterView,
           {
-            events,
+            events: events2,
             traineesData,
             courseColors: scopedCourseColors,
             archivedCourses,
@@ -77708,7 +78393,7 @@ ${conflictLines.join("\n")}${moreText}`,
             instructorsData,
             archivedTraineesData,
             archivedInstructorsData,
-            events,
+            events: events2,
             scores,
             publishedSchedules,
             syllabusDetails,
@@ -77716,7 +78401,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onSavePT051Assessment,
             locations,
             units,
-            platformConfig,
+            platformConfig: platformConfig2,
             resourceDisplayNames,
             instructorLabel
           }
@@ -77900,7 +78585,7 @@ ${conflictLines.join("\n")}${moreText}`,
             currentLocation: school === "ESL" ? "East Sale" : "Pearce",
             onNavigate: handleNavigation,
             onOpenAuth: (e) => {
-              const latestEvent = events.find((ev) => ev.id === e.id) || e;
+              const latestEvent = events2.find((ev) => ev.id === e.id) || e;
               setEventForAuth(latestEvent);
               setShowAuthFlyout(true);
             }
@@ -77912,7 +78597,7 @@ ${conflictLines.join("\n")}${moreText}`,
           StaffView,
           {
             onClose: handleCloseStaffView,
-            events,
+            events: events2,
             traineesData,
             instructorsData,
             archivedInstructorsData,
@@ -78011,7 +78696,7 @@ ${conflictLines.join("\n")}${moreText}`,
             resourceDisplayNames,
             personnelDisplaySettings,
             instructorLabel,
-            operationalModel: activeOperationalModel
+            operationalModel: activeOperationalModel2
           }
         );
       case "Instructors":
@@ -78019,7 +78704,7 @@ ${conflictLines.join("\n")}${moreText}`,
           InstructorListView,
           {
             onClose: () => handleNavigation("Program Schedule"),
-            events,
+            events: events2,
             traineesData,
             instructorsData,
             archivedInstructorsData,
@@ -78123,7 +78808,7 @@ ${conflictLines.join("\n")}${moreText}`,
             resourceDisplayNames,
             personnelDisplaySettings,
             instructorLabel,
-            operationalModel: activeOperationalModel
+            operationalModel: activeOperationalModel2
           }
         );
       case "Trainees":
@@ -78131,7 +78816,7 @@ ${conflictLines.join("\n")}${moreText}`,
           TraineeListView,
           {
             onClose: () => handleNavigation("Program Schedule"),
-            events,
+            events: events2,
             traineesData,
             instructorsData,
             archivedTraineesData,
@@ -78171,8 +78856,32 @@ ${conflictLines.join("\n")}${moreText}`,
             onAddItem: handleAddSyllabusItem,
             aircraftConfigurations,
             activeLocationCode: school,
-            activeUnitCode,
-            trainingPackageTemplates: syllabusDetails.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false)
+            activeUnitCode: activeUnitCode2,
+            trainingPackageTemplates: syllabusDetails.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false),
+            instructorsData,
+            operationalModel: activeOperationalModel2,
+            currentUserName,
+            onUpdateInstructor: async (data) => {
+              const dbId = data.id;
+              try {
+                const response = await fetch(dbId ? `/api/personnel/${dbId}` : "/api/personnel", {
+                  method: dbId ? "PATCH" : "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(data)
+                });
+                if (!response.ok) {
+                  const errorData = await response.json().catch(() => ({}));
+                  throw new Error(errorData.error || errorData.details || `Failed to save staff ${data.name}`);
+                }
+                const responseData = await response.json().catch(() => ({}));
+                const saved = responseData.personnel || data;
+                setInstructorsData((prev) => prev.map((instructor) => instructor.idNumber === data.idNumber ? { ...data, ...normalisePersonnelRecord(saved), preferences: saved.preferences || data.preferences } : instructor));
+              } catch (error) {
+                console.error("❌ Error saving Air Combat training assignment:", error);
+                throw error;
+              }
+            }
           }
         );
       case "Currency":
@@ -78473,7 +79182,7 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
               },
               instructors: instructorsData,
               pt051Assessments,
-              events,
+              events: events2,
               lmpScores: scores.get(selectedTraineeForHateSheet.fullName) || [],
               syllabusDetails,
               registerDirtyCheck,
@@ -78861,7 +79570,7 @@ Do you want to replace the existing entry?`,
             LogbookView,
             {
               person: selectedPersonForLogbook,
-              events,
+              events: events2,
               resourceDisplayNames,
               onBack: () => {
                 if ("role" in selectedPersonForLogbook) {
@@ -79001,7 +79710,7 @@ Do you want to replace the existing entry?`,
             },
             contextOptions: operationalContextOptions,
             activeLocation: school,
-            activeUnit: activeUnitCode,
+            activeUnit: activeUnitCode2,
             onContextChange: (loc, unit) => changeOperationalContext(loc, unit),
             activeModelLabel: activeOperationalModelLabel,
             isMagnifierEnabled,
@@ -79154,10 +79863,10 @@ Do you want to replace the existing entry?`,
               onSelectModeChange: (active) => setPauseIsSelectingCompleted(active),
               completedEventIds: pauseCompletedEventIds,
               onCompletedEventIdsChange: setPauseCompletedEventIds,
-              onStagedEventsReady: (events2) => {
-                if (events2 !== null) {
+              onStagedEventsReady: (events3) => {
+                if (events3 !== null) {
                   const seenIds = /* @__PURE__ */ new Set();
-                  const deduped = events2.filter((e) => {
+                  const deduped = events3.filter((e) => {
                     if (seenIds.has(e.id)) return false;
                     seenIds.add(e.id);
                     return true;
@@ -79202,7 +79911,7 @@ Do you want to replace the existing entry?`,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "FLTLT",
           currentUserName,
           currentUserLocation: school,
-          currentUserUnit: activeUnitCode || currentUser2?.unit || "1FTS",
+          currentUserUnit: activeUnitCode2 || currentUser2?.unit || "1FTS",
           canAccessView,
           canRunNeoBuild: canRunNeoBuildForActiveModel,
           canPublishDfp,
@@ -79217,8 +79926,8 @@ Do you want to replace the existing entry?`,
             setSelectedEvent(null);
             setIsAddingTile(false);
           },
-          onSave: (events2) => {
-            handleSaveEvents(events2, false);
+          onSave: (events3) => {
+            handleSaveEvents(events3, false);
             setSelectedEvent(null);
             setIsAddingTile(false);
           },
@@ -79249,7 +79958,7 @@ Do you want to replace the existing entry?`,
             setOracleContextForModal(null);
             setIsAddingTile(false);
           },
-          onSave: (events2) => handleSaveEvents(events2, isPriorityEventCreation),
+          onSave: (events3) => handleSaveEvents(events3, isPriorityEventCreation),
           onDeleteRequest: handleDeleteEvent,
           isEditingDefault,
           instructors: instructorsData.map((i) => i.name),
@@ -79285,7 +79994,7 @@ Do you want to replace the existing entry?`,
             handleNavigation("PT051");
           },
           onOpenAuth: (e) => {
-            const latestEvent = events.find((ev) => ev.id === e.id) || e;
+            const latestEvent = events2.find((ev) => ev.id === e.id) || e;
             setEventForAuth(latestEvent);
             setShowAuthFlyout(true);
           },
@@ -79508,7 +80217,7 @@ Do you want to replace the existing entry?`,
           syllabusDetails,
           scores,
           traineeLMPs,
-          events,
+          events: events2,
           date: buildDfpDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
           courseColors: scopedCourseColors,
           school,

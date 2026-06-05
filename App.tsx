@@ -61,6 +61,11 @@ import {
     getStaffCallsignAssignments,
     getStaffCallsignKey,
 } from './utils/staffCallsigns';
+import {
+    getAirCombatTrainingKey,
+    normaliseAirCombatSchedulingWeights,
+    normaliseAirCombatTrainingAssignments,
+} from './utils/airCombatTraining';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
@@ -156,6 +161,7 @@ const DfpSidePanelTimeline: React.FC<{
     const chartRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
+    const [airCombatPriorityDiag, setAirCombatPriorityDiag] = useState<any | null>(null);
 
     const normalizeHour = (time: number): number => {
         let value = Number(time) || 0;
@@ -275,6 +281,29 @@ const DfpSidePanelTimeline: React.FC<{
         const targetHour = Math.max(timelineStartHour, normalizeHour(flyingStartTime) - 0.75);
         const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
         scroller.scrollLeft = Math.max(0, ratio * scroller.scrollWidth - scroller.clientWidth * 0.15);
+    }, []);
+
+    useEffect(() => {
+        const loadAirCombatPriorityDiag = () => {
+            try {
+                const raw = localStorage.getItem('neo_build_diag_report');
+                if (!raw) {
+                    setAirCombatPriorityDiag(null);
+                    return;
+                }
+                const parsed = JSON.parse(raw);
+                setAirCombatPriorityDiag(parsed?.airCombatPriority?.enabled ? parsed.airCombatPriority : null);
+            } catch {
+                setAirCombatPriorityDiag(null);
+            }
+        };
+        loadAirCombatPriorityDiag();
+        const refreshTimer = window.setInterval(loadAirCombatPriorityDiag, 2000);
+        window.addEventListener('storage', loadAirCombatPriorityDiag);
+        return () => {
+            window.clearInterval(refreshTimer);
+            window.removeEventListener('storage', loadAirCombatPriorityDiag);
+        };
     }, []);
 
     useEffect(() => {
@@ -435,6 +464,50 @@ const DfpSidePanelTimeline: React.FC<{
                 <span className="inline-flex items-center gap-1.5"><span className={`h-3 w-4 rounded-sm ring-1 ring-inset ${nightShade}`} /> Night</span>
                 <span className="inline-flex items-center gap-1.5"><span className={`h-3 w-4 rounded-sm ring-1 ring-inset ${exclusionShade}`} /> Exclusion</span>
             </div>
+            {airCombatPriorityDiag && (
+                <div className="mt-4 rounded-md border border-emerald-400/25 bg-emerald-950/20 p-3 text-[11px] text-slate-200">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="font-semibold text-emerald-100">Air Combat Priority Lists</span>
+                        <span className="text-[10px] font-semibold text-emerald-200/80">
+                            Courses {airCombatPriorityDiag.weights?.courses ?? 60}% / Packages {airCombatPriorityDiag.weights?.trainingPackages ?? 40}%
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
+                            <span className="block text-[9px] uppercase tracking-[0.08em] text-slate-400">Task</span>
+                            <span className="text-sm font-bold text-white">{airCombatPriorityDiag.taskStaffPriorityList?.length || 0}</span>
+                        </div>
+                        <div className="rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
+                            <span className="block text-[9px] uppercase tracking-[0.08em] text-slate-400">Course</span>
+                            <span className="text-sm font-bold text-white">{airCombatPriorityDiag.courseStaffPriorityLists?.length || 0}</span>
+                        </div>
+                        <div className="rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
+                            <span className="block text-[9px] uppercase tracking-[0.08em] text-slate-400">Package</span>
+                            <span className="text-sm font-bold text-white">{airCombatPriorityDiag.trainingPackageStaffPriorityLists?.length || 0}</span>
+                        </div>
+                    </div>
+                    {(airCombatPriorityDiag.placements?.length || 0) > 0 && (
+                        <div className="mt-2 rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
+                            <span className="font-semibold text-slate-100">{airCombatPriorityDiag.placements.length}</span>
+                            <span className="ml-1 text-slate-400">priority placements this build</span>
+                        </div>
+                    )}
+                    {(airCombatPriorityDiag.skipReasons?.length || 0) > 0 && (
+                        <div className="mt-2">
+                            <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">Latest skips</span>
+                            <div className="space-y-1">
+                                {airCombatPriorityDiag.skipReasons.slice(-4).map((skip: any, index: number) => (
+                                    <div key={`${skip.staffName || skip.staff || 'staff'}-${skip.reason || 'skip'}-${index}`} className="rounded border border-slate-700/80 bg-slate-950/45 px-2 py-1 text-[10px] text-slate-300">
+                                        <span className="font-semibold text-slate-100">{skip.staffName || skip.staff || 'Staff'}</span>
+                                        <span className="text-slate-500"> - </span>
+                                        <span>{skip.reason || 'Skipped'}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
@@ -6393,6 +6466,55 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         event.type === 'flight'
     );
     const scheduledTaskingPriorityEventIds = new Set<string>();
+    const isAirCombatBuild = activeOperationalModel === 'air_combat';
+    const airCombatMandatoryTaskingEvents = taskingPriorityEvents.filter(event => event.isMandatoryTasking !== false);
+    const activeTaskingPriorityEvents = isAirCombatBuild ? airCombatMandatoryTaskingEvents : taskingPriorityEvents;
+    const airCombatWeights = normaliseAirCombatSchedulingWeights(
+        platformConfig?.organisations?.[0]?.settings?.airCombatScheduling?.defaultWeights
+    );
+    const airCombatRandomTieBreaks = new Map<string, number>();
+    const getAirCombatTieBreak = (name: string): number => {
+        if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, Math.random());
+        return airCombatRandomTieBreaks.get(name)!;
+    };
+    const publishedHistoryEvents = Object.values(publishedSchedules || {}).flat() as ScheduleEvent[];
+    const airCombatHistoryEvents = [...publishedHistoryEvents, ...events, ...generatedEvents];
+    const getAirCombatStaffEvents = (staffName: string, sourceEvents?: ScheduleEvent[]): ScheduleEvent[] =>
+        (sourceEvents || [...airCombatHistoryEvents, ...generatedEvents]).filter(event => eventHasPerson(event, staffName));
+    const getAirCombatTaskingEvents = (staffName: string): ScheduleEvent[] =>
+        getAirCombatStaffEvents(staffName).filter(event => isTaskingPriorityEvent(event as ScheduleEvent));
+    const getMostRecentEventDateValue = (items: ScheduleEvent[]): number => (
+        items.reduce((latest, event) => {
+            const rawDate = event.date || (event as any).eventDate || '';
+            const timestamp = rawDate ? new Date(`${rawDate}T00:00:00`).getTime() : 0;
+            return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
+        }, 0)
+    );
+    const getTaskStaffPriorityList = () => instructors
+        .filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name))
+        .map(staff => {
+            const taskingEvents = getAirCombatTaskingEvents(staff.name);
+            return {
+                staff,
+                taskingCompleted: taskingEvents.length,
+                lastTaskingDateValue: getMostRecentEventDateValue(taskingEvents),
+                tieBreak: getAirCombatTieBreak(staff.name),
+            };
+        })
+        .sort((left, right) =>
+            left.taskingCompleted - right.taskingCompleted ||
+            left.lastTaskingDateValue - right.lastTaskingDateValue ||
+            left.tieBreak - right.tieBreak
+        );
+    neoBuildDiag.airCombatPriority = {
+        enabled: isAirCombatBuild,
+        weights: airCombatWeights,
+        taskStaffPriorityList: [],
+        courseStaffPriorityLists: [],
+        trainingPackageStaffPriorityLists: [],
+        skipReasons: [],
+        placements: [],
+    };
     const getTaskingEventIdentity = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>) => ({
         id: event.id,
         taskingRequestId: event.taskingRequestId || null,
@@ -6451,6 +6573,64 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             candidate: Omit<ScheduleEvent, 'date'>,
             requiredStaffCount: number
         ): { pilot: string; crew?: string; instructor?: string; rejectedStaff: number } | null => {
+            if (isAirCombatBuild) {
+                const priorityList = getTaskStaffPriorityList();
+                neoBuildDiag.airCombatPriority.taskStaffPriorityList = priorityList.map(entry => ({
+                    name: entry.staff.name,
+                    role: entry.staff.role,
+                    taskingCompleted: entry.taskingCompleted,
+                    lastTaskingDateValue: entry.lastTaskingDateValue || null,
+                }));
+                let rejectedStaff = 0;
+                const isValidForTasking = (staff: Instructor, proposed: Omit<ScheduleEvent, 'date'>): string | null => {
+                    if (staff.role !== 'Pilot') return 'ROLE_NOT_PILOT';
+                    if (staff.isAdminStaff) return 'ADMIN_STAFF';
+                    if (isPersonStaticallyUnavailable(staff, proposed.startTime, proposed.startTime + proposed.duration, buildDate, 'flight')) return 'STATIC_UNAVAILABLE';
+                    if (generatedEvents.some(existing => priorityPersonnelConflict({ ...proposed, pilot: staff.name, crew: '' }, existing))) return 'PERSONNEL_CONFLICT';
+                    const counts = eventCounts.get(staff.name);
+                    if (counts && counts.flightFtd >= eventLimits.instructor.maxFlightFtd) return 'FLIGHT_FTD_LIMIT';
+                    if (counts && (counts.flightFtd + counts.ground + counts.cpt + counts.dutySup) >= eventLimits.instructor.maxTotal) return 'TOTAL_EVENT_LIMIT';
+                    return null;
+                };
+
+                for (const primaryEntry of priorityList) {
+                    const primaryReason = isValidForTasking(primaryEntry.staff, candidate);
+                    if (primaryReason) {
+                        rejectedStaff++;
+                        neoBuildDiag.airCombatPriority.skipReasons.push({
+                            list: 'task',
+                            staff: primaryEntry.staff.name,
+                            event: candidate.flightNumber,
+                            reason: primaryReason,
+                            startTime: candidate.startTime,
+                        });
+                        continue;
+                    }
+                    if (requiredStaffCount === 1) {
+                        return { pilot: primaryEntry.staff.name, crew: '', instructor: '', rejectedStaff };
+                    }
+                    const secondaryList = getTaskStaffPriorityList().filter(entry => entry.staff.name !== primaryEntry.staff.name);
+                    for (const secondaryEntry of secondaryList) {
+                        const dualCandidate = { ...candidate, pilot: primaryEntry.staff.name, crew: secondaryEntry.staff.name, instructor: '' };
+                        const secondaryReason = isValidForTasking(secondaryEntry.staff, dualCandidate) ||
+                            (generatedEvents.some(existing => priorityPersonnelConflict(dualCandidate, existing)) ? 'PERSONNEL_CONFLICT' : null);
+                        if (secondaryReason) {
+                            rejectedStaff++;
+                            neoBuildDiag.airCombatPriority.skipReasons.push({
+                                list: 'task',
+                                staff: secondaryEntry.staff.name,
+                                event: candidate.flightNumber,
+                                reason: secondaryReason,
+                                startTime: candidate.startTime,
+                            });
+                            continue;
+                        }
+                        return { pilot: primaryEntry.staff.name, crew: secondaryEntry.staff.name, instructor: '', rejectedStaff };
+                    }
+                    rejectedStaff++;
+                }
+                return null;
+            }
             const availableStaff = shuffleRandom(staffPool).filter(staff => (
                 !isPersonStaticallyUnavailable(staff, candidate.startTime, candidate.startTime + candidate.duration, buildDate, 'flight')
             ));
@@ -6487,10 +6667,23 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         orderedTaskingEvents.forEach(priorityEvent => {
             const requestedStart = Number.isFinite(Number(priorityEvent.startTime)) ? Number(priorityEvent.startTime) : flyingStartTime;
-            const searchStart = Math.max(flyingStartTime, requestedStart);
-            const searchEnd = allowNightFlying && searchStart >= commenceNightFlying
-                ? ceaseNightFlying
-                : flyingEndTime;
+            const searchStart = isAirCombatBuild
+                ? Math.round(requestedStart * 12) / 12
+                : Math.max(flyingStartTime, requestedStart);
+            const activeWindowEnd = allowNightFlying && searchStart >= commenceNightFlying ? ceaseNightFlying : flyingEndTime;
+            if (isAirCombatBuild && (searchStart < flyingStartTime - 0.001 || searchStart + priorityEvent.duration > activeWindowEnd + 0.001)) {
+                neoBuildDiag.airCombatPriority.skipReasons.push({
+                    list: 'task',
+                    staff: 'Tasking',
+                    event: priorityEvent.flightNumber,
+                    reason: 'EXACT_TIME_OUTSIDE_FLYING_WINDOW',
+                    startTime: searchStart,
+                });
+                return;
+            }
+            const searchEnd = isAirCombatBuild
+                ? searchStart + priorityEvent.duration
+                : activeWindowEnd;
             let placedEvent: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string }) | null = null;
             const attemptSummary: Array<Record<string, any>> = [];
             const requiredStaffCount = priorityEvent.flightType === 'Solo' || priorityEvent.soloOrDual === 'Solo' ? 1 : 2;
@@ -6576,6 +6769,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     const staffCounts = eventCounts.get(staffName as string);
                     if (staffCounts) staffCounts.flightFtd++;
                 });
+                if (isAirCombatBuild) {
+                    neoBuildDiag.airCombatPriority.placements.push({
+                        kind: 'task',
+                        event: placedEvent.flightNumber,
+                        startTime: placedEvent.startTime,
+                        resourceId: placedEvent.resourceId,
+                        pilot: placedEvent.pilot || null,
+                        crew: placedEvent.crew || null,
+                    });
+                }
                 scheduledCount++;
                 buildDebugLog(`[Tasking Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ''}/${priorityEvent.taskingAircraftCount || ''} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
             } else {
@@ -6613,6 +6816,193 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         });
 
         buildDebugLog(`DEBUG Tasking priority scheduling complete: ${scheduledCount}/${orderedTaskingEvents.length} scheduled`);
+    };
+    const scheduleAirCombatTrainingPriorityEvents = () => {
+        if (!isAirCombatBuild) return;
+        const slotIncrement = 5 / 60;
+        const sortedTrainingItems = (kind: 'course' | 'training_package', code: string) => syllabusDetails
+            .filter(item => item.isActive !== false)
+            .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
+            .filter(item => (item.courses || []).includes(code))
+            .sort((left, right) => (left.orderKey || '').localeCompare(right.orderKey || '') || left.code.localeCompare(right.code));
+        const getCompletedTrainingEvents = (staffName: string, code: string, kind: 'course' | 'training_package') => {
+            const validCodes = new Set(sortedTrainingItems(kind, code).map(item => item.code));
+            return getAirCombatStaffEvents(staffName).filter(event => validCodes.has(event.flightNumber));
+        };
+        const getNextTrainingItem = (staffName: string, code: string, kind: 'course' | 'training_package') => {
+            const items = sortedTrainingItems(kind, code);
+            const completed = new Set(getCompletedTrainingEvents(staffName, code, kind).map(event => event.flightNumber));
+            return items.find(item => !completed.has(item.code)) || null;
+        };
+        const getTrainingPriorityList = (kind: 'course' | 'training_package', code: string) => instructors
+            .filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name))
+            .filter(staff => {
+                const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+                const list = kind === 'training_package' ? assignments.trainingPackages : assignments.courses;
+                const expectedKey = getAirCombatTrainingKey(kind, code, school, activeUnitCode);
+                return list.some(item => item.trainingKey === expectedKey || item.code === code);
+            })
+            .map(staff => {
+                const completedEvents = getCompletedTrainingEvents(staff.name, code, kind);
+                return {
+                    staff,
+                    completedCount: completedEvents.length,
+                    lastEventDateValue: getMostRecentEventDateValue(completedEvents),
+                    nextItem: getNextTrainingItem(staff.name, code, kind),
+                    tieBreak: getAirCombatTieBreak(`${kind}:${code}:${staff.name}`),
+                };
+            })
+            .filter(entry => !!entry.nextItem)
+            .sort((left, right) =>
+                left.completedCount - right.completedCount ||
+                left.lastEventDateValue - right.lastEventDateValue ||
+                left.tieBreak - right.tieBreak
+            );
+        const assignmentCodes = (kind: 'course' | 'training_package') => Array.from(new Set(
+            instructors.flatMap(staff => {
+                const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+                return (kind === 'training_package' ? assignments.trainingPackages : assignments.courses)
+                    .filter(item => !activeUnitCode || item.unitCode === activeUnitCode)
+                    .map(item => item.code);
+            })
+        )).filter(Boolean).sort();
+        const courseCodes = assignmentCodes('course');
+        const packageCodes = assignmentCodes('training_package');
+        const placementLimit = Math.max(0, courseCodes.length + packageCodes.length + instructors.length);
+        const pickNextKind = (coursePlaced: number, packagePlaced: number): 'course' | 'training_package' | null => {
+            if (courseCodes.length === 0 && packageCodes.length === 0) return null;
+            if (courseCodes.length === 0) return 'training_package';
+            if (packageCodes.length === 0) return 'course';
+            const total = coursePlaced + packagePlaced + 1;
+            const courseDeficit = (airCombatWeights.courses / 100) * total - coursePlaced;
+            const packageDeficit = (airCombatWeights.trainingPackages / 100) * total - packagePlaced;
+            return courseDeficit >= packageDeficit ? 'course' : 'training_package';
+        };
+        const findResourceForTraining = (item: SyllabusItemDetail, type: 'flight' | 'ftd' | 'ground' | 'cpt', startTime: number): { resourceId: string; area?: string; aircraftConfigId?: string } | null => {
+            const prefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
+            const count = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
+            for (let index = 1; index <= count; index++) {
+                const resourceId = `${prefix}${index}`;
+                const aircraftConfigId = type === 'flight' ? getAircraftConfigIdForResource(resourceId) : undefined;
+                if (type === 'flight' && !eventAcceptsResourceConfig(item, aircraftConfigId)) continue;
+                const candidate = { startTime, duration: item.duration, resourceId, flightNumber: item.code, type } as ScheduleEvent;
+                if (generatedEvents.some(existing => priorityResourceConflict(candidate, existing))) continue;
+                const area = type === 'flight' ? findAvailableArea(startTime, item.duration, generatedEvents) : undefined;
+                if (type === 'flight' && !area) return null;
+                return { resourceId, area, aircraftConfigId };
+            }
+            return null;
+        };
+        const placeTrainingForKind = (kind: 'course' | 'training_package'): boolean => {
+            const codes = kind === 'training_package' ? packageCodes : courseCodes;
+            for (const code of codes) {
+                const priorityList = getTrainingPriorityList(kind, code);
+                const diagKey = kind === 'training_package' ? 'trainingPackageStaffPriorityLists' : 'courseStaffPriorityLists';
+                neoBuildDiag.airCombatPriority[diagKey].push({
+                    code,
+                    list: priorityList.map(entry => ({
+                        name: entry.staff.name,
+                        completedCount: entry.completedCount,
+                        lastEventDateValue: entry.lastEventDateValue || null,
+                        nextEvent: entry.nextItem?.code || null,
+                    })),
+                });
+                for (const entry of priorityList) {
+                    const item = entry.nextItem!;
+                    const type: 'flight' | 'ftd' | 'ground' | 'cpt' =
+                        item.type === 'Flight' ? 'flight' :
+                        item.type === 'FTD' ? 'ftd' :
+                        item.code.toUpperCase().includes('CPT') ? 'cpt' :
+                        'ground';
+                    const windowEnd = type === 'ftd' ? ftdEndTime : flyingEndTime;
+                    for (let time = flyingStartTime; time + item.duration <= windowEnd + 0.001; time += slotIncrement) {
+                        const startTime = Math.round(time * 12) / 12;
+                        if (type === 'flight') {
+                            const exclusion = getFlightWindowExclusionViolation(startTime, item.duration);
+                            if (exclusion) continue;
+                        }
+                        const bookingStart = startTime - (item.preFlightTime || 0);
+                        const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
+                        const counts = eventCounts.get(entry.staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false };
+                        const limitReached = (type === 'flight' || type === 'ftd')
+                            ? counts.flightFtd >= eventLimits.instructor.maxFlightFtd
+                            : false;
+                        if (limitReached || (counts.flightFtd + counts.ground + counts.cpt + counts.dutySup) >= eventLimits.instructor.maxTotal) {
+                            neoBuildDiag.airCombatPriority.skipReasons.push({ list: kind, staff: entry.staff.name, event: item.code, reason: 'DUTY_LIMIT', startTime });
+                            break;
+                        }
+                        if (isPersonStaticallyUnavailable(entry.staff, bookingStart, bookingEnd, buildDate, type)) {
+                            neoBuildDiag.airCombatPriority.skipReasons.push({ list: kind, staff: entry.staff.name, event: item.code, reason: 'STATIC_UNAVAILABLE', startTime });
+                            continue;
+                        }
+                        const resource = findResourceForTraining(item, type, startTime);
+                        if (!resource) continue;
+                        const candidate: ScheduleEvent = {
+                            id: uuidv4(),
+                            date: buildDate,
+                            type,
+                            instructor: '',
+                            student: '',
+                            pilot: entry.staff.name,
+                            crew: '',
+                            flightNumber: item.code,
+                            duration: item.duration,
+                            startTime,
+                            resourceId: resource.resourceId,
+                            color: kind === 'training_package' ? 'bg-emerald-500/70' : 'bg-sky-500/70',
+                            flightType: 'Solo',
+                            soloOrDual: 'Solo',
+                            locationType: 'Local',
+                            origin: school,
+                            destination: school,
+                            area: resource.area,
+                            preStart: item.preFlightTime,
+                            postEnd: item.postFlightTime,
+                            dayNight: item.dayNight,
+                            aircraftConfigId: resource.aircraftConfigId,
+                            acceptableAircraftConfigs: type === 'flight' ? normaliseAircraftConfigRequirement(item) : undefined,
+                            notes: `Air Combat ${kind === 'training_package' ? 'training package' : 'course'} allocation: ${code}`,
+                        };
+                        if (generatedEvents.some(existing => priorityPersonnelConflict(candidate, existing))) {
+                            neoBuildDiag.airCombatPriority.skipReasons.push({ list: kind, staff: entry.staff.name, event: item.code, reason: 'PERSONNEL_CONFLICT', startTime });
+                            continue;
+                        }
+                        generatedEvents.push(candidate);
+                        if (!eventCounts.has(entry.staff.name)) eventCounts.set(entry.staff.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
+                        const nextCounts = eventCounts.get(entry.staff.name)!;
+                        if (type === 'flight' || type === 'ftd') nextCounts.flightFtd++;
+                        else if (type === 'cpt') nextCounts.cpt++;
+                        else nextCounts.ground++;
+                        neoBuildDiag.airCombatPriority.placements.push({
+                            kind,
+                            code,
+                            event: item.code,
+                            staff: entry.staff.name,
+                            startTime,
+                            resourceId: resource.resourceId,
+                        });
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        let coursePlaced = 0;
+        let packagePlaced = 0;
+        for (let attempt = 0; attempt < placementLimit; attempt++) {
+            const preferredKind = pickNextKind(coursePlaced, packagePlaced);
+            if (!preferredKind) break;
+            let placedKind: 'course' | 'training_package' | null = null;
+            if (placeTrainingForKind(preferredKind)) {
+                placedKind = preferredKind;
+            } else {
+                const fallbackKind = preferredKind === 'course' ? 'training_package' : 'course';
+                if (placeTrainingForKind(fallbackKind)) placedKind = fallbackKind;
+            }
+            if (!placedKind) break;
+            if (placedKind === 'course') coursePlaced++;
+            else packagePlaced++;
+        }
     };
     const getCurrencyPriorityPerson = (event: ScheduleEvent): { trainee: Trainee; excludeInstructorNames: string[] } | null => {
         const personName = event.student || event.pilot || event.instructor || '';
@@ -7700,7 +8090,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         formationLabel: string,
         latestStartBefore?: number
     ) => {
-        const pendingTaskingEvents = () => taskingPriorityEvents.filter(event => !scheduledTaskingPriorityEventIds.has(event.id));
+        const pendingTaskingEvents = () => activeTaskingPriorityEvents.filter(event => !scheduledTaskingPriorityEventIds.has(event.id));
         const segmentEnd = typeof latestStartBefore === 'number'
             ? Math.min(endTimeBoundary, latestStartBefore)
             : endTimeBoundary;
@@ -7797,6 +8187,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     buildDebugLog(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees (${_mandatoryDayFlightList.length} day, ${_mandatoryNightFlightList.length} night), Formation groups: ${_formationFlightGroups.length}, Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
     buildDebugLog('[MANDATORY-REMEDIAL-DIAG] Match audit:', neoBuildDiag.mandatoryRemedialFlights.matchAudit);
     (window as any).__fbFlightListSize = _allFlightList.length;
+
+    if (isAirCombatBuild) {
+        if (activeTaskingPriorityEvents.length > 0) {
+            recordProgress({ message: 'Scheduling Air Combat mandatory tasking...', percentage: 45 });
+            scheduleTaskingPriorityEvents(activeTaskingPriorityEvents);
+        }
+        recordProgress({ message: 'Scheduling Air Combat priority lists...', percentage: 55 });
+        scheduleAirCombatTrainingPriorityEvents();
+    }
 
     // Step 3a: Schedule day flights. Multi-resource formation groups run through
     // a dedicated grouped pass so matching trainees are pulled together by event code.
@@ -24028,6 +24427,34 @@ updates.forEach(update => {
                            activeLocationCode={school}
                            activeUnitCode={activeUnitCode}
                            trainingPackageTemplates={syllabusDetails.filter(item => item.lmpType === 'Staff CAT' && item.isActive !== false)}
+                           instructorsData={instructorsData}
+                           operationalModel={activeOperationalModel}
+                           currentUserName={currentUserName}
+                           onUpdateInstructor={async (data) => {
+                               const dbId = (data as any).id;
+                               try {
+                                   const response = await fetch(dbId ? `/api/personnel/${dbId}` : '/api/personnel', {
+                                       method: dbId ? 'PATCH' : 'POST',
+                                       credentials: 'include',
+                                       headers: { 'Content-Type': 'application/json' },
+                                       body: JSON.stringify(data),
+                                   });
+                                   if (!response.ok) {
+                                       const errorData = await response.json().catch(() => ({}));
+                                       throw new Error(errorData.error || errorData.details || `Failed to save staff ${data.name}`);
+                                   }
+                                   const responseData = await response.json().catch(() => ({}));
+                                   const saved = responseData.personnel || data;
+                                   setInstructorsData(prev => prev.map(instructor => (
+                                       instructor.idNumber === data.idNumber
+                                           ? { ...data, ...normalisePersonnelRecord(saved), preferences: saved.preferences || data.preferences }
+                                           : instructor
+                                   )));
+                               } catch (error) {
+                                   console.error('❌ Error saving Air Combat training assignment:', error);
+                                   throw error;
+                               }
+                           }}
                        />;
              case 'Currency':
                 if (selectedPersonForCurrency) {
