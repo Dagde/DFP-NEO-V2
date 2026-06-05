@@ -59958,6 +59958,18 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: airCombatPriorityDiag.placements.length }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 text-slate-400", children: "priority placements this build" })
       ] }),
+      (airCombatPriorityDiag.conclusion?.length || 0) > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 rounded border border-amber-400/25 bg-amber-950/20 px-2 py-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-200/80", children: "Build conclusion" }),
+        airCombatPriorityDiag.conclusion.slice(0, 3).map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] leading-snug text-amber-50/90", children: item }, `air-combat-conclusion-${index}`))
+      ] }),
+      airCombatPriorityDiag.rejectionReasons && Object.keys(airCombatPriorityDiag.rejectionReasons).length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400", children: "Top rejection reasons" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: Object.entries(airCombatPriorityDiag.rejectionReasons).sort((left, right) => Number(right[1]) - Number(left[1])).slice(0, 5).map(([reason, count]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-200", children: [
+          reason,
+          ": ",
+          count
+        ] }, reason)) })
+      ] }),
       (airCombatPriorityDiag.skipReasons?.length || 0) > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400", children: "Latest skips" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: airCombatPriorityDiag.skipReasons.slice(-4).map((skip, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700/80 bg-slate-950/45 px-2 py-1 text-[10px] text-slate-300", children: [
@@ -61510,7 +61522,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           standbyExclusions: neoBuildDiag.formationResourceDiagnostics.standbyExclusions.slice(-300),
           laterScheduledEvents: neoBuildDiag.formationResourceDiagnostics.laterScheduledEvents.slice(-500)
         },
-        currencyPriorityDiagnostics: getCompactCurrencyPriorityDiagnostics()
+        currencyPriorityDiagnostics: getCompactCurrencyPriorityDiagnostics(),
+        airCombatPriority: neoBuildDiag.airCombatPriority ? {
+          ...neoBuildDiag.airCombatPriority,
+          staffAudit: (neoBuildDiag.airCombatPriority.staffAudit || []).slice(0, 120),
+          taskingQueue: (neoBuildDiag.airCombatPriority.taskingQueue || []).slice(-120),
+          taskingAttempts: (neoBuildDiag.airCombatPriority.taskingAttempts || []).slice(-240),
+          taskStaffPriorityList: (neoBuildDiag.airCombatPriority.taskStaffPriorityList || []).slice(0, 120),
+          courseStaffPriorityLists: (neoBuildDiag.airCombatPriority.courseStaffPriorityLists || []).slice(-120),
+          trainingPackageStaffPriorityLists: (neoBuildDiag.airCombatPriority.trainingPackageStaffPriorityLists || []).slice(-120),
+          trainingAttempts: (neoBuildDiag.airCombatPriority.trainingAttempts || []).slice(-700),
+          resourceChecks: (neoBuildDiag.airCombatPriority.resourceChecks || []).slice(-700),
+          skipReasons: (neoBuildDiag.airCombatPriority.skipReasons || []).slice(-700),
+          stageTrace: (neoBuildDiag.airCombatPriority.stageTrace || []).slice(-120),
+          placements: (neoBuildDiag.airCombatPriority.placements || []).slice(-240)
+        } : void 0
       };
       try {
         localStorage.setItem("neo_build_diag_report", JSON.stringify(compactReport));
@@ -61558,9 +61584,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const getPriorityResourceOptions = (event) => {
     const resourcePrefix = event.type === "flight" ? "PC-21 " : event.type === "ftd" ? "FTD " : event.type === "cpt" ? "CPT " : "Ground ";
     const resourceCount = event.type === "flight" ? availableAircraftCount : event.type === "ftd" ? ftdCount : event.type === "cpt" ? cptCount : 6;
-    const resourceOptions2 = Array.from({ length: resourceCount }, (_, index) => `${resourcePrefix}${index + 1}`);
-    if (event.type !== "flight") return resourceOptions2;
-    return resourceOptions2.filter((resourceId) => eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)));
+    const resourceOptions = Array.from({ length: resourceCount }, (_, index) => `${resourcePrefix}${index + 1}`);
+    if (event.type !== "flight") return resourceOptions;
+    return resourceOptions.filter((resourceId) => eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)));
   };
   const ensurePriorityResourceConfigCompatibility = (event) => {
     if (event.type !== "flight") return event;
@@ -61828,9 +61854,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     const searchEnd = isNightRemedial ? ceaseNightFlying : isDayRemedial ? Math.min(normalEndTime, commenceNightFlying) : normalEndTime;
     const timeIncrement = event.type === "flight" ? 5 / 60 : 15 / 60;
-    const resourceOptions2 = getPriorityResourceOptions(event);
+    const resourceOptions = getPriorityResourceOptions(event);
     for (let startTime = searchStart; startTime + event.duration <= searchEnd + 1e-3; startTime += timeIncrement) {
-      for (const resourceId of resourceOptions2) {
+      for (const resourceId of resourceOptions) {
         const candidate = {
           ...event,
           startTime,
@@ -61904,7 +61930,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           aircraftConfigId: event.type === "flight" ? candidate.aircraftConfigId : null,
           aircraftConfigLabel: event.type === "flight" ? getAircraftConfigLabelForId(candidate.aircraftConfigId) : null,
           requiredAircraftConfig: event.type === "flight" ? getAircraftConfigRequirementSummary(event) : null,
-          resourcePoolTried: resourceOptions2,
+          resourcePoolTried: resourceOptions,
           remedialInstructor,
           outcome: conflicts ? "rejected" : "placed",
           conflictReason: conflictReason || null,
@@ -64379,13 +64405,113 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   );
   neoBuildDiag.airCombatPriority = {
     enabled: isAirCombatBuild,
+    model: activeOperationalModel,
+    context: {
+      locationCode: school,
+      unitCode: activeUnitCode,
+      buildDate
+    },
     weights: airCombatWeights,
+    inputs: {
+      staffTotal: instructors.length,
+      pilotRoleStaff: instructors.filter((staff) => staff.role === "Pilot" && !staff.isAdminStaff && Boolean(staff.name)).length,
+      adminStaff: instructors.filter((staff) => staff.isAdminStaff).length,
+      taskingPriorityEvents: taskingPriorityEvents.length,
+      mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length,
+      nonMandatoryTaskingEvents: taskingPriorityEvents.length - airCombatMandatoryTaskingEvents.length,
+      syllabusItems: syllabusDetails.length,
+      activeSyllabusItems: syllabusDetails.filter((item) => item.isActive !== false).length,
+      generatedEventsAtAirCombatStart: generatedEvents.length,
+      windows: {
+        flyingStartTime,
+        flyingEndTime,
+        ftdStartTime,
+        ftdEndTime,
+        allowNightFlying,
+        commenceNightFlying,
+        ceaseNightFlying,
+        flyingWindowExclusions: normalisedFlyingWindowExclusions
+      },
+      resources: {
+        aircraft: availableAircraftCount,
+        ftd: ftdCount,
+        cpt: cptCount,
+        aircraftConfigIdsByResource
+      }
+    },
+    staffAudit: [],
+    assignmentAudit: [],
+    taskingQueue: [],
+    taskingAttempts: [],
     taskStaffPriorityList: [],
     courseStaffPriorityLists: [],
     trainingPackageStaffPriorityLists: [],
+    trainingInputs: null,
+    trainingAttempts: [],
+    resourceChecks: [],
     skipReasons: [],
-    placements: []
+    rejectionReasons: {},
+    placements: [],
+    stageTrace: [],
+    conclusion: []
   };
+  const pushAirCombatDiag = (bucket, entry, limit = 500) => {
+    const diag = neoBuildDiag.airCombatPriority;
+    if (!diag || !Array.isArray(diag[bucket])) return;
+    diag[bucket].push(entry);
+    if (diag[bucket].length > limit) diag[bucket] = diag[bucket].slice(-limit);
+  };
+  const countAirCombatRejection = (reason) => {
+    const reasons = neoBuildDiag.airCombatPriority.rejectionReasons || {};
+    reasons[reason] = (reasons[reason] || 0) + 1;
+    neoBuildDiag.airCombatPriority.rejectionReasons = reasons;
+  };
+  const recordAirCombatSkip = (entry) => {
+    pushAirCombatDiag("skipReasons", entry, 800);
+    if (entry?.reason) countAirCombatRejection(String(entry.reason));
+  };
+  const recordAirCombatStage = (stage, details = {}) => {
+    pushAirCombatDiag("stageTrace", {
+      stage,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      generatedEvents: generatedEvents.length,
+      ...details
+    }, 120);
+  };
+  const refreshAirCombatStaffAndAssignmentAudit = () => {
+    if (!isAirCombatBuild) return;
+    const pilotStaff = instructors.filter((staff) => staff.role === "Pilot" && !staff.isAdminStaff && Boolean(staff.name));
+    neoBuildDiag.airCombatPriority.staffAudit = instructors.map((staff) => {
+      const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      return {
+        name: staff.name,
+        role: staff.role || null,
+        unit: staff.unit || null,
+        flight: staff.flight || null,
+        isAdminStaff: !!staff.isAdminStaff,
+        isPilotEligible: staff.role === "Pilot" && !staff.isAdminStaff && Boolean(staff.name),
+        courseAssignments: assignments.courses.map((item) => ({ code: item.code, trainingKey: item.trainingKey, unitCode: item.unitCode })),
+        trainingPackageAssignments: assignments.trainingPackages.map((item) => ({ code: item.code, trainingKey: item.trainingKey, unitCode: item.unitCode }))
+      };
+    });
+    neoBuildDiag.airCombatPriority.assignmentAudit = {
+      pilotStaff: pilotStaff.length,
+      pilotsWithCourseAssignments: pilotStaff.filter((staff) => normaliseAirCombatTrainingAssignments(staff.preferences).courses.length > 0).length,
+      pilotsWithTrainingPackageAssignments: pilotStaff.filter((staff) => normaliseAirCombatTrainingAssignments(staff.preferences).trainingPackages.length > 0).length,
+      allCourseCodes: Array.from(new Set(pilotStaff.flatMap((staff) => normaliseAirCombatTrainingAssignments(staff.preferences).courses.map((item) => item.code)))).sort(),
+      allTrainingPackageCodes: Array.from(new Set(pilotStaff.flatMap((staff) => normaliseAirCombatTrainingAssignments(staff.preferences).trainingPackages.map((item) => item.code)))).sort()
+    };
+    if (pilotStaff.length === 0) {
+      recordAirCombatSkip({ list: "input", staff: "All staff", event: "Air Combat build", reason: "NO_PILOT_ROLE_STAFF", startTime: null });
+    }
+  };
+  refreshAirCombatStaffAndAssignmentAudit();
+  recordAirCombatStage("air-combat-diagnostics-initialised", {
+    enabled: isAirCombatBuild,
+    model: activeOperationalModel,
+    taskingPriorityEvents: taskingPriorityEvents.length,
+    mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length
+  });
   const getTaskingEventIdentity = (event) => ({
     id: event.id,
     taskingRequestId: event.taskingRequestId || null,
@@ -64406,6 +64532,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     let scheduledCount = 0;
     buildDebugLog(`DEBUG Scheduling Tasking priority events: ${orderedTaskingEvents.length}`);
+    if (isAirCombatBuild) {
+      neoBuildDiag.airCombatPriority.taskingQueue = orderedTaskingEvents.map((event) => ({
+        ...getTaskingEventIdentity(event),
+        mandatory: event.isMandatoryTasking !== false,
+        type: event.type,
+        flightType: event.flightType,
+        soloOrDual: event.soloOrDual,
+        aircraftConfigId: event.aircraftConfigId || null,
+        acceptableAircraftConfigs: normaliseAircraftConfigRequirement(event)
+      }));
+      recordAirCombatStage("tasking-queue-built", {
+        queueSize: orderedTaskingEvents.length,
+        mandatoryQueueSize: orderedTaskingEvents.filter((event) => event.isMandatoryTasking !== false).length
+      });
+    }
     const randomIndex = (maxExclusive) => {
       if (maxExclusive <= 1) return 0;
       const cryptoApi = globalThis.crypto;
@@ -64426,13 +64567,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const staffPool = instructors.filter((staff) => Boolean(staff.name) && !staff.isAdminStaff);
     const getTaskingResourceOptionsForFlow = (priorityEvent, startTime) => {
-      const resourceOptions2 = getPriorityResourceOptions(priorityEvent);
-      if (resourceOptions2.length <= 1) return resourceOptions2;
+      const resourceOptions = getPriorityResourceOptions(priorityEvent);
+      if (resourceOptions.length <= 1) return resourceOptions;
       const waveOffset = Math.max(0, Math.round((startTime - flyingStartTime) / timeIncrement));
-      const preferredIndex = waveOffset % resourceOptions2.length;
+      const preferredIndex = waveOffset % resourceOptions.length;
       return [
-        ...resourceOptions2.slice(preferredIndex),
-        ...resourceOptions2.slice(0, preferredIndex)
+        ...resourceOptions.slice(preferredIndex),
+        ...resourceOptions.slice(0, preferredIndex)
       ];
     };
     const assignTaskingStaff = (candidate, requiredStaffCount) => {
@@ -64459,7 +64600,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const primaryReason = isValidForTasking(primaryEntry.staff, candidate);
           if (primaryReason) {
             rejectedStaff2++;
-            neoBuildDiag.airCombatPriority.skipReasons.push({
+            recordAirCombatSkip({
               list: "task",
               staff: primaryEntry.staff.name,
               event: candidate.flightNumber,
@@ -64477,7 +64618,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             const secondaryReason = isValidForTasking(secondaryEntry.staff, dualCandidate) || (generatedEvents.some((existing) => priorityPersonnelConflict(dualCandidate, existing)) ? "PERSONNEL_CONFLICT" : null);
             if (secondaryReason) {
               rejectedStaff2++;
-              neoBuildDiag.airCombatPriority.skipReasons.push({
+              recordAirCombatSkip({
                 list: "task",
                 staff: secondaryEntry.staff.name,
                 event: candidate.flightNumber,
@@ -64527,13 +64668,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const requestedStart = Number.isFinite(Number(priorityEvent.startTime)) ? Number(priorityEvent.startTime) : flyingStartTime;
       const searchStart = isAirCombatBuild ? Math.round(requestedStart * 12) / 12 : Math.max(flyingStartTime, requestedStart);
       const activeWindowEnd = allowNightFlying && searchStart >= commenceNightFlying ? ceaseNightFlying : flyingEndTime;
+      const resourceOptions = getTaskingResourceOptionsForFlow(priorityEvent, searchStart);
       if (isAirCombatBuild && (searchStart < flyingStartTime - 1e-3 || searchStart + priorityEvent.duration > activeWindowEnd + 1e-3)) {
-        neoBuildDiag.airCombatPriority.skipReasons.push({
+        recordAirCombatSkip({
           list: "task",
           staff: "Tasking",
           event: priorityEvent.flightNumber,
           reason: "EXACT_TIME_OUTSIDE_FLYING_WINDOW",
           startTime: searchStart
+        });
+        pushAirCombatDiag("taskingAttempts", {
+          priorityEvent: getTaskingEventIdentity(priorityEvent),
+          scheduled: false,
+          reason: "EXACT_TIME_OUTSIDE_FLYING_WINDOW",
+          requestedStart,
+          searchStart,
+          activeWindowEnd,
+          resourceOptions
         });
         return;
       }
@@ -64556,7 +64707,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           continue;
         }
-        for (const resourceId of getTaskingResourceOptionsForFlow(priorityEvent, roundedTime)) {
+        const resourceOptionsAtTime = getTaskingResourceOptionsForFlow(priorityEvent, roundedTime);
+        if (isAirCombatBuild && resourceOptionsAtTime.length === 0) {
+          recordAirCombatSkip({
+            list: "task",
+            staff: "Tasking",
+            event: priorityEvent.flightNumber,
+            reason: "NO_COMPATIBLE_AIRCRAFT_CONFIG",
+            startTime: roundedTime
+          });
+        }
+        for (const resourceId of resourceOptionsAtTime) {
           const { date, ...eventWithoutDate } = priorityEvent;
           const candidate = {
             ...eventWithoutDate,
@@ -64587,6 +64748,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                 }
               });
             }
+            if (isAirCombatBuild) countAirCombatRejection("RESOURCE_CONFLICT");
             continue;
           }
           const assignedStaff = assignTaskingStaff(candidate, requiredStaffCount);
@@ -64600,6 +64762,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                 reason: requiredStaffCount === 1 ? "NO_RANDOM_STAFF_AVAILABLE" : "NO_RANDOM_STAFF_PAIR_AVAILABLE"
               });
             }
+            if (isAirCombatBuild) countAirCombatRejection(requiredStaffCount === 1 ? "NO_STAFF_AVAILABLE" : "NO_STAFF_PAIR_AVAILABLE");
             continue;
           }
           placedEvent = {
@@ -64634,6 +64797,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         buildDebugLog(`[Tasking Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
       } else {
         buildDebugLog(`[Tasking Priority] Unable to schedule ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""}: no compatible aircraft slot from ${_fmtT(searchStart)} to ${_fmtT(searchEnd)}`);
+      }
+      if (isAirCombatBuild) {
+        pushAirCombatDiag("taskingAttempts", {
+          priorityEvent: getTaskingEventIdentity(priorityEvent),
+          scheduled: !!placedEvent,
+          scheduledEvent: placedEvent ? {
+            startTime: placedEvent.startTime,
+            resourceId: placedEvent.resourceId,
+            pilot: placedEvent.pilot || null,
+            crew: placedEvent.crew || null,
+            aircraftConfigId: placedEvent.aircraftConfigId || null
+          } : null,
+          searchStart,
+          searchEnd,
+          resourceOptions,
+          attemptSummary,
+          generatedEventsAfterAttempt: generatedEvents.length
+        });
       }
       try {
         const existingReport = JSON.parse(localStorage.getItem("neo_tasking_priority_diag") || "[]");
@@ -64704,6 +64885,47 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const courseCodes = assignmentCodes("course");
     const packageCodes = assignmentCodes("training_package");
     const placementLimit = Math.max(0, courseCodes.length + packageCodes.length + instructors.length);
+    const syllabusMatchAudit = (kind, codes) => codes.map((code) => {
+      const matches = sortedTrainingItems(kind, code);
+      return {
+        kind,
+        code,
+        matches: matches.length,
+        sampleEvents: matches.slice(0, 12).map((item) => ({
+          code: item.code,
+          type: item.type,
+          duration: item.duration,
+          orderKey: item.orderKey || null,
+          courses: item.courses || [],
+          lmpType: item.lmpType || null,
+          isActive: item.isActive !== false
+        }))
+      };
+    });
+    neoBuildDiag.airCombatPriority.trainingInputs = {
+      courseCodes,
+      packageCodes,
+      placementLimit,
+      courseSyllabusMatches: syllabusMatchAudit("course", courseCodes),
+      trainingPackageSyllabusMatches: syllabusMatchAudit("training_package", packageCodes)
+    };
+    recordAirCombatStage("training-inputs-built", {
+      courseCodes,
+      packageCodes,
+      placementLimit,
+      courseMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.courseSyllabusMatches.map((item) => ({ code: item.code, matches: item.matches })),
+      packageMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.trainingPackageSyllabusMatches.map((item) => ({ code: item.code, matches: item.matches }))
+    });
+    if (courseCodes.length === 0 && packageCodes.length === 0) {
+      recordAirCombatSkip({ list: "training", staff: "Assigned Training", event: "Air Combat build", reason: "NO_AIR_COMBAT_TRAINING_ASSIGNMENTS", startTime: null });
+    }
+    [...neoBuildDiag.airCombatPriority.trainingInputs.courseSyllabusMatches, ...neoBuildDiag.airCombatPriority.trainingInputs.trainingPackageSyllabusMatches].filter((item) => item.matches === 0).forEach((item) => recordAirCombatSkip({
+      list: item.kind,
+      staff: "Syllabus",
+      event: item.code,
+      reason: "NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE",
+      startTime: null
+    }));
     const pickNextKind = (coursePlaced2, packagePlaced2) => {
       if (courseCodes.length === 0 && packageCodes.length === 0) return null;
       if (courseCodes.length === 0) return "training_package";
@@ -64716,14 +64938,53 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const findResourceForTraining = (item, type, startTime) => {
       const prefix = type === "flight" ? "PC-21 " : type === "ftd" ? "FTD " : type === "cpt" ? "CPT " : "Ground ";
       const count = type === "flight" ? availableAircraftCount : type === "ftd" ? ftdCount : type === "cpt" ? cptCount : 6;
+      if (count <= 0) {
+        pushAirCombatDiag("resourceChecks", { event: item.code, type, startTime, reason: "NO_RESOURCE_COUNT", count });
+        countAirCombatRejection("NO_RESOURCE_COUNT");
+        return null;
+      }
       for (let index = 1; index <= count; index++) {
         const resourceId = `${prefix}${index}`;
         const aircraftConfigId = type === "flight" ? getAircraftConfigIdForResource(resourceId) : void 0;
-        if (type === "flight" && !eventAcceptsResourceConfig(item, aircraftConfigId)) continue;
+        if (type === "flight" && !eventAcceptsResourceConfig(item, aircraftConfigId)) {
+          pushAirCombatDiag("resourceChecks", {
+            event: item.code,
+            type,
+            startTime,
+            resourceId,
+            aircraftConfigId,
+            reason: "AIRCRAFT_CONFIG_INCOMPATIBLE",
+            required: normaliseAircraftConfigRequirement(item)
+          }, 800);
+          countAirCombatRejection("AIRCRAFT_CONFIG_INCOMPATIBLE");
+          continue;
+        }
         const candidate = { startTime, duration: item.duration, resourceId, flightNumber: item.code, type };
-        if (generatedEvents.some((existing) => priorityResourceConflict(candidate, existing))) continue;
+        const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
+        if (resourceConflict) {
+          pushAirCombatDiag("resourceChecks", {
+            event: item.code,
+            type,
+            startTime,
+            resourceId,
+            reason: "RESOURCE_CONFLICT",
+            conflict: {
+              flightNumber: resourceConflict.flightNumber,
+              startTime: resourceConflict.startTime,
+              duration: resourceConflict.duration,
+              resourceId: resourceConflict.resourceId,
+              source: resourceConflict._source || null
+            }
+          }, 800);
+          countAirCombatRejection("RESOURCE_CONFLICT");
+          continue;
+        }
         const area = type === "flight" ? findAvailableArea(startTime, item.duration, generatedEvents) : void 0;
-        if (type === "flight" && !area) return null;
+        if (type === "flight" && !area) {
+          pushAirCombatDiag("resourceChecks", { event: item.code, type, startTime, resourceId, reason: "NO_AVAILABLE_AREA" }, 800);
+          countAirCombatRejection("NO_AVAILABLE_AREA");
+          return null;
+        }
         return { resourceId, area, aircraftConfigId };
       }
       return null;
@@ -64732,9 +64993,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const codes = kind === "training_package" ? packageCodes : courseCodes;
       for (const code of codes) {
         const priorityList = getTrainingPriorityList(kind, code);
+        const matchingItems = sortedTrainingItems(kind, code);
         const diagKey = kind === "training_package" ? "trainingPackageStaffPriorityLists" : "courseStaffPriorityLists";
         neoBuildDiag.airCombatPriority[diagKey].push({
           code,
+          matchingSyllabusItems: matchingItems.length,
           list: priorityList.map((entry) => ({
             name: entry.staff.name,
             completedCount: entry.completedCount,
@@ -64742,30 +65005,88 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             nextEvent: entry.nextItem?.code || null
           }))
         });
+        if (matchingItems.length === 0) {
+          pushAirCombatDiag("trainingAttempts", {
+            kind,
+            code,
+            placed: false,
+            reason: "NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE"
+          });
+          continue;
+        }
+        if (priorityList.length === 0) {
+          recordAirCombatSkip({
+            list: kind,
+            staff: "Assigned staff",
+            event: code,
+            reason: "NO_PRIORITY_STAFF_WITH_NEXT_EVENT",
+            startTime: null
+          });
+          pushAirCombatDiag("trainingAttempts", {
+            kind,
+            code,
+            placed: false,
+            reason: "NO_PRIORITY_STAFF_WITH_NEXT_EVENT",
+            matchingSyllabusItems: matchingItems.length
+          });
+          continue;
+        }
         for (const entry of priorityList) {
           const item = entry.nextItem;
           const type = item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.toUpperCase().includes("CPT") ? "cpt" : "ground";
           const windowEnd = type === "ftd" ? ftdEndTime : flyingEndTime;
+          let candidateSlotsChecked = 0;
+          let candidateSlotsRejected = 0;
           for (let time = flyingStartTime; time + item.duration <= windowEnd + 1e-3; time += slotIncrement) {
             const startTime = Math.round(time * 12) / 12;
+            candidateSlotsChecked++;
             if (type === "flight") {
               const exclusion = getFlightWindowExclusionViolation(startTime, item.duration);
-              if (exclusion) continue;
+              if (exclusion) {
+                candidateSlotsRejected++;
+                pushAirCombatDiag("trainingAttempts", {
+                  kind,
+                  code,
+                  staff: entry.staff.name,
+                  event: item.code,
+                  startTime,
+                  placed: false,
+                  reason: exclusion.reason || "FLYING_WINDOW_EXCLUSION",
+                  restriction: exclusion.period?.restriction
+                }, 1200);
+                countAirCombatRejection(exclusion.reason || "FLYING_WINDOW_EXCLUSION");
+                continue;
+              }
             }
             const bookingStart = startTime - (item.preFlightTime || 0);
             const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
             const counts = eventCounts.get(entry.staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0 };
             const limitReached = type === "flight" || type === "ftd" ? counts.flightFtd >= eventLimits.instructor.maxFlightFtd : false;
             if (limitReached || counts.flightFtd + counts.ground + counts.cpt + counts.dutySup >= eventLimits.instructor.maxTotal) {
-              neoBuildDiag.airCombatPriority.skipReasons.push({ list: kind, staff: entry.staff.name, event: item.code, reason: "DUTY_LIMIT", startTime });
+              recordAirCombatSkip({ list: kind, staff: entry.staff.name, event: item.code, reason: "DUTY_LIMIT", startTime });
               break;
             }
             if (isPersonStaticallyUnavailable(entry.staff, bookingStart, bookingEnd, buildDate, type)) {
-              neoBuildDiag.airCombatPriority.skipReasons.push({ list: kind, staff: entry.staff.name, event: item.code, reason: "STATIC_UNAVAILABLE", startTime });
+              recordAirCombatSkip({ list: kind, staff: entry.staff.name, event: item.code, reason: "STATIC_UNAVAILABLE", startTime });
+              candidateSlotsRejected++;
               continue;
             }
             const resource = findResourceForTraining(item, type, startTime);
-            if (!resource) continue;
+            if (!resource) {
+              candidateSlotsRejected++;
+              pushAirCombatDiag("trainingAttempts", {
+                kind,
+                code,
+                staff: entry.staff.name,
+                event: item.code,
+                type,
+                startTime,
+                placed: false,
+                reason: "NO_RESOURCE_AVAILABLE"
+              }, 1200);
+              countAirCombatRejection("NO_RESOURCE_AVAILABLE");
+              continue;
+            }
             const candidate = {
               id: v4(),
               date: buildDate,
@@ -64793,7 +65114,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               notes: `Air Combat ${kind === "training_package" ? "training package" : "course"} allocation: ${code}`
             };
             if (generatedEvents.some((existing) => priorityPersonnelConflict(candidate, existing))) {
-              neoBuildDiag.airCombatPriority.skipReasons.push({ list: kind, staff: entry.staff.name, event: item.code, reason: "PERSONNEL_CONFLICT", startTime });
+              recordAirCombatSkip({ list: kind, staff: entry.staff.name, event: item.code, reason: "PERSONNEL_CONFLICT", startTime });
+              candidateSlotsRejected++;
               continue;
             }
             generatedEvents.push(candidate);
@@ -64810,8 +65132,34 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               startTime,
               resourceId: resource.resourceId
             });
+            pushAirCombatDiag("trainingAttempts", {
+              kind,
+              code,
+              staff: entry.staff.name,
+              event: item.code,
+              type,
+              placed: true,
+              startTime,
+              resourceId: resource.resourceId,
+              candidateSlotsChecked,
+              candidateSlotsRejected
+            }, 1200);
             return true;
           }
+          pushAirCombatDiag("trainingAttempts", {
+            kind,
+            code,
+            staff: entry.staff.name,
+            event: item.code,
+            type,
+            placed: false,
+            reason: "NO_VALID_SLOT_IN_WINDOW",
+            candidateSlotsChecked,
+            candidateSlotsRejected,
+            windowStart: flyingStartTime,
+            windowEnd
+          }, 1200);
+          countAirCombatRejection("NO_VALID_SLOT_IN_WINDOW");
         }
       }
       return false;
@@ -67137,6 +67485,33 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return a.startTime - b.startTime;
   });
+  if (neoBuildDiag.airCombatPriority?.enabled) {
+    const airCombatPlacements = neoBuildDiag.airCombatPriority.placements || [];
+    const conclusions = [];
+    if (activeOperationalModel !== "air_combat") conclusions.push(`Air Combat scheduler did not run because active model was ${activeOperationalModel || "blank"}.`);
+    if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push("No non-admin staff with Role = Pilot were available in the active Air Combat staff pool.");
+    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat tasking events matched the build date.");
+    const trainingInputs = neoBuildDiag.airCombatPriority.trainingInputs;
+    if (trainingInputs && trainingInputs.courseCodes.length === 0 && trainingInputs.packageCodes.length === 0) conclusions.push("No Air Combat course or training-package assignments were found on Pilot staff preferences.");
+    const allSyllabusMatches = [
+      ...trainingInputs?.courseSyllabusMatches || [],
+      ...trainingInputs?.trainingPackageSyllabusMatches || []
+    ];
+    if (allSyllabusMatches.length > 0 && allSyllabusMatches.every((item) => item.matches === 0)) conclusions.push("Training assignments existed, but none matched active syllabus/training-package events by code.");
+    if (airCombatPlacements.length === 0 && Object.keys(neoBuildDiag.airCombatPriority.rejectionReasons || {}).length > 0) conclusions.push("Air Combat scheduler ran but every candidate was rejected; see rejectionReasons, taskingAttempts, trainingAttempts, and resourceChecks.");
+    if (generatedEventsBeforeFinalCleanup > 0 && sortedEvents.length === 0) conclusions.push("Events existed before final cleanup but were removed by day/night guard or ground conflict repair; see finalCleanup.");
+    if (airCombatPlacements.length > 0 && sortedEvents.length === 0) conclusions.push("Air Combat placements were created but none survived final cleanup; see finalCleanup and placements.");
+    if (conclusions.length === 0) conclusions.push(airCombatPlacements.length > 0 ? "Air Combat events were placed." : "No single dominant blocker identified; inspect taskingAttempts, trainingAttempts, resourceChecks, and skipReasons.");
+    neoBuildDiag.airCombatPriority.finalSummary = {
+      generatedEventsBeforeFinalCleanup,
+      sortedEvents: sortedEvents.length,
+      placements: airCombatPlacements.length,
+      rejectionReasons: neoBuildDiag.airCombatPriority.rejectionReasons || {},
+      finalCleanup: neoBuildDiag.finalCleanup
+    };
+    neoBuildDiag.airCombatPriority.conclusion = conclusions;
+    recordAirCombatStage("air-combat-final-summary", neoBuildDiag.airCombatPriority.finalSummary);
+  }
   const dayPc21FlightsByStart = sortedEvents.filter(
     (event) => event.type === "flight" && event.resourceId?.startsWith("PC-21") && getGeneratedEventDayNightClassification(event) !== "Night" && event.startTime < flyingEndTime
   ).sort((a, b) => a.startTime - b.startTime || (resourceOrderMap.get(a.resourceId) ?? 9999) - (resourceOrderMap.get(b.resourceId) ?? 9999));
