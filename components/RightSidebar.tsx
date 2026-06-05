@@ -15,6 +15,7 @@ interface RightSidebarProps {
     canAccessView?: (view: string) => boolean;
     canRunNeoBuild?: boolean;
     canPublishDfp?: boolean;
+    modelUnavailableViews?: string[];
 }
 
 const RightSidebar: React.FC<RightSidebarProps> = ({
@@ -30,7 +31,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     currentUserUnit,
     canAccessView,
     canRunNeoBuild = true,
-    canPublishDfp = true
+    canPublishDfp = true,
+    modelUnavailableViews = [],
 }) => {
   const nextDayBuildSubViews = ['NextDayBuild', 'Priorities', 'ProgramData', 'BuildAnalysis', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'];
   const isNextDayBuildSectionActive = nextDayBuildSubViews.includes(activeView);
@@ -40,11 +42,16 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
   const { isFrozen } = useSystemFreeze();
   const canOpen = (view: string) => canAccessView ? canAccessView(view) : true;
+  const isModelUnavailable = (view: string) => modelUnavailableViews.includes(view);
   const canBuild = canRunNeoBuild && canOpen('NextDayBuild');
   const canPublish = canPublishDfp && canOpen('NextDayBuild');
-  const accessButtonClass = (view: string) => canOpen(view) ? '' : 'opacity-45 cursor-not-allowed';
+  const accessButtonClass = (view: string) => {
+    if (isModelUnavailable(view)) return 'cursor-not-allowed';
+    return canOpen(view) ? '' : 'opacity-45 cursor-not-allowed';
+  };
   const actionButtonClass = (allowed: boolean) => allowed ? '' : 'opacity-45 cursor-not-allowed grayscale';
   const navigateIfAllowed = (view: string) => {
+    if (isModelUnavailable(view)) return;
     if (canOpen(view)) onNavigate(view);
   };
 
@@ -98,6 +105,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         <button
           onClick={() => navigateIfAllowed('NextDayTraineeSchedule')}
           disabled={!canOpen('NextDayTraineeSchedule')}
+          aria-disabled={isModelUnavailable('NextDayTraineeSchedule') || !canOpen('NextDayTraineeSchedule')}
+          title={isModelUnavailable('NextDayTraineeSchedule') ? 'Trainee schedule functions are not used by the Air Combat Model.' : undefined}
           className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''} ${accessButtonClass('NextDayTraineeSchedule')}`}
         >
           <span className="text-center leading-tight">Trainee Schedule</span>

@@ -15096,7 +15096,10 @@ const App: React.FC = () => {
     const canRunValidation = canUsePlatformPermission('dfp.validation');
     const canPublishDfp = canUsePlatformPermission('dfp.publish');
     const canRunNeoBuild = canUsePlatformPermission('neo.run');
-    const canRunNeoBuildForActiveModel = canRunNeoBuild && activeOperationalModel === 'flight_school';
+    const isNeoCapableOperationalModel = activeOperationalModel === 'flight_school' || activeOperationalModel === 'air_combat';
+    const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
+    const modelUnavailableLeftViews = activeOperationalModel === 'air_combat' ? ['Trainee'] : [];
+    const modelUnavailableRightViews = activeOperationalModel === 'air_combat' ? ['NextDayTraineeSchedule'] : [];
     const canViewOwnTraineeProfile = canUsePlatformPermission('trainee.profile.own');
     const canViewOtherTraineeProfiles = canUsePlatformPermission('trainee.profile.others');
     const canViewOwnPt051 = canUsePlatformPermission('trainee.pt051.own');
@@ -18663,8 +18666,8 @@ const App: React.FC = () => {
             denyPlatformAction('Run NEO Build is not permitted for your assigned permission profile');
             return;
         }
-        if (activeOperationalModel !== 'flight_school') {
-            setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build currently runs the Flight School Model only.`);
+        if (!isNeoCapableOperationalModel) {
+            setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build is not available for this operational model yet.`);
             return;
         }
         // System freeze check - prevent NEO Build when frozen
@@ -22276,8 +22279,8 @@ updates.forEach(update => {
             denyPlatformAction('NEO tile assistance is not permitted for your assigned permission profile');
             return;
         }
-        if (activeOperationalModel !== 'flight_school') {
-            setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. Flight School NEO tile assistance is not available for this model.`);
+        if (!isNeoCapableOperationalModel) {
+            setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO tile assistance is not available for this operational model yet.`);
             return;
         }
         const isNextDay = ['NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'Priorities', 'ProgramData'].includes(activeView);
@@ -22290,7 +22293,7 @@ updates.forEach(update => {
             setOraclePreviewEvent(null);
         }
         setIsOracleMode(prev => !prev);
-    }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
+    }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
 
     useEffect(() => {
         if (isOracleMode) {
@@ -24932,6 +24935,7 @@ updates.forEach(update => {
                 school={school}
                 allTraineesData={traineesData}
                 canAccessView={canAccessView}
+                modelUnavailableViews={modelUnavailableLeftViews}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header
@@ -24992,7 +24996,7 @@ updates.forEach(update => {
                                return;
                            }
                            if (!canEditDfpTiles || !canRunNeoBuildForActiveModel) {
-                               denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a Flight School model NEO context`);
+                               denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a NEO-capable operational model`);
                                return;
                            }
                            // Pause Flight Ops: navigate to NEO Build for the active DFP date,
@@ -25161,6 +25165,7 @@ updates.forEach(update => {
                 canAccessView={canAccessView}
                 canRunNeoBuild={canRunNeoBuildForActiveModel}
                 canPublishDfp={canPublishDfp}
+                modelUnavailableViews={modelUnavailableRightViews}
             />
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
 

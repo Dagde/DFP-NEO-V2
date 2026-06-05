@@ -19,6 +19,7 @@ interface SidebarProps {
     school?: string;
     allTraineesData?: any[];
     canAccessView?: (view: string) => boolean;
+    modelUnavailableViews?: string[];
 }
 
 const formatCourseName = (name: string): string => {
@@ -28,7 +29,7 @@ const formatCourseName = (name: string): string => {
   return name.replace(/^CSE\s*/i, 'ADF').replace(' ', '');
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [] }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
 
@@ -132,8 +133,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
   const canOpen = (view: string) => canAccessView ? canAccessView(view) : true;
-  const accessButtonClass = (view: string) => canOpen(view) ? '' : 'opacity-45 cursor-not-allowed';
+  const isModelUnavailable = (view: string) => modelUnavailableViews.includes(view);
+  const accessButtonClass = (view: string) => {
+    if (isModelUnavailable(view)) return 'cursor-not-allowed';
+    return canOpen(view) ? '' : 'opacity-45 cursor-not-allowed';
+  };
   const navigateIfAllowed = (view: string) => {
+    if (isModelUnavailable(view)) return;
     if (canOpen(view)) onNavigate(view);
   };
 
@@ -175,6 +181,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           <button
             onClick={() => navigateIfAllowed('Trainee')}
             disabled={!canOpen('Trainee')}
+            aria-disabled={isModelUnavailable('Trainee') || !canOpen('Trainee')}
+            title={isModelUnavailable('Trainee') ? 'Trainee functions are not used by the Air Combat Model.' : undefined}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Trainee' ? 'active' : ''} ${accessButtonClass('Trainee')}`}
           >
             <span>Trainee</span>

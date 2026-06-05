@@ -4483,7 +4483,7 @@ const formatCourseName = (name) => {
   }
   return name.replace(/^CSE\s*/i, "ADF").replace(" ", "");
 };
-const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView }) => {
+const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [] }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = reactExports.useState(false);
   const [showUserSelector, setShowUserSelector] = reactExports.useState(false);
@@ -4553,8 +4553,13 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
   const dashboardViews = ["MyDashboard", "SupervisorDashboard"];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
   const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
-  const accessButtonClass = (view2) => canOpen(view2) ? "" : "opacity-45 cursor-not-allowed";
+  const isModelUnavailable = (view2) => modelUnavailableViews.includes(view2);
+  const accessButtonClass = (view2) => {
+    if (isModelUnavailable(view2)) return "cursor-not-allowed";
+    return canOpen(view2) ? "" : "opacity-45 cursor-not-allowed";
+  };
   const navigateIfAllowed = (view2) => {
+    if (isModelUnavailable(view2)) return;
     if (canOpen(view2)) onNavigate(view2);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -4595,6 +4600,8 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           {
             onClick: () => navigateIfAllowed("Trainee"),
             disabled: !canOpen("Trainee"),
+            "aria-disabled": isModelUnavailable("Trainee") || !canOpen("Trainee"),
+            title: isModelUnavailable("Trainee") ? "Trainee functions are not used by the Air Combat Model." : void 0,
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Trainee" ? "active" : ""} ${accessButtonClass("Trainee")}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Trainee" })
           }
@@ -4803,15 +4810,21 @@ const RightSidebar = ({
   currentUserUnit,
   canAccessView,
   canRunNeoBuild = true,
-  canPublishDfp = true
+  canPublishDfp = true,
+  modelUnavailableViews = []
 }) => {
   const { isFrozen } = useSystemFreeze();
   const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
+  const isModelUnavailable = (view2) => modelUnavailableViews.includes(view2);
   const canBuild = canRunNeoBuild && canOpen("NextDayBuild");
   const canPublish = canPublishDfp && canOpen("NextDayBuild");
-  const accessButtonClass = (view2) => canOpen(view2) ? "" : "opacity-45 cursor-not-allowed";
+  const accessButtonClass = (view2) => {
+    if (isModelUnavailable(view2)) return "cursor-not-allowed";
+    return canOpen(view2) ? "" : "opacity-45 cursor-not-allowed";
+  };
   const actionButtonClass = (allowed) => allowed ? "" : "opacity-45 cursor-not-allowed grayscale";
   const navigateIfAllowed = (view2) => {
+    if (isModelUnavailable(view2)) return;
     if (canOpen(view2)) onNavigate(view2);
   };
   const userSurname = currentUserName.split(",")[0];
@@ -4865,6 +4878,8 @@ const RightSidebar = ({
         {
           onClick: () => navigateIfAllowed("NextDayTraineeSchedule"),
           disabled: !canOpen("NextDayTraineeSchedule"),
+          "aria-disabled": isModelUnavailable("NextDayTraineeSchedule") || !canOpen("NextDayTraineeSchedule"),
+          title: isModelUnavailable("NextDayTraineeSchedule") ? "Trainee schedule functions are not used by the Air Combat Model." : void 0,
           className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayTraineeSchedule" ? "active" : ""} ${accessButtonClass("NextDayTraineeSchedule")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Trainee Schedule" })
         }
@@ -70795,7 +70810,10 @@ ${"=".repeat(60)}`);
   const canRunValidation = canUsePlatformPermission("dfp.validation");
   const canPublishDfp = canUsePlatformPermission("dfp.publish");
   const canRunNeoBuild = canUsePlatformPermission("neo.run");
-  const canRunNeoBuildForActiveModel = canRunNeoBuild && activeOperationalModel === "flight_school";
+  const isNeoCapableOperationalModel = activeOperationalModel === "flight_school" || activeOperationalModel === "air_combat";
+  const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
+  const modelUnavailableLeftViews = activeOperationalModel === "air_combat" ? ["Trainee"] : [];
+  const modelUnavailableRightViews = activeOperationalModel === "air_combat" ? ["NextDayTraineeSchedule"] : [];
   const canViewOwnTraineeProfile = canUsePlatformPermission("trainee.profile.own");
   const canViewOtherTraineeProfiles = canUsePlatformPermission("trainee.profile.others");
   const canViewOwnPt051 = canUsePlatformPermission("trainee.pt051.own");
@@ -73708,8 +73726,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       denyPlatformAction("Run NEO Build is not permitted for your assigned permission profile");
       return;
     }
-    if (activeOperationalModel !== "flight_school") {
-      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build currently runs the Flight School Model only.`);
+    if (!isNeoCapableOperationalModel) {
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build is not available for this operational model yet.`);
       return;
     }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
@@ -76534,8 +76552,8 @@ ${conflictLines.join("\n")}${moreText}`,
       denyPlatformAction("NEO tile assistance is not permitted for your assigned permission profile");
       return;
     }
-    if (activeOperationalModel !== "flight_school") {
-      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. Flight School NEO tile assistance is not available for this model.`);
+    if (!isNeoCapableOperationalModel) {
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO tile assistance is not available for this operational model yet.`);
       return;
     }
     const isNextDay = ["NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "Priorities", "ProgramData"].includes(activeView);
@@ -76546,7 +76564,7 @@ ${conflictLines.join("\n")}${moreText}`,
       setOraclePreviewEvent(null);
     }
     setIsOracleMode((prev) => !prev);
-  }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
+  }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
   reactExports.useEffect(() => {
     if (isOracleMode) {
       runOracleAnalysis();
@@ -78934,7 +78952,8 @@ Do you want to replace the existing entry?`,
           onUserChange: handleUserChange,
           school,
           allTraineesData: traineesData,
-          canAccessView
+          canAccessView,
+          modelUnavailableViews: modelUnavailableLeftViews
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden", children: [
@@ -78996,7 +79015,7 @@ Do you want to replace the existing entry?`,
                 return;
               }
               if (!canEditDfpTiles || !canRunNeoBuildForActiveModel) {
-                denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a Flight School model NEO context`);
+                denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a NEO-capable operational model`);
                 return;
               }
               const pauseDate = date;
@@ -79178,7 +79197,8 @@ Do you want to replace the existing entry?`,
           currentUserUnit: activeUnitCode || currentUser2?.unit || "1FTS",
           canAccessView,
           canRunNeoBuild: canRunNeoBuildForActiveModel,
-          canPublishDfp
+          canPublishDfp,
+          modelUnavailableViews: modelUnavailableRightViews
         }
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxRuntimeExports.jsx(Magnifier, { isEnabled: isMagnifierEnabled }),
