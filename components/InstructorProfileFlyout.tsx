@@ -140,11 +140,6 @@ const card3d = "rounded-lg border border-gray-500/60 shadow-md";
 const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 type StaffRole = Instructor['role'];
 
-const is77SqnUnit = (value?: string): boolean => String(value || '').trim().toUpperCase() === '77SQN';
-const getRoleForUnit = (value: StaffRole, unit?: string): StaffRole => (
-  is77SqnUnit(unit) ? 'Pilot' : value === 'Pilot' ? 'QFI' : value
-);
-
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
@@ -169,7 +164,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     const hasCurrentRank = Boolean(currentRank) && configuredRanks.some(option => option.toLowerCase() === currentRank.toLowerCase());
     return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
   }, [personnelDisplaySettings, rank]);
-  const [role, setRole] = useState<StaffRole>(getRoleForUnit(instructor.role, instructor.unit));
+  const [role, setRole] = useState<StaffRole>(instructor.role);
   const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
   const [service, setService] = useState<'RAAF' | 'RAN' | 'ARA' | undefined>(instructor.service);
   const [category, setCategory] = useState<InstructorCategory>(instructor.category);
@@ -273,7 +268,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   const resetState = () => {
     setIdNumber(instructor.idNumber); setName(instructor.name); setRank(instructor.rank);
-    setRole(getRoleForUnit(instructor.role, instructor.unit)); setCallsignNumber(instructor.callsignNumber); setService(instructor.service);
+    setRole(instructor.role); setCallsignNumber(instructor.callsignNumber); setService(instructor.service);
     setCategory(instructor.category); setSeatConfig(instructor.seatConfig);
     setUnavailabilityPeriods(instructor.unavailability || []); setLocation(instructor.location || '');
     setUnit(instructor.unit || ''); setFlight(instructor.flight || '');
@@ -311,7 +306,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   const handleSave = async () => {
     if (!name) { alert("Name is required."); return; }
-    const savedRole = getRoleForUnit(role, unit);
+    const savedRole = role;
 
     // ── Handle pending photo changes ──────────────────────────────────────────
     let finalPhotoUrl = photoUrl;
@@ -916,15 +911,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           <option key={option} value={option}>{option}</option>
                         ))}
                       </Dropdown>
-                      <Dropdown label="Role" value={getRoleForUnit(role, unit)} onChange={e => setRole(e.target.value as StaffRole)}>
-                        {is77SqnUnit(unit) ? (
-                          <option value="Pilot">Pilot</option>
-                        ) : (
-                          <>
-                            <option value="QFI">{instructorLabel}</option>
-                            <option value="SIM IP">SIM IP</option>
-                          </>
-                        )}
+                      <Dropdown label="Role" value={role} onChange={e => setRole(e.target.value as StaffRole)}>
+                        <option value="QFI">{instructorLabel}</option>
+                        <option value="SIM IP">SIM IP</option>
+                        <option value="Pilot">Pilot</option>
                       </Dropdown>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1018,7 +1008,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
                         {/* Row 1 */}
                         <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{instructor.idNumber}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{getRoleForUnit(instructor.role, instructor.unit)}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{instructor.role}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{displayCallsign || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{instructor.secondaryCallsign || '[None]'}</span></div>

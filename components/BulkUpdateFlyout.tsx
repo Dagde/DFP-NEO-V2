@@ -91,7 +91,9 @@ const applyQualificationRoles = (parsedData: Partial<Instructor>, rolesValue: st
     parsedData.isAdminStaff = rolesLower.includes('admin');
     if (rolesLower.includes('sim ip')) {
         parsedData.role = 'SIM IP';
-    } else if (rolesLower.includes('qfi') || rolesLower.includes('pilot') || rolesLower.includes('instructor')) {
+    } else if (rolesLower.includes('pilot')) {
+        parsedData.role = 'Pilot';
+    } else if (rolesLower.includes('qfi') || rolesLower.includes('instructor')) {
         parsedData.role = 'QFI';
     }
 };

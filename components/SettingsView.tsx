@@ -1314,7 +1314,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         parsed.isAdminStaff = rolesLower.includes('admin');
         if (rolesLower.includes('sim ip')) {
             parsed.role = 'SIM IP';
-        } else if (rolesLower.includes('qfi') || rolesLower.includes('pilot') || rolesLower.includes('instructor')) {
+        } else if (rolesLower.includes('pilot')) {
+            parsed.role = 'Pilot';
+        } else if (rolesLower.includes('qfi') || rolesLower.includes('instructor')) {
             parsed.role = 'QFI';
         }
     };
@@ -1362,9 +1364,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         
         const rolesStr = getStr(row, ['Roles', 'Qualifications and Roles', 'Qualifications & Roles', 'Qualifications']);
         applyImportedQualifications(parsed, rolesStr);
-        if (String(parsed.unit || '').trim().toUpperCase() === '77SQN') {
-            parsed.role = 'Pilot';
-        }
 
         return parsed;
     };
