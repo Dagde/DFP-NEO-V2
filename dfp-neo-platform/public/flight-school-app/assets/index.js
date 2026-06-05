@@ -2144,7 +2144,11 @@ const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
   ].flatMap((unit) => String(unit || "").split("+")).map(normaliseAccessValue).filter(Boolean);
   const targetUnitSet = new Set(targetUnits);
   const targetModel = normaliseOperationalModel(context.operationalModel);
-  const matchingLevels = normaliseMasterLmpAccessRules(config).filter((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp).filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
+  const activeRulesForLmp = normaliseMasterLmpAccessRules(config).filter((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp);
+  const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
+  if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel === "air_combat") {
+    return "Manage";
+  }
   if (matchingLevels.length === 0) return null;
   return matchingLevels.sort((a, b) => masterLmpAccessWeight(b) - masterLmpAccessWeight(a))[0];
 };
@@ -67870,7 +67874,8 @@ const App = () => {
     const activeUnit = normaliseContextCode(activeUnitCode);
     return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode).filter((item) => {
       if (item.lmpType !== "Staff CAT") return true;
-      return normaliseContextCode(item.unit) === activeUnit;
+      const packageUnit = normaliseContextCode(item.unit);
+      return !packageUnit || packageUnit === activeUnit;
     });
   }, [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
   reactExports.useEffect(() => {

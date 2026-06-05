@@ -11398,7 +11398,8 @@ const App: React.FC = () => {
         return filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', activeUnitCode)
             .filter((item) => {
                 if (item.lmpType !== 'Staff CAT') return true;
-                return normaliseContextCode((item as any).unit) === activeUnit;
+                const packageUnit = normaliseContextCode((item as any).unit);
+                return !packageUnit || packageUnit === activeUnit;
             });
     }, [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
 
