@@ -7478,7 +7478,7 @@ const ScheduleView = ({
             "div",
             {
               "data-schedule-exclusion-start-line": "true",
-              className: "absolute top-0 pointer-events-none z-[6] w-px bg-red-400/35",
+              className: "absolute top-0 pointer-events-none z-[6] w-px bg-red-400/20",
               style: { left: `${left}px`, height: `${gridHeight}px` }
             }
           ),
