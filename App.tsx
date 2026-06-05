@@ -1311,6 +1311,9 @@ export const DEFAULT_INSTRUCTOR_PRIORITY_CONFIG: InstructorPriorityConfig = {
 
 interface DfpConfig {
   buildDate: string;
+  operationalModel?: string;
+  activeUnitCode?: string;
+  airCombatSchedulingWeights?: any;
   instructors: Instructor[];
   trainees: Trainee[];
   syllabus: SyllabusItemDetail[];
@@ -2234,6 +2237,8 @@ function generateDfpInternal(
     const ftdResourceLabel = buildResourceDisplayNames.ftd;
     const cptResourceLabel = buildResourceDisplayNames.cpt;
     const timingReport = config.timingReport;
+    const buildOperationalModel = normaliseOperationalModel(config.operationalModel || 'flight_school');
+    const buildActiveUnitCode = String(config.activeUnitCode || '').trim().toUpperCase();
     const markBuildTiming = (name: string, details?: Record<string, any>) => markNeoBuildTiming(timingReport, name, details);
     const recordProgress = (progress: { message: string, percentage: number }) => {
         markBuildTiming(`progress:${progress.message}`, {
@@ -2919,11 +2924,11 @@ function generateDfpInternal(
             summary: null,
         },
         airCombatPriority: {
-            enabled: activeOperationalModel === 'air_combat',
-            model: activeOperationalModel,
+            enabled: buildOperationalModel === 'air_combat',
+            model: buildOperationalModel,
             context: {
                 locationCode: school,
-                unitCode: activeUnitCode,
+                unitCode: buildActiveUnitCode,
                 buildDate,
             },
             inputs: {
@@ -2938,9 +2943,9 @@ function generateDfpInternal(
                 timestamp: new Date().toISOString(),
                 generatedEvents: generatedEvents.length,
             }],
-            conclusion: activeOperationalModel === 'air_combat'
+            conclusion: buildOperationalModel === 'air_combat'
                 ? ['Build report was saved before the Air Combat scheduler stage completed. Check runtimeError and stageTrace for the earlier failure point.']
-                : [`Air Combat scheduler did not run because active model was ${activeOperationalModel || 'blank'}.`],
+                : [`Air Combat scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`],
             rejectionReasons: {},
             skipReasons: [],
             placements: [],
@@ -6530,11 +6535,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         event.type === 'flight'
     );
     const scheduledTaskingPriorityEventIds = new Set<string>();
-    const isAirCombatBuild = activeOperationalModel === 'air_combat';
+    const isAirCombatBuild = buildOperationalModel === 'air_combat';
     const airCombatMandatoryTaskingEvents = taskingPriorityEvents.filter(event => event.isMandatoryTasking !== false);
     const activeTaskingPriorityEvents = isAirCombatBuild ? airCombatMandatoryTaskingEvents : taskingPriorityEvents;
     const airCombatWeights = normaliseAirCombatSchedulingWeights(
-        platformConfig?.organisations?.[0]?.settings?.airCombatScheduling?.defaultWeights
+        config.airCombatSchedulingWeights
     );
     const airCombatRandomTieBreaks = new Map<string, number>();
     const getAirCombatTieBreak = (name: string): number => {
@@ -6572,10 +6577,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         );
     neoBuildDiag.airCombatPriority = {
         enabled: isAirCombatBuild,
-        model: activeOperationalModel,
+        model: buildOperationalModel,
         context: {
             locationCode: school,
-            unitCode: activeUnitCode,
+            unitCode: buildActiveUnitCode,
             buildDate,
         },
         weights: airCombatWeights,
@@ -6675,7 +6680,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     refreshAirCombatStaffAndAssignmentAudit();
     recordAirCombatStage('air-combat-diagnostics-initialised', {
         enabled: isAirCombatBuild,
-        model: activeOperationalModel,
+        model: buildOperationalModel,
         taskingPriorityEvents: taskingPriorityEvents.length,
         mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length,
     });
@@ -7058,7 +7063,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             .filter(staff => {
                 const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
                 const list = kind === 'training_package' ? assignments.trainingPackages : assignments.courses;
-                const expectedKey = getAirCombatTrainingKey(kind, code, school, activeUnitCode);
+                const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
                 return list.some(item => item.trainingKey === expectedKey || item.code === code);
             })
             .map(staff => {
@@ -7081,7 +7086,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             instructors.flatMap(staff => {
                 const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
                 return (kind === 'training_package' ? assignments.trainingPackages : assignments.courses)
-                    .filter(item => !activeUnitCode || item.unitCode === activeUnitCode)
+                    .filter(item => !buildActiveUnitCode || item.unitCode === buildActiveUnitCode)
                     .map(item => item.code);
             })
         )).filter(Boolean).sort();
@@ -10331,7 +10336,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     if (neoBuildDiag.airCombatPriority?.enabled) {
         const airCombatPlacements = neoBuildDiag.airCombatPriority.placements || [];
         const conclusions: string[] = [];
-        if (activeOperationalModel !== 'air_combat') conclusions.push(`Air Combat scheduler did not run because active model was ${activeOperationalModel || 'blank'}.`);
+        if (buildOperationalModel !== 'air_combat') conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`);
         if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin staff with Role = Pilot were available in the active Air Combat staff pool.');
         if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat tasking events matched the build date.');
         const trainingInputs = neoBuildDiag.airCombatPriority.trainingInputs;
@@ -19668,6 +19673,9 @@ const App: React.FC = () => {
         console.log('🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:', instructorsInBuild.slice(0, 5).map((i: any) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: (i as any)._dataSource })));
 
         const config: DfpConfig = {
+            operationalModel: activeOperationalModel,
+            activeUnitCode,
+            airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
             instructors: instructorsInBuild,
             trainees: traineesInBuild,
             syllabus: syllabusDetails,

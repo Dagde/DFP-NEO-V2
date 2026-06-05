@@ -11565,7 +11565,7 @@ const TraineeProfileFlyout = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
-  platformConfig: platformConfig2 = null
+  platformConfig = null
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -11627,19 +11627,19 @@ const TraineeProfileFlyout = ({
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
     });
-    const allowed = filterMasterLmpCodesForAccess(platformConfig2, Array.from(courseCodes), {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
       unitCode: unit || trainee.unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig2, syllabusDetails, trainee.unit, unit]);
+  }, [platformConfig, syllabusDetails, trainee.unit, unit]);
   const academicLmpCourses = reactExports.useMemo(() => {
-    const allowed = filterMasterLmpCodesForAccess(platformConfig2, allAcademicLmpCourses, {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
       unitCode: unit || trainee.unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [allAcademicLmpCourses, platformConfig2, trainee.unit, unit]);
+  }, [allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
@@ -13286,7 +13286,7 @@ const CourseRosterView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
   trainingReportTerminology,
-  platformConfig: platformConfig2 = null
+  platformConfig = null
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -13576,7 +13576,7 @@ const CourseRosterView = ({
         resourceDisplayNames,
         personnelDisplaySettings,
         trainingReportTerminology,
-        platformConfig: platformConfig2,
+        platformConfig,
         pt051Assessments,
         pt051PerformanceLoading,
         traineeLMPs,
@@ -34086,7 +34086,7 @@ const SyllabusView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   aircraftConfigurations = [],
   activeLocationCode = "",
-  activeUnitCode: activeUnitCode2 = "",
+  activeUnitCode = "",
   trainingPackageTemplates = [],
   instructorsData = [],
   onUpdateInstructor,
@@ -34139,7 +34139,7 @@ const SyllabusView = ({
   }, [activeTab, syllabusDetails]);
   const getCourseTitle = (code) => courseTitleMap[code] || code;
   const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-  const activeUnitNormalised = normaliseContextCode(activeUnitCode2);
+  const activeUnitNormalised = normaliseContextCode(activeUnitCode);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
   const getPackageSourceKey = (item) => {
     const packageCode = (item.courses || [])[0] || item.code;
@@ -34205,14 +34205,14 @@ const SyllabusView = ({
     return getAirCombatAssignmentFromItem(
       { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
       activeLocationCode,
-      activeUnitCode2,
+      activeUnitCode,
       currentUserName
     );
-  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode2, currentUserName, selectedCourseType]);
+  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode, currentUserName, selectedCourseType]);
   const assignableAirCombatStaff = reactExports.useMemo(() => {
-    const targetUnit = String(activeUnitCode2 || "").trim().toUpperCase();
+    const targetUnit = String(activeUnitCode || "").trim().toUpperCase();
     return instructorsData.filter((staff) => staff && staff.name && !staff.isAdminStaff).filter((staff) => !targetUnit || String(staff.unit || "").trim().toUpperCase() === targetUnit).sort((a, b) => a.name.localeCompare(b.name));
-  }, [activeUnitCode2, instructorsData]);
+  }, [activeUnitCode, instructorsData]);
   const openAssignTraining = () => {
     if (!activeTrainingAssignment) return;
     setAssignTrainingSelection(new Set(
@@ -54520,7 +54520,7 @@ const EditCourseFlyout = ({
   locations = [],
   units = [],
   syllabusDetails = [],
-  platformConfig: platformConfig2 = null,
+  platformConfig = null,
   onClose,
   onSave
 }) => {
@@ -54537,24 +54537,24 @@ const EditCourseFlyout = ({
         s.courses.forEach((c) => courseCodes.add(c));
       }
     });
-    const allowed = filterMasterLmpCodesForAccess(platformConfig2, Array.from(courseCodes), {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig2, syllabusDetails, unit]);
+  }, [platformConfig, syllabusDetails, unit]);
   const assignableMasterLmps = reactExports.useMemo(() => {
     const courseCodes = new Set(COURSE_MASTER_LMPS.filter((lmp) => lmp !== "Staff CAT"));
     syllabusDetails.forEach((s) => {
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
     });
-    const allowed = filterMasterLmpCodesForAccess(platformConfig2, Array.from(courseCodes), {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig2, syllabusDetails, unit]);
+  }, [platformConfig, syllabusDetails, unit]);
   reactExports.useEffect(() => {
     setStartDate(initialStartDate);
     setGradDate(initialGradDate);
@@ -54773,7 +54773,7 @@ const CoursesManagementView = ({
   locations = [],
   units = [],
   syllabusDetails = [],
-  platformConfig: platformConfig2 = null
+  platformConfig = null
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   useSystemFreeze();
@@ -55039,7 +55039,7 @@ const CoursesManagementView = ({
         locations,
         units,
         syllabusDetails,
-        platformConfig: platformConfig2,
+        platformConfig,
         onClose: () => {
           setShowEditFlyout(false);
           setCourseToEdit(null);
@@ -56703,7 +56703,7 @@ const TrainingRecordsView = ({
   onSavePT051Assessment,
   locations = [],
   units = [],
-  platformConfig: platformConfig2 = null,
+  platformConfig = null,
   resourceDisplayNames,
   instructorLabel = "QFI"
 }) => {
@@ -56752,7 +56752,7 @@ const TrainingRecordsView = ({
           locations,
           units,
           syllabusDetails,
-          platformConfig: platformConfig2
+          platformConfig
         }
       ),
       activeTab === "export" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60943,6 +60943,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
   const cptResourceLabel = buildResourceDisplayNames.cpt;
   const timingReport = config.timingReport;
+  const buildOperationalModel = normaliseOperationalModel(config.operationalModel || "flight_school");
+  const buildActiveUnitCode = String(config.activeUnitCode || "").trim().toUpperCase();
   const markBuildTiming = (name, details) => markNeoBuildTiming(timingReport, name, details);
   const recordProgress = (progress) => {
     markBuildTiming(`progress:${progress.message}`, {
@@ -61464,11 +61466,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       summary: null
     },
     airCombatPriority: {
-      enabled: activeOperationalModel === "air_combat",
-      model: activeOperationalModel,
+      enabled: buildOperationalModel === "air_combat",
+      model: buildOperationalModel,
       context: {
         locationCode: school,
-        unitCode: activeUnitCode,
+        unitCode: buildActiveUnitCode,
         buildDate
       },
       inputs: {
@@ -61483,7 +61485,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         timestamp: (/* @__PURE__ */ new Date()).toISOString(),
         generatedEvents: generatedEvents.length
       }],
-      conclusion: activeOperationalModel === "air_combat" ? ["Build report was saved before the Air Combat scheduler stage completed. Check runtimeError and stageTrace for the earlier failure point."] : [`Air Combat scheduler did not run because active model was ${activeOperationalModel || "blank"}.`],
+      conclusion: buildOperationalModel === "air_combat" ? ["Build report was saved before the Air Combat scheduler stage completed. Check runtimeError and stageTrace for the earlier failure point."] : [`Air Combat scheduler did not run because active model was ${buildOperationalModel || "blank"}.`],
       rejectionReasons: {},
       skipReasons: [],
       placements: []
@@ -64397,11 +64399,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     (event) => isTaskingPriorityEvent(event) && priorityEventMatchesBuildDate(event, buildDate) && event.type === "flight"
   );
   const scheduledTaskingPriorityEventIds = /* @__PURE__ */ new Set();
-  const isAirCombatBuild = activeOperationalModel === "air_combat";
+  const isAirCombatBuild = buildOperationalModel === "air_combat";
   const airCombatMandatoryTaskingEvents = taskingPriorityEvents.filter((event) => event.isMandatoryTasking !== false);
   const activeTaskingPriorityEvents = isAirCombatBuild ? airCombatMandatoryTaskingEvents : taskingPriorityEvents;
   const airCombatWeights = normaliseAirCombatSchedulingWeights(
-    platformConfig?.organisations?.[0]?.settings?.airCombatScheduling?.defaultWeights
+    config.airCombatSchedulingWeights
   );
   const airCombatRandomTieBreaks = /* @__PURE__ */ new Map();
   const getAirCombatTieBreak = (name) => {
@@ -64430,10 +64432,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   );
   neoBuildDiag.airCombatPriority = {
     enabled: isAirCombatBuild,
-    model: activeOperationalModel,
+    model: buildOperationalModel,
     context: {
       locationCode: school,
-      unitCode: activeUnitCode,
+      unitCode: buildActiveUnitCode,
       buildDate
     },
     weights: airCombatWeights,
@@ -64533,7 +64535,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   refreshAirCombatStaffAndAssignmentAudit();
   recordAirCombatStage("air-combat-diagnostics-initialised", {
     enabled: isAirCombatBuild,
-    model: activeOperationalModel,
+    model: buildOperationalModel,
     taskingPriorityEvents: taskingPriorityEvents.length,
     mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length
   });
@@ -64887,7 +64889,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const getTrainingPriorityList = (kind, code) => instructors.filter((staff) => staff.role === "Pilot" && !staff.isAdminStaff && Boolean(staff.name)).filter((staff) => {
       const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
       const list = kind === "training_package" ? assignments.trainingPackages : assignments.courses;
-      const expectedKey = getAirCombatTrainingKey(kind, code, school, activeUnitCode);
+      const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
       return list.some((item) => item.trainingKey === expectedKey || item.code === code);
     }).map((staff) => {
       const completedEvents = getCompletedTrainingEvents(staff.name, code, kind);
@@ -64904,7 +64906,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const assignmentCodes = (kind) => Array.from(new Set(
       instructors.flatMap((staff) => {
         const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
-        return (kind === "training_package" ? assignments.trainingPackages : assignments.courses).filter((item) => !activeUnitCode || item.unitCode === activeUnitCode).map((item) => item.code);
+        return (kind === "training_package" ? assignments.trainingPackages : assignments.courses).filter((item) => !buildActiveUnitCode || item.unitCode === buildActiveUnitCode).map((item) => item.code);
       })
     )).filter(Boolean).sort();
     const courseCodes = assignmentCodes("course");
@@ -67513,7 +67515,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   if (neoBuildDiag.airCombatPriority?.enabled) {
     const airCombatPlacements = neoBuildDiag.airCombatPriority.placements || [];
     const conclusions = [];
-    if (activeOperationalModel !== "air_combat") conclusions.push(`Air Combat scheduler did not run because active model was ${activeOperationalModel || "blank"}.`);
+    if (buildOperationalModel !== "air_combat") conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || "blank"}.`);
     if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push("No non-admin staff with Role = Pilot were available in the active Air Combat staff pool.");
     if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat tasking events matched the build date.");
     const trainingInputs = neoBuildDiag.airCombatPriority.trainingInputs;
@@ -68206,8 +68208,8 @@ const App = () => {
   };
   const initialOperationalContext = reactExports.useMemo(() => getStoredOperationalContext(), []);
   const [school, setSchool] = reactExports.useState(initialOperationalContext.location);
-  const [activeUnitCode2, setActiveUnitCode] = reactExports.useState(initialOperationalContext.unit);
-  const [platformConfig2, setPlatformConfig] = reactExports.useState(null);
+  const [activeUnitCode, setActiveUnitCode] = reactExports.useState(initialOperationalContext.unit);
+  const [platformConfig, setPlatformConfig] = reactExports.useState(null);
   const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
   const [settingsLoaded, setSettingsLoaded] = reactExports.useState(false);
   const [organisationSettings, setOrganisationSettings] = reactExports.useState({
@@ -68228,7 +68230,7 @@ const App = () => {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       stage,
       school,
-      activeUnitCode: activeUnitCode2,
+      activeUnitCode,
       settingsLoaded,
       platformConfigLoaded,
       fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
@@ -68248,7 +68250,7 @@ const App = () => {
       } catch {
       }
     }
-  }, [activeUnitCode2, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
+  }, [activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
   reactExports.useEffect(() => {
     pushContextSelectorDiag("restore:init", {
       storageKey: ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
@@ -68339,21 +68341,21 @@ const App = () => {
     return [...new Set([...directAliases, ...profileAliases].map((alias) => alias.toUpperCase()).filter(Boolean))];
   }, [knownDfpLocationAliases]);
   const baseSelectableLocationCodes = reactExports.useMemo(() => {
-    const activeLocations = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE");
-    const activeUnitLocationCodes = (platformConfig2?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim()).filter(Boolean);
+    const activeLocations = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE");
+    const activeUnitLocationCodes = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim()).filter(Boolean);
     const configuredLocationsWithUnits = activeUnitLocationCodes.filter((unitLocationCode, index, allCodes) => {
       const normalisedUnitLocation = unitLocationCode.toUpperCase();
       if (allCodes.findIndex((code) => code.toUpperCase() === normalisedUnitLocation) !== index) return false;
       return activeLocations.some((location) => getLocationSelectorAliases(location).includes(normalisedUnitLocation));
     });
-    return configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig2, ["ESL", "PEA"]);
-  }, [getLocationSelectorAliases, platformConfig2]);
+    return configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]);
+  }, [getLocationSelectorAliases, platformConfig]);
   const getUnitOptionsForLocation = reactExports.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-    const activeLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
     const locationAliases = new Set(activeLocation ? getLocationSelectorAliases(activeLocation) : [normalisedLocationCode]);
     const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
-    const configuredUnits = (platformConfig2?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
+    const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
       code: String(unit.code || "").trim(),
       name: String(unit.name || unit.code || "").trim(),
       model: getUnitOperationalModel(unit)
@@ -68401,7 +68403,7 @@ const App = () => {
       });
       return [...configuredUnitsWithSharedContextLock, ...sharedContextOptions];
     }
-    const hasConfiguredPlatformUnits = (platformConfig2?.units || []).some((unit) => unit.status !== "INACTIVE");
+    const hasConfiguredPlatformUnits = (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE");
     if (hasConfiguredPlatformUnits) return [];
     const fallbackCodes = normalisedLocationCode === "PEA" ? ["2FTS"] : ["1FTS", "CFS"];
     const fallbackUnits = fallbackCodes.map((code) => ({
@@ -68455,7 +68457,7 @@ const App = () => {
     organisationSettings.remainderUnitIndex,
     organisationSettings.resourceSharingGroups,
     organisationSettings.selectedUnits,
-    platformConfig2
+    platformConfig
   ]);
   const activeLocationUnitOptions = reactExports.useMemo(
     () => getUnitOptionsForLocation(school),
@@ -68469,11 +68471,11 @@ const App = () => {
         name: unit.name,
         memberUnits: unit.memberUnits
       })),
-      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode2),
+      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode),
       resourceSharingGroups: organisationSettings.resourceSharingGroups,
       selectedUnits: organisationSettings.selectedUnits
     });
-  }, [activeLocationUnitOptions, activeUnitCode2, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
+  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) {
       pushContextSelectorDiag("validate:skip-platform-loading");
@@ -68483,18 +68485,18 @@ const App = () => {
       pushContextSelectorDiag("validate:skip-no-options");
       return;
     }
-    const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode2);
+    const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode);
     if (!activeUnitOption || activeUnitOption.disabled) {
-      if (String(activeUnitCode2 || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
+      if (String(activeUnitCode || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
         pushContextSelectorDiag("validate:hold-shared-until-settings", {
-          activeUnitCode: activeUnitCode2,
+          activeUnitCode,
           optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
         });
         return;
       }
       const nextUnitCode = (activeLocationUnitOptions.find((unit) => !unit.disabled) || activeLocationUnitOptions[0]).code;
       pushContextSelectorDiag("validate:reset-unit", {
-        fromUnit: activeUnitCode2,
+        fromUnit: activeUnitCode,
         toUnit: nextUnitCode,
         optionCodes: activeLocationUnitOptions.map((unit) => unit.code),
         disabledOption: activeUnitOption?.disabled === true,
@@ -68503,58 +68505,58 @@ const App = () => {
       setActiveUnitCode(nextUnitCode);
     } else {
       pushContextSelectorDiag("validate:keep-unit", {
-        activeUnitCode: activeUnitCode2,
+        activeUnitCode,
         optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
       });
     }
-  }, [activeLocationUnitOptions, activeUnitCode2, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag]);
+  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag]);
   reactExports.useEffect(() => {
     try {
       const payload = {
         location: school,
-        unit: activeUnitCode2
+        unit: activeUnitCode
       };
       localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
       pushContextSelectorDiag("persist:context", { payload });
     } catch (error) {
       pushContextSelectorDiag("persist:error", { error: String(error) });
     }
-  }, [school, activeUnitCode2, pushContextSelectorDiag]);
+  }, [school, activeUnitCode, pushContextSelectorDiag]);
   const activeUnitContext = reactExports.useMemo(
-    () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode2) || activeLocationUnitOptions[0] || null,
-    [activeLocationUnitOptions, activeUnitCode2]
+    () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode) || activeLocationUnitOptions[0] || null,
+    [activeLocationUnitOptions, activeUnitCode]
   );
   const activeContextUnitCodes = reactExports.useMemo(() => {
     const memberUnits = activeUnitContext?.memberUnits;
-    const rawUnits = Array.isArray(memberUnits) && memberUnits.length > 0 ? memberUnits : String(activeUnitCode2 || "").split("+");
+    const rawUnits = Array.isArray(memberUnits) && memberUnits.length > 0 ? memberUnits : String(activeUnitCode || "").split("+");
     return Array.from(new Set(rawUnits.map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean)));
-  }, [activeUnitCode2, activeUnitContext]);
+  }, [activeUnitCode, activeUnitContext]);
   const activeContextUnitCodeSet = reactExports.useMemo(
     () => new Set(activeContextUnitCodes),
     [activeContextUnitCodes]
   );
   const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
-  const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode2;
-  const activeOperationalModel2 = activeUnitContext?.model || normaliseOperationalModel("flight_school");
-  const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel2);
+  const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
+  const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
+  const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
   const activeTaskProfiles = reactExports.useMemo(
-    () => getTaskProfilesForModel(platformConfig2, activeOperationalModel2),
-    [activeOperationalModel2, platformConfig2]
+    () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
+    [activeOperationalModel, platformConfig]
   );
   const activeOperationalContext = reactExports.useMemo(() => ({
     locationCode: school,
-    unitCode: activeUnitCode2,
-    unitName: activeUnitContext?.name || activeUnitCode2,
+    unitCode: activeUnitCode,
+    unitName: activeUnitContext?.name || activeUnitCode,
     unitCodes: activeContextUnitCodes,
     isSharedFleetContext: isSharedFleetOperationalContext,
-    operationalModel: activeOperationalModel2,
+    operationalModel: activeOperationalModel,
     operationalModelLabel: activeOperationalModelLabel
-  }), [activeContextUnitCodes, activeOperationalModel2, activeOperationalModelLabel, activeUnitCode2, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
+  }), [activeContextUnitCodes, activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
   const getOperationalModelForUnitCode = reactExports.useCallback((unitCode) => {
     const normalisedUnit = String(unitCode || "").trim().toUpperCase();
-    const unit = (platformConfig2?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
-    return unit ? getUnitOperationalModel(unit) : activeOperationalModel2;
-  }, [activeOperationalModel2, platformConfig2]);
+    const unit = (platformConfig?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
+    return unit ? getUnitOperationalModel(unit) : activeOperationalModel;
+  }, [activeOperationalModel, platformConfig]);
   const getSyllabusMasterLmpCodes = reactExports.useCallback((item) => {
     const courses2 = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
     if (courses2.length > 0) return courses2;
@@ -68562,12 +68564,12 @@ const App = () => {
   }, []);
   const hasMasterLmpUnitAccess = reactExports.useCallback((lmpCode, unitCode, requiredAccess = "View") => {
     if (!platformConfigLoaded) return false;
-    const contextUnitCode = unitCode || activeUnitCode2;
-    return hasMasterLmpAccess(platformConfig2, lmpCode, {
+    const contextUnitCode = unitCode || activeUnitCode;
+    return hasMasterLmpAccess(platformConfig, lmpCode, {
       unitCode: contextUnitCode,
       operationalModel: getOperationalModelForUnitCode(contextUnitCode)
     }, requiredAccess);
-  }, [activeUnitCode2, getOperationalModelForUnitCode, platformConfig2, platformConfigLoaded]);
+  }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded]);
   const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => items.filter((item) => {
     if (item.lmpType === "Staff CAT") return true;
     const lmpCodes = getSyllabusMasterLmpCodes(item);
@@ -68575,12 +68577,12 @@ const App = () => {
     return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
   }), [getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess]);
   const activePlatformResourcePool = reactExports.useMemo(
-    () => getLocationResourcePool(platformConfig2, school, activeResourcePoolUnitCode),
-    [activeResourcePoolUnitCode, platformConfig2, school]
+    () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
+    [activeResourcePoolUnitCode, platformConfig, school]
   );
   const activeLocationSolarProfile = reactExports.useMemo(() => {
     const normalisedSchool = String(school || "").trim().toUpperCase();
-    const configuredLocation = (platformConfig2?.locations || []).find((location) => getLocationSelectorAliases(location).includes(normalisedSchool));
+    const configuredLocation = (platformConfig?.locations || []).find((location) => getLocationSelectorAliases(location).includes(normalisedSchool));
     const fallbackProfile = getDefaultAirfieldSolarProfile(configuredLocation?.code) || getDefaultAirfieldSolarProfile(configuredLocation?.name) || getDefaultAirfieldSolarProfile(school);
     const latitude = configuredLocation?.latitude ?? configuredLocation?.settings?.latitude ?? fallbackProfile?.latitude ?? null;
     const longitude = configuredLocation?.longitude ?? configuredLocation?.settings?.longitude ?? fallbackProfile?.longitude ?? null;
@@ -68592,7 +68594,7 @@ const App = () => {
       longitude: longitude === null || longitude === "" ? null : Number(longitude),
       timezone: timezone ? String(timezone) : null
     };
-  }, [platformConfig2, school]);
+  }, [platformConfig, school]);
   const getSunTimesForDate = reactExports.useCallback((targetDate) => {
     const { latitude, longitude, timezone } = activeLocationSolarProfile;
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !timezone) {
@@ -68618,11 +68620,11 @@ const App = () => {
     const normaliseToken = (value) => String(value || "").trim().toUpperCase();
     const selectedAliases = knownDfpLocationAliases(school);
     const selectedAliasSet = new Set(selectedAliases.map(normaliseToken).filter(Boolean));
-    const configuredLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliasSet.has(normaliseToken(alias))));
+    const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliasSet.has(normaliseToken(alias))));
     const configuredAliases = configuredLocation ? getLocationSelectorAliases(configuredLocation) : [];
     const expandedAliases = [school, ...selectedAliases, ...configuredAliases].flatMap((alias) => [alias, ...knownDfpLocationAliases(alias)]).map(normaliseToken).filter(Boolean);
     return new Set(expandedAliases);
-  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig2, school]);
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
   const isActiveLocationAlias = reactExports.useCallback((value) => {
     const directToken = String(value || "").trim().toUpperCase();
     if (!directToken) return false;
@@ -68635,19 +68637,19 @@ const App = () => {
     if (personLocation && isActiveLocationAlias(personLocation)) return true;
     const unitCode = personUnit.split("/")[0].trim().toUpperCase();
     if (!unitCode) return !personLocation;
-    const configuredUnit = (platformConfig2?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => String(unit.code || "").trim().toUpperCase() === unitCode);
+    const configuredUnit = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => String(unit.code || "").trim().toUpperCase() === unitCode);
     if (configuredUnit?.locationCode && isActiveLocationAlias(configuredUnit.locationCode)) return true;
     if (unitCode.startsWith("2FTS")) return isActiveLocationAlias("PEA");
     if (unitCode.startsWith("1FTS") || unitCode.startsWith("CFS")) return isActiveLocationAlias("ESL");
     return !personLocation;
-  }, [isActiveLocationAlias, platformConfig2]);
+  }, [isActiveLocationAlias, platformConfig]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     if (activePlatformResourcePool) {
       console.log("[PlatformConfig] Active location resource context:", {
         school,
-        unit: activeUnitCode2,
-        operationalModel: activeOperationalModel2,
+        unit: activeUnitCode,
+        operationalModel: activeOperationalModel,
         pool: activePlatformResourcePool.code,
         poolType: activePlatformResourcePool.poolType,
         aircraftType: activePlatformResourcePool.aircraftTypeCode,
@@ -68655,9 +68657,9 @@ const App = () => {
         settings: activePlatformResourcePool.settings
       });
     } else {
-      console.log("[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.", { school, unit: activeUnitCode2, operationalModel: activeOperationalModel2 });
+      console.log("[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.", { school, unit: activeUnitCode, operationalModel: activeOperationalModel });
     }
-  }, [activePlatformResourcePool, activeOperationalModel2, activeUnitCode2, platformConfigLoaded, school]);
+  }, [activePlatformResourcePool, activeOperationalModel, activeUnitCode, platformConfigLoaded, school]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     const locationFiltered = allInstructorsData.filter(personMatchesActiveLocation);
@@ -68839,7 +68841,7 @@ const App = () => {
   const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
   const currentUser2 = instructorsData.find((inst) => inst.name === currentUserName) || instructorsData[0];
   const [sessionUser, setSessionUser] = reactExports.useState(null);
-  const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig2, [
+  const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
     authUser?.id,
     authUser?.userId,
     authUser?.username,
@@ -68847,7 +68849,7 @@ const App = () => {
     sessionUser?.userId,
     sessionUser?.username,
     currentUserName
-  ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig2, baseSelectableLocationCodes]);
+  ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
   const hasRuntimePlatformWideAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(authUser?.role || "").toUpperCase()) || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin;
   const selectableLocationCodes = reactExports.useMemo(
     () => hasRuntimePlatformWideAccess ? baseSelectableLocationCodes : platformAccessContext.accessibleLocations,
@@ -68866,7 +68868,7 @@ const App = () => {
   );
   const platformDataScopeQuery = reactExports.useMemo(() => {
     const scope = hasRuntimePlatformWideAccess ? { organisationCodes: [], locationCode: school, unitCodes: [], allUnits: true } : getPlatformDataScopeForLocation(platformAccessContext, school);
-    const requestedUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : activeUnitCode2 ? [activeUnitCode2] : [];
+    const requestedUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : activeUnitCode ? [activeUnitCode] : [];
     const requestedUnitCodeSet = new Set(requestedUnitCodes.map((unitCode) => String(unitCode || "").trim().toUpperCase()));
     const scopedUnitCodes = requestedUnitCodes.length > 0 ? scope.allUnits || scope.unitCodes.length === 0 ? requestedUnitCodes : scope.unitCodes.filter((unitCode) => requestedUnitCodeSet.has(String(unitCode || "").trim().toUpperCase())) : scope.unitCodes;
     return buildPlatformDataScopeQuery({
@@ -68874,7 +68876,7 @@ const App = () => {
       unitCodes: scopedUnitCodes,
       allUnits: requestedUnitCodes.length === 0 && scope.allUnits
     });
-  }, [activeContextUnitCodes, activeUnitCode2, hasRuntimePlatformWideAccess, platformAccessContext, school]);
+  }, [activeContextUnitCodes, activeUnitCode, hasRuntimePlatformWideAccess, platformAccessContext, school]);
   const scopedApiPath = reactExports.useCallback((path, extraParams) => {
     const params = new URLSearchParams(platformDataScopeQuery);
     Object.entries(extraParams || {}).forEach(([key, value]) => {
@@ -68892,7 +68894,7 @@ const App = () => {
       stage,
       date,
       school,
-      unit: activeUnitCode2,
+      unit: activeUnitCode,
       activeView,
       details
     };
@@ -68913,14 +68915,14 @@ const App = () => {
   }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
-      platformLocations: (platformConfig2?.locations || []).map((location) => ({
+      platformLocations: (platformConfig?.locations || []).map((location) => ({
         code: location.code,
         iataCode: location.iataCode,
         name: location.name,
         status: location.status,
         aliases: getLocationSelectorAliases(location)
       })),
-      platformUnits: (platformConfig2?.units || []).map((unit) => ({
+      platformUnits: (platformConfig?.units || []).map((unit) => ({
         code: unit.code,
         locationCode: unit.locationCode,
         status: unit.status,
@@ -68941,7 +68943,7 @@ const App = () => {
     hasRuntimePlatformWideAccess,
     operationalContextOptions,
     platformAccessContext,
-    platformConfig2,
+    platformConfig,
     platformDataScopeQuery,
     selectableLocationCodes
   ]);
@@ -68951,21 +68953,21 @@ const App = () => {
     const normalisedSchool = String(school || "").trim().toUpperCase();
     const aliasMatchedLocation = selectableLocationCodes.find((locationCode) => {
       const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-      const configuredLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+      const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
       const aliases = configuredLocation ? getLocationSelectorAliases(configuredLocation) : [normalisedLocationCode];
       return aliases.includes(normalisedSchool);
     });
     if (aliasMatchedLocation) {
       const nextUnits = getUnitOptionsForLocation(aliasMatchedLocation);
       setSchool(aliasMatchedLocation);
-      if (nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode2)) {
+      if (nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode)) {
         setActiveUnitCode(nextUnits[0].code);
       }
     } else {
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [activeUnitCode2, getLocationSelectorAliases, getUnitOptionsForLocation, platformConfig2, platformConfigLoaded, selectableLocationCodes, school]);
+  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformConfig, platformConfigLoaded, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
@@ -68978,13 +68980,13 @@ const App = () => {
   const [syllabusError, setSyllabusError] = reactExports.useState(null);
   const visibleSyllabusDetails = reactExports.useMemo(() => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-    const activeUnit = normaliseContextCode(activeUnitCode2);
-    return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode2).filter((item) => {
+    const activeUnit = normaliseContextCode(activeUnitCode);
+    return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode).filter((item) => {
       if (item.lmpType !== "Staff CAT") return true;
       const packageUnit = normaliseContextCode(item.unit);
       return !packageUnit || packageUnit === activeUnit;
     });
-  }, [activeUnitCode2, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+  }, [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
   reactExports.useEffect(() => {
     const loadSyllabus = async () => {
       setSyllabusLoading(true);
@@ -69057,7 +69059,7 @@ const App = () => {
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
           try {
-            const assignableSyncSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode2);
+            const assignableSyncSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
             const bpcIpcSyllabus = assignableSyncSyllabus.filter(
               (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
             );
@@ -69109,7 +69111,7 @@ const App = () => {
                     const newLMPs = new Map(prev);
                     lmps.forEach((lmp) => {
                       const traineeForLmp = data.trainees.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
-                      const traineeUnitCode = traineeForLmp?.unit || activeUnitCode2;
+                      const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
                       if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
                         newLMPs.delete(lmp.traineeFullName);
                         console.log(`[LMP Sync] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
@@ -69199,7 +69201,7 @@ const App = () => {
                 }
               }
               if (!lmpType) lmpType = "BPC+IPC";
-              const traineeUnitCode = trainee.unit || activeUnitCode2;
+              const traineeUnitCode = trainee.unit || activeUnitCode;
               if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
                 newLMPs.delete(trainee.fullName);
                 console.log(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
@@ -69284,7 +69286,7 @@ const App = () => {
         }
         const isFicTrainee = lmpType === "FIC";
         const alreadySet = newLMPs.has(trainee.fullName);
-        const traineeUnitCode = trainee.unit || activeUnitCode2;
+        const traineeUnitCode = trainee.unit || activeUnitCode;
         if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
           newLMPs.delete(trainee.fullName);
           console.log(`[LMP Re-init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
@@ -69309,11 +69311,11 @@ const App = () => {
       console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
       return newLMPs;
     });
-  }, [activeUnitCode2, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, syllabusDetails]);
+  }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, syllabusDetails]);
   reactExports.useEffect(() => {
     let cancelled = false;
     const requestedSchool = school;
-    const requestedUnit = activeUnitCode2;
+    const requestedUnit = activeUnitCode;
     const loadHistoricalData = async () => {
       try {
         const apiBase2 = getAppApiBase();
@@ -69481,7 +69483,7 @@ const App = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeUnitCode2, school]);
+  }, [activeUnitCode, school]);
   reactExports.useEffect(() => {
     const loadSnapshotDates = async () => {
       try {
@@ -69560,20 +69562,20 @@ const App = () => {
       }));
     }
     return events3.length;
-  }, [activeUnitCode2]);
+  }, [activeUnitCode]);
   const getDailySnapshotLocationAliases = React.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-    const matchingLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+    const matchingLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
     return [
       normalisedLocationCode,
       ...knownDfpLocationAliases(normalisedLocationCode),
       ...matchingLocation ? getLocationSelectorAliases(matchingLocation) : []
     ].map((alias) => String(alias || "").trim().toUpperCase()).filter((alias, index, aliases) => Boolean(alias) && aliases.indexOf(alias) === index);
-  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig2]);
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
     const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
     const snapshotSchool = schoolOverride ?? school;
-    const snapshotUnit = unitOverride ?? activeUnitCode2;
+    const snapshotUnit = unitOverride ?? activeUnitCode;
     const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
     const snapshotLocationAliases = getDailySnapshotLocationAliases(snapshotSchool);
     const cacheKey = `dfp_snapshot_cache_${snapshotKey}`;
@@ -69760,11 +69762,11 @@ const App = () => {
     } finally {
       loadingSnapshotDates.current.delete(snapshotKey);
     }
-  }, [activeUnitCode2, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
+  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
   reactExports.useEffect(() => {
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true });
-  }, [activeUnitCode2, date, school, loadSnapshotForDate]);
+  }, [activeUnitCode, date, school, loadSnapshotForDate]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -69812,8 +69814,8 @@ const App = () => {
   const [coursePercentages, setCoursePercentages] = reactExports.useState(/* @__PURE__ */ new Map());
   const [traineeLMPs, setTraineeLMPs] = reactExports.useState(/* @__PURE__ */ new Map());
   const hasConfiguredCourseUnitScope = reactExports.useMemo(
-    () => (platformConfig2?.units || []).some((unit) => unit.status !== "INACTIVE"),
-    [platformConfig2]
+    () => (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE"),
+    [platformConfig]
   );
   const getCourseUnitCodes = reactExports.useCallback((course) => {
     const rawUnit = String(course.unit || "").trim();
@@ -69923,7 +69925,7 @@ const App = () => {
     }, 700);
     return () => window.clearTimeout(noticeTimer);
   }, [date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAuthenticated]);
-  function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode2) {
+  function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode) {
     const safeUnit = String(targetUnit || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
     const safeSchool = String(targetSchool || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
     return safeUnit ? `${targetDate}__${safeSchool}__${safeUnit}` : `${targetDate}__${safeSchool}`;
@@ -70018,16 +70020,16 @@ const App = () => {
     ...aircraftConfigurations.filter((definition) => definition.id !== "CONFIG-0")
   ], [aircraftConfigurations]);
   const personnelDisplaySettings = reactExports.useMemo(
-    () => getPersonnelDisplaySettings(platformConfig2),
-    [platformConfig2]
+    () => getPersonnelDisplaySettings(platformConfig),
+    [platformConfig]
   );
   const trainingReportTerminology = reactExports.useMemo(
-    () => getTrainingReportTerminology(platformConfig2),
-    [platformConfig2]
+    () => getTrainingReportTerminology(platformConfig),
+    [platformConfig]
   );
   const insertEventTypes = reactExports.useMemo(
-    () => getInsertEventTypes(platformConfig2),
-    [platformConfig2]
+    () => getInsertEventTypes(platformConfig),
+    [platformConfig]
   );
   const instructorLabel = personnelDisplaySettings.instructorLabel;
   const formatResourceDisplayLabel = reactExports.useCallback(
@@ -71887,8 +71889,8 @@ ${"=".repeat(60)}`);
         return Array.isArray(settings?.permissionProfileIds) ? settings.permissionProfileIds : [];
       })
     ].map((value) => normalisePermissionId(String(value))).filter(Boolean));
-    return new Set(getPlatformPermissionProfiles(platformConfig2).filter((profile) => profileIds.has(normalisePermissionId(profile.id)) || profileIds.has(normalisePermissionId(profile.name))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
-  }, [platformAccessContext, platformConfig2, normalisePermissionId]);
+    return new Set(getPlatformPermissionProfiles(platformConfig).filter((profile) => profileIds.has(normalisePermissionId(profile.id)) || profileIds.has(normalisePermissionId(profile.name))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
+  }, [platformAccessContext, platformConfig, normalisePermissionId]);
   const canUsePlatformPermission = reactExports.useCallback((permissionId) => {
     if (platformAccessContext.isSuperAdmin) return true;
     if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
@@ -71902,10 +71904,10 @@ ${"=".repeat(60)}`);
   const canRunValidation = canUsePlatformPermission("dfp.validation");
   const canPublishDfp = canUsePlatformPermission("dfp.publish");
   const canRunNeoBuild = canUsePlatformPermission("neo.run");
-  const isNeoCapableOperationalModel = activeOperationalModel2 === "flight_school" || activeOperationalModel2 === "air_combat";
+  const isNeoCapableOperationalModel = activeOperationalModel === "flight_school" || activeOperationalModel === "air_combat";
   const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
-  const modelUnavailableLeftViews = activeOperationalModel2 === "air_combat" ? ["Trainee"] : [];
-  const modelUnavailableRightViews = activeOperationalModel2 === "air_combat" ? ["NextDayTraineeSchedule"] : [];
+  const modelUnavailableLeftViews = activeOperationalModel === "air_combat" ? ["Trainee"] : [];
+  const modelUnavailableRightViews = activeOperationalModel === "air_combat" ? ["NextDayTraineeSchedule"] : [];
   const canViewOwnTraineeProfile = canUsePlatformPermission("trainee.profile.own");
   const canViewOtherTraineeProfiles = canUsePlatformPermission("trainee.profile.others");
   const canViewOwnPt051 = canUsePlatformPermission("trainee.pt051.own");
@@ -72082,7 +72084,7 @@ ${"=".repeat(60)}`);
       const persistedLmp = data?.lmp?.events;
       if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return null;
       const persistedLmpType = data?.lmp?.lmpType || trainee.lmpType || "BPC+IPC";
-      const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode2;
+      const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
       if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, "Assign")) {
         setTraineeLMPs((prev) => {
           const updated = new Map(prev);
@@ -72103,7 +72105,7 @@ ${"=".repeat(60)}`);
       console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
       return null;
     }
-  }, [activeUnitCode2, allTraineesData, hasMasterLmpUnitAccess]);
+  }, [activeUnitCode, allTraineesData, hasMasterLmpUnitAccess]);
   const loadPersistedPt051Assessment = reactExports.useCallback(async (trainee, event) => {
     const loadKey = `${event.id}-${trainee.fullName}`;
     try {
@@ -72297,7 +72299,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (courseObj?.lmpType) lmpType = courseObj.lmpType;
     }
     if (!lmpType) lmpType = "BPC+IPC";
-    const traineeUnitCode = newTrainee.unit || activeUnitCode2;
+    const traineeUnitCode = newTrainee.unit || activeUnitCode;
     if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
       setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
       return;
@@ -72317,7 +72319,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
     }
     setSuccessMessage("New Trainee Added!");
-  }, [activeUnitCode2, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails]);
+  }, [activeUnitCode, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails]);
   const handleUpdateTrainee = reactExports.useCallback(async (data) => {
     console.log("📝 [APP] handleUpdateTrainee called");
     console.log("📝 [APP] Trainee data received:", {
@@ -72328,18 +72330,18 @@ ${error instanceof Error ? error.message : String(error)}`,
       unavailability: data.unavailability,
       unavailabilityLength: data.unavailability?.length || 0
     });
-    const traineeUnitCode = data.unit || activeUnitCode2;
+    const traineeUnitCode = data.unit || activeUnitCode;
     const requestedLmpType = data.lmpType || "";
     const requestedAcademicLmpType = data.academicLmpType || "";
     const lmpAccessContext = {
       unitCode: traineeUnitCode,
-      operationalModel: activeOperationalModel2
+      operationalModel: activeOperationalModel
     };
-    if (requestedLmpType && !hasMasterLmpAccess(platformConfig2, requestedLmpType, lmpAccessContext, "Assign")) {
+    if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
-    if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig2, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
+    if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
@@ -72415,7 +72417,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     } else {
       console.log("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
     }
-  }, [activeOperationalModel2, activeUnitCode2, platformConfig2]);
+  }, [activeOperationalModel, activeUnitCode, platformConfig]);
   const buildRemedialPackageLmp = (originalTraineeLMP, eventToRemediate, newEvents) => {
     let lastNewEventId = eventToRemediate.id;
     const remedialPackageItems = [];
@@ -73047,16 +73049,16 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
   };
   const handleUpdateCourseFromTrainingRecords = async (courseName, data) => {
-    const courseUnitCode = data.unit || activeUnitCode2;
+    const courseUnitCode = data.unit || activeUnitCode;
     const lmpAccessContext = {
       unitCode: courseUnitCode,
-      operationalModel: activeOperationalModel2
+      operationalModel: activeOperationalModel
     };
-    if (data.lmpType && !hasMasterLmpAccess(platformConfig2, data.lmpType, lmpAccessContext, "Assign")) {
+    if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
-    if (data.academicLmpType && !hasMasterLmpAccess(platformConfig2, data.academicLmpType, lmpAccessContext, "Assign")) {
+    if (data.academicLmpType && !hasMasterLmpAccess(platformConfig, data.academicLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
@@ -73407,8 +73409,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       isPaused: !!inst.isPaused,
       currencyStatus: inst.currencyStatus || [],
       snapshotSchool: school,
-      snapshotUnit: activeUnitCode2,
-      operationalModel: activeOperationalModel2,
+      snapshotUnit: activeUnitCode,
+      operationalModel: activeOperationalModel,
       snapshotDate: targetDate
     }));
     const lmpCompletedIdsMap = {};
@@ -73424,8 +73426,8 @@ ${error instanceof Error ? error.message : String(error)}`,
     const snapshotPayload = {
       date: snapshotKey,
       locationCode: school,
-      unitCode: activeUnitCode2,
-      operationalModel: activeOperationalModel2,
+      unitCode: activeUnitCode,
+      operationalModel: activeOperationalModel,
       scheduleEvents: allEventsForDate,
       staffEvents: staffEventsForDate,
       traineeEvents: traineeEventsForDate,
@@ -73437,7 +73439,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       aircraftConfigState: currentAircraftConfigState,
       savedBy
     };
-    console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events...`);
+    console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
     fetch(`${apiBase2}/daily-snapshot/save`, {
       method: "POST",
@@ -73447,7 +73449,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (result.success) {
         loadedSnapshotDates.current.add(snapshotKey);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events`);
+        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events`);
       } else {
         console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
       }
@@ -73973,8 +73975,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         date: snapshotDate,
         eventDate: date,
         school,
-        unit: activeUnitCode2,
-        operationalModel: activeOperationalModel2,
+        unit: activeUnitCode,
+        operationalModel: activeOperationalModel,
         eventId,
         sentBy: userId,
         recipients,
@@ -74819,7 +74821,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       return;
     }
     if (!isNeoCapableOperationalModel) {
-      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode2}. NEO Build is not available for this operational model yet.`);
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build is not available for this operational model yet.`);
       return;
     }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
@@ -74896,7 +74898,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     let buildTraineeLMPs = traineeLMPs;
     try {
       const apiBase2 = getApiBaseUrl();
-      const assignableBuildSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode2);
+      const assignableBuildSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
       const bpcIpcSyllabus = assignableBuildSyllabus.filter(
         (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
       );
@@ -74934,7 +74936,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         (lmpData.lmps || []).forEach((lmp) => {
           if (lmp.traineeFullName && Array.isArray(lmp.events)) {
             const traineeForLmp = traineesData.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
-            const traineeUnitCode = traineeForLmp?.unit || activeUnitCode2;
+            const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
             if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
               console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
               return;
@@ -74973,6 +74975,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):", traineesInBuild.length, "| mockData count:", traineesInBuild.filter((t) => t._dataSource !== "database").length, "| DB count:", traineesInBuild.filter((t) => t._dataSource === "database").length);
     console.log("🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:", instructorsInBuild.slice(0, 5).map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: i._dataSource })));
     const config = {
+      operationalModel: activeOperationalModel,
+      activeUnitCode,
+      airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
       instructors: instructorsInBuild,
       trainees: traineesInBuild,
       syllabus: syllabusDetails,
@@ -75148,11 +75153,11 @@ ${conflictLines.join("\n")}${moreText}`,
           const existingDiagRaw = localStorage.getItem("neo_build_diag_report");
           const existingDiag = existingDiagRaw ? JSON.parse(existingDiagRaw) : {};
           const fallbackAirCombatPriority = existingDiag.airCombatPriority || {
-            enabled: activeOperationalModel2 === "air_combat",
-            model: activeOperationalModel2,
+            enabled: activeOperationalModel === "air_combat",
+            model: activeOperationalModel,
             context: {
               locationCode: school,
-              unitCode: activeUnitCode2,
+              unitCode: activeUnitCode,
               buildDate: buildDfpDate
             },
             inputs: {
@@ -75165,7 +75170,7 @@ ${conflictLines.join("\n")}${moreText}`,
               stage: "runtime-error-before-air-combat-diagnostics",
               timestamp: runtimeErrorReport.timestamp
             }],
-            conclusion: activeOperationalModel2 === "air_combat" ? ["Build failed before the Air Combat scheduler diagnostics completed. See runtimeError for the exact exception."] : [`Air Combat scheduler did not run because active model was ${activeOperationalModel2 || "blank"}.`],
+            conclusion: activeOperationalModel === "air_combat" ? ["Build failed before the Air Combat scheduler diagnostics completed. See runtimeError for the exact exception."] : [`Air Combat scheduler did not run because active model was ${activeOperationalModel || "blank"}.`],
             rejectionReasons: {},
             skipReasons: [],
             placements: []
@@ -75823,8 +75828,8 @@ ${conflictLines.join("\n")}${moreText}`,
         isPaused: !!inst.isPaused,
         currencyStatus: inst.currencyStatus || [],
         snapshotSchool: school,
-        snapshotUnit: activeUnitCode2,
-        operationalModel: activeOperationalModel2,
+        snapshotUnit: activeUnitCode,
+        operationalModel: activeOperationalModel,
         snapshotDate: buildDfpDate
       }));
       const lmpCompletedIdsMap = {};
@@ -75841,8 +75846,8 @@ ${conflictLines.join("\n")}${moreText}`,
       const snapshotPayload = {
         date: snapshotKey,
         locationCode: school,
-        unitCode: activeUnitCode2,
-        operationalModel: activeOperationalModel2,
+        unitCode: activeUnitCode,
+        operationalModel: activeOperationalModel,
         scheduleEvents: newEventsForDate,
         staffEvents: staffEventsForDate,
         traineeEvents: traineeEventsForDate,
@@ -75864,7 +75869,7 @@ ${conflictLines.join("\n")}${moreText}`,
         body: JSON.stringify(snapshotPayload)
       }).then((res) => res.json()).then((result) => {
         if (result.success) {
-          console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode2}), ${newEventsForDate.length} events`);
+          console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
           loadedSnapshotDates.current.add(snapshotKey);
           cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
         } else {
@@ -77670,7 +77675,7 @@ ${conflictLines.join("\n")}${moreText}`,
       return;
     }
     if (!isNeoCapableOperationalModel) {
-      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode2}. NEO tile assistance is not available for this operational model yet.`);
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO tile assistance is not available for this operational model yet.`);
       return;
     }
     const isNextDay = ["NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "Priorities", "ProgramData"].includes(activeView);
@@ -77681,7 +77686,7 @@ ${conflictLines.join("\n")}${moreText}`,
       setOraclePreviewEvent(null);
     }
     setIsOracleMode((prev) => !prev);
-  }, [activeOperationalModel2, activeOperationalModelLabel, activeUnitCode2, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
+  }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
   reactExports.useEffect(() => {
     if (isOracleMode) {
       runOracleAnalysis();
@@ -78348,7 +78353,7 @@ ${conflictLines.join("\n")}${moreText}`,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,
-            platformConfig: platformConfig2
+            platformConfig
           }
         );
       case "CourseRoster":
@@ -78825,7 +78830,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onSavePT051Assessment,
             locations,
             units,
-            platformConfig: platformConfig2,
+            platformConfig,
             resourceDisplayNames,
             instructorLabel
           }
@@ -79120,7 +79125,7 @@ ${conflictLines.join("\n")}${moreText}`,
             resourceDisplayNames,
             personnelDisplaySettings,
             instructorLabel,
-            operationalModel: activeOperationalModel2
+            operationalModel: activeOperationalModel
           }
         );
       case "Instructors":
@@ -79232,7 +79237,7 @@ ${conflictLines.join("\n")}${moreText}`,
             resourceDisplayNames,
             personnelDisplaySettings,
             instructorLabel,
-            operationalModel: activeOperationalModel2
+            operationalModel: activeOperationalModel
           }
         );
       case "Trainees":
@@ -79280,10 +79285,10 @@ ${conflictLines.join("\n")}${moreText}`,
             onAddItem: handleAddSyllabusItem,
             aircraftConfigurations,
             activeLocationCode: school,
-            activeUnitCode: activeUnitCode2,
+            activeUnitCode,
             trainingPackageTemplates: syllabusDetails.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false),
             instructorsData,
-            operationalModel: activeOperationalModel2,
+            operationalModel: activeOperationalModel,
             currentUserName,
             onUpdateInstructor: async (data) => {
               const dbId = data.id;
@@ -80134,7 +80139,7 @@ Do you want to replace the existing entry?`,
             },
             contextOptions: operationalContextOptions,
             activeLocation: school,
-            activeUnit: activeUnitCode2,
+            activeUnit: activeUnitCode,
             onContextChange: (loc, unit) => changeOperationalContext(loc, unit),
             activeModelLabel: activeOperationalModelLabel,
             isMagnifierEnabled,
@@ -80335,7 +80340,7 @@ Do you want to replace the existing entry?`,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "FLTLT",
           currentUserName,
           currentUserLocation: school,
-          currentUserUnit: activeUnitCode2 || currentUser2?.unit || "1FTS",
+          currentUserUnit: activeUnitCode || currentUser2?.unit || "1FTS",
           canAccessView,
           canRunNeoBuild: canRunNeoBuildForActiveModel,
           canPublishDfp,
