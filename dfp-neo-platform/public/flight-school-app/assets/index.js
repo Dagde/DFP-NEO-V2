@@ -31871,6 +31871,49 @@ const InstructorProfileFlyout = ({
               }
             )
           ] }),
+          activeTab === "trainingReports" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-4", style: card3dStyle, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
+                "Training Reports - ",
+                instructor.name
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs italic mb-4", children: "Staff training report links are shown from the training assigned to this profile." }),
+            isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-3", children: [
+              { title: "Course Reports", items: assignedTraining.courses },
+              { title: "Training Package Reports", items: assignedTraining.trainingPackages }
+            ].map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-sky-400 font-semibold mb-2", children: group.title }),
+              group.items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.items.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-white", children: item.code }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 truncate", children: item.title }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[9px] uppercase tracking-wide text-gray-500", children: "Report source assigned" })
+              ] }, item.trainingKey)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "Nil" })
+            ] }, group.title)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training reports are not configured for this operational model." })
+          ] }),
+          activeTab === "trainingProgress" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-4", style: card3dStyle, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
+                "Training Progress - ",
+                instructor.name
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
+            ] }),
+            isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-3", children: [
+              { title: "Courses", items: assignedTraining.courses },
+              { title: "Training Packages", items: assignedTraining.trainingPackages }
+            ].map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-sky-400 font-semibold mb-2", children: group.title }),
+              group.items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.items.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-white", children: item.code }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 truncate", children: item.title })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 rounded border border-gray-600 bg-gray-950 px-2 py-1 text-[9px] font-semibold text-gray-300", children: "Assigned" })
+              ] }) }, item.trainingKey)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "Nil" })
+            ] }, group.title)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training progress is not configured for this operational model." })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d + " p-4", style: card3dStyle, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -32317,6 +32360,8 @@ const InstructorProfileFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("sct"), className: tabBtnClass("sct"), children: "Request SCT" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("trainingReports"), className: tabBtnClass("trainingReports"), children: "Training Reports" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("trainingProgress"), className: tabBtnClass("trainingProgress"), children: "Training Progress" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
               setActiveTab(null);
               handleEdit();

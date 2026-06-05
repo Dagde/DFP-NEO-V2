@@ -142,6 +142,7 @@ const initialExperience: LogbookExperience = {
 const card3d = "rounded-lg border border-gray-500/60 shadow-md";
 const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 type StaffRole = Instructor['role'];
+type StaffProfileTab = 'unavailable' | 'currency' | 'logbook' | 'sct' | 'trainingReports' | 'trainingProgress';
 
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
@@ -450,7 +451,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const formatMilitaryTime = (t: string | undefined) => t ? t.replace(':', '') : '';
 
   // Tab state — null means no tab open (profile only)
-  const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'sct' | null>(null);
+  const [activeTab, setActiveTab] = useState<StaffProfileTab | null>(null);
 
   // Logbook flight entries (fetched from DB when tab opens)
   const [logbookEntries, setLogbookEntries] = useState<any[]>([]);
@@ -828,6 +829,89 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     }}
                     className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
                   >Submit SCT Request</button>
+                </div>
+              )}
+
+              {activeTab === 'trainingReports' && (
+                <div className={card3d + " p-4"} style={card3dStyle}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-bold text-white">Training Reports - {instructor.name}</h4>
+                    <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                  </div>
+                  <p className="text-gray-400 text-xs italic mb-4">
+                    Staff training report links are shown from the training assigned to this profile.
+                  </p>
+                  {isAirCombatModel ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { title: 'Course Reports', items: assignedTraining.courses },
+                        { title: 'Training Package Reports', items: assignedTraining.trainingPackages },
+                      ].map(group => (
+                        <div key={group.title} className={card3d + " p-3"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                          <div className="text-[10px] text-sky-400 font-semibold mb-2">{group.title}</div>
+                          {group.items.length > 0 ? (
+                            <div className="space-y-1">
+                              {group.items.map(item => (
+                                <div key={item.trainingKey} className="rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5">
+                                  <div className="text-[11px] font-semibold text-white">{item.code}</div>
+                                  <div className="text-[10px] text-gray-400 truncate">{item.title}</div>
+                                  <div className="mt-1 text-[9px] uppercase tracking-wide text-gray-500">Report source assigned</div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-gray-500 text-[10px] italic">Nil</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400">
+                      Staff training reports are not configured for this operational model.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'trainingProgress' && (
+                <div className={card3d + " p-4"} style={card3dStyle}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-bold text-white">Training Progress - {instructor.name}</h4>
+                    <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                  </div>
+                  {isAirCombatModel ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { title: 'Courses', items: assignedTraining.courses },
+                        { title: 'Training Packages', items: assignedTraining.trainingPackages },
+                      ].map(group => (
+                        <div key={group.title} className={card3d + " p-3"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                          <div className="text-[10px] text-sky-400 font-semibold mb-2">{group.title}</div>
+                          {group.items.length > 0 ? (
+                            <div className="space-y-1">
+                              {group.items.map(item => (
+                                <div key={item.trainingKey} className="rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <div className="text-[11px] font-semibold text-white">{item.code}</div>
+                                      <div className="text-[10px] text-gray-400 truncate">{item.title}</div>
+                                    </div>
+                                    <span className="shrink-0 rounded border border-gray-600 bg-gray-950 px-2 py-1 text-[9px] font-semibold text-gray-300">Assigned</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-gray-500 text-[10px] italic">Nil</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400">
+                      Staff training progress is not configured for this operational model.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1288,6 +1372,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
                 <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                 <button onClick={() => handleTabClick('sct')} className={tabBtnClass('sct')}>Request SCT</button>
+                <button onClick={() => handleTabClick('trainingReports')} className={tabBtnClass('trainingReports')}>Training Reports</button>
+                <button onClick={() => handleTabClick('trainingProgress')} className={tabBtnClass('trainingProgress')}>Training Progress</button>
                 <button onClick={() => { setActiveTab(null); handleEdit(); }} disabled={isFrozen} className={btnClass}>Edit</button>
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
