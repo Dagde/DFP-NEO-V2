@@ -60,9 +60,9 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   // App already provides the active location/unit scoped staff list.
   const locationFilteredInstructorsForSchedule = props.instructorsData
     .sort((a, b) => {
-      // First sort by Role - QFIs before SIM IPs
-      const roleA = a.role === 'QFI' ? 0 : 1;
-      const roleB = b.role === 'QFI' ? 0 : 1;
+      // First sort by Role - flying staff before SIM IPs
+      const roleA = a.role === 'QFI' || a.role === 'Pilot' ? 0 : 1;
+      const roleB = b.role === 'QFI' || b.role === 'Pilot' ? 0 : 1;
       if (roleA !== roleB) {
         return roleA - roleB;
       }

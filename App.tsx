@@ -505,8 +505,10 @@ const normalisePersonnelRecord = (person: any): any => {
     const preferences = person?.preferences && typeof person.preferences === 'object' && !Array.isArray(person.preferences)
         ? person.preferences
         : {};
+    const unitCode = String(person?.unit || '').trim().toUpperCase();
     return {
         ...person,
+        role: unitCode === '77SQN' ? 'Pilot' : person?.role,
         callsign: person?.callsign || preferences.callsign || '',
         secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || '',
     };
@@ -20562,10 +20564,11 @@ updates.forEach(update => {
     const handleBulkUpdateInstructors = useCallback(async (updatedInstructors: Instructor[]) => {
         const normaliseImportedInstructor = (instructor: Instructor): Instructor => {
             const roleText = String(instructor.role || '').trim().toLowerCase();
+            const unitCode = String(instructor.unit || '').trim().toUpperCase();
             const inferredQfi = roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor';
             const nextInstructor: Instructor = {
                 ...instructor,
-                role: roleText === 'sim ip' ? 'SIM IP' : 'QFI',
+                role: unitCode === '77SQN' ? 'Pilot' : roleText === 'sim ip' ? 'SIM IP' : 'QFI',
                 isQFI: instructor.isQFI ?? inferredQfi,
                 isOFI: instructor.isOFI ?? false,
                 isCFI: instructor.isCFI ?? false,

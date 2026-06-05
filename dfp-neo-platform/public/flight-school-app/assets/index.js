@@ -30948,6 +30948,8 @@ const initialExperience = {
 };
 const card3d = "rounded-lg border border-gray-500/60 shadow-md";
 const card3dStyle = { background: "linear-gradient(180deg, #243044 0%, #1e2d42 60%)", boxShadow: "0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)" };
+const is77SqnUnit = (value) => String(value || "").trim().toUpperCase() === "77SQN";
+const getRoleForUnit = (value, unit) => is77SqnUnit(unit) ? "Pilot" : value === "Pilot" ? "QFI" : value;
 const InstructorProfileFlyout = ({
   instructor,
   onClose,
@@ -30986,7 +30988,7 @@ const InstructorProfileFlyout = ({
     const hasCurrentRank = Boolean(currentRank) && configuredRanks.some((option) => option.toLowerCase() === currentRank.toLowerCase());
     return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
   }, [personnelDisplaySettings, rank]);
-  const [role, setRole] = reactExports.useState(instructor.role);
+  const [role, setRole] = reactExports.useState(getRoleForUnit(instructor.role, instructor.unit));
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
   const [service, setService] = reactExports.useState(instructor.service);
   const [category, setCategory] = reactExports.useState(instructor.category);
@@ -31075,7 +31077,7 @@ const InstructorProfileFlyout = ({
     setIdNumber(instructor.idNumber);
     setName(instructor.name);
     setRank(instructor.rank);
-    setRole(instructor.role);
+    setRole(getRoleForUnit(instructor.role, instructor.unit));
     setCallsignNumber(instructor.callsignNumber);
     setService(instructor.service);
     setCategory(instructor.category);
@@ -31132,6 +31134,7 @@ const InstructorProfileFlyout = ({
       alert("Name is required.");
       return;
     }
+    const savedRole = getRoleForUnit(role, unit);
     let finalPhotoUrl = photoUrl;
     const dbId = instructor.id;
     if (dbId) {
@@ -31187,7 +31190,7 @@ const InstructorProfileFlyout = ({
       idNumber,
       name,
       rank,
-      role,
+      role: savedRole,
       callsignNumber,
       callsign: displayCallsign,
       service,
@@ -31216,12 +31219,12 @@ const InstructorProfileFlyout = ({
     };
     flushPendingAudits();
     if (isCreating) {
-      logAudit({ action: "Add", description: `Added new staff ${rank} ${name}`, changes: `Role: ${role}, Unit: ${unit}, Location: ${location}`, page: "Staff" });
+      logAudit({ action: "Add", description: `Added new staff ${rank} ${name}`, changes: `Role: ${savedRole}, Unit: ${unit}, Location: ${location}`, page: "Staff" });
     } else {
       const changes = [];
       if (instructor.name !== name) changes.push(`Name: ${instructor.name} → ${name}`);
       if (instructor.rank !== rank) changes.push(`Rank: ${instructor.rank} → ${rank}`);
-      if (instructor.role !== role) changes.push(`Role: ${instructor.role} → ${role}`);
+      if (instructor.role !== savedRole) changes.push(`Role: ${instructor.role} → ${savedRole}`);
       if (instructor.unit !== unit) changes.push(`Unit: ${instructor.unit || "(none)"} → ${unit || "(none)"}`);
       if (instructor.flight !== flight) changes.push(`Flight: ${instructor.flight || "(none)"} → ${flight || "(none)"}`);
       if (instructor.location !== location) changes.push(`Location: ${instructor.location || "(none)"} → ${location || "(none)"}`);
@@ -31725,10 +31728,10 @@ const InstructorProfileFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => setName(e.target.value) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: staffRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Role", value: getRoleForUnit(role, unit), onChange: (e) => setRole(e.target.value), children: is77SqnUnit(unit) ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Pilot", children: "Pilot" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "QFI", children: instructorLabel }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SIM IP", children: "SIM IP" })
-              ] })
+              ] }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-5 gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Callsign", value: displayCallsign || "Auto assigned", onChange: () => {
@@ -31809,7 +31812,7 @@ const InstructorProfileFlyout = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Role" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300 font-medium", children: instructor.role })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300 font-medium", children: getRoleForUnit(instructor.role, instructor.unit) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Category" }),
@@ -32473,6 +32476,7 @@ const generateRandomIdNumber$1 = () => {
   return Math.floor(Math.random() * (9999999 - 1e6 + 1)) + 1e6;
 };
 const UNIT_SORT_ORDER = { "1FTS": 1, "CFS": 2, "2FTS": 3 };
+const isPilotRole = (instructor) => String(instructor.role || "").trim().toLowerCase() === "pilot";
 const generateNewInstructorTemplate = () => ({
   idNumber: generateRandomIdNumber$1(),
   name: "",
@@ -32578,12 +32582,13 @@ const InstructorListView = ({
       }
     }
   }, [instructorsData]);
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
   const qfis = reactExports.useMemo(() => {
     return instructorsData.filter((i) => {
       const isQFI = i.role === "QFI" || i.isQFI === true || i.role === "INSTRUCTOR";
-      return isQFI;
+      return isQFI || isAirCombatModel && isPilotRole(i);
     }).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
-  }, [instructorsData, personnelDisplaySettings]);
+  }, [instructorsData, isAirCombatModel, personnelDisplaySettings]);
   const qfisByUnit = reactExports.useMemo(() => {
     const groups = {};
     qfis.forEach((instructor) => {
@@ -32604,7 +32609,6 @@ const InstructorListView = ({
     }),
     [qfisByUnit]
   );
-  const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
   const qfisByFlight = reactExports.useMemo(() => {
     if (!isAirCombatModel) return {};
     const groups = {};
@@ -32671,7 +32675,7 @@ const InstructorListView = ({
   const otherStaff = reactExports.useMemo(() => {
     console.log("🔍 [OTHER STAFF] instructorsData length:", instructorsData.length);
     const otherStaffCandidates = instructorsData.filter((i) => {
-      const isQfi = i.role === "QFI" || i.isQFI === true || i.role === "INSTRUCTOR";
+      const isQfi = i.role === "QFI" || i.isQFI === true || i.role === "INSTRUCTOR" || isAirCombatModel && isPilotRole(i);
       const isSimIp2 = i.role === "SIM IP";
       const isOfi = i.role === "OFI" || i.isOFI === true;
       const isOther = !isQfi && !isSimIp2 && !isOfi;
@@ -32995,8 +32999,8 @@ const StaffView = (props) => {
   useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
   const locationFilteredInstructorsForSchedule = props.instructorsData.sort((a, b) => {
-    const roleA = a.role === "QFI" ? 0 : 1;
-    const roleB = b.role === "QFI" ? 0 : 1;
+    const roleA = a.role === "QFI" || a.role === "Pilot" ? 0 : 1;
+    const roleB = b.role === "QFI" || b.role === "Pilot" ? 0 : 1;
     if (roleA !== roleB) {
       return roleA - roleB;
     }
@@ -40544,6 +40548,9 @@ const SettingsView = ({
     if (permissions) parsed.permissions = splitImportList(permissions);
     const rolesStr = getStr(row, ["Roles", "Qualifications and Roles", "Qualifications & Roles", "Qualifications"]);
     applyImportedQualifications(parsed, rolesStr);
+    if (String(parsed.unit || "").trim().toUpperCase() === "77SQN") {
+      parsed.role = "Pilot";
+    }
     return parsed;
   };
   const parseTraineeRow = (row) => {
@@ -42269,7 +42276,7 @@ const StaffMockDataTable = ({ instructorsData, onDeleteFromMockdata }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 font-mono text-xs", children: instructor.idNumber }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 whitespace-nowrap text-white font-medium", children: instructor.name }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: instructor.rank }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 text-xs font-medium rounded ${instructor.role === "QFI" ? "bg-sky-900/50 text-sky-300" : instructor.role === "OFI" ? "bg-purple-900/50 text-purple-300" : instructor.role === "SIM IP" ? "bg-teal-900/50 text-teal-300" : "bg-gray-700 text-gray-300"}`, children: instructor.role }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 text-xs font-medium rounded ${instructor.role === "QFI" ? "bg-sky-900/50 text-sky-300" : instructor.role === "Pilot" ? "bg-emerald-900/50 text-emerald-300" : instructor.role === "OFI" ? "bg-purple-900/50 text-purple-300" : instructor.role === "SIM IP" ? "bg-teal-900/50 text-teal-300" : "bg-gray-700 text-gray-300"}`, children: instructor.role }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: instructor.unit }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: instructor.category }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: instructor.flight || "-" }),
@@ -42807,8 +42814,10 @@ async function fetchInstructors() {
   if (result.success && result.data?.personnel) {
     return result.data.personnel.map((p) => {
       const preferences = p.preferences && typeof p.preferences === "object" && !Array.isArray(p.preferences) ? p.preferences : {};
+      const unitCode = String(p.unit || "").trim().toUpperCase();
       return {
         ...p,
+        role: unitCode === "77SQN" ? "Pilot" : p.role,
         callsign: p.callsign || preferences.callsign || "",
         secondaryCallsign: p.secondaryCallsign || preferences.secondaryCallsign || "",
         currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || []
@@ -59572,8 +59581,10 @@ const DfpSidePanelTimeline = ({
 };
 const normalisePersonnelRecord = (person) => {
   const preferences = person?.preferences && typeof person.preferences === "object" && !Array.isArray(person.preferences) ? person.preferences : {};
+  const unitCode = String(person?.unit || "").trim().toUpperCase();
   return {
     ...person,
+    role: unitCode === "77SQN" ? "Pilot" : person?.role,
     callsign: person?.callsign || preferences.callsign || "",
     secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || ""
   };
@@ -75253,10 +75264,11 @@ ${conflictLines.join("\n")}${moreText}`,
   const handleBulkUpdateInstructors = reactExports.useCallback(async (updatedInstructors) => {
     const normaliseImportedInstructor = (instructor) => {
       const roleText = String(instructor.role || "").trim().toLowerCase();
+      const unitCode = String(instructor.unit || "").trim().toUpperCase();
       const inferredQfi = roleText === "pilot" || roleText === "qfi" || roleText === "instructor";
       const nextInstructor = {
         ...instructor,
-        role: roleText === "sim ip" ? "SIM IP" : "QFI",
+        role: unitCode === "77SQN" ? "Pilot" : roleText === "sim ip" ? "SIM IP" : "QFI",
         isQFI: instructor.isQFI ?? inferredQfi,
         isOFI: instructor.isOFI ?? false,
         isCFI: instructor.isCFI ?? false,

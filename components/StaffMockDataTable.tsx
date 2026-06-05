@@ -92,6 +92,7 @@ const StaffMockDataTable: React.FC<StaffMockDataTableProps> = ({ instructorsData
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <span className={`px-2 py-1 text-xs font-medium rounded ${
                                             instructor.role === 'QFI' ? 'bg-sky-900/50 text-sky-300' :
+                                            instructor.role === 'Pilot' ? 'bg-emerald-900/50 text-emerald-300' :
                                             instructor.role === 'OFI' ? 'bg-purple-900/50 text-purple-300' :
                                             instructor.role === 'SIM IP' ? 'bg-teal-900/50 text-teal-300' :
                                             'bg-gray-700 text-gray-300'

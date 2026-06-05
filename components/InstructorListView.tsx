@@ -20,6 +20,8 @@ const generateRandomIdNumber = (): number => {
 
 // Unit display sort order in Staff Profile
 const UNIT_SORT_ORDER: Record<string, number> = { '1FTS': 1, 'CFS': 2, '2FTS': 3 };
+const isPilotRole = (instructor: Instructor): boolean =>
+    String(instructor.role || '').trim().toLowerCase() === 'pilot';
 
 const generateNewInstructorTemplate = (): Instructor => ({
     idNumber: generateRandomIdNumber(),
@@ -178,14 +180,16 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     }
   }, [instructorsData]);
 
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
+
   const qfis = useMemo(() => {
       return instructorsData
           .filter(i => {
               const isQFI = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
-              return isQFI;
+              return isQFI || (isAirCombatModel && isPilotRole(i));
           })
           .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
-  }, [instructorsData, personnelDisplaySettings]);
+  }, [instructorsData, isAirCombatModel, personnelDisplaySettings]);
 
   const qfisByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
@@ -207,8 +211,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
           return a.localeCompare(b);
       }),
   [qfisByUnit]);
-
-  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
 
   const qfisByFlight = useMemo(() => {
       if (!isAirCombatModel) return {};
@@ -288,7 +290,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
         const otherStaffCandidates = instructorsData.filter(i => {
             // Exclude QFIs, INSTRUCTORs, SIM IPs, and OFIs
-            const isQfi = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
+            const isQfi = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR' || (isAirCombatModel && isPilotRole(i));
             const isSimIp = i.role === 'SIM IP';
             const isOfi = i.role === 'OFI' || i.isOFI === true;
 

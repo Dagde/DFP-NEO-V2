@@ -125,7 +125,7 @@ export interface Instructor {
   name: string;
   rank: InstructorRank;
   photoUrl?: string | null;  // Profile photo — base64 data URI or https URL; null/undefined = no photo
-  role: 'QFI' | 'SIM IP';
+  role: 'QFI' | 'SIM IP' | 'Pilot';
   callsignNumber: number;
   service?: 'RAAF' | 'RAN' | 'ARA';
   category: InstructorCategory;

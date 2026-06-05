@@ -49,8 +49,10 @@ export async function fetchInstructors(): Promise<any[]> {
       const preferences = p.preferences && typeof p.preferences === 'object' && !Array.isArray(p.preferences)
         ? p.preferences
         : {};
+      const unitCode = String(p.unit || '').trim().toUpperCase();
       return {
         ...p,
+        role: unitCode === '77SQN' ? 'Pilot' : p.role,
         callsign: p.callsign || preferences.callsign || '',
         secondaryCallsign: p.secondaryCallsign || preferences.secondaryCallsign || '',
         currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],

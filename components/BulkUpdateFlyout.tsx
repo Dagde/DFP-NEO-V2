@@ -189,7 +189,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 if (rank) parsedData.rank = rank as InstructorRank;
                 
                 const role = getStringFromRow(row, ['Role']);
-                if (role) parsedData.role = role as 'QFI' | 'SIM IP';
+                if (role) parsedData.role = role as Instructor['role'];
                 
                 const callsign = getValueFromRow(row, ['callsign number', 'callsignnumber', 'Callsign No', 'Callsign Number']);
                 if (callsign !== undefined) parsedData.callsignNumber = Number(callsign) || 0;

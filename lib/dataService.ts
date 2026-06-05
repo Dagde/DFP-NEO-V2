@@ -106,7 +106,7 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
       return a.unit.localeCompare(b.unit);
     }
     // Then by rank (higher rank first)
-    const rankOrder = { 'QFI': 1, 'SIM IP': 2, 'INSTRUCTOR': 3 };
+    const rankOrder = { 'QFI': 1, 'Pilot': 1, 'SIM IP': 2, 'INSTRUCTOR': 3 };
     const aRank = rankOrder[a.role] || 99;
     const bRank = rankOrder[b.role] || 99;
     if (aRank !== bRank) {

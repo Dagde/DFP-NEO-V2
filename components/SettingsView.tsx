@@ -1341,7 +1341,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         }
 
         const rank = getStr(row, ['Rank']); if (rank) parsed.rank = rank as InstructorRank;
-        const role = getStr(row, ['Role']); if (role) parsed.role = role as 'QFI' | 'SIM IP';
+        const role = getStr(row, ['Role']); if (role) parsed.role = role as Instructor['role'];
         const callsign = getNum(row, ['callsign number', 'callsignnumber', 'Callsign No', 'Callsign Number', 'Callsign']); if (callsign !== undefined) parsed.callsignNumber = callsign;
         const service = getStr(row, ['Service']);
         const normalisedService = service ? normaliseImportedService(service) : undefined;
@@ -1362,6 +1362,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         
         const rolesStr = getStr(row, ['Roles', 'Qualifications and Roles', 'Qualifications & Roles', 'Qualifications']);
         applyImportedQualifications(parsed, rolesStr);
+        if (String(parsed.unit || '').trim().toUpperCase() === '77SQN') {
+            parsed.role = 'Pilot';
+        }
 
         return parsed;
     };
