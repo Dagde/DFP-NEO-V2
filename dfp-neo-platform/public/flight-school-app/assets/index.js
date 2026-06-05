@@ -6940,6 +6940,7 @@ const ScheduleView = ({
   formatResourceLabel: formatResourceLabel2,
   aircraftConfigLabelsByResource,
   aircraftNumberSettings,
+  flyingWindowExclusions = [],
   isReadOnly = false,
   timezoneOffset = 11
   // Default to UTC+11
@@ -7436,6 +7437,63 @@ const ScheduleView = ({
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: shades });
   };
+  const renderExclusionPeriods = () => {
+    const gridHeight = resources.length * ROW_HEIGHT$5;
+    const segments = flyingWindowExclusions.flatMap((period) => {
+      const rawStart = Number(period.startTime);
+      const rawEnd = Number(period.endTime);
+      if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd) || rawStart === rawEnd) return [];
+      const periodSegments = rawEnd > rawStart ? [{ start: rawStart, end: rawEnd }] : [
+        { start: rawStart, end: END_HOUR$5 },
+        { start: START_HOUR$5, end: rawEnd }
+      ];
+      return periodSegments.map((segment) => ({
+        id: period.id,
+        restriction: period.restriction,
+        start: Math.max(START_HOUR$5, segment.start),
+        end: Math.min(END_HOUR$5, segment.end)
+      })).filter((segment) => segment.end > segment.start);
+    });
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      segments.map((segment, index) => {
+        const left = (segment.start - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+        const width = (segment.end - segment.start) * PIXELS_PER_HOUR$5 * zoomLevel;
+        const title = `Exclusion period ${segment.start.toFixed(2)}-${segment.end.toFixed(2)} (${segment.restriction})`;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            "data-schedule-exclusion-fill": "true",
+            className: "absolute top-0 pointer-events-none z-[2] bg-red-500/5",
+            style: { left: `${left}px`, width: `${width}px`, height: `${gridHeight}px` },
+            title
+          },
+          `exclusion-fill-${segment.id}-${index}`
+        );
+      }),
+      segments.map((segment, index) => {
+        const left = (segment.start - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+        const right = (segment.end - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              "data-schedule-exclusion-start-line": "true",
+              className: "absolute top-0 pointer-events-none z-[6] w-px bg-red-400/35",
+              style: { left: `${left}px`, height: `${gridHeight}px` }
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              "data-schedule-exclusion-end-line": "true",
+              className: "absolute top-0 pointer-events-none z-[6] w-px bg-red-400/35",
+              style: { left: `${right}px`, height: `${gridHeight}px` }
+            }
+          )
+        ] }, `exclusion-lines-${segment.id}-${index}`);
+      })
+    ] });
+  };
   const renderCurrentTimeIndicator = () => {
     const getLocalDateStringFromAdjustedTime2 = (date2) => {
       const year = date2.getUTCFullYear();
@@ -7752,6 +7810,7 @@ const ScheduleView = ({
             children: [
               renderGridLines(),
               renderNightShade(),
+              renderExclusionPeriods(),
               renderDaylightLines(),
               renderCategorySeparators(),
               renderCurrentTimeIndicator(),
@@ -78091,6 +78150,7 @@ ${conflictLines.join("\n")}${moreText}`,
             formatResourceLabel: formatResourceDisplayLabel,
             aircraftConfigLabelsByResource,
             aircraftNumberSettings,
+            flyingWindowExclusions,
             isReadOnly: isViewingPastDfp,
             isOracleMode,
             oraclePreviewEvent,

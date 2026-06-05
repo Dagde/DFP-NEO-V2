@@ -23551,6 +23551,7 @@ updates.forEach(update => {
                            formatResourceLabel={formatResourceDisplayLabel}
                            aircraftConfigLabelsByResource={aircraftConfigLabelsByResource}
                            aircraftNumberSettings={aircraftNumberSettings}
+                           flyingWindowExclusions={flyingWindowExclusions}
                            isReadOnly={isViewingPastDfp}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}

@@ -1,7 +1,7 @@
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, FlyingWindowExclusionPeriod } from '../types';
 import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
 import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
@@ -79,6 +79,7 @@ interface ScheduleViewProps {
   formatResourceLabel?: (resourceId: string) => string;
   aircraftConfigLabelsByResource?: Record<string, string>;
   aircraftNumberSettings?: AircraftNumberSettings;
+  flyingWindowExclusions?: FlyingWindowExclusionPeriod[];
   isReadOnly?: boolean;
 }
 
@@ -182,6 +183,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     formatResourceLabel,
     aircraftConfigLabelsByResource,
     aircraftNumberSettings,
+    flyingWindowExclusions = [],
     isReadOnly = false,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
@@ -791,6 +793,68 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         return <>{shades}</>;
     };
 
+    const renderExclusionPeriods = () => {
+        const gridHeight = resources.length * ROW_HEIGHT;
+        const segments = flyingWindowExclusions.flatMap((period) => {
+            const rawStart = Number(period.startTime);
+            const rawEnd = Number(period.endTime);
+            if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd) || rawStart === rawEnd) return [];
+
+            const periodSegments = rawEnd > rawStart
+                ? [{ start: rawStart, end: rawEnd }]
+                : [
+                    { start: rawStart, end: END_HOUR },
+                    { start: START_HOUR, end: rawEnd },
+                ];
+
+            return periodSegments
+                .map(segment => ({
+                    id: period.id,
+                    restriction: period.restriction,
+                    start: Math.max(START_HOUR, segment.start),
+                    end: Math.min(END_HOUR, segment.end),
+                }))
+                .filter(segment => segment.end > segment.start);
+        });
+
+        return (
+            <>
+                {segments.map((segment, index) => {
+                    const left = (segment.start - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+                    const width = (segment.end - segment.start) * PIXELS_PER_HOUR * zoomLevel;
+                    const title = `Exclusion period ${segment.start.toFixed(2)}-${segment.end.toFixed(2)} (${segment.restriction})`;
+                    return (
+                        <div
+                            key={`exclusion-fill-${segment.id}-${index}`}
+                            data-schedule-exclusion-fill="true"
+                            className="absolute top-0 pointer-events-none z-[2] bg-red-500/5"
+                            style={{ left: `${left}px`, width: `${width}px`, height: `${gridHeight}px` }}
+                            title={title}
+                        />
+                    );
+                })}
+                {segments.map((segment, index) => {
+                    const left = (segment.start - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+                    const right = (segment.end - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+                    return (
+                        <React.Fragment key={`exclusion-lines-${segment.id}-${index}`}>
+                            <div
+                                data-schedule-exclusion-start-line="true"
+                                className="absolute top-0 pointer-events-none z-[6] w-px bg-red-400/35"
+                                style={{ left: `${left}px`, height: `${gridHeight}px` }}
+                            />
+                            <div
+                                data-schedule-exclusion-end-line="true"
+                                className="absolute top-0 pointer-events-none z-[6] w-px bg-red-400/35"
+                                style={{ left: `${right}px`, height: `${gridHeight}px` }}
+                            />
+                        </React.Fragment>
+                    );
+                })}
+            </>
+        );
+    };
+
     const renderCurrentTimeIndicator = () => {
         // Create timezone-adjusted date string for comparison
         // Since currentTime is already timezone-adjusted, we need to get the date from it
@@ -1149,6 +1213,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 >
                     {renderGridLines()}
                     {renderNightShade()}
+                    {renderExclusionPeriods()}
                     {renderDaylightLines()}
                     {renderCategorySeparators()}
                     {renderCurrentTimeIndicator()}
