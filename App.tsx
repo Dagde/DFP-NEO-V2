@@ -11392,10 +11392,15 @@ const App: React.FC = () => {
     const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>([]);
     const [syllabusLoading, setSyllabusLoading] = useState<boolean>(false);
     const [syllabusError, setSyllabusError] = useState<string | null>(null);
-    const visibleSyllabusDetails = useMemo(
-        () => filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', activeUnitCode),
-        [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails],
-    );
+    const visibleSyllabusDetails = useMemo(() => {
+        const normaliseContextCode = (value?: string | null) => String(value || '').trim().toUpperCase();
+        const activeUnit = normaliseContextCode(activeUnitCode);
+        return filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', activeUnitCode)
+            .filter((item) => {
+                if (item.lmpType !== 'Staff CAT') return true;
+                return normaliseContextCode((item as any).unit) === activeUnit;
+            });
+    }, [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
 
 // Load syllabus from DB on mount — DB only, no mock data fallback
     useEffect(() => {
@@ -24012,6 +24017,9 @@ updates.forEach(update => {
                            onUpdateItem={handleUpdateSyllabusItem}
                            onAddItem={handleAddSyllabusItem}
                            aircraftConfigurations={aircraftConfigurations}
+                           activeLocationCode={school}
+                           activeUnitCode={activeUnitCode}
+                           trainingPackageTemplates={syllabusDetails.filter(item => item.lmpType === 'Staff CAT' && item.isActive !== false)}
                        />;
              case 'Currency':
                 if (selectedPersonForCurrency) {

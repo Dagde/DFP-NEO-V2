@@ -22,6 +22,9 @@ interface SyllabusViewProps {
   onAddItem?: (item: SyllabusItemDetail) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftConfigurations?: AircraftConfigurationDefinition[];
+  activeLocationCode?: string;
+  activeUnitCode?: string;
+  trainingPackageTemplates?: SyllabusItemDetail[];
 }
 
 // Reusable components for view mode
@@ -533,6 +536,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     onAddItem,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     aircraftConfigurations = [],
+    activeLocationCode = '',
+    activeUnitCode = '',
+    trainingPackageTemplates = [],
 }) => {
     const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -580,11 +586,54 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   // Helper: get display title for a course code
   const getCourseTitle = (code: string) => courseTitleMap[code] || code;
+  const normaliseContextCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+  const activeUnitNormalised = normaliseContextCode(activeUnitCode);
+  const activeLocationNormalised = normaliseContextCode(activeLocationCode);
+  const getPackageSourceKey = (item: SyllabusItemDetail): string => {
+      const packageCode = (item.courses || [])[0] || item.code;
+      const location = normaliseContextCode(item.location) || 'GLOBAL';
+      const unit = normaliseContextCode(item.unit) || 'GLOBAL';
+      return `${location}|${unit}|${packageCode}`;
+  };
+  const packageCopyOptions = useMemo(() => {
+      const grouped = new Map<string, {
+          key: string;
+          code: string;
+          title: string;
+          location: string;
+          unit: string;
+          items: SyllabusItemDetail[];
+      }>();
+      trainingPackageTemplates
+          .filter(item => item.isActive !== false && item.lmpType === 'Staff CAT')
+          .forEach(item => {
+              const packageCode = (item.courses || [])[0] || item.code;
+              if (!packageCode) return;
+              const key = getPackageSourceKey(item);
+              if (!grouped.has(key)) {
+                  grouped.set(key, {
+                      key,
+                      code: packageCode,
+                      title: item.module && item.module !== packageCode ? item.module : packageCode,
+                      location: normaliseContextCode(item.location) || 'Global',
+                      unit: normaliseContextCode(item.unit) || 'Global',
+                      items: [],
+                  });
+              }
+              grouped.get(key)!.items.push(item);
+          });
+      return Array.from(grouped.values())
+          .filter(option => option.unit !== activeUnitNormalised || !activeUnitNormalised)
+          .sort((a, b) => `${a.title} ${a.unit}`.localeCompare(`${b.title} ${b.unit}`));
+  }, [activeUnitNormalised, trainingPackageTemplates]);
 
   // Add Course modal state
   const [showAddLMPModal, setShowAddLMPModal] = useState(false);
   const [newLMPName, setNewLMPName] = useState('');       // full course title e.g. "Basic Flying Course"
   const [newLMPCourseType, setNewLMPCourseType] = useState<'Flight Training' | 'Academic Training'>('Flight Training');
+  const [addPackageMode, setAddPackageMode] = useState<'blank' | 'copy'>('blank');
+  const [copyPackageSourceKey, setCopyPackageSourceKey] = useState('');
+  const [isCopyingPackage, setIsCopyingPackage] = useState(false);
 
   // Delete Course modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -851,6 +900,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           formData.append('packageName', destinationName);
           formData.append('uploadMode', isTrainingPackagesTab ? uploadMode : 'update');
           formData.append('lmpType', activeLmpType);
+          if (isTrainingPackagesTab) {
+              formData.append('locationCode', activeLocationNormalised);
+              formData.append('unitCode', activeUnitNormalised);
+          }
           const resp = await fetch('/api/syllabus/bulk-upload', {
               method: 'POST',
               body: formData,
@@ -939,10 +992,80 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const handleAddLMP = () => {
       setNewLMPName('');
       setNewLMPCourseType('Flight Training');
+      setAddPackageMode('blank');
+      setCopyPackageSourceKey(packageCopyOptions[0]?.key || '');
       setShowAddLMPModal(true);
   };
 
+  const handleCopyPackageSave = async () => {
+      const source = packageCopyOptions.find(option => option.key === copyPackageSourceKey);
+      if (!source) {
+          alert('Please select a package to copy.');
+          return;
+      }
+      if (!activeUnitNormalised) {
+          alert('Please select a unit before copying a training package.');
+          return;
+      }
+      const targetPackageCodeBase = `${activeUnitNormalised}-${source.code}`.replace(/[^A-Z0-9-]/g, '').slice(0, 24);
+      let targetPackageCode = targetPackageCodeBase;
+      let suffix = 2;
+      while (courseLMPs.includes(targetPackageCode)) {
+          targetPackageCode = `${targetPackageCodeBase}-${suffix}`;
+          suffix += 1;
+      }
+      const sortedSourceItems = [...source.items].sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }));
+      const codeMap = new Map(sortedSourceItems.map(item => [
+          item.code,
+          `${targetPackageCode}-${item.code}`.replace(/[^A-Z0-9-]/gi, '').slice(0, 48),
+      ]));
+      const remapList = (values?: string[]) => (values || []).map(value => codeMap.get(value) || value);
+
+      setIsCopyingPackage(true);
+      try {
+          const savedItems: SyllabusItemDetail[] = [];
+          for (const sourceItem of sortedSourceItems) {
+              const { id: _id, completedAt: _completedAt, masterEventId: _masterEventId, lmpSource: _lmpSource, ...copyBase } = sourceItem as any;
+              const copiedItem: Partial<SyllabusItemDetail> = {
+                  ...copyBase,
+                  code: codeMap.get(sourceItem.code) || `${targetPackageCode}-${sourceItem.code}`,
+                  courses: [targetPackageCode],
+                  module: source.title,
+                  location: activeLocationNormalised,
+                  unit: activeUnitNormalised,
+                  lmpType: 'Staff CAT',
+                  prerequisites: remapList(sourceItem.prerequisites),
+                  prerequisitesGround: remapList(sourceItem.prerequisitesGround),
+                  prerequisitesFlying: remapList(sourceItem.prerequisitesFlying),
+                  isActive: true,
+              };
+              const saved = await createSyllabusItem(copiedItem, `Copied Training Package ${source.title} into ${activeUnitNormalised}`);
+              savedItems.push(saved);
+              if (onAddItem) onAddItem(saved);
+          }
+          setSelectedCourseType(targetPackageCode);
+          setSelectedItem(savedItems[0] || null);
+          setEditedItem(savedItems[0] ? JSON.parse(JSON.stringify(savedItems[0])) : null);
+          setIsEditing(false);
+          setShowAddLMPModal(false);
+          logAudit({
+              action: 'Create',
+              description: `Copied training package ${source.title} into ${activeUnitNormalised}`,
+              changes: `${savedItems.length} events copied from ${source.unit} / ${source.code} to ${targetPackageCode}`,
+              page: 'LMP/Event Details',
+          });
+      } catch (err: any) {
+          alert(`❌ Failed to copy package: ${err.message}`);
+      } finally {
+          setIsCopyingPackage(false);
+      }
+  };
+
   const handleAddLMPSave = async () => {
+      if (isTrainingPackagesTab && addPackageMode === 'copy') {
+          await handleCopyPackageSave();
+          return;
+      }
       if (!newLMPName.trim()) { alert(`Please enter a ${activeCollectionNoun} title.`); return; }
       // For Academic Training courses, use the full name as the course code/identifier.
       // This is critical: the academicLmpType field on trainees/courses stores the FULL NAME
@@ -981,7 +1104,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           resourceNumber: 0,
           acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
           resourcesHuman: [],
-          location: '',
+          location: isTrainingPackagesTab ? activeLocationNormalised : '',
+          unit: isTrainingPackagesTab ? activeUnitNormalised : undefined,
           courses: [courseCode],
           lmpType: activeLmpType,
       };
@@ -1032,7 +1156,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           resourceNumber: 0,
           acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
           resourcesHuman: [],
-          location: '',
+          location: isTrainingPackagesTab ? activeLocationNormalised : '',
+          unit: isTrainingPackagesTab ? activeUnitNormalised : undefined,
           courses: [selectedCourseType],
           lmpType: activeLmpType,
       };
@@ -1107,7 +1232,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     }}
                     className="bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8"
                 >
-                    {courseLMPs.length === 0 && <option value="">No Master LMP available</option>}
+                    {courseLMPs.length === 0 && <option value="">No {activeCollectionTitle} available</option>}
                     {courseLMPs.map(c => <option key={`${activeTab}-${c}`} value={c}>{getCourseTitle(c)}</option>)}
                 </select>
             </div>
@@ -1238,11 +1363,58 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     Add {isTrainingPackagesTab ? 'Package' : 'Course'}
                 </h2>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20 }}>
-                    A {activeCollectionNoun} code will be auto-generated from the title.
+                    {isTrainingPackagesTab
+                        ? `Packages created here are assigned to ${activeLocationNormalised || 'the selected location'} / ${activeUnitNormalised || 'the selected unit'}.`
+                        : `A ${activeCollectionNoun} code will be auto-generated from the title.`}
                 </p>
 
+                {isTrainingPackagesTab && (
+                    <div style={{ marginBottom: 16, padding: 10, border: '1px solid #374151', borderRadius: 8, backgroundColor: '#111827' }}>
+                        {[
+                            { id: 'blank' as const, label: 'Create blank package' },
+                            { id: 'copy' as const, label: 'Copy package from another unit' },
+                        ].map(option => (
+                            <label key={option.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: option.id === 'blank' ? 8 : 0, cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="addPackageMode"
+                                    checked={addPackageMode === option.id}
+                                    onChange={() => setAddPackageMode(option.id)}
+                                />
+                                <span style={{ fontSize: 12, fontWeight: 700, color: '#f9fafb' }}>{option.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                )}
+
+                {isTrainingPackagesTab && addPackageMode === 'copy' && (
+                    <div style={{ marginBottom: 24 }}>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                            textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                            Source Package
+                        </label>
+                        <select
+                            value={copyPackageSourceKey}
+                            onChange={e => setCopyPackageSourceKey(e.target.value)}
+                            style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
+                                borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13,
+                                outline: 'none', boxSizing: 'border-box' as const }}
+                        >
+                            {packageCopyOptions.length === 0 && <option value="">No source packages available</option>}
+                            {packageCopyOptions.map(option => (
+                                <option key={option.key} value={option.key}>
+                                    {option.title} ({option.code}) - {option.location} / {option.unit}
+                                </option>
+                            ))}
+                        </select>
+                        <p style={{ fontSize: 10, color: '#6b7280', marginTop: 6 }}>
+                            The copied package will become a separate {activeUnitNormalised || 'unit'} package.
+                        </p>
+                    </div>
+                )}
+
                 {/* Course Title */}
-                <div style={{ marginBottom: 16 }}>
+                {(!isTrainingPackagesTab || addPackageMode === 'blank') && <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
                         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
                         {isTrainingPackagesTab ? 'Package' : 'Course'} Title *
@@ -1267,10 +1439,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             </span>
                         </p>
                     )}
-                </div>
+                </div>}
 
                 {/* Course Type */}
-                <div style={{ marginBottom: 24 }}>
+                {(!isTrainingPackagesTab || addPackageMode === 'blank') && <div style={{ marginBottom: 24 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
                         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
                         {isTrainingPackagesTab ? 'Package Type' : 'Course Type'}
@@ -1290,7 +1462,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             ? 'Academic Training: theory/classroom instruction delivered prior to the flying phase.'
                             : 'Flight Training: airborne, simulator and associated ground events during the flying phase.'}
                     </p>
-                </div>
+                </div>}
 
                 {/* Buttons */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -1302,9 +1474,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     </button>
                     <button
                         onClick={handleAddLMPSave}
-                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black"
+                        disabled={isCopyingPackage}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-60"
                     >
-                        Create
+                        {isCopyingPackage ? 'Copying…' : addPackageMode === 'copy' ? 'Copy' : 'Create'}
                     </button>
                 </div>
             </div>

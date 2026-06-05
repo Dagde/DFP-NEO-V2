@@ -302,6 +302,7 @@ export interface SyllabusItemDetail {
   userLockedPosition?: boolean;
   placementNeedsReview?: boolean;
   location: string;
+  unit?: string;
   courses: string[]; // Added for Master LMP filtering
   lmpType?: 'Master LMP' | 'Staff CAT'; // Added for LMP type filtering
 }

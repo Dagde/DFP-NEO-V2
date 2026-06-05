@@ -33244,7 +33244,7 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "5";
+const CACHE_VERSION = "6";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
 function getCachedSyllabus() {
   try {
@@ -33875,7 +33875,10 @@ const SyllabusView = ({
   onUpdateItem,
   onAddItem,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  aircraftConfigurations = []
+  aircraftConfigurations = [],
+  activeLocationCode = "",
+  activeUnitCode = "",
+  trainingPackageTemplates = []
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -33918,9 +33921,41 @@ const SyllabusView = ({
     return map;
   }, [activeTab, syllabusDetails]);
   const getCourseTitle = (code) => courseTitleMap[code] || code;
+  const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
+  const activeUnitNormalised = normaliseContextCode(activeUnitCode);
+  const activeLocationNormalised = normaliseContextCode(activeLocationCode);
+  const getPackageSourceKey = (item) => {
+    const packageCode = (item.courses || [])[0] || item.code;
+    const location = normaliseContextCode(item.location) || "GLOBAL";
+    const unit = normaliseContextCode(item.unit) || "GLOBAL";
+    return `${location}|${unit}|${packageCode}`;
+  };
+  const packageCopyOptions = reactExports.useMemo(() => {
+    const grouped = /* @__PURE__ */ new Map();
+    trainingPackageTemplates.filter((item) => item.isActive !== false && item.lmpType === "Staff CAT").forEach((item) => {
+      const packageCode = (item.courses || [])[0] || item.code;
+      if (!packageCode) return;
+      const key = getPackageSourceKey(item);
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          key,
+          code: packageCode,
+          title: item.module && item.module !== packageCode ? item.module : packageCode,
+          location: normaliseContextCode(item.location) || "Global",
+          unit: normaliseContextCode(item.unit) || "Global",
+          items: []
+        });
+      }
+      grouped.get(key).items.push(item);
+    });
+    return Array.from(grouped.values()).filter((option) => option.unit !== activeUnitNormalised || !activeUnitNormalised).sort((a, b) => `${a.title} ${a.unit}`.localeCompare(`${b.title} ${b.unit}`));
+  }, [activeUnitNormalised, trainingPackageTemplates]);
   const [showAddLMPModal, setShowAddLMPModal] = reactExports.useState(false);
   const [newLMPName, setNewLMPName] = reactExports.useState("");
   const [newLMPCourseType, setNewLMPCourseType] = reactExports.useState("Flight Training");
+  const [addPackageMode, setAddPackageMode] = reactExports.useState("blank");
+  const [copyPackageSourceKey, setCopyPackageSourceKey] = reactExports.useState("");
+  const [isCopyingPackage, setIsCopyingPackage] = reactExports.useState(false);
   const [showDeleteModal, setShowDeleteModal] = reactExports.useState(false);
   const [deletePassword, setDeletePassword] = reactExports.useState("");
   const [deleteError, setDeleteError] = reactExports.useState("");
@@ -34153,6 +34188,10 @@ const SyllabusView = ({
       formData.append("packageName", destinationName);
       formData.append("uploadMode", isTrainingPackagesTab ? uploadMode : "update");
       formData.append("lmpType", activeLmpType);
+      if (isTrainingPackagesTab) {
+        formData.append("locationCode", activeLocationNormalised);
+        formData.append("unitCode", activeUnitNormalised);
+      }
       const resp = await fetch("/api/syllabus/bulk-upload", {
         method: "POST",
         body: formData
@@ -34237,9 +34276,77 @@ const SyllabusView = ({
   const handleAddLMP = () => {
     setNewLMPName("");
     setNewLMPCourseType("Flight Training");
+    setAddPackageMode("blank");
+    setCopyPackageSourceKey(packageCopyOptions[0]?.key || "");
     setShowAddLMPModal(true);
   };
+  const handleCopyPackageSave = async () => {
+    const source = packageCopyOptions.find((option) => option.key === copyPackageSourceKey);
+    if (!source) {
+      alert("Please select a package to copy.");
+      return;
+    }
+    if (!activeUnitNormalised) {
+      alert("Please select a unit before copying a training package.");
+      return;
+    }
+    const targetPackageCodeBase = `${activeUnitNormalised}-${source.code}`.replace(/[^A-Z0-9-]/g, "").slice(0, 24);
+    let targetPackageCode = targetPackageCodeBase;
+    let suffix = 2;
+    while (courseLMPs.includes(targetPackageCode)) {
+      targetPackageCode = `${targetPackageCodeBase}-${suffix}`;
+      suffix += 1;
+    }
+    const sortedSourceItems = [...source.items].sort((a, b) => (a.code || "").localeCompare(b.code || "", void 0, { numeric: true }));
+    const codeMap = new Map(sortedSourceItems.map((item) => [
+      item.code,
+      `${targetPackageCode}-${item.code}`.replace(/[^A-Z0-9-]/gi, "").slice(0, 48)
+    ]));
+    const remapList = (values) => (values || []).map((value) => codeMap.get(value) || value);
+    setIsCopyingPackage(true);
+    try {
+      const savedItems = [];
+      for (const sourceItem of sortedSourceItems) {
+        const { id: _id, completedAt: _completedAt, masterEventId: _masterEventId, lmpSource: _lmpSource, ...copyBase } = sourceItem;
+        const copiedItem = {
+          ...copyBase,
+          code: codeMap.get(sourceItem.code) || `${targetPackageCode}-${sourceItem.code}`,
+          courses: [targetPackageCode],
+          module: source.title,
+          location: activeLocationNormalised,
+          unit: activeUnitNormalised,
+          lmpType: "Staff CAT",
+          prerequisites: remapList(sourceItem.prerequisites),
+          prerequisitesGround: remapList(sourceItem.prerequisitesGround),
+          prerequisitesFlying: remapList(sourceItem.prerequisitesFlying),
+          isActive: true
+        };
+        const saved = await createSyllabusItem$1(copiedItem, `Copied Training Package ${source.title} into ${activeUnitNormalised}`);
+        savedItems.push(saved);
+        if (onAddItem) onAddItem(saved);
+      }
+      setSelectedCourseType(targetPackageCode);
+      setSelectedItem(savedItems[0] || null);
+      setEditedItem(savedItems[0] ? JSON.parse(JSON.stringify(savedItems[0])) : null);
+      setIsEditing(false);
+      setShowAddLMPModal(false);
+      logAudit({
+        action: "Create",
+        description: `Copied training package ${source.title} into ${activeUnitNormalised}`,
+        changes: `${savedItems.length} events copied from ${source.unit} / ${source.code} to ${targetPackageCode}`,
+        page: "LMP/Event Details"
+      });
+    } catch (err) {
+      alert(`❌ Failed to copy package: ${err.message}`);
+    } finally {
+      setIsCopyingPackage(false);
+    }
+  };
   const handleAddLMPSave = async () => {
+    if (isTrainingPackagesTab && addPackageMode === "copy") {
+      await handleCopyPackageSave();
+      return;
+    }
     if (!newLMPName.trim()) {
       alert(`Please enter a ${activeCollectionNoun} title.`);
       return;
@@ -34272,7 +34379,8 @@ const SyllabusView = ({
       resourceNumber: 0,
       acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
       resourcesHuman: [],
-      location: "",
+      location: isTrainingPackagesTab ? activeLocationNormalised : "",
+      unit: isTrainingPackagesTab ? activeUnitNormalised : void 0,
       courses: [courseCode],
       lmpType: activeLmpType
     };
@@ -34317,7 +34425,8 @@ const SyllabusView = ({
       resourceNumber: 0,
       acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
       resourcesHuman: [],
-      location: "",
+      location: isTrainingPackagesTab ? activeLocationNormalised : "",
+      unit: isTrainingPackagesTab ? activeUnitNormalised : void 0,
       courses: [selectedCourseType],
       lmpType: activeLmpType
     };
@@ -34386,7 +34495,11 @@ const SyllabusView = ({
                 },
                 className: "bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8",
                 children: [
-                  courseLMPs.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No Master LMP available" }),
+                  courseLMPs.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "", children: [
+                    "No ",
+                    activeCollectionTitle,
+                    " available"
+                  ] }),
                   courseLMPs.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: getCourseTitle(c) }, `${activeTab}-${c}`))
                 ]
               }
@@ -34516,12 +34629,69 @@ const SyllabusView = ({
                 "Add ",
                 isTrainingPackagesTab ? "Package" : "Course"
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20 }, children: [
-                "A ",
-                activeCollectionNoun,
-                " code will be auto-generated from the title."
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20 }, children: isTrainingPackagesTab ? `Packages created here are assigned to ${activeLocationNormalised || "the selected location"} / ${activeUnitNormalised || "the selected unit"}.` : `A ${activeCollectionNoun} code will be auto-generated from the title.` }),
+              isTrainingPackagesTab && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginBottom: 16, padding: 10, border: "1px solid #374151", borderRadius: 8, backgroundColor: "#111827" }, children: [
+                { id: "blank", label: "Create blank package" },
+                { id: "copy", label: "Copy package from another unit" }
+              ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", gap: 8, alignItems: "center", marginBottom: option.id === "blank" ? 8 : 0, cursor: "pointer" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "radio",
+                    name: "addPackageMode",
+                    checked: addPackageMode === option.id,
+                    onChange: () => setAddPackageMode(option.id)
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 12, fontWeight: 700, color: "#f9fafb" }, children: option.label })
+              ] }, option.id)) }),
+              isTrainingPackagesTab && addPackageMode === "copy" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 24 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#9ca3af",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  marginBottom: 4
+                }, children: "Source Package" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: copyPackageSourceKey,
+                    onChange: (e) => setCopyPackageSourceKey(e.target.value),
+                    style: {
+                      width: "100%",
+                      backgroundColor: "#111827",
+                      border: "1px solid #4b5563",
+                      borderRadius: 6,
+                      padding: "8px 10px",
+                      color: "#fff",
+                      fontSize: 13,
+                      outline: "none",
+                      boxSizing: "border-box"
+                    },
+                    children: [
+                      packageCopyOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No source packages available" }),
+                      packageCopyOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: option.key, children: [
+                        option.title,
+                        " (",
+                        option.code,
+                        ") - ",
+                        option.location,
+                        " / ",
+                        option.unit
+                      ] }, option.key))
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 10, color: "#6b7280", marginTop: 6 }, children: [
+                  "The copied package will become a separate ",
+                  activeUnitNormalised || "unit",
+                  " package."
+                ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
+              (!isTrainingPackagesTab || addPackageMode === "blank") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: {
                   display: "block",
                   fontSize: 11,
@@ -34561,7 +34731,7 @@ const SyllabusView = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#38bdf8", fontWeight: 700 }, children: newLMPName.trim().split(/\s+/).length === 1 ? newLMPName.trim().toUpperCase().slice(0, 8) : newLMPName.trim().split(/\s+/).map((w) => w[0].toUpperCase()).join("").slice(0, 8) })
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 24 }, children: [
+              (!isTrainingPackagesTab || addPackageMode === "blank") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 24 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
                   display: "block",
                   fontSize: 11,
@@ -34608,8 +34778,9 @@ const SyllabusView = ({
                   "button",
                   {
                     onClick: handleAddLMPSave,
-                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black",
-                    children: "Create"
+                    disabled: isCopyingPackage,
+                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-60",
+                    children: isCopyingPackage ? "Copying…" : addPackageMode === "copy" ? "Copy" : "Create"
                   }
                 )
               ] })
@@ -67694,10 +67865,14 @@ const App = () => {
   const [syllabusDetails, setSyllabusDetails] = reactExports.useState([]);
   const [syllabusLoading, setSyllabusLoading] = reactExports.useState(false);
   const [syllabusError, setSyllabusError] = reactExports.useState(null);
-  const visibleSyllabusDetails = reactExports.useMemo(
-    () => filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode),
-    [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]
-  );
+  const visibleSyllabusDetails = reactExports.useMemo(() => {
+    const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
+    const activeUnit = normaliseContextCode(activeUnitCode);
+    return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode).filter((item) => {
+      if (item.lmpType !== "Staff CAT") return true;
+      return normaliseContextCode(item.unit) === activeUnit;
+    });
+  }, [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
   reactExports.useEffect(() => {
     const loadSyllabus = async () => {
       setSyllabusLoading(true);
@@ -77963,7 +78138,10 @@ ${conflictLines.join("\n")}${moreText}`,
             initialSelectedId: initialSyllabusId || void 0,
             onUpdateItem: handleUpdateSyllabusItem,
             onAddItem: handleAddSyllabusItem,
-            aircraftConfigurations
+            aircraftConfigurations,
+            activeLocationCode: school,
+            activeUnitCode,
+            trainingPackageTemplates: syllabusDetails.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false)
           }
         );
       case "Currency":

@@ -12,7 +12,7 @@ const CACHE_TIMESTAMP_KEY = 'dfp-syllabus-cache-timestamp';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 // Increment this version when DB schema/data migrations change the syllabus structure.
 // Old caches with a different version are automatically invalidated on next load.
-const CACHE_VERSION = '5'; // v5: Training package uploads invalidate cached package lists
+const CACHE_VERSION = '6'; // v6: Training packages include unit ownership context
 const CACHE_VERSION_KEY = 'dfp-syllabus-cache-version';
 
 // ============================================================================

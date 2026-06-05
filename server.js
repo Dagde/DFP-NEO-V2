@@ -336,6 +336,7 @@ async function ensureSyllabusTablesExist(db) {
         "prerequisitesGround"  TEXT[] NOT NULL DEFAULT '{}',
         "prerequisitesFlying"  TEXT[] NOT NULL DEFAULT '{}',
         "location"             TEXT,
+        "unit"                 TEXT,
         "sortOrder"            INTEGER NOT NULL DEFAULT 0,
         "lmpType"              TEXT,
         "twrDiReqd"            TEXT,
@@ -352,6 +353,7 @@ async function ensureSyllabusTablesExist(db) {
     `);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "resourceNumber" INTEGER NOT NULL DEFAULT 1`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "acceptableAircraftConfigs" TEXT[] NOT NULL DEFAULT ARRAY['ANY']::text[]`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "unit" TEXT`);
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SyllabusItem_code_key" ON "SyllabusItem"("code")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_sortOrder_idx" ON "SyllabusItem"("sortOrder")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_isActive_idx" ON "SyllabusItem"("isActive")`);
@@ -5615,7 +5617,8 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
         prerequisites: getUploadList(row, ['prerequisites', 'Prerequisites']),
         prerequisitesGround: getUploadList(row, ['Pre-requisite Events (Ground School)', 'prerequisitesGround']),
         prerequisitesFlying: getUploadList(row, ['Pre-requisite Events (Sim/Flying)', 'prerequisitesFlying']),
-        location: '',
+        location: String(req.body?.locationCode || req.body?.location || '').trim(),
+        unit: String(req.body?.unitCode || req.body?.unit || '').trim(),
         lmpType,
         isActive: true,
       };
@@ -5642,8 +5645,8 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
               "flightOrSimHours" = $18, "totalEventHours" = $19, "duration" = $20,
               "preFlightTime" = $21, "postFlightTime" = $22,
               "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
-              "prerequisitesFlying" = $25::text[], "location" = $26, "lmpType" = $27,
-              "isActive" = $28::boolean, "version" = "version" + 1, "updatedAt" = NOW()
+              "prerequisitesFlying" = $25::text[], "location" = $26, "unit" = $27, "lmpType" = $28,
+              "isActive" = $29::boolean, "version" = "version" + 1, "updatedAt" = NOW()
           WHERE "id" = $1
         `,
           existing.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
@@ -5651,7 +5654,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
           itemData.resourcesPhysical, itemData.resourceNumber, itemData.acceptableAircraftConfigs, itemData.resourcesHuman,
           itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
           itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
-          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.lmpType, itemData.isActive
+          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive
         );
         updated.push({ code });
         continue;
@@ -5669,8 +5672,8 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
               "flightOrSimHours" = $18, "totalEventHours" = $19, "duration" = $20,
               "preFlightTime" = $21, "postFlightTime" = $22,
               "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
-              "prerequisitesFlying" = $25::text[], "location" = $26, "lmpType" = $27,
-              "isActive" = $28::boolean, "version" = "version" + 1, "updatedAt" = NOW()
+              "prerequisitesFlying" = $25::text[], "location" = $26, "unit" = $27, "lmpType" = $28,
+              "isActive" = $29::boolean, "version" = "version" + 1, "updatedAt" = NOW()
           WHERE "id" = $1
         `,
           reusablePackagePlaceholder.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
@@ -5678,7 +5681,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
           itemData.resourcesPhysical, itemData.resourceNumber, itemData.acceptableAircraftConfigs, itemData.resourcesHuman,
           itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
           itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
-          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.lmpType, itemData.isActive
+          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive
         );
         generatedPlaceholderUsed = true;
         updated.push({ code });
@@ -5692,15 +5695,15 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
           "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber",
           "acceptableAircraftConfigs","resourcesHuman","eventDetailsCommon","eventDetailsSortie",
           "flightOrSimHours","totalEventHours","duration","preFlightTime","postFlightTime",
-          "prerequisites","prerequisitesGround","prerequisitesFlying","location","sortOrder","lmpType",
+          "prerequisites","prerequisitesGround","prerequisitesFlying","location","unit","sortOrder","lmpType",
           "isActive","version","createdBy","createdAt","updatedAt"
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,
           $9,$10,$11,$12,$13,
           $14,$15,$16,$17,
           $18,$19,$20,$21,$22,
-          $23,$24,$25,$26,$27,$28,
-          $29,$30,$31,NOW(),NOW()
+          $23,$24,$25,$26,$27,$28,$29,
+          $30,$31,$32,NOW(),NOW()
         )
       `,
         id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
@@ -5709,7 +5712,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
         itemData.acceptableAircraftConfigs, itemData.resourcesHuman, itemData.eventDetailsCommon,
         itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
         itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
-        itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, nextSortOrder++,
+        itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, nextSortOrder++,
         itemData.lmpType, itemData.isActive, 1, 'bulk-upload'
       );
       created.push({ code });
@@ -5834,15 +5837,15 @@ app.post('/api/syllabus', async (req, res) => {
         "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber","acceptableAircraftConfigs","resourcesHuman",
         "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
         "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
-        "location","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
+        "location","unit","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
         "notes","createdBy","createdAt","updatedAt"
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,
         $9,$10,$11,$12,$13,$14,$15,
         $16,$17,$18,$19,$20,
         $21,$22,$23,$24,$25,
-        $26,$27,$28,$29,$30,$31,$32,$33,
-        $34,$35,NOW(),NOW()
+        $26,$27,$28,$29,$30,$31,$32,$33,$34,
+        $35,$36,NOW(),NOW()
       )`,
       id, finalCode, body.eventDescription, body.phase, body.module, body.type,
       body.sortieType || null, body.dayNight || 'Day',
@@ -5854,7 +5857,7 @@ app.post('/api/syllabus', async (req, res) => {
       body.flightOrSimHours || 0, body.totalEventHours || 1, body.duration || 1,
       body.preFlightTime || 0, body.postFlightTime || 0,
       body.prerequisites || [], body.prerequisitesGround || [], body.prerequisitesFlying || [],
-      body.location || null, body.sortOrder || 0,
+      body.location || null, body.unit || null, body.sortOrder || 0,
       body.lmpType || null, body.twrDiReqd || null, body.cctOnly || null,
       body.isRemedial || false, true, 1,
       body.notes || null, body.createdBy || null
