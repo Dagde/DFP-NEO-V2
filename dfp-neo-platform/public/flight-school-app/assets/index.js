@@ -2393,9 +2393,14 @@ const getLocationResourcePool = (config, locationCode, unitCode) => {
     if (runtimeUnitPool) return runtimeUnitPool;
     if (unitPools.length > 0) return unitPools[0];
   }
-  const sharedPools = pools.filter((pool) => pool.poolType === "Shared");
+  const sharedPools = pools.filter((pool) => String(pool.poolType || "").trim().toLowerCase() === "shared");
   const runtimeSharedPool = sharedPools.find(isResourcePoolRuntimeEnabled);
-  return runtimeSharedPool || sharedPools[0] || null;
+  if (runtimeSharedPool) return runtimeSharedPool;
+  const locationLevelPools = pools.filter((pool) => !normaliseLocationIdentifier(pool.unitCode));
+  const runtimeLocationLevelPool = locationLevelPools.find(isResourcePoolRuntimeEnabled);
+  if (runtimeLocationLevelPool) return runtimeLocationLevelPool;
+  const runtimeLocationPool = pools.find(isResourcePoolRuntimeEnabled);
+  return runtimeLocationPool || sharedPools[0] || locationLevelPools[0] || pools[0] || null;
 };
 const isResourcePoolRuntimeEnabled = (pool) => pool?.settings?.applyToV2Runtime === true;
 const getResourcePoolCount = (pool, key, fallback) => {
