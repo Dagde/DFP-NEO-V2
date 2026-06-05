@@ -185,8 +185,32 @@ async function getPrisma() {
     await migrateCptDurations(prisma);
     // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
     await migrateAcademicsCoursesField(prisma);
+    // Ensure existing Air Combat personnel profile roles endure as Pilot.
+    await repairAirCombatPersonnelRoles(prisma);
   }
   return prisma;
+}
+
+async function repairAirCombatPersonnelRoles(db) {
+  try {
+    const updated = await db.$executeRawUnsafe(`
+      UPDATE "Personnel"
+      SET "role" = 'Pilot',
+          "isQFI" = false,
+          "updatedAt" = CURRENT_TIMESTAMP
+      WHERE UPPER(COALESCE("unit", '')) = '77SQN'
+        AND COALESCE("isActive", true) = true
+        AND (
+          COALESCE("role", '') <> 'Pilot'
+          OR COALESCE("isQFI", false) = true
+        )
+    `);
+    if (updated > 0) {
+      console.log(`[AirCombatRoleRepair] Updated ${updated} active 77SQN personnel record(s) to role=Pilot, isQFI=false.`);
+    }
+  } catch (error) {
+    console.warn('[AirCombatRoleRepair] Could not repair 77SQN personnel roles:', error.message);
+  }
 }
 
 const LOCATION_NAME_BY_CODE = {

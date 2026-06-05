@@ -1310,7 +1310,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         parsed.isIRE = rolesLower.includes('ire');
         parsed.isCFI = rolesLower.includes('cfi');
         parsed.isOFI = rolesLower.includes('ofi');
-        parsed.isQFI = rolesLower.includes('qfi') || rolesLower.includes('pilot');
+        parsed.isQFI = rolesLower.includes('qfi') || rolesLower.includes('instructor');
         parsed.isAdminStaff = rolesLower.includes('admin');
         if (rolesLower.includes('sim ip')) {
             parsed.role = 'SIM IP';

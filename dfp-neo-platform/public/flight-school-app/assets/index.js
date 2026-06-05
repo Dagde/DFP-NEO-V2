@@ -32326,7 +32326,7 @@ const applyQualificationRoles = (parsedData, rolesValue) => {
   parsedData.isIRE = rolesLower.includes("ire");
   parsedData.isCFI = rolesLower.includes("cfi");
   parsedData.isOFI = rolesLower.includes("ofi");
-  parsedData.isQFI = rolesLower.includes("qfi") || rolesLower.includes("pilot");
+  parsedData.isQFI = rolesLower.includes("qfi") || rolesLower.includes("instructor");
   parsedData.isAdminStaff = rolesLower.includes("admin");
   if (rolesLower.includes("sim ip")) {
     parsedData.role = "SIM IP";
@@ -40755,7 +40755,7 @@ const SettingsView = ({
     parsed.isIRE = rolesLower.includes("ire");
     parsed.isCFI = rolesLower.includes("cfi");
     parsed.isOFI = rolesLower.includes("ofi");
-    parsed.isQFI = rolesLower.includes("qfi") || rolesLower.includes("pilot");
+    parsed.isQFI = rolesLower.includes("qfi") || rolesLower.includes("instructor");
     parsed.isAdminStaff = rolesLower.includes("admin");
     if (rolesLower.includes("sim ip")) {
       parsed.role = "SIM IP";
