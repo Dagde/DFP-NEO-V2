@@ -5,9 +5,10 @@ import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Sco
 import { InstructorPriorityConfig } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import type { AirCombatSchedulingWeights } from '../utils/airCombatTraining';
 
 interface PrioritiesViewWithMenuProps {
-  school: 'ESL' | 'PEA';
+  school: string;
   coursePriorities: string[];
   onUpdatePriorities: (newOrder: string[]) => void;
   coursePercentages: Map<string, number>;
@@ -63,7 +64,10 @@ interface PrioritiesViewWithMenuProps {
   currencyNames: string[];
   resourceDisplayNames?: ResourceDisplayNames;
   taskProfiles?: string[];
+  operationalModel?: string;
   operationalModelLabel?: string;
+  airCombatSchedulingWeights?: AirCombatSchedulingWeights;
+  onUpdateAirCombatSchedulingWeights?: (weights: AirCombatSchedulingWeights) => void;
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
@@ -71,6 +75,7 @@ type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | '
 export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<PrioritiesSection>('build-timeline');
     const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
+    const locationDisplayName = props.school === 'ESL' ? 'East Sale' : props.school === 'PEA' ? 'Pearce' : props.school;
 
     const workflowItems = [
         {
@@ -173,7 +178,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                                 </div>
                             </div>
                             <span className="rounded-md border border-slate-600/70 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-300">
-                                {props.school === 'ESL' ? 'East Sale' : 'Pearce'} build setup
+                                {locationDisplayName} build setup
                             </span>
                         </div>
                     </div>

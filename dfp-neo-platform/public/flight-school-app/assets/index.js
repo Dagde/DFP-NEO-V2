@@ -22048,11 +22048,15 @@ const PrioritiesView = ({
   currencyNames,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   taskProfiles = [],
-  operationalModelLabel = "Flight School Model"
+  operationalModel = "flight_school",
+  operationalModelLabel = "Flight School Model",
+  airCombatSchedulingWeights,
+  onUpdateAirCombatSchedulingWeights
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
   const cptLabel = resourceDisplayNames.cpt;
+  const locationDisplayName = school === "ESL" ? "East Sale (ESL)" : school === "PEA" ? "Pearce (PEA)" : school;
   const staffRankOrder = ["WGCDR", "SQNLDR", "FLTLT", "FLGOFF", "PLTOFF", "Mr"];
   const aircraftConfigOptions = reactExports.useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
@@ -22068,6 +22072,11 @@ const PrioritiesView = ({
   const [flyingWindowTimestamp, setFlyingWindowTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const [dutyPeriodTimestamp, setDutyPeriodTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const [turnaroundTimestamp, setTurnaroundTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
+  const isAirCombatModel = String(operationalModel || "").trim().toLowerCase() === "air_combat";
+  const normalisedAirCombatWeights = reactExports.useMemo(
+    () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
+    [airCombatSchedulingWeights]
+  );
   reactExports.useEffect(() => {
     setCourseTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
   }, [coursePriorities, coursePercentages]);
@@ -22092,6 +22101,20 @@ const PrioritiesView = ({
     if (!nextValue) delete nextCapacities[configId];
     logAudit("Priorities", "Edit", `Updated ${configId.replace("-", " ")} aircraft capacity`, `${aircraftConfigCapacities[configId] || "blank"} → ${nextValue || "blank"}`);
     onUpdateAircraftConfigCapacities(nextCapacities);
+  };
+  const handleAirCombatCourseWeightChange = (value) => {
+    const courses = Math.max(0, Math.min(100, Math.round(value)));
+    const nextWeights = {
+      courses,
+      trainingPackages: 100 - courses
+    };
+    logAudit(
+      "Priorities",
+      "Edit",
+      "Updated Air Combat priority mix",
+      `Courses ${normalisedAirCombatWeights.courses}% / Training Packages ${normalisedAirCombatWeights.trainingPackages}% → Courses ${nextWeights.courses}% / Training Packages ${nextWeights.trainingPackages}%`
+    );
+    onUpdateAirCombatSchedulingWeights?.(nextWeights);
   };
   const nonCleanConfigCapacityTotal = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || "", 10) || 0), 0), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
   const hasEnteredConfigCapacity = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").some((definition) => String(aircraftConfigCapacities[definition.id] || "").trim() !== ""), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
@@ -22939,7 +22962,7 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Course Priority" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-0.5", children: [
-              school === "ESL" ? "East Sale (ESL)" : "Pearce (PEA)",
+              locationDisplayName,
               " — locality courses only"
             ] })
           ] }),
@@ -22948,56 +22971,118 @@ const PrioritiesView = ({
             courseTimestamp
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: coursePriorities.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-8 text-center text-gray-500", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium", children: [
-            "No courses found for ",
-            school === "ESL" ? "East Sale" : "Pearce"
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700", children: [
+          isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: "Air Combat Priority Mix" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Sets how remaining Air Combat capacity is shared after mandatory tasking is attempted." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100", children: [
+                "Courses ",
+                normalisedAirCombatWeights.courses,
+                "% / Training Packages ",
+                normalisedAirCombatWeights.trainingPackages,
+                "%"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_120px_150px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[11px] font-semibold uppercase tracking-wide text-slate-400", children: "Course Weight" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "range",
+                    min: 0,
+                    max: 100,
+                    step: 5,
+                    value: normalisedAirCombatWeights.courses,
+                    onChange: (event) => handleAirCombatCourseWeightChange(Number(event.target.value)),
+                    className: "mt-3 w-full accent-emerald-500"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[11px] font-semibold uppercase tracking-wide text-slate-400", children: "Courses" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "number",
+                    min: 0,
+                    max: 100,
+                    step: 5,
+                    value: normalisedAirCombatWeights.courses,
+                    onChange: (event) => handleAirCombatCourseWeightChange(Number(event.target.value)),
+                    className: "mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[11px] font-semibold uppercase tracking-wide text-slate-400", children: "Training Packages" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "number",
+                    value: normalisedAirCombatWeights.trainingPackages,
+                    readOnly: true,
+                    disabled: true,
+                    className: "mt-1 w-full cursor-not-allowed rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-400 opacity-80"
+                  }
+                )
+              ] })
+            ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-1", children: "Courses will appear here once trainees are loaded for this locality." })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: coursePriorities.map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "li",
-            {
-              draggable: true,
-              onDragStart: () => handleCourseDragStart(index),
-              onDragEnter: () => handleCourseDragEnter(index),
-              onDragEnd: handleCourseDragEnd,
-              onDragOver: (e) => e.preventDefault(),
-              className: "p-3 bg-slate-950/70 border border-slate-700 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500", children: index + 1 }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: course })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `font-mono w-12 text-center ${totalPercentage !== 100 && "text-red-400"}`, children: [
-                    coursePercentages.get(course) ?? 0,
-                    "%"
+          coursePriorities.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-8 text-center text-gray-500", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium", children: [
+              "No courses found for ",
+              locationDisplayName
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-1", children: "Courses will appear here once trainees are loaded for this locality." })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: coursePriorities.map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "li",
+              {
+                draggable: true,
+                onDragStart: () => handleCourseDragStart(index),
+                onDragEnter: () => handleCourseDragEnter(index),
+                onDragEnd: handleCourseDragEnd,
+                onDragOver: (e) => e.preventDefault(),
+                className: "p-3 bg-slate-950/70 border border-slate-700 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500", children: index + 1 }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: course })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "up", onClick: () => handlePercentageChange(course, "increase"), disabled: (coursePercentages.get(course) ?? 0) >= 100 }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "down", onClick: () => handlePercentageChange(course, "decrease"), disabled: (coursePercentages.get(course) ?? 0) <= 5 })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `font-mono w-12 text-center ${totalPercentage !== 100 && "text-red-400"}`, children: [
+                      coursePercentages.get(course) ?? 0,
+                      "%"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "up", onClick: () => handlePercentageChange(course, "increase"), disabled: (coursePercentages.get(course) ?? 0) >= 100 }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "down", onClick: () => handlePercentageChange(course, "decrease"), disabled: (coursePercentages.get(course) ?? 0) <= 5 })
+                    ] })
                   ] })
-                ] })
-              ]
-            },
-            course
-          )) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`, children: [
-            "Total: ",
-            totalPercentage,
-            "%"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priority-help": "true", className: "mt-2 p-2 bg-cyan-500/10 border border-cyan-500/30 rounded text-xs text-cyan-300", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold mb-1", children: "ℹ️ Weighted Priority System:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "list-disc list-inside space-y-1 text-cyan-200", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Percentages are auto-normalized to 100%" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Minimum percentage per course: 5%" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Higher % = more events (biased allocation)" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "All courses still get events (no starvation)" })
+                ]
+              },
+              course
+            )) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`, children: [
+              "Total: ",
+              totalPercentage,
+              "%"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priority-help": "true", className: "mt-2 p-2 bg-cyan-500/10 border border-cyan-500/30 rounded text-xs text-cyan-300", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold mb-1", children: "ℹ️ Weighted Priority System:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "list-disc list-inside space-y-1 text-cyan-200", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Percentages are auto-normalized to 100%" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Minimum percentage per course: 5%" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Higher % = more events (biased allocation)" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "All courses still get events (no starvation)" })
+              ] })
             ] })
           ] })
-        ] }) })
+        ] })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-build-timeline space-y-6", children: [
@@ -23998,6 +24083,7 @@ const PrioritiesView = ({
 const PrioritiesViewWithMenu = (props) => {
   const [activeSection, setActiveSection] = reactExports.useState("build-timeline");
   const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
+  const locationDisplayName = props.school === "ESL" ? "East Sale" : props.school === "PEA" ? "Pearce" : props.school;
   const workflowItems = [
     {
       id: "build-timeline",
@@ -24079,7 +24165,7 @@ const PrioritiesViewWithMenu = (props) => {
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-md border border-slate-600/70 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-300", children: [
-            props.school === "ESL" ? "East Sale" : "Pearce",
+            locationDisplayName,
             " build setup"
           ] })
         ] }) }),
@@ -47341,10 +47427,6 @@ const PlatformConfigurationSettings = ({
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null
   );
-  const airCombatScheduling = {
-    ...primaryOrganisationSettings.airCombatScheduling || {},
-    defaultWeights: normaliseAirCombatSchedulingWeights(primaryOrganisationSettings.airCombatScheduling?.defaultWeights)
-  };
   const masterLmpAccessRules = reactExports.useMemo(
     () => normaliseMasterLmpAccessRules(config),
     [config.organisations]
@@ -47448,20 +47530,6 @@ const PlatformConfigurationSettings = ({
       taskProfiles: {
         ...normaliseTaskProfileConfig(settings.taskProfiles || null),
         [model]: parseTaskProfileText(text)
-      }
-    }));
-  };
-  const updateAirCombatSchedulingWeights = (courseWeight) => {
-    const courses = Math.max(0, Math.min(100, Math.round(courseWeight)));
-    updatePrimaryOrganisationSettings((settings) => ({
-      ...settings,
-      airCombatScheduling: {
-        ...settings.airCombatScheduling || {},
-        version: 1,
-        defaultWeights: {
-          courses,
-          trainingPackages: 100 - courses
-        }
       }
     }));
   };
@@ -49492,58 +49560,6 @@ const PlatformConfigurationSettings = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-scheduling-rule-sets", className: getSectionClass("platform-scheduling-rule-sets"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Scheduling Rule Sets", subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-emerald-100", children: "Air Combat Priority Mix" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Sets how remaining Air Combat capacity is shared after mandatory tasking is attempted." })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100", children: [
-              "Courses ",
-              airCombatScheduling.defaultWeights.courses,
-              "% / Training Packages ",
-              airCombatScheduling.defaultWeights.trainingPackages,
-              "%"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_120px_120px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: "Course Weight", info: "Training Package weight is automatically balanced to make the pair total 100%." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "range",
-                  min: 0,
-                  max: 100,
-                  step: 5,
-                  disabled: !canEdit,
-                  value: airCombatScheduling.defaultWeights.courses,
-                  onChange: (event) => updateAirCombatSchedulingWeights(Number(event.target.value)),
-                  className: "mt-3 w-full accent-emerald-500 disabled:opacity-50"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              NumberField,
-              {
-                label: "Courses",
-                value: airCombatScheduling.defaultWeights.courses,
-                disabled: !canEdit,
-                onChange: updateAirCombatSchedulingWeights
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              NumberField,
-              {
-                label: "Training Packages",
-                value: airCombatScheduling.defaultWeights.trainingPackages,
-                disabled: true,
-                onChange: () => {
-                }
-              }
-            )
-          ] })
-        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -68548,6 +68564,21 @@ const App = () => {
     () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
     [activeOperationalModel, platformConfig]
   );
+  const airCombatSchedulingWeights = reactExports.useMemo(
+    () => normaliseAirCombatSchedulingWeights(organisationSettings.airCombatScheduling?.defaultWeights),
+    [organisationSettings.airCombatScheduling?.defaultWeights]
+  );
+  const handleUpdateAirCombatSchedulingWeights = reactExports.useCallback((weights) => {
+    const defaultWeights = normaliseAirCombatSchedulingWeights(weights);
+    setOrganisationSettings((prev) => ({
+      ...prev,
+      airCombatScheduling: {
+        ...prev.airCombatScheduling || {},
+        version: 1,
+        defaultWeights
+      }
+    }));
+  }, []);
   const activeOperationalContext = reactExports.useMemo(() => ({
     locationCode: school,
     unitCode: activeUnitCode,
@@ -78793,7 +78824,10 @@ ${conflictLines.join("\n")}${moreText}`,
             currencyNames,
             resourceDisplayNames,
             taskProfiles: activeTaskProfiles,
-            operationalModelLabel: activeOperationalModelLabel
+            operationalModel: activeOperationalModel,
+            operationalModelLabel: activeOperationalModelLabel,
+            airCombatSchedulingWeights,
+            onUpdateAirCombatSchedulingWeights: handleUpdateAirCombatSchedulingWeights
           }
         );
       case "CourseProgress":

@@ -9,9 +9,13 @@ import { logAudit } from '../utils/auditLogger';
 import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import {
+  normaliseAirCombatSchedulingWeights,
+  type AirCombatSchedulingWeights,
+} from '../utils/airCombatTraining';
 
 interface PrioritiesViewProps {
-  school?: 'ESL' | 'PEA';
+  school?: string;
   coursePriorities: string[];
   onUpdatePriorities: (newOrder: string[]) => void;
   coursePercentages: Map<string, number>;
@@ -68,7 +72,10 @@ interface PrioritiesViewProps {
   currencyNames: string[];
   resourceDisplayNames?: ResourceDisplayNames;
   taskProfiles?: string[];
+  operationalModel?: string;
   operationalModelLabel?: string;
+  airCombatSchedulingWeights?: AirCombatSchedulingWeights;
+  onUpdateAirCombatSchedulingWeights?: (weights: AirCombatSchedulingWeights) => void;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
 
@@ -651,11 +658,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   currencyNames,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   taskProfiles = [],
+  operationalModel = 'flight_school',
   operationalModelLabel = 'Flight School Model',
+  airCombatSchedulingWeights,
+  onUpdateAirCombatSchedulingWeights,
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
   const cptLabel = resourceDisplayNames.cpt;
+  const locationDisplayName = school === 'ESL' ? 'East Sale (ESL)' : school === 'PEA' ? 'Pearce (PEA)' : school;
   const staffRankOrder = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'];
   const aircraftConfigOptions = useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0
@@ -682,6 +693,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [flyingWindowTimestamp, setFlyingWindowTimestamp] = useState(new Date().toLocaleString());
   const [dutyPeriodTimestamp, setDutyPeriodTimestamp] = useState(new Date().toLocaleString());
   const [turnaroundTimestamp, setTurnaroundTimestamp] = useState(new Date().toLocaleString());
+  const isAirCombatModel = String(operationalModel || '').trim().toLowerCase() === 'air_combat';
+  const normalisedAirCombatWeights = useMemo(
+    () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
+    [airCombatSchedulingWeights],
+  );
 
 
   useEffect(() => {
@@ -712,6 +728,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (!nextValue) delete nextCapacities[configId];
     logAudit("Priorities", "Edit", `Updated ${configId.replace('-', ' ')} aircraft capacity`, `${aircraftConfigCapacities[configId] || 'blank'} → ${nextValue || 'blank'}`);
     onUpdateAircraftConfigCapacities(nextCapacities);
+  };
+
+  const handleAirCombatCourseWeightChange = (value: number) => {
+    const courses = Math.max(0, Math.min(100, Math.round(value)));
+    const nextWeights = {
+      courses,
+      trainingPackages: 100 - courses,
+    };
+    logAudit(
+      'Priorities',
+      'Edit',
+      'Updated Air Combat priority mix',
+      `Courses ${normalisedAirCombatWeights.courses}% / Training Packages ${normalisedAirCombatWeights.trainingPackages}% → Courses ${nextWeights.courses}% / Training Packages ${nextWeights.trainingPackages}%`,
+    );
+    onUpdateAirCombatSchedulingWeights?.(nextWeights);
   };
 
   const nonCleanConfigCapacityTotal = useMemo(() => (
@@ -1799,15 +1830,66 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <div>
                         <h2 className="text-lg font-semibold text-gray-200">Course Priority</h2>
                         <p className="text-xs text-gray-400 mt-0.5">
-                            {school === 'ESL' ? 'East Sale (ESL)' : 'Pearce (PEA)'} &mdash; locality courses only
+                            {locationDisplayName} &mdash; locality courses only
                         </p>
                     </div>
                     <span className="text-xs text-gray-500">Last updated: {courseTimestamp}</span>
                 </div>
                 <div className="p-4 border-t border-gray-700">
+                    {isAirCombatModel && (
+                        <div className="mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
+                            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-sm font-bold text-emerald-100">Air Combat Priority Mix</h3>
+                                    <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
+                                        Sets how remaining Air Combat capacity is shared after mandatory tasking is attempted.
+                                    </p>
+                                </div>
+                                <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100">
+                                    Courses {normalisedAirCombatWeights.courses}% / Training Packages {normalisedAirCombatWeights.trainingPackages}%
+                                </span>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-[1fr_120px_150px]">
+                                <label className="block">
+                                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Course Weight</span>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={100}
+                                        step={5}
+                                        value={normalisedAirCombatWeights.courses}
+                                        onChange={(event) => handleAirCombatCourseWeightChange(Number(event.target.value))}
+                                        className="mt-3 w-full accent-emerald-500"
+                                    />
+                                </label>
+                                <label className="block">
+                                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Courses</span>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        step={5}
+                                        value={normalisedAirCombatWeights.courses}
+                                        onChange={(event) => handleAirCombatCourseWeightChange(Number(event.target.value))}
+                                        className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500"
+                                    />
+                                </label>
+                                <label className="block">
+                                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Training Packages</span>
+                                    <input
+                                        type="number"
+                                        value={normalisedAirCombatWeights.trainingPackages}
+                                        readOnly
+                                        disabled
+                                        className="mt-1 w-full cursor-not-allowed rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-400 opacity-80"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+                    )}
                     {coursePriorities.length === 0 ? (
                         <div className="py-8 text-center text-gray-500">
-                            <p className="text-sm font-medium">No courses found for {school === 'ESL' ? 'East Sale' : 'Pearce'}</p>
+                            <p className="text-sm font-medium">No courses found for {locationDisplayName}</p>
                             <p className="text-xs mt-1">Courses will appear here once trainees are loaded for this locality.</p>
                         </div>
                     ) : (

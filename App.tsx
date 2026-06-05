@@ -65,6 +65,7 @@ import {
     getAirCombatTrainingKey,
     normaliseAirCombatSchedulingWeights,
     normaliseAirCombatTrainingAssignments,
+    type AirCombatSchedulingWeights,
 } from './utils/airCombatTraining';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
@@ -11596,6 +11597,21 @@ const App: React.FC = () => {
         () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
         [activeOperationalModel, platformConfig],
     );
+    const airCombatSchedulingWeights = useMemo(
+        () => normaliseAirCombatSchedulingWeights(organisationSettings.airCombatScheduling?.defaultWeights),
+        [organisationSettings.airCombatScheduling?.defaultWeights],
+    );
+    const handleUpdateAirCombatSchedulingWeights = useCallback((weights: AirCombatSchedulingWeights) => {
+        const defaultWeights = normaliseAirCombatSchedulingWeights(weights);
+        setOrganisationSettings(prev => ({
+            ...prev,
+            airCombatScheduling: {
+                ...(prev.airCombatScheduling || {}),
+                version: 1,
+                defaultWeights,
+            },
+        }));
+    }, []);
     const activeOperationalContext = useMemo(() => ({
         locationCode: school,
         unitCode: activeUnitCode,
@@ -24358,7 +24374,10 @@ updates.forEach(update => {
                     currencyNames={currencyNames}
                     resourceDisplayNames={resourceDisplayNames}
                     taskProfiles={activeTaskProfiles}
+                    operationalModel={activeOperationalModel}
                     operationalModelLabel={activeOperationalModelLabel}
+                    airCombatSchedulingWeights={airCombatSchedulingWeights}
+                    onUpdateAirCombatSchedulingWeights={handleUpdateAirCombatSchedulingWeights}
                 />;
             case 'CourseProgress':
                 return <CourseProgressView
