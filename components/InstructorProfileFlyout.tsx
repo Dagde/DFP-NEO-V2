@@ -1224,8 +1224,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
                   </div>
                   {isAirCombatModel ? (
-                    <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-                      <div className="space-y-2">
+                    <div className="space-y-4">
+                      <div className="grid gap-3 md:grid-cols-2">
                         {airCombatTrainingSummaries.length > 0 ? airCombatTrainingSummaries.map(summary => {
                           const isSelected = selectedAirCombatTraining?.assignment.trainingKey === summary.assignment.trainingKey;
                           return (
@@ -1233,7 +1233,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               key={summary.assignment.trainingKey}
                               type="button"
                               onClick={() => setSelectedAirCombatTrainingKey(summary.assignment.trainingKey)}
-                              className={`w-full rounded-md border p-3 text-left transition ${isSelected ? 'border-sky-300 bg-sky-800/70 shadow-lg' : 'border-gray-700 bg-gray-900/70 hover:border-sky-500/60 hover:bg-gray-800'}`}
+                              className={`min-h-[132px] w-full rounded-md border p-3 text-left transition ${isSelected ? 'border-sky-300 bg-sky-800/70 shadow-lg' : 'border-gray-700 bg-gray-900/70 hover:border-sky-500/60 hover:bg-gray-800'}`}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
@@ -1264,12 +1264,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </div>
                       <div className="min-h-[260px] rounded-lg border border-gray-700 bg-gray-950/35">
                         {selectedAirCombatTraining ? (
-                          <div className="grid min-h-[260px] grid-cols-[260px_1fr]">
-                            <div className="border-r border-gray-700 bg-gray-950/30 p-3">
-                              <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Selected Sequence</div>
-                              <div className="mt-1 text-lg font-extrabold text-white">{selectedAirCombatTraining.assignment.code}</div>
-                              <div className="text-xs text-gray-400">{selectedAirCombatTraining.assignment.title}</div>
-                              <div className="mt-4 grid grid-cols-2 gap-2">
+                          <div className="min-h-[260px]">
+                            <div className="grid gap-3 border-b border-gray-700 bg-gray-950/30 p-3 lg:grid-cols-[minmax(220px,1fr)_140px_140px_minmax(240px,0.9fr)]">
+                              <div className="min-w-0">
+                                <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Selected Sequence</div>
+                                <div className="mt-1 truncate text-lg font-extrabold text-white">{selectedAirCombatTraining.assignment.code}</div>
+                                <div className="truncate text-xs text-gray-400">{selectedAirCombatTraining.assignment.title}</div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 lg:contents">
                                 <div className="rounded border border-gray-700 bg-gray-900/70 p-2">
                                   <div className="text-[9px] uppercase tracking-wide text-gray-500">Complete</div>
                                   <div className="text-base font-bold text-emerald-300">{selectedAirCombatTraining.completedCount}</div>
@@ -1279,7 +1281,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                   <div className="text-base font-bold text-amber-300">{Math.max(0, selectedAirCombatTraining.totalCount - selectedAirCombatTraining.completedCount)}</div>
                                 </div>
                               </div>
-                              <div className="mt-4 rounded border border-sky-500/25 bg-sky-500/10 p-3">
+                              <div className="rounded border border-sky-500/25 bg-sky-500/10 p-3">
                                 <div className="text-[9px] font-bold uppercase tracking-wide text-sky-300">Next Event</div>
                                 <div className="mt-1 text-sm font-bold text-white">{selectedAirCombatTraining.nextItem?.code || 'Sequence complete'}</div>
                                 {selectedAirCombatTraining.nextItem && (
@@ -1293,7 +1295,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               )}
                             </div>
                             <div className="max-h-[420px] overflow-y-auto p-3">
-                              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                                 {selectedAirCombatTraining.sequenceItems.map((item, index) => {
                                   const isCompleted = selectedAirCombatTraining.completedCodes.has(normaliseTrainingCode(item.code));
                                   const isNext = selectedAirCombatTraining.nextItem?.code === item.code;
