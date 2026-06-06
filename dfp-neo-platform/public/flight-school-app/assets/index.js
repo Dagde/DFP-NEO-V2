@@ -66010,15 +66010,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const aliases = /* @__PURE__ */ new Set([token]);
       if (token.startsWith("Y") && token.length === 4) aliases.add(token.slice(1));
       if (token.length === 3) aliases.add(`Y${token}`);
-      Object.entries(locationAbbreviations || {}).forEach(([name, abbreviation]) => {
-        const nameToken = normaliseFormationContextToken(name);
-        const abbreviationToken = normaliseFormationContextToken(abbreviation);
-        if (token === nameToken || token === abbreviationToken || token === `Y${abbreviationToken}`) {
-          aliases.add(nameToken);
-          aliases.add(abbreviationToken);
-          aliases.add(`Y${abbreviationToken}`);
-        }
-      });
+      try {
+        Object.entries(locationAbbreviations || {}).forEach(([name, abbreviation]) => {
+          const nameToken = normaliseFormationContextToken(name);
+          const abbreviationToken = normaliseFormationContextToken(abbreviation);
+          if (token === nameToken || token === abbreviationToken || token === `Y${abbreviationToken}`) {
+            aliases.add(nameToken);
+            aliases.add(abbreviationToken);
+            aliases.add(`Y${abbreviationToken}`);
+          }
+        });
+      } catch {
+      }
       return Array.from(aliases);
     };
     const getAirCombatFormationLocationAliases = (members) => {
@@ -66026,7 +66029,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         school,
         ...members.flatMap((member) => [
           member.staff.location,
-          member.staff.unit ? unitLocations[member.staff.unit] : ""
+          member.staff.unit ? unitLocations?.[member.staff.unit] : ""
         ])
       ];
       return new Set(rawValues.flatMap(expandFormationLocationAliases));
@@ -66049,30 +66052,61 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => locationAliases.has(alias));
       return unitMatches && locationMatches;
     };
+    const isAirCombatFormationCallsignAvailable = (callsignBase, startTime, duration) => {
+      const normalisedBase = normalizeFormationCallsignCode(callsignBase);
+      if (!normalisedBase) return false;
+      const endTime = startTime + duration;
+      return !generatedEvents.some((event) => {
+        if (!event.callsign) return false;
+        const eventEnd = event.startTime + event.duration;
+        const overlaps = event.startTime < endTime && eventEnd > startTime;
+        return overlaps && eventUsesFormationCallsignBase(event.callsign, normalisedBase);
+      });
+    };
     const selectAirCombatFormationCallsignBase = (members, startTime, duration) => {
-      const formationUnit = members.find((member) => String(member.staff.unit || "").trim())?.staff.unit || "";
-      const configuredCandidates = (config.formationCallsigns || []).filter((callsign) => normalizeFormationCallsignCode(callsign.code)).filter((callsign) => formationCallsignMatchesAirCombatContext(callsign, members, formationUnit)).map((callsign) => ({
-        ...callsign,
-        code: normalizeFormationCallsignCode(callsign.code)
-      }));
-      const shuffledCandidates = [...configuredCandidates].sort(() => Math.random() - 0.5);
-      const available = shuffledCandidates.find(
-        (callsign) => isFormationCallsignBaseAvailable(callsign.code, startTime, duration)
-      );
-      const inUseCandidates = configuredCandidates.filter((callsign) => !isFormationCallsignBaseAvailable(callsign.code, startTime, duration)).map((callsign) => callsign.code);
-      if (available) {
-        return {
-          base: available.code,
-          source: "configured",
-          name: available.name,
-          unit: available.unit,
-          candidates: configuredCandidates.map((callsign) => callsign.code),
-          inUseCandidates
-        };
+      let formationUnit = "";
+      let configuredCandidates = [];
+      let inUseCandidates = [];
+      try {
+        formationUnit = members.find((member) => String(member.staff.unit || "").trim())?.staff.unit || "";
+        configuredCandidates = (config.formationCallsigns || []).filter((callsign) => normalizeFormationCallsignCode(callsign.code)).filter((callsign) => formationCallsignMatchesAirCombatContext(callsign, members, formationUnit)).map((callsign) => ({
+          ...callsign,
+          code: normalizeFormationCallsignCode(callsign.code)
+        }));
+        const shuffledCandidates = [...configuredCandidates].sort(() => Math.random() - 0.5);
+        const available = shuffledCandidates.find(
+          (callsign) => isAirCombatFormationCallsignAvailable(callsign.code, startTime, duration)
+        );
+        inUseCandidates = configuredCandidates.filter((callsign) => !isAirCombatFormationCallsignAvailable(callsign.code, startTime, duration)).map((callsign) => callsign.code);
+        if (available) {
+          return {
+            base: available.code,
+            source: "configured",
+            name: available.name,
+            unit: available.unit,
+            candidates: configuredCandidates.map((callsign) => callsign.code),
+            inUseCandidates
+          };
+        }
+      } catch (error) {
+        pushAirCombatDiag("trainingAttempts", {
+          placed: false,
+          formation: true,
+          reason: "FORMATION_CALLSIGN_SELECTION_ERROR",
+          error: error instanceof Error ? error.message : String(error)
+        }, 1200);
+        countAirCombatRejection("FORMATION_CALLSIGN_SELECTION_ERROR");
       }
-      const staffPrefix = members[0]?.staff.callsign?.match(/^[A-Za-z]+/)?.[0] || "";
+      const fallbackCandidates = [
+        members[0]?.staff.callsign?.match(/^[A-Za-z]+/)?.[0] || "",
+        school,
+        "FORM"
+      ].map((candidate) => normalizeFormationCallsignCode(candidate).slice(0, 4)).filter(Boolean);
+      const availableFallback = fallbackCandidates.find(
+        (candidate) => isAirCombatFormationCallsignAvailable(candidate, startTime, duration)
+      ) || "FORM";
       return {
-        base: normalizeFormationCallsignCode(staffPrefix || school || "FORM").slice(0, 4) || "FORM",
+        base: availableFallback,
         source: "fallback",
         unit: formationUnit,
         candidates: configuredCandidates.map((callsign) => callsign.code),
