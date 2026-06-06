@@ -84,6 +84,44 @@ const Dropdown: React.FC<{ label: string; value: string; onChange: (e: React.Cha
   </div>
 );
 
+const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
+
+const getAirCombatLinkedEventCode = (item?: Partial<SyllabusItemDetail> | null): string => {
+  const notes = String(item?.notes || '');
+  const linkedLine = notes
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .find(line => AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line));
+  const match = linkedLine?.match(AIR_COMBAT_LINKED_EVENT_NOTE_REGEX);
+  return match?.[1]?.trim() || '';
+};
+
+const getAirCombatDisplayNotes = (item?: Partial<SyllabusItemDetail> | null): string => {
+  const visibleNotes = String(item?.notes || '')
+    .split(/\r?\n/)
+    .filter(line => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line.trim()))
+    .join('\n')
+    .trim();
+  return visibleNotes || 'Nil';
+};
+
+const withAirCombatLinkedEventNote = (item: SyllabusItemDetail, linkedEventCode: string): SyllabusItemDetail => {
+  const visibleNotes = String(item.notes || '')
+    .split(/\r?\n/)
+    .filter(line => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line.trim()))
+    .join('\n')
+    .trim();
+  const normalizedLinkedEvent = linkedEventCode && linkedEventCode !== 'none' ? linkedEventCode : '';
+  const notes = [visibleNotes, normalizedLinkedEvent ? `[Linked Event: ${normalizedLinkedEvent}]` : '']
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+  return {
+    ...item,
+    notes: notes || undefined,
+  };
+};
+
 const ExperienceInput: React.FC<{ label: string; value: number; onChange: (val: number) => void }> = ({ label, value, onChange }) => (
   <div className="flex flex-col items-center">
     <label className="text-xs text-gray-400 mb-1">{label}</label>
@@ -439,6 +477,19 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     item.code === selectedAirCombatTrainingItemId
   )) || selectedAirCombatTraining?.nextItem || selectedAirCombatTraining?.sequenceItems[0] || null;
   const isSelectedAirCombatTrainingPackage = selectedAirCombatTraining?.assignment.kind === 'training_package';
+  const handleAirCombatLinkedEventChange = useCallback(async (item: SyllabusItemDetail, linkedEventCode: string) => {
+    if (!selectedAirCombatTraining || !onUpdateAirCombatTrainingEvent) return;
+    const updatedItem = withAirCombatLinkedEventNote(item, linkedEventCode);
+    const updated = await onUpdateAirCombatTrainingEvent(
+      instructor,
+      selectedAirCombatTraining.assignment,
+      item,
+      updatedItem,
+    );
+    if (updated !== false) {
+      setSelectedAirCombatTrainingItemId(updatedItem.id || updatedItem.code);
+    }
+  }, [instructor, onUpdateAirCombatTrainingEvent, selectedAirCombatTraining]);
   const airCombatTrainingReportRows = useMemo(() => (
     airCombatTrainingSummaries.flatMap(summary => (
       summary.completedEvents.map(event => ({
@@ -1324,6 +1375,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                   const physicalResources = Array.isArray(item.resourcesPhysical) && item.resourcesPhysical.length > 0 ? item.resourcesPhysical.join(', ') : 'Nil';
                                   const humanResources = Array.isArray(item.resourcesHuman) && item.resourcesHuman.length > 0 ? item.resourcesHuman.join(', ') : 'Nil';
                                   const prerequisites = Array.from(new Set([...(item.prerequisitesGround || []), ...(item.prerequisitesFlying || []), ...(item.prerequisites || [])])).filter(Boolean).join(', ') || 'Nil';
+                                  const linkedEventCode = getAirCombatLinkedEventCode(item);
+                                  const linkedEventOptions = selectedAirCombatTraining.sequenceItems.filter(option => (
+                                    (option.id || option.code) !== (item.id || item.code) &&
+                                    option.code !== item.code
+                                  ));
+                                  const hasSavedLinkedEventOption = linkedEventOptions.some(option => (option.code || option.id) === linkedEventCode);
+                                  const displayNotes = getAirCombatDisplayNotes(item);
                                   const rowToneClass = isSelectedAirCombatTrainingPackage
                                     ? (isSelected ? 'border-emerald-300 bg-gray-950/35 ring-1 ring-emerald-300/80' : 'border-emerald-500/45 bg-gray-950/25 hover:border-emerald-400/75')
                                     : (isSelected ? 'border-sky-300 bg-gray-950/35 ring-1 ring-sky-300/80' : 'border-sky-500/40 bg-gray-950/25 hover:border-sky-400/70');
@@ -1371,9 +1429,16 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                           <span className="rounded bg-gray-950/45 px-1.5 py-1">{item.duration || 0}h</span>
                                         </div>
                                       </button>
-                                      <button
-                                        type="button"
+                                      <div
+                                        role="button"
+                                        tabIndex={0}
                                         onClick={() => setSelectedAirCombatTrainingItemId(item.id || item.code)}
+                                        onKeyDown={(event) => {
+                                          if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            setSelectedAirCombatTrainingItemId(item.id || item.code);
+                                          }
+                                        }}
                                         className={`min-h-[132px] rounded-md border p-3 text-left shadow-sm transition hover:bg-gray-900 ${detailTileToneClass}`}
                                       >
                                         <div className="flex items-start justify-between gap-3">
@@ -1383,7 +1448,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                           </div>
                                           <span className="shrink-0 rounded-full bg-gray-950/60 px-2 py-1 text-[10px] font-bold uppercase text-gray-300">{item.type || 'Event'}</span>
                                         </div>
-                                        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                                           <div className="rounded border border-gray-800 bg-gray-950/45 px-2 py-1.5">
                                             <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Timing</div>
                                             <div className="mt-0.5 text-[11px] font-semibold text-gray-200">{item.dayNight || 'Day'} / {item.duration || 0}h</div>
@@ -1400,6 +1465,30 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                             <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Human</div>
                                             <div className="mt-0.5 truncate text-[11px] font-semibold text-gray-200">{humanResources}</div>
                                           </div>
+                                          <div className="rounded border border-gray-800 bg-gray-950/45 px-2 py-1.5">
+                                            <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Linked Events</div>
+                                            <select
+                                              className="mt-0.5 w-full rounded border border-gray-700 bg-gray-950 px-1.5 py-1 text-[11px] font-semibold text-gray-200 focus:border-sky-400 focus:outline-none"
+                                              value={linkedEventCode || 'none'}
+                                              onClick={(event) => event.stopPropagation()}
+                                              onKeyDown={(event) => event.stopPropagation()}
+                                              onChange={async (event) => {
+                                                event.stopPropagation();
+                                                await handleAirCombatLinkedEventChange(item, event.target.value);
+                                              }}
+                                              disabled={!onUpdateAirCombatTrainingEvent}
+                                            >
+                                              <option value="none">none</option>
+                                              {linkedEventCode && !hasSavedLinkedEventOption && (
+                                                <option value={linkedEventCode}>{linkedEventCode}</option>
+                                              )}
+                                              {linkedEventOptions.map(option => (
+                                                <option key={option.id || option.code} value={option.code || option.id}>
+                                                  {option.code || option.id} - {option.eventDescription || option.module || 'Event'}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </div>
                                         </div>
                                         <div className="mt-2 grid gap-2 lg:grid-cols-[1fr_1.3fr]">
                                           <div className="rounded border border-gray-800 bg-gray-950/35 px-2 py-1.5">
@@ -1408,10 +1497,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                           </div>
                                           <div className="rounded border border-gray-800 bg-gray-950/35 px-2 py-1.5">
                                             <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Notes</div>
-                                            <div className="mt-0.5 max-h-[2.6em] overflow-hidden text-[11px] leading-snug text-gray-300">{item.notes || 'Nil'}</div>
+                                            <div className="mt-0.5 max-h-[2.6em] overflow-hidden whitespace-pre-line text-[11px] leading-snug text-gray-300">{displayNotes}</div>
                                           </div>
                                         </div>
-                                      </button>
+                                      </div>
                                     </div>
                                   );
                                 })}

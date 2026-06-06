@@ -31153,6 +31153,26 @@ const Dropdown = ({ label, value, onChange, children }) => /* @__PURE__ */ jsxRu
     }
   )
 ] });
+const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
+const getAirCombatLinkedEventCode = (item) => {
+  const notes = String(item?.notes || "");
+  const linkedLine = notes.split(/\r?\n/).map((line) => line.trim()).find((line) => AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line));
+  const match = linkedLine?.match(AIR_COMBAT_LINKED_EVENT_NOTE_REGEX);
+  return match?.[1]?.trim() || "";
+};
+const getAirCombatDisplayNotes = (item) => {
+  const visibleNotes = String(item?.notes || "").split(/\r?\n/).filter((line) => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line.trim())).join("\n").trim();
+  return visibleNotes || "Nil";
+};
+const withAirCombatLinkedEventNote = (item, linkedEventCode) => {
+  const visibleNotes = String(item.notes || "").split(/\r?\n/).filter((line) => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line.trim())).join("\n").trim();
+  const normalizedLinkedEvent = linkedEventCode && linkedEventCode !== "none" ? linkedEventCode : "";
+  const notes = [visibleNotes, normalizedLinkedEvent ? `[Linked Event: ${normalizedLinkedEvent}]` : ""].filter(Boolean).join("\n").trim();
+  return {
+    ...item,
+    notes: notes || void 0
+  };
+};
 const ExperienceInput = ({ label, value, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-gray-400 mb-1", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31454,6 +31474,19 @@ const InstructorProfileFlyout = ({
   }, [selectedAirCombatTraining, selectedAirCombatTrainingItemId]);
   const selectedAirCombatTrainingItem = selectedAirCombatTraining?.sequenceItems.find((item) => (item.id || item.code) === selectedAirCombatTrainingItemId || item.code === selectedAirCombatTrainingItemId) || selectedAirCombatTraining?.nextItem || selectedAirCombatTraining?.sequenceItems[0] || null;
   const isSelectedAirCombatTrainingPackage = selectedAirCombatTraining?.assignment.kind === "training_package";
+  const handleAirCombatLinkedEventChange = reactExports.useCallback(async (item, linkedEventCode) => {
+    if (!selectedAirCombatTraining || !onUpdateAirCombatTrainingEvent) return;
+    const updatedItem = withAirCombatLinkedEventNote(item, linkedEventCode);
+    const updated = await onUpdateAirCombatTrainingEvent(
+      instructor,
+      selectedAirCombatTraining.assignment,
+      item,
+      updatedItem
+    );
+    if (updated !== false) {
+      setSelectedAirCombatTrainingItemId(updatedItem.id || updatedItem.code);
+    }
+  }, [instructor, onUpdateAirCombatTrainingEvent, selectedAirCombatTraining]);
   const airCombatTrainingReportRows = reactExports.useMemo(() => airCombatTrainingSummaries.flatMap((summary) => summary.completedEvents.map((event) => ({
     event,
     summary,
@@ -32344,6 +32377,10 @@ const InstructorProfileFlyout = ({
                   const physicalResources = Array.isArray(item.resourcesPhysical) && item.resourcesPhysical.length > 0 ? item.resourcesPhysical.join(", ") : "Nil";
                   const humanResources = Array.isArray(item.resourcesHuman) && item.resourcesHuman.length > 0 ? item.resourcesHuman.join(", ") : "Nil";
                   const prerequisites = Array.from(/* @__PURE__ */ new Set([...item.prerequisitesGround || [], ...item.prerequisitesFlying || [], ...item.prerequisites || []])).filter(Boolean).join(", ") || "Nil";
+                  const linkedEventCode = getAirCombatLinkedEventCode(item);
+                  const linkedEventOptions = selectedAirCombatTraining.sequenceItems.filter((option) => (option.id || option.code) !== (item.id || item.code) && option.code !== item.code);
+                  const hasSavedLinkedEventOption = linkedEventOptions.some((option) => (option.code || option.id) === linkedEventCode);
+                  const displayNotes = getAirCombatDisplayNotes(item);
                   const rowToneClass = isSelectedAirCombatTrainingPackage ? isSelected ? "border-emerald-300 bg-gray-950/35 ring-1 ring-emerald-300/80" : "border-emerald-500/45 bg-gray-950/25 hover:border-emerald-400/75" : isSelected ? "border-sky-300 bg-gray-950/35 ring-1 ring-sky-300/80" : "border-sky-500/40 bg-gray-950/25 hover:border-sky-400/70";
                   const eventTileToneClass = isSelectedAirCombatTrainingPackage ? isSelected ? "border-emerald-200 bg-gray-700/85" : isNext ? "border-emerald-300 bg-gray-700/80" : "border-emerald-500/45 bg-gray-700/70 hover:border-emerald-400/75 hover:bg-gray-700/85" : isSelected ? "border-sky-200 bg-gray-700/85" : isNext ? "border-sky-300 bg-gray-700/80" : "border-sky-500/40 bg-gray-700/70 hover:border-sky-400/70 hover:bg-gray-700/85";
                   const detailTileToneClass = isSelectedAirCombatTrainingPackage ? isSelected ? "border-emerald-300/80 bg-gray-900/85" : "border-emerald-500/45 bg-gray-900/75 hover:border-emerald-400/75" : isSelected ? "border-sky-300/80 bg-gray-900/85" : "border-sky-500/40 bg-gray-900/75 hover:border-sky-400/70";
@@ -32385,10 +32422,17 @@ const InstructorProfileFlyout = ({
                           }
                         ),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                          "button",
+                          "div",
                           {
-                            type: "button",
+                            role: "button",
+                            tabIndex: 0,
                             onClick: () => setSelectedAirCombatTrainingItemId(item.id || item.code),
+                            onKeyDown: (event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setSelectedAirCombatTrainingItemId(item.id || item.code);
+                              }
+                            },
                             className: `min-h-[132px] rounded-md border p-3 text-left shadow-sm transition hover:bg-gray-900 ${detailTileToneClass}`,
                             children: [
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
@@ -32402,7 +32446,7 @@ const InstructorProfileFlyout = ({
                                 ] }),
                                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 rounded-full bg-gray-950/60 px-2 py-1 text-[10px] font-bold uppercase text-gray-300", children: item.type || "Event" })
                               ] }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4", children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5", children: [
                                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-800 bg-gray-950/45 px-2 py-1.5", children: [
                                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Timing" }),
                                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 text-[11px] font-semibold text-gray-200", children: [
@@ -32423,6 +32467,32 @@ const InstructorProfileFlyout = ({
                                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-800 bg-gray-950/45 px-2 py-1.5", children: [
                                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Human" }),
                                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[11px] font-semibold text-gray-200", children: humanResources })
+                                ] }),
+                                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-800 bg-gray-950/45 px-2 py-1.5", children: [
+                                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Linked Events" }),
+                                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                                    "select",
+                                    {
+                                      className: "mt-0.5 w-full rounded border border-gray-700 bg-gray-950 px-1.5 py-1 text-[11px] font-semibold text-gray-200 focus:border-sky-400 focus:outline-none",
+                                      value: linkedEventCode || "none",
+                                      onClick: (event) => event.stopPropagation(),
+                                      onKeyDown: (event) => event.stopPropagation(),
+                                      onChange: async (event) => {
+                                        event.stopPropagation();
+                                        await handleAirCombatLinkedEventChange(item, event.target.value);
+                                      },
+                                      disabled: !onUpdateAirCombatTrainingEvent,
+                                      children: [
+                                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "none", children: "none" }),
+                                        linkedEventCode && !hasSavedLinkedEventOption && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: linkedEventCode, children: linkedEventCode }),
+                                        linkedEventOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: option.code || option.id, children: [
+                                          option.code || option.id,
+                                          " - ",
+                                          option.eventDescription || option.module || "Event"
+                                        ] }, option.id || option.code))
+                                      ]
+                                    }
+                                  )
                                 ] })
                               ] }),
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid gap-2 lg:grid-cols-[1fr_1.3fr]", children: [
@@ -32432,7 +32502,7 @@ const InstructorProfileFlyout = ({
                                 ] }),
                                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-800 bg-gray-950/35 px-2 py-1.5", children: [
                                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Notes" }),
-                                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 max-h-[2.6em] overflow-hidden text-[11px] leading-snug text-gray-300", children: item.notes || "Nil" })
+                                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 max-h-[2.6em] overflow-hidden whitespace-pre-line text-[11px] leading-snug text-gray-300", children: displayNotes })
                                 ] })
                               ] })
                             ]
