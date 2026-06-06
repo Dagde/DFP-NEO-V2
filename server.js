@@ -12200,6 +12200,9 @@ async function ensureTraineePerformanceTable(db) {
         CONSTRAINT "TraineePerformance_eventId_key" UNIQUE ("eventId")
       )
     `);
+    // PT-051 records can now belong to trainees or Air Combat staff. Older
+    // deployments may still have this column constrained to Trainee.id.
+    await db.$executeRawUnsafe(`ALTER TABLE "TraineePerformance" DROP CONSTRAINT IF EXISTS "TraineePerformance_traineeId_fkey"`);
     // Create indexes for common query patterns
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_traineeId_idx" ON "TraineePerformance"("traineeId")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_instructorName_idx" ON "TraineePerformance"("instructorName")`);
