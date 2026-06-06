@@ -1225,34 +1225,50 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   </div>
                   {isAirCombatModel ? (
                     <div className="space-y-4">
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="rounded-lg border border-gray-600 bg-gray-950/55 p-3 shadow-inner">
+                        <div className="mb-3 flex items-center justify-between gap-3 border-b border-gray-700 pb-2">
+                          <div>
+                            <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Assigned Air Combat Training</div>
+                            <div className="text-[11px] text-gray-500">Courses and packages assigned to this staff member.</div>
+                          </div>
+                          <span className="shrink-0 rounded-full border border-gray-600 bg-gray-900 px-2.5 py-1 text-[10px] font-bold uppercase text-gray-300">
+                            {airCombatTrainingSummaries.length} assigned
+                          </span>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2">
                         {airCombatTrainingSummaries.length > 0 ? airCombatTrainingSummaries.map(summary => {
                           const isSelected = selectedAirCombatTraining?.assignment.trainingKey === summary.assignment.trainingKey;
+                          const isPackage = summary.assignment.kind === 'training_package';
+                          const accentClass = isPackage ? 'from-emerald-400 via-emerald-500 to-teal-500' : 'from-sky-300 via-sky-500 to-cyan-500';
+                          const typePillClass = isPackage ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-200' : 'border-sky-300/40 bg-sky-500/20 text-sky-100';
+                          const progressClass = isPackage ? 'bg-emerald-400' : 'bg-sky-400';
                           return (
                             <button
                               key={summary.assignment.trainingKey}
                               type="button"
                               onClick={() => setSelectedAirCombatTrainingKey(summary.assignment.trainingKey)}
-                              className={`min-h-[132px] w-full rounded-md border p-3 text-left transition ${isSelected ? 'border-sky-300 bg-sky-800/70 shadow-lg' : 'border-gray-700 bg-gray-900/70 hover:border-sky-500/60 hover:bg-gray-800'}`}
+                              className={`relative min-h-[156px] w-full overflow-hidden rounded-md border p-4 text-left transition ${isSelected ? 'border-sky-200 bg-sky-900/55 shadow-lg shadow-sky-950/40 ring-1 ring-sky-300/70' : 'border-gray-700 bg-gray-900/85 hover:border-sky-500/60 hover:bg-gray-800'}`}
                             >
+                              <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accentClass}`} />
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
-                                  <div className="truncate text-sm font-bold text-white">{summary.assignment.code}</div>
-                                  <div className="truncate text-[10px] text-gray-400">{summary.assignment.title}</div>
+                                  <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Training Assignment</div>
+                                  <div className="mt-1 truncate text-xl font-extrabold leading-tight text-white">{summary.assignment.code}</div>
+                                  <div className="mt-0.5 truncate text-xs font-medium text-gray-300">{summary.assignment.title}</div>
                                 </div>
-                                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${summary.assignment.kind === 'training_package' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'}`}>
-                                  {summary.assignment.kind === 'training_package' ? 'Package' : 'Course'}
+                                <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${typePillClass}`}>
+                                  {isPackage ? 'Package' : 'Course'}
                                 </span>
                               </div>
-                              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-700">
-                                <div className="h-full rounded-full bg-sky-400" style={{ width: `${summary.progressPercent}%` }} />
+                              <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-700/90">
+                                <div className={`h-full rounded-full ${progressClass}`} style={{ width: `${summary.progressPercent}%` }} />
                               </div>
-                              <div className="mt-2 flex justify-between text-[10px] text-gray-400">
+                              <div className="mt-2 flex justify-between text-[11px] font-semibold text-gray-300">
                                 <span>{summary.completedCount}/{summary.totalCount} complete</span>
-                                <span>{summary.progressPercent}%</span>
+                                <span className="text-white">{summary.progressPercent}%</span>
                               </div>
-                              <div className="mt-2 text-[10px] text-gray-500">
-                                Next: <span className="text-gray-300">{summary.nextItem?.code || 'Complete'}</span>
+                              <div className="mt-3 rounded border border-gray-700 bg-gray-950/45 px-2.5 py-2 text-[11px] text-gray-400">
+                                Next event: <span className="font-bold text-gray-100">{summary.nextItem?.code || 'Complete'}</span>
                               </div>
                             </button>
                           );
@@ -1261,6 +1277,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                             No Air Combat training assigned.
                           </div>
                         )}
+                        </div>
                       </div>
                       <div className="min-h-[260px] rounded-lg border border-gray-700 bg-gray-950/35">
                         {selectedAirCombatTraining ? (
