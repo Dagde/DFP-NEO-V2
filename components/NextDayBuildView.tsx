@@ -242,21 +242,34 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             const initialPositions = new Map<string, { startTime: number, rowIndex: number }>();
             const originalResourceIds = new Map<string, string>();
 
+            const processedDragEventIds = new Set<string>();
             const processEvent = (ev: ScheduleEvent) => {
+                if (processedDragEventIds.has(ev.id)) return;
+                processedDragEventIds.add(ev.id);
                 const rowIndex = resources.indexOf(ev.resourceId);
                 if (rowIndex !== -1) {
                     initialPositions.set(ev.id, { startTime: ev.startTime, rowIndex });
                     originalResourceIds.set(ev.id, ev.resourceId);
                 }
             };
+            const processEventWithFormation = (ev: ScheduleEvent) => {
+                const formationId = String(ev.formationId || '').trim();
+                if (!formationId) {
+                    processEvent(ev);
+                    return;
+                }
+                events
+                    .filter(candidate => candidate.formationId === formationId)
+                    .forEach(processEvent);
+            };
 
             if (isMultiSelectMode && selectedEventIds.has(event.id)) {
                 selectedEventIds.forEach(id => {
                     const ev = events.find(e => e.id === id);
-                    if (ev) processEvent(ev);
+                    if (ev) processEventWithFormation(ev);
                 });
             } else {
-                processEvent(event);
+                processEventWithFormation(event);
             }
 
             if (initialPositions.size > 0) {

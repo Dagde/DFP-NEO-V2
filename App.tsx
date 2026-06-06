@@ -21970,18 +21970,42 @@ const App: React.FC = () => {
     };
     // ───────────────────────────────────────────────────────────────────────────
 
-    const handleScheduleUpdate = (updates: { eventId: string; newStartTime?: number; newResourceId?: string; }[]) => {
+    type ScheduleTileUpdate = { eventId: string; newStartTime?: number; newResourceId?: string; };
+    const expandFormationScheduleUpdates = (scheduleForDate: ScheduleEvent[], updates: ScheduleTileUpdate[]): ScheduleTileUpdate[] => {
+        const expanded = new Map<string, ScheduleTileUpdate>(updates.map(update => [update.eventId, update]));
+        updates.forEach(update => {
+            const movedEvent = scheduleForDate.find(event => event.id === update.eventId);
+            const formationId = String(movedEvent?.formationId || '').trim();
+            if (!movedEvent || !formationId) return;
+            const startDelta = typeof update.newStartTime === 'number'
+                ? update.newStartTime - movedEvent.startTime
+                : null;
+            if (startDelta === null) return;
+            scheduleForDate
+                .filter(event => event.id !== movedEvent.id && event.formationId === formationId && !expanded.has(event.id))
+                .forEach(event => {
+                    expanded.set(event.id, {
+                        eventId: event.id,
+                        newStartTime: event.startTime + startDelta,
+                    });
+                });
+        });
+        return Array.from(expanded.values());
+    };
+
+    const handleScheduleUpdate = (updates: ScheduleTileUpdate[]) => {
         if (!updates || updates.length === 0) return;
         if (isPastDfpDate(date)) {
             denyPastDfpEdit('move tiles');
             return;
         }
 
-        // Simple event update - no formation linking
         let updatedEventsForDate: ScheduleEvent[] = [];
+        let appliedUpdates: ScheduleTileUpdate[] = updates;
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
             const scheduleForDate = prev[date] || [];
-            const updatesMap = new Map(updates.map(u => [u.eventId, u]));
+            appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
+            const updatesMap = new Map(appliedUpdates.map(u => [u.eventId, u]));
 
             const newScheduleForDate = scheduleForDate.map(event => {
                 if (updatesMap.has(event.id)) {
@@ -22015,7 +22039,7 @@ const App: React.FC = () => {
         }, 500);
 
         // Log the updates to audit trail
-updates.forEach(update => {
+appliedUpdates.forEach(update => {
                const event = updatedEventsForDate.find(e => e.id === update.eventId);
                if (event) {
                       // Capture original values BEFORE they change
@@ -22046,12 +22070,13 @@ updates.forEach(update => {
                }
            });
        };
-    const handleNextDayScheduleUpdate = (updates: { eventId: string; newStartTime?: number; newResourceId?: string; }[]) => {
+    const handleNextDayScheduleUpdate = (updates: ScheduleTileUpdate[]) => {
         if (!updates || updates.length === 0) return;
 
-        // Simple event update - no formation linking
+        let appliedUpdates: ScheduleTileUpdate[] = updates;
         setNextDayBuildEvents(prev => {
-            const updatesMap = new Map(updates.map(u => [u.eventId, u]));
+            appliedUpdates = expandFormationScheduleUpdates(prev, updates);
+            const updatesMap = new Map(appliedUpdates.map(u => [u.eventId, u]));
             return prev.map(event => {
                 if (updatesMap.has(event.id)) {
                     const update = updatesMap.get(event.id)!;
@@ -22066,7 +22091,7 @@ updates.forEach(update => {
         });
 
 // Log the updates to audit trail
-           updates.forEach(update => {
+           appliedUpdates.forEach(update => {
                const event = nextDayBuildEvents.find(e => e.id === update.eventId);
                if (event) {
                       // Capture original values BEFORE they change

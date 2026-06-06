@@ -7092,7 +7092,10 @@ const ScheduleView = ({
       const rect = tileElement.getBoundingClientRect();
       const initialPositions = /* @__PURE__ */ new Map();
       const originalResourceIds = /* @__PURE__ */ new Map();
+      const processedDragEventIds = /* @__PURE__ */ new Set();
       const processEvent = (ev) => {
+        if (processedDragEventIds.has(ev.id)) return;
+        processedDragEventIds.add(ev.id);
         console.log("🐍 Processing event for drag:", ev.id, "resourceId:", ev.resourceId);
         console.log("🐍 Available resources:", resources);
         const rowIndex = resources.indexOf(ev.resourceId);
@@ -7105,13 +7108,21 @@ const ScheduleView = ({
           console.log("🐍 Event NOT added - resourceId not found in resources");
         }
       };
+      const processEventWithFormation = (ev) => {
+        const formationId = String(ev.formationId || "").trim();
+        if (!formationId) {
+          processEvent(ev);
+          return;
+        }
+        events.filter((candidate) => candidate.formationId === formationId).forEach(processEvent);
+      };
       if (isMultiSelectMode && selectedEventIds.has(event.id)) {
         selectedEventIds.forEach((id) => {
           const ev = events.find((e2) => e2.id === id);
-          if (ev) processEvent(ev);
+          if (ev) processEventWithFormation(ev);
         });
       } else {
-        processEvent(event);
+        processEventWithFormation(event);
       }
       if (initialPositions.size > 0) {
         console.log("Setting dragging state with", initialPositions.size, "events for event:", event.id);
@@ -20983,20 +20994,31 @@ const NextDayBuildView = ({
       const rect = tileElement.getBoundingClientRect();
       const initialPositions = /* @__PURE__ */ new Map();
       const originalResourceIds = /* @__PURE__ */ new Map();
+      const processedDragEventIds = /* @__PURE__ */ new Set();
       const processEvent = (ev) => {
+        if (processedDragEventIds.has(ev.id)) return;
+        processedDragEventIds.add(ev.id);
         const rowIndex = resources.indexOf(ev.resourceId);
         if (rowIndex !== -1) {
           initialPositions.set(ev.id, { startTime: ev.startTime, rowIndex });
           originalResourceIds.set(ev.id, ev.resourceId);
         }
       };
+      const processEventWithFormation = (ev) => {
+        const formationId = String(ev.formationId || "").trim();
+        if (!formationId) {
+          processEvent(ev);
+          return;
+        }
+        events.filter((candidate) => candidate.formationId === formationId).forEach(processEvent);
+      };
       if (isMultiSelectMode && selectedEventIds.has(event.id)) {
         selectedEventIds.forEach((id) => {
           const ev = events.find((e2) => e2.id === id);
-          if (ev) processEvent(ev);
+          if (ev) processEventWithFormation(ev);
         });
       } else {
-        processEvent(event);
+        processEventWithFormation(event);
       }
       if (initialPositions.size > 0) {
         setDraggingState({
@@ -77719,6 +77741,23 @@ ${conflictLines.join("\n")}${moreText}`,
       }
     }
   };
+  const expandFormationScheduleUpdates = (scheduleForDate, updates) => {
+    const expanded = new Map(updates.map((update) => [update.eventId, update]));
+    updates.forEach((update) => {
+      const movedEvent = scheduleForDate.find((event) => event.id === update.eventId);
+      const formationId = String(movedEvent?.formationId || "").trim();
+      if (!movedEvent || !formationId) return;
+      const startDelta = typeof update.newStartTime === "number" ? update.newStartTime - movedEvent.startTime : null;
+      if (startDelta === null) return;
+      scheduleForDate.filter((event) => event.id !== movedEvent.id && event.formationId === formationId && !expanded.has(event.id)).forEach((event) => {
+        expanded.set(event.id, {
+          eventId: event.id,
+          newStartTime: event.startTime + startDelta
+        });
+      });
+    });
+    return Array.from(expanded.values());
+  };
   const handleScheduleUpdate = (updates) => {
     if (!updates || updates.length === 0) return;
     if (isPastDfpDate(date)) {
@@ -77726,9 +77765,11 @@ ${conflictLines.join("\n")}${moreText}`,
       return;
     }
     let updatedEventsForDate = [];
+    let appliedUpdates = updates;
     setPublishedSchedules((prev) => {
       const scheduleForDate = prev[date] || [];
-      const updatesMap = new Map(updates.map((u) => [u.eventId, u]));
+      appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
+      const updatesMap = new Map(appliedUpdates.map((u) => [u.eventId, u]));
       const newScheduleForDate = scheduleForDate.map((event) => {
         if (updatesMap.has(event.id)) {
           const update = updatesMap.get(event.id);
@@ -77754,7 +77795,7 @@ ${conflictLines.join("\n")}${moreText}`,
         });
       }
     }, 500);
-    updates.forEach((update) => {
+    appliedUpdates.forEach((update) => {
       const event = updatedEventsForDate.find((e) => e.id === update.eventId);
       if (event) {
         const originalStartTime = event.startTime;
@@ -77783,8 +77824,10 @@ ${conflictLines.join("\n")}${moreText}`,
   };
   const handleNextDayScheduleUpdate = (updates) => {
     if (!updates || updates.length === 0) return;
+    let appliedUpdates = updates;
     setNextDayBuildEvents((prev) => {
-      const updatesMap = new Map(updates.map((u) => [u.eventId, u]));
+      appliedUpdates = expandFormationScheduleUpdates(prev, updates);
+      const updatesMap = new Map(appliedUpdates.map((u) => [u.eventId, u]));
       return prev.map((event) => {
         if (updatesMap.has(event.id)) {
           const update = updatesMap.get(event.id);
@@ -77797,7 +77840,7 @@ ${conflictLines.join("\n")}${moreText}`,
         return event;
       });
     });
-    updates.forEach((update) => {
+    appliedUpdates.forEach((update) => {
       const event = nextDayBuildEvents.find((e) => e.id === update.eventId);
       if (event) {
         const originalStartTime = event.startTime;
