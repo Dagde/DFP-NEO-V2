@@ -32324,22 +32324,29 @@ const InstructorProfileFlyout = ({
                     {
                       type: "button",
                       onClick: () => setSelectedAirCombatTrainingItemId(item.id || item.code),
-                      className: `relative h-[96px] overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "ring-2 ring-sky-200" : ""} ${isNext ? "border-sky-300 bg-sky-800/70" : isCompleted ? "border-emerald-500/60 bg-gray-900" : "border-gray-700 bg-gray-900/75 hover:border-sky-500/60"}`,
+                      className: `flex min-h-[122px] flex-col rounded-md border px-3 py-2.5 text-left shadow-sm transition ${isSelected ? "ring-2 ring-sky-200" : ""} ${isNext ? "border-sky-300 bg-sky-800/70" : isCompleted ? "border-emerald-500/60 bg-gray-900" : "border-gray-700 bg-gray-900/75 hover:border-sky-500/60"}`,
                       title: `${item.code} - ${item.eventDescription || item.module || ""}`,
                       children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-3 top-2 max-w-[46%] truncate text-[10px] font-bold uppercase text-gray-400", children: item.phase || "Phase" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute right-3 top-2 max-w-[46%] truncate text-[10px] font-bold uppercase text-gray-300", children: item.type || "Event" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-center text-lg font-extrabold text-white", children: item.code }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-3 max-w-[48%] truncate text-[10px] font-semibold uppercase text-gray-400", children: item.module || selectedAirCombatTraining.assignment.code }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute bottom-2 right-3 flex max-w-[48%] items-center gap-2 text-[10px] font-semibold uppercase text-gray-300", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.dayNight || "Day" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[10px] font-bold uppercase tracking-wide text-gray-400", children: item.phase || "Phase" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: item.type || "Event" })
+                          ] }),
+                          isCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-200", children: "Done" }),
+                          isNext && !isCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 rounded-full bg-sky-500/25 px-2 py-0.5 text-[9px] font-bold uppercase text-sky-100", children: "Next" })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "my-3 min-w-0 text-center", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-2xl font-extrabold leading-none text-white", children: item.code }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 truncate text-[10px] font-medium text-gray-400", children: item.eventDescription || item.module || selectedAirCombatTraining.assignment.code })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-auto grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1.5 text-[10px] font-bold uppercase text-gray-300", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate rounded bg-gray-950/45 px-1.5 py-1 text-gray-400", children: item.module || selectedAirCombatTraining.assignment.code }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-950/45 px-1.5 py-1", children: item.dayNight || "Day" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-950/45 px-1.5 py-1", children: [
                             item.duration || 0,
                             "h"
                           ] })
-                        ] }),
-                        isCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-200", children: "Done" }),
-                        isNext && !isCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-sky-500/25 px-2 py-0.5 text-[9px] font-bold text-sky-100", children: "Next" })
+                        ] })
                       ]
                     },
                     item.id || `${item.code}-${index}`
