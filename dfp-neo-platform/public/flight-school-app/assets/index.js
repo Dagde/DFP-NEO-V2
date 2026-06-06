@@ -32255,14 +32255,11 @@ const InstructorProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: airCombatPanelButtonClass, children: "Close" })
               ] })
             ] }),
-            isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-t-lg border border-b-0 border-gray-600 bg-gray-950/55 px-3 pt-3 shadow-inner", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-400", children: "Assigned Air Combat Training" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Courses and packages assigned to this staff member." })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 rounded-full border border-gray-600 bg-gray-900 px-2.5 py-1 text-[10px] font-bold uppercase text-gray-300", children: [
+            isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-t-lg border border-b-0 border-gray-600 bg-gray-950/55 px-2 pt-2 shadow-inner", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1.5 flex items-center justify-between gap-3 px-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-400", children: "Assigned Training" }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 rounded-full border border-gray-600 bg-gray-900 px-2 py-0.5 text-[9px] font-bold uppercase text-gray-300", children: [
                     airCombatTrainingSummaries.length,
                     " assigned"
                   ] })
@@ -32270,7 +32267,7 @@ const InstructorProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "div",
                   {
-                    className: "grid items-end gap-2",
+                    className: "grid items-end gap-1.5",
                     style: { gridTemplateColumns: `repeat(${Math.max(2, airCombatTrainingSummaries.length || 1)}, minmax(0, 1fr))` },
                     children: airCombatTrainingSummaries.length > 0 ? airCombatTrainingSummaries.map((summary) => {
                       const isSelected = selectedAirCombatTraining?.assignment.trainingKey === summary.assignment.trainingKey;
@@ -32282,20 +32279,13 @@ const InstructorProfileFlyout = ({
                         {
                           type: "button",
                           onClick: () => setSelectedAirCombatTrainingKey(summary.assignment.trainingKey),
-                          className: `relative min-h-[76px] w-full overflow-hidden rounded-t-lg border border-b-0 px-3 py-2.5 text-left transition ${assignmentTabClass}`,
-                          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center justify-between gap-3", children: [
+                          className: `relative min-h-[44px] w-full overflow-hidden rounded-t-md border border-b-0 px-2.5 py-1.5 text-left transition ${assignmentTabClass}`,
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center justify-between gap-2", children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-xl font-extrabold leading-tight text-white", children: summary.assignment.code }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[11px] font-medium text-gray-300", children: summary.assignment.title }),
-                              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 truncate text-[10px] font-semibold text-gray-500", children: [
-                                summary.completedCount,
-                                "/",
-                                summary.totalCount,
-                                " complete · Next ",
-                                summary.nextItem?.code || "Complete"
-                              ] })
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-sm font-extrabold leading-tight text-white", children: summary.assignment.code }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[10px] font-medium text-gray-400", children: summary.assignment.title })
                             ] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${typePillClass}`, children: isPackage ? "Package" : "Course" })
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold uppercase ${typePillClass}`, children: isPackage ? "Package" : "Course" })
                           ] })
                         },
                         summary.assignment.trainingKey

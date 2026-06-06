@@ -1225,19 +1225,18 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
                   </div>
                   {isAirCombatModel ? (
-                    <div className="space-y-4">
-                      <div className="rounded-t-lg border border-b-0 border-gray-600 bg-gray-950/55 px-3 pt-3 shadow-inner">
-                        <div className="mb-2 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="rounded-t-lg border border-b-0 border-gray-600 bg-gray-950/55 px-2 pt-2 shadow-inner">
+                        <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
                           <div>
-                            <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Assigned Air Combat Training</div>
-                            <div className="text-[11px] text-gray-500">Courses and packages assigned to this staff member.</div>
+                            <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Assigned Training</div>
                           </div>
-                          <span className="shrink-0 rounded-full border border-gray-600 bg-gray-900 px-2.5 py-1 text-[10px] font-bold uppercase text-gray-300">
+                          <span className="shrink-0 rounded-full border border-gray-600 bg-gray-900 px-2 py-0.5 text-[9px] font-bold uppercase text-gray-300">
                             {airCombatTrainingSummaries.length} assigned
                           </span>
                         </div>
                         <div
-                          className="grid items-end gap-2"
+                          className="grid items-end gap-1.5"
                           style={{ gridTemplateColumns: `repeat(${Math.max(2, airCombatTrainingSummaries.length || 1)}, minmax(0, 1fr))` }}
                         >
                         {airCombatTrainingSummaries.length > 0 ? airCombatTrainingSummaries.map(summary => {
@@ -1252,17 +1251,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               key={summary.assignment.trainingKey}
                               type="button"
                               onClick={() => setSelectedAirCombatTrainingKey(summary.assignment.trainingKey)}
-                              className={`relative min-h-[76px] w-full overflow-hidden rounded-t-lg border border-b-0 px-3 py-2.5 text-left transition ${assignmentTabClass}`}
+                              className={`relative min-h-[44px] w-full overflow-hidden rounded-t-md border border-b-0 px-2.5 py-1.5 text-left transition ${assignmentTabClass}`}
                             >
-                              <div className="flex h-full items-center justify-between gap-3">
+                              <div className="flex h-full items-center justify-between gap-2">
                                 <div className="min-w-0">
-                                  <div className="truncate text-xl font-extrabold leading-tight text-white">{summary.assignment.code}</div>
-                                  <div className="mt-0.5 truncate text-[11px] font-medium text-gray-300">{summary.assignment.title}</div>
-                                  <div className="mt-1 truncate text-[10px] font-semibold text-gray-500">
-                                    {summary.completedCount}/{summary.totalCount} complete · Next {summary.nextItem?.code || 'Complete'}
-                                  </div>
+                                  <div className="truncate text-sm font-extrabold leading-tight text-white">{summary.assignment.code}</div>
+                                  <div className="mt-0.5 truncate text-[10px] font-medium text-gray-400">{summary.assignment.title}</div>
                                 </div>
-                                <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${typePillClass}`}>
+                                <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold uppercase ${typePillClass}`}>
                                   {isPackage ? 'Package' : 'Course'}
                                 </span>
                               </div>
