@@ -111,7 +111,8 @@ import {
     CancellationCode,
     CancellationRecord,
     StaffCallsignInfo,
-    FlyingWindowExclusionPeriod
+    FlyingWindowExclusionPeriod,
+    AirCombatTrainingAssignment
 } from './types';
 import { NewCourseData } from './components/AddCourseFlyout';
 
@@ -613,7 +614,7 @@ const normalisePersonnelRecord = (person: any): any => {
 import { ESL_DATA } from './mockData';
 import { initializeData } from './lib/dataService';
 // --- SYLLABUS SERVICE (loads from DB at startup) ---
-import { loadSyllabusFromDB, clearSyllabusCache } from './lib/syllabusService';
+import { loadSyllabusFromDB, clearSyllabusCache, createSyllabusItem, updateSyllabusItem } from './lib/syllabusService';
 // --- DEFAULT PHRASE BANK (configuration data - not mock data) ---
 import { DEFAULT_PHRASE_BANK } from './config/phraseBankConfig';
 import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from './lib/api';
@@ -7049,7 +7050,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             .filter(item => item.isActive !== false)
             .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
             .filter(item => (item.courses || []).includes(code))
-            .sort((left, right) => (left.orderKey || '').localeCompare(right.orderKey || '') || left.code.localeCompare(right.code));
+            .sort((left, right) =>
+                Number((left as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
+                (left.orderKey || '').localeCompare(right.orderKey || '') ||
+                left.code.localeCompare(right.code)
+            );
         const getCompletedTrainingEvents = (staffName: string, code: string, kind: 'course' | 'training_package') => {
             const validCodes = new Set(sortedTrainingItems(kind, code).map(item => item.code));
             return getAirCombatStaffEvents(staffName).filter(event => validCodes.has(event.flightNumber));
@@ -21903,6 +21908,177 @@ updates.forEach(update => {
         });
     };
 
+    const handleInsertAirCombatTrainingEvent = async (
+        staff: Instructor,
+        assignment: AirCombatTrainingAssignment,
+        sequenceItems: SyllabusItemDetail[],
+        request: InsertLmpEventRequest
+    ): Promise<boolean> => {
+        if (!sequenceItems.length) {
+            await showDarkAlert(`Could not insert ${request.label}: no Air Combat sequence events are available for ${assignment.code}.`, 'Insert Event Failed', 'error');
+            return false;
+        }
+        const insertionIndex = sequenceItems.findIndex(item => (
+            (item.id || item.code) === request.followsEventId ||
+            (item.code || item.id) === request.followsEventId
+        ));
+        if (insertionIndex === -1) {
+            await showDarkAlert('Could not insert event: the selected follow-on event was not found in the Air Combat sequence.', 'Insert Event Failed', 'error');
+            return false;
+        }
+
+        const cleanedLabel = request.label.trim().slice(0, 8).toUpperCase();
+        const existingCodes = new Set(syllabusDetails.map(item => String(item.code || item.id || '').trim().toUpperCase()));
+        let sequence = 1;
+        let eventCode = cleanedLabel;
+        while (existingCodes.has(eventCode.toUpperCase())) {
+            const suffix = String(sequence);
+            eventCode = `${cleanedLabel.slice(0, Math.max(1, 8 - suffix.length))}${suffix}`;
+            sequence++;
+        }
+
+        const followsItem = sequenceItems[insertionIndex];
+        const nextItem = sequenceItems[insertionIndex + 1];
+        const followsSort = Number((followsItem as any).sortOrder ?? insertionIndex * 10);
+        const nextSort = Number((nextItem as any)?.sortOrder);
+        const sortOrder = Number.isFinite(nextSort) && nextSort > followsSort + 1
+            ? Math.floor((followsSort + nextSort) / 2)
+            : followsSort + 1;
+        const physicalResources = Array.from({ length: request.resourceCount }, (_, index) => (
+            request.resourceCount === 1 ? 'Aircraft' : `Aircraft ${index + 1}`
+        ));
+
+        const newItem = {
+            code: eventCode,
+            phase: followsItem.phase || assignment.code,
+            module: assignment.title || followsItem.module || assignment.code,
+            dayNight: request.dayNight,
+            eventDescription: eventCode,
+            prerequisites: [followsItem.code || followsItem.id].filter(Boolean),
+            prerequisitesGround: [],
+            prerequisitesFlying: [followsItem.code || followsItem.id].filter(Boolean),
+            eventDetailsCommon: [],
+            eventDetailsSortie: [],
+            totalEventHours: request.totalEventHours,
+            flightOrSimHours: request.flightOrSimHours,
+            duration: request.duration,
+            preFlightTime: request.preFlightTime,
+            postFlightTime: request.postFlightTime,
+            type: request.eventType.syllabusType,
+            sortieType: request.eventType.syllabusType === 'Flight' ? 'Dual' : undefined,
+            methodOfDelivery: [],
+            methodOfAssessment: [],
+            resourcesPhysical: physicalResources,
+            resourceNumber: request.resourceCount,
+            acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
+            resourcesHuman: request.eventType.syllabusType === 'Academics' ? [] : ['Pilot'],
+            location: assignment.locationCode || followsItem.location || school,
+            unit: assignment.unitCode || followsItem.unit || activeUnitCode,
+            courses: [assignment.code],
+            lmpType: assignment.kind === 'training_package' ? 'Staff CAT' : 'Master LMP',
+            sortOrder,
+        } as Partial<SyllabusItemDetail> & { sortOrder: number };
+
+        try {
+            const savedItem = await createSyllabusItem(newItem, `Inserted Air Combat training event ${eventCode} for ${assignment.code}`);
+            setSyllabusDetails(prev => [...prev, savedItem]);
+            logAudit(
+                'Air Combat Training Progress',
+                'Insert',
+                `Inserted event ${savedItem.code} into ${assignment.code}`,
+                [
+                    `Staff profile: ${staff.rank ? `${staff.rank} ` : ''}${staff.name}`,
+                    `Training: ${assignment.code}`,
+                    `Type: ${request.eventType.label}`,
+                    `Follows: ${followsItem.code}`,
+                ].join('; ')
+            );
+            setSuccessMessage(`Inserted Air Combat event ${savedItem.code}.`);
+            return true;
+        } catch (error) {
+            console.error('[Air Combat Training] Failed to insert event:', error);
+            await showDarkAlert(
+                `The Air Combat training event was not saved.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Insert Event Failed',
+                'error'
+            );
+            return false;
+        }
+    };
+
+    const handleUpdateAirCombatTrainingEvent = async (
+        staff: Instructor,
+        assignment: AirCombatTrainingAssignment,
+        originalItem: SyllabusItemDetail,
+        updatedItem: SyllabusItemDetail
+    ): Promise<boolean> => {
+        const originalId = originalItem.id || originalItem.code;
+        const originalCode = originalItem.code || originalItem.id;
+        const updatedCode = String(updatedItem.code || updatedItem.id || '').trim().toUpperCase();
+        const duplicateCode = syllabusDetails.some(item => {
+            const matchesOriginal = (item.id || item.code) === originalId || (item.code || item.id) === originalCode;
+            if (matchesOriginal) return false;
+            return String(item.code || item.id || '').trim().toUpperCase() === updatedCode;
+        });
+        if (duplicateCode) {
+            await showDarkAlert(`Could not update ${originalItem.code}: another syllabus event already uses ${updatedItem.code}.`, 'Air Combat Training Save Failed', 'error');
+            return false;
+        }
+
+        const {
+            id: _id,
+            completedAt: _completedAt,
+            masterEventId: _masterEventId,
+            lmpSource: _lmpSource,
+            orderKey: _orderKey,
+            anchorAfterMasterEventId: _anchorAfterMasterEventId,
+            anchorBeforeMasterEventId: _anchorBeforeMasterEventId,
+            anchorPolicy: _anchorPolicy,
+            userLockedPosition: _userLockedPosition,
+            placementNeedsReview: _placementNeedsReview,
+            ...persistableUpdatedItem
+        } = {
+            ...updatedItem,
+            location: updatedItem.location || assignment.locationCode || school,
+            unit: updatedItem.unit || assignment.unitCode || activeUnitCode,
+            courses: [assignment.code],
+            lmpType: assignment.kind === 'training_package' ? 'Staff CAT' : 'Master LMP',
+            sortOrder: (originalItem as any).sortOrder ?? (updatedItem as any).sortOrder ?? 0,
+        } as any;
+
+        try {
+            const savedItem = await updateSyllabusItem(originalId, persistableUpdatedItem, `Updated Air Combat training event ${originalItem.code}`);
+            setSyllabusDetails(prev => prev.map(item => (
+                (item.id || item.code) === originalId || (item.code || item.id) === originalCode
+                    ? savedItem
+                    : item
+            )));
+            logAudit(
+                'Air Combat Training Progress',
+                'Edit',
+                `Edited event ${originalItem.code} in ${assignment.code}`,
+                [
+                    `Staff profile: ${staff.rank ? `${staff.rank} ` : ''}${staff.name}`,
+                    `Training: ${assignment.code}`,
+                    `Original Event: ${originalItem.code}`,
+                    `Updated Event: ${savedItem.code}`,
+                    `Type: ${savedItem.type}`,
+                    `Duration: ${savedItem.duration}`,
+                ].join('; ')
+            );
+            setSuccessMessage(`Updated Air Combat event ${savedItem.code}.`);
+            return true;
+        } catch (error) {
+            console.error('[Air Combat Training] Failed to update event:', error);
+            await showDarkAlert(
+                `The Air Combat training event was not saved.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Air Combat Training Save Failed',
+                'error'
+            );
+            return false;
+        }
+    };
+
     const handleUpdateGradDate = (courseName: string, newGradDate: string) => {
         setCourses(prevCourses =>
             prevCourses.map(course =>
@@ -24632,6 +24808,10 @@ updates.forEach(update => {
                             instructorsData={instructorsData}
                             archivedInstructorsData={archivedInstructorsData}
                             scheduleHistoryEvents={publishedScheduleHistoryEvents}
+                            insertEventTypes={insertEventTypes}
+                            aircraftConfigurations={aircraftConfigurations}
+                            onInsertAirCombatTrainingEvent={handleInsertAirCombatTrainingEvent}
+                            onUpdateAirCombatTrainingEvent={handleUpdateAirCombatTrainingEvent}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
@@ -24749,6 +24929,10 @@ updates.forEach(update => {
                             archivedInstructorsData={archivedInstructorsData}
                             scheduleHistoryEvents={publishedScheduleHistoryEvents}
                             syllabusDetails={syllabusDetails}
+                            insertEventTypes={insertEventTypes}
+                            aircraftConfigurations={aircraftConfigurations}
+                            onInsertAirCombatTrainingEvent={handleInsertAirCombatTrainingEvent}
+                            onUpdateAirCombatTrainingEvent={handleUpdateAirCombatTrainingEvent}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {

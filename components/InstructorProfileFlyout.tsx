@@ -1,8 +1,10 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, ScheduleEvent, SyllabusItemDetail } from '../types';
+import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, ScheduleEvent, SyllabusItemDetail, AirCombatTrainingAssignment } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
+import AuditButton from './AuditButton';
+import { InsertEventModal, LmpEventEditModal, type InsertLmpEventRequest } from './TraineeLmpView';
 import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
@@ -16,6 +18,8 @@ import {
 } from '../utils/personnelDisplaySettings';
 import { normaliseOperationalModel } from '../utils/platformConfigService';
 import { normaliseAirCombatTrainingAssignments } from '../utils/airCombatTraining';
+import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
+import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -33,6 +37,20 @@ interface InstructorProfileFlyoutProps {
   events?: ScheduleEvent[];
   scheduleHistoryEvents?: ScheduleEvent[];
   syllabusDetails?: SyllabusItemDetail[];
+  insertEventTypes?: InsertEventTypeConfig[];
+  aircraftConfigurations?: AircraftConfigurationDefinition[];
+  onInsertAirCombatTrainingEvent?: (
+    staff: Instructor,
+    assignment: AirCombatTrainingAssignment,
+    sequenceItems: SyllabusItemDetail[],
+    request: InsertLmpEventRequest,
+  ) => Promise<boolean> | boolean;
+  onUpdateAirCombatTrainingEvent?: (
+    staff: Instructor,
+    assignment: AirCombatTrainingAssignment,
+    originalItem: SyllabusItemDetail,
+    updatedItem: SyllabusItemDetail,
+  ) => Promise<boolean> | boolean;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: () => void;
   onNavigateToTrainee?: (trainee: Trainee) => void;
@@ -146,7 +164,7 @@ const card3d = "rounded-lg border border-gray-500/60 shadow-md";
 const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 type StaffRole = Instructor['role'];
 type StaffProfileTab = 'unavailable' | 'currency' | 'logbook' | 'sct' | 'trainingReports' | 'trainingProgress';
-type AirCombatAssignment = ReturnType<typeof normaliseAirCombatTrainingAssignments>['courses'][number];
+type AirCombatAssignment = AirCombatTrainingAssignment;
 
 const normaliseTrainingCode = (value?: string | null): string =>
   String(value || '').replace(/\s+/g, '').trim().toUpperCase();
@@ -193,10 +211,32 @@ const getStaffEventRole = (event: ScheduleEvent, staffName: string): string => {
   return 'Staff';
 };
 
+const downloadTextFile = (filename: string, content: string, mimeType = 'text/html') => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const escapeHtml = (value: unknown): string => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
-  locations, units, traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [], onViewLogbook, onRequestSct, onNavigateToTrainee,
+  locations, units, traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
+  insertEventTypes = DEFAULT_INSERT_EVENT_TYPES, aircraftConfigurations = [],
+  onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent,
+  onViewLogbook, onRequestSct, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],
   profileInitialTab, onProfileTabConsumed,
   currentUserId, currentUserName,
@@ -341,6 +381,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         normaliseTrainingCode(item.code) === assignmentCode
       ))
       .sort((left, right) => (
+        Number((left as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
         String(left.orderKey || '').localeCompare(String(right.orderKey || '')) ||
         normaliseTrainingCode(left.code).localeCompare(normaliseTrainingCode(right.code))
       ));
@@ -366,6 +407,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     };
   }), [airCombatStaffHistoryEvents, assignedAirCombatTraining, getTrainingSyllabusItems]);
   const [selectedAirCombatTrainingKey, setSelectedAirCombatTrainingKey] = useState<string | null>(null);
+  const [selectedAirCombatTrainingItemId, setSelectedAirCombatTrainingItemId] = useState<string | null>(null);
+  const [showAirCombatInsertEventModal, setShowAirCombatInsertEventModal] = useState(false);
+  const [airCombatItemBeingEdited, setAirCombatItemBeingEdited] = useState<SyllabusItemDetail | null>(null);
   useEffect(() => {
     if (airCombatTrainingSummaries.length === 0) {
       if (selectedAirCombatTrainingKey) setSelectedAirCombatTrainingKey(null);
@@ -376,6 +420,24 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     }
   }, [airCombatTrainingSummaries, selectedAirCombatTrainingKey]);
   const selectedAirCombatTraining = airCombatTrainingSummaries.find(summary => summary.assignment.trainingKey === selectedAirCombatTrainingKey) || airCombatTrainingSummaries[0] || null;
+  useEffect(() => {
+    if (!selectedAirCombatTraining) {
+      if (selectedAirCombatTrainingItemId) setSelectedAirCombatTrainingItemId(null);
+      return;
+    }
+    const selectedStillExists = selectedAirCombatTraining.sequenceItems.some(item => (
+      (item.id || item.code) === selectedAirCombatTrainingItemId ||
+      item.code === selectedAirCombatTrainingItemId
+    ));
+    if (!selectedAirCombatTrainingItemId || !selectedStillExists) {
+      const defaultItem = selectedAirCombatTraining.nextItem || selectedAirCombatTraining.sequenceItems[0] || null;
+      setSelectedAirCombatTrainingItemId(defaultItem ? (defaultItem.id || defaultItem.code) : null);
+    }
+  }, [selectedAirCombatTraining, selectedAirCombatTrainingItemId]);
+  const selectedAirCombatTrainingItem = selectedAirCombatTraining?.sequenceItems.find(item => (
+    (item.id || item.code) === selectedAirCombatTrainingItemId ||
+    item.code === selectedAirCombatTrainingItemId
+  )) || selectedAirCombatTraining?.nextItem || selectedAirCombatTraining?.sequenceItems[0] || null;
   const airCombatTrainingReportRows = useMemo(() => (
     airCombatTrainingSummaries.flatMap(summary => (
       summary.completedEvents.map(event => ({
@@ -390,6 +452,85 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   ), [airCombatTrainingSummaries]);
   const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
   const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
+  const airCombatPanelButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
+  const generateAirCombatTrainingReport = useCallback(() => {
+    const selected = selectedAirCombatTraining;
+    if (!selected) return;
+    const reportRows = selected.sequenceItems.map(item => {
+      const matchingEvents = selected.completedEvents.filter(event => normaliseTrainingCode(event.flightNumber) === normaliseTrainingCode(item.code));
+      return {
+        code: item.code,
+        description: item.eventDescription || item.module || '',
+        type: item.type,
+        dayNight: item.dayNight || 'Day',
+        duration: item.duration || 0,
+        status: selected.completedCodes.has(normaliseTrainingCode(item.code)) ? 'Complete' : (selected.nextItem?.code === item.code ? 'Next' : 'Remaining'),
+        records: matchingEvents.map(event => ({
+          date: event.date || (event as any).eventDate || '',
+          time: formatDecimalTime(event.startTime),
+          resource: event.resourceId || '',
+          role: getStaffEventRole(event, instructor.name),
+        })),
+      };
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    const safeStaff = instructor.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'staff';
+    const safeTraining = selected.assignment.code.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'training';
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Air Combat Training Report - ${escapeHtml(instructor.name)}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
+    h1 { margin: 0 0 4px; font-size: 24px; }
+    h2 { margin: 24px 0 8px; font-size: 16px; }
+    .muted { color: #6b7280; font-size: 12px; }
+    .stats { display: flex; gap: 12px; margin: 20px 0; }
+    .stat { border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; min-width: 120px; }
+    .stat label { display: block; color: #6b7280; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .stat strong { display: block; margin-top: 4px; font-size: 18px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; font-size: 12px; vertical-align: top; }
+    th { background: #f3f4f6; text-transform: uppercase; letter-spacing: .04em; font-size: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Air Combat Training Report</h1>
+  <div class="muted">Generated ${escapeHtml(today)} for ${escapeHtml(instructor.rank)} ${escapeHtml(instructor.name)} (${escapeHtml(instructor.unit || 'No unit')})</div>
+  <h2>${escapeHtml(selected.assignment.code)} - ${escapeHtml(selected.assignment.title)}</h2>
+  <div class="stats">
+    <div class="stat"><label>Training Type</label><strong>${selected.assignment.kind === 'training_package' ? 'Package' : 'Course'}</strong></div>
+    <div class="stat"><label>Progress</label><strong>${selected.completedCount}/${selected.totalCount}</strong></div>
+    <div class="stat"><label>Percent</label><strong>${selected.progressPercent}%</strong></div>
+    <div class="stat"><label>Next Event</label><strong>${escapeHtml(selected.nextItem?.code || 'Complete')}</strong></div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Event</th><th>Description</th><th>Type</th><th>Day/Night</th><th>Duration</th><th>Status</th><th>Records</th></tr>
+    </thead>
+    <tbody>
+      ${reportRows.map(row => `<tr>
+        <td>${escapeHtml(row.code)}</td>
+        <td>${escapeHtml(row.description)}</td>
+        <td>${escapeHtml(row.type)}</td>
+        <td>${escapeHtml(row.dayNight)}</td>
+        <td>${escapeHtml(row.duration)}h</td>
+        <td>${escapeHtml(row.status)}</td>
+        <td>${row.records.length ? row.records.map(record => `${escapeHtml(record.date)} ${escapeHtml(record.time)} ${escapeHtml(record.resource)} ${escapeHtml(record.role)}`).join('<br />') : 'Nil'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</body>
+</html>`;
+    downloadTextFile(`air-combat-training-report-${safeStaff}-${safeTraining}-${today}.html`, html);
+    logAudit({
+      page: 'Air Combat Training Progress',
+      action: 'Generate Report',
+      description: `Generated Air Combat training report for ${instructor.name}`,
+      changes: `${selected.assignment.code}; progress ${selected.completedCount}/${selected.totalCount}`,
+    });
+  }, [instructor, selectedAirCombatTraining]);
 
   const callsignData = useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
   const displayCallsign = useMemo(() => {
@@ -964,7 +1105,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <h4 className="text-sm font-bold text-white">Training Reports - {instructor.name}</h4>
                       <p className="mt-0.5 text-xs text-gray-400">Air Combat staff training history from published DFP records and active schedule data.</p>
                     </div>
-                    <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                    <div className="flex items-center gap-px">
+                      <AuditButton pageName="Air Combat Training Reports" />
+                      <button onClick={() => setActiveTab(null)} className={airCombatPanelButtonClass}>Close</button>
+                    </div>
                   </div>
                   {isAirCombatModel ? (
                     <div className="space-y-3">
@@ -1050,7 +1194,34 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <h4 className="text-sm font-bold text-white">Training Progress - {instructor.name}</h4>
                       <p className="mt-0.5 text-xs text-gray-400">Progress follows the Air Combat sequence used by the NEO priority scheduler.</p>
                     </div>
-                    <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                    <div className="flex items-center gap-px">
+                      <button
+                        type="button"
+                        onClick={() => setShowAirCombatInsertEventModal(true)}
+                        disabled={!selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || !onInsertAirCombatTrainingEvent}
+                        className={airCombatPanelButtonClass}
+                      >
+                        Insert<br />Event
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => selectedAirCombatTrainingItem && setAirCombatItemBeingEdited(selectedAirCombatTrainingItem)}
+                        disabled={!selectedAirCombatTrainingItem || !onUpdateAirCombatTrainingEvent}
+                        className={airCombatPanelButtonClass}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={generateAirCombatTrainingReport}
+                        disabled={!selectedAirCombatTraining}
+                        className={airCombatPanelButtonClass}
+                      >
+                        Generate<br />Report
+                      </button>
+                      <AuditButton pageName="Air Combat Training Progress" />
+                      <button onClick={() => setActiveTab(null)} className={airCombatPanelButtonClass}>Close</button>
+                    </div>
                   </div>
                   {isAirCombatModel ? (
                     <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
@@ -1126,10 +1297,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                 {selectedAirCombatTraining.sequenceItems.map((item, index) => {
                                   const isCompleted = selectedAirCombatTraining.completedCodes.has(normaliseTrainingCode(item.code));
                                   const isNext = selectedAirCombatTraining.nextItem?.code === item.code;
+                                  const isSelected = selectedAirCombatTrainingItem && ((item.id || item.code) === (selectedAirCombatTrainingItem.id || selectedAirCombatTrainingItem.code));
                                   return (
-                                    <div
+                                    <button
+                                      type="button"
                                       key={item.id || `${item.code}-${index}`}
-                                      className={`relative h-[96px] overflow-hidden rounded-md border px-3 py-2 shadow-sm ${isNext ? 'border-sky-300 bg-sky-800/70' : isCompleted ? 'border-emerald-500/60 bg-gray-900' : 'border-gray-700 bg-gray-900/75'}`}
+                                      onClick={() => setSelectedAirCombatTrainingItemId(item.id || item.code)}
+                                      className={`relative h-[96px] overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? 'ring-2 ring-sky-200' : ''} ${isNext ? 'border-sky-300 bg-sky-800/70' : isCompleted ? 'border-emerald-500/60 bg-gray-900' : 'border-gray-700 bg-gray-900/75 hover:border-sky-500/60'}`}
                                       title={`${item.code} - ${item.eventDescription || item.module || ''}`}
                                     >
                                       <span className="absolute left-3 top-2 max-w-[46%] truncate text-[10px] font-bold uppercase text-gray-400">{item.phase || 'Phase'}</span>
@@ -1150,7 +1324,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                           Next
                                         </span>
                                       )}
-                                    </div>
+                                    </button>
                                   );
                                 })}
                               </div>
@@ -1641,6 +1815,43 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
           </div>
         </div>
       </div>
+      {showAirCombatInsertEventModal && selectedAirCombatTraining && (
+        <InsertEventModal
+          traineeLmp={selectedAirCombatTraining.sequenceItems}
+          insertEventTypes={insertEventTypes}
+          description="Create an Air Combat course/package event with the scheduling fields NEO Build needs."
+          onCancel={() => setShowAirCombatInsertEventModal(false)}
+          onSave={async (request) => {
+            const inserted = await onInsertAirCombatTrainingEvent?.(
+              instructor,
+              selectedAirCombatTraining.assignment,
+              selectedAirCombatTraining.sequenceItems,
+              request,
+            );
+            if (inserted !== false) setShowAirCombatInsertEventModal(false);
+          }}
+        />
+      )}
+      {airCombatItemBeingEdited && selectedAirCombatTraining && (
+        <LmpEventEditModal
+          item={airCombatItemBeingEdited}
+          aircraftConfigurations={aircraftConfigurations}
+          description="Update the Air Combat training event details used by Training Progress and NEO Build."
+          onCancel={() => setAirCombatItemBeingEdited(null)}
+          onSave={async (updatedItem) => {
+            const updated = await onUpdateAirCombatTrainingEvent?.(
+              instructor,
+              selectedAirCombatTraining.assignment,
+              airCombatItemBeingEdited,
+              updatedItem,
+            );
+            if (updated !== false) {
+              setSelectedAirCombatTrainingItemId(updatedItem.id || updatedItem.code);
+              setAirCombatItemBeingEdited(null);
+            }
+          }}
+        />
+      )}
       {showAddUnavailability && !isCreating && (
         <AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnly} onSave={handleSaveUnavailability} unavailabilityPeriods={unavailabilityPeriods} onRemove={handleRemoveUnavailability} />
       )}

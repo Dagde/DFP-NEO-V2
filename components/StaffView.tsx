@@ -13,6 +13,10 @@ interface StaffViewProps {
   instructorsData: any[];
   archivedInstructorsData: any[];
   scheduleHistoryEvents?: any[];
+  insertEventTypes?: any[];
+  aircraftConfigurations?: any[];
+  onInsertAirCombatTrainingEvent?: (...args: any[]) => Promise<boolean> | boolean;
+  onUpdateAirCombatTrainingEvent?: (...args: any[]) => Promise<boolean> | boolean;
   school: string;
   personnelData: any[];
   onUpdateInstructor: (data: any) => Promise<void>;
@@ -115,6 +119,10 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             archivedInstructorsData={props.archivedInstructorsData}
             scheduleHistoryEvents={props.scheduleHistoryEvents}
             syllabusDetails={props.syllabusDetails}
+            insertEventTypes={props.insertEventTypes}
+            aircraftConfigurations={props.aircraftConfigurations}
+            onInsertAirCombatTrainingEvent={props.onInsertAirCombatTrainingEvent}
+            onUpdateAirCombatTrainingEvent={props.onUpdateAirCombatTrainingEvent}
             school={props.school}
             personnelData={props.personnelData}
             onUpdateInstructor={props.onUpdateInstructor}

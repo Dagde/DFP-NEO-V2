@@ -10632,7 +10632,7 @@ const AircraftConfigCheckboxes = ({ value, definitions, onChange }) => {
     ] }, definition.id))
   ] });
 };
-const LmpEventEditModal = ({ item, aircraftConfigurations, onCancel, onSave }) => {
+const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update the event details used by Individual LMP and NEO Build.", onCancel, onSave }) => {
   const [code, setCode] = reactExports.useState(item.code || item.id || "");
   const [eventDescription, setEventDescription] = reactExports.useState(item.eventDescription || "");
   const [type, setType] = reactExports.useState(item.type || "Flight");
@@ -10686,7 +10686,7 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, onCancel, onSave }) =
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 px-5 py-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Edit LMP Event" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Update the event details used by Individual LMP and NEO Build." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: description })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "text-2xl leading-none text-gray-400 hover:text-white", children: "×" })
     ] }),
@@ -10790,7 +10790,7 @@ const DetailList$1 = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsx
   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
-const InsertEventModal = ({ traineeLmp, insertEventTypes, onCancel, onSave }) => {
+const InsertEventModal = ({ traineeLmp, insertEventTypes, description = "Create an Individual LMP event with the scheduling fields NEO Build needs.", onCancel, onSave }) => {
   const options = insertEventTypes.length > 0 ? insertEventTypes : DEFAULT_INSERT_EVENT_TYPES;
   const [selectedLabel, setSelectedLabel] = reactExports.useState(options[0]?.label || "GF");
   const selectedType = options.find((option) => option.label === selectedLabel) || options[0];
@@ -10847,7 +10847,7 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, onCancel, onSave }) =>
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 px-5 py-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Insert Event" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Create an Individual LMP event with the scheduling fields NEO Build needs." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: description })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "text-2xl leading-none text-gray-400 hover:text-white", children: "×" })
     ] }),
@@ -31252,6 +31252,18 @@ const getStaffEventRole = (event, staffName) => {
   if (Array.isArray(event.attendees) && event.attendees.some((person) => String(person || "").trim().toLowerCase() === target)) return "Attendee";
   return "Staff";
 };
+const downloadTextFile$1 = (filename, content, mimeType = "text/html") => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+const escapeHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const InstructorProfileFlyout = ({
   instructor,
   onClose,
@@ -31268,6 +31280,10 @@ const InstructorProfileFlyout = ({
   events = [],
   scheduleHistoryEvents = [],
   syllabusDetails = [],
+  insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+  aircraftConfigurations = [],
+  onInsertAirCombatTrainingEvent,
+  onUpdateAirCombatTrainingEvent,
   onViewLogbook,
   onRequestSct,
   onNavigateToTrainee,
@@ -31389,7 +31405,7 @@ const InstructorProfileFlyout = ({
   }, [events, instructor.name, scheduleHistoryEvents]);
   const getTrainingSyllabusItems = reactExports.useCallback((assignment) => {
     const assignmentCode = normaliseTrainingCode(assignment.code);
-    return syllabusDetails.filter((item) => item.isActive !== false).filter((item) => assignment.kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).some((course) => normaliseTrainingCode(course) === assignmentCode) || normaliseTrainingCode(item.code) === assignmentCode).sort((left, right) => String(left.orderKey || "").localeCompare(String(right.orderKey || "")) || normaliseTrainingCode(left.code).localeCompare(normaliseTrainingCode(right.code)));
+    return syllabusDetails.filter((item) => item.isActive !== false).filter((item) => assignment.kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).some((course) => normaliseTrainingCode(course) === assignmentCode) || normaliseTrainingCode(item.code) === assignmentCode).sort((left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || String(left.orderKey || "").localeCompare(String(right.orderKey || "")) || normaliseTrainingCode(left.code).localeCompare(normaliseTrainingCode(right.code)));
   }, [syllabusDetails]);
   const airCombatTrainingSummaries = reactExports.useMemo(() => assignedAirCombatTraining.map((assignment) => {
     const sequenceItems = getTrainingSyllabusItems(assignment);
@@ -31412,6 +31428,9 @@ const InstructorProfileFlyout = ({
     };
   }), [airCombatStaffHistoryEvents, assignedAirCombatTraining, getTrainingSyllabusItems]);
   const [selectedAirCombatTrainingKey, setSelectedAirCombatTrainingKey] = reactExports.useState(null);
+  const [selectedAirCombatTrainingItemId, setSelectedAirCombatTrainingItemId] = reactExports.useState(null);
+  const [showAirCombatInsertEventModal, setShowAirCombatInsertEventModal] = reactExports.useState(false);
+  const [airCombatItemBeingEdited, setAirCombatItemBeingEdited] = reactExports.useState(null);
   reactExports.useEffect(() => {
     if (airCombatTrainingSummaries.length === 0) {
       if (selectedAirCombatTrainingKey) setSelectedAirCombatTrainingKey(null);
@@ -31422,6 +31441,18 @@ const InstructorProfileFlyout = ({
     }
   }, [airCombatTrainingSummaries, selectedAirCombatTrainingKey]);
   const selectedAirCombatTraining = airCombatTrainingSummaries.find((summary) => summary.assignment.trainingKey === selectedAirCombatTrainingKey) || airCombatTrainingSummaries[0] || null;
+  reactExports.useEffect(() => {
+    if (!selectedAirCombatTraining) {
+      if (selectedAirCombatTrainingItemId) setSelectedAirCombatTrainingItemId(null);
+      return;
+    }
+    const selectedStillExists = selectedAirCombatTraining.sequenceItems.some((item) => (item.id || item.code) === selectedAirCombatTrainingItemId || item.code === selectedAirCombatTrainingItemId);
+    if (!selectedAirCombatTrainingItemId || !selectedStillExists) {
+      const defaultItem = selectedAirCombatTraining.nextItem || selectedAirCombatTraining.sequenceItems[0] || null;
+      setSelectedAirCombatTrainingItemId(defaultItem ? defaultItem.id || defaultItem.code : null);
+    }
+  }, [selectedAirCombatTraining, selectedAirCombatTrainingItemId]);
+  const selectedAirCombatTrainingItem = selectedAirCombatTraining?.sequenceItems.find((item) => (item.id || item.code) === selectedAirCombatTrainingItemId || item.code === selectedAirCombatTrainingItemId) || selectedAirCombatTraining?.nextItem || selectedAirCombatTraining?.sequenceItems[0] || null;
   const airCombatTrainingReportRows = reactExports.useMemo(() => airCombatTrainingSummaries.flatMap((summary) => summary.completedEvents.map((event) => ({
     event,
     summary,
@@ -31429,6 +31460,85 @@ const InstructorProfileFlyout = ({
   }))).sort((left, right) => getEventDateValue(right.event) - getEventDateValue(left.event) || Number(right.event.startTime || 0) - Number(left.event.startTime || 0)), [airCombatTrainingSummaries]);
   const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
   const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
+  const airCombatPanelButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
+  const generateAirCombatTrainingReport = reactExports.useCallback(() => {
+    const selected = selectedAirCombatTraining;
+    if (!selected) return;
+    const reportRows = selected.sequenceItems.map((item) => {
+      const matchingEvents = selected.completedEvents.filter((event) => normaliseTrainingCode(event.flightNumber) === normaliseTrainingCode(item.code));
+      return {
+        code: item.code,
+        description: item.eventDescription || item.module || "",
+        type: item.type,
+        dayNight: item.dayNight || "Day",
+        duration: item.duration || 0,
+        status: selected.completedCodes.has(normaliseTrainingCode(item.code)) ? "Complete" : selected.nextItem?.code === item.code ? "Next" : "Remaining",
+        records: matchingEvents.map((event) => ({
+          date: event.date || event.eventDate || "",
+          time: formatDecimalTime(event.startTime),
+          resource: event.resourceId || "",
+          role: getStaffEventRole(event, instructor.name)
+        }))
+      };
+    });
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const safeStaff = instructor.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "staff";
+    const safeTraining = selected.assignment.code.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "training";
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Air Combat Training Report - ${escapeHtml(instructor.name)}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
+    h1 { margin: 0 0 4px; font-size: 24px; }
+    h2 { margin: 24px 0 8px; font-size: 16px; }
+    .muted { color: #6b7280; font-size: 12px; }
+    .stats { display: flex; gap: 12px; margin: 20px 0; }
+    .stat { border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; min-width: 120px; }
+    .stat label { display: block; color: #6b7280; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .stat strong { display: block; margin-top: 4px; font-size: 18px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; font-size: 12px; vertical-align: top; }
+    th { background: #f3f4f6; text-transform: uppercase; letter-spacing: .04em; font-size: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Air Combat Training Report</h1>
+  <div class="muted">Generated ${escapeHtml(today)} for ${escapeHtml(instructor.rank)} ${escapeHtml(instructor.name)} (${escapeHtml(instructor.unit || "No unit")})</div>
+  <h2>${escapeHtml(selected.assignment.code)} - ${escapeHtml(selected.assignment.title)}</h2>
+  <div class="stats">
+    <div class="stat"><label>Training Type</label><strong>${selected.assignment.kind === "training_package" ? "Package" : "Course"}</strong></div>
+    <div class="stat"><label>Progress</label><strong>${selected.completedCount}/${selected.totalCount}</strong></div>
+    <div class="stat"><label>Percent</label><strong>${selected.progressPercent}%</strong></div>
+    <div class="stat"><label>Next Event</label><strong>${escapeHtml(selected.nextItem?.code || "Complete")}</strong></div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Event</th><th>Description</th><th>Type</th><th>Day/Night</th><th>Duration</th><th>Status</th><th>Records</th></tr>
+    </thead>
+    <tbody>
+      ${reportRows.map((row) => `<tr>
+        <td>${escapeHtml(row.code)}</td>
+        <td>${escapeHtml(row.description)}</td>
+        <td>${escapeHtml(row.type)}</td>
+        <td>${escapeHtml(row.dayNight)}</td>
+        <td>${escapeHtml(row.duration)}h</td>
+        <td>${escapeHtml(row.status)}</td>
+        <td>${row.records.length ? row.records.map((record) => `${escapeHtml(record.date)} ${escapeHtml(record.time)} ${escapeHtml(record.resource)} ${escapeHtml(record.role)}`).join("<br />") : "Nil"}</td>
+      </tr>`).join("")}
+    </tbody>
+  </table>
+</body>
+</html>`;
+    downloadTextFile$1(`air-combat-training-report-${safeStaff}-${safeTraining}-${today}.html`, html);
+    logAudit({
+      page: "Air Combat Training Progress",
+      action: "Generate Report",
+      description: `Generated Air Combat training report for ${instructor.name}`,
+      changes: `${selected.assignment.code}; progress ${selected.completedCount}/${selected.totalCount}`
+    });
+  }, [instructor, selectedAirCombatTraining]);
   const callsignData = reactExports.useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
   const displayCallsign = reactExports.useMemo(() => {
     if (callsignData?.callsign) return callsignData.callsign;
@@ -32031,7 +32141,10 @@ const InstructorProfileFlyout = ({
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-gray-400", children: "Air Combat staff training history from published DFP records and active schedule data." })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Air Combat Training Reports" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: airCombatPanelButtonClass, children: "Close" })
+              ] })
             ] }),
             isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
@@ -32098,7 +32211,48 @@ const InstructorProfileFlyout = ({
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-gray-400", children: "Progress follows the Air Combat sequence used by the NEO priority scheduler." })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setShowAirCombatInsertEventModal(true),
+                    disabled: !selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || !onInsertAirCombatTrainingEvent,
+                    className: airCombatPanelButtonClass,
+                    children: [
+                      "Insert",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                      "Event"
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => selectedAirCombatTrainingItem && setAirCombatItemBeingEdited(selectedAirCombatTrainingItem),
+                    disabled: !selectedAirCombatTrainingItem || !onUpdateAirCombatTrainingEvent,
+                    className: airCombatPanelButtonClass,
+                    children: "Edit"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: generateAirCombatTrainingReport,
+                    disabled: !selectedAirCombatTraining,
+                    className: airCombatPanelButtonClass,
+                    children: [
+                      "Generate",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                      "Report"
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Air Combat Training Progress" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: airCombatPanelButtonClass, children: "Close" })
+              ] })
             ] }),
             isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-[300px_1fr]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: airCombatTrainingSummaries.length > 0 ? airCombatTrainingSummaries.map((summary) => {
@@ -32164,10 +32318,13 @@ const InstructorProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[420px] overflow-y-auto p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:grid-cols-2 xl:grid-cols-3", children: selectedAirCombatTraining.sequenceItems.map((item, index) => {
                   const isCompleted = selectedAirCombatTraining.completedCodes.has(normaliseTrainingCode(item.code));
                   const isNext = selectedAirCombatTraining.nextItem?.code === item.code;
+                  const isSelected = selectedAirCombatTrainingItem && (item.id || item.code) === (selectedAirCombatTrainingItem.id || selectedAirCombatTrainingItem.code);
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
+                    "button",
                     {
-                      className: `relative h-[96px] overflow-hidden rounded-md border px-3 py-2 shadow-sm ${isNext ? "border-sky-300 bg-sky-800/70" : isCompleted ? "border-emerald-500/60 bg-gray-900" : "border-gray-700 bg-gray-900/75"}`,
+                      type: "button",
+                      onClick: () => setSelectedAirCombatTrainingItemId(item.id || item.code),
+                      className: `relative h-[96px] overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "ring-2 ring-sky-200" : ""} ${isNext ? "border-sky-300 bg-sky-800/70" : isCompleted ? "border-emerald-500/60 bg-gray-900" : "border-gray-700 bg-gray-900/75 hover:border-sky-500/60"}`,
                       title: `${item.code} - ${item.eventDescription || item.module || ""}`,
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-3 top-2 max-w-[46%] truncate text-[10px] font-bold uppercase text-gray-400", children: item.phase || "Phase" }),
@@ -32652,6 +32809,45 @@ const InstructorProfileFlyout = ({
         ] })
       ] })
     ] }) }),
+    showAirCombatInsertEventModal && selectedAirCombatTraining && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      InsertEventModal,
+      {
+        traineeLmp: selectedAirCombatTraining.sequenceItems,
+        insertEventTypes,
+        description: "Create an Air Combat course/package event with the scheduling fields NEO Build needs.",
+        onCancel: () => setShowAirCombatInsertEventModal(false),
+        onSave: async (request) => {
+          const inserted = await onInsertAirCombatTrainingEvent?.(
+            instructor,
+            selectedAirCombatTraining.assignment,
+            selectedAirCombatTraining.sequenceItems,
+            request
+          );
+          if (inserted !== false) setShowAirCombatInsertEventModal(false);
+        }
+      }
+    ),
+    airCombatItemBeingEdited && selectedAirCombatTraining && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      LmpEventEditModal,
+      {
+        item: airCombatItemBeingEdited,
+        aircraftConfigurations,
+        description: "Update the Air Combat training event details used by Training Progress and NEO Build.",
+        onCancel: () => setAirCombatItemBeingEdited(null),
+        onSave: async (updatedItem) => {
+          const updated = await onUpdateAirCombatTrainingEvent?.(
+            instructor,
+            selectedAirCombatTraining.assignment,
+            airCombatItemBeingEdited,
+            updatedItem
+          );
+          if (updated !== false) {
+            setSelectedAirCombatTrainingItemId(updatedItem.id || updatedItem.code);
+            setAirCombatItemBeingEdited(null);
+          }
+        }
+      }
+    ),
     showAddUnavailability && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnly, onSave: handleSaveUnavailability, unavailabilityPeriods, onRemove: handleRemoveUnavailability })
   ] });
 };
@@ -33055,6 +33251,10 @@ const InstructorListView = ({
   archivedInstructorsData,
   scheduleHistoryEvents = [],
   syllabusDetails = [],
+  insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+  aircraftConfigurations = [],
+  onInsertAirCombatTrainingEvent,
+  onUpdateAirCombatTrainingEvent,
   school,
   personnelData,
   onUpdateInstructor,
@@ -33084,7 +33284,7 @@ const InstructorListView = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -33485,6 +33685,10 @@ const InstructorListView = ({
         events,
         scheduleHistoryEvents,
         syllabusDetails,
+        insertEventTypes,
+        aircraftConfigurations,
+        onInsertAirCombatTrainingEvent,
+        onUpdateAirCombatTrainingEvent,
         onViewLogbook,
         onRequestSct: () => {
           if (onRequestSct) {
@@ -33597,6 +33801,10 @@ const StaffView = (props) => {
           archivedInstructorsData: props.archivedInstructorsData,
           scheduleHistoryEvents: props.scheduleHistoryEvents,
           syllabusDetails: props.syllabusDetails,
+          insertEventTypes: props.insertEventTypes,
+          aircraftConfigurations: props.aircraftConfigurations,
+          onInsertAirCombatTrainingEvent: props.onInsertAirCombatTrainingEvent,
+          onUpdateAirCombatTrainingEvent: props.onUpdateAirCombatTrainingEvent,
           school: props.school,
           personnelData: props.personnelData,
           onUpdateInstructor: props.onUpdateInstructor,
@@ -65226,7 +65434,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const scheduleAirCombatTrainingPriorityEvents = () => {
     if (!isAirCombatBuild) return;
     const slotIncrement = 5 / 60;
-    const sortedTrainingItems = (kind, code) => syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort((left, right) => (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code));
+    const sortedTrainingItems = (kind, code) => syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
+      (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
+    );
     const getCompletedTrainingEvents = (staffName, code, kind) => {
       const validCodes = new Set(sortedTrainingItems(kind, code).map((item) => item.code));
       return getAirCombatStaffEvents(staffName).filter((event) => validCodes.has(event.flightNumber));
@@ -77125,6 +77335,152 @@ ${conflictLines.join("\n")}${moreText}`,
       return [...prev, newItem];
     });
   };
+  const handleInsertAirCombatTrainingEvent = async (staff, assignment, sequenceItems, request) => {
+    if (!sequenceItems.length) {
+      await showDarkAlert2(`Could not insert ${request.label}: no Air Combat sequence events are available for ${assignment.code}.`, "Insert Event Failed", "error");
+      return false;
+    }
+    const insertionIndex = sequenceItems.findIndex((item) => (item.id || item.code) === request.followsEventId || (item.code || item.id) === request.followsEventId);
+    if (insertionIndex === -1) {
+      await showDarkAlert2("Could not insert event: the selected follow-on event was not found in the Air Combat sequence.", "Insert Event Failed", "error");
+      return false;
+    }
+    const cleanedLabel = request.label.trim().slice(0, 8).toUpperCase();
+    const existingCodes = new Set(syllabusDetails.map((item) => String(item.code || item.id || "").trim().toUpperCase()));
+    let sequence = 1;
+    let eventCode = cleanedLabel;
+    while (existingCodes.has(eventCode.toUpperCase())) {
+      const suffix = String(sequence);
+      eventCode = `${cleanedLabel.slice(0, Math.max(1, 8 - suffix.length))}${suffix}`;
+      sequence++;
+    }
+    const followsItem = sequenceItems[insertionIndex];
+    const nextItem = sequenceItems[insertionIndex + 1];
+    const followsSort = Number(followsItem.sortOrder ?? insertionIndex * 10);
+    const nextSort = Number(nextItem?.sortOrder);
+    const sortOrder = Number.isFinite(nextSort) && nextSort > followsSort + 1 ? Math.floor((followsSort + nextSort) / 2) : followsSort + 1;
+    const physicalResources = Array.from({ length: request.resourceCount }, (_, index) => request.resourceCount === 1 ? "Aircraft" : `Aircraft ${index + 1}`);
+    const newItem = {
+      code: eventCode,
+      phase: followsItem.phase || assignment.code,
+      module: assignment.title || followsItem.module || assignment.code,
+      dayNight: request.dayNight,
+      eventDescription: eventCode,
+      prerequisites: [followsItem.code || followsItem.id].filter(Boolean),
+      prerequisitesGround: [],
+      prerequisitesFlying: [followsItem.code || followsItem.id].filter(Boolean),
+      eventDetailsCommon: [],
+      eventDetailsSortie: [],
+      totalEventHours: request.totalEventHours,
+      flightOrSimHours: request.flightOrSimHours,
+      duration: request.duration,
+      preFlightTime: request.preFlightTime,
+      postFlightTime: request.postFlightTime,
+      type: request.eventType.syllabusType,
+      sortieType: request.eventType.syllabusType === "Flight" ? "Dual" : void 0,
+      methodOfDelivery: [],
+      methodOfAssessment: [],
+      resourcesPhysical: physicalResources,
+      resourceNumber: request.resourceCount,
+      acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
+      resourcesHuman: request.eventType.syllabusType === "Academics" ? [] : ["Pilot"],
+      location: assignment.locationCode || followsItem.location || school,
+      unit: assignment.unitCode || followsItem.unit || activeUnitCode,
+      courses: [assignment.code],
+      lmpType: assignment.kind === "training_package" ? "Staff CAT" : "Master LMP",
+      sortOrder
+    };
+    try {
+      const savedItem = await createSyllabusItem$1(newItem, `Inserted Air Combat training event ${eventCode} for ${assignment.code}`);
+      setSyllabusDetails((prev) => [...prev, savedItem]);
+      logAudit(
+        "Air Combat Training Progress",
+        "Insert",
+        `Inserted event ${savedItem.code} into ${assignment.code}`,
+        [
+          `Staff profile: ${staff.rank ? `${staff.rank} ` : ""}${staff.name}`,
+          `Training: ${assignment.code}`,
+          `Type: ${request.eventType.label}`,
+          `Follows: ${followsItem.code}`
+        ].join("; ")
+      );
+      setSuccessMessage(`Inserted Air Combat event ${savedItem.code}.`);
+      return true;
+    } catch (error) {
+      console.error("[Air Combat Training] Failed to insert event:", error);
+      await showDarkAlert2(
+        `The Air Combat training event was not saved.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Insert Event Failed",
+        "error"
+      );
+      return false;
+    }
+  };
+  const handleUpdateAirCombatTrainingEvent = async (staff, assignment, originalItem, updatedItem) => {
+    const originalId = originalItem.id || originalItem.code;
+    const originalCode = originalItem.code || originalItem.id;
+    const updatedCode = String(updatedItem.code || updatedItem.id || "").trim().toUpperCase();
+    const duplicateCode = syllabusDetails.some((item) => {
+      const matchesOriginal = (item.id || item.code) === originalId || (item.code || item.id) === originalCode;
+      if (matchesOriginal) return false;
+      return String(item.code || item.id || "").trim().toUpperCase() === updatedCode;
+    });
+    if (duplicateCode) {
+      await showDarkAlert2(`Could not update ${originalItem.code}: another syllabus event already uses ${updatedItem.code}.`, "Air Combat Training Save Failed", "error");
+      return false;
+    }
+    const {
+      id: _id,
+      completedAt: _completedAt,
+      masterEventId: _masterEventId,
+      lmpSource: _lmpSource,
+      orderKey: _orderKey,
+      anchorAfterMasterEventId: _anchorAfterMasterEventId,
+      anchorBeforeMasterEventId: _anchorBeforeMasterEventId,
+      anchorPolicy: _anchorPolicy,
+      userLockedPosition: _userLockedPosition,
+      placementNeedsReview: _placementNeedsReview,
+      ...persistableUpdatedItem
+    } = {
+      ...updatedItem,
+      location: updatedItem.location || assignment.locationCode || school,
+      unit: updatedItem.unit || assignment.unitCode || activeUnitCode,
+      courses: [assignment.code],
+      lmpType: assignment.kind === "training_package" ? "Staff CAT" : "Master LMP",
+      sortOrder: originalItem.sortOrder ?? updatedItem.sortOrder ?? 0
+    };
+    try {
+      const savedItem = await updateSyllabusItem(originalId, persistableUpdatedItem, `Updated Air Combat training event ${originalItem.code}`);
+      setSyllabusDetails((prev) => prev.map((item) => (item.id || item.code) === originalId || (item.code || item.id) === originalCode ? savedItem : item));
+      logAudit(
+        "Air Combat Training Progress",
+        "Edit",
+        `Edited event ${originalItem.code} in ${assignment.code}`,
+        [
+          `Staff profile: ${staff.rank ? `${staff.rank} ` : ""}${staff.name}`,
+          `Training: ${assignment.code}`,
+          `Original Event: ${originalItem.code}`,
+          `Updated Event: ${savedItem.code}`,
+          `Type: ${savedItem.type}`,
+          `Duration: ${savedItem.duration}`
+        ].join("; ")
+      );
+      setSuccessMessage(`Updated Air Combat event ${savedItem.code}.`);
+      return true;
+    } catch (error) {
+      console.error("[Air Combat Training] Failed to update event:", error);
+      await showDarkAlert2(
+        `The Air Combat training event was not saved.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Air Combat Training Save Failed",
+        "error"
+      );
+      return false;
+    }
+  };
   const handleUpdateGradDate = (courseName, newGradDate) => {
     setCourses(
       (prevCourses) => prevCourses.map(
@@ -79404,6 +79760,10 @@ ${conflictLines.join("\n")}${moreText}`,
             instructorsData,
             archivedInstructorsData,
             scheduleHistoryEvents: publishedScheduleHistoryEvents,
+            insertEventTypes,
+            aircraftConfigurations,
+            onInsertAirCombatTrainingEvent: handleInsertAirCombatTrainingEvent,
+            onUpdateAirCombatTrainingEvent: handleUpdateAirCombatTrainingEvent,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {
@@ -79513,6 +79873,10 @@ ${conflictLines.join("\n")}${moreText}`,
             archivedInstructorsData,
             scheduleHistoryEvents: publishedScheduleHistoryEvents,
             syllabusDetails,
+            insertEventTypes,
+            aircraftConfigurations,
+            onInsertAirCombatTrainingEvent: handleInsertAirCombatTrainingEvent,
+            onUpdateAirCombatTrainingEvent: handleUpdateAirCombatTrainingEvent,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {

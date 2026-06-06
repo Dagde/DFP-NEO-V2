@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement, SyllabusItemDetail } from '../types';
+import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement, SyllabusItemDetail, AirCombatTrainingAssignment } from '../types';
 import FlightInfoFlyout from './FlightInfoFlyout';
 // FIX: Corrected import path for the InstructorProfileFlyout component.
 import { InstructorProfileFlyout } from './InstructorProfileFlyout';
@@ -12,6 +12,9 @@ import AuditButton from './AuditButton';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
+import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import type { InsertLmpEventRequest } from './TraineeLmpView';
 
 // Helper to generate a unique random ID for new instructors
 const generateRandomIdNumber = (): number => {
@@ -50,6 +53,20 @@ interface InstructorListViewProps {
   archivedInstructorsData: Instructor[];
   scheduleHistoryEvents?: ScheduleEvent[];
   syllabusDetails?: SyllabusItemDetail[];
+  insertEventTypes?: InsertEventTypeConfig[];
+  aircraftConfigurations?: AircraftConfigurationDefinition[];
+  onInsertAirCombatTrainingEvent?: (
+    staff: Instructor,
+    assignment: AirCombatTrainingAssignment,
+    sequenceItems: SyllabusItemDetail[],
+    request: InsertLmpEventRequest,
+  ) => Promise<boolean> | boolean;
+  onUpdateAirCombatTrainingEvent?: (
+    staff: Instructor,
+    assignment: AirCombatTrainingAssignment,
+    originalItem: SyllabusItemDetail,
+    updatedItem: SyllabusItemDetail,
+  ) => Promise<boolean> | boolean;
   school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void;
@@ -84,6 +101,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     archivedInstructorsData,
     scheduleHistoryEvents = [],
     syllabusDetails = [],
+    insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+    aircraftConfigurations = [],
+    onInsertAirCombatTrainingEvent,
+    onUpdateAirCombatTrainingEvent,
     school,
     personnelData,
     onUpdateInstructor,
@@ -114,7 +135,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -612,6 +633,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     events={events}
                     scheduleHistoryEvents={scheduleHistoryEvents}
                     syllabusDetails={syllabusDetails}
+                    insertEventTypes={insertEventTypes}
+                    aircraftConfigurations={aircraftConfigurations}
+                    onInsertAirCombatTrainingEvent={onInsertAirCombatTrainingEvent}
+                    onUpdateAirCombatTrainingEvent={onUpdateAirCombatTrainingEvent}
                     onViewLogbook={onViewLogbook}
                     onRequestSct={() => {
                         if (onRequestSct) {

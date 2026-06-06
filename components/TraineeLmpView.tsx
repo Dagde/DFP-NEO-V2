@@ -138,12 +138,13 @@ const AircraftConfigCheckboxes: React.FC<{
     );
 };
 
-const LmpEventEditModal: React.FC<{
+export const LmpEventEditModal: React.FC<{
     item: SyllabusItemDetail;
     aircraftConfigurations: AircraftConfigurationDefinition[];
+    description?: string;
     onCancel: () => void;
     onSave: (updatedItem: SyllabusItemDetail) => void;
-}> = ({ item, aircraftConfigurations, onCancel, onSave }) => {
+}> = ({ item, aircraftConfigurations, description = 'Update the event details used by Individual LMP and NEO Build.', onCancel, onSave }) => {
     const [code, setCode] = useState(item.code || item.id || '');
     const [eventDescription, setEventDescription] = useState(item.eventDescription || '');
     const [type, setType] = useState<SyllabusItemDetail['type']>(item.type || 'Flight');
@@ -204,7 +205,7 @@ const LmpEventEditModal: React.FC<{
                 <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
                     <div>
                         <h2 className="text-lg font-bold text-white">Edit LMP Event</h2>
-                        <p className="mt-1 text-xs text-gray-400">Update the event details used by Individual LMP and NEO Build.</p>
+                        <p className="mt-1 text-xs text-gray-400">{description}</p>
                     </div>
                     <button type="button" onClick={onCancel} className="text-2xl leading-none text-gray-400 hover:text-white">×</button>
                 </div>
@@ -321,12 +322,13 @@ const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items
     </div>
 );
 
-const InsertEventModal: React.FC<{
+export const InsertEventModal: React.FC<{
     traineeLmp: SyllabusItemDetail[];
     insertEventTypes: InsertEventTypeConfig[];
+    description?: string;
     onCancel: () => void;
     onSave: (request: InsertLmpEventRequest) => void;
-}> = ({ traineeLmp, insertEventTypes, onCancel, onSave }) => {
+}> = ({ traineeLmp, insertEventTypes, description = 'Create an Individual LMP event with the scheduling fields NEO Build needs.', onCancel, onSave }) => {
     const options = insertEventTypes.length > 0 ? insertEventTypes : DEFAULT_INSERT_EVENT_TYPES;
     const [selectedLabel, setSelectedLabel] = useState(options[0]?.label || 'GF');
     const selectedType = options.find(option => option.label === selectedLabel) || options[0];
@@ -388,7 +390,7 @@ const InsertEventModal: React.FC<{
                 <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
                     <div>
                         <h2 className="text-lg font-bold text-white">Insert Event</h2>
-                        <p className="mt-1 text-xs text-gray-400">Create an Individual LMP event with the scheduling fields NEO Build needs.</p>
+                        <p className="mt-1 text-xs text-gray-400">{description}</p>
                     </div>
                     <button type="button" onClick={onCancel} className="text-2xl leading-none text-gray-400 hover:text-white">×</button>
                 </div>
