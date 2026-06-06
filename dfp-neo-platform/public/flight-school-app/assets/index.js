@@ -32271,14 +32271,14 @@ const InstructorProfileFlyout = ({
                   const isSelected = selectedAirCombatTraining?.assignment.trainingKey === summary.assignment.trainingKey;
                   const isPackage = summary.assignment.kind === "training_package";
                   const accentClass = isPackage ? "from-emerald-400 via-emerald-500 to-teal-500" : "from-sky-300 via-sky-500 to-cyan-500";
-                  const typePillClass = isPackage ? "border-emerald-400/40 bg-emerald-500/20 text-emerald-200" : "border-sky-300/40 bg-sky-500/20 text-sky-100";
-                  const progressClass = isPackage ? "bg-emerald-400" : "bg-sky-400";
+                  const assignmentCardClass = isPackage ? isSelected ? "border-emerald-300 bg-gray-900/90 shadow-lg shadow-emerald-950/25 ring-1 ring-emerald-300/70" : "border-emerald-500/55 bg-gray-900/85 hover:border-emerald-400/80 hover:bg-gray-800" : isSelected ? "border-sky-300 bg-gray-900/90 shadow-lg shadow-sky-950/30 ring-1 ring-sky-300/70" : "border-sky-500/55 bg-gray-900/85 hover:border-sky-400/80 hover:bg-gray-800";
+                  const typePillClass = isPackage ? "border-emerald-400/45 bg-gray-950/60 text-emerald-200" : "border-sky-300/45 bg-gray-950/60 text-sky-100";
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "button",
                     {
                       type: "button",
                       onClick: () => setSelectedAirCombatTrainingKey(summary.assignment.trainingKey),
-                      className: `relative min-h-[156px] w-full overflow-hidden rounded-md border p-4 text-left transition ${isSelected ? "border-sky-200 bg-sky-900/55 shadow-lg shadow-sky-950/40 ring-1 ring-sky-300/70" : "border-gray-700 bg-gray-900/85 hover:border-sky-500/60 hover:bg-gray-800"}`,
+                      className: `relative min-h-[156px] w-full overflow-hidden rounded-md border p-4 text-left transition ${assignmentCardClass}`,
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accentClass}` }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
@@ -32289,7 +32289,7 @@ const InstructorProfileFlyout = ({
                           ] }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${typePillClass}`, children: isPackage ? "Package" : "Course" })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 h-2 overflow-hidden rounded-full bg-gray-700/90", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full rounded-full ${progressClass}`, style: { width: `${summary.progressPercent}%` } }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 h-2 overflow-hidden rounded-full bg-gray-700/90", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full rounded-full bg-gray-300", style: { width: `${summary.progressPercent}%` } }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex justify-between text-[11px] font-semibold text-gray-300", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                             summary.completedCount,
@@ -32329,7 +32329,7 @@ const InstructorProfileFlyout = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-base font-bold text-amber-300", children: Math.max(0, selectedAirCombatTraining.totalCount - selectedAirCombatTraining.completedCount) })
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border p-3 ${isSelectedAirCombatTrainingPackage ? "border-emerald-500/25 bg-emerald-500/10" : "border-sky-500/25 bg-sky-500/10"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border bg-gray-900/70 p-3 ${isSelectedAirCombatTrainingPackage ? "border-emerald-500/35" : "border-sky-500/35"}`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-[9px] font-bold uppercase tracking-wide ${isSelectedAirCombatTrainingPackage ? "text-emerald-300" : "text-sky-300"}`, children: "Next Event" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-bold text-white", children: selectedAirCombatTraining.nextItem?.code || "Sequence complete" }),
                     selectedAirCombatTraining.nextItem && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[10px] text-gray-300", children: selectedAirCombatTraining.nextItem.eventDescription || selectedAirCombatTraining.nextItem.module })
@@ -32344,10 +32344,10 @@ const InstructorProfileFlyout = ({
                   const physicalResources = Array.isArray(item.resourcesPhysical) && item.resourcesPhysical.length > 0 ? item.resourcesPhysical.join(", ") : "Nil";
                   const humanResources = Array.isArray(item.resourcesHuman) && item.resourcesHuman.length > 0 ? item.resourcesHuman.join(", ") : "Nil";
                   const prerequisites = Array.from(/* @__PURE__ */ new Set([...item.prerequisitesGround || [], ...item.prerequisitesFlying || [], ...item.prerequisites || []])).filter(Boolean).join(", ") || "Nil";
-                  const rowToneClass = isSelectedAirCombatTrainingPackage ? isSelected ? "border-emerald-300 bg-emerald-950/25 ring-1 ring-emerald-300/80" : "border-emerald-500/45 bg-gray-950/25 hover:border-emerald-400/75" : isSelected ? "border-sky-300 bg-sky-950/35 ring-1 ring-sky-300/80" : "border-sky-500/40 bg-gray-950/25 hover:border-sky-400/70";
-                  const eventTileToneClass = isSelectedAirCombatTrainingPackage ? isSelected ? "border-emerald-200 bg-emerald-900/45" : isNext ? "border-emerald-300 bg-emerald-900/35" : "border-emerald-500/45 bg-gray-900/75 hover:border-emerald-400/75" : isSelected ? "border-sky-200 bg-sky-800/75" : isNext ? "border-sky-300 bg-sky-800/60" : "border-sky-500/40 bg-gray-900/75 hover:border-sky-400/70";
+                  const rowToneClass = isSelectedAirCombatTrainingPackage ? isSelected ? "border-emerald-300 bg-gray-950/35 ring-1 ring-emerald-300/80" : "border-emerald-500/45 bg-gray-950/25 hover:border-emerald-400/75" : isSelected ? "border-sky-300 bg-gray-950/35 ring-1 ring-sky-300/80" : "border-sky-500/40 bg-gray-950/25 hover:border-sky-400/70";
+                  const eventTileToneClass = isSelectedAirCombatTrainingPackage ? isSelected ? "border-emerald-200 bg-gray-900/90" : isNext ? "border-emerald-300 bg-gray-900/85" : "border-emerald-500/45 bg-gray-900/75 hover:border-emerald-400/75" : isSelected ? "border-sky-200 bg-gray-900/90" : isNext ? "border-sky-300 bg-gray-900/85" : "border-sky-500/40 bg-gray-900/75 hover:border-sky-400/70";
                   const detailTileToneClass = isSelectedAirCombatTrainingPackage ? isSelected ? "border-emerald-300/80 bg-gray-900/85" : "border-emerald-500/45 bg-gray-900/75 hover:border-emerald-400/75" : isSelected ? "border-sky-300/80 bg-gray-900/85" : "border-sky-500/40 bg-gray-900/75 hover:border-sky-400/70";
-                  const nextPillClass = isSelectedAirCombatTrainingPackage ? "bg-emerald-500/25 text-emerald-100" : "bg-sky-500/25 text-sky-100";
+                  const nextPillClass = isSelectedAirCombatTrainingPackage ? "border border-emerald-400/45 bg-gray-950/60 text-emerald-100" : "border border-sky-400/45 bg-gray-950/60 text-sky-100";
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "div",
                     {
