@@ -17244,6 +17244,220 @@ const App: React.FC = () => {
         handleNavigation('PT051');
     };
 
+    const buildAirCombatTrainingReportSubject = (staff: Instructor): Trainee => ({
+        idNumber: staff.idNumber,
+        fullName: staff.name,
+        name: staff.name,
+        rank: staff.rank as any,
+        course: staff.unit || activeUnitCode || 'Air Combat',
+        seatConfig: staff.seatConfig,
+        isPaused: false,
+        unit: staff.unit || activeUnitCode || '',
+        flight: staff.flight,
+        service: staff.service,
+        unavailability: staff.unavailability || [],
+        location: staff.location,
+        phoneNumber: staff.phoneNumber,
+        email: staff.email,
+        traineeCallsign: staff.callsign,
+        secondaryCallsign: staff.secondaryCallsign,
+        permissions: staff.permissions || [],
+        priorExperience: staff.priorExperience,
+    } as any);
+
+    const buildAirCombatTrainingReportEventFromItem = (
+        staff: Instructor,
+        assignment: AirCombatTrainingAssignment,
+        item: SyllabusItemDetail,
+    ): ScheduleEvent => {
+        const eventType: ScheduleEvent['type'] =
+            item.type === 'Flight' ? 'flight' :
+            item.type === 'FTD' ? 'ftd' :
+            item.code.includes('CPT') ? 'cpt' :
+            'ground';
+        const eventDate = getLocalDateString();
+        const duration = item.totalEventHours || item.duration || item.flightOrSimHours || 1;
+        const stableStaffId = (staff as any).id || staff.idNumber;
+        const stableEventId = item.id || item.code;
+
+        return {
+            id: `air-combat-report-${stableStaffId}-${assignment.trainingKey}-${stableEventId}`,
+            date: eventDate,
+            type: eventType,
+            instructor: currentUserName || '',
+            student: '',
+            pilot: staff.name,
+            crew: '',
+            flightNumber: item.code,
+            duration,
+            startTime: 8,
+            resourceId: '',
+            color: '',
+            flightType: item.sortieType || 'Solo',
+            locationType: 'Local',
+            origin: school,
+            destination: school,
+            notes: item.eventDescription || item.module || '',
+            eventCode: item.code,
+            eventCategory: 'lmp_event',
+            dayNight: item.dayNight,
+            preStart: item.preFlightTime,
+            postEnd: item.postFlightTime,
+        };
+    };
+
+    const openOrCreateAirCombatTrainingReport = async (
+        staff: Instructor,
+        sourceEvent: ScheduleEvent,
+        options: {
+            syllabusItem?: SyllabusItemDetail;
+            assignment?: AirCombatTrainingAssignment;
+            sourcePage: string;
+        }
+    ) => {
+        const staffSubject = buildAirCombatTrainingReportSubject(staff);
+        if (!canViewTraineePt051(staffSubject)) {
+            denyPlatformAction('Air Combat training report');
+            return;
+        }
+
+        const reportEvent: ScheduleEvent = {
+            ...sourceEvent,
+            id: sourceEvent.id || `air-combat-report-${(staff as any).id || staff.idNumber}-${sourceEvent.flightNumber}`,
+            date: sourceEvent.date || getLocalDateString(),
+            instructor: sourceEvent.instructor || currentUserName || '',
+            student: '',
+            pilot: sourceEvent.pilot || staff.name,
+            crew: sourceEvent.crew || '',
+            flightNumber: sourceEvent.flightNumber || options.syllabusItem?.code || 'Air Combat',
+            duration: Number(sourceEvent.duration || options.syllabusItem?.totalEventHours || options.syllabusItem?.duration || 1),
+            startTime: Number(sourceEvent.startTime || 8),
+            resourceId: sourceEvent.resourceId || '',
+            color: sourceEvent.color || '',
+            flightType: sourceEvent.flightType || options.syllabusItem?.sortieType || 'Solo',
+            locationType: sourceEvent.locationType || 'Local',
+            origin: sourceEvent.origin || school,
+            destination: sourceEvent.destination || school,
+            notes: sourceEvent.notes || options.syllabusItem?.eventDescription || options.syllabusItem?.module || '',
+        };
+
+        const existingAssessment = Array.from(pt051Assessments.values()).find(
+            assessment =>
+                assessment.traineeFullName === staffSubject.fullName &&
+                (
+                    assessment.eventId === reportEvent.id ||
+                    (
+                        assessment.flightNumber === reportEvent.flightNumber &&
+                        (!reportEvent.date || !assessment.date || assessment.date === reportEvent.date)
+                    )
+                )
+        ) || await loadPersistedPt051Assessment(staffSubject, reportEvent);
+
+        if (existingAssessment) {
+            setSelectedTraineeForHateSheet(staffSubject);
+            setEventForPt051({
+                ...reportEvent,
+                id: existingAssessment.eventId || reportEvent.id,
+                date: existingAssessment.date || reportEvent.date,
+                instructor: existingAssessment.instructorName || reportEvent.instructor,
+                startTime: existingAssessment.startTime ?? reportEvent.startTime,
+                duration: existingAssessment.duration ?? reportEvent.duration,
+            });
+            await showDarkAlert(
+                `A training report already exists for ${reportEvent.flightNumber}.\n\nPlease wait while NEO redirects you to the existing report.`,
+                'Training Report Already Exists',
+                'info',
+                3200
+            );
+            handleNavigation('PT051');
+            return;
+        }
+
+        if (!canEditTraineePt051(staffSubject)) {
+            denyPlatformAction('generate Air Combat training report');
+            return;
+        }
+
+        const newAssessment: Pt051Assessment = {
+            id: `pt051-${reportEvent.id}-${staffSubject.fullName}`,
+            traineeFullName: staffSubject.fullName,
+            eventId: reportEvent.id,
+            flightNumber: reportEvent.flightNumber,
+            date: reportEvent.date,
+            instructorName: reportEvent.instructor || currentUserName || '',
+            overallGrade: null,
+            overallResult: null,
+            dcoResult: '',
+            overallComments: '',
+            startTime: Number(reportEvent.startTime || 8),
+            duration: Number(reportEvent.duration || 1),
+            endTime: Number(reportEvent.startTime || 8) + Number(reportEvent.duration || 1),
+            isCompleted: false,
+            scores: ALL_ELEMENTS.map(element => ({
+                element,
+                grade: null,
+                comment: '',
+            })),
+            groundSchoolAssessment: { isAssessment: false, result: undefined },
+        };
+
+        (newAssessment as any).course = options.assignment?.code || staff.unit || activeUnitCode || 'Air Combat';
+
+        const assessmentKey = `pt051-${newAssessment.eventId}-${staffSubject.fullName}`;
+        try {
+            await persistPt051AssessmentRecord(newAssessment);
+            setPt051Assessments(prev => {
+                const updated = new Map(prev);
+                updated.set(assessmentKey, newAssessment);
+                return updated;
+            });
+            setLoadedPt051Keys(prev => {
+                const updated = new Set(prev);
+                updated.add(`${reportEvent.id}-${staffSubject.fullName}`);
+                return updated;
+            });
+            logAudit(
+                options.sourcePage,
+                'Generate',
+                `Generated Air Combat training report for ${staff.name} - Event: ${reportEvent.flightNumber} (${reportEvent.date})`
+            );
+        } catch (error) {
+            console.warn('[PT051] Failed to persist Air Combat training report:', error);
+            await showDarkAlert(
+                `The training report was created locally, but could not be saved to the database.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Training Report Save Failed',
+                'error'
+            );
+            return;
+        }
+
+        setSelectedTraineeForHateSheet(staffSubject);
+        setEventForPt051(reportEvent);
+        handleNavigation('PT051');
+    };
+
+    const handleGenerateAirCombatTrainingReportForStaff = async (
+        staff: Instructor,
+        assignment: AirCombatTrainingAssignment,
+        item: SyllabusItemDetail,
+    ) => {
+        const reportEvent = buildAirCombatTrainingReportEventFromItem(staff, assignment, item);
+        await openOrCreateAirCombatTrainingReport(staff, reportEvent, {
+            syllabusItem: item,
+            assignment,
+            sourcePage: 'Air Combat Training Progress',
+        });
+    };
+
+    const handleOpenAirCombatTrainingReportFromFlightDetails = async (
+        staff: Instructor,
+        sourceEvent: ScheduleEvent,
+    ) => {
+        await openOrCreateAirCombatTrainingReport(staff, sourceEvent, {
+            sourcePage: 'Flight Details',
+        });
+    };
+
     const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
         setSelectedPersonForLogbook(person);
         handleNavigation('Logbook');
@@ -18698,9 +18912,10 @@ const App: React.FC = () => {
     const persistPt051AssessmentRecord = async (assessment: Pt051Assessment) => {
         const apiBase = getApiBaseUrl();
         const trainee = allTraineesData.find((t: any) => t.fullName === assessment.traineeFullName);
-        const traineeId = (trainee as any)?.id;
+        const staff = allInstructorsData.find((person: any) => person.name === assessment.traineeFullName);
+        const traineeId = (trainee as any)?.id || (staff as any)?.id || (staff ? `staff-${staff.idNumber}` : null);
         if (!traineeId) {
-            throw new Error(`Cannot save PT-051: trainee database record not found for ${assessment.traineeFullName}`);
+            throw new Error(`Cannot save PT-051: personnel database record not found for ${assessment.traineeFullName}`);
         }
 
         const response = await fetch(`${apiBase}/trainee-performance`, {
@@ -18709,7 +18924,7 @@ const App: React.FC = () => {
             body: JSON.stringify({
                 ...assessment,
                 traineeId,
-                course: (trainee as any)?.course || null,
+                course: (trainee as any)?.course || (assessment as any).course || (staff as any)?.unit || null,
                 createdBy: authUser?.userId ?? sessionUser?.userId ?? null,
             }),
         });
@@ -25710,6 +25925,7 @@ appliedUpdates.forEach(update => {
                             aircraftConfigurations={aircraftConfigurations}
                             onInsertAirCombatTrainingEvent={handleInsertAirCombatTrainingEvent}
                             onUpdateAirCombatTrainingEvent={handleUpdateAirCombatTrainingEvent}
+                            onGenerateAirCombatTrainingReport={handleGenerateAirCombatTrainingReportForStaff}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
@@ -25831,6 +26047,7 @@ appliedUpdates.forEach(update => {
                             aircraftConfigurations={aircraftConfigurations}
                             onInsertAirCombatTrainingEvent={handleInsertAirCombatTrainingEvent}
                             onUpdateAirCombatTrainingEvent={handleUpdateAirCombatTrainingEvent}
+                            onGenerateAirCombatTrainingReport={handleGenerateAirCombatTrainingReportForStaff}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
@@ -27234,6 +27451,9 @@ appliedUpdates.forEach(update => {
 
                         handleNavigation('PT051');
                     }}
+                    onOpenTrainingReport={normaliseOperationalModel(activeOperationalModel) === 'air_combat'
+                        ? handleOpenAirCombatTrainingReportFromFlightDetails
+                        : undefined}
                     onOpenAuth={(e) => {
                         // Find the latest version of the event from main events state
                         const latestEvent = events.find(ev => ev.id === e.id) || e;

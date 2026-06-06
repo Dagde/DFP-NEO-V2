@@ -14506,7 +14506,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], personnelDisplaySettings, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], personnelDisplaySettings, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -15412,6 +15412,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (!traineeFullName) return null;
     return traineesData.find((t) => t.fullName === traineeFullName) || null;
   }, [event.flightType, event.student, event.pilot, traineesData]);
+  const trainingReportStaffObject = reactExports.useMemo(() => {
+    const candidateNames = [event.pilot, event.crew, event.instructor].map((name) => String(name || "").trim()).filter(Boolean);
+    for (const candidateName of candidateNames) {
+      const staff = instructorsData.find((instructor) => instructor.name === candidateName);
+      if (staff) return staff;
+    }
+    return null;
+  }, [event.crew, event.instructor, event.pilot, instructorsData]);
   const handleSyllabusFocus = () => {
     if (isOracleContext && !crew[0]?.student && !crew[0]?.instructor) {
       setSyllabusSelectionError(true);
@@ -15430,6 +15438,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const handlePt051Click = () => {
     if (traineeObject) {
       onOpenPt051(traineeObject);
+      onClose();
+    }
+  };
+  const handleTrainingReportClick = () => {
+    if (trainingReportStaffObject && onOpenTrainingReport) {
+      onOpenTrainingReport(trainingReportStaffObject, event);
       onClose();
     }
   };
@@ -15793,6 +15807,21 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   onClick: handlePt051Click,
                   className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]",
                   children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "PT-051" })
+                }
+              )
+            ] }),
+            onOpenTrainingReport && trainingReportStaffObject && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+              isFrozen && !freezeAllowedActions.pt051Entries && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: handleTrainingReportClick,
+                  className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
+                    "Training",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                    "Report"
+                  ] })
                 }
               )
             ] }),
@@ -31294,18 +31323,6 @@ const getStaffEventRole = (event, staffName) => {
   if (Array.isArray(event.attendees) && event.attendees.some((person) => String(person || "").trim().toLowerCase() === target)) return "Attendee";
   return "Staff";
 };
-const downloadTextFile$1 = (filename, content, mimeType = "text/html") => {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
-const escapeHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const InstructorProfileFlyout = ({
   instructor,
   onClose,
@@ -31326,6 +31343,7 @@ const InstructorProfileFlyout = ({
   aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent,
   onUpdateAirCombatTrainingEvent,
+  onGenerateAirCombatTrainingReport,
   onViewLogbook,
   onRequestSct,
   onNavigateToTrainee,
@@ -31472,6 +31490,8 @@ const InstructorProfileFlyout = ({
   const [selectedAirCombatTrainingKey, setSelectedAirCombatTrainingKey] = reactExports.useState(null);
   const [selectedAirCombatTrainingItemId, setSelectedAirCombatTrainingItemId] = reactExports.useState(null);
   const [showAirCombatInsertEventModal, setShowAirCombatInsertEventModal] = reactExports.useState(false);
+  const [showAirCombatGenerateReportModal, setShowAirCombatGenerateReportModal] = reactExports.useState(false);
+  const [airCombatReportItemId, setAirCombatReportItemId] = reactExports.useState("");
   const [airCombatItemBeingEdited, setAirCombatItemBeingEdited] = reactExports.useState(null);
   reactExports.useEffect(() => {
     if (airCombatTrainingSummaries.length === 0) {
@@ -31517,84 +31537,12 @@ const InstructorProfileFlyout = ({
   const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
   const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
   const airCombatPanelButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
-  const generateAirCombatTrainingReport = reactExports.useCallback(() => {
-    const selected = selectedAirCombatTraining;
-    if (!selected) return;
-    const reportRows = selected.sequenceItems.map((item) => {
-      const matchingEvents = selected.completedEvents.filter((event) => normaliseTrainingCode(event.flightNumber) === normaliseTrainingCode(item.code));
-      return {
-        code: item.code,
-        description: item.eventDescription || item.module || "",
-        type: item.type,
-        dayNight: item.dayNight || "Day",
-        duration: item.duration || 0,
-        status: selected.completedCodes.has(normaliseTrainingCode(item.code)) ? "Complete" : selected.nextItem?.code === item.code ? "Next" : "Remaining",
-        records: matchingEvents.map((event) => ({
-          date: event.date || event.eventDate || "",
-          time: formatDecimalTime(event.startTime),
-          resource: event.resourceId || "",
-          role: getStaffEventRole(event, instructor.name)
-        }))
-      };
-    });
-    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const safeStaff = instructor.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "staff";
-    const safeTraining = selected.assignment.code.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "training";
-    const html = `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Air Combat Training Report - ${escapeHtml(instructor.name)}</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
-    h1 { margin: 0 0 4px; font-size: 24px; }
-    h2 { margin: 24px 0 8px; font-size: 16px; }
-    .muted { color: #6b7280; font-size: 12px; }
-    .stats { display: flex; gap: 12px; margin: 20px 0; }
-    .stat { border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; min-width: 120px; }
-    .stat label { display: block; color: #6b7280; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
-    .stat strong { display: block; margin-top: 4px; font-size: 18px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
-    th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; font-size: 12px; vertical-align: top; }
-    th { background: #f3f4f6; text-transform: uppercase; letter-spacing: .04em; font-size: 10px; }
-  </style>
-</head>
-<body>
-  <h1>Air Combat Training Report</h1>
-  <div class="muted">Generated ${escapeHtml(today)} for ${escapeHtml(instructor.rank)} ${escapeHtml(instructor.name)} (${escapeHtml(instructor.unit || "No unit")})</div>
-  <h2>${escapeHtml(selected.assignment.code)} - ${escapeHtml(selected.assignment.title)}</h2>
-  <div class="stats">
-    <div class="stat"><label>Training Type</label><strong>${selected.assignment.kind === "training_package" ? "Package" : "Course"}</strong></div>
-    <div class="stat"><label>Progress</label><strong>${selected.completedCount}/${selected.totalCount}</strong></div>
-    <div class="stat"><label>Percent</label><strong>${selected.progressPercent}%</strong></div>
-    <div class="stat"><label>Next Event</label><strong>${escapeHtml(selected.nextItem?.code || "Complete")}</strong></div>
-  </div>
-  <table>
-    <thead>
-      <tr><th>Event</th><th>Description</th><th>Type</th><th>Day/Night</th><th>Duration</th><th>Status</th><th>Records</th></tr>
-    </thead>
-    <tbody>
-      ${reportRows.map((row) => `<tr>
-        <td>${escapeHtml(row.code)}</td>
-        <td>${escapeHtml(row.description)}</td>
-        <td>${escapeHtml(row.type)}</td>
-        <td>${escapeHtml(row.dayNight)}</td>
-        <td>${escapeHtml(row.duration)}h</td>
-        <td>${escapeHtml(row.status)}</td>
-        <td>${row.records.length ? row.records.map((record) => `${escapeHtml(record.date)} ${escapeHtml(record.time)} ${escapeHtml(record.resource)} ${escapeHtml(record.role)}`).join("<br />") : "Nil"}</td>
-      </tr>`).join("")}
-    </tbody>
-  </table>
-</body>
-</html>`;
-    downloadTextFile$1(`air-combat-training-report-${safeStaff}-${safeTraining}-${today}.html`, html);
-    logAudit({
-      page: "Air Combat Training Progress",
-      action: "Generate Report",
-      description: `Generated Air Combat training report for ${instructor.name}`,
-      changes: `${selected.assignment.code}; progress ${selected.completedCount}/${selected.totalCount}`
-    });
-  }, [instructor, selectedAirCombatTraining]);
+  const openAirCombatTrainingReportPicker = reactExports.useCallback(() => {
+    if (!selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0) return;
+    const defaultItem = selectedAirCombatTrainingItem || selectedAirCombatTraining.nextItem || selectedAirCombatTraining.sequenceItems[0];
+    setAirCombatReportItemId(defaultItem?.id || defaultItem?.code || "");
+    setShowAirCombatGenerateReportModal(true);
+  }, [selectedAirCombatTraining, selectedAirCombatTrainingItem]);
   const callsignData = reactExports.useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
   const displayCallsign = reactExports.useMemo(() => {
     if (callsignData?.callsign) return callsignData.callsign;
@@ -32296,8 +32244,8 @@ const InstructorProfileFlyout = ({
                   "button",
                   {
                     type: "button",
-                    onClick: generateAirCombatTrainingReport,
-                    disabled: !selectedAirCombatTraining,
+                    onClick: openAirCombatTrainingReportPicker,
+                    disabled: !selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || !onGenerateAirCombatTrainingReport,
                     className: airCombatPanelButtonClass,
                     children: [
                       "Generate",
@@ -33038,6 +32986,63 @@ const InstructorProfileFlyout = ({
         }
       }
     ),
+    showAirCombatGenerateReportModal && selectedAirCombatTraining && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-lg border border-gray-600 bg-gray-900 p-5 shadow-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Create Training Report" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-gray-400", children: [
+          "Select the Air Combat event to open a new PT-051 training report for ",
+          instructor.name,
+          "."
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Event" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "select",
+        {
+          value: airCombatReportItemId,
+          onChange: (event) => setAirCombatReportItemId(event.target.value),
+          className: "mb-5 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400",
+          children: selectedAirCombatTraining.sequenceItems.map((item) => {
+            const itemKey = item.id || item.code;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: itemKey, children: [
+              item.code,
+              " - ",
+              item.eventDescription || item.module || selectedAirCombatTraining.assignment.title
+            ] }, itemKey);
+          })
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setShowAirCombatGenerateReportModal(false),
+            className: "h-10 min-w-[92px] rounded-md btn-aluminium-brushed text-sm font-semibold",
+            children: "Cancel"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: async () => {
+              const selectedItem = selectedAirCombatTraining.sequenceItems.find((item) => (item.id || item.code) === airCombatReportItemId || item.code === airCombatReportItemId) || selectedAirCombatTraining.nextItem || selectedAirCombatTraining.sequenceItems[0];
+              if (!selectedItem) return;
+              await onGenerateAirCombatTrainingReport?.(
+                instructor,
+                selectedAirCombatTraining.assignment,
+                selectedItem
+              );
+              setShowAirCombatGenerateReportModal(false);
+            },
+            disabled: !airCombatReportItemId || !onGenerateAirCombatTrainingReport,
+            className: "h-10 min-w-[120px] rounded-md btn-aluminium-brushed text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed",
+            children: "Create Report"
+          }
+        )
+      ] })
+    ] }) }),
     showAddUnavailability && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnly, onSave: handleSaveUnavailability, unavailabilityPeriods, onRemove: handleRemoveUnavailability })
   ] });
 };
@@ -33445,6 +33450,7 @@ const InstructorListView = ({
   aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent,
   onUpdateAirCombatTrainingEvent,
+  onGenerateAirCombatTrainingReport,
   school,
   personnelData,
   onUpdateInstructor,
@@ -33474,7 +33480,7 @@ const InstructorListView = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -33879,6 +33885,7 @@ const InstructorListView = ({
         aircraftConfigurations,
         onInsertAirCombatTrainingEvent,
         onUpdateAirCombatTrainingEvent,
+        onGenerateAirCombatTrainingReport,
         onViewLogbook,
         onRequestSct: () => {
           if (onRequestSct) {
@@ -33995,6 +34002,7 @@ const StaffView = (props) => {
           aircraftConfigurations: props.aircraftConfigurations,
           onInsertAirCombatTrainingEvent: props.onInsertAirCombatTrainingEvent,
           onUpdateAirCombatTrainingEvent: props.onUpdateAirCombatTrainingEvent,
+          onGenerateAirCombatTrainingReport: props.onGenerateAirCombatTrainingReport,
           school: props.school,
           personnelData: props.personnelData,
           onUpdateInstructor: props.onUpdateInstructor,
@@ -73901,6 +73909,179 @@ ${error instanceof Error ? error.message : String(error)}`,
     setEventForPt051(eventForAssessment);
     handleNavigation("PT051");
   };
+  const buildAirCombatTrainingReportSubject = (staff) => ({
+    idNumber: staff.idNumber,
+    fullName: staff.name,
+    name: staff.name,
+    rank: staff.rank,
+    course: staff.unit || activeUnitCode || "Air Combat",
+    seatConfig: staff.seatConfig,
+    isPaused: false,
+    unit: staff.unit || activeUnitCode || "",
+    flight: staff.flight,
+    service: staff.service,
+    unavailability: staff.unavailability || [],
+    location: staff.location,
+    phoneNumber: staff.phoneNumber,
+    email: staff.email,
+    traineeCallsign: staff.callsign,
+    secondaryCallsign: staff.secondaryCallsign,
+    permissions: staff.permissions || [],
+    priorExperience: staff.priorExperience
+  });
+  const buildAirCombatTrainingReportEventFromItem = (staff, assignment, item) => {
+    const eventType = item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.includes("CPT") ? "cpt" : "ground";
+    const eventDate = getLocalDateString();
+    const duration = item.totalEventHours || item.duration || item.flightOrSimHours || 1;
+    const stableStaffId = staff.id || staff.idNumber;
+    const stableEventId = item.id || item.code;
+    return {
+      id: `air-combat-report-${stableStaffId}-${assignment.trainingKey}-${stableEventId}`,
+      date: eventDate,
+      type: eventType,
+      instructor: currentUserName || "",
+      student: "",
+      pilot: staff.name,
+      crew: "",
+      flightNumber: item.code,
+      duration,
+      startTime: 8,
+      resourceId: "",
+      color: "",
+      flightType: item.sortieType || "Solo",
+      locationType: "Local",
+      origin: school,
+      destination: school,
+      notes: item.eventDescription || item.module || "",
+      eventCode: item.code,
+      eventCategory: "lmp_event",
+      dayNight: item.dayNight,
+      preStart: item.preFlightTime,
+      postEnd: item.postFlightTime
+    };
+  };
+  const openOrCreateAirCombatTrainingReport = async (staff, sourceEvent, options) => {
+    const staffSubject = buildAirCombatTrainingReportSubject(staff);
+    if (!canViewTraineePt051(staffSubject)) {
+      denyPlatformAction("Air Combat training report");
+      return;
+    }
+    const reportEvent = {
+      ...sourceEvent,
+      id: sourceEvent.id || `air-combat-report-${staff.id || staff.idNumber}-${sourceEvent.flightNumber}`,
+      date: sourceEvent.date || getLocalDateString(),
+      instructor: sourceEvent.instructor || currentUserName || "",
+      student: "",
+      pilot: sourceEvent.pilot || staff.name,
+      crew: sourceEvent.crew || "",
+      flightNumber: sourceEvent.flightNumber || options.syllabusItem?.code || "Air Combat",
+      duration: Number(sourceEvent.duration || options.syllabusItem?.totalEventHours || options.syllabusItem?.duration || 1),
+      startTime: Number(sourceEvent.startTime || 8),
+      resourceId: sourceEvent.resourceId || "",
+      color: sourceEvent.color || "",
+      flightType: sourceEvent.flightType || options.syllabusItem?.sortieType || "Solo",
+      locationType: sourceEvent.locationType || "Local",
+      origin: sourceEvent.origin || school,
+      destination: sourceEvent.destination || school,
+      notes: sourceEvent.notes || options.syllabusItem?.eventDescription || options.syllabusItem?.module || ""
+    };
+    const existingAssessment = Array.from(pt051Assessments.values()).find(
+      (assessment) => assessment.traineeFullName === staffSubject.fullName && (assessment.eventId === reportEvent.id || assessment.flightNumber === reportEvent.flightNumber && (!reportEvent.date || !assessment.date || assessment.date === reportEvent.date))
+    ) || await loadPersistedPt051Assessment(staffSubject, reportEvent);
+    if (existingAssessment) {
+      setSelectedTraineeForHateSheet(staffSubject);
+      setEventForPt051({
+        ...reportEvent,
+        id: existingAssessment.eventId || reportEvent.id,
+        date: existingAssessment.date || reportEvent.date,
+        instructor: existingAssessment.instructorName || reportEvent.instructor,
+        startTime: existingAssessment.startTime ?? reportEvent.startTime,
+        duration: existingAssessment.duration ?? reportEvent.duration
+      });
+      await showDarkAlert2(
+        `A training report already exists for ${reportEvent.flightNumber}.
+
+Please wait while NEO redirects you to the existing report.`,
+        "Training Report Already Exists",
+        "info",
+        3200
+      );
+      handleNavigation("PT051");
+      return;
+    }
+    if (!canEditTraineePt051(staffSubject)) {
+      denyPlatformAction("generate Air Combat training report");
+      return;
+    }
+    const newAssessment = {
+      id: `pt051-${reportEvent.id}-${staffSubject.fullName}`,
+      traineeFullName: staffSubject.fullName,
+      eventId: reportEvent.id,
+      flightNumber: reportEvent.flightNumber,
+      date: reportEvent.date,
+      instructorName: reportEvent.instructor || currentUserName || "",
+      overallGrade: null,
+      overallResult: null,
+      dcoResult: "",
+      overallComments: "",
+      startTime: Number(reportEvent.startTime || 8),
+      duration: Number(reportEvent.duration || 1),
+      endTime: Number(reportEvent.startTime || 8) + Number(reportEvent.duration || 1),
+      isCompleted: false,
+      scores: ALL_ELEMENTS.map((element) => ({
+        element,
+        grade: null,
+        comment: ""
+      })),
+      groundSchoolAssessment: { isAssessment: false, result: void 0 }
+    };
+    newAssessment.course = options.assignment?.code || staff.unit || activeUnitCode || "Air Combat";
+    const assessmentKey = `pt051-${newAssessment.eventId}-${staffSubject.fullName}`;
+    try {
+      await persistPt051AssessmentRecord(newAssessment);
+      setPt051Assessments((prev) => {
+        const updated = new Map(prev);
+        updated.set(assessmentKey, newAssessment);
+        return updated;
+      });
+      setLoadedPt051Keys((prev) => {
+        const updated = new Set(prev);
+        updated.add(`${reportEvent.id}-${staffSubject.fullName}`);
+        return updated;
+      });
+      logAudit(
+        options.sourcePage,
+        "Generate",
+        `Generated Air Combat training report for ${staff.name} - Event: ${reportEvent.flightNumber} (${reportEvent.date})`
+      );
+    } catch (error) {
+      console.warn("[PT051] Failed to persist Air Combat training report:", error);
+      await showDarkAlert2(
+        `The training report was created locally, but could not be saved to the database.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Training Report Save Failed",
+        "error"
+      );
+      return;
+    }
+    setSelectedTraineeForHateSheet(staffSubject);
+    setEventForPt051(reportEvent);
+    handleNavigation("PT051");
+  };
+  const handleGenerateAirCombatTrainingReportForStaff = async (staff, assignment, item) => {
+    const reportEvent = buildAirCombatTrainingReportEventFromItem(staff, assignment, item);
+    await openOrCreateAirCombatTrainingReport(staff, reportEvent, {
+      syllabusItem: item,
+      assignment,
+      sourcePage: "Air Combat Training Progress"
+    });
+  };
+  const handleOpenAirCombatTrainingReportFromFlightDetails = async (staff, sourceEvent) => {
+    await openOrCreateAirCombatTrainingReport(staff, sourceEvent, {
+      sourcePage: "Flight Details"
+    });
+  };
   const handleViewLogbook = reactExports.useCallback((person) => {
     setSelectedPersonForLogbook(person);
     handleNavigation("Logbook");
@@ -75096,9 +75277,10 @@ ${error instanceof Error ? error.message : String(error)}`,
   const persistPt051AssessmentRecord = async (assessment) => {
     const apiBase2 = getApiBaseUrl();
     const trainee = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
-    const traineeId = trainee?.id;
+    const staff = allInstructorsData.find((person) => person.name === assessment.traineeFullName);
+    const traineeId = trainee?.id || staff?.id || (staff ? `staff-${staff.idNumber}` : null);
     if (!traineeId) {
-      throw new Error(`Cannot save PT-051: trainee database record not found for ${assessment.traineeFullName}`);
+      throw new Error(`Cannot save PT-051: personnel database record not found for ${assessment.traineeFullName}`);
     }
     const response = await fetch(`${apiBase2}/trainee-performance`, {
       method: "POST",
@@ -75106,7 +75288,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       body: JSON.stringify({
         ...assessment,
         traineeId,
-        course: trainee?.course || null,
+        course: trainee?.course || assessment.course || staff?.unit || null,
         createdBy: authUser?.userId ?? sessionUser?.userId ?? null
       })
     });
@@ -80841,6 +81023,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftConfigurations,
             onInsertAirCombatTrainingEvent: handleInsertAirCombatTrainingEvent,
             onUpdateAirCombatTrainingEvent: handleUpdateAirCombatTrainingEvent,
+            onGenerateAirCombatTrainingReport: handleGenerateAirCombatTrainingReportForStaff,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {
@@ -80954,6 +81137,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftConfigurations,
             onInsertAirCombatTrainingEvent: handleInsertAirCombatTrainingEvent,
             onUpdateAirCombatTrainingEvent: handleUpdateAirCombatTrainingEvent,
+            onGenerateAirCombatTrainingReport: handleGenerateAirCombatTrainingReportForStaff,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {
@@ -82239,6 +82423,7 @@ Do you want to replace the existing entry?`,
             logAudit("Flight Detail", "View", `Viewed PT-051 for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
             handleNavigation("PT051");
           },
+          onOpenTrainingReport: normaliseOperationalModel(activeOperationalModel) === "air_combat" ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
           onOpenAuth: (e) => {
             const latestEvent = events.find((ev) => ev.id === e.id) || e;
             setEventForAuth(latestEvent);

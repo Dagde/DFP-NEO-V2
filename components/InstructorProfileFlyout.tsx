@@ -51,6 +51,11 @@ interface InstructorProfileFlyoutProps {
     originalItem: SyllabusItemDetail,
     updatedItem: SyllabusItemDetail,
   ) => Promise<boolean> | boolean;
+  onGenerateAirCombatTrainingReport?: (
+    staff: Instructor,
+    assignment: AirCombatTrainingAssignment,
+    item: SyllabusItemDetail,
+  ) => Promise<void> | void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: () => void;
   onNavigateToTrainee?: (trainee: Trainee) => void;
@@ -249,31 +254,12 @@ const getStaffEventRole = (event: ScheduleEvent, staffName: string): string => {
   return 'Staff';
 };
 
-const downloadTextFile = (filename: string, content: string, mimeType = 'text/html') => {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
-
-const escapeHtml = (value: unknown): string => String(value ?? '')
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#39;');
-
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
   locations, units, traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
   insertEventTypes = DEFAULT_INSERT_EVENT_TYPES, aircraftConfigurations = [],
-  onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent,
+  onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport,
   onViewLogbook, onRequestSct, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],
   profileInitialTab, onProfileTabConsumed,
@@ -447,6 +433,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [selectedAirCombatTrainingKey, setSelectedAirCombatTrainingKey] = useState<string | null>(null);
   const [selectedAirCombatTrainingItemId, setSelectedAirCombatTrainingItemId] = useState<string | null>(null);
   const [showAirCombatInsertEventModal, setShowAirCombatInsertEventModal] = useState(false);
+  const [showAirCombatGenerateReportModal, setShowAirCombatGenerateReportModal] = useState(false);
+  const [airCombatReportItemId, setAirCombatReportItemId] = useState<string>('');
   const [airCombatItemBeingEdited, setAirCombatItemBeingEdited] = useState<SyllabusItemDetail | null>(null);
   useEffect(() => {
     if (airCombatTrainingSummaries.length === 0) {
@@ -505,84 +493,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
   const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
   const airCombatPanelButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
-  const generateAirCombatTrainingReport = useCallback(() => {
-    const selected = selectedAirCombatTraining;
-    if (!selected) return;
-    const reportRows = selected.sequenceItems.map(item => {
-      const matchingEvents = selected.completedEvents.filter(event => normaliseTrainingCode(event.flightNumber) === normaliseTrainingCode(item.code));
-      return {
-        code: item.code,
-        description: item.eventDescription || item.module || '',
-        type: item.type,
-        dayNight: item.dayNight || 'Day',
-        duration: item.duration || 0,
-        status: selected.completedCodes.has(normaliseTrainingCode(item.code)) ? 'Complete' : (selected.nextItem?.code === item.code ? 'Next' : 'Remaining'),
-        records: matchingEvents.map(event => ({
-          date: event.date || (event as any).eventDate || '',
-          time: formatDecimalTime(event.startTime),
-          resource: event.resourceId || '',
-          role: getStaffEventRole(event, instructor.name),
-        })),
-      };
-    });
-    const today = new Date().toISOString().slice(0, 10);
-    const safeStaff = instructor.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'staff';
-    const safeTraining = selected.assignment.code.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'training';
-    const html = `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Air Combat Training Report - ${escapeHtml(instructor.name)}</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
-    h1 { margin: 0 0 4px; font-size: 24px; }
-    h2 { margin: 24px 0 8px; font-size: 16px; }
-    .muted { color: #6b7280; font-size: 12px; }
-    .stats { display: flex; gap: 12px; margin: 20px 0; }
-    .stat { border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; min-width: 120px; }
-    .stat label { display: block; color: #6b7280; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
-    .stat strong { display: block; margin-top: 4px; font-size: 18px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
-    th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; font-size: 12px; vertical-align: top; }
-    th { background: #f3f4f6; text-transform: uppercase; letter-spacing: .04em; font-size: 10px; }
-  </style>
-</head>
-<body>
-  <h1>Air Combat Training Report</h1>
-  <div class="muted">Generated ${escapeHtml(today)} for ${escapeHtml(instructor.rank)} ${escapeHtml(instructor.name)} (${escapeHtml(instructor.unit || 'No unit')})</div>
-  <h2>${escapeHtml(selected.assignment.code)} - ${escapeHtml(selected.assignment.title)}</h2>
-  <div class="stats">
-    <div class="stat"><label>Training Type</label><strong>${selected.assignment.kind === 'training_package' ? 'Package' : 'Course'}</strong></div>
-    <div class="stat"><label>Progress</label><strong>${selected.completedCount}/${selected.totalCount}</strong></div>
-    <div class="stat"><label>Percent</label><strong>${selected.progressPercent}%</strong></div>
-    <div class="stat"><label>Next Event</label><strong>${escapeHtml(selected.nextItem?.code || 'Complete')}</strong></div>
-  </div>
-  <table>
-    <thead>
-      <tr><th>Event</th><th>Description</th><th>Type</th><th>Day/Night</th><th>Duration</th><th>Status</th><th>Records</th></tr>
-    </thead>
-    <tbody>
-      ${reportRows.map(row => `<tr>
-        <td>${escapeHtml(row.code)}</td>
-        <td>${escapeHtml(row.description)}</td>
-        <td>${escapeHtml(row.type)}</td>
-        <td>${escapeHtml(row.dayNight)}</td>
-        <td>${escapeHtml(row.duration)}h</td>
-        <td>${escapeHtml(row.status)}</td>
-        <td>${row.records.length ? row.records.map(record => `${escapeHtml(record.date)} ${escapeHtml(record.time)} ${escapeHtml(record.resource)} ${escapeHtml(record.role)}`).join('<br />') : 'Nil'}</td>
-      </tr>`).join('')}
-    </tbody>
-  </table>
-</body>
-</html>`;
-    downloadTextFile(`air-combat-training-report-${safeStaff}-${safeTraining}-${today}.html`, html);
-    logAudit({
-      page: 'Air Combat Training Progress',
-      action: 'Generate Report',
-      description: `Generated Air Combat training report for ${instructor.name}`,
-      changes: `${selected.assignment.code}; progress ${selected.completedCount}/${selected.totalCount}`,
-    });
-  }, [instructor, selectedAirCombatTraining]);
+  const openAirCombatTrainingReportPicker = useCallback(() => {
+    if (!selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0) return;
+    const defaultItem = selectedAirCombatTrainingItem || selectedAirCombatTraining.nextItem || selectedAirCombatTraining.sequenceItems[0];
+    setAirCombatReportItemId(defaultItem?.id || defaultItem?.code || '');
+    setShowAirCombatGenerateReportModal(true);
+  }, [selectedAirCombatTraining, selectedAirCombatTrainingItem]);
 
   const callsignData = useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
   const displayCallsign = useMemo(() => {
@@ -1265,8 +1181,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </button>
                       <button
                         type="button"
-                        onClick={generateAirCombatTrainingReport}
-                        disabled={!selectedAirCombatTraining}
+                        onClick={openAirCombatTrainingReportPicker}
+                        disabled={!selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || !onGenerateAirCombatTrainingReport}
                         className={airCombatPanelButtonClass}
                       >
                         Generate<br />Report
@@ -2028,6 +1944,62 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             }
           }}
         />
+      )}
+      {showAirCombatGenerateReportModal && selectedAirCombatTraining && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-lg border border-gray-600 bg-gray-900 p-5 shadow-2xl">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-white">Create Training Report</h3>
+              <p className="mt-1 text-sm text-gray-400">
+                Select the Air Combat event to open a new PT-051 training report for {instructor.name}.
+              </p>
+            </div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">Event</label>
+            <select
+              value={airCombatReportItemId}
+              onChange={(event) => setAirCombatReportItemId(event.target.value)}
+              className="mb-5 block w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
+            >
+              {selectedAirCombatTraining.sequenceItems.map(item => {
+                const itemKey = item.id || item.code;
+                return (
+                  <option key={itemKey} value={itemKey}>
+                    {item.code} - {item.eventDescription || item.module || selectedAirCombatTraining.assignment.title}
+                  </option>
+                );
+              })}
+            </select>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAirCombatGenerateReportModal(false)}
+                className="h-10 min-w-[92px] rounded-md btn-aluminium-brushed text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const selectedItem = selectedAirCombatTraining.sequenceItems.find(item => (
+                    (item.id || item.code) === airCombatReportItemId ||
+                    item.code === airCombatReportItemId
+                  )) || selectedAirCombatTraining.nextItem || selectedAirCombatTraining.sequenceItems[0];
+                  if (!selectedItem) return;
+                  await onGenerateAirCombatTrainingReport?.(
+                    instructor,
+                    selectedAirCombatTraining.assignment,
+                    selectedItem,
+                  );
+                  setShowAirCombatGenerateReportModal(false);
+                }}
+                disabled={!airCombatReportItemId || !onGenerateAirCombatTrainingReport}
+                className="h-10 min-w-[120px] rounded-md btn-aluminium-brushed text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Create Report
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {showAddUnavailability && !isCreating && (
         <AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnly} onSave={handleSaveUnavailability} unavailabilityPeriods={unavailabilityPeriods} onRemove={handleRemoveUnavailability} />

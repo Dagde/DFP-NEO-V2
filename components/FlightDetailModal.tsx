@@ -357,6 +357,7 @@ interface EventDetailModalProps {
   onNavigateToHateSheet: (trainee: Trainee) => void;
   onNavigateToSyllabus: (flightNumber: string) => void;
   onOpenPt051: (trainee: Trainee) => void;
+  onOpenTrainingReport?: (staff: Instructor, event: ScheduleEvent) => void;
   onOpenAuth: (event: ScheduleEvent) => void;
   onOpenPostFlight: (event: ScheduleEvent) => void;
   isConflict: boolean;
@@ -437,7 +438,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], personnelDisplaySettings, isReadOnly = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], personnelDisplaySettings, isReadOnly = false }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -1665,6 +1666,17 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         return traineesData.find(t => t.fullName === traineeFullName) || null;
     }, [event.flightType, event.student, event.pilot, traineesData]);
 
+    const trainingReportStaffObject = useMemo(() => {
+        const candidateNames = [event.pilot, event.crew, event.instructor]
+            .map(name => String(name || '').trim())
+            .filter(Boolean);
+        for (const candidateName of candidateNames) {
+            const staff = instructorsData.find(instructor => instructor.name === candidateName);
+            if (staff) return staff;
+        }
+        return null;
+    }, [event.crew, event.instructor, event.pilot, instructorsData]);
+
     const handleSyllabusFocus = () => {
         if (isOracleContext && !crew[0]?.student && !crew[0]?.instructor) {
             setSyllabusSelectionError(true);
@@ -1686,6 +1698,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const handlePt051Click = () => {
         if (traineeObject) {
             onOpenPt051(traineeObject);
+            onClose();
+        }
+    };
+
+    const handleTrainingReportClick = () => {
+        if (trainingReportStaffObject && onOpenTrainingReport) {
+            onOpenTrainingReport(trainingReportStaffObject, event);
             onClose();
         }
     };
@@ -2126,6 +2145,19 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                             >
                                                 <span className="text-center leading-tight">PT-051</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                    {onOpenTrainingReport && trainingReportStaffObject && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && !freezeAllowedActions.pt051Entries && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button
+                                                onClick={handleTrainingReportClick}
+                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                            >
+                                                <span className="text-center leading-tight">Training<br/>Report</span>
                                             </button>
                                         </div>
                                     )}

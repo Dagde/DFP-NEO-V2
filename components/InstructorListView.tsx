@@ -67,6 +67,11 @@ interface InstructorListViewProps {
     originalItem: SyllabusItemDetail,
     updatedItem: SyllabusItemDetail,
   ) => Promise<boolean> | boolean;
+  onGenerateAirCombatTrainingReport?: (
+    staff: Instructor,
+    assignment: AirCombatTrainingAssignment,
+    item: SyllabusItemDetail,
+  ) => Promise<void> | void;
   school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void;
@@ -105,6 +110,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     aircraftConfigurations = [],
     onInsertAirCombatTrainingEvent,
     onUpdateAirCombatTrainingEvent,
+    onGenerateAirCombatTrainingReport,
     school,
     personnelData,
     onUpdateInstructor,
@@ -135,7 +141,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -637,6 +643,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     aircraftConfigurations={aircraftConfigurations}
                     onInsertAirCombatTrainingEvent={onInsertAirCombatTrainingEvent}
                     onUpdateAirCombatTrainingEvent={onUpdateAirCombatTrainingEvent}
+                    onGenerateAirCombatTrainingReport={onGenerateAirCombatTrainingReport}
                     onViewLogbook={onViewLogbook}
                     onRequestSct={() => {
                         if (onRequestSct) {
