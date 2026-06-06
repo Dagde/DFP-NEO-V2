@@ -7458,7 +7458,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             formationUnit: string
         ) => {
             const memberUnitTokens = new Set(members.map(member => normaliseFormationContextToken(member.staff.unit)).filter(Boolean));
-            const activeUnitTokens = new Set(String(activeUnitCode || '').split('+').map(normaliseFormationContextToken).filter(Boolean));
+            const activeUnitTokens = new Set(String(buildActiveUnitCode || '').split('+').map(normaliseFormationContextToken).filter(Boolean));
             const allowedUnitTokens = new Set([
                 ...memberUnitTokens,
                 ...activeUnitTokens,
@@ -7541,7 +7541,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const context = getAirCombatFormationCallsignContext(members, formationUnit);
                 contextSnapshot = {
                     school,
-                    activeUnitCode,
+                    activeUnitCode: buildActiveUnitCode,
                     buildActiveUnitCode,
                     formationUnit,
                     memberUnits: Array.from(context.memberUnitTokens),
