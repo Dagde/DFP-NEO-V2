@@ -18816,7 +18816,7 @@ const AcademicsTab = ({
   date,
   courseColors,
   school,
-  locationAbbreviations: locationAbbreviations2,
+  locationAbbreviations,
   defaultLocality,
   courseAcademicProgress,
   onUpdateCourseAcademicProgress,
@@ -18836,14 +18836,14 @@ const AcademicsTab = ({
     const consolidated = [];
     const seen = /* @__PURE__ */ new Set();
     for (const loc of locsArray) {
-      const longName = Object.entries(locationAbbreviations2 || {}).find(([_, code]) => code === loc)?.[0] || loc;
+      const longName = Object.entries(locationAbbreviations || {}).find(([_, code]) => code === loc)?.[0] || loc;
       if (!seen.has(longName)) {
         consolidated.push(longName);
         seen.add(longName);
       }
     }
     return consolidated.length > 0 ? consolidated : locsArray;
-  }, [traineesData, school, locationAbbreviations2]);
+  }, [traineesData, school, locationAbbreviations]);
   const [selectedLocality, setSelectedLocality] = reactExports.useState(() => {
     if (defaultLocality && localities.includes(defaultLocality)) return defaultLocality;
     return localities[0] || "";
@@ -18859,14 +18859,14 @@ const AcademicsTab = ({
   const [editDuration, setEditDuration] = reactExports.useState("");
   const coursesForLocality = reactExports.useMemo(() => {
     const courses = /* @__PURE__ */ new Set();
-    const locationShortCode = Object.entries(locationAbbreviations2 || {}).find(([name, _]) => name === selectedLocality)?.[1] || "";
+    const locationShortCode = Object.entries(locationAbbreviations || {}).find(([name, _]) => name === selectedLocality)?.[1] || "";
     traineesData.forEach((t) => {
       if (!selectedLocality || t.location === selectedLocality || t.location === locationShortCode || localities.length <= 1) {
         courses.add(t.course);
       }
     });
     return Array.from(courses).sort();
-  }, [traineesData, selectedLocality, localities, locationAbbreviations2]);
+  }, [traineesData, selectedLocality, localities, locationAbbreviations]);
   const [selectedCourse, setSelectedCourse] = reactExports.useState(coursesForLocality[0] || "");
   reactExports.useEffect(() => {
     if (!coursesForLocality.includes(selectedCourse)) {
@@ -19669,7 +19669,7 @@ const AddGroundEventFlyout = ({
   date,
   courseColors,
   school,
-  locationAbbreviations: locationAbbreviations2,
+  locationAbbreviations,
   courseAcademicProgress,
   onUpdateCourseAcademicProgress,
   persistedAcademicLmp,
@@ -19940,7 +19940,7 @@ const AddGroundEventFlyout = ({
                     date: date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
                     courseColors: courseColors || activeCourses,
                     school: school || "ESL",
-                    locationAbbreviations: locationAbbreviations2,
+                    locationAbbreviations,
                     defaultLocality: (school || "ESL") === "ESL" ? "East Sale" : "Pearce",
                     courseAcademicProgress,
                     onUpdateCourseAcademicProgress,
@@ -40976,7 +40976,7 @@ const SettingsView = ({
   hideHeader = false,
   locations,
   onUpdateLocations,
-  locationAbbreviations: locationAbbreviations2 = {},
+  locationAbbreviations = {},
   onUpdateLocationAbbreviations,
   serviceDefinitions = [
     { longName: "Air Force", shortName: "RAAF" },
@@ -40986,7 +40986,7 @@ const SettingsView = ({
   onUpdateServiceDefinitions,
   units,
   onUpdateUnits,
-  unitLocations: unitLocations2,
+  unitLocations,
   onUpdateUnitLocations,
   locationOpAreas = {},
   onUpdateLocationOpAreas,
@@ -41176,7 +41176,7 @@ const SettingsView = ({
   };
   const handleEditLocations = () => {
     setTempLocations([...locations]);
-    setTempLocationAbbreviations({ ...locationAbbreviations2 });
+    setTempLocationAbbreviations({ ...locationAbbreviations });
     setIsEditingLocations(true);
   };
   const handleSaveLocations = () => {
@@ -41285,7 +41285,7 @@ const SettingsView = ({
   };
   const handleEditUnits = () => {
     setTempUnits([...units]);
-    setTempUnitLocations({ ...unitLocations2 });
+    setTempUnitLocations({ ...unitLocations });
     setIsEditingUnits(true);
   };
   const handleSaveUnits = () => {
@@ -42250,7 +42250,7 @@ const SettingsView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured operating locations." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-48 overflow-y-auto", children: locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded text-white", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm", children: loc }),
-            locationAbbreviations2[loc] && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono font-bold text-yellow-400 bg-gray-600 px-2 py-0.5 rounded", children: locationAbbreviations2[loc] })
+            locationAbbreviations[loc] && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono font-bold text-yellow-400 bg-gray-600 px-2 py-0.5 rounded", children: locationAbbreviations[loc] })
           ] }, loc)) })
         ] }) })
       ] }),
@@ -42424,7 +42424,7 @@ const SettingsView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured units and their locations." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 max-h-40 overflow-y-auto", children: units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "p-2 bg-gray-700/50 rounded text-white flex justify-between", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: unit }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: unitLocations2[unit] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: unitLocations[unit] })
           ] }, unit)) })
         ] }) })
       ] }),
@@ -51563,7 +51563,7 @@ const formatTimezoneLabel = (offset) => {
 const LocaleSettingsSection = ({
   locations,
   onUpdateLocations,
-  locationAbbreviations: locationAbbreviations2 = {},
+  locationAbbreviations = {},
   onUpdateLocationAbbreviations,
   serviceDefinitions = [
     { longName: "Air Force", shortName: "RAAF" },
@@ -51573,7 +51573,7 @@ const LocaleSettingsSection = ({
   onUpdateServiceDefinitions,
   units,
   onUpdateUnits,
-  unitLocations: unitLocations2,
+  unitLocations,
   onUpdateUnitLocations,
   locationOpAreas = {},
   onUpdateLocationOpAreas,
@@ -51587,9 +51587,9 @@ const LocaleSettingsSection = ({
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const [isEditing, setIsEditing] = reactExports.useState(false);
   const [tempLocations, setTempLocations] = reactExports.useState(locations);
-  const [tempLocationAbbreviations, setTempLocationAbbreviations] = reactExports.useState(locationAbbreviations2);
+  const [tempLocationAbbreviations, setTempLocationAbbreviations] = reactExports.useState(locationAbbreviations);
   const [tempUnits, setTempUnits] = reactExports.useState(units);
-  const [tempUnitLocations, setTempUnitLocations] = reactExports.useState(unitLocations2);
+  const [tempUnitLocations, setTempUnitLocations] = reactExports.useState(unitLocations);
   const [tempOpAreas, setTempOpAreas] = reactExports.useState(locationOpAreas);
   const [tempTimezoneOffset, setTempTimezoneOffset] = reactExports.useState(timezoneOffset);
   const [tempServiceDefinitions, setTempServiceDefinitions] = reactExports.useState(serviceDefinitions);
@@ -51601,19 +51601,19 @@ const LocaleSettingsSection = ({
   React.useEffect(() => {
     if (!isEditing) {
       setTempLocations(locations);
-      setTempLocationAbbreviations(locationAbbreviations2);
+      setTempLocationAbbreviations(locationAbbreviations);
       setTempUnits(units);
-      setTempUnitLocations(unitLocations2);
+      setTempUnitLocations(unitLocations);
       setTempOpAreas(locationOpAreas);
       setTempTimezoneOffset(timezoneOffset);
       setTempServiceDefinitions(serviceDefinitions);
     }
-  }, [isEditing, locations, locationAbbreviations2, units, unitLocations2, locationOpAreas, timezoneOffset, serviceDefinitions]);
+  }, [isEditing, locations, locationAbbreviations, units, unitLocations, locationOpAreas, timezoneOffset, serviceDefinitions]);
   const resetDrafts = () => {
     setTempLocations(locations);
-    setTempLocationAbbreviations(locationAbbreviations2);
+    setTempLocationAbbreviations(locationAbbreviations);
     setTempUnits(units);
-    setTempUnitLocations(unitLocations2);
+    setTempUnitLocations(unitLocations);
     setTempOpAreas(locationOpAreas);
     setTempTimezoneOffset(timezoneOffset);
     setTempServiceDefinitions(serviceDefinitions);
@@ -51783,9 +51783,9 @@ const LocaleSettingsSection = ({
   };
   const displayedLocations = isEditing ? tempLocations : locations;
   const displayedUnits = isEditing ? tempUnits : units;
-  const displayedUnitLocations = isEditing ? tempUnitLocations : unitLocations2;
+  const displayedUnitLocations = isEditing ? tempUnitLocations : unitLocations;
   const displayedOpAreas = isEditing ? tempOpAreas : locationOpAreas;
-  const displayedAbbreviations = isEditing ? tempLocationAbbreviations : locationAbbreviations2;
+  const displayedAbbreviations = isEditing ? tempLocationAbbreviations : locationAbbreviations;
   const displayedTimezone = isEditing ? tempTimezoneOffset : timezoneOffset;
   const displayedServices = isEditing ? tempServiceDefinitions : serviceDefinitions;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
@@ -66013,7 +66013,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (token.startsWith("Y") && token.length === 4) aliases.add(token.slice(1));
       if (token.length === 3) aliases.add(`Y${token}`);
       try {
-        Object.entries(locationAbbreviations || {}).forEach(([name, abbreviation]) => {
+        Object.entries(config.locationAbbreviations || {}).forEach(([name, abbreviation]) => {
           const nameToken = normaliseFormationContextToken(name);
           const abbreviationToken = normaliseFormationContextToken(abbreviation);
           if (token === nameToken || token === abbreviationToken || token === `Y${abbreviationToken}`) {
@@ -66031,7 +66031,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         school,
         ...members.flatMap((member) => [
           member.staff.location,
-          member.staff.unit ? unitLocations?.[member.staff.unit] : ""
+          member.staff.unit ? config.unitLocations?.[member.staff.unit] : ""
         ])
       ];
       return new Set(rawValues.flatMap(expandFormationLocationAliases));
@@ -72245,7 +72245,7 @@ ${"=".repeat(60)}`);
   const [pendingNavigation, setPendingNavigation] = reactExports.useState(null);
   const [selectedPersonForLogbook, setSelectedPersonForLogbook] = reactExports.useState(null);
   const [locations, setLocations] = reactExports.useState(["East Sale", "Pearce", "Williamtown", "Amberley", "Tindal", "Edinburgh"]);
-  const [locationAbbreviations2, setLocationAbbreviations] = reactExports.useState({
+  const [locationAbbreviations, setLocationAbbreviations] = reactExports.useState({
     "East Sale": "ESL",
     "Pearce": "PEA",
     "Williamtown": "WLM",
@@ -72265,7 +72265,7 @@ ${"=".repeat(60)}`);
   });
   const [sctEvents, setSctEvents] = reactExports.useState(["SCT GF", "SCT IF", "SCT FORM", "SCT Nav", "Night SCT"]);
   const [units, setUnits] = reactExports.useState(["1FTS", "CFS", "2FTS", "76SQN", "77SQN", "1SQN", "6SQN", "2SQN", "10SQN"]);
-  const [unitLocations2, setUnitLocations] = reactExports.useState({
+  const [unitLocations, setUnitLocations] = reactExports.useState({
     "1FTS": "East Sale",
     "CFS": "East Sale",
     "2FTS": "Pearce",
@@ -72306,11 +72306,11 @@ ${"=".repeat(60)}`);
         if (saved.locationOpAreas) setLocationOpAreas(saved.locationOpAreas);
         const savedLocations = saved.locations?.length ? saved.locations : locations;
         const savedLocationAbbreviations = {
-          ...locationAbbreviations2,
+          ...locationAbbreviations,
           ...saved.locationAbbreviations || {}
         };
         const savedUnits = saved.units?.length ? saved.units : units;
-        const savedUnitLocations = saved.unitLocations || unitLocations2;
+        const savedUnitLocations = saved.unitLocations || unitLocations;
         const savedLocationOpAreas = saved.locationOpAreas || locationOpAreas;
         const resolveLegacyLocationCode = (locationValue) => {
           const raw = String(locationValue || "").trim();
@@ -72478,10 +72478,10 @@ ${"=".repeat(60)}`);
     console.log("[App] 💾 Auto-save triggered — organisationSettings:", JSON.stringify(organisationSettings));
     const snapshot = buildSettingsSnapshot({
       locations,
-      locationAbbreviations: locationAbbreviations2,
+      locationAbbreviations,
       serviceDefinitions,
       units,
-      unitLocations: unitLocations2,
+      unitLocations,
       locationOpAreas,
       eventLimits,
       preferredDutyPeriod,
@@ -72524,10 +72524,10 @@ ${"=".repeat(60)}`);
   }, [
     settingsLoaded,
     locations,
-    locationAbbreviations2,
+    locationAbbreviations,
     serviceDefinitions,
     units,
-    unitLocations2,
+    unitLocations,
     locationOpAreas,
     eventLimits,
     preferredDutyPeriod,
@@ -76623,6 +76623,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       remedialRequests: remedialRequestsForBuild,
       sctEvents,
       formationCallsigns,
+      locationAbbreviations,
+      unitLocations,
       resourceDisplayNames,
       aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
       aircraftConfigIdsByResource: buildAircraftConfigIdsByResource(currentAircraftConfigState),
@@ -81106,13 +81108,13 @@ ${error instanceof Error ? error.message : String(error)}`,
           {
             locations,
             onUpdateLocations: setLocations,
-            locationAbbreviations: locationAbbreviations2,
+            locationAbbreviations,
             onUpdateLocationAbbreviations: setLocationAbbreviations,
             serviceDefinitions,
             onUpdateServiceDefinitions: setServiceDefinitions,
             units,
             onUpdateUnits: setUnits,
-            unitLocations: unitLocations2,
+            unitLocations,
             onUpdateUnitLocations: setUnitLocations,
             locationOpAreas,
             onUpdateLocationOpAreas: setLocationOpAreas,
@@ -82422,7 +82424,7 @@ Do you want to replace the existing entry?`,
           date: buildDfpDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
           courseColors: scopedCourseColors,
           school,
-          locationAbbreviations: locationAbbreviations2,
+          locationAbbreviations,
           courseAcademicProgress,
           onUpdateCourseAcademicProgress: handleUpdateCourseAcademicProgress,
           persistedAcademicLmp,

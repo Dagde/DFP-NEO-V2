@@ -1360,6 +1360,8 @@ interface DfpConfig {
   remedialRequests: RemedialRequest[];
   sctEvents: string[];
   formationCallsigns: FormationCallsign[];
+  locationAbbreviations?: Record<string, string>;
+  unitLocations?: Record<string, string>;
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
   aircraftConfigIdsByResource?: Record<string, string>;
@@ -7429,7 +7431,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (token.startsWith('Y') && token.length === 4) aliases.add(token.slice(1));
             if (token.length === 3) aliases.add(`Y${token}`);
             try {
-                Object.entries(locationAbbreviations || {}).forEach(([name, abbreviation]) => {
+                Object.entries(config.locationAbbreviations || {}).forEach(([name, abbreviation]) => {
                     const nameToken = normaliseFormationContextToken(name);
                     const abbreviationToken = normaliseFormationContextToken(abbreviation);
                     if (token === nameToken || token === abbreviationToken || token === `Y${abbreviationToken}`) {
@@ -7448,7 +7450,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 school,
                 ...(members.flatMap(member => [
                     member.staff.location,
-                    member.staff.unit ? unitLocations?.[member.staff.unit] : '',
+                    member.staff.unit ? config.unitLocations?.[member.staff.unit] : '',
                 ])),
             ];
             return new Set(rawValues.flatMap(expandFormationLocationAliases));
@@ -20604,6 +20606,8 @@ const App: React.FC = () => {
             remedialRequests: remedialRequestsForBuild,
             sctEvents: sctEvents,
             formationCallsigns,
+            locationAbbreviations,
+            unitLocations,
             resourceDisplayNames,
             aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
             aircraftConfigIdsByResource: buildAircraftConfigIdsByResource(currentAircraftConfigState),
