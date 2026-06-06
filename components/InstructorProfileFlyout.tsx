@@ -1328,8 +1328,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                     ? (isSelected ? 'border-emerald-300 bg-gray-950/35 ring-1 ring-emerald-300/80' : 'border-emerald-500/45 bg-gray-950/25 hover:border-emerald-400/75')
                                     : (isSelected ? 'border-sky-300 bg-gray-950/35 ring-1 ring-sky-300/80' : 'border-sky-500/40 bg-gray-950/25 hover:border-sky-400/70');
                                   const eventTileToneClass = isSelectedAirCombatTrainingPackage
-                                    ? (isSelected ? 'border-emerald-200 bg-gray-900/90' : isNext ? 'border-emerald-300 bg-gray-900/85' : 'border-emerald-500/45 bg-gray-900/75 hover:border-emerald-400/75')
-                                    : (isSelected ? 'border-sky-200 bg-gray-900/90' : isNext ? 'border-sky-300 bg-gray-900/85' : 'border-sky-500/40 bg-gray-900/75 hover:border-sky-400/70');
+                                    ? (isSelected ? 'border-emerald-200 bg-gray-700/85' : isNext ? 'border-emerald-300 bg-gray-700/80' : 'border-emerald-500/45 bg-gray-700/70 hover:border-emerald-400/75 hover:bg-gray-700/85')
+                                    : (isSelected ? 'border-sky-200 bg-gray-700/85' : isNext ? 'border-sky-300 bg-gray-700/80' : 'border-sky-500/40 bg-gray-700/70 hover:border-sky-400/70 hover:bg-gray-700/85');
                                   const detailTileToneClass = isSelectedAirCombatTrainingPackage
                                     ? (isSelected ? 'border-emerald-300/80 bg-gray-900/85' : 'border-emerald-500/45 bg-gray-900/75 hover:border-emerald-400/75')
                                     : (isSelected ? 'border-sky-300/80 bg-gray-900/85' : 'border-sky-500/40 bg-gray-900/75 hover:border-sky-400/70');
