@@ -60,6 +60,31 @@ const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items
     </div>
 );
 
+const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
+
+const getAirCombatLinkedEventCode = (item?: Partial<SyllabusItemDetail> | null): string => {
+    const linkedLine = String(item?.notes || '')
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .find(line => AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line));
+    const match = linkedLine?.match(AIR_COMBAT_LINKED_EVENT_NOTE_REGEX);
+    return match?.[1]?.trim() || '';
+};
+
+const withAirCombatLinkedEventNote = (item: SyllabusItemDetail, linkedEventCode: string): SyllabusItemDetail => {
+    const visibleNotes = String(item.notes || '')
+        .split(/\r?\n/)
+        .filter(line => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line.trim()))
+        .join('\n')
+        .trim();
+    const normalizedLinkedEvent = linkedEventCode && linkedEventCode !== 'none' ? linkedEventCode : '';
+    const notes = [visibleNotes, normalizedLinkedEvent ? `[Linked Event: ${normalizedLinkedEvent}]` : '']
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+    return { ...item, notes: notes || undefined };
+};
+
 // Reusable components for edit mode
 const EditableField: React.FC<{ label: string; value: string | number; onChange: (value: string | number) => void; type?: string; step?: number; }> = ({ label, value, onChange, type = 'text', step }) => (
     <div className="bg-gray-700/50 p-3 rounded-lg">
@@ -252,7 +277,10 @@ const DetailView: React.FC<{
     onDeleteEvent?: (item: SyllabusItemDetail) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftConfigurations?: AircraftConfigurationDefinition[];
-}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [] }) => {
+    isAirCombatModel?: boolean;
+    linkedEventOptions?: SyllabusItemDetail[];
+    onLinkedEventChange?: (item: SyllabusItemDetail, linkedEventCode: string) => void | Promise<void>;
+}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, linkedEventOptions = [], onLinkedEventChange }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -290,6 +318,20 @@ const DetailView: React.FC<{
 
     const currentItem = isEditing ? editedItem : item;
     if (!currentItem) return null;
+    const currentLinkedEventCode = getAirCombatLinkedEventCode(currentItem);
+    const currentLinkedEventOptions = linkedEventOptions.filter(option => (
+        (option.id || option.code) !== (currentItem.id || currentItem.code) &&
+        option.code !== currentItem.code
+    ));
+    const hasSavedLinkedEventOption = currentLinkedEventOptions.some(option => (option.code || option.id) === currentLinkedEventCode);
+    const handleLinkedEventChange = (linkedEventCode: string) => {
+        const updatedItem = withAirCombatLinkedEventNote(currentItem, linkedEventCode);
+        if (isEditing) {
+            onItemChange(updatedItem);
+            return;
+        }
+        onLinkedEventChange?.(item, linkedEventCode);
+    };
 
     return (
     <div className="space-y-6">
@@ -465,6 +507,26 @@ const DetailView: React.FC<{
                                 className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             />
                         </div>
+                        {isAirCombatModel && (
+                            <div className="bg-gray-700/50 p-1 rounded-lg">
+                                <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Linked Events</label>
+                                <select
+                                    value={currentLinkedEventCode || 'none'}
+                                    onChange={(e) => handleLinkedEventChange(e.target.value)}
+                                    className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                                >
+                                    <option value="none">none</option>
+                                    {currentLinkedEventCode && !hasSavedLinkedEventOption && (
+                                        <option value={currentLinkedEventCode}>{currentLinkedEventCode}</option>
+                                    )}
+                                    {currentLinkedEventOptions.map(option => (
+                                        <option key={option.id || option.code} value={option.code || option.id}>
+                                            {option.code || option.id} - {option.eventDescription || option.module || 'Event'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </>
                 ) : (
                     <>
@@ -486,6 +548,27 @@ const DetailView: React.FC<{
                         <DetailCard label="Course" value={(item.courses || []).join(", ") || "None"} />
                         <DetailCard label="Phase" value={item.phase} />
                         <DetailCard label="Module" value={item.module} />
+                        {isAirCombatModel && (
+                            <div className="bg-gray-700/50 p-1 rounded-lg">
+                                <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Linked Events</label>
+                                <select
+                                    value={currentLinkedEventCode || 'none'}
+                                    onChange={(e) => handleLinkedEventChange(e.target.value)}
+                                    disabled={!onLinkedEventChange}
+                                    className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px] disabled:opacity-60"
+                                >
+                                    <option value="none">none</option>
+                                    {currentLinkedEventCode && !hasSavedLinkedEventOption && (
+                                        <option value={currentLinkedEventCode}>{currentLinkedEventCode}</option>
+                                    )}
+                                    {currentLinkedEventOptions.map(option => (
+                                        <option key={option.id || option.code} value={option.code || option.id}>
+                                            {option.code || option.id} - {option.eventDescription || option.module || 'Event'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
@@ -795,6 +878,22 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       } finally {
           setIsSavingTrainingAssignments(false);
       }
+  };
+
+  const handleLinkedEventChange = async (item: SyllabusItemDetail, linkedEventCode: string) => {
+      const updatedItem = withAirCombatLinkedEventNote(item, linkedEventCode);
+      const savedItem = await updateSyllabusItem(item.id, updatedItem, `Updated linked event for ${item.code}`);
+      onUpdateItem(savedItem);
+      setSelectedItem(savedItem);
+      if (editedItem && editedItem.id === item.id) {
+          setEditedItem(savedItem);
+      }
+      logAudit({
+          action: 'Edit',
+          description: `Updated linked event for ${savedItem.code}`,
+          changes: `Linked Event: ${linkedEventCode === 'none' ? 'none' : linkedEventCode}`,
+          page: 'LMP/Event Details',
+      });
   };
 
     // Log view on component mount
@@ -1468,6 +1567,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     onDeleteEvent={handleDeleteEventRequest}
                     resourceDisplayNames={resourceDisplayNames}
                     aircraftConfigurations={aircraftConfigurations}
+                    isAirCombatModel={isAirCombatModel}
+                    linkedEventOptions={filteredSyllabusDetails}
+                    onLinkedEventChange={handleLinkedEventChange}
                 />
             ) : (
               <div className="flex items-center justify-center h-full">

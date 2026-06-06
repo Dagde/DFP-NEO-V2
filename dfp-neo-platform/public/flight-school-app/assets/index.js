@@ -31153,19 +31153,19 @@ const Dropdown = ({ label, value, onChange, children }) => /* @__PURE__ */ jsxRu
     }
   )
 ] });
-const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
-const getAirCombatLinkedEventCode = (item) => {
+const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1 = /^\[Linked Event:\s*([^\]]+)\]$/i;
+const getAirCombatLinkedEventCode$1 = (item) => {
   const notes = String(item?.notes || "");
-  const linkedLine = notes.split(/\r?\n/).map((line) => line.trim()).find((line) => AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line));
-  const match = linkedLine?.match(AIR_COMBAT_LINKED_EVENT_NOTE_REGEX);
+  const linkedLine = notes.split(/\r?\n/).map((line) => line.trim()).find((line) => AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1.test(line));
+  const match = linkedLine?.match(AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1);
   return match?.[1]?.trim() || "";
 };
 const getAirCombatDisplayNotes = (item) => {
-  const visibleNotes = String(item?.notes || "").split(/\r?\n/).filter((line) => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line.trim())).join("\n").trim();
+  const visibleNotes = String(item?.notes || "").split(/\r?\n/).filter((line) => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1.test(line.trim())).join("\n").trim();
   return visibleNotes || "Nil";
 };
-const withAirCombatLinkedEventNote = (item, linkedEventCode) => {
-  const visibleNotes = String(item.notes || "").split(/\r?\n/).filter((line) => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line.trim())).join("\n").trim();
+const withAirCombatLinkedEventNote$1 = (item, linkedEventCode) => {
+  const visibleNotes = String(item.notes || "").split(/\r?\n/).filter((line) => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1.test(line.trim())).join("\n").trim();
   const normalizedLinkedEvent = linkedEventCode && linkedEventCode !== "none" ? linkedEventCode : "";
   const notes = [visibleNotes, normalizedLinkedEvent ? `[Linked Event: ${normalizedLinkedEvent}]` : ""].filter(Boolean).join("\n").trim();
   return {
@@ -31476,7 +31476,7 @@ const InstructorProfileFlyout = ({
   const isSelectedAirCombatTrainingPackage = selectedAirCombatTraining?.assignment.kind === "training_package";
   const handleAirCombatLinkedEventChange = reactExports.useCallback(async (item, linkedEventCode) => {
     if (!selectedAirCombatTraining || !onUpdateAirCombatTrainingEvent) return;
-    const updatedItem = withAirCombatLinkedEventNote(item, linkedEventCode);
+    const updatedItem = withAirCombatLinkedEventNote$1(item, linkedEventCode);
     const updated = await onUpdateAirCombatTrainingEvent(
       instructor,
       selectedAirCombatTraining.assignment,
@@ -32377,7 +32377,7 @@ const InstructorProfileFlyout = ({
                   const physicalResources = Array.isArray(item.resourcesPhysical) && item.resourcesPhysical.length > 0 ? item.resourcesPhysical.join(", ") : "Nil";
                   const humanResources = Array.isArray(item.resourcesHuman) && item.resourcesHuman.length > 0 ? item.resourcesHuman.join(", ") : "Nil";
                   const prerequisites = Array.from(/* @__PURE__ */ new Set([...item.prerequisitesGround || [], ...item.prerequisitesFlying || [], ...item.prerequisites || []])).filter(Boolean).join(", ") || "Nil";
-                  const linkedEventCode = getAirCombatLinkedEventCode(item);
+                  const linkedEventCode = getAirCombatLinkedEventCode$1(item);
                   const linkedEventOptions = selectedAirCombatTraining.sequenceItems.filter((option) => (option.id || option.code) !== (item.id || item.code) && option.code !== item.code);
                   const hasSavedLinkedEventOption = linkedEventOptions.some((option) => (option.code || option.id) === linkedEventCode);
                   const displayNotes = getAirCombatDisplayNotes(item);
@@ -34373,6 +34373,18 @@ const DetailList = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
+const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
+const getAirCombatLinkedEventCode = (item) => {
+  const linkedLine = String(item?.notes || "").split(/\r?\n/).map((line) => line.trim()).find((line) => AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line));
+  const match = linkedLine?.match(AIR_COMBAT_LINKED_EVENT_NOTE_REGEX);
+  return match?.[1]?.trim() || "";
+};
+const withAirCombatLinkedEventNote = (item, linkedEventCode) => {
+  const visibleNotes = String(item.notes || "").split(/\r?\n/).filter((line) => !AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line.trim())).join("\n").trim();
+  const normalizedLinkedEvent = linkedEventCode && linkedEventCode !== "none" ? linkedEventCode : "";
+  const notes = [visibleNotes, normalizedLinkedEvent ? `[Linked Event: ${normalizedLinkedEvent}]` : ""].filter(Boolean).join("\n").trim();
+  return { ...item, notes: notes || void 0 };
+};
 const EditableField = ({ label, value, onChange, type = "text", step }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-3 rounded-lg", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase tracking-wider", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -34532,7 +34544,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [] }) => {
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, linkedEventOptions = [], onLinkedEventChange }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -34563,6 +34575,17 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   };
   const currentItem = isEditing ? editedItem : item;
   if (!currentItem) return null;
+  const currentLinkedEventCode = getAirCombatLinkedEventCode(currentItem);
+  const currentLinkedEventOptions = linkedEventOptions.filter((option) => (option.id || option.code) !== (currentItem.id || currentItem.code) && option.code !== currentItem.code);
+  const hasSavedLinkedEventOption = currentLinkedEventOptions.some((option) => (option.code || option.id) === currentLinkedEventCode);
+  const handleLinkedEventChange = (linkedEventCode) => {
+    const updatedItem = withAirCombatLinkedEventNote(currentItem, linkedEventCode);
+    if (isEditing) {
+      onItemChange(updatedItem);
+      return;
+    }
+    onLinkedEventChange?.(item, linkedEventCode);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(EditableField, { label: "Code", value: currentItem.code, onChange: (val) => handleFieldChange("code", val) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
@@ -34772,6 +34795,26 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
             }
           )
+        ] }),
+        isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "Linked Events" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: currentLinkedEventCode || "none",
+              onChange: (e) => handleLinkedEventChange(e.target.value),
+              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "none", children: "none" }),
+                currentLinkedEventCode && !hasSavedLinkedEventOption && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: currentLinkedEventCode, children: currentLinkedEventCode }),
+                currentLinkedEventOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: option.code || option.id, children: [
+                  option.code || option.id,
+                  " - ",
+                  option.eventDescription || option.module || "Event"
+                ] }, option.id || option.code))
+              ]
+            }
+          )
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
@@ -34813,7 +34856,28 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Code", value: item.code }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Course", value: (item.courses || []).join(", ") || "None" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Phase", value: item.phase }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Module", value: item.module })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Module", value: item.module }),
+        isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "Linked Events" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: currentLinkedEventCode || "none",
+              onChange: (e) => handleLinkedEventChange(e.target.value),
+              disabled: !onLinkedEventChange,
+              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px] disabled:opacity-60",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "none", children: "none" }),
+                currentLinkedEventCode && !hasSavedLinkedEventOption && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: currentLinkedEventCode, children: currentLinkedEventCode }),
+                currentLinkedEventOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: option.code || option.id, children: [
+                  option.code || option.id,
+                  " - ",
+                  option.eventDescription || option.module || "Event"
+                ] }, option.id || option.code))
+              ]
+            }
+          )
+        ] })
       ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
@@ -35036,6 +35100,21 @@ const SyllabusView = ({
     } finally {
       setIsSavingTrainingAssignments(false);
     }
+  };
+  const handleLinkedEventChange = async (item, linkedEventCode) => {
+    const updatedItem = withAirCombatLinkedEventNote(item, linkedEventCode);
+    const savedItem = await updateSyllabusItem(item.id, updatedItem, `Updated linked event for ${item.code}`);
+    onUpdateItem(savedItem);
+    setSelectedItem(savedItem);
+    if (editedItem && editedItem.id === item.id) {
+      setEditedItem(savedItem);
+    }
+    logAudit({
+      action: "Edit",
+      description: `Updated linked event for ${savedItem.code}`,
+      changes: `Linked Event: ${linkedEventCode === "none" ? "none" : linkedEventCode}`,
+      page: "LMP/Event Details"
+    });
   };
   reactExports.useEffect(() => {
     logAudit({
@@ -35654,7 +35733,10 @@ const SyllabusView = ({
             onItemChange: setEditedItem,
             onDeleteEvent: handleDeleteEventRequest,
             resourceDisplayNames,
-            aircraftConfigurations
+            aircraftConfigurations,
+            isAirCombatModel,
+            linkedEventOptions: filteredSyllabusDetails,
+            onLinkedEventChange: handleLinkedEventChange
           }
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
       ] })
