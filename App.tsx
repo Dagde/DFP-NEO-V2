@@ -1038,6 +1038,17 @@ const getFormationEventKey = (item?: Partial<SyllabusItemDetail> | null): string
         .toUpperCase()
         .replace(/\s+/g, '');
 
+const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
+
+const getAirCombatLinkedEventCode = (item?: Partial<SyllabusItemDetail> | null): string => {
+    const notes = String(item?.notes || '');
+    const markerLine = notes
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .find(line => AIR_COMBAT_LINKED_EVENT_NOTE_REGEX.test(line));
+    return markerLine?.match(AIR_COMBAT_LINKED_EVENT_NOTE_REGEX)?.[1]?.trim() || '';
+};
+
 const INDIVIDUAL_LMP_EDITABLE_FIELDS: (keyof SyllabusItemDetail)[] = [
     'code',
     'eventDescription',
@@ -7088,6 +7099,194 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 left.lastEventDateValue - right.lastEventDateValue ||
                 left.tieBreak - right.tieBreak
             );
+        type AirCombatTrainingPriorityEntry = ReturnType<typeof getTrainingPriorityList>[number];
+        type AirCombatTrainingType = 'flight' | 'ftd' | 'ground' | 'cpt';
+        type AirCombatFormationMember = {
+            staff: Instructor;
+            item: SyllabusItemDetail;
+            selectionReason: string;
+            completedCount?: number;
+            lastEventDateValue?: number;
+        };
+        const normaliseAirCombatTrainingCode = (value?: string | null): string =>
+            String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+        const airCombatTrainingCodesMatch = (left?: string | null, right?: string | null): boolean =>
+            !!normaliseAirCombatTrainingCode(left) && normaliseAirCombatTrainingCode(left) === normaliseAirCombatTrainingCode(right);
+        const getTrainingEventType = (item: SyllabusItemDetail): AirCombatTrainingType =>
+            item.type === 'Flight' ? 'flight' :
+            item.type === 'FTD' ? 'ftd' :
+            item.code.toUpperCase().includes('CPT') ? 'cpt' :
+            'ground';
+        const findLinkedTrainingItem = (
+            item: SyllabusItemDetail,
+            matchingItems: SyllabusItemDetail[]
+        ): SyllabusItemDetail | null => {
+            const linkedCode = getAirCombatLinkedEventCode(item);
+            if (!linkedCode) return null;
+            return matchingItems.find(candidate =>
+                airCombatTrainingCodesMatch(candidate.code, linkedCode) ||
+                airCombatTrainingCodesMatch(candidate.id, linkedCode)
+            ) || null;
+        };
+        const staffHasAirCombatAssignment = (staff: Instructor, kind: 'course' | 'training_package', code: string): boolean => {
+            const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+            const list = kind === 'training_package' ? assignments.trainingPackages : assignments.courses;
+            const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
+            return list.some(item => item.trainingKey === expectedKey || item.code === code);
+        };
+        const isAirCombatStaffSchedulable = (
+            staff: Instructor,
+            item: SyllabusItemDetail,
+            type: AirCombatTrainingType,
+            startTime: number,
+            stagedEvents: Omit<ScheduleEvent, 'date'>[] = []
+        ): string | null => {
+            if (staff.role !== 'Pilot') return 'ROLE_NOT_PILOT';
+            if (staff.isAdminStaff) return 'ADMIN_STAFF';
+            const bookingStart = startTime - (item.preFlightTime || 0);
+            const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
+            const counts = eventCounts.get(staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false };
+            if ((type === 'flight' || type === 'ftd') && counts.flightFtd >= eventLimits.instructor.maxFlightFtd) return 'FLIGHT_FTD_LIMIT';
+            if ((counts.flightFtd + counts.ground + counts.cpt + counts.dutySup) >= eventLimits.instructor.maxTotal) return 'TOTAL_EVENT_LIMIT';
+            if (isPersonStaticallyUnavailable(staff, bookingStart, bookingEnd, buildDate, type)) return 'STATIC_UNAVAILABLE';
+            const candidate = {
+                id: `air-combat-check-${staff.idNumber}-${item.code}-${startTime}`,
+                type,
+                instructor: '',
+                student: '',
+                pilot: staff.name,
+                crew: '',
+                flightNumber: item.code,
+                duration: item.duration,
+                startTime,
+                resourceId: '',
+                color: 'bg-slate-500/70',
+                flightType: 'Solo' as const,
+                soloOrDual: 'Solo' as const,
+                locationType: 'Local' as const,
+                origin: school,
+                destination: school,
+                preStart: item.preFlightTime,
+                postEnd: item.postFlightTime,
+            };
+            if ([...generatedEvents, ...stagedEvents].some(existing => priorityPersonnelConflict(candidate, existing))) return 'PERSONNEL_CONFLICT';
+            return null;
+        };
+        const getLinkedEventRecencyCandidates = (
+            kind: 'course' | 'training_package',
+            code: string,
+            linkedItem: SyllabusItemDetail,
+            excludedStaffNames: Set<string>
+        ): AirCombatFormationMember[] => instructors
+            .filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name))
+            .filter(staff => staffHasAirCombatAssignment(staff, kind, code))
+            .filter(staff => !excludedStaffNames.has(staff.name))
+            .map(staff => {
+                const linkedHistory = getAirCombatStaffEvents(staff.name)
+                    .filter(event => airCombatTrainingCodesMatch(event.flightNumber, linkedItem.code));
+                return {
+                    staff,
+                    item: linkedItem,
+                    selectionReason: 'linked-event-oldest-recency',
+                    completedCount: linkedHistory.length,
+                    lastEventDateValue: getMostRecentEventDateValue(linkedHistory),
+                };
+            })
+            .filter(candidate => (candidate.completedCount || 0) > 0)
+            .sort((left, right) =>
+                (left.lastEventDateValue || 0) - (right.lastEventDateValue || 0) ||
+                getAirCombatTieBreak(`linked-recency:${linkedItem.code}:${left.staff.name}`) - getAirCombatTieBreak(`linked-recency:${linkedItem.code}:${right.staff.name}`)
+            );
+        const getAirCombatFormationMembers = (
+            kind: 'course' | 'training_package',
+            code: string,
+            leadEntry: AirCombatTrainingPriorityEntry,
+            leadItem: SyllabusItemDetail,
+            matchingItems: SyllabusItemDetail[],
+            priorityList: AirCombatTrainingPriorityEntry[],
+            resourceNumber: number,
+            startTime: number
+        ): { members: AirCombatFormationMember[]; linkedItem: SyllabusItemDetail | null; rejectionReason?: string } => {
+            const members: AirCombatFormationMember[] = [{
+                staff: leadEntry.staff,
+                item: leadItem,
+                selectionReason: 'lead-next-event',
+                completedCount: leadEntry.completedCount,
+                lastEventDateValue: leadEntry.lastEventDateValue,
+            }];
+            const selectedNames = new Set<string>([leadEntry.staff.name]);
+            const linkedItem = findLinkedTrainingItem(leadItem, matchingItems);
+            const appendIfSchedulable = (candidate: AirCombatFormationMember): boolean => {
+                if (selectedNames.has(candidate.staff.name)) return false;
+                const reason = isAirCombatStaffSchedulable(candidate.staff, candidate.item, 'flight', startTime, members.map((member, index) => ({
+                    id: `air-combat-formation-staged-${index}`,
+                    type: 'flight',
+                    instructor: '',
+                    student: '',
+                    pilot: member.staff.name,
+                    crew: '',
+                    flightNumber: member.item.code,
+                    duration: member.item.duration,
+                    startTime,
+                    resourceId: '',
+                    color: 'bg-slate-500/70',
+                    flightType: 'Solo',
+                    soloOrDual: 'Solo',
+                    locationType: 'Local',
+                    origin: school,
+                    destination: school,
+                    preStart: member.item.preFlightTime,
+                    postEnd: member.item.postFlightTime,
+                } as Omit<ScheduleEvent, 'date'>)));
+                if (reason) {
+                    recordAirCombatSkip({ list: kind, staff: candidate.staff.name, event: candidate.item.code, reason, startTime, formationFor: leadItem.code });
+                    return false;
+                }
+                members.push(candidate);
+                selectedNames.add(candidate.staff.name);
+                return true;
+            };
+            if (linkedItem) {
+                const linkedNextEntries = priorityList
+                    .filter(entry => entry.staff.name !== leadEntry.staff.name)
+                    .filter(entry => entry.nextItem && airCombatTrainingCodesMatch(entry.nextItem.code, linkedItem.code));
+                for (const entry of linkedNextEntries) {
+                    appendIfSchedulable({
+                        staff: entry.staff,
+                        item: entry.nextItem!,
+                        selectionReason: 'linked-event-next-event',
+                        completedCount: entry.completedCount,
+                        lastEventDateValue: entry.lastEventDateValue,
+                    });
+                    if (members.length >= resourceNumber) break;
+                }
+                if (members.length < resourceNumber) {
+                    for (const candidate of getLinkedEventRecencyCandidates(kind, code, linkedItem, selectedNames)) {
+                        appendIfSchedulable(candidate);
+                        if (members.length >= resourceNumber) break;
+                    }
+                }
+            } else {
+                const sameEventEntries = priorityList
+                    .filter(entry => entry.staff.name !== leadEntry.staff.name)
+                    .filter(entry => entry.nextItem && airCombatTrainingCodesMatch(entry.nextItem.code, leadItem.code));
+                for (const entry of sameEventEntries) {
+                    appendIfSchedulable({
+                        staff: entry.staff,
+                        item: entry.nextItem!,
+                        selectionReason: 'same-formation-next-event',
+                        completedCount: entry.completedCount,
+                        lastEventDateValue: entry.lastEventDateValue,
+                    });
+                    if (members.length >= resourceNumber) break;
+                }
+            }
+            return {
+                members,
+                linkedItem,
+                rejectionReason: members.length >= resourceNumber ? undefined : (linkedItem ? 'INSUFFICIENT_LINKED_EVENT_STAFF' : 'INSUFFICIENT_SAME_EVENT_STAFF'),
+            };
+        };
         const assignmentCodes = (kind: 'course' | 'training_package') => Array.from(new Set(
             instructors.flatMap(staff => {
                 const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
@@ -7205,22 +7404,437 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             }
             return null;
         };
+        const countAirCombatFormationDispatchesInPreviousHour = (startTime: number): number =>
+            generatedEvents.filter(event =>
+                event.type === 'flight' &&
+                !event.resourceId.startsWith('STBY') &&
+                !event.resourceId.startsWith('BNF-STBY') &&
+                event.startTime > startTime - 1 &&
+                event.startTime <= startTime
+            ).length;
+        const hasAirCombatNonFormationTakeoffConflict = (startTime: number): boolean =>
+            generatedEvents.some(event => {
+                if (event.type !== 'flight') return false;
+                if (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY')) return false;
+                return Math.round(Math.abs(event.startTime - startTime) * 60) < 5;
+            });
+        const selectAirCombatFormationCallsignBase = (
+            members: AirCombatFormationMember[],
+            startTime: number,
+            duration: number
+        ): string => {
+            const formationUnit = members.find(member => String(member.staff.unit || '').trim())?.staff.unit || '';
+            const configuredCandidates = (config.formationCallsigns || [])
+                .filter(callsign => normalizeFormationCallsignCode(callsign.code))
+                .filter(callsign => !formationUnit || callsign.unit === formationUnit)
+                .filter(callsign => !callsign.locationCode || callsign.locationCode === school)
+                .map(callsign => normalizeFormationCallsignCode(callsign.code));
+            const shuffledCandidates = [...configuredCandidates].sort(() => Math.random() - 0.5);
+            const available = shuffledCandidates.find(callsign =>
+                isFormationCallsignBaseAvailable(callsign, startTime, duration)
+            );
+            if (available) return available;
+            const staffPrefix = members[0]?.staff.callsign?.match(/^[A-Za-z]+/)?.[0] || '';
+            return (staffPrefix || school || 'FORM').slice(0, 4).toUpperCase();
+        };
+        const allocateAirCombatFormationResources = (
+            members: AirCombatFormationMember[],
+            startTime: number,
+            groupId: string
+        ): { resources: Array<{ resourceId: string; aircraftConfigId?: string }>; area: string } | null => {
+            const resourceNumber = members.length;
+            if (availableAircraftCount < resourceNumber) {
+                pushAirCombatDiag('resourceChecks', {
+                    event: members[0]?.item.code || null,
+                    type: 'flight',
+                    startTime,
+                    reason: 'INSUFFICIENT_AIRCRAFT_FOR_FORMATION',
+                    availableAircraftCount,
+                    resourceNumber,
+                }, 800);
+                countAirCombatRejection('INSUFFICIENT_AIRCRAFT_FOR_FORMATION');
+                return null;
+            }
+            const dispatchesInPreviousHour = countAirCombatFormationDispatchesInPreviousHour(startTime);
+            if (dispatchesInPreviousHour + resourceNumber > 8) {
+                pushAirCombatDiag('resourceChecks', {
+                    event: members[0]?.item.code || null,
+                    type: 'flight',
+                    startTime,
+                    reason: 'HOURLY_DISPATCH_LIMIT',
+                    dispatchesInPreviousHour,
+                    resourceNumber,
+                }, 800);
+                countAirCombatRejection('HOURLY_DISPATCH_LIMIT');
+                return null;
+            }
+            if (hasAirCombatNonFormationTakeoffConflict(startTime)) {
+                pushAirCombatDiag('resourceChecks', {
+                    event: members[0]?.item.code || null,
+                    type: 'flight',
+                    startTime,
+                    reason: 'TAKEOFF_SEPARATION_VIOLATION',
+                    resourceNumber,
+                }, 800);
+                countAirCombatRejection('TAKEOFF_SEPARATION_VIOLATION');
+                return null;
+            }
+            const formationDuration = Math.max(...members.map(member => Number(member.item.duration) || 0));
+            const area = findAvailableArea(startTime, formationDuration, generatedEvents);
+            if (!area) {
+                pushAirCombatDiag('resourceChecks', {
+                    event: members[0]?.item.code || null,
+                    type: 'flight',
+                    startTime,
+                    reason: 'NO_AVAILABLE_AREA',
+                    resourceNumber,
+                }, 800);
+                countAirCombatRejection('NO_AVAILABLE_AREA');
+                return null;
+            }
+            const resources: Array<{ resourceId: string; aircraftConfigId?: string }> = [];
+            const reservedResources = new Set<string>();
+            for (const member of members) {
+                let placedResource: { resourceId: string; aircraftConfigId?: string } | null = null;
+                for (let index = 1; index <= availableAircraftCount; index++) {
+                    const resourceId = `PC-21 ${index}`;
+                    if (reservedResources.has(resourceId)) continue;
+                    const aircraftConfigId = getAircraftConfigIdForResource(resourceId);
+                    if (!eventAcceptsResourceConfig(member.item, aircraftConfigId)) {
+                        pushAirCombatDiag('resourceChecks', {
+                            event: member.item.code,
+                            type: 'flight',
+                            startTime,
+                            resourceId,
+                            aircraftConfigId,
+                            reason: 'AIRCRAFT_CONFIG_INCOMPATIBLE',
+                            required: normaliseAircraftConfigRequirement(member.item),
+                            formationGroupId: groupId,
+                        }, 800);
+                        countAirCombatRejection('AIRCRAFT_CONFIG_INCOMPATIBLE');
+                        continue;
+                    }
+                    const candidate = {
+                        id: `air-combat-formation-resource-${groupId}-${resourceId}`,
+                        type: 'flight',
+                        instructor: '',
+                        student: '',
+                        pilot: member.staff.name,
+                        crew: '',
+                        flightNumber: member.item.code,
+                        duration: member.item.duration,
+                        startTime,
+                        resourceId,
+                        color: 'bg-slate-500/70',
+                        flightType: 'Solo' as const,
+                        soloOrDual: 'Solo' as const,
+                        locationType: 'Local' as const,
+                        origin: school,
+                        destination: school,
+                        area,
+                        preStart: member.item.preFlightTime,
+                        postEnd: member.item.postFlightTime,
+                        aircraftConfigId,
+                        acceptableAircraftConfigs: normaliseAircraftConfigRequirement(member.item),
+                        formationId: groupId,
+                    };
+                    const resourceConflict = generatedEvents.find(existing => priorityResourceConflict(candidate, existing));
+                    if (resourceConflict) {
+                        pushAirCombatDiag('resourceChecks', {
+                            event: member.item.code,
+                            type: 'flight',
+                            startTime,
+                            resourceId,
+                            reason: 'RESOURCE_CONFLICT',
+                            formationGroupId: groupId,
+                            conflict: {
+                                flightNumber: resourceConflict.flightNumber,
+                                startTime: resourceConflict.startTime,
+                                duration: resourceConflict.duration,
+                                resourceId: resourceConflict.resourceId,
+                            },
+                        }, 800);
+                        countAirCombatRejection('RESOURCE_CONFLICT');
+                        continue;
+                    }
+                    placedResource = { resourceId, aircraftConfigId };
+                    break;
+                }
+                if (!placedResource) {
+                    pushAirCombatDiag('resourceChecks', {
+                        event: member.item.code,
+                        type: 'flight',
+                        startTime,
+                        reason: 'NO_RESOURCE_AVAILABLE_FOR_FORMATION_MEMBER',
+                        formationGroupId: groupId,
+                    }, 800);
+                    countAirCombatRejection('NO_RESOURCE_AVAILABLE_FOR_FORMATION_MEMBER');
+                    return null;
+                }
+                reservedResources.add(placedResource.resourceId);
+                resources.push(placedResource);
+            }
+            return { resources, area };
+        };
+        const placeAirCombatFormationTraining = (
+            kind: 'course' | 'training_package',
+            code: string,
+            leadEntry: AirCombatTrainingPriorityEntry,
+            leadItem: SyllabusItemDetail,
+            matchingItems: SyllabusItemDetail[],
+            priorityList: AirCombatTrainingPriorityEntry[]
+        ): boolean => {
+            const resourceNumber = getLmpResourceNumber(leadItem);
+            const linkedCode = getAirCombatLinkedEventCode(leadItem);
+            const linkedItemForWindow = findLinkedTrainingItem(leadItem, matchingItems);
+            const formationWindowDuration = Math.max(Number(leadItem.duration) || 0, Number(linkedItemForWindow?.duration) || 0);
+            const windowEnd = flyingEndTime;
+            let candidateSlotsChecked = 0;
+            let candidateSlotsRejected = 0;
+            for (let time = flyingStartTime; time + formationWindowDuration <= windowEnd + 0.001; time += slotIncrement) {
+                const startTime = Math.round(time * 12) / 12;
+                candidateSlotsChecked++;
+                const exclusion = getFlightWindowExclusionViolation(startTime, formationWindowDuration);
+                if (exclusion) {
+                    candidateSlotsRejected++;
+                    pushAirCombatDiag('trainingAttempts', {
+                        kind,
+                        code,
+                        staff: leadEntry.staff.name,
+                        event: leadItem.code,
+                        startTime,
+                        placed: false,
+                        reason: exclusion.reason || 'FLYING_WINDOW_EXCLUSION',
+                        restriction: exclusion.period?.restriction,
+                        formation: true,
+                        resourceNumber,
+                        linkedEvent: linkedCode || null,
+                    }, 1200);
+                    countAirCombatRejection(exclusion.reason || 'FLYING_WINDOW_EXCLUSION');
+                    continue;
+                }
+                const leadSchedulableReason = isAirCombatStaffSchedulable(leadEntry.staff, leadItem, 'flight', startTime);
+                if (leadSchedulableReason) {
+                    candidateSlotsRejected++;
+                    recordAirCombatSkip({ list: kind, staff: leadEntry.staff.name, event: leadItem.code, reason: leadSchedulableReason, startTime, formation: true });
+                    continue;
+                }
+                const selection = getAirCombatFormationMembers(kind, code, leadEntry, leadItem, matchingItems, priorityList, resourceNumber, startTime);
+                if (selection.members.length < resourceNumber) {
+                    candidateSlotsRejected++;
+                    recordAirCombatSkip({
+                        list: kind,
+                        staff: leadEntry.staff.name,
+                        event: leadItem.code,
+                        reason: selection.rejectionReason || 'INSUFFICIENT_FORMATION_STAFF',
+                        startTime,
+                        formation: true,
+                        resourceNumber,
+                        linkedEvent: linkedCode || null,
+                        linkedItem: selection.linkedItem?.code || null,
+                        selectedMembers: selection.members.map(member => ({ staff: member.staff.name, event: member.item.code, selectionReason: member.selectionReason })),
+                    });
+                    pushAirCombatDiag('trainingAttempts', {
+                        kind,
+                        code,
+                        staff: leadEntry.staff.name,
+                        event: leadItem.code,
+                        startTime,
+                        placed: false,
+                        reason: selection.rejectionReason || 'INSUFFICIENT_FORMATION_STAFF',
+                        formation: true,
+                        resourceNumber,
+                        linkedEvent: linkedCode || null,
+                        linkedItem: selection.linkedItem?.code || null,
+                        selectedMembers: selection.members.map(member => ({ staff: member.staff.name, event: member.item.code, selectionReason: member.selectionReason })),
+                    }, 1200);
+                    continue;
+                }
+                const memberExclusion = selection.members
+                    .map(member => ({ member, exclusion: getFlightWindowExclusionViolation(startTime, member.item.duration) }))
+                    .find(result => !!result.exclusion);
+                if (memberExclusion?.exclusion) {
+                    candidateSlotsRejected++;
+                    pushAirCombatDiag('trainingAttempts', {
+                        kind,
+                        code,
+                        staff: memberExclusion.member.staff.name,
+                        event: memberExclusion.member.item.code,
+                        startTime,
+                        placed: false,
+                        reason: memberExclusion.exclusion.reason || 'FLYING_WINDOW_EXCLUSION',
+                        restriction: memberExclusion.exclusion.period?.restriction,
+                        formation: true,
+                        resourceNumber,
+                        linkedEvent: linkedCode || null,
+                    }, 1200);
+                    countAirCombatRejection(memberExclusion.exclusion.reason || 'FLYING_WINDOW_EXCLUSION');
+                    continue;
+                }
+                const groupId = `air-combat-formation-${normaliseAirCombatTrainingCode(leadItem.code)}-${uuidv4()}`;
+                const resourceAllocation = allocateAirCombatFormationResources(selection.members, startTime, groupId);
+                if (!resourceAllocation) {
+                    candidateSlotsRejected++;
+                    pushAirCombatDiag('trainingAttempts', {
+                        kind,
+                        code,
+                        staff: leadEntry.staff.name,
+                        event: leadItem.code,
+                        startTime,
+                        placed: false,
+                        reason: 'NO_FORMATION_RESOURCES_AVAILABLE',
+                        formation: true,
+                        resourceNumber,
+                        linkedEvent: linkedCode || null,
+                        selectedMembers: selection.members.map(member => ({ staff: member.staff.name, event: member.item.code, selectionReason: member.selectionReason })),
+                    }, 1200);
+                    continue;
+                }
+                const callsignBase = selectAirCombatFormationCallsignBase(selection.members, startTime, Math.max(...selection.members.map(member => member.item.duration)));
+                const stagedEvents = selection.members.map((member, index) => {
+                    const resource = resourceAllocation.resources[index];
+                    return {
+                        id: uuidv4(),
+                        type: 'flight',
+                        instructor: '',
+                        student: '',
+                        pilot: member.staff.name,
+                        crew: '',
+                        flightNumber: member.item.code,
+                        duration: member.item.duration,
+                        startTime,
+                        resourceId: resource.resourceId,
+                        color: kind === 'training_package' ? 'bg-emerald-500/70' : 'bg-sky-500/70',
+                        flightType: 'Solo' as const,
+                        soloOrDual: 'Solo' as const,
+                        locationType: 'Local' as const,
+                        origin: school,
+                        destination: school,
+                        area: resourceAllocation.area,
+                        preStart: member.item.preFlightTime,
+                        postEnd: member.item.postFlightTime,
+                        dayNight: member.item.dayNight,
+                        aircraftConfigId: resource.aircraftConfigId,
+                        acceptableAircraftConfigs: normaliseAircraftConfigRequirement(member.item),
+                        formationId: groupId,
+                        formationType: 'Air Combat Linked Formation',
+                        formationPosition: index + 1,
+                        formationSize: resourceNumber,
+                        callsign: `${callsignBase}${index + 1}`,
+                        notes: `Air Combat ${kind === 'training_package' ? 'training package' : 'course'} formation allocation: ${code}${linkedCode ? `; linked event ${linkedCode}` : ''}`,
+                        _source: 'air-combat-priority-formation',
+                        _isNext: member.selectionReason !== 'linked-event-oldest-recency',
+                        _traineeName: '',
+                    } as Omit<ScheduleEvent, 'date'> & { formationSize?: number; _source?: string; _isNext?: boolean; _traineeName?: string };
+                });
+                const stagedConflict = stagedEvents.find((candidate, index) =>
+                    stagedEvents.slice(0, index).some(existing =>
+                        priorityPersonnelConflict(candidate, existing) ||
+                        priorityResourceConflict(candidate, existing)
+                    )
+                );
+                if (stagedConflict) {
+                    candidateSlotsRejected++;
+                    pushAirCombatDiag('trainingAttempts', {
+                        kind,
+                        code,
+                        staff: leadEntry.staff.name,
+                        event: leadItem.code,
+                        startTime,
+                        placed: false,
+                        reason: 'FORMATION_STAGED_CONFLICT',
+                        conflictEvent: stagedConflict.flightNumber,
+                        formation: true,
+                        resourceNumber,
+                    }, 1200);
+                    countAirCombatRejection('FORMATION_STAGED_CONFLICT');
+                    continue;
+                }
+                stagedEvents.forEach(event => generatedEvents.push(event));
+                selection.members.forEach(member => {
+                    if (!eventCounts.has(member.staff.name)) eventCounts.set(member.staff.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
+                    eventCounts.get(member.staff.name)!.flightFtd++;
+                });
+                neoBuildDiag.airCombatPriority.placements.push({
+                    kind,
+                    code,
+                    event: leadItem.code,
+                    formation: true,
+                    resourceNumber,
+                    linkedEvent: linkedCode || null,
+                    groupId,
+                    startTime,
+                    members: stagedEvents.map((event, index) => ({
+                        staff: selection.members[index].staff.name,
+                        event: event.flightNumber,
+                        resourceId: event.resourceId,
+                        callsign: event.callsign,
+                        selectionReason: selection.members[index].selectionReason,
+                    })),
+                });
+                pushAirCombatDiag('trainingAttempts', {
+                    kind,
+                    code,
+                    staff: leadEntry.staff.name,
+                    event: leadItem.code,
+                    placed: true,
+                    formation: true,
+                    resourceNumber,
+                    linkedEvent: linkedCode || null,
+                    linkedItem: selection.linkedItem?.code || null,
+                    groupId,
+                    startTime,
+                    area: resourceAllocation.area,
+                    candidateSlotsChecked,
+                    candidateSlotsRejected,
+                    members: stagedEvents.map((event, index) => ({
+                        staff: selection.members[index].staff.name,
+                        event: event.flightNumber,
+                        resourceId: event.resourceId,
+                        callsign: event.callsign,
+                        selectionReason: selection.members[index].selectionReason,
+                        completedCount: selection.members[index].completedCount ?? null,
+                        lastEventDateValue: selection.members[index].lastEventDateValue || null,
+                    })),
+                }, 1200);
+                return true;
+            }
+            pushAirCombatDiag('trainingAttempts', {
+                kind,
+                code,
+                staff: leadEntry.staff.name,
+                event: leadItem.code,
+                placed: false,
+                reason: 'NO_VALID_FORMATION_SLOT_IN_WINDOW',
+                formation: true,
+                resourceNumber,
+                linkedEvent: linkedCode || null,
+                candidateSlotsChecked,
+                candidateSlotsRejected,
+                windowStart: flyingStartTime,
+                windowEnd,
+            }, 1200);
+            countAirCombatRejection('NO_VALID_FORMATION_SLOT_IN_WINDOW');
+            return false;
+        };
         const placeTrainingForKind = (kind: 'course' | 'training_package'): boolean => {
             const codes = kind === 'training_package' ? packageCodes : courseCodes;
             for (const code of codes) {
                 const priorityList = getTrainingPriorityList(kind, code);
                 const matchingItems = sortedTrainingItems(kind, code);
                 const diagKey = kind === 'training_package' ? 'trainingPackageStaffPriorityLists' : 'courseStaffPriorityLists';
-                neoBuildDiag.airCombatPriority[diagKey].push({
-                    code,
-                    matchingSyllabusItems: matchingItems.length,
-                    list: priorityList.map(entry => ({
-                        name: entry.staff.name,
-                        completedCount: entry.completedCount,
-                        lastEventDateValue: entry.lastEventDateValue || null,
-                        nextEvent: entry.nextItem?.code || null,
-                    })),
-                });
+	                neoBuildDiag.airCombatPriority[diagKey].push({
+	                    code,
+	                    matchingSyllabusItems: matchingItems.length,
+	                    list: priorityList.map(entry => ({
+	                        name: entry.staff.name,
+	                        completedCount: entry.completedCount,
+	                        lastEventDateValue: entry.lastEventDateValue || null,
+	                        nextEvent: entry.nextItem?.code || null,
+	                        nextEventResourceNumber: entry.nextItem ? getLmpResourceNumber(entry.nextItem) : null,
+	                        linkedEvent: entry.nextItem ? getAirCombatLinkedEventCode(entry.nextItem) || null : null,
+	                    })),
+	                });
                 if (matchingItems.length === 0) {
                     pushAirCombatDiag('trainingAttempts', {
                         kind,
@@ -7247,14 +7861,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     });
                     continue;
                 }
-                for (const entry of priorityList) {
-                    const item = entry.nextItem!;
-                    const type: 'flight' | 'ftd' | 'ground' | 'cpt' =
-                        item.type === 'Flight' ? 'flight' :
-                        item.type === 'FTD' ? 'ftd' :
-                        item.code.toUpperCase().includes('CPT') ? 'cpt' :
-                        'ground';
-                    const windowEnd = type === 'ftd' ? ftdEndTime : flyingEndTime;
+	                for (const entry of priorityList) {
+	                    const item = entry.nextItem!;
+	                    const type = getTrainingEventType(item);
+	                    const resourceNumber = getLmpResourceNumber(item);
+	                    if (type === 'flight' && resourceNumber > 1) {
+	                        if (placeAirCombatFormationTraining(kind, code, entry, item, matchingItems, priorityList)) {
+	                            return true;
+	                        }
+	                        continue;
+	                    }
+	                    const windowEnd = type === 'ftd' ? ftdEndTime : flyingEndTime;
                     let candidateSlotsChecked = 0;
                     let candidateSlotsRejected = 0;
                     for (let time = flyingStartTime; time + item.duration <= windowEnd + 0.001; time += slotIncrement) {
