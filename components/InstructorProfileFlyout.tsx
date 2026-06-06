@@ -17,7 +17,7 @@ import {
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import { normaliseOperationalModel } from '../utils/platformConfigService';
-import { normaliseAirCombatTrainingAssignments } from '../utils/airCombatTraining';
+import { normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports } from '../utils/airCombatTraining';
 import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 
@@ -490,6 +490,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       Number(right.event.startTime || 0) - Number(left.event.startTime || 0)
     ))
   ), [airCombatTrainingSummaries]);
+  const airCombatStoredTrainingReports = useMemo(() => (
+    normaliseAirCombatTrainingReports(instructor.preferences)
+      .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')) || String(right.createdAt || '').localeCompare(String(left.createdAt || '')))
+  ), [instructor.preferences]);
   const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
   const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
   const airCombatPanelButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
@@ -1071,7 +1075,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h4 className="text-sm font-bold text-white">Training Reports - {instructor.name}</h4>
-                      <p className="mt-0.5 text-xs text-gray-400">Air Combat staff training history from published DFP records and active schedule data.</p>
+                      <p className="mt-0.5 text-xs text-gray-400">Air Combat training reports saved against this staff member and unit.</p>
                     </div>
                     <div className="flex items-center gap-px">
                       <AuditButton pageName="Air Combat Training Reports" />
@@ -1087,7 +1091,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         </div>
                         <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
                           <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Report Records</div>
-                          <div className="mt-1 text-lg font-bold text-emerald-300">{airCombatTrainingReportRows.length}</div>
+                          <div className="mt-1 text-lg font-bold text-emerald-300">{airCombatStoredTrainingReports.length}</div>
                         </div>
                         <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
                           <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Sequence Progress</div>
@@ -1101,45 +1105,44 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Date</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Event</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Training</th>
-                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Type</th>
-                              <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300">Status</th>
-                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Role</th>
-                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Resource</th>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Report</th>
+                              <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300">Result</th>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Instructor</th>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Unit</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-700 bg-gray-800">
-                            {airCombatTrainingReportRows.length > 0 ? airCombatTrainingReportRows.map(({ event, summary, item }, index) => {
-                              const eventDate = event.date || (event as any).eventDate || '';
-                              const isFuture = eventDate && eventDate > new Date().toISOString().slice(0, 10);
+                            {airCombatStoredTrainingReports.length > 0 ? airCombatStoredTrainingReports.map((report) => {
+                              const isComplete = report.status === 'Complete';
                               return (
-                                <tr key={`${event.id || index}-${summary.assignment.trainingKey}`} className="hover:bg-gray-700/50">
-                                  <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-400">{eventDate || '-'}</td>
+                                <tr key={report.id} className="hover:bg-gray-700/50">
+                                  <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-400">{report.date || '-'}</td>
                                   <td className="whitespace-nowrap px-4 py-2">
-                                    <div className="text-xs font-bold text-sky-300">{event.flightNumber}</div>
-                                    <div className="text-[10px] text-gray-500">{formatDecimalTime(event.startTime)} / {event.duration || item?.duration || 0}h</div>
+                                    <div className="text-xs font-bold text-sky-300">{report.eventCode}</div>
+                                    <div className="max-w-[180px] truncate text-[10px] text-gray-500">{report.eventDescription || '-'}</div>
                                   </td>
                                   <td className="px-4 py-2">
-                                    <div className="max-w-[180px] truncate text-xs font-semibold text-white">{summary.assignment.code}</div>
-                                    <div className="max-w-[180px] truncate text-[10px] text-gray-400">{summary.assignment.title}</div>
+                                    <div className="max-w-[180px] truncate text-xs font-semibold text-white">{report.trainingCode || '-'}</div>
+                                    <div className="max-w-[180px] truncate text-[10px] text-gray-400">{report.trainingTitle || '-'}</div>
                                   </td>
                                   <td className="whitespace-nowrap px-4 py-2">
-                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${summary.assignment.kind === 'training_package' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'}`}>
-                                      {summary.assignment.kind === 'training_package' ? 'Package' : 'Course'}
+                                    <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300">
+                                      {report.reportName || 'PT-051'}
                                     </span>
                                   </td>
                                   <td className="whitespace-nowrap px-4 py-2 text-center">
-                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isFuture ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                                      {isFuture ? 'Scheduled' : 'Recorded'}
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isComplete ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                                      {report.overallResult || report.status || 'Draft'}
                                     </span>
                                   </td>
-                                  <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-300">{getStaffEventRole(event, instructor.name)}</td>
-                                  <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-400">{event.resourceId || '-'}</td>
+                                  <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-300">{report.instructorName || '-'}</td>
+                                  <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-400">{report.locationCode || instructor.location || '-'} / {report.unitCode || instructor.unit || '-'}</td>
                                 </tr>
                               );
                             }) : (
                               <tr>
                                 <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-500">
-                                  No Air Combat training report records found for assigned training.
+                                  No Air Combat training reports saved for this staff member.
                                 </td>
                               </tr>
                             )}

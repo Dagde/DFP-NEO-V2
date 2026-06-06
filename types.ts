@@ -174,11 +174,44 @@ export interface AirCombatTrainingAssignments {
   trainingPackages: AirCombatTrainingAssignment[];
 }
 
+export interface AirCombatTrainingReport {
+  id: string;
+  reportName: string;
+  staffIdNumber: number;
+  staffName: string;
+  locationCode?: string;
+  unitCode?: string;
+  trainingKey?: string;
+  trainingKind?: 'course' | 'training_package';
+  trainingCode?: string;
+  trainingTitle?: string;
+  eventId?: string;
+  eventCode: string;
+  eventDescription?: string;
+  eventType?: string;
+  date: string;
+  startTime?: number;
+  duration?: number;
+  resourceId?: string;
+  callsign?: string;
+  instructorName?: string;
+  overallGrade?: string;
+  overallResult?: '' | 'P' | 'F';
+  dcoResult?: '' | 'DCO' | 'DPCO' | 'DNCO';
+  notes?: string;
+  status?: 'Draft' | 'Complete';
+  createdAt: string;
+  createdBy?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface PersonnelPreferences {
   callsign?: string | null;
   secondaryCallsign?: string | null;
   airCombat?: {
     trainingAssignments?: AirCombatTrainingAssignments;
+    trainingReports?: AirCombatTrainingReport[];
   };
   [key: string]: any;
 }

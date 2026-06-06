@@ -1,4 +1,5 @@
 import {
+  AirCombatTrainingReport,
   AirCombatTrainingAssignment,
   AirCombatTrainingAssignments,
   Instructor,
@@ -105,6 +106,44 @@ export const normaliseAirCombatTrainingAssignments = (preferences?: PersonnelPre
   };
 };
 
+export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPreferences | null): AirCombatTrainingReport[] => {
+  const raw = preferences?.airCombat?.trainingReports;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((report: any) => ({
+      id: String(report.id || ''),
+      reportName: String(report.reportName || 'PT-051'),
+      staffIdNumber: Number(report.staffIdNumber || 0),
+      staffName: String(report.staffName || ''),
+      locationCode: report.locationCode ? String(report.locationCode) : undefined,
+      unitCode: report.unitCode ? String(report.unitCode) : undefined,
+      trainingKey: report.trainingKey ? String(report.trainingKey) : undefined,
+      trainingKind: report.trainingKind === 'training_package' ? 'training_package' : report.trainingKind === 'course' ? 'course' : undefined,
+      trainingCode: report.trainingCode ? String(report.trainingCode) : undefined,
+      trainingTitle: report.trainingTitle ? String(report.trainingTitle) : undefined,
+      eventId: report.eventId ? String(report.eventId) : undefined,
+      eventCode: String(report.eventCode || report.flightNumber || ''),
+      eventDescription: report.eventDescription ? String(report.eventDescription) : undefined,
+      eventType: report.eventType ? String(report.eventType) : undefined,
+      date: String(report.date || ''),
+      startTime: Number.isFinite(Number(report.startTime)) ? Number(report.startTime) : undefined,
+      duration: Number.isFinite(Number(report.duration)) ? Number(report.duration) : undefined,
+      resourceId: report.resourceId ? String(report.resourceId) : undefined,
+      callsign: report.callsign ? String(report.callsign) : undefined,
+      instructorName: report.instructorName ? String(report.instructorName) : undefined,
+      overallGrade: report.overallGrade ? String(report.overallGrade) : undefined,
+      overallResult: report.overallResult === 'P' || report.overallResult === 'F' ? report.overallResult : '',
+      dcoResult: ['DCO', 'DPCO', 'DNCO'].includes(report.dcoResult) ? report.dcoResult : '',
+      notes: report.notes ? String(report.notes) : undefined,
+      status: report.status === 'Complete' ? 'Complete' : 'Draft',
+      createdAt: String(report.createdAt || ''),
+      createdBy: report.createdBy ? String(report.createdBy) : undefined,
+      updatedAt: report.updatedAt ? String(report.updatedAt) : undefined,
+      updatedBy: report.updatedBy ? String(report.updatedBy) : undefined,
+    }))
+    .filter(report => report.id && report.eventCode) as AirCombatTrainingReport[];
+};
+
 export const setAirCombatTrainingAssignment = (
   instructor: Instructor,
   assignment: AirCombatTrainingAssignment,
@@ -156,4 +195,3 @@ export const normaliseAirCombatSchedulingWeights = (value: any): AirCombatSchedu
     trainingPackages: 100 - Math.round((courses / total) * 100),
   };
 };
-

@@ -193,12 +193,13 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             const prevUnavailHash = JSON.stringify((selectedInstructor.unavailability || []).map((u: any) => u.id).sort());
             const newUnavailHash  = JSON.stringify((updatedInstructor.unavailability  || []).map((u: any) => u.id).sort());
             const unavailChanged = prevUnavailHash !== newUnavailHash;
+            const preferencesChanged = JSON.stringify(selectedInstructor.preferences || {}) !== JSON.stringify(updatedInstructor.preferences || {});
 
             // Also check other key fields
             const otherChanged = updatedInstructor.name !== selectedInstructor.name ||
                 (updatedInstructor as any).isActive !== (selectedInstructor as any).isActive;
 
-            if (unavailChanged || otherChanged) {
+            if (unavailChanged || preferencesChanged || otherChanged) {
                 console.log('[InstructorListView] Syncing selectedInstructor from updated instructorsData - unavailChanged:', unavailChanged);
                 // Preserve any locally-edited currencyStatus so a background instructorsData refresh
                 // doesn't overwrite currency saves that haven't propagated back to the master array yet

@@ -2936,6 +2936,41 @@ const normaliseAirCombatTrainingAssignments = (preferences) => {
     trainingPackages: normaliseList(raw.trainingPackages, "training_package")
   };
 };
+const normaliseAirCombatTrainingReports = (preferences) => {
+  const raw = preferences?.airCombat?.trainingReports;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((report) => ({
+    id: String(report.id || ""),
+    reportName: String(report.reportName || "PT-051"),
+    staffIdNumber: Number(report.staffIdNumber || 0),
+    staffName: String(report.staffName || ""),
+    locationCode: report.locationCode ? String(report.locationCode) : void 0,
+    unitCode: report.unitCode ? String(report.unitCode) : void 0,
+    trainingKey: report.trainingKey ? String(report.trainingKey) : void 0,
+    trainingKind: report.trainingKind === "training_package" ? "training_package" : report.trainingKind === "course" ? "course" : void 0,
+    trainingCode: report.trainingCode ? String(report.trainingCode) : void 0,
+    trainingTitle: report.trainingTitle ? String(report.trainingTitle) : void 0,
+    eventId: report.eventId ? String(report.eventId) : void 0,
+    eventCode: String(report.eventCode || report.flightNumber || ""),
+    eventDescription: report.eventDescription ? String(report.eventDescription) : void 0,
+    eventType: report.eventType ? String(report.eventType) : void 0,
+    date: String(report.date || ""),
+    startTime: Number.isFinite(Number(report.startTime)) ? Number(report.startTime) : void 0,
+    duration: Number.isFinite(Number(report.duration)) ? Number(report.duration) : void 0,
+    resourceId: report.resourceId ? String(report.resourceId) : void 0,
+    callsign: report.callsign ? String(report.callsign) : void 0,
+    instructorName: report.instructorName ? String(report.instructorName) : void 0,
+    overallGrade: report.overallGrade ? String(report.overallGrade) : void 0,
+    overallResult: report.overallResult === "P" || report.overallResult === "F" ? report.overallResult : "",
+    dcoResult: ["DCO", "DPCO", "DNCO"].includes(report.dcoResult) ? report.dcoResult : "",
+    notes: report.notes ? String(report.notes) : void 0,
+    status: report.status === "Complete" ? "Complete" : "Draft",
+    createdAt: String(report.createdAt || ""),
+    createdBy: report.createdBy ? String(report.createdBy) : void 0,
+    updatedAt: report.updatedAt ? String(report.updatedAt) : void 0,
+    updatedBy: report.updatedBy ? String(report.updatedBy) : void 0
+  })).filter((report) => report.id && report.eventCode);
+};
 const setAirCombatTrainingAssignment = (instructor, assignment, assigned) => {
   const preferences = { ...instructor.preferences || {} };
   const current = normaliseAirCombatTrainingAssignments(preferences);
@@ -31289,13 +31324,6 @@ const initialExperience = {
 const card3d = "rounded-lg border border-gray-500/60 shadow-md";
 const card3dStyle = { background: "linear-gradient(180deg, #243044 0%, #1e2d42 60%)", boxShadow: "0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)" };
 const normaliseTrainingCode = (value) => String(value || "").replace(/\s+/g, "").trim().toUpperCase();
-const formatDecimalTime = (time) => {
-  const value = Number(time);
-  if (!Number.isFinite(value)) return "----";
-  const hours = Math.floor(value);
-  const minutes = Math.round((value - hours) * 60);
-  return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
-};
 const getEventDateValue = (event) => {
   const rawDate = event.date || event.eventDate || "";
   const timestamp = rawDate ? (/* @__PURE__ */ new Date(`${rawDate}T00:00:00`)).getTime() : 0;
@@ -31314,14 +31342,6 @@ const getEventPeople = (event) => {
 const eventIncludesStaff = (event, staffName) => {
   const target = staffName.trim().toLowerCase();
   return Boolean(target) && getEventPeople(event).some((person) => person.toLowerCase() === target);
-};
-const getStaffEventRole = (event, staffName) => {
-  const target = staffName.trim().toLowerCase();
-  if (String(event.pilot || "").trim().toLowerCase() === target) return "Pilot";
-  if (String(event.crew || "").split(/[,;/]/).some((person) => person.trim().toLowerCase() === target)) return "Crew";
-  if (String(event.instructor || "").trim().toLowerCase() === target) return "Instructor";
-  if (Array.isArray(event.attendees) && event.attendees.some((person) => String(person || "").trim().toLowerCase() === target)) return "Attendee";
-  return "Staff";
 };
 const InstructorProfileFlyout = ({
   instructor,
@@ -31529,11 +31549,12 @@ const InstructorProfileFlyout = ({
       setSelectedAirCombatTrainingItemId(updatedItem.id || updatedItem.code);
     }
   }, [instructor, onUpdateAirCombatTrainingEvent, selectedAirCombatTraining]);
-  const airCombatTrainingReportRows = reactExports.useMemo(() => airCombatTrainingSummaries.flatMap((summary) => summary.completedEvents.map((event) => ({
+  reactExports.useMemo(() => airCombatTrainingSummaries.flatMap((summary) => summary.completedEvents.map((event) => ({
     event,
     summary,
     item: summary.sequenceItems.find((item) => normaliseTrainingCode(item.code) === normaliseTrainingCode(event.flightNumber)) || null
   }))).sort((left, right) => getEventDateValue(right.event) - getEventDateValue(left.event) || Number(right.event.startTime || 0) - Number(left.event.startTime || 0)), [airCombatTrainingSummaries]);
+  const airCombatStoredTrainingReports = reactExports.useMemo(() => normaliseAirCombatTrainingReports(instructor.preferences).sort((left, right) => String(right.date || "").localeCompare(String(left.date || "")) || String(right.createdAt || "").localeCompare(String(left.createdAt || ""))), [instructor.preferences]);
   const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
   const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
   const airCombatPanelButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
@@ -32143,7 +32164,7 @@ const InstructorProfileFlyout = ({
                   "Training Reports - ",
                   instructor.name
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-gray-400", children: "Air Combat staff training history from published DFP records and active schedule data." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-gray-400", children: "Air Combat training reports saved against this staff member and unit." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Air Combat Training Reports" }),
@@ -32158,7 +32179,7 @@ const InstructorProfileFlyout = ({
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Report Records" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-bold text-emerald-300", children: airCombatTrainingReportRows.length })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-bold text-emerald-300", children: airCombatStoredTrainingReports.length })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Sequence Progress" }),
@@ -32174,35 +32195,33 @@ const InstructorProfileFlyout = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Date" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Event" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Training" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Type" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Status" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Role" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Resource" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Report" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Result" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Instructor" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Unit" })
                 ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800", children: airCombatTrainingReportRows.length > 0 ? airCombatTrainingReportRows.map(({ event, summary, item }, index) => {
-                  const eventDate = event.date || event.eventDate || "";
-                  const isFuture = eventDate && eventDate > (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+                /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800", children: airCombatStoredTrainingReports.length > 0 ? airCombatStoredTrainingReports.map((report) => {
+                  const isComplete = report.status === "Complete";
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/50", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-400", children: eventDate || "-" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-400", children: report.date || "-" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "whitespace-nowrap px-4 py-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold text-sky-300", children: event.flightNumber }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] text-gray-500", children: [
-                        formatDecimalTime(event.startTime),
-                        " / ",
-                        event.duration || item?.duration || 0,
-                        "h"
-                      ] })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold text-sky-300", children: report.eventCode }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-[180px] truncate text-[10px] text-gray-500", children: report.eventDescription || "-" })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-[180px] truncate text-xs font-semibold text-white", children: summary.assignment.code }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-[180px] truncate text-[10px] text-gray-400", children: summary.assignment.title })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-[180px] truncate text-xs font-semibold text-white", children: report.trainingCode || "-" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-[180px] truncate text-[10px] text-gray-400", children: report.trainingTitle || "-" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2 py-0.5 text-[10px] font-bold ${summary.assignment.kind === "training_package" ? "bg-emerald-500/20 text-emerald-300" : "bg-sky-500/20 text-sky-300"}`, children: summary.assignment.kind === "training_package" ? "Package" : "Course" }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2 py-0.5 text-[10px] font-bold ${isFuture ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`, children: isFuture ? "Scheduled" : "Recorded" }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-300", children: getStaffEventRole(event, instructor.name) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-400", children: event.resourceId || "-" })
-                  ] }, `${event.id || index}-${summary.assignment.trainingKey}`);
-                }) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-4 py-10 text-center text-sm text-gray-500", children: "No Air Combat training report records found for assigned training." }) }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300", children: report.reportName || "PT-051" }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2 py-0.5 text-[10px] font-bold ${isComplete ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"}`, children: report.overallResult || report.status || "Draft" }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-300", children: report.instructorName || "-" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-400", children: [
+                      report.locationCode || instructor.location || "-",
+                      " / ",
+                      report.unitCode || instructor.unit || "-"
+                    ] })
+                  ] }, report.id);
+                }) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-4 py-10 text-center text-sm text-gray-500", children: "No Air Combat training reports saved for this staff member." }) }) })
               ] }) })
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training reports are not configured for this operational model." })
           ] }),
@@ -33521,8 +33540,9 @@ const InstructorListView = ({
         const prevUnavailHash = JSON.stringify((selectedInstructor.unavailability || []).map((u) => u.id).sort());
         const newUnavailHash = JSON.stringify((updatedInstructor.unavailability || []).map((u) => u.id).sort());
         const unavailChanged = prevUnavailHash !== newUnavailHash;
+        const preferencesChanged = JSON.stringify(selectedInstructor.preferences || {}) !== JSON.stringify(updatedInstructor.preferences || {});
         const otherChanged = updatedInstructor.name !== selectedInstructor.name || updatedInstructor.isActive !== selectedInstructor.isActive;
-        if (unavailChanged || otherChanged) {
+        if (unavailChanged || preferencesChanged || otherChanged) {
           console.log("[InstructorListView] Syncing selectedInstructor from updated instructorsData - unavailChanged:", unavailChanged);
           setSelectedInstructor({
             ...updatedInstructor,
@@ -37932,6 +37952,205 @@ This action cannot be undone.`;
       }
     )
   ] });
+};
+const formatDecimalTime = (time) => {
+  if (!Number.isFinite(Number(time))) return "-";
+  const hours = Math.floor(Number(time));
+  const minutes = Math.round((Number(time) - hours) * 60);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+const AirCombatTrainingReportModal = ({
+  staff,
+  assignment,
+  item,
+  sourceEvent,
+  reportName = "PT-051",
+  currentUserName = "",
+  locationCode = "",
+  unitCode = "",
+  onCancel,
+  onSave
+}) => {
+  const eventCode = item?.code || sourceEvent?.flightNumber || "";
+  const eventDescription = item?.eventDescription || sourceEvent?.notes || item?.module || "";
+  const eventType = item?.type || sourceEvent?.type || "";
+  const defaultDate = sourceEvent?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  const defaultStart = Number(sourceEvent?.startTime ?? 8);
+  const defaultDuration = Number(sourceEvent?.duration ?? item?.totalEventHours ?? item?.duration ?? item?.flightOrSimHours ?? 1);
+  const [date, setDate] = reactExports.useState(defaultDate);
+  const [instructorName, setInstructorName] = reactExports.useState(sourceEvent?.instructor || currentUserName || "");
+  const [overallGrade, setOverallGrade] = reactExports.useState("");
+  const [overallResult, setOverallResult] = reactExports.useState("");
+  const [dcoResult, setDcoResult] = reactExports.useState("");
+  const [notes, setNotes] = reactExports.useState("");
+  const [isSaving2, setIsSaving] = reactExports.useState(false);
+  const [saveError, setSaveError] = reactExports.useState("");
+  const reportId = reactExports.useMemo(() => `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode}-${Date.now()}`, [eventCode, item?.id, sourceEvent?.id, staff.idNumber]);
+  const detailCell = (label, value) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-white", children: value || "-" })
+  ] });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[95] flex items-center justify-center bg-black/75 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between border-b border-gray-700 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-xl font-bold text-white", children: [
+          reportName,
+          " Training Report"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-gray-400", children: [
+          staff.rank,
+          " ",
+          staff.name,
+          " - ",
+          staff.unit || unitCode || "Air Combat"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "text-2xl text-gray-400 hover:text-white", children: "x" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 space-y-5 overflow-y-auto p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 md:grid-cols-4", children: [
+        detailCell("Event", eventCode),
+        detailCell("Training", assignment?.code || item?.phase || "-"),
+        detailCell("Type", eventType),
+        detailCell("Timing", `${formatDecimalTime(defaultStart)} / ${defaultDuration}h`)
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/55 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: "Event Details" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-white", children: eventCode }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm text-gray-300", children: eventDescription || "No event description recorded." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-3", children: [
+          detailCell("Resource", sourceEvent?.resourceId || "-"),
+          detailCell("Callsign", sourceEvent?.callsign || staff.callsign || "-"),
+          detailCell("Unit", unitCode || staff.unit || "-")
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Date" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "date",
+              value: date,
+              onChange: (event) => setDate(event.target.value),
+              className: "w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Report Instructor" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              value: instructorName,
+              onChange: (event) => setInstructorName(event.target.value),
+              className: "w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Overall Grade" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: overallGrade, onChange: (event) => setOverallGrade(event.target.value), className: "w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No Grade" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "1", children: "1" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "2", children: "2" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "3", children: "3" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "4", children: "4" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "5", children: "5" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Overall Result" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: overallResult, onChange: (event) => setOverallResult(event.target.value), className: "w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not Set" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "P", children: "Pass" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "F", children: "Fail" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "DCO Result" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: dcoResult, onChange: (event) => setDcoResult(event.target.value), className: "w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not Set" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "DCO", children: "DCO" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "DPCO", children: "DPCO" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "DNCO", children: "DNCO" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Status" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm font-semibold text-amber-300", children: "Draft" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Notes" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "textarea",
+          {
+            value: notes,
+            onChange: (event) => setNotes(event.target.value),
+            rows: 5,
+            className: "w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
+            placeholder: "Record training observations, debrief points, or follow-up actions."
+          }
+        )
+      ] }),
+      saveError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-red-500/50 bg-red-950/40 px-3 py-2 text-sm text-red-200", children: saveError })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "h-10 min-w-[96px] rounded-md btn-aluminium-brushed text-sm font-semibold", children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          disabled: isSaving2 || !eventCode,
+          onClick: async () => {
+            setIsSaving(true);
+            setSaveError("");
+            try {
+              const now = (/* @__PURE__ */ new Date()).toISOString();
+              await onSave({
+                id: reportId,
+                reportName,
+                staffIdNumber: staff.idNumber,
+                staffName: staff.name,
+                locationCode,
+                unitCode: unitCode || staff.unit,
+                trainingKey: assignment?.trainingKey,
+                trainingKind: assignment?.kind,
+                trainingCode: assignment?.code || item?.phase,
+                trainingTitle: assignment?.title || item?.module,
+                eventId: sourceEvent?.id || item?.id,
+                eventCode,
+                eventDescription,
+                eventType,
+                date,
+                startTime: defaultStart,
+                duration: defaultDuration,
+                resourceId: sourceEvent?.resourceId,
+                callsign: sourceEvent?.callsign || staff.callsign,
+                instructorName,
+                overallGrade,
+                overallResult,
+                dcoResult,
+                notes,
+                status: "Draft",
+                createdAt: now,
+                createdBy: currentUserName,
+                updatedAt: now,
+                updatedBy: currentUserName
+              });
+            } catch (error) {
+              setSaveError(error instanceof Error ? error.message : String(error));
+            } finally {
+              setIsSaving(false);
+            }
+          },
+          className: "h-10 min-w-[128px] rounded-md btn-aluminium-brushed text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40",
+          children: "Save Report"
+        }
+      )
+    ] })
+  ] }) });
 };
 const AuthorisationConfirmation = ({ onConfirm, onCancel, message, annotation }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[70] flex items-center justify-center animate-fade-in", onClick: onCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
@@ -72260,6 +72479,7 @@ ${"=".repeat(60)}`);
   const [selectedTraineeForHateSheet, setSelectedTraineeForHateSheet] = reactExports.useState(null);
   const [selectedScoreForDetail, setSelectedScoreForDetail] = reactExports.useState(null);
   const [eventForPt051, setEventForPt051] = reactExports.useState(null);
+  const [airCombatTrainingReportDraft, setAirCombatTrainingReportDraft] = reactExports.useState(null);
   const [loadedPt051Keys, setLoadedPt051Keys] = reactExports.useState(/* @__PURE__ */ new Set());
   const [selectedPersonForCurrency, setSelectedPersonForCurrency] = reactExports.useState(null);
   const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = reactExports.useState("instructor");
@@ -73909,26 +74129,6 @@ ${error instanceof Error ? error.message : String(error)}`,
     setEventForPt051(eventForAssessment);
     handleNavigation("PT051");
   };
-  const buildAirCombatTrainingReportSubject = (staff) => ({
-    idNumber: staff.idNumber,
-    fullName: staff.name,
-    name: staff.name,
-    rank: staff.rank,
-    course: staff.unit || activeUnitCode || "Air Combat",
-    seatConfig: staff.seatConfig,
-    isPaused: false,
-    unit: staff.unit || activeUnitCode || "",
-    flight: staff.flight,
-    service: staff.service,
-    unavailability: staff.unavailability || [],
-    location: staff.location,
-    phoneNumber: staff.phoneNumber,
-    email: staff.email,
-    traineeCallsign: staff.callsign,
-    secondaryCallsign: staff.secondaryCallsign,
-    permissions: staff.permissions || [],
-    priorExperience: staff.priorExperience
-  });
   const buildAirCombatTrainingReportEventFromItem = (staff, assignment, item) => {
     const eventType = item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.includes("CPT") ? "cpt" : "ground";
     const eventDate = getLocalDateString();
@@ -73960,127 +74160,68 @@ ${error instanceof Error ? error.message : String(error)}`,
       postEnd: item.postFlightTime
     };
   };
-  const openOrCreateAirCombatTrainingReport = async (staff, sourceEvent, options) => {
-    const staffSubject = buildAirCombatTrainingReportSubject(staff);
-    if (!canViewTraineePt051(staffSubject)) {
-      denyPlatformAction("Air Combat training report");
-      return;
-    }
-    const reportEvent = {
-      ...sourceEvent,
-      id: sourceEvent.id || `air-combat-report-${staff.id || staff.idNumber}-${sourceEvent.flightNumber}`,
-      date: sourceEvent.date || getLocalDateString(),
-      instructor: sourceEvent.instructor || currentUserName || "",
-      student: "",
-      pilot: sourceEvent.pilot || staff.name,
-      crew: sourceEvent.crew || "",
-      flightNumber: sourceEvent.flightNumber || options.syllabusItem?.code || "Air Combat",
-      duration: Number(sourceEvent.duration || options.syllabusItem?.totalEventHours || options.syllabusItem?.duration || 1),
-      startTime: Number(sourceEvent.startTime || 8),
-      resourceId: sourceEvent.resourceId || "",
-      color: sourceEvent.color || "",
-      flightType: sourceEvent.flightType || options.syllabusItem?.sortieType || "Solo",
-      locationType: sourceEvent.locationType || "Local",
-      origin: sourceEvent.origin || school,
-      destination: sourceEvent.destination || school,
-      notes: sourceEvent.notes || options.syllabusItem?.eventDescription || options.syllabusItem?.module || ""
-    };
-    const existingAssessment = Array.from(pt051Assessments.values()).find(
-      (assessment) => assessment.traineeFullName === staffSubject.fullName && (assessment.eventId === reportEvent.id || assessment.flightNumber === reportEvent.flightNumber && (!reportEvent.date || !assessment.date || assessment.date === reportEvent.date))
-    ) || await loadPersistedPt051Assessment(staffSubject, reportEvent);
-    if (existingAssessment) {
-      setSelectedTraineeForHateSheet(staffSubject);
-      setEventForPt051({
-        ...reportEvent,
-        id: existingAssessment.eventId || reportEvent.id,
-        date: existingAssessment.date || reportEvent.date,
-        instructor: existingAssessment.instructorName || reportEvent.instructor,
-        startTime: existingAssessment.startTime ?? reportEvent.startTime,
-        duration: existingAssessment.duration ?? reportEvent.duration
-      });
-      await showDarkAlert2(
-        `A training report already exists for ${reportEvent.flightNumber}.
-
-Please wait while NEO redirects you to the existing report.`,
-        "Training Report Already Exists",
-        "info",
-        3200
-      );
-      handleNavigation("PT051");
-      return;
-    }
-    if (!canEditTraineePt051(staffSubject)) {
-      denyPlatformAction("generate Air Combat training report");
-      return;
-    }
-    const newAssessment = {
-      id: `pt051-${reportEvent.id}-${staffSubject.fullName}`,
-      traineeFullName: staffSubject.fullName,
-      eventId: reportEvent.id,
-      flightNumber: reportEvent.flightNumber,
-      date: reportEvent.date,
-      instructorName: reportEvent.instructor || currentUserName || "",
-      overallGrade: null,
-      overallResult: null,
-      dcoResult: "",
-      overallComments: "",
-      startTime: Number(reportEvent.startTime || 8),
-      duration: Number(reportEvent.duration || 1),
-      endTime: Number(reportEvent.startTime || 8) + Number(reportEvent.duration || 1),
-      isCompleted: false,
-      scores: ALL_ELEMENTS.map((element) => ({
-        element,
-        grade: null,
-        comment: ""
-      })),
-      groundSchoolAssessment: { isAssessment: false, result: void 0 }
-    };
-    newAssessment.course = options.assignment?.code || staff.unit || activeUnitCode || "Air Combat";
-    const assessmentKey = `pt051-${newAssessment.eventId}-${staffSubject.fullName}`;
-    try {
-      await persistPt051AssessmentRecord(newAssessment);
-      setPt051Assessments((prev) => {
-        const updated = new Map(prev);
-        updated.set(assessmentKey, newAssessment);
-        return updated;
-      });
-      setLoadedPt051Keys((prev) => {
-        const updated = new Set(prev);
-        updated.add(`${reportEvent.id}-${staffSubject.fullName}`);
-        return updated;
-      });
-      logAudit(
-        options.sourcePage,
-        "Generate",
-        `Generated Air Combat training report for ${staff.name} - Event: ${reportEvent.flightNumber} (${reportEvent.date})`
-      );
-    } catch (error) {
-      console.warn("[PT051] Failed to persist Air Combat training report:", error);
-      await showDarkAlert2(
-        `The training report was created locally, but could not be saved to the database.
-
-${error instanceof Error ? error.message : String(error)}`,
-        "Training Report Save Failed",
-        "error"
-      );
-      return;
-    }
-    setSelectedTraineeForHateSheet(staffSubject);
-    setEventForPt051(reportEvent);
-    handleNavigation("PT051");
-  };
   const handleGenerateAirCombatTrainingReportForStaff = async (staff, assignment, item) => {
     const reportEvent = buildAirCombatTrainingReportEventFromItem(staff, assignment, item);
-    await openOrCreateAirCombatTrainingReport(staff, reportEvent, {
-      syllabusItem: item,
-      assignment,
-      sourcePage: "Air Combat Training Progress"
-    });
+    setAirCombatTrainingReportDraft({ staff, assignment, item, sourceEvent: reportEvent });
   };
   const handleOpenAirCombatTrainingReportFromFlightDetails = async (staff, sourceEvent) => {
-    await openOrCreateAirCombatTrainingReport(staff, sourceEvent, {
-      sourcePage: "Flight Details"
-    });
+    const matchingItem = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(sourceEvent.flightNumber || "").trim().toUpperCase());
+    let assignment;
+    if (matchingItem) {
+      const staffAssignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      const allAssignments = [...staffAssignments.courses, ...staffAssignments.trainingPackages];
+      const trainingCodes = new Set([
+        ...matchingItem.courses || [],
+        matchingItem.phase,
+        matchingItem.module
+      ].map((value) => String(value || "").trim()).filter(Boolean));
+      assignment = allAssignments.find((candidate) => trainingCodes.has(candidate.code));
+      if (!assignment) {
+        assignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode, currentUserName);
+      }
+    }
+    setAirCombatTrainingReportDraft({ staff, assignment, item: matchingItem, sourceEvent });
+  };
+  const handleSaveAirCombatTrainingReport = async (report) => {
+    const staff = allInstructorsData.find((person) => airCombatTrainingReportDraft?.staff?.id ? person.id === airCombatTrainingReportDraft.staff.id : person.idNumber === airCombatTrainingReportDraft?.staff.idNumber) || airCombatTrainingReportDraft?.staff;
+    if (!staff) return;
+    const preferences = { ...staff.preferences || {} };
+    const existingReports = normaliseAirCombatTrainingReports(preferences);
+    const updatedReports = [
+      report,
+      ...existingReports.filter((existing) => existing.id !== report.id)
+    ];
+    const updatedStaff = {
+      ...staff,
+      preferences: {
+        ...preferences,
+        airCombat: {
+          ...preferences.airCombat || {},
+          trainingReports: updatedReports
+        }
+      }
+    };
+    const dbId = updatedStaff.id;
+    if (dbId) {
+      const response = await fetch(`/api/personnel/${dbId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedStaff)
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to save Air Combat training report (${response.status})`);
+      }
+    }
+    setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
+    setAirCombatTrainingReportDraft(null);
+    setSelectedPersonForProfile(updatedStaff);
+    logAudit(
+      "Air Combat Training Reports",
+      "Create",
+      `Created ${report.reportName} Air Combat training report for ${report.staffName} - Event: ${report.eventCode}`
+    );
   };
   const handleViewLogbook = reactExports.useCallback((person) => {
     setSelectedPersonForLogbook(person);
@@ -75277,10 +75418,9 @@ ${error instanceof Error ? error.message : String(error)}`,
   const persistPt051AssessmentRecord = async (assessment) => {
     const apiBase2 = getApiBaseUrl();
     const trainee = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
-    const staff = allInstructorsData.find((person) => person.name === assessment.traineeFullName);
-    const traineeId = trainee?.id || staff?.id || (staff ? `staff-${staff.idNumber}` : null);
+    const traineeId = trainee?.id;
     if (!traineeId) {
-      throw new Error(`Cannot save PT-051: personnel database record not found for ${assessment.traineeFullName}`);
+      throw new Error(`Cannot save PT-051: trainee database record not found for ${assessment.traineeFullName}`);
     }
     const response = await fetch(`${apiBase2}/trainee-performance`, {
       method: "POST",
@@ -75288,7 +75428,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       body: JSON.stringify({
         ...assessment,
         traineeId,
-        course: trainee?.course || assessment.course || staff?.unit || null,
+        course: trainee?.course || null,
         createdBy: authUser?.userId ?? sessionUser?.userId ?? null
       })
     });
@@ -82793,6 +82933,21 @@ Do you want to replace the existing entry?`,
         }
       )
     ] }),
+    airCombatTrainingReportDraft && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AirCombatTrainingReportModal,
+      {
+        staff: airCombatTrainingReportDraft.staff,
+        assignment: airCombatTrainingReportDraft.assignment,
+        item: airCombatTrainingReportDraft.item,
+        sourceEvent: airCombatTrainingReportDraft.sourceEvent,
+        reportName: "PT-051",
+        currentUserName,
+        locationCode: school,
+        unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode,
+        onCancel: () => setAirCombatTrainingReportDraft(null),
+        onSave: handleSaveAirCombatTrainingReport
+      }
+    ),
     !authLoading && !isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsx(LoginModal, { onLoginSuccess: handleLoginSuccess }),
     authLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }),
