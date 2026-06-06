@@ -1226,8 +1226,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   </div>
                   {isAirCombatModel ? (
                     <div className="space-y-4">
-                      <div className="rounded-lg border border-gray-600 bg-gray-950/55 p-3 pb-0 shadow-inner">
-                        <div className="mb-2 flex items-center justify-between gap-3 border-b border-gray-700 pb-2">
+                      <div className="rounded-t-lg border border-b-0 border-gray-600 bg-gray-950/55 px-3 pt-3 shadow-inner">
+                        <div className="mb-2 flex items-center justify-between gap-3">
                           <div>
                             <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Assigned Air Combat Training</div>
                             <div className="text-[11px] text-gray-500">Courses and packages assigned to this staff member.</div>
@@ -1243,49 +1243,39 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         {airCombatTrainingSummaries.length > 0 ? airCombatTrainingSummaries.map(summary => {
                           const isSelected = selectedAirCombatTraining?.assignment.trainingKey === summary.assignment.trainingKey;
                           const isPackage = summary.assignment.kind === 'training_package';
-                          const accentClass = isPackage ? 'from-emerald-400 via-emerald-500 to-teal-500' : 'from-sky-300 via-sky-500 to-cyan-500';
                           const assignmentTabClass = isPackage
-                            ? (isSelected ? 'border-emerald-300 bg-gray-900 shadow-lg shadow-emerald-950/25 ring-1 ring-emerald-300/70' : 'border-emerald-500/55 bg-gray-900/80 hover:border-emerald-400/80 hover:bg-gray-800')
-                            : (isSelected ? 'border-sky-300 bg-gray-900 shadow-lg shadow-sky-950/30 ring-1 ring-sky-300/70' : 'border-sky-500/55 bg-gray-900/80 hover:border-sky-400/80 hover:bg-gray-800');
+                            ? (isSelected ? 'border-emerald-300 bg-gray-900 shadow-lg shadow-emerald-950/25 ring-1 ring-emerald-300/70' : 'border-emerald-500/55 bg-gray-950/80 hover:border-emerald-400/80 hover:bg-gray-900')
+                            : (isSelected ? 'border-sky-300 bg-gray-900 shadow-lg shadow-sky-950/30 ring-1 ring-sky-300/70' : 'border-sky-500/55 bg-gray-950/80 hover:border-sky-400/80 hover:bg-gray-900');
                           const typePillClass = isPackage ? 'border-emerald-400/45 bg-gray-950/60 text-emerald-200' : 'border-sky-300/45 bg-gray-950/60 text-sky-100';
                           return (
                             <button
                               key={summary.assignment.trainingKey}
                               type="button"
                               onClick={() => setSelectedAirCombatTrainingKey(summary.assignment.trainingKey)}
-                              className={`relative min-h-[118px] w-full overflow-hidden rounded-t-lg rounded-b-sm border px-3 py-3 text-left transition ${assignmentTabClass}`}
+                              className={`relative min-h-[76px] w-full overflow-hidden rounded-t-lg border border-b-0 px-3 py-2.5 text-left transition ${assignmentTabClass}`}
                             >
-                              <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accentClass}`} />
-                              <div className="flex items-start justify-between gap-2 pt-1">
+                              <div className="flex h-full items-center justify-between gap-3">
                                 <div className="min-w-0">
-                                  <div className="truncate text-[9px] font-bold uppercase tracking-wide text-gray-500">Training Assignment</div>
-                                  <div className="mt-1 truncate text-lg font-extrabold leading-tight text-white">{summary.assignment.code}</div>
-                                  <div className="mt-0.5 truncate text-xs font-medium text-gray-300">{summary.assignment.title}</div>
+                                  <div className="truncate text-xl font-extrabold leading-tight text-white">{summary.assignment.code}</div>
+                                  <div className="mt-0.5 truncate text-[11px] font-medium text-gray-300">{summary.assignment.title}</div>
+                                  <div className="mt-1 truncate text-[10px] font-semibold text-gray-500">
+                                    {summary.completedCount}/{summary.totalCount} complete · Next {summary.nextItem?.code || 'Complete'}
+                                  </div>
                                 </div>
                                 <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${typePillClass}`}>
                                   {isPackage ? 'Package' : 'Course'}
                                 </span>
                               </div>
-                              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-700/90">
-                                <div className="h-full rounded-full bg-gray-300" style={{ width: `${summary.progressPercent}%` }} />
-                              </div>
-                              <div className="mt-2 flex justify-between gap-2 text-[10px] font-semibold text-gray-300">
-                                <span>{summary.completedCount}/{summary.totalCount} complete</span>
-                                <span className="text-white">{summary.progressPercent}%</span>
-                              </div>
-                              <div className="mt-2 truncate rounded border border-gray-700 bg-gray-950/45 px-2 py-1.5 text-[10px] text-gray-400">
-                                Next event: <span className="font-bold text-gray-100">{summary.nextItem?.code || 'Complete'}</span>
-                              </div>
                             </button>
                           );
                         }) : (
-                          <div className="rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-500">
+                          <div className="rounded-t-lg border border-b-0 border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-500">
                             No Air Combat training assigned.
                           </div>
                         )}
                         </div>
                       </div>
-                      <div className="min-h-[260px] rounded-lg border border-gray-700 bg-gray-950/35">
+                      <div className="min-h-[260px] rounded-b-lg border border-gray-700 bg-gray-950/35">
                         {selectedAirCombatTraining ? (
                           <div className="min-h-[260px]">
                             <div className="grid gap-3 border-b border-gray-700 bg-gray-950/30 p-3 lg:grid-cols-[minmax(220px,1fr)_140px_140px_minmax(240px,0.9fr)]">
