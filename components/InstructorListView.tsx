@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement } from '../types';
+import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement, SyllabusItemDetail } from '../types';
 import FlightInfoFlyout from './FlightInfoFlyout';
 // FIX: Corrected import path for the InstructorProfileFlyout component.
 import { InstructorProfileFlyout } from './InstructorProfileFlyout';
@@ -48,6 +48,8 @@ interface InstructorListViewProps {
   traineesData: Trainee[];
   instructorsData: Instructor[];
   archivedInstructorsData: Instructor[];
+  scheduleHistoryEvents?: ScheduleEvent[];
+  syllabusDetails?: SyllabusItemDetail[];
   school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void;
@@ -80,6 +82,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     traineesData,
     instructorsData,
     archivedInstructorsData,
+    scheduleHistoryEvents = [],
+    syllabusDetails = [],
     school,
     personnelData,
     onUpdateInstructor,
@@ -110,7 +114,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -605,6 +609,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     locations={locations}
                     units={units}
                     traineesData={traineesData}
+                    events={events}
+                    scheduleHistoryEvents={scheduleHistoryEvents}
+                    syllabusDetails={syllabusDetails}
                     onViewLogbook={onViewLogbook}
                     onRequestSct={() => {
                         if (onRequestSct) {

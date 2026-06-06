@@ -12,6 +12,7 @@ interface StaffViewProps {
   traineesData: any[];
   instructorsData: any[];
   archivedInstructorsData: any[];
+  scheduleHistoryEvents?: any[];
   school: string;
   personnelData: any[];
   onUpdateInstructor: (data: any) => Promise<void>;
@@ -112,6 +113,8 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             traineesData={props.traineesData}
             instructorsData={props.instructorsData}
             archivedInstructorsData={props.archivedInstructorsData}
+            scheduleHistoryEvents={props.scheduleHistoryEvents}
+            syllabusDetails={props.syllabusDetails}
             school={props.school}
             personnelData={props.personnelData}
             onUpdateInstructor={props.onUpdateInstructor}

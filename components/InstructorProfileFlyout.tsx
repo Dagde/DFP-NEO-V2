@@ -1,6 +1,6 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../types';
+import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, ScheduleEvent, SyllabusItemDetail } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import { addFile } from '../utils/db';
@@ -30,6 +30,9 @@ interface InstructorProfileFlyoutProps {
   locations: string[];
   units: string[];
   traineesData: Trainee[];
+  events?: ScheduleEvent[];
+  scheduleHistoryEvents?: ScheduleEvent[];
+  syllabusDetails?: SyllabusItemDetail[];
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: () => void;
   onNavigateToTrainee?: (trainee: Trainee) => void;
@@ -143,11 +146,57 @@ const card3d = "rounded-lg border border-gray-500/60 shadow-md";
 const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 type StaffRole = Instructor['role'];
 type StaffProfileTab = 'unavailable' | 'currency' | 'logbook' | 'sct' | 'trainingReports' | 'trainingProgress';
+type AirCombatAssignment = ReturnType<typeof normaliseAirCombatTrainingAssignments>['courses'][number];
+
+const normaliseTrainingCode = (value?: string | null): string =>
+  String(value || '').replace(/\s+/g, '').trim().toUpperCase();
+
+const formatDecimalTime = (time?: number | null): string => {
+  const value = Number(time);
+  if (!Number.isFinite(value)) return '----';
+  const hours = Math.floor(value);
+  const minutes = Math.round((value - hours) * 60);
+  return `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;
+};
+
+const getEventDateValue = (event: ScheduleEvent): number => {
+  const rawDate = event.date || (event as any).eventDate || '';
+  const timestamp = rawDate ? new Date(`${rawDate}T00:00:00`).getTime() : 0;
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+const getEventPeople = (event: ScheduleEvent): string[] => {
+  const rawPeople = [
+    event.instructor,
+    event.student,
+    event.pilot,
+    event.crew,
+    ...(Array.isArray(event.attendees) ? event.attendees : []),
+  ];
+  return rawPeople
+    .flatMap(person => String(person || '').split(/[,;/]/))
+    .map(person => person.trim())
+    .filter(Boolean);
+};
+
+const eventIncludesStaff = (event: ScheduleEvent, staffName: string): boolean => {
+  const target = staffName.trim().toLowerCase();
+  return Boolean(target) && getEventPeople(event).some(person => person.toLowerCase() === target);
+};
+
+const getStaffEventRole = (event: ScheduleEvent, staffName: string): string => {
+  const target = staffName.trim().toLowerCase();
+  if (String(event.pilot || '').trim().toLowerCase() === target) return 'Pilot';
+  if (String(event.crew || '').split(/[,;/]/).some(person => person.trim().toLowerCase() === target)) return 'Crew';
+  if (String(event.instructor || '').trim().toLowerCase() === target) return 'Instructor';
+  if (Array.isArray(event.attendees) && event.attendees.some(person => String(person || '').trim().toLowerCase() === target)) return 'Attendee';
+  return 'Staff';
+};
 
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
-  locations, units, traineesData, onViewLogbook, onRequestSct, onNavigateToTrainee,
+  locations, units, traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [], onViewLogbook, onRequestSct, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],
   profileInitialTab, onProfileTabConsumed,
   currentUserId, currentUserName,
@@ -265,6 +314,82 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     () => normaliseAirCombatTrainingAssignments(instructor.preferences),
     [instructor.preferences],
   );
+  const assignedAirCombatTraining = useMemo(() => ([
+    ...assignedTraining.courses.map(item => ({ ...item, displayKind: 'Course', tone: 'sky' })),
+    ...assignedTraining.trainingPackages.map(item => ({ ...item, displayKind: 'Training Package', tone: 'emerald' })),
+  ]), [assignedTraining]);
+  const airCombatStaffHistoryEvents = useMemo(() => {
+    const deduped = new Map<string, ScheduleEvent>();
+    [...scheduleHistoryEvents, ...events]
+      .filter(event => eventIncludesStaff(event, instructor.name))
+      .forEach(event => {
+        const key = event.id || `${event.date || ''}-${event.flightNumber || ''}-${event.startTime}-${event.resourceId || ''}`;
+        deduped.set(key, event);
+      });
+    return Array.from(deduped.values()).sort((left, right) => (
+      getEventDateValue(right) - getEventDateValue(left) ||
+      Number(right.startTime || 0) - Number(left.startTime || 0)
+    ));
+  }, [events, instructor.name, scheduleHistoryEvents]);
+  const getTrainingSyllabusItems = useCallback((assignment: AirCombatAssignment): SyllabusItemDetail[] => {
+    const assignmentCode = normaliseTrainingCode(assignment.code);
+    return syllabusDetails
+      .filter(item => item.isActive !== false)
+      .filter(item => (assignment.kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
+      .filter(item => (
+        (item.courses || []).some(course => normaliseTrainingCode(course) === assignmentCode) ||
+        normaliseTrainingCode(item.code) === assignmentCode
+      ))
+      .sort((left, right) => (
+        String(left.orderKey || '').localeCompare(String(right.orderKey || '')) ||
+        normaliseTrainingCode(left.code).localeCompare(normaliseTrainingCode(right.code))
+      ));
+  }, [syllabusDetails]);
+  const airCombatTrainingSummaries = useMemo(() => assignedAirCombatTraining.map(assignment => {
+    const sequenceItems = getTrainingSyllabusItems(assignment);
+    const sequenceCodeSet = new Set(sequenceItems.map(item => normaliseTrainingCode(item.code)));
+    const completedEvents = airCombatStaffHistoryEvents.filter(event => sequenceCodeSet.has(normaliseTrainingCode(event.flightNumber)));
+    const completedCodes = new Set(completedEvents.map(event => normaliseTrainingCode(event.flightNumber)));
+    const nextItem = sequenceItems.find(item => !completedCodes.has(normaliseTrainingCode(item.code))) || null;
+    const completedCount = completedCodes.size;
+    const totalCount = sequenceItems.length;
+    return {
+      assignment,
+      sequenceItems,
+      completedEvents,
+      completedCodes,
+      completedCount,
+      totalCount,
+      nextItem,
+      progressPercent: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
+      lastEvent: completedEvents[0] || null,
+    };
+  }), [airCombatStaffHistoryEvents, assignedAirCombatTraining, getTrainingSyllabusItems]);
+  const [selectedAirCombatTrainingKey, setSelectedAirCombatTrainingKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (airCombatTrainingSummaries.length === 0) {
+      if (selectedAirCombatTrainingKey) setSelectedAirCombatTrainingKey(null);
+      return;
+    }
+    if (!selectedAirCombatTrainingKey || !airCombatTrainingSummaries.some(summary => summary.assignment.trainingKey === selectedAirCombatTrainingKey)) {
+      setSelectedAirCombatTrainingKey(airCombatTrainingSummaries[0].assignment.trainingKey);
+    }
+  }, [airCombatTrainingSummaries, selectedAirCombatTrainingKey]);
+  const selectedAirCombatTraining = airCombatTrainingSummaries.find(summary => summary.assignment.trainingKey === selectedAirCombatTrainingKey) || airCombatTrainingSummaries[0] || null;
+  const airCombatTrainingReportRows = useMemo(() => (
+    airCombatTrainingSummaries.flatMap(summary => (
+      summary.completedEvents.map(event => ({
+        event,
+        summary,
+        item: summary.sequenceItems.find(item => normaliseTrainingCode(item.code) === normaliseTrainingCode(event.flightNumber)) || null,
+      }))
+    )).sort((left, right) => (
+      getEventDateValue(right.event) - getEventDateValue(left.event) ||
+      Number(right.event.startTime || 0) - Number(left.event.startTime || 0)
+    ))
+  ), [airCombatTrainingSummaries]);
+  const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
+  const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
 
   const callsignData = useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
   const displayCallsign = useMemo(() => {
@@ -835,35 +960,80 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
               {activeTab === 'trainingReports' && (
                 <div className={card3d + " p-4"} style={card3dStyle}>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-white">Training Reports - {instructor.name}</h4>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Training Reports - {instructor.name}</h4>
+                      <p className="mt-0.5 text-xs text-gray-400">Air Combat staff training history from published DFP records and active schedule data.</p>
+                    </div>
                     <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                   </div>
-                  <p className="text-gray-400 text-xs italic mb-4">
-                    Staff training report links are shown from the training assigned to this profile.
-                  </p>
                   {isAirCombatModel ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { title: 'Course Reports', items: assignedTraining.courses },
-                        { title: 'Training Package Reports', items: assignedTraining.trainingPackages },
-                      ].map(group => (
-                        <div key={group.title} className={card3d + " p-3"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                          <div className="text-[10px] text-sky-400 font-semibold mb-2">{group.title}</div>
-                          {group.items.length > 0 ? (
-                            <div className="space-y-1">
-                              {group.items.map(item => (
-                                <div key={item.trainingKey} className="rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5">
-                                  <div className="text-[11px] font-semibold text-white">{item.code}</div>
-                                  <div className="text-[10px] text-gray-400 truncate">{item.title}</div>
-                                  <div className="mt-1 text-[9px] uppercase tracking-wide text-gray-500">Report source assigned</div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-gray-500 text-[10px] italic">Nil</div>
-                          )}
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+                          <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Assigned Training</div>
+                          <div className="mt-1 text-lg font-bold text-white">{airCombatTrainingSummaries.length}</div>
                         </div>
-                      ))}
+                        <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+                          <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Report Records</div>
+                          <div className="mt-1 text-lg font-bold text-emerald-300">{airCombatTrainingReportRows.length}</div>
+                        </div>
+                        <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+                          <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Sequence Progress</div>
+                          <div className="mt-1 text-lg font-bold text-sky-300">{totalAirCombatCompletedEvents}/{totalAirCombatSequenceEvents}</div>
+                        </div>
+                      </div>
+                      <div className="overflow-hidden rounded-lg border border-gray-700 bg-gray-800">
+                        <table className="min-w-full divide-y divide-gray-700">
+                          <thead className="bg-gray-700/50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Date</th>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Event</th>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Training</th>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Type</th>
+                              <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300">Status</th>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Role</th>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Resource</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-700 bg-gray-800">
+                            {airCombatTrainingReportRows.length > 0 ? airCombatTrainingReportRows.map(({ event, summary, item }, index) => {
+                              const eventDate = event.date || (event as any).eventDate || '';
+                              const isFuture = eventDate && eventDate > new Date().toISOString().slice(0, 10);
+                              return (
+                                <tr key={`${event.id || index}-${summary.assignment.trainingKey}`} className="hover:bg-gray-700/50">
+                                  <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-400">{eventDate || '-'}</td>
+                                  <td className="whitespace-nowrap px-4 py-2">
+                                    <div className="text-xs font-bold text-sky-300">{event.flightNumber}</div>
+                                    <div className="text-[10px] text-gray-500">{formatDecimalTime(event.startTime)} / {event.duration || item?.duration || 0}h</div>
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <div className="max-w-[180px] truncate text-xs font-semibold text-white">{summary.assignment.code}</div>
+                                    <div className="max-w-[180px] truncate text-[10px] text-gray-400">{summary.assignment.title}</div>
+                                  </td>
+                                  <td className="whitespace-nowrap px-4 py-2">
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${summary.assignment.kind === 'training_package' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'}`}>
+                                      {summary.assignment.kind === 'training_package' ? 'Package' : 'Course'}
+                                    </span>
+                                  </td>
+                                  <td className="whitespace-nowrap px-4 py-2 text-center">
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isFuture ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+                                      {isFuture ? 'Scheduled' : 'Recorded'}
+                                    </span>
+                                  </td>
+                                  <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-300">{getStaffEventRole(event, instructor.name)}</td>
+                                  <td className="whitespace-nowrap px-4 py-2 text-xs text-gray-400">{event.resourceId || '-'}</td>
+                                </tr>
+                              );
+                            }) : (
+                              <tr>
+                                <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-500">
+                                  No Air Combat training report records found for assigned training.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   ) : (
                     <div className="rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400">
@@ -876,36 +1046,122 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
               {activeTab === 'trainingProgress' && (
                 <div className={card3d + " p-4"} style={card3dStyle}>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-white">Training Progress - {instructor.name}</h4>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Training Progress - {instructor.name}</h4>
+                      <p className="mt-0.5 text-xs text-gray-400">Progress follows the Air Combat sequence used by the NEO priority scheduler.</p>
+                    </div>
                     <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                   </div>
                   {isAirCombatModel ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { title: 'Courses', items: assignedTraining.courses },
-                        { title: 'Training Packages', items: assignedTraining.trainingPackages },
-                      ].map(group => (
-                        <div key={group.title} className={card3d + " p-3"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                          <div className="text-[10px] text-sky-400 font-semibold mb-2">{group.title}</div>
-                          {group.items.length > 0 ? (
-                            <div className="space-y-1">
-                              {group.items.map(item => (
-                                <div key={item.trainingKey} className="rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
-                                      <div className="text-[11px] font-semibold text-white">{item.code}</div>
-                                      <div className="text-[10px] text-gray-400 truncate">{item.title}</div>
-                                    </div>
-                                    <span className="shrink-0 rounded border border-gray-600 bg-gray-950 px-2 py-1 text-[9px] font-semibold text-gray-300">Assigned</span>
-                                  </div>
+                    <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+                      <div className="space-y-2">
+                        {airCombatTrainingSummaries.length > 0 ? airCombatTrainingSummaries.map(summary => {
+                          const isSelected = selectedAirCombatTraining?.assignment.trainingKey === summary.assignment.trainingKey;
+                          return (
+                            <button
+                              key={summary.assignment.trainingKey}
+                              type="button"
+                              onClick={() => setSelectedAirCombatTrainingKey(summary.assignment.trainingKey)}
+                              className={`w-full rounded-md border p-3 text-left transition ${isSelected ? 'border-sky-300 bg-sky-800/70 shadow-lg' : 'border-gray-700 bg-gray-900/70 hover:border-sky-500/60 hover:bg-gray-800'}`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-bold text-white">{summary.assignment.code}</div>
+                                  <div className="truncate text-[10px] text-gray-400">{summary.assignment.title}</div>
                                 </div>
-                              ))}
+                                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${summary.assignment.kind === 'training_package' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-sky-500/20 text-sky-300'}`}>
+                                  {summary.assignment.kind === 'training_package' ? 'Package' : 'Course'}
+                                </span>
+                              </div>
+                              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-700">
+                                <div className="h-full rounded-full bg-sky-400" style={{ width: `${summary.progressPercent}%` }} />
+                              </div>
+                              <div className="mt-2 flex justify-between text-[10px] text-gray-400">
+                                <span>{summary.completedCount}/{summary.totalCount} complete</span>
+                                <span>{summary.progressPercent}%</span>
+                              </div>
+                              <div className="mt-2 text-[10px] text-gray-500">
+                                Next: <span className="text-gray-300">{summary.nextItem?.code || 'Complete'}</span>
+                              </div>
+                            </button>
+                          );
+                        }) : (
+                          <div className="rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-500">
+                            No Air Combat training assigned.
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-h-[260px] rounded-lg border border-gray-700 bg-gray-950/35">
+                        {selectedAirCombatTraining ? (
+                          <div className="grid min-h-[260px] grid-cols-[260px_1fr]">
+                            <div className="border-r border-gray-700 bg-gray-950/30 p-3">
+                              <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Selected Sequence</div>
+                              <div className="mt-1 text-lg font-extrabold text-white">{selectedAirCombatTraining.assignment.code}</div>
+                              <div className="text-xs text-gray-400">{selectedAirCombatTraining.assignment.title}</div>
+                              <div className="mt-4 grid grid-cols-2 gap-2">
+                                <div className="rounded border border-gray-700 bg-gray-900/70 p-2">
+                                  <div className="text-[9px] uppercase tracking-wide text-gray-500">Complete</div>
+                                  <div className="text-base font-bold text-emerald-300">{selectedAirCombatTraining.completedCount}</div>
+                                </div>
+                                <div className="rounded border border-gray-700 bg-gray-900/70 p-2">
+                                  <div className="text-[9px] uppercase tracking-wide text-gray-500">Remaining</div>
+                                  <div className="text-base font-bold text-amber-300">{Math.max(0, selectedAirCombatTraining.totalCount - selectedAirCombatTraining.completedCount)}</div>
+                                </div>
+                              </div>
+                              <div className="mt-4 rounded border border-sky-500/25 bg-sky-500/10 p-3">
+                                <div className="text-[9px] font-bold uppercase tracking-wide text-sky-300">Next Event</div>
+                                <div className="mt-1 text-sm font-bold text-white">{selectedAirCombatTraining.nextItem?.code || 'Sequence complete'}</div>
+                                {selectedAirCombatTraining.nextItem && (
+                                  <div className="mt-1 text-[10px] text-gray-300">{selectedAirCombatTraining.nextItem.eventDescription || selectedAirCombatTraining.nextItem.module}</div>
+                                )}
+                              </div>
+                              {selectedAirCombatTraining.sequenceItems.length === 0 && (
+                                <div className="mt-4 rounded border border-amber-500/25 bg-amber-500/10 p-3 text-[11px] text-amber-200">
+                                  No active syllabus events match this assignment code.
+                                </div>
+                              )}
                             </div>
-                          ) : (
-                            <div className="text-gray-500 text-[10px] italic">Nil</div>
-                          )}
-                        </div>
-                      ))}
+                            <div className="max-h-[420px] overflow-y-auto p-3">
+                              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                                {selectedAirCombatTraining.sequenceItems.map((item, index) => {
+                                  const isCompleted = selectedAirCombatTraining.completedCodes.has(normaliseTrainingCode(item.code));
+                                  const isNext = selectedAirCombatTraining.nextItem?.code === item.code;
+                                  return (
+                                    <div
+                                      key={item.id || `${item.code}-${index}`}
+                                      className={`relative h-[96px] overflow-hidden rounded-md border px-3 py-2 shadow-sm ${isNext ? 'border-sky-300 bg-sky-800/70' : isCompleted ? 'border-emerald-500/60 bg-gray-900' : 'border-gray-700 bg-gray-900/75'}`}
+                                      title={`${item.code} - ${item.eventDescription || item.module || ''}`}
+                                    >
+                                      <span className="absolute left-3 top-2 max-w-[46%] truncate text-[10px] font-bold uppercase text-gray-400">{item.phase || 'Phase'}</span>
+                                      <span className="absolute right-3 top-2 max-w-[46%] truncate text-[10px] font-bold uppercase text-gray-300">{item.type || 'Event'}</span>
+                                      <span className="absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-center text-lg font-extrabold text-white">{item.code}</span>
+                                      <span className="absolute bottom-2 left-3 max-w-[48%] truncate text-[10px] font-semibold uppercase text-gray-400">{item.module || selectedAirCombatTraining.assignment.code}</span>
+                                      <span className="absolute bottom-2 right-3 flex max-w-[48%] items-center gap-2 text-[10px] font-semibold uppercase text-gray-300">
+                                        <span>{item.dayNight || 'Day'}</span>
+                                        <span>{item.duration || 0}h</span>
+                                      </span>
+                                      {isCompleted && (
+                                        <span className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-200">
+                                          Done
+                                        </span>
+                                      )}
+                                      {isNext && !isCompleted && (
+                                        <span className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-sky-500/25 px-2 py-0.5 text-[9px] font-bold text-sky-100">
+                                          Next
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex h-full items-center justify-center p-8 text-sm text-gray-500">
+                            Select assigned training to view progress.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400">

@@ -13368,6 +13368,10 @@ const App: React.FC = () => {
     useEffect(() => {
         publishedSchedulesRef.current = publishedSchedules;
     }, [publishedSchedules]);
+    const publishedScheduleHistoryEvents = useMemo(
+        () => Object.values(publishedSchedules).flat(),
+        [publishedSchedules],
+    );
     // Snapshot dates available in DB (for calendar dropdown on date selector)
     const [snapshotDates, setSnapshotDates] = useState<string[]>([]);
     useEffect(() => {
@@ -24627,6 +24631,7 @@ updates.forEach(update => {
                             traineesData={traineesData}
                             instructorsData={instructorsData}
                             archivedInstructorsData={archivedInstructorsData}
+                            scheduleHistoryEvents={publishedScheduleHistoryEvents}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
@@ -24742,6 +24747,8 @@ updates.forEach(update => {
                             traineesData={traineesData}
                             instructorsData={instructorsData}
                             archivedInstructorsData={archivedInstructorsData}
+                            scheduleHistoryEvents={publishedScheduleHistoryEvents}
+                            syllabusDetails={syllabusDetails}
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {

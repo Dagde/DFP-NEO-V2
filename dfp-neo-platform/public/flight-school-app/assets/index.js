@@ -31217,6 +31217,41 @@ const initialExperience = {
 };
 const card3d = "rounded-lg border border-gray-500/60 shadow-md";
 const card3dStyle = { background: "linear-gradient(180deg, #243044 0%, #1e2d42 60%)", boxShadow: "0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)" };
+const normaliseTrainingCode = (value) => String(value || "").replace(/\s+/g, "").trim().toUpperCase();
+const formatDecimalTime = (time) => {
+  const value = Number(time);
+  if (!Number.isFinite(value)) return "----";
+  const hours = Math.floor(value);
+  const minutes = Math.round((value - hours) * 60);
+  return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
+};
+const getEventDateValue = (event) => {
+  const rawDate = event.date || event.eventDate || "";
+  const timestamp = rawDate ? (/* @__PURE__ */ new Date(`${rawDate}T00:00:00`)).getTime() : 0;
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+const getEventPeople = (event) => {
+  const rawPeople = [
+    event.instructor,
+    event.student,
+    event.pilot,
+    event.crew,
+    ...Array.isArray(event.attendees) ? event.attendees : []
+  ];
+  return rawPeople.flatMap((person) => String(person || "").split(/[,;/]/)).map((person) => person.trim()).filter(Boolean);
+};
+const eventIncludesStaff = (event, staffName) => {
+  const target = staffName.trim().toLowerCase();
+  return Boolean(target) && getEventPeople(event).some((person) => person.toLowerCase() === target);
+};
+const getStaffEventRole = (event, staffName) => {
+  const target = staffName.trim().toLowerCase();
+  if (String(event.pilot || "").trim().toLowerCase() === target) return "Pilot";
+  if (String(event.crew || "").split(/[,;/]/).some((person) => person.trim().toLowerCase() === target)) return "Crew";
+  if (String(event.instructor || "").trim().toLowerCase() === target) return "Instructor";
+  if (Array.isArray(event.attendees) && event.attendees.some((person) => String(person || "").trim().toLowerCase() === target)) return "Attendee";
+  return "Staff";
+};
 const InstructorProfileFlyout = ({
   instructor,
   onClose,
@@ -31230,6 +31265,9 @@ const InstructorProfileFlyout = ({
   locations,
   units,
   traineesData,
+  events = [],
+  scheduleHistoryEvents = [],
+  syllabusDetails = [],
   onViewLogbook,
   onRequestSct,
   onNavigateToTrainee,
@@ -31337,6 +31375,60 @@ const InstructorProfileFlyout = ({
     () => normaliseAirCombatTrainingAssignments(instructor.preferences),
     [instructor.preferences]
   );
+  const assignedAirCombatTraining = reactExports.useMemo(() => [
+    ...assignedTraining.courses.map((item) => ({ ...item, displayKind: "Course", tone: "sky" })),
+    ...assignedTraining.trainingPackages.map((item) => ({ ...item, displayKind: "Training Package", tone: "emerald" }))
+  ], [assignedTraining]);
+  const airCombatStaffHistoryEvents = reactExports.useMemo(() => {
+    const deduped = /* @__PURE__ */ new Map();
+    [...scheduleHistoryEvents, ...events].filter((event) => eventIncludesStaff(event, instructor.name)).forEach((event) => {
+      const key = event.id || `${event.date || ""}-${event.flightNumber || ""}-${event.startTime}-${event.resourceId || ""}`;
+      deduped.set(key, event);
+    });
+    return Array.from(deduped.values()).sort((left, right) => getEventDateValue(right) - getEventDateValue(left) || Number(right.startTime || 0) - Number(left.startTime || 0));
+  }, [events, instructor.name, scheduleHistoryEvents]);
+  const getTrainingSyllabusItems = reactExports.useCallback((assignment) => {
+    const assignmentCode = normaliseTrainingCode(assignment.code);
+    return syllabusDetails.filter((item) => item.isActive !== false).filter((item) => assignment.kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).some((course) => normaliseTrainingCode(course) === assignmentCode) || normaliseTrainingCode(item.code) === assignmentCode).sort((left, right) => String(left.orderKey || "").localeCompare(String(right.orderKey || "")) || normaliseTrainingCode(left.code).localeCompare(normaliseTrainingCode(right.code)));
+  }, [syllabusDetails]);
+  const airCombatTrainingSummaries = reactExports.useMemo(() => assignedAirCombatTraining.map((assignment) => {
+    const sequenceItems = getTrainingSyllabusItems(assignment);
+    const sequenceCodeSet = new Set(sequenceItems.map((item) => normaliseTrainingCode(item.code)));
+    const completedEvents = airCombatStaffHistoryEvents.filter((event) => sequenceCodeSet.has(normaliseTrainingCode(event.flightNumber)));
+    const completedCodes = new Set(completedEvents.map((event) => normaliseTrainingCode(event.flightNumber)));
+    const nextItem = sequenceItems.find((item) => !completedCodes.has(normaliseTrainingCode(item.code))) || null;
+    const completedCount = completedCodes.size;
+    const totalCount = sequenceItems.length;
+    return {
+      assignment,
+      sequenceItems,
+      completedEvents,
+      completedCodes,
+      completedCount,
+      totalCount,
+      nextItem,
+      progressPercent: totalCount > 0 ? Math.round(completedCount / totalCount * 100) : 0,
+      lastEvent: completedEvents[0] || null
+    };
+  }), [airCombatStaffHistoryEvents, assignedAirCombatTraining, getTrainingSyllabusItems]);
+  const [selectedAirCombatTrainingKey, setSelectedAirCombatTrainingKey] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (airCombatTrainingSummaries.length === 0) {
+      if (selectedAirCombatTrainingKey) setSelectedAirCombatTrainingKey(null);
+      return;
+    }
+    if (!selectedAirCombatTrainingKey || !airCombatTrainingSummaries.some((summary) => summary.assignment.trainingKey === selectedAirCombatTrainingKey)) {
+      setSelectedAirCombatTrainingKey(airCombatTrainingSummaries[0].assignment.trainingKey);
+    }
+  }, [airCombatTrainingSummaries, selectedAirCombatTrainingKey]);
+  const selectedAirCombatTraining = airCombatTrainingSummaries.find((summary) => summary.assignment.trainingKey === selectedAirCombatTrainingKey) || airCombatTrainingSummaries[0] || null;
+  const airCombatTrainingReportRows = reactExports.useMemo(() => airCombatTrainingSummaries.flatMap((summary) => summary.completedEvents.map((event) => ({
+    event,
+    summary,
+    item: summary.sequenceItems.find((item) => normaliseTrainingCode(item.code) === normaliseTrainingCode(event.flightNumber)) || null
+  }))).sort((left, right) => getEventDateValue(right.event) - getEventDateValue(left.event) || Number(right.event.startTime || 0) - Number(left.event.startTime || 0)), [airCombatTrainingSummaries]);
+  const totalAirCombatSequenceEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.totalCount, 0);
+  const totalAirCombatCompletedEvents = airCombatTrainingSummaries.reduce((total, summary) => total + summary.completedCount, 0);
   const callsignData = reactExports.useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
   const displayCallsign = reactExports.useMemo(() => {
     if (callsignData?.callsign) return callsignData.callsign;
@@ -31932,46 +32024,172 @@ const InstructorProfileFlyout = ({
           ] }),
           activeTab === "trainingReports" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-4", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
-                "Training Reports - ",
-                instructor.name
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
+                  "Training Reports - ",
+                  instructor.name
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-gray-400", children: "Air Combat staff training history from published DFP records and active schedule data." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs italic mb-4", children: "Staff training report links are shown from the training assigned to this profile." }),
-            isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-3", children: [
-              { title: "Course Reports", items: assignedTraining.courses },
-              { title: "Training Package Reports", items: assignedTraining.trainingPackages }
-            ].map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-sky-400 font-semibold mb-2", children: group.title }),
-              group.items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.items.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-white", children: item.code }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 truncate", children: item.title }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[9px] uppercase tracking-wide text-gray-500", children: "Report source assigned" })
-              ] }, item.trainingKey)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "Nil" })
-            ] }, group.title)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training reports are not configured for this operational model." })
+            isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Assigned Training" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-bold text-white", children: airCombatTrainingSummaries.length })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Report Records" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-bold text-emerald-300", children: airCombatTrainingReportRows.length })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Sequence Progress" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-lg font-bold text-sky-300", children: [
+                    totalAirCombatCompletedEvents,
+                    "/",
+                    totalAirCombatSequenceEvents
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full divide-y divide-gray-700", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Date" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Event" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Training" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Type" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Status" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Role" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Resource" })
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800", children: airCombatTrainingReportRows.length > 0 ? airCombatTrainingReportRows.map(({ event, summary, item }, index) => {
+                  const eventDate = event.date || event.eventDate || "";
+                  const isFuture = eventDate && eventDate > (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/50", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-400", children: eventDate || "-" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "whitespace-nowrap px-4 py-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold text-sky-300", children: event.flightNumber }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] text-gray-500", children: [
+                        formatDecimalTime(event.startTime),
+                        " / ",
+                        event.duration || item?.duration || 0,
+                        "h"
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-[180px] truncate text-xs font-semibold text-white", children: summary.assignment.code }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-[180px] truncate text-[10px] text-gray-400", children: summary.assignment.title })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2 py-0.5 text-[10px] font-bold ${summary.assignment.kind === "training_package" ? "bg-emerald-500/20 text-emerald-300" : "bg-sky-500/20 text-sky-300"}`, children: summary.assignment.kind === "training_package" ? "Package" : "Course" }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2 py-0.5 text-[10px] font-bold ${isFuture ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`, children: isFuture ? "Scheduled" : "Recorded" }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-300", children: getStaffEventRole(event, instructor.name) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-400", children: event.resourceId || "-" })
+                  ] }, `${event.id || index}-${summary.assignment.trainingKey}`);
+                }) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-4 py-10 text-center text-sm text-gray-500", children: "No Air Combat training report records found for assigned training." }) }) })
+              ] }) })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training reports are not configured for this operational model." })
           ] }),
           activeTab === "trainingProgress" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-4", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
-                "Training Progress - ",
-                instructor.name
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
+                  "Training Progress - ",
+                  instructor.name
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-gray-400", children: "Progress follows the Air Combat sequence used by the NEO priority scheduler." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
             ] }),
-            isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-3", children: [
-              { title: "Courses", items: assignedTraining.courses },
-              { title: "Training Packages", items: assignedTraining.trainingPackages }
-            ].map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-sky-400 font-semibold mb-2", children: group.title }),
-              group.items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.items.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-white", children: item.code }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 truncate", children: item.title })
+            isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-[300px_1fr]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: airCombatTrainingSummaries.length > 0 ? airCombatTrainingSummaries.map((summary) => {
+                const isSelected = selectedAirCombatTraining?.assignment.trainingKey === summary.assignment.trainingKey;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setSelectedAirCombatTrainingKey(summary.assignment.trainingKey),
+                    className: `w-full rounded-md border p-3 text-left transition ${isSelected ? "border-sky-300 bg-sky-800/70 shadow-lg" : "border-gray-700 bg-gray-900/70 hover:border-sky-500/60 hover:bg-gray-800"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-sm font-bold text-white", children: summary.assignment.code }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[10px] text-gray-400", children: summary.assignment.title })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${summary.assignment.kind === "training_package" ? "bg-emerald-500/20 text-emerald-300" : "bg-sky-500/20 text-sky-300"}`, children: summary.assignment.kind === "training_package" ? "Package" : "Course" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 h-1.5 overflow-hidden rounded-full bg-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full rounded-full bg-sky-400", style: { width: `${summary.progressPercent}%` } }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex justify-between text-[10px] text-gray-400", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                          summary.completedCount,
+                          "/",
+                          summary.totalCount,
+                          " complete"
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                          summary.progressPercent,
+                          "%"
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-[10px] text-gray-500", children: [
+                        "Next: ",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: summary.nextItem?.code || "Complete" })
+                      ] })
+                    ]
+                  },
+                  summary.assignment.trainingKey
+                );
+              }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-500", children: "No Air Combat training assigned." }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[260px] rounded-lg border border-gray-700 bg-gray-950/35", children: selectedAirCombatTraining ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-h-[260px] grid-cols-[260px_1fr]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-r border-gray-700 bg-gray-950/30 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Selected Sequence" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-extrabold text-white", children: selectedAirCombatTraining.assignment.code }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: selectedAirCombatTraining.assignment.title }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-2 gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/70 p-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] uppercase tracking-wide text-gray-500", children: "Complete" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-base font-bold text-emerald-300", children: selectedAirCombatTraining.completedCount })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/70 p-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] uppercase tracking-wide text-gray-500", children: "Remaining" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-base font-bold text-amber-300", children: Math.max(0, selectedAirCombatTraining.totalCount - selectedAirCombatTraining.completedCount) })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-sky-500/25 bg-sky-500/10 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-sky-300", children: "Next Event" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-bold text-white", children: selectedAirCombatTraining.nextItem?.code || "Sequence complete" }),
+                    selectedAirCombatTraining.nextItem && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[10px] text-gray-300", children: selectedAirCombatTraining.nextItem.eventDescription || selectedAirCombatTraining.nextItem.module })
+                  ] }),
+                  selectedAirCombatTraining.sequenceItems.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded border border-amber-500/25 bg-amber-500/10 p-3 text-[11px] text-amber-200", children: "No active syllabus events match this assignment code." })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 rounded border border-gray-600 bg-gray-950 px-2 py-1 text-[9px] font-semibold text-gray-300", children: "Assigned" })
-              ] }) }, item.trainingKey)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "Nil" })
-            ] }, group.title)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training progress is not configured for this operational model." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[420px] overflow-y-auto p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:grid-cols-2 xl:grid-cols-3", children: selectedAirCombatTraining.sequenceItems.map((item, index) => {
+                  const isCompleted = selectedAirCombatTraining.completedCodes.has(normaliseTrainingCode(item.code));
+                  const isNext = selectedAirCombatTraining.nextItem?.code === item.code;
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "div",
+                    {
+                      className: `relative h-[96px] overflow-hidden rounded-md border px-3 py-2 shadow-sm ${isNext ? "border-sky-300 bg-sky-800/70" : isCompleted ? "border-emerald-500/60 bg-gray-900" : "border-gray-700 bg-gray-900/75"}`,
+                      title: `${item.code} - ${item.eventDescription || item.module || ""}`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-3 top-2 max-w-[46%] truncate text-[10px] font-bold uppercase text-gray-400", children: item.phase || "Phase" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute right-3 top-2 max-w-[46%] truncate text-[10px] font-bold uppercase text-gray-300", children: item.type || "Event" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-x-3 top-1/2 -translate-y-1/2 truncate text-center text-lg font-extrabold text-white", children: item.code }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-3 max-w-[48%] truncate text-[10px] font-semibold uppercase text-gray-400", children: item.module || selectedAirCombatTraining.assignment.code }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute bottom-2 right-3 flex max-w-[48%] items-center gap-2 text-[10px] font-semibold uppercase text-gray-300", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.dayNight || "Day" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                            item.duration || 0,
+                            "h"
+                          ] })
+                        ] }),
+                        isCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-200", children: "Done" }),
+                        isNext && !isCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-sky-500/25 px-2 py-0.5 text-[9px] font-bold text-sky-100", children: "Next" })
+                      ]
+                    },
+                    item.id || `${item.code}-${index}`
+                  );
+                }) }) })
+              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full items-center justify-center p-8 text-sm text-gray-500", children: "Select assigned training to view progress." }) })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 text-xs text-gray-400", children: "Staff training progress is not configured for this operational model." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d + " p-4", style: card3dStyle, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-4", children: [
@@ -32835,6 +33053,8 @@ const InstructorListView = ({
   traineesData,
   instructorsData,
   archivedInstructorsData,
+  scheduleHistoryEvents = [],
+  syllabusDetails = [],
   school,
   personnelData,
   onUpdateInstructor,
@@ -32864,7 +33084,7 @@ const InstructorListView = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -33262,6 +33482,9 @@ const InstructorListView = ({
         locations,
         units,
         traineesData,
+        events,
+        scheduleHistoryEvents,
+        syllabusDetails,
         onViewLogbook,
         onRequestSct: () => {
           if (onRequestSct) {
@@ -33372,6 +33595,8 @@ const StaffView = (props) => {
           traineesData: props.traineesData,
           instructorsData: props.instructorsData,
           archivedInstructorsData: props.archivedInstructorsData,
+          scheduleHistoryEvents: props.scheduleHistoryEvents,
+          syllabusDetails: props.syllabusDetails,
           school: props.school,
           personnelData: props.personnelData,
           onUpdateInstructor: props.onUpdateInstructor,
@@ -70041,6 +70266,10 @@ const App = () => {
   reactExports.useEffect(() => {
     publishedSchedulesRef.current = publishedSchedules;
   }, [publishedSchedules]);
+  const publishedScheduleHistoryEvents = reactExports.useMemo(
+    () => Object.values(publishedSchedules).flat(),
+    [publishedSchedules]
+  );
   const [snapshotDates, setSnapshotDates] = reactExports.useState([]);
   reactExports.useEffect(() => {
     pushDfpDataDiag("snapshot-dates:state", {
@@ -79174,6 +79403,7 @@ ${conflictLines.join("\n")}${moreText}`,
             traineesData,
             instructorsData,
             archivedInstructorsData,
+            scheduleHistoryEvents: publishedScheduleHistoryEvents,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {
@@ -79281,6 +79511,8 @@ ${conflictLines.join("\n")}${moreText}`,
             traineesData,
             instructorsData,
             archivedInstructorsData,
+            scheduleHistoryEvents: publishedScheduleHistoryEvents,
+            syllabusDetails,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {
