@@ -882,18 +882,35 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   const handleLinkedEventChange = async (item: SyllabusItemDetail, linkedEventCode: string) => {
       const updatedItem = withAirCombatLinkedEventNote(item, linkedEventCode);
-      const savedItem = await updateSyllabusItem(item.id, updatedItem, `Updated linked event for ${item.code}`);
-      onUpdateItem(savedItem);
-      setSelectedItem(savedItem);
+      const previousSelectedItem = selectedItem;
+      const previousHoveredItem = hoveredItem;
+      const previousEditedItem = editedItem;
+      setSelectedItem(prev => prev && prev.id === item.id ? updatedItem : prev);
+      setHoveredItem(prev => prev && prev.id === item.id ? updatedItem : prev);
       if (editedItem && editedItem.id === item.id) {
-          setEditedItem(savedItem);
+          setEditedItem(updatedItem);
       }
-      logAudit({
-          action: 'Edit',
-          description: `Updated linked event for ${savedItem.code}`,
-          changes: `Linked Event: ${linkedEventCode === 'none' ? 'none' : linkedEventCode}`,
-          page: 'LMP/Event Details',
-      });
+      try {
+          const savedItem = await updateSyllabusItem(item.id, updatedItem, `Updated linked event for ${item.code}`);
+          onUpdateItem(savedItem);
+          setSelectedItem(prev => prev && prev.id === item.id ? savedItem : prev);
+          setHoveredItem(prev => prev && prev.id === item.id ? savedItem : prev);
+          if (editedItem && editedItem.id === item.id) {
+              setEditedItem(savedItem);
+          }
+          logAudit({
+              action: 'Edit',
+              description: `Updated linked event for ${savedItem.code}`,
+              changes: `Linked Event: ${linkedEventCode === 'none' ? 'none' : linkedEventCode}`,
+              page: 'LMP/Event Details',
+          });
+      } catch (error) {
+          console.error('[LMP/Event Details] Failed to update linked event:', error);
+          setSelectedItem(previousSelectedItem);
+          setHoveredItem(previousHoveredItem);
+          setEditedItem(previousEditedItem);
+          alert(`Linked event was not saved: ${error instanceof Error ? error.message : String(error)}`);
+      }
   };
 
     // Log view on component mount
