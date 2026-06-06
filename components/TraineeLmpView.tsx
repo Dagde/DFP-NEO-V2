@@ -201,7 +201,7 @@ export const LmpEventEditModal: React.FC<{
 
     return (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4">
-            <div className="w-full max-w-3xl rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl">
+            <div className="max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl">
                 <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
                     <div>
                         <h2 className="text-lg font-bold text-white">Edit LMP Event</h2>
@@ -386,7 +386,7 @@ export const InsertEventModal: React.FC<{
 
     return (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4">
-            <div className="w-full max-w-3xl rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl">
+            <div className="max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl">
                 <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
                     <div>
                         <h2 className="text-lg font-bold text-white">Insert Event</h2>
