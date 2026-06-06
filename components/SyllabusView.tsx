@@ -279,8 +279,9 @@ const DetailView: React.FC<{
     aircraftConfigurations?: AircraftConfigurationDefinition[];
     isAirCombatModel?: boolean;
     linkedEventOptions?: SyllabusItemDetail[];
+    linkedEventOverrides?: Record<string, string>;
     onLinkedEventChange?: (item: SyllabusItemDetail, linkedEventCode: string) => void | Promise<void>;
-}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, linkedEventOptions = [], onLinkedEventChange }) => {
+}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -318,7 +319,10 @@ const DetailView: React.FC<{
 
     const currentItem = isEditing ? editedItem : item;
     if (!currentItem) return null;
-    const currentLinkedEventCode = getAirCombatLinkedEventCode(currentItem);
+    const currentItemKey = currentItem.id || currentItem.code;
+    const currentLinkedEventCode = Object.prototype.hasOwnProperty.call(linkedEventOverrides, currentItemKey)
+        ? linkedEventOverrides[currentItemKey]
+        : getAirCombatLinkedEventCode(currentItem);
     const currentLinkedEventOptions = linkedEventOptions.filter(option => (
         (option.id || option.code) !== (currentItem.id || currentItem.code) &&
         option.code !== currentItem.code
@@ -697,6 +701,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [hoveredItem, setHoveredItem] = useState<SyllabusItemDetail | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
+  const [linkedEventOverrides, setLinkedEventOverrides] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<LmpDetailsTab>(() => {
       const savedTab = localStorage.getItem('neo_lmp_details_active_tab');
       return savedTab === 'packages' || savedTab === 'master' ? savedTab : 'master';
@@ -881,10 +886,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   };
 
   const handleLinkedEventChange = async (item: SyllabusItemDetail, linkedEventCode: string) => {
+      const itemKey = item.id || item.code;
       const updatedItem = withAirCombatLinkedEventNote(item, linkedEventCode);
       const previousSelectedItem = selectedItem;
       const previousHoveredItem = hoveredItem;
       const previousEditedItem = editedItem;
+      const previousOverride = Object.prototype.hasOwnProperty.call(linkedEventOverrides, itemKey)
+          ? linkedEventOverrides[itemKey]
+          : undefined;
+      setLinkedEventOverrides(prev => ({ ...prev, [itemKey]: linkedEventCode === 'none' ? '' : linkedEventCode }));
       setSelectedItem(prev => prev && prev.id === item.id ? updatedItem : prev);
       setHoveredItem(prev => prev && prev.id === item.id ? updatedItem : prev);
       if (editedItem && editedItem.id === item.id) {
@@ -895,6 +905,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           onUpdateItem(savedItem);
           setSelectedItem(prev => prev && prev.id === item.id ? savedItem : prev);
           setHoveredItem(prev => prev && prev.id === item.id ? savedItem : prev);
+          setLinkedEventOverrides(prev => ({ ...prev, [itemKey]: getAirCombatLinkedEventCode(savedItem) }));
           if (editedItem && editedItem.id === item.id) {
               setEditedItem(savedItem);
           }
@@ -909,6 +920,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           setSelectedItem(previousSelectedItem);
           setHoveredItem(previousHoveredItem);
           setEditedItem(previousEditedItem);
+          setLinkedEventOverrides(prev => {
+              const next = { ...prev };
+              if (previousOverride === undefined) {
+                  delete next[itemKey];
+              } else {
+                  next[itemKey] = previousOverride;
+              }
+              return next;
+          });
           alert(`Linked event was not saved: ${error instanceof Error ? error.message : String(error)}`);
       }
   };
@@ -1586,6 +1606,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     aircraftConfigurations={aircraftConfigurations}
                     isAirCombatModel={isAirCombatModel}
                     linkedEventOptions={filteredSyllabusDetails}
+                    linkedEventOverrides={linkedEventOverrides}
                     onLinkedEventChange={handleLinkedEventChange}
                 />
             ) : (

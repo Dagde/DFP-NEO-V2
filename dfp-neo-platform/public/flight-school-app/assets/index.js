@@ -34544,7 +34544,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, linkedEventOptions = [], onLinkedEventChange }) => {
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -34575,7 +34575,8 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   };
   const currentItem = isEditing ? editedItem : item;
   if (!currentItem) return null;
-  const currentLinkedEventCode = getAirCombatLinkedEventCode(currentItem);
+  const currentItemKey = currentItem.id || currentItem.code;
+  const currentLinkedEventCode = Object.prototype.hasOwnProperty.call(linkedEventOverrides, currentItemKey) ? linkedEventOverrides[currentItemKey] : getAirCombatLinkedEventCode(currentItem);
   const currentLinkedEventOptions = linkedEventOptions.filter((option) => (option.id || option.code) !== (currentItem.id || currentItem.code) && option.code !== currentItem.code);
   const hasSavedLinkedEventOption = currentLinkedEventOptions.some((option) => (option.code || option.id) === currentLinkedEventCode);
   const handleLinkedEventChange = (linkedEventCode) => {
@@ -34958,6 +34959,7 @@ const SyllabusView = ({
   const [hoveredItem, setHoveredItem] = reactExports.useState(null);
   const [isEditing, setIsEditing] = reactExports.useState(false);
   const [editedItem, setEditedItem] = reactExports.useState(null);
+  const [linkedEventOverrides, setLinkedEventOverrides] = reactExports.useState({});
   const [activeTab, setActiveTab] = reactExports.useState(() => {
     const savedTab = localStorage.getItem("neo_lmp_details_active_tab");
     return savedTab === "packages" || savedTab === "master" ? savedTab : "master";
@@ -35102,10 +35104,13 @@ const SyllabusView = ({
     }
   };
   const handleLinkedEventChange = async (item, linkedEventCode) => {
+    const itemKey = item.id || item.code;
     const updatedItem = withAirCombatLinkedEventNote(item, linkedEventCode);
     const previousSelectedItem = selectedItem;
     const previousHoveredItem = hoveredItem;
     const previousEditedItem = editedItem;
+    const previousOverride = Object.prototype.hasOwnProperty.call(linkedEventOverrides, itemKey) ? linkedEventOverrides[itemKey] : void 0;
+    setLinkedEventOverrides((prev) => ({ ...prev, [itemKey]: linkedEventCode === "none" ? "" : linkedEventCode }));
     setSelectedItem((prev) => prev && prev.id === item.id ? updatedItem : prev);
     setHoveredItem((prev) => prev && prev.id === item.id ? updatedItem : prev);
     if (editedItem && editedItem.id === item.id) {
@@ -35116,6 +35121,7 @@ const SyllabusView = ({
       onUpdateItem(savedItem);
       setSelectedItem((prev) => prev && prev.id === item.id ? savedItem : prev);
       setHoveredItem((prev) => prev && prev.id === item.id ? savedItem : prev);
+      setLinkedEventOverrides((prev) => ({ ...prev, [itemKey]: getAirCombatLinkedEventCode(savedItem) }));
       if (editedItem && editedItem.id === item.id) {
         setEditedItem(savedItem);
       }
@@ -35130,6 +35136,15 @@ const SyllabusView = ({
       setSelectedItem(previousSelectedItem);
       setHoveredItem(previousHoveredItem);
       setEditedItem(previousEditedItem);
+      setLinkedEventOverrides((prev) => {
+        const next = { ...prev };
+        if (previousOverride === void 0) {
+          delete next[itemKey];
+        } else {
+          next[itemKey] = previousOverride;
+        }
+        return next;
+      });
       alert(`Linked event was not saved: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
@@ -35753,6 +35768,7 @@ const SyllabusView = ({
             aircraftConfigurations,
             isAirCombatModel,
             linkedEventOptions: filteredSyllabusDetails,
+            linkedEventOverrides,
             onLinkedEventChange: handleLinkedEventChange
           }
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
