@@ -62407,6 +62407,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           trainingPackageStaffPriorityLists: (neoBuildDiag.airCombatPriority.trainingPackageStaffPriorityLists || []).slice(-120),
           trainingAttempts: (neoBuildDiag.airCombatPriority.trainingAttempts || []).slice(-700),
           resourceChecks: (neoBuildDiag.airCombatPriority.resourceChecks || []).slice(-700),
+          formationCallsignDiagnostics: (neoBuildDiag.airCombatPriority.formationCallsignDiagnostics || []).slice(-300),
           skipReasons: (neoBuildDiag.airCombatPriority.skipReasons || []).slice(-700),
           stageTrace: (neoBuildDiag.airCombatPriority.stageTrace || []).slice(-120),
           placements: (neoBuildDiag.airCombatPriority.placements || []).slice(-240)
@@ -65323,6 +65324,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     trainingInputs: null,
     trainingAttempts: [],
     resourceChecks: [],
+    formationCallsignDiagnostics: [],
     skipReasons: [],
     rejectionReasons: {},
     placements: [],
@@ -66034,8 +66036,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ];
       return new Set(rawValues.flatMap(expandFormationLocationAliases));
     };
-    const formationCallsignMatchesAirCombatContext = (callsign, members, formationUnit) => {
-      const configuredUnit = normaliseFormationContextToken(callsign.unit);
+    const getAirCombatFormationCallsignContext = (members, formationUnit) => {
       const memberUnitTokens = new Set(members.map((member) => normaliseFormationContextToken(member.staff.unit)).filter(Boolean));
       const activeUnitTokens = new Set(String(activeUnitCode || "").split("+").map(normaliseFormationContextToken).filter(Boolean));
       const allowedUnitTokens = new Set([
@@ -66043,8 +66044,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ...activeUnitTokens,
         normaliseFormationContextToken(formationUnit)
       ].filter(Boolean));
-      const unitMatches = !configuredUnit || allowedUnitTokens.size === 0 || allowedUnitTokens.has(configuredUnit);
       const locationAliases = getAirCombatFormationLocationAliases(members);
+      return { memberUnitTokens, activeUnitTokens, allowedUnitTokens, locationAliases };
+    };
+    const formationCallsignMatchesAirCombatContext = (callsign, members, formationUnit) => {
+      const configuredUnit = normaliseFormationContextToken(callsign.unit);
+      const { allowedUnitTokens, locationAliases } = getAirCombatFormationCallsignContext(members, formationUnit);
+      const unitMatches = !configuredUnit || allowedUnitTokens.size === 0 || allowedUnitTokens.has(configuredUnit);
       const callsignLocationAliases = [
         ...expandFormationLocationAliases(callsign.location),
         ...expandFormationLocationAliases(callsign.locationCode)
@@ -66063,12 +66069,88 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return overlaps && eventUsesFormationCallsignBase(event.callsign, normalisedBase);
       });
     };
+    const getAirCombatFormationCallsignConflicts = (callsignBase, startTime, duration) => {
+      const normalisedBase = normalizeFormationCallsignCode(callsignBase);
+      if (!normalisedBase) return [];
+      const endTime = startTime + duration;
+      return generatedEvents.filter((event) => {
+        if (!event.callsign) return false;
+        const eventEnd = event.startTime + event.duration;
+        const overlaps = event.startTime < endTime && eventEnd > startTime;
+        return overlaps && eventUsesFormationCallsignBase(event.callsign, normalisedBase);
+      }).map((event) => ({
+        id: event.id || null,
+        callsign: event.callsign || null,
+        formationId: event.formationId || null,
+        flightNumber: event.flightNumber || null,
+        startTime: event.startTime,
+        endTime: event.startTime + event.duration,
+        resourceId: event.resourceId || null,
+        pilot: event.pilot || null,
+        crew: event.crew || null,
+        instructor: event.instructor || null,
+        student: event.student || null
+      }));
+    };
     const selectAirCombatFormationCallsignBase = (members, startTime, duration) => {
       let formationUnit = "";
       let configuredCandidates = [];
       let inUseCandidates = [];
+      let contextSnapshot = {};
+      let callsignAudit = [];
       try {
         formationUnit = members.find((member) => String(member.staff.unit || "").trim())?.staff.unit || "";
+        const context = getAirCombatFormationCallsignContext(members, formationUnit);
+        contextSnapshot = {
+          school,
+          activeUnitCode,
+          buildActiveUnitCode,
+          formationUnit,
+          memberUnits: Array.from(context.memberUnitTokens),
+          activeUnitTokens: Array.from(context.activeUnitTokens),
+          allowedUnitTokens: Array.from(context.allowedUnitTokens),
+          locationAliases: Array.from(context.locationAliases),
+          settingsRows: (config.formationCallsigns || []).map((callsign) => ({
+            name: callsign.name || null,
+            code: callsign.code || null,
+            unit: callsign.unit || null,
+            location: callsign.location || null,
+            locationCode: callsign.locationCode || null
+          }))
+        };
+        callsignAudit = (config.formationCallsigns || []).map((callsign) => {
+          const normalisedCode = normalizeFormationCallsignCode(callsign.code);
+          const configuredUnit = normaliseFormationContextToken(callsign.unit);
+          const callsignLocationAliases = [
+            ...expandFormationLocationAliases(callsign.location),
+            ...expandFormationLocationAliases(callsign.locationCode)
+          ];
+          const unitMatches = !configuredUnit || context.allowedUnitTokens.size === 0 || context.allowedUnitTokens.has(configuredUnit);
+          const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => context.locationAliases.has(alias));
+          const conflicts = getAirCombatFormationCallsignConflicts(normalisedCode, startTime, duration);
+          const matchReasons = [
+            normalisedCode ? null : "EMPTY_CODE",
+            unitMatches ? null : "UNIT_MISMATCH",
+            locationMatches ? null : "LOCATION_MISMATCH",
+            conflicts.length > 0 ? "OVERLAPPING_FORMATION_IN_USE" : null
+          ].filter(Boolean);
+          return {
+            name: callsign.name || null,
+            code: callsign.code || null,
+            normalisedCode,
+            unit: callsign.unit || null,
+            normalisedUnit: configuredUnit || null,
+            location: callsign.location || null,
+            locationCode: callsign.locationCode || null,
+            locationAliases: callsignLocationAliases,
+            unitMatches,
+            locationMatches,
+            matchesContext: !!normalisedCode && unitMatches && locationMatches,
+            availableForWindow: !!normalisedCode && unitMatches && locationMatches && conflicts.length === 0,
+            rejectionReasons: matchReasons,
+            conflicts
+          };
+        });
         configuredCandidates = (config.formationCallsigns || []).filter((callsign) => normalizeFormationCallsignCode(callsign.code)).filter((callsign) => formationCallsignMatchesAirCombatContext(callsign, members, formationUnit)).map((callsign) => ({
           ...callsign,
           code: normalizeFormationCallsignCode(callsign.code)
@@ -66079,6 +66161,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         );
         inUseCandidates = configuredCandidates.filter((callsign) => !isAirCombatFormationCallsignAvailable(callsign.code, startTime, duration)).map((callsign) => callsign.code);
         if (available) {
+          pushAirCombatDiag("formationCallsignDiagnostics", {
+            phase: "formation-callsign-selected",
+            selectedBase: available.code,
+            source: "configured",
+            selectedName: available.name || null,
+            selectedUnit: available.unit || null,
+            startTime,
+            duration,
+            context: contextSnapshot,
+            members: members.map((member) => ({ staff: member.staff.name, unit: member.staff.unit || null, event: member.item.code })),
+            candidates: configuredCandidates.map((callsign) => callsign.code),
+            inUseCandidates,
+            audit: callsignAudit
+          }, 300);
           return {
             base: available.code,
             source: "configured",
@@ -66089,6 +66185,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           };
         }
       } catch (error) {
+        pushAirCombatDiag("formationCallsignDiagnostics", {
+          phase: "formation-callsign-error",
+          startTime,
+          duration,
+          context: contextSnapshot,
+          members: members.map((member) => ({ staff: member.staff.name, unit: member.staff.unit || null, event: member.item.code })),
+          audit: callsignAudit,
+          error: error instanceof Error ? error.message : String(error)
+        }, 300);
         pushAirCombatDiag("trainingAttempts", {
           placed: false,
           formation: true,
@@ -66105,6 +66210,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const availableFallback = fallbackCandidates.find(
         (candidate) => isAirCombatFormationCallsignAvailable(candidate, startTime, duration)
       ) || "FORM";
+      pushAirCombatDiag("formationCallsignDiagnostics", {
+        phase: "formation-callsign-fallback",
+        selectedBase: availableFallback,
+        source: "fallback",
+        fallbackCandidates,
+        startTime,
+        duration,
+        context: contextSnapshot,
+        members: members.map((member) => ({ staff: member.staff.name, unit: member.staff.unit || null, event: member.item.code })),
+        configuredCandidates: configuredCandidates.map((callsign) => callsign.code),
+        inUseCandidates,
+        audit: callsignAudit,
+        fallbackConflicts: fallbackCandidates.map((candidate) => ({
+          candidate,
+          conflicts: getAirCombatFormationCallsignConflicts(candidate, startTime, duration)
+        }))
+      }, 300);
       return {
         base: availableFallback,
         source: "fallback",
