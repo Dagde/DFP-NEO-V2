@@ -2758,6 +2758,211 @@ const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
   }
   return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
 };
+const DEFAULT_PHRASE_BANK = {
+  "Airmanship": {
+    5: [
+      "Operates the aircraft safely and effectively at all times.",
+      "Organised and deals with all situations effectively, under all workloads.",
+      "Handles non-standard situations capably with a high level of confidence.",
+      "Excellent decision making based on situational awareness and prioritised attention."
+    ],
+    4: [
+      "Operates the aircraft safely and effectively.",
+      "Handles most normal situations well.",
+      "Needs occasional help with non-standard routines but does not become confused under moderate workloads.",
+      "Very good decision making based on situational awareness and prioritised attention.",
+      "Sometimes overlooks some considerations but not to the detriment of safety."
+    ],
+    3: [
+      "Operates the aircraft safely.",
+      "Copes with normal situations.",
+      "Occasionally slow to react to new or developing situations.",
+      "Makes basic decisions and applies the basic considerations.",
+      "Adequate confidence and decision making ability."
+    ],
+    2: [
+      "Operates the aircraft safely in familiar situations.",
+      "Slow to react to new or developing situations.",
+      "Makes basic decisions in familiar situations.",
+      "Sometimes unsure in new or more advanced sequences.",
+      "Developing confidence and decision making ability."
+    ],
+    1: [
+      "Just coping with familiar situations.",
+      "Had difficulty applying normal procedures.",
+      "Often deviated from more complex or advanced routines.",
+      "Showed a lack of situational awareness.",
+      "Made basic decisions but was sometimes overwhelmed or task saturated by basic sequences.",
+      "Not confident.",
+      "Uncharacteristic major safety breach."
+    ],
+    0: [
+      "Poor.",
+      "Frequently deviated from normal procedures.",
+      "Not able to cope with familiar situations.",
+      "Demonstrated likelihood of violating aircraft and operational limits.",
+      "Frequently task-saturated by basic sequences.",
+      "Easily confused and often disorganised.",
+      "Excessively under or over confident.",
+      "Repeated safety breaches."
+    ]
+  },
+  "Preparation": {
+    5: [
+      "Always fully prepared.",
+      "An excellent understanding of sortie requirements.",
+      "Focussed and committed to continuous improvement.",
+      "Prepared technique and sequences to a very high standard.",
+      "Enthusiastic and motivated to achieve excellence."
+    ],
+    4: [
+      "Well prepared.",
+      "Researched widely to develop a sound understanding of all sortie aspects.",
+      "Focussed and committed to improvement.",
+      "Prepared technique and sequences to a high standard.",
+      "Enthusiastic and motivated."
+    ],
+    3: [
+      "Adequately prepared.",
+      "A satisfactory understanding of sortie requirements.",
+      "Prepared required technique and sequences.",
+      "Satisfactory motivation."
+    ],
+    2: [
+      "Partially prepared.",
+      "Some gaps in understanding of sortie requirements.",
+      "Partially prepared required technique and sequences.",
+      "Required prompting in some areas."
+    ],
+    1: [
+      "Poorly prepared.",
+      "Significant gaps in understanding of sortie requirements.",
+      "Inadequately prepared required technique and sequences.",
+      "Required significant prompting."
+    ],
+    0: [
+      "Not prepared.",
+      "No understanding of sortie requirements.",
+      "Did not prepare required technique or sequences.",
+      "Unable to proceed without full instructor support."
+    ]
+  },
+  "Technique": {
+    5: [
+      "Aircraft control precise and smooth at all times.",
+      "Excellent management of aircraft energy.",
+      "Proactively manages all aspects of the sortie.",
+      "Techniques mastered to a very high standard."
+    ],
+    4: [
+      "Aircraft control accurate and mostly smooth.",
+      "Good management of aircraft energy.",
+      "Manages most aspects of the sortie effectively.",
+      "Good technical standard overall."
+    ],
+    3: [
+      "Aircraft control adequate.",
+      "Satisfactory management of aircraft energy.",
+      "Manages basic aspects of the sortie.",
+      "Acceptable technical standard."
+    ],
+    2: [
+      "Aircraft control developing.",
+      "Some difficulty managing aircraft energy.",
+      "Manages basic aspects with some prompting.",
+      "Technical standard requires improvement."
+    ],
+    1: [
+      "Aircraft control below standard.",
+      "Difficulty managing aircraft energy.",
+      "Requires regular prompting.",
+      "Technical standard unsatisfactory."
+    ],
+    0: [
+      "Aircraft control unacceptable.",
+      "Unable to manage aircraft energy.",
+      "Requires constant prompting and assistance.",
+      "Technical standard dangerous."
+    ]
+  },
+  "Communication": {
+    5: [
+      "RT phraseology precise, professional, and correct at all times.",
+      "Listens out effectively, never misses a call.",
+      "Maintains excellent situational awareness of radio environment.",
+      "Sets an exemplary standard of RT discipline."
+    ],
+    4: [
+      "RT phraseology accurate and professional.",
+      "Rarely misses a radio call.",
+      "Good situational awareness of radio environment.",
+      "High standard of RT discipline."
+    ],
+    3: [
+      "RT phraseology generally correct.",
+      "Occasionally misses a radio call.",
+      "Adequate situational awareness of radio environment.",
+      "Satisfactory RT discipline."
+    ],
+    2: [
+      "RT phraseology sometimes incorrect.",
+      "Misses some radio calls.",
+      "Developing situational awareness of radio environment.",
+      "RT discipline requires improvement."
+    ],
+    1: [
+      "RT phraseology frequently incorrect.",
+      "Misses many radio calls.",
+      "Limited situational awareness of radio environment.",
+      "RT discipline unsatisfactory."
+    ],
+    0: [
+      "RT phraseology unacceptable.",
+      "Unable to maintain radio watch.",
+      "No situational awareness of radio environment.",
+      "RT discipline dangerous or absent."
+    ]
+  },
+  "Cockpit Management": {
+    5: [
+      "Cockpit management exemplary.",
+      "All checks and procedures completed accurately and on time.",
+      "Excellent prioritisation of tasks under all workloads.",
+      "Proactively manages cockpit environment."
+    ],
+    4: [
+      "Cockpit management of a high standard.",
+      "Checks and procedures completed accurately.",
+      "Good prioritisation of tasks.",
+      "Manages cockpit environment effectively."
+    ],
+    3: [
+      "Cockpit management satisfactory.",
+      "Checks and procedures generally completed.",
+      "Adequate prioritisation of tasks.",
+      "Manages basic cockpit requirements."
+    ],
+    2: [
+      "Cockpit management developing.",
+      "Some checks or procedures missed or late.",
+      "Difficulty prioritising tasks under moderate workload.",
+      "Requires prompting for cockpit management."
+    ],
+    1: [
+      "Cockpit management unsatisfactory.",
+      "Frequently misses checks or procedures.",
+      "Unable to prioritise tasks effectively.",
+      "Requires regular prompting."
+    ],
+    0: [
+      "Cockpit management dangerous.",
+      "Critical checks or procedures missed.",
+      "Task saturated; unable to manage cockpit.",
+      "Work cycles disorganised or absent.",
+      "Easily overwhelmed; demonstrates unsafe or inconsistent behaviour."
+    ]
+  }
+};
 const TRAINING_REPORT_NAME_MAX_LENGTH = 10;
 const TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH = 20;
 const TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH = 40;
@@ -2973,18 +3178,33 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
     }
   };
 };
-const getTrainingReportTerminology = (config) => {
+const findTrainingReportUnit = (config, unitCode) => {
+  const rawUnitCode = String(unitCode || "").trim();
+  if (!rawUnitCode || rawUnitCode.includes("+")) return null;
+  const normalised = rawUnitCode.toUpperCase();
+  return (Array.isArray(config?.units) ? config.units : []).find((unit) => String(unit?.code || "").trim().toUpperCase() === normalised) || null;
+};
+const getUnitTrainingReportTemplate = (config, unitCode) => {
+  const unit = findTrainingReportUnit(config, unitCode);
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
-  const settings = activeOrganisation?.settings || {};
-  const template = normaliseTrainingReportTemplate(settings.trainingReportTemplate || null, settings.trainingReportTerminology || null);
+  const organisationSettings = activeOrganisation?.settings || {};
+  return normaliseTrainingReportTemplate(
+    unit?.settings?.trainingReportTemplate || organisationSettings.trainingReportTemplate || null,
+    unit?.settings?.trainingReportTerminology || organisationSettings.trainingReportTerminology || null
+  );
+};
+const getUnitTrainingReportTerminology = (config, unitCode) => {
+  const template = getUnitTrainingReportTemplate(config, unitCode);
   return normaliseTrainingReportTerminology({ name: template.displayName });
 };
-const getTrainingReportTemplate = (config) => {
+const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) => {
+  const unit = findTrainingReportUnit(config, unitCode);
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
-  const settings = activeOrganisation?.settings || {};
-  return normaliseTrainingReportTemplate(settings.trainingReportTemplate || null, settings.trainingReportTerminology || null);
+  const organisationPhraseBank = activeOrganisation?.settings?.trainingReportPhraseBank;
+  const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
+  return JSON.parse(JSON.stringify(source));
 };
 const INSERT_EVENT_LABEL_MAX_LENGTH = 8;
 const DEFAULT_INSERT_EVENT_TYPES = [
@@ -48596,7 +48816,9 @@ const PlatformConfigurationSettings = ({
   onShowSuccess,
   scrollTarget,
   sectionOnly = false,
-  canUsePlatformPermission
+  canUsePlatformPermission,
+  activeUnitCode = "",
+  phraseBank = {}
 }) => {
   const [config, setConfig] = reactExports.useState(emptyConfig);
   const [loading, setLoading] = reactExports.useState(true);
@@ -48621,6 +48843,7 @@ const PlatformConfigurationSettings = ({
   const [airfieldCatalogueError, setAirfieldCatalogueError] = reactExports.useState("");
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
+  const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = reactExports.useState("");
   const locationRowRefs = reactExports.useRef({});
   const pendingLocationScrollIdRef = reactExports.useRef(null);
   const unitRowRefs = reactExports.useRef({});
@@ -48831,10 +49054,23 @@ const PlatformConfigurationSettings = ({
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
+  const activeTrainingReportUnitCode = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0]?.trim() : String(activeUnitCode || "").trim();
+  const activeTrainingReportUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()) || config.units.find(isActiveRecord) || config.units[0] || null;
+  const activeTrainingReportUnitIndex = activeTrainingReportUnit ? config.units.findIndex((unit) => unit === activeTrainingReportUnit) : -1;
+  const activeTrainingReportUnitLabel = activeTrainingReportUnit ? `${activeTrainingReportUnit.code}${activeTrainingReportUnit.name && activeTrainingReportUnit.name !== activeTrainingReportUnit.code ? ` - ${activeTrainingReportUnit.name}` : ""}` : "No unit selected";
   const trainingReportTemplate = normaliseTrainingReportTemplate(
-    primaryOrganisationSettings.trainingReportTemplate || null,
-    primaryOrganisationSettings.trainingReportTerminology || null
+    activeTrainingReportUnit?.settings?.trainingReportTemplate || primaryOrganisationSettings.trainingReportTemplate || null,
+    activeTrainingReportUnit?.settings?.trainingReportTerminology || primaryOrganisationSettings.trainingReportTerminology || null
   );
+  const trainingReportPhraseBank = getUnitTrainingReportPhraseBank(
+    config,
+    activeTrainingReportUnit?.code || activeTrainingReportUnitCode,
+    phraseBank
+  );
+  const trainingReportSyncOptions = config.units.filter((unit) => isActiveRecord(unit) && String(unit.code || "").trim() && String(unit.code || "").trim() !== String(activeTrainingReportUnit?.code || "").trim()).map((unit) => ({
+    code: String(unit.code || "").trim(),
+    label: `${unit.code}${unit.name && unit.name !== unit.code ? ` - ${unit.name}` : ""}`
+  }));
   const describeTrainingReportGrades = (grades) => {
     if (!Array.isArray(grades) || grades.length === 0) return "No grades selected";
     return grades.map((grade) => {
@@ -48946,17 +49182,31 @@ const PlatformConfigurationSettings = ({
     }));
   };
   const updateTrainingReportTemplate = (updater) => {
-    updatePrimaryOrganisationSettings((settings) => {
-      const currentTemplate = normaliseTrainingReportTemplate(settings.trainingReportTemplate || null, settings.trainingReportTerminology || null);
+    if (activeTrainingReportUnitIndex < 0) return;
+    setConfig((prev) => {
+      const targetUnit = prev.units[activeTrainingReportUnitIndex];
+      if (!targetUnit) return prev;
+      const orgSettings = prev.organisations[0]?.settings || {};
+      const currentTemplate = normaliseTrainingReportTemplate(
+        targetUnit.settings?.trainingReportTemplate || orgSettings.trainingReportTemplate || null,
+        targetUnit.settings?.trainingReportTerminology || orgSettings.trainingReportTerminology || null
+      );
       const nextPartial = typeof updater === "function" ? updater(currentTemplate) : updater;
       const nextTemplate = normaliseTrainingReportTemplate({
         ...currentTemplate,
         ...nextPartial
       });
       return {
-        ...settings,
-        trainingReportTemplate: nextTemplate,
-        trainingReportTerminology: normaliseTrainingReportTerminology({ name: nextTemplate.displayName })
+        ...prev,
+        units: prev.units.map((unit, index) => index === activeTrainingReportUnitIndex ? {
+          ...unit,
+          settings: {
+            ...unit.settings || {},
+            trainingReportTemplate: nextTemplate,
+            trainingReportTerminology: normaliseTrainingReportTerminology({ name: nextTemplate.displayName }),
+            trainingReportPhraseBank
+          }
+        } : unit)
       };
     });
   };
@@ -49028,6 +49278,43 @@ const PlatformConfigurationSettings = ({
         }
       };
     });
+  };
+  const syncTrainingReportSettingsFromUnit = async () => {
+    if (!canEditTrainingReportTemplate || activeTrainingReportUnitIndex < 0 || !trainingReportSyncUnitCode) return;
+    const sourceUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === trainingReportSyncUnitCode.trim().toUpperCase());
+    const targetUnit = config.units[activeTrainingReportUnitIndex];
+    if (!sourceUnit || !targetUnit) return;
+    const sourceTemplate = normaliseTrainingReportTemplate(
+      sourceUnit.settings?.trainingReportTemplate || primaryOrganisationSettings.trainingReportTemplate || null,
+      sourceUnit.settings?.trainingReportTerminology || primaryOrganisationSettings.trainingReportTerminology || null
+    );
+    const sourceTerminology = normaliseTrainingReportTerminology({
+      ...sourceUnit.settings?.trainingReportTerminology || {},
+      name: sourceTemplate.displayName
+    });
+    const sourcePhraseBank = getUnitTrainingReportPhraseBank(config, sourceUnit.code, phraseBank);
+    const nextConfig = {
+      ...config,
+      units: config.units.map((unit, index) => index === activeTrainingReportUnitIndex ? {
+        ...unit,
+        settings: {
+          ...unit.settings || {},
+          trainingReportTemplate: sourceTemplate,
+          trainingReportTerminology: sourceTerminology,
+          trainingReportPhraseBank: sourcePhraseBank,
+          trainingReportSyncedFromUnit: sourceUnit.code,
+          trainingReportSyncedAt: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      } : unit)
+    };
+    setConfig(nextConfig);
+    logAudit({
+      page: "Settings - Training Reports",
+      action: "Sync",
+      description: `Synced Training Report settings into ${targetUnit.code}`,
+      changes: `Copied report template and scoring matrix from ${sourceUnit.code} to ${targetUnit.code}`
+    });
+    await save(nextConfig, "training-report-template");
   };
   const updateInsertEventTypes = (nextEventTypes) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -49254,6 +49541,11 @@ const PlatformConfigurationSettings = ({
     const defaultLocation = config.locations[0]?.code || "ESL";
     const newUnitId = createClientRecordId("unit");
     const nextUnitIndex = config.units.length;
+    const defaultTrainingReportTemplate = normaliseTrainingReportTemplate(
+      config.organisations[0]?.settings?.trainingReportTemplate || null,
+      config.organisations[0]?.settings?.trainingReportTerminology || null
+    );
+    const defaultTrainingReportPhraseBank = config.organisations[0]?.settings?.trainingReportPhraseBank || phraseBank;
     pendingUnitScrollIdRef.current = newUnitId;
     setSelectedUnitIndex(nextUnitIndex);
     setEditingUnitIndex(nextUnitIndex);
@@ -49269,7 +49561,12 @@ const PlatformConfigurationSettings = ({
           locationCode: defaultLocation,
           unitType: "Training",
           status: "ACTIVE",
-          settings: { operationalModel: DEFAULT_OPERATIONAL_MODEL }
+          settings: {
+            operationalModel: DEFAULT_OPERATIONAL_MODEL,
+            trainingReportTemplate: defaultTrainingReportTemplate,
+            trainingReportTerminology: normaliseTrainingReportTerminology({ name: defaultTrainingReportTemplate.displayName }),
+            trainingReportPhraseBank: defaultTrainingReportPhraseBank
+          }
         }
       ]
     }));
@@ -49610,7 +49907,7 @@ const PlatformConfigurationSettings = ({
     updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
   const save = async (configOverride, restoreSection) => {
-    const configToSave = config;
+    const configToSave = configOverride && Array.isArray(configOverride.locations) ? configOverride : config;
     if (!canEdit) return;
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
@@ -50821,8 +51118,55 @@ const PlatformConfigurationSettings = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-4", children: [
         !canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Training Report settings are read-only. Super Admin or Admin permission is required to edit the template." }) : !trainingReportTemplateUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Training Report settings are locked. Press Edit before changing report names, field labels, grade text or repeat rules." }) : null,
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-sky-100", children: "Organisation Training Report Template" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-sky-100/70", children: "These settings rename and configure the existing report layout. Core dimensions and descriptor phrases still come from the Scoring Matrix." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-sky-100", children: "Unit Training Report Template" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-sky-100/70", children: "These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-gray-950/50 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[220px] flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                FieldLabel,
+                {
+                  label: "Active Unit Training Report",
+                  info: "Training Report settings are saved against this unit. If the unit has no custom settings yet, it uses the organisation default as a fallback."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-50", children: activeTrainingReportUnitLabel })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[260px] flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                FieldLabel,
+                {
+                  label: "Sync From Unit",
+                  info: "Select another unit to copy its Training Report template and Scoring Matrix into the active unit. This does not change the source unit."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  className: fieldClass,
+                  value: trainingReportSyncUnitCode,
+                  disabled: !canEditTrainingReportTemplate || trainingReportSyncOptions.length === 0,
+                  onChange: (event) => setTrainingReportSyncUnitCode(event.target.value),
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select source unit..." }),
+                    trainingReportSyncOptions.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit.code, children: unit.label }, unit.code))
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                disabled: !canEditTrainingReportTemplate || !trainingReportSyncUnitCode || saving || applyingChanges,
+                onClick: syncTrainingReportSettingsFromUnit,
+                className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                children: "Sync Settings"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-relaxed text-gray-400", children: "Sync includes the report name, module labels, grade scale, repeat rules and scoring matrix phrase bank." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -53576,7 +53920,9 @@ const SettingsViewWithMenu = (props) => {
               onShowSuccess: props.onShowSuccess,
               scrollTarget: "platform-scheduling-rule-sets",
               sectionOnly: true,
-              canUsePlatformPermission: props.canUsePlatformPermission
+              canUsePlatformPermission: props.canUsePlatformPermission,
+              activeUnitCode: props.activeUnitCode,
+              phraseBank: props.phraseBank
             }
           )
         ] }),
@@ -53587,7 +53933,9 @@ const SettingsViewWithMenu = (props) => {
             onShowSuccess: props.onShowSuccess,
             scrollTarget: "platform-training-report-template",
             sectionOnly: true,
-            canUsePlatformPermission: props.canUsePlatformPermission
+            canUsePlatformPermission: props.canUsePlatformPermission,
+            activeUnitCode: props.activeUnitCode,
+            phraseBank: props.phraseBank
           }
         ),
         activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
@@ -53668,7 +54016,9 @@ const SettingsViewWithMenu = (props) => {
             onShowSuccess: props.onShowSuccess,
             scrollTarget: activePlatformTarget,
             sectionOnly: true,
-            canUsePlatformPermission: props.canUsePlatformPermission
+            canUsePlatformPermission: props.canUsePlatformPermission,
+            activeUnitCode: props.activeUnitCode,
+            phraseBank: props.phraseBank
           }
         ),
         activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppearanceSettings, {}) }),
@@ -61357,211 +61707,6 @@ async function initializeData() {
     };
   }
 }
-const DEFAULT_PHRASE_BANK = {
-  "Airmanship": {
-    5: [
-      "Operates the aircraft safely and effectively at all times.",
-      "Organised and deals with all situations effectively, under all workloads.",
-      "Handles non-standard situations capably with a high level of confidence.",
-      "Excellent decision making based on situational awareness and prioritised attention."
-    ],
-    4: [
-      "Operates the aircraft safely and effectively.",
-      "Handles most normal situations well.",
-      "Needs occasional help with non-standard routines but does not become confused under moderate workloads.",
-      "Very good decision making based on situational awareness and prioritised attention.",
-      "Sometimes overlooks some considerations but not to the detriment of safety."
-    ],
-    3: [
-      "Operates the aircraft safely.",
-      "Copes with normal situations.",
-      "Occasionally slow to react to new or developing situations.",
-      "Makes basic decisions and applies the basic considerations.",
-      "Adequate confidence and decision making ability."
-    ],
-    2: [
-      "Operates the aircraft safely in familiar situations.",
-      "Slow to react to new or developing situations.",
-      "Makes basic decisions in familiar situations.",
-      "Sometimes unsure in new or more advanced sequences.",
-      "Developing confidence and decision making ability."
-    ],
-    1: [
-      "Just coping with familiar situations.",
-      "Had difficulty applying normal procedures.",
-      "Often deviated from more complex or advanced routines.",
-      "Showed a lack of situational awareness.",
-      "Made basic decisions but was sometimes overwhelmed or task saturated by basic sequences.",
-      "Not confident.",
-      "Uncharacteristic major safety breach."
-    ],
-    0: [
-      "Poor.",
-      "Frequently deviated from normal procedures.",
-      "Not able to cope with familiar situations.",
-      "Demonstrated likelihood of violating aircraft and operational limits.",
-      "Frequently task-saturated by basic sequences.",
-      "Easily confused and often disorganised.",
-      "Excessively under or over confident.",
-      "Repeated safety breaches."
-    ]
-  },
-  "Preparation": {
-    5: [
-      "Always fully prepared.",
-      "An excellent understanding of sortie requirements.",
-      "Focussed and committed to continuous improvement.",
-      "Prepared technique and sequences to a very high standard.",
-      "Enthusiastic and motivated to achieve excellence."
-    ],
-    4: [
-      "Well prepared.",
-      "Researched widely to develop a sound understanding of all sortie aspects.",
-      "Focussed and committed to improvement.",
-      "Prepared technique and sequences to a high standard.",
-      "Enthusiastic and motivated."
-    ],
-    3: [
-      "Adequately prepared.",
-      "A satisfactory understanding of sortie requirements.",
-      "Prepared required technique and sequences.",
-      "Satisfactory motivation."
-    ],
-    2: [
-      "Partially prepared.",
-      "Some gaps in understanding of sortie requirements.",
-      "Partially prepared required technique and sequences.",
-      "Required prompting in some areas."
-    ],
-    1: [
-      "Poorly prepared.",
-      "Significant gaps in understanding of sortie requirements.",
-      "Inadequately prepared required technique and sequences.",
-      "Required significant prompting."
-    ],
-    0: [
-      "Not prepared.",
-      "No understanding of sortie requirements.",
-      "Did not prepare required technique or sequences.",
-      "Unable to proceed without full instructor support."
-    ]
-  },
-  "Technique": {
-    5: [
-      "Aircraft control precise and smooth at all times.",
-      "Excellent management of aircraft energy.",
-      "Proactively manages all aspects of the sortie.",
-      "Techniques mastered to a very high standard."
-    ],
-    4: [
-      "Aircraft control accurate and mostly smooth.",
-      "Good management of aircraft energy.",
-      "Manages most aspects of the sortie effectively.",
-      "Good technical standard overall."
-    ],
-    3: [
-      "Aircraft control adequate.",
-      "Satisfactory management of aircraft energy.",
-      "Manages basic aspects of the sortie.",
-      "Acceptable technical standard."
-    ],
-    2: [
-      "Aircraft control developing.",
-      "Some difficulty managing aircraft energy.",
-      "Manages basic aspects with some prompting.",
-      "Technical standard requires improvement."
-    ],
-    1: [
-      "Aircraft control below standard.",
-      "Difficulty managing aircraft energy.",
-      "Requires regular prompting.",
-      "Technical standard unsatisfactory."
-    ],
-    0: [
-      "Aircraft control unacceptable.",
-      "Unable to manage aircraft energy.",
-      "Requires constant prompting and assistance.",
-      "Technical standard dangerous."
-    ]
-  },
-  "Communication": {
-    5: [
-      "RT phraseology precise, professional, and correct at all times.",
-      "Listens out effectively, never misses a call.",
-      "Maintains excellent situational awareness of radio environment.",
-      "Sets an exemplary standard of RT discipline."
-    ],
-    4: [
-      "RT phraseology accurate and professional.",
-      "Rarely misses a radio call.",
-      "Good situational awareness of radio environment.",
-      "High standard of RT discipline."
-    ],
-    3: [
-      "RT phraseology generally correct.",
-      "Occasionally misses a radio call.",
-      "Adequate situational awareness of radio environment.",
-      "Satisfactory RT discipline."
-    ],
-    2: [
-      "RT phraseology sometimes incorrect.",
-      "Misses some radio calls.",
-      "Developing situational awareness of radio environment.",
-      "RT discipline requires improvement."
-    ],
-    1: [
-      "RT phraseology frequently incorrect.",
-      "Misses many radio calls.",
-      "Limited situational awareness of radio environment.",
-      "RT discipline unsatisfactory."
-    ],
-    0: [
-      "RT phraseology unacceptable.",
-      "Unable to maintain radio watch.",
-      "No situational awareness of radio environment.",
-      "RT discipline dangerous or absent."
-    ]
-  },
-  "Cockpit Management": {
-    5: [
-      "Cockpit management exemplary.",
-      "All checks and procedures completed accurately and on time.",
-      "Excellent prioritisation of tasks under all workloads.",
-      "Proactively manages cockpit environment."
-    ],
-    4: [
-      "Cockpit management of a high standard.",
-      "Checks and procedures completed accurately.",
-      "Good prioritisation of tasks.",
-      "Manages cockpit environment effectively."
-    ],
-    3: [
-      "Cockpit management satisfactory.",
-      "Checks and procedures generally completed.",
-      "Adequate prioritisation of tasks.",
-      "Manages basic cockpit requirements."
-    ],
-    2: [
-      "Cockpit management developing.",
-      "Some checks or procedures missed or late.",
-      "Difficulty prioritising tasks under moderate workload.",
-      "Requires prompting for cockpit management."
-    ],
-    1: [
-      "Cockpit management unsatisfactory.",
-      "Frequently misses checks or procedures.",
-      "Unable to prioritise tasks effectively.",
-      "Requires regular prompting."
-    ],
-    0: [
-      "Cockpit management dangerous.",
-      "Critical checks or procedures missed.",
-      "Task saturated; unable to manage cockpit.",
-      "Work cycles disorganised or absent.",
-      "Easily overwhelmed; demonstrates unsafe or inconsistent behaviour."
-    ]
-  }
-};
 const INITIAL_CURRENCY_REQUIREMENTS = [
   // 12 months = 365 days
   { id: "aircrew-medical", name: "Aircrew Medical", description: "Annual aircrew medical check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
@@ -71047,6 +71192,7 @@ const App = () => {
   const [activeUnitCode, setActiveUnitCode] = reactExports.useState(initialOperationalContext.unit);
   const [platformConfig, setPlatformConfig] = reactExports.useState(null);
   const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
+  const platformConfigSaveTimerRef = reactExports.useRef(null);
   const [settingsLoaded, setSettingsLoaded] = reactExports.useState(false);
   const [organisationSettings, setOrganisationSettings] = reactExports.useState({
     staffSharingEnabled: false,
@@ -72878,14 +73024,62 @@ const App = () => {
     () => getPersonnelDisplaySettings(platformConfig),
     [platformConfig]
   );
+  const activeTrainingReportUnitCode = activeContextUnitCodes[0] || activeUnitCode;
   const trainingReportTerminology = reactExports.useMemo(
-    () => getTrainingReportTerminology(platformConfig),
-    [platformConfig]
+    () => getUnitTrainingReportTerminology(platformConfig, activeTrainingReportUnitCode),
+    [activeTrainingReportUnitCode, platformConfig]
   );
-  const trainingReportTemplate = reactExports.useMemo(
-    () => getTrainingReportTemplate(platformConfig),
-    [platformConfig]
+  reactExports.useMemo(
+    () => getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode),
+    [activeTrainingReportUnitCode, platformConfig]
   );
+  const activeTrainingReportPhraseBank = reactExports.useMemo(
+    () => getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank),
+    [activeTrainingReportUnitCode, phraseBank, platformConfig]
+  );
+  const savePlatformConfigDebounced = reactExports.useCallback((nextConfig) => {
+    if (platformConfigSaveTimerRef.current) {
+      clearTimeout(platformConfigSaveTimerRef.current);
+    }
+    platformConfigSaveTimerRef.current = setTimeout(() => {
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
+      fetch(`${getApiBase2()}/platform-config`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
+        body: JSON.stringify(nextConfig)
+      }).catch((error) => {
+        console.warn("[PlatformConfig] Failed to save unit training report settings:", error);
+      });
+    }, 900);
+  }, []);
+  const handleUpdateActiveTrainingReportPhraseBank = reactExports.useCallback((newBank) => {
+    const unitCode = String(activeTrainingReportUnitCode || "").trim();
+    if (!unitCode || unitCode.includes("+")) {
+      setPhraseBank(newBank);
+      return;
+    }
+    setPlatformConfig((prev) => {
+      if (!prev) {
+        setPhraseBank(newBank);
+        return prev;
+      }
+      const nextConfig = {
+        ...prev,
+        units: (prev.units || []).map((unit) => String(unit.code || "").trim().toUpperCase() === unitCode.toUpperCase() ? {
+          ...unit,
+          settings: {
+            ...unit.settings || {},
+            trainingReportPhraseBank: newBank
+          }
+        } : unit)
+      };
+      savePlatformConfigDebounced(nextConfig);
+      return nextConfig;
+    });
+  }, [activeTrainingReportUnitCode, savePlatformConfigDebounced]);
   const insertEventTypes = reactExports.useMemo(
     () => getInsertEventTypes(platformConfig),
     [platformConfig]
@@ -82498,8 +82692,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             eventLimits,
             onUpdateEventLimits: setEventLimits,
             onNavigateToProfile: handleNavigateToProfile,
-            phraseBank,
-            onUpdatePhraseBank: setPhraseBank,
+            phraseBank: activeTrainingReportPhraseBank,
+            onUpdatePhraseBank: handleUpdateActiveTrainingReportPhraseBank,
             onNavigate: handleNavigation,
             masterCurrencies,
             currencyRequirements,
@@ -82545,7 +82739,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             resourceDisplayNames,
             personnelDisplaySettings,
             instructorLabel,
-            canUsePlatformPermission
+            canUsePlatformPermission,
+            activeUnitCode: activeTrainingReportUnitCode
           }
         );
       case "CurrencyBuilder":
@@ -82605,8 +82800,8 @@ ${error instanceof Error ? error.message : String(error)}`,
               event: eventForPt051,
               initialAssessment: existingAssessment,
               instructorLabel,
-              trainingReportTerminology,
-              trainingReportTemplate,
+              trainingReportTerminology: getUnitTrainingReportTerminology(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode),
+              trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode),
               onBack: () => {
                 setEventForPt051(null);
                 openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet");
@@ -82756,7 +82951,7 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
               lmpScores: scores.get(selectedTraineeForHateSheet.fullName) || [],
               syllabusDetails,
               registerDirtyCheck,
-              phraseBank,
+              phraseBank: getUnitTrainingReportPhraseBank(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode, phraseBank),
               currentUserPin: currentUser2?.pin || "1111",
               canEditPt051: canEditTraineePt051(selectedTraineeForHateSheet)
             },
@@ -83940,8 +84135,8 @@ Do you want to replace the existing entry?`,
         assignment: airCombatTrainingReportDraft.assignment,
         item: airCombatTrainingReportDraft.item,
         sourceEvent: airCombatTrainingReportDraft.sourceEvent,
-        reportName: trainingReportTemplate.displayName,
-        trainingReportTemplate,
+        reportName: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName,
+        trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode),
         currentUserName,
         locationCode: school,
         unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode,

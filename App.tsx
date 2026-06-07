@@ -48,7 +48,11 @@ import {
     comparePeopleByConfiguredRank,
     getPersonnelDisplaySettings,
 } from './utils/personnelDisplaySettings';
-import { getTrainingReportTemplate, getTrainingReportTerminology } from './utils/trainingReportTerminology';
+import {
+    getUnitTrainingReportPhraseBank,
+    getUnitTrainingReportTemplate,
+    getUnitTrainingReportTerminology,
+} from './utils/trainingReportTerminology';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
 import {
@@ -12090,6 +12094,7 @@ const App: React.FC = () => {
     const [activeUnitCode, setActiveUnitCode] = useState<string>(initialOperationalContext.unit);
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
     const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
+    const platformConfigSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     // Settings loaded flag is used by context restore diagnostics and availability fetches.
     const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
@@ -14413,14 +14418,66 @@ const App: React.FC = () => {
         () => getPersonnelDisplaySettings(platformConfig),
         [platformConfig]
     );
+    const activeTrainingReportUnitCode = activeContextUnitCodes[0] || activeUnitCode;
     const trainingReportTerminology = useMemo(
-        () => getTrainingReportTerminology(platformConfig),
-        [platformConfig]
+        () => getUnitTrainingReportTerminology(platformConfig, activeTrainingReportUnitCode),
+        [activeTrainingReportUnitCode, platformConfig]
     );
     const trainingReportTemplate = useMemo(
-        () => getTrainingReportTemplate(platformConfig),
-        [platformConfig]
+        () => getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode),
+        [activeTrainingReportUnitCode, platformConfig]
     );
+    const activeTrainingReportPhraseBank = useMemo(
+        () => getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank),
+        [activeTrainingReportUnitCode, phraseBank, platformConfig]
+    );
+    const savePlatformConfigDebounced = useCallback((nextConfig: PlatformConfig) => {
+        if (platformConfigSaveTimerRef.current) {
+            clearTimeout(platformConfigSaveTimerRef.current);
+        }
+        platformConfigSaveTimerRef.current = setTimeout(() => {
+            const sessionToken = localStorage.getItem('dfp_session_token') || '';
+            fetch(`${getApiBase()}/platform-config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+                },
+                body: JSON.stringify(nextConfig),
+            }).catch((error) => {
+                console.warn('[PlatformConfig] Failed to save unit training report settings:', error);
+            });
+        }, 900);
+    }, []);
+    const handleUpdateActiveTrainingReportPhraseBank = useCallback((newBank: PhraseBank) => {
+        const unitCode = String(activeTrainingReportUnitCode || '').trim();
+        if (!unitCode || unitCode.includes('+')) {
+            setPhraseBank(newBank);
+            return;
+        }
+        setPlatformConfig((prev) => {
+            if (!prev) {
+                setPhraseBank(newBank);
+                return prev;
+            }
+            const nextConfig = {
+                ...prev,
+                units: (prev.units || []).map((unit: any) => (
+                    String(unit.code || '').trim().toUpperCase() === unitCode.toUpperCase()
+                        ? {
+                            ...unit,
+                            settings: {
+                                ...(unit.settings || {}),
+                                trainingReportPhraseBank: newBank,
+                            },
+                        }
+                        : unit
+                )),
+            };
+            savePlatformConfigDebounced(nextConfig);
+            return nextConfig;
+        });
+    }, [activeTrainingReportUnitCode, savePlatformConfigDebounced]);
     const insertEventTypes = useMemo(
         () => getInsertEventTypes(platformConfig),
         [platformConfig]
@@ -26198,8 +26255,8 @@ appliedUpdates.forEach(update => {
                     eventLimits={eventLimits}
                     onUpdateEventLimits={setEventLimits}
                         onNavigateToProfile={handleNavigateToProfile}
-                    phraseBank={phraseBank} // Pass phraseBank state
-                    onUpdatePhraseBank={setPhraseBank} // Pass update handler
+                    phraseBank={activeTrainingReportPhraseBank}
+                    onUpdatePhraseBank={handleUpdateActiveTrainingReportPhraseBank}
                     onNavigate={handleNavigation}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}
@@ -26246,7 +26303,8 @@ appliedUpdates.forEach(update => {
                        resourceDisplayNames={resourceDisplayNames}
                        personnelDisplaySettings={personnelDisplaySettings}
                        instructorLabel={instructorLabel}
-                       canUsePlatformPermission={canUsePlatformPermission}
+                    canUsePlatformPermission={canUsePlatformPermission}
+                    activeUnitCode={activeTrainingReportUnitCode}
 
                 />;
             case 'CurrencyBuilder':
@@ -26316,8 +26374,8 @@ appliedUpdates.forEach(update => {
                         event={eventForPt051}
                         initialAssessment={existingAssessment}
                         instructorLabel={instructorLabel}
-                        trainingReportTerminology={trainingReportTerminology}
-                        trainingReportTemplate={trainingReportTemplate}
+                        trainingReportTerminology={getUnitTrainingReportTerminology(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode)}
+                        trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode)}
                         onBack={() => {
                             setEventForPt051(null);
                             openTraineeProfileTab(selectedTraineeForHateSheet, 'hatesheet');
@@ -26498,7 +26556,7 @@ appliedUpdates.forEach(update => {
                         lmpScores={scores.get(selectedTraineeForHateSheet.fullName) || []}
                         syllabusDetails={syllabusDetails}
                         registerDirtyCheck={registerDirtyCheck}
-                        phraseBank={phraseBank} // Pass phraseBank prop
+                        phraseBank={getUnitTrainingReportPhraseBank(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode, phraseBank)}
                         currentUserPin={currentUser?.pin || '1111'}
                         canEditPt051={canEditTraineePt051(selectedTraineeForHateSheet)}
                     />;
@@ -27782,8 +27840,8 @@ appliedUpdates.forEach(update => {
                 assignment={airCombatTrainingReportDraft.assignment}
                 item={airCombatTrainingReportDraft.item}
                 sourceEvent={airCombatTrainingReportDraft.sourceEvent}
-                reportName={trainingReportTemplate.displayName}
-                trainingReportTemplate={trainingReportTemplate}
+                reportName={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName}
+                trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode)}
                 currentUserName={currentUserName}
                 locationCode={school}
                 unitCode={airCombatTrainingReportDraft.staff.unit || activeUnitCode}

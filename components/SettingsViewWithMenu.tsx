@@ -89,6 +89,7 @@ interface SettingsViewWithMenuProps {
     personnelDisplaySettings?: PersonnelDisplaySettings;
     instructorLabel?: string;
     canUsePlatformPermission?: (permissionId: string) => boolean;
+    activeUnitCode?: string;
     settingsLoaded?: boolean;
     organisationSettings?: {
         staffSharingEnabled: boolean;
@@ -1684,6 +1685,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 scrollTarget="platform-scheduling-rule-sets"
                                 sectionOnly={true}
                                 canUsePlatformPermission={props.canUsePlatformPermission}
+                                activeUnitCode={props.activeUnitCode}
+                                phraseBank={props.phraseBank}
                             />
                         </div>
                     )}
@@ -1695,6 +1698,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             scrollTarget="platform-training-report-template"
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
+                            activeUnitCode={props.activeUnitCode}
+                            phraseBank={props.phraseBank}
                         />
                     )}
 
@@ -1787,6 +1792,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             scrollTarget={activePlatformTarget}
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
+                            activeUnitCode={props.activeUnitCode}
+                            phraseBank={props.phraseBank}
                         />
                     )}
                     {activeSection === 'appearance' && (

@@ -1,4 +1,5 @@
 import type { PlatformConfig } from './platformConfigService';
+import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 
 export interface TrainingReportTerminology {
   name: string;
@@ -345,4 +346,48 @@ export const getTrainingReportTemplate = (config?: PlatformConfig | null): Train
   const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0];
   const settings = activeOrganisation?.settings || {};
   return normaliseTrainingReportTemplate(settings.trainingReportTemplate || null, settings.trainingReportTerminology || null);
+};
+
+export const findTrainingReportUnit = (config?: PlatformConfig | null, unitCode?: string | null): any | null => {
+  const rawUnitCode = String(unitCode || '').trim();
+  if (!rawUnitCode || rawUnitCode.includes('+')) return null;
+  const normalised = rawUnitCode.toUpperCase();
+  return (Array.isArray(config?.units) ? config!.units : []).find((unit: any) => (
+    String(unit?.code || '').trim().toUpperCase() === normalised
+  )) || null;
+};
+
+export const getUnitTrainingReportTemplate = (
+  config?: PlatformConfig | null,
+  unitCode?: string | null,
+): TrainingReportTemplate => {
+  const unit = findTrainingReportUnit(config, unitCode);
+  const organisations = Array.isArray(config?.organisations) ? config!.organisations : [];
+  const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0];
+  const organisationSettings = activeOrganisation?.settings || {};
+  return normaliseTrainingReportTemplate(
+    unit?.settings?.trainingReportTemplate || organisationSettings.trainingReportTemplate || null,
+    unit?.settings?.trainingReportTerminology || organisationSettings.trainingReportTerminology || null,
+  );
+};
+
+export const getUnitTrainingReportTerminology = (
+  config?: PlatformConfig | null,
+  unitCode?: string | null,
+): TrainingReportTerminology => {
+  const template = getUnitTrainingReportTemplate(config, unitCode);
+  return normaliseTrainingReportTerminology({ name: template.displayName });
+};
+
+export const getUnitTrainingReportPhraseBank = (
+  config?: PlatformConfig | null,
+  unitCode?: string | null,
+  fallbackPhraseBank?: Record<string, any> | null,
+): Record<string, any> => {
+  const unit = findTrainingReportUnit(config, unitCode);
+  const organisations = Array.isArray(config?.organisations) ? config!.organisations : [];
+  const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0];
+  const organisationPhraseBank = activeOrganisation?.settings?.trainingReportPhraseBank;
+  const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
+  return JSON.parse(JSON.stringify(source));
 };

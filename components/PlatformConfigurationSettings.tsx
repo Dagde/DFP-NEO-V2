@@ -28,6 +28,7 @@ import {
   TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH,
   normaliseTrainingReportTerminology,
   normaliseTrainingReportTemplate,
+  getUnitTrainingReportPhraseBank,
   type TrainingReportTerminology,
   type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
@@ -936,6 +937,8 @@ interface PlatformConfigurationSettingsProps {
   scrollTarget?: string;
   sectionOnly?: boolean;
   canUsePlatformPermission?: (permissionId: string) => boolean;
+  activeUnitCode?: string;
+  phraseBank?: Record<string, any>;
 }
 
 const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps> = ({
@@ -944,6 +947,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   scrollTarget,
   sectionOnly = false,
   canUsePlatformPermission,
+  activeUnitCode = '',
+  phraseBank = {},
 }) => {
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
   const [loading, setLoading] = useState(true);
@@ -968,6 +973,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [airfieldCatalogueError, setAirfieldCatalogueError] = useState('');
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
+  const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = useState('');
   const locationRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingLocationScrollIdRef = useRef<string | null>(null);
   const unitRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -1201,10 +1207,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null,
   );
+  const activeTrainingReportUnitCode = String(activeUnitCode || '').includes('+')
+    ? String(activeUnitCode || '').split('+')[0]?.trim()
+    : String(activeUnitCode || '').trim();
+  const activeTrainingReportUnit = config.units.find((unit) => (
+    String(unit.code || '').trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()
+  )) || config.units.find(isActiveRecord) || config.units[0] || null;
+  const activeTrainingReportUnitIndex = activeTrainingReportUnit
+    ? config.units.findIndex((unit) => unit === activeTrainingReportUnit)
+    : -1;
+  const activeTrainingReportUnitLabel = activeTrainingReportUnit
+    ? `${activeTrainingReportUnit.code}${activeTrainingReportUnit.name && activeTrainingReportUnit.name !== activeTrainingReportUnit.code ? ` - ${activeTrainingReportUnit.name}` : ''}`
+    : 'No unit selected';
   const trainingReportTemplate = normaliseTrainingReportTemplate(
-    primaryOrganisationSettings.trainingReportTemplate || null,
-    primaryOrganisationSettings.trainingReportTerminology || null,
+    activeTrainingReportUnit?.settings?.trainingReportTemplate || primaryOrganisationSettings.trainingReportTemplate || null,
+    activeTrainingReportUnit?.settings?.trainingReportTerminology || primaryOrganisationSettings.trainingReportTerminology || null,
   );
+  const trainingReportPhraseBank = getUnitTrainingReportPhraseBank(
+    config as any,
+    activeTrainingReportUnit?.code || activeTrainingReportUnitCode,
+    phraseBank,
+  );
+  const trainingReportSyncOptions = config.units
+    .filter((unit) => isActiveRecord(unit) && String(unit.code || '').trim() && String(unit.code || '').trim() !== String(activeTrainingReportUnit?.code || '').trim())
+    .map((unit) => ({
+      code: String(unit.code || '').trim(),
+      label: `${unit.code}${unit.name && unit.name !== unit.code ? ` - ${unit.name}` : ''}`,
+    }));
   const describeTrainingReportGrades = (grades: number[]): string => {
     if (!Array.isArray(grades) || grades.length === 0) return 'No grades selected';
     return grades
@@ -1336,17 +1365,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const updateTrainingReportTemplate = (
     updater: Partial<TrainingReportTemplate> | ((template: TrainingReportTemplate) => Partial<TrainingReportTemplate> | TrainingReportTemplate),
   ) => {
-    updatePrimaryOrganisationSettings((settings) => {
-      const currentTemplate = normaliseTrainingReportTemplate(settings.trainingReportTemplate || null, settings.trainingReportTerminology || null);
+    if (activeTrainingReportUnitIndex < 0) return;
+    setConfig((prev) => {
+      const targetUnit = prev.units[activeTrainingReportUnitIndex];
+      if (!targetUnit) return prev;
+      const orgSettings = prev.organisations[0]?.settings || {};
+      const currentTemplate = normaliseTrainingReportTemplate(
+        targetUnit.settings?.trainingReportTemplate || orgSettings.trainingReportTemplate || null,
+        targetUnit.settings?.trainingReportTerminology || orgSettings.trainingReportTerminology || null,
+      );
       const nextPartial = typeof updater === 'function' ? updater(currentTemplate) : updater;
       const nextTemplate = normaliseTrainingReportTemplate({
         ...currentTemplate,
         ...nextPartial,
       });
       return {
-        ...settings,
-        trainingReportTemplate: nextTemplate,
-        trainingReportTerminology: normaliseTrainingReportTerminology({ name: nextTemplate.displayName }),
+        ...prev,
+        units: prev.units.map((unit, index) => index === activeTrainingReportUnitIndex
+          ? {
+              ...unit,
+              settings: {
+                ...(unit.settings || {}),
+                trainingReportTemplate: nextTemplate,
+                trainingReportTerminology: normaliseTrainingReportTerminology({ name: nextTemplate.displayName }),
+                trainingReportPhraseBank,
+              },
+            }
+          : unit),
       };
     });
   };
@@ -1441,6 +1486,48 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         },
       };
     });
+  };
+
+  const syncTrainingReportSettingsFromUnit = async () => {
+    if (!canEditTrainingReportTemplate || activeTrainingReportUnitIndex < 0 || !trainingReportSyncUnitCode) return;
+    const sourceUnit = config.units.find((unit) => (
+      String(unit.code || '').trim().toUpperCase() === trainingReportSyncUnitCode.trim().toUpperCase()
+    ));
+    const targetUnit = config.units[activeTrainingReportUnitIndex];
+    if (!sourceUnit || !targetUnit) return;
+    const sourceTemplate = normaliseTrainingReportTemplate(
+      sourceUnit.settings?.trainingReportTemplate || primaryOrganisationSettings.trainingReportTemplate || null,
+      sourceUnit.settings?.trainingReportTerminology || primaryOrganisationSettings.trainingReportTerminology || null,
+    );
+    const sourceTerminology = normaliseTrainingReportTerminology({
+      ...(sourceUnit.settings?.trainingReportTerminology || {}),
+      name: sourceTemplate.displayName,
+    });
+    const sourcePhraseBank = getUnitTrainingReportPhraseBank(config as any, sourceUnit.code, phraseBank);
+    const nextConfig = {
+      ...config,
+      units: config.units.map((unit, index) => index === activeTrainingReportUnitIndex
+        ? {
+            ...unit,
+            settings: {
+              ...(unit.settings || {}),
+              trainingReportTemplate: sourceTemplate,
+              trainingReportTerminology: sourceTerminology,
+              trainingReportPhraseBank: sourcePhraseBank,
+              trainingReportSyncedFromUnit: sourceUnit.code,
+              trainingReportSyncedAt: new Date().toISOString(),
+            },
+          }
+        : unit),
+    };
+    setConfig(nextConfig);
+    logAudit({
+      page: 'Settings - Training Reports',
+      action: 'Sync',
+      description: `Synced Training Report settings into ${targetUnit.code}`,
+      changes: `Copied report template and scoring matrix from ${sourceUnit.code} to ${targetUnit.code}`,
+    });
+    await save(nextConfig, 'training-report-template');
   };
 
   const updateInsertEventTypes = (nextEventTypes: InsertEventTypeConfig[]) => {
@@ -1732,6 +1819,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const defaultLocation = config.locations[0]?.code || 'ESL';
     const newUnitId = createClientRecordId('unit');
     const nextUnitIndex = config.units.length;
+    const defaultTrainingReportTemplate = normaliseTrainingReportTemplate(
+      config.organisations[0]?.settings?.trainingReportTemplate || null,
+      config.organisations[0]?.settings?.trainingReportTerminology || null,
+    );
+    const defaultTrainingReportPhraseBank = config.organisations[0]?.settings?.trainingReportPhraseBank || phraseBank;
     pendingUnitScrollIdRef.current = newUnitId;
     setSelectedUnitIndex(nextUnitIndex);
     setEditingUnitIndex(nextUnitIndex);
@@ -1747,7 +1839,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           locationCode: defaultLocation,
           unitType: 'Training',
           status: 'ACTIVE',
-          settings: { operationalModel: DEFAULT_OPERATIONAL_MODEL },
+          settings: {
+            operationalModel: DEFAULT_OPERATIONAL_MODEL,
+            trainingReportTemplate: defaultTrainingReportTemplate,
+            trainingReportTerminology: normaliseTrainingReportTerminology({ name: defaultTrainingReportTemplate.displayName }),
+            trainingReportPhraseBank: defaultTrainingReportPhraseBank,
+          },
         },
       ],
     }));
@@ -3471,9 +3568,51 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           ) : null}
           <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3">
-            <h4 className="text-sm font-bold text-sky-100">Organisation Training Report Template</h4>
+            <h4 className="text-sm font-bold text-sky-100">Unit Training Report Template</h4>
             <p className="mt-1 text-sm text-sky-100/70">
-              These settings rename and configure the existing report layout. Core dimensions and descriptor phrases still come from the Scoring Matrix.
+              These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-cyan-500/30 bg-gray-950/50 p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[220px] flex-1">
+                <FieldLabel
+                  label="Active Unit Training Report"
+                  info="Training Report settings are saved against this unit. If the unit has no custom settings yet, it uses the organisation default as a fallback."
+                />
+                <div className="rounded border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-50">
+                  {activeTrainingReportUnitLabel}
+                </div>
+              </div>
+              <div className="min-w-[260px] flex-1">
+                <FieldLabel
+                  label="Sync From Unit"
+                  info="Select another unit to copy its Training Report template and Scoring Matrix into the active unit. This does not change the source unit."
+                />
+                <select
+                  className={fieldClass}
+                  value={trainingReportSyncUnitCode}
+                  disabled={!canEditTrainingReportTemplate || trainingReportSyncOptions.length === 0}
+                  onChange={(event) => setTrainingReportSyncUnitCode(event.target.value)}
+                >
+                  <option value="">Select source unit...</option>
+                  {trainingReportSyncOptions.map((unit) => (
+                    <option key={unit.code} value={unit.code}>{unit.label}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                disabled={!canEditTrainingReportTemplate || !trainingReportSyncUnitCode || saving || applyingChanges}
+                onClick={syncTrainingReportSettingsFromUnit}
+                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Sync Settings
+              </button>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-gray-400">
+              Sync includes the report name, module labels, grade scale, repeat rules and scoring matrix phrase bank.
             </p>
           </div>
 
