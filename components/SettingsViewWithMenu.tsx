@@ -157,6 +157,7 @@ interface SettingsViewWithMenuProps {
 
 type SettingsSection =
     | 'scoring-matrix'
+    | 'training-report-template'
     | 'currencies'
     | 'sct-events'
     | 'people-profile'
@@ -225,6 +226,7 @@ const isPlatformConfigurationMenuSection = (section: SettingsMenuSection): secti
 
 const sectionLabels: Record<SettingsMenuSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
+    'training-report-template': 'Training Reports',
     'currencies': 'Currencies',
     'sct-events': 'SCT Events',
     'people-profile': 'NEO Build People Profile',
@@ -270,6 +272,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
 // All sections in order for the left menu
 const allSections: SettingsSection[] = [
     'scoring-matrix',
+    'training-report-template',
     'currencies',
     'sct-events',
     'people-profile',
@@ -312,6 +315,13 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
       <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
       <rect x="9" y="3" width="6" height="4" rx="1"/>
       <path d="M9 12l2 2 4-4"/>
+    </svg>
+  ),
+  'training-report-template': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <path d="M7 3h7l3 3v15H7z"/>
+      <path d="M14 3v4h4"/>
+      <path d="M9 11h6M9 15h6M9 19h4"/>
     </svg>
   ),
   'currencies': (
@@ -510,6 +520,7 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
 // Descriptions for each section
 const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'scoring-matrix': 'Configure scoring logic and weighting',
+  'training-report-template': 'Configure report labels, grades and repeat rules',
   'currencies': 'Manage qualification expiry dates',
   'sct-events': 'Event scoring rules and triggers',
   'people-profile': 'Assign NEO Build training basis and exclusions',
@@ -562,6 +573,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
 const sectionColors: Record<SettingsMenuSection, string> = {
   // SYSTEM CONFIGURATION - sky blue icons
   'scoring-matrix':    'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
+  'training-report-template': 'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'currencies':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'sct-events':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'people-profile':    'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
@@ -662,7 +674,7 @@ const sectionGroups: {
     description: 'Scoring rules, currencies and SCT event standards used across the training system.',
     accent: 'sky',
     defaultSection: 'scoring-matrix',
-    sections: ['scoring-matrix', 'sct-events', 'currencies'],
+    sections: ['scoring-matrix', 'training-report-template', 'sct-events', 'currencies'],
   },
   {
     label: 'DFP Build Rules',
@@ -1676,10 +1688,21 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         </div>
                     )}
 
+                    {activeSection === 'training-report-template' && (
+                        <PlatformConfigurationSettings
+                            currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
+                            scrollTarget="platform-training-report-template"
+                            sectionOnly={true}
+                            canUsePlatformPermission={props.canUsePlatformPermission}
+                        />
+                    )}
+
                     {/* All other sections rendered via SettingsView */}
                     {activeSection !== 'scoring-matrix' &&
                      activeSection !== 'locale-settings' &&
                      activeSection !== 'scheduling-rules' &&
+                     activeSection !== 'training-report-template' &&
                      activeSection !== 'user-list' &&
                      activeSection !== 'staff-database' &&
                      activeSection !== 'staff-mockdata' &&

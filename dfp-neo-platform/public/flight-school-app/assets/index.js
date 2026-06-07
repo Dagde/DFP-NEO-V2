@@ -2759,8 +2759,97 @@ const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
   return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
 };
 const TRAINING_REPORT_NAME_MAX_LENGTH = 10;
+const TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH = 20;
+const TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH = 40;
+const TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH = 40;
 const DEFAULT_TRAINING_REPORT_TERMINOLOGY = {
   name: "Report"
+};
+const DEFAULT_GRADE_LABELS = {
+  0: "Unsatisfactory",
+  1: "Marginal",
+  2: "Low Satisfactory",
+  3: "Satisfactory",
+  4: "High Satisfactory",
+  5: "Excellent"
+};
+const DEFAULT_TRAINING_REPORT_TEMPLATE = {
+  version: 1,
+  genericName: "Training Report",
+  displayName: "PT-051",
+  modules: {
+    overview: {
+      title: "Event Details",
+      fields: {
+        event: "Event",
+        training: "Training",
+        type: "Type",
+        timing: "Timing",
+        resource: "Resource",
+        callsign: "Callsign",
+        unit: "Unit",
+        date: "Date",
+        assessor: "Report Instructor"
+      }
+    },
+    overallAssessment: {
+      title: "Overall Assessment",
+      fields: {
+        result: "Result",
+        overallGrade: "Overall Grade",
+        overallResult: "Overall Result",
+        groundSchoolAssessment: "Ground School Assessment"
+      }
+    },
+    comments: {
+      title: "Comments",
+      fields: {
+        assessor: "QFI",
+        weather: "Weather",
+        profile: "Profile",
+        overall: "Overall",
+        nest: "NEST",
+        notes: "Notes"
+      }
+    },
+    assessmentMatrix: {
+      title: "Assessment Matrix"
+    }
+  },
+  completionResults: [
+    { code: "DCO", label: "DCO" },
+    { code: "DPCO", label: "DPCO" },
+    { code: "DNCO", label: "DNCO" }
+  ],
+  overallResults: {
+    passLabel: "PASS",
+    failLabel: "FAIL",
+    doubleRepeatLabel: "Double Marg"
+  },
+  grades: {
+    scaleMax: 5,
+    includeDemo: true,
+    showNumbers: true,
+    options: [0, 1, 2, 3, 4, 5].map((value) => ({
+      value,
+      label: DEFAULT_GRADE_LABELS[value],
+      requiresRepeat: value === 0
+    }))
+  },
+  repeatRules: {
+    gradesRequiringRepeat: [0],
+    consecutive: {
+      enabled: true,
+      grades: [1],
+      count: 2
+    },
+    rollingWindow: {
+      enabled: false,
+      grades: [1],
+      count: 2,
+      window: 3
+    }
+  }
 };
 const cleanLabel$1 = (value, fallback, maxLength) => {
   if (typeof value !== "string") return fallback;
@@ -2770,11 +2859,120 @@ const cleanLabel$1 = (value, fallback, maxLength) => {
 const normaliseTrainingReportTerminology = (input) => ({
   name: cleanLabel$1(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name, TRAINING_REPORT_NAME_MAX_LENGTH)
 });
+const cleanNumber$1 = (value, fallback, min, max) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(numeric)));
+};
+const cleanBoolean = (value, fallback) => typeof value === "boolean" ? value : fallback;
+const normaliseGradeValues = (values, scaleMax, fallback) => {
+  const source = Array.isArray(values) ? values : fallback;
+  const cleaned = source.map((value) => cleanNumber$1(value, -1, 0, scaleMax)).filter((value) => value >= 0 && value <= scaleMax);
+  return Array.from(new Set(cleaned)).sort((a, b) => a - b);
+};
+const normaliseGradeOptions = (input, scaleMax, repeatGrades) => {
+  const source = Array.isArray(input) ? input : [];
+  return Array.from({ length: scaleMax + 1 }, (_, value) => {
+    const existing = source.find((option) => Number(option?.value) === value);
+    return {
+      value,
+      label: cleanLabel$1(existing?.label, DEFAULT_GRADE_LABELS[value] || `Grade ${value}`, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+      requiresRepeat: cleanBoolean(existing?.requiresRepeat, repeatGrades.includes(value))
+    };
+  });
+};
+const mergeFields = (defaults, input) => {
+  const source = input && typeof input === "object" ? input : {};
+  return Object.keys(defaults).reduce((next, key) => ({
+    ...next,
+    [key]: cleanLabel$1(source[key], defaults[key], TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)
+  }), {});
+};
+const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
+  const source = input && typeof input === "object" ? input : {};
+  const legacy = normaliseTrainingReportTerminology(legacyTerminology || null);
+  const scaleMax = cleanNumber$1(source.grades?.scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, 5, 10);
+  const fallbackRepeatGrades = normaliseGradeValues(
+    source.repeatRules?.gradesRequiringRepeat,
+    scaleMax,
+    DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.gradesRequiringRepeat
+  );
+  const gradeOptions = normaliseGradeOptions(source.grades?.options, scaleMax, fallbackRepeatGrades);
+  const gradesRequiringRepeat = normaliseGradeValues(
+    source.repeatRules?.gradesRequiringRepeat,
+    scaleMax,
+    gradeOptions.filter((option) => option.requiresRepeat).map((option) => option.value)
+  );
+  return {
+    version: 1,
+    genericName: cleanLabel$1(source.genericName, DEFAULT_TRAINING_REPORT_TEMPLATE.genericName, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH),
+    displayName: cleanLabel$1(source.displayName, legacy.name === DEFAULT_TRAINING_REPORT_TERMINOLOGY.name ? DEFAULT_TRAINING_REPORT_TEMPLATE.displayName : legacy.name, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH),
+    modules: {
+      overview: {
+        title: cleanLabel$1(source.modules?.overview?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overview.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+        fields: mergeFields(DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overview.fields, source.modules?.overview?.fields)
+      },
+      overallAssessment: {
+        title: cleanLabel$1(source.modules?.overallAssessment?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+        fields: mergeFields(DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overallAssessment.fields, source.modules?.overallAssessment?.fields)
+      },
+      comments: {
+        title: cleanLabel$1(source.modules?.comments?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.comments.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+        fields: mergeFields(DEFAULT_TRAINING_REPORT_TEMPLATE.modules.comments.fields, source.modules?.comments?.fields)
+      },
+      assessmentMatrix: {
+        title: cleanLabel$1(source.modules?.assessmentMatrix?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.assessmentMatrix.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)
+      }
+    },
+    completionResults: DEFAULT_TRAINING_REPORT_TEMPLATE.completionResults.map((result) => {
+      const existing = Array.isArray(source.completionResults) ? source.completionResults.find((option) => option?.code === result.code) : null;
+      return {
+        code: result.code,
+        label: cleanLabel$1(existing?.label, result.label, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)
+      };
+    }),
+    overallResults: {
+      passLabel: cleanLabel$1(source.overallResults?.passLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.passLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+      failLabel: cleanLabel$1(source.overallResults?.failLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.failLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+      doubleRepeatLabel: cleanLabel$1(source.overallResults?.doubleRepeatLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.doubleRepeatLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)
+    },
+    grades: {
+      scaleMax,
+      includeDemo: cleanBoolean(source.grades?.includeDemo, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.includeDemo),
+      showNumbers: cleanBoolean(source.grades?.showNumbers, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.showNumbers),
+      options: gradeOptions.map((option) => ({
+        ...option,
+        requiresRepeat: gradesRequiringRepeat.includes(option.value)
+      }))
+    },
+    repeatRules: {
+      gradesRequiringRepeat,
+      consecutive: {
+        enabled: cleanBoolean(source.repeatRules?.consecutive?.enabled, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.enabled),
+        grades: normaliseGradeValues(source.repeatRules?.consecutive?.grades, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.grades),
+        count: cleanNumber$1(source.repeatRules?.consecutive?.count, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.count, 2, 5)
+      },
+      rollingWindow: {
+        enabled: cleanBoolean(source.repeatRules?.rollingWindow?.enabled, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.enabled),
+        grades: normaliseGradeValues(source.repeatRules?.rollingWindow?.grades, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.grades),
+        count: cleanNumber$1(source.repeatRules?.rollingWindow?.count, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.count, 2, 5),
+        window: cleanNumber$1(source.repeatRules?.rollingWindow?.window, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.window, 3, 10)
+      }
+    }
+  };
+};
 const getTrainingReportTerminology = (config) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   const settings = activeOrganisation?.settings || {};
-  return normaliseTrainingReportTerminology(settings.trainingReportTerminology || null);
+  const template = normaliseTrainingReportTemplate(settings.trainingReportTemplate || null, settings.trainingReportTerminology || null);
+  return normaliseTrainingReportTerminology({ name: template.displayName });
+};
+const getTrainingReportTemplate = (config) => {
+  const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
+  const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
+  const settings = activeOrganisation?.settings || {};
+  return normaliseTrainingReportTemplate(settings.trainingReportTemplate || null, settings.trainingReportTerminology || null);
 };
 const INSERT_EVENT_LABEL_MAX_LENGTH = 8;
 const DEFAULT_INSERT_EVENT_TYPES = [
@@ -36951,8 +37149,6 @@ const PT051_STRUCTURE$1 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$1 = PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
-const GRADES = ["DEMO", 0, 1, 2, 3, 4, 5];
-const OVERALL_GRADES = ["No Grade", 0, 1, 2, 3, 4, 5];
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST"];
 const parseComments = (raw) => {
   const defaults = { QFI: "", Weather: "", Profile: "", Overall: "", NEST: "" };
@@ -37056,8 +37252,30 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
-  const trainingReportName = (trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name;
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null }) => {
+  const reportTemplate = reactExports.useMemo(
+    () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
+    [trainingReportTemplate, trainingReportTerminology]
+  );
+  const trainingReportName = reportTemplate.displayName;
+  const overviewFields = reportTemplate.modules.overview.fields;
+  const overallFields = reportTemplate.modules.overallAssessment.fields;
+  const commentFieldsConfig = reportTemplate.modules.comments.fields;
+  const gradeOptions = reportTemplate.grades.options;
+  const assessmentGradeOptions = reactExports.useMemo(() => [
+    ...reportTemplate.grades.includeDemo ? ["DEMO"] : [],
+    ...gradeOptions.map((option) => option.value)
+  ], [gradeOptions, reportTemplate.grades.includeDemo]);
+  const overallGradeOptions = reactExports.useMemo(() => [
+    "No Grade",
+    ...gradeOptions.map((option) => option.value)
+  ], [gradeOptions]);
+  const gradeLabelMap = reactExports.useMemo(() => new Map(gradeOptions.map((option) => [option.value, option.label])), [gradeOptions]);
+  const formatGradeOption = (grade) => {
+    if (grade === "No Grade" || grade === "DEMO" || grade === "MIN") return String(grade);
+    const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
+    return reportTemplate.grades.showNumbers ? `${grade} - ${label}` : label;
+  };
   const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
   const { checkAndWarn } = useSystemFreeze$1();
   const [isDirty, setIsDirty] = reactExports.useState(false);
@@ -37135,7 +37353,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: void 0 }
   );
   const [dcoResult, setDcoResult] = reactExports.useState(initialAssessment?.dcoResult || "");
-  const previousPerformance = reactExports.useMemo(() => {
+  const recentPerformanceHistory = reactExports.useMemo(() => {
     const history = [];
     const isFlightOrFtd = (eventName) => {
       const detail = syllabusDetails.find((d) => d.id === eventName || d.code === eventName);
@@ -37174,26 +37392,44 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     });
     history.sort((a, b) => b.timestamp - a.timestamp);
     const currentEventTime = new Date(event.date).getTime();
-    const past = history.filter((h) => h.timestamp < currentEventTime);
-    return past.length > 0 ? past[0] : null;
+    return history.filter((h) => h.timestamp < currentEventTime);
   }, [lmpScores, pt051Assessments, trainee.fullName, syllabusDetails, event.date, event.id]);
+  recentPerformanceHistory.length > 0 ? recentPerformanceHistory[0] : null;
+  const shouldRepeatForGrade = (grade) => {
+    if (typeof grade !== "number") return false;
+    if (reportTemplate.repeatRules.gradesRequiringRepeat.includes(grade)) return true;
+    if (reportTemplate.repeatRules.consecutive.enabled && reportTemplate.repeatRules.consecutive.grades.includes(grade)) {
+      const previousScores = recentPerformanceHistory.slice(0, Math.max(0, reportTemplate.repeatRules.consecutive.count - 1)).map((entry) => Number(entry.score));
+      if (previousScores.length >= reportTemplate.repeatRules.consecutive.count - 1 && previousScores.every((score) => reportTemplate.repeatRules.consecutive.grades.includes(score))) {
+        return true;
+      }
+    }
+    if (reportTemplate.repeatRules.rollingWindow.enabled && reportTemplate.repeatRules.rollingWindow.grades.includes(grade)) {
+      const previousScores = recentPerformanceHistory.slice(0, Math.max(0, reportTemplate.repeatRules.rollingWindow.window - 1)).map((entry) => Number(entry.score));
+      const matchingCount = previousScores.filter((score) => reportTemplate.repeatRules.rollingWindow.grades.includes(score)).length + 1;
+      if (matchingCount >= reportTemplate.repeatRules.rollingWindow.count) {
+        return true;
+      }
+    }
+    return false;
+  };
   reactExports.useEffect(() => {
-    if (overallGrade === 1 && previousPerformance && Number(previousPerformance.score) === 1) {
+    if (shouldRepeatForGrade(overallGrade)) {
       setShowDoubleMarginalWarning(true);
       setOverallResult("F");
     } else {
       setShowDoubleMarginalWarning(false);
     }
-  }, [overallGrade, previousPerformance]);
+  }, [overallGrade, recentPerformanceHistory, reportTemplate]);
   reactExports.useEffect(() => {
     if (overallGrade === "No Grade" || overallGrade === null) {
       setOverallResult(null);
-    } else if (overallGrade === 0) {
+    } else if (shouldRepeatForGrade(overallGrade)) {
       setOverallResult("F");
-    } else if (overallGrade >= 1 && overallGrade <= 5) {
+    } else if (typeof overallGrade === "number") {
       setOverallResult("P");
     }
-  }, [overallGrade]);
+  }, [overallGrade, recentPerformanceHistory, reportTemplate]);
   const handleGradeChange = (element, grade) => {
     setAssessment((prev) => ({
       ...prev,
@@ -37497,11 +37733,11 @@ This action cannot be undone.`;
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "lg:col-span-1 space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Event Number" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.event }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: event.flightNumber || "N/A" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Event Description" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.type }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white", children: (() => {
               const eventNum = (event.flightNumber || "").trim();
               console.log("🔍 Event Description Debug - Event Number:", eventNum);
@@ -37533,7 +37769,7 @@ This action cannot be undone.`;
             /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: trainee.course })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Date" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.date }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -37549,7 +37785,7 @@ This action cannot be undone.`;
             ) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Time" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.timing }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("dd", { className: "mt-1 flex items-center gap-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
@@ -37628,7 +37864,7 @@ This action cannot be undone.`;
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Instructor" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.assessor }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
               {
@@ -37649,24 +37885,24 @@ This action cannot be undone.`;
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-2 space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Overall Assessment" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 mb-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Result" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
-                ["DCO", "DPCO", "DNCO"].map((value) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
                       type: "radio",
                       name: "dco-result",
-                      value,
-                      checked: dcoResult === value,
+                      value: option.code,
+                      checked: dcoResult === option.code,
                       onChange: (e) => setDcoResult(e.target.value),
                       className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
                     }
                   ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: value })
-                ] }, value)),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
+                ] }, option.code)),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
@@ -37685,28 +37921,28 @@ This action cannot be undone.`;
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Overall Grade" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex justify-around p-2 bg-gray-700/50 rounded", children: OVERALL_GRADES.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex flex-col items-center space-y-1 text-xs text-gray-300 cursor-pointer", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: grade }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: overallFields.overallGrade }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex justify-around p-2 bg-gray-700/50 rounded", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex flex-col items-center space-y-1 text-xs text-gray-300 cursor-pointer", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatGradeOption(grade) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-grade", value: grade, checked: overallGrade === grade, onChange: () => setOverallGrade(grade), className: `h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600` })
                 ] }, grade)) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Overall Result" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.overallResult }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "P", checked: overallResult === "P", onChange: () => setOverallResult("P"), className: "sr-only" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: "PASS" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: reportTemplate.overallResults.passLabel })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "F", checked: overallResult === "F", onChange: () => setOverallResult("F"), className: "sr-only" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: showDoubleMarginalWarning ? "Double Marg" : "FAIL" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel })
                   ] })
                 ] })
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 pt-4 border-t border-gray-600", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Ground School Assessment" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.groundSchoolAssessment }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37725,7 +37961,10 @@ This action cannot be undone.`;
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-gray-300", children: "Assessment" })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs font-medium text-gray-400", children: "Result:" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs font-medium text-gray-400", children: [
+                    overallFields.result,
+                    ":"
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "input",
@@ -37755,14 +37994,14 @@ This action cannot be undone.`;
           ] }),
           showDoubleMarginalWarning && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-300", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Warning:" }),
-            " This is the second consecutive marginal (1) grade. A review may be required."
+            " This grade matches the configured repeat rule for this training report. A review may be required."
           ] })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 mb-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: instructorLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.assessor || instructorLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
               {
@@ -37781,7 +38020,7 @@ This action cannot be undone.`;
             ) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Weather" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.weather }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "textarea",
               {
@@ -37804,7 +38043,7 @@ This action cannot be undone.`;
             )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "NEST" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.nest }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -37819,7 +38058,7 @@ This action cannot be undone.`;
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Profile" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.profile }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "textarea",
               {
@@ -37842,7 +38081,7 @@ This action cannot be undone.`;
             )
           ] }, "Profile"),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Overall" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.overall }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "textarea",
               {
@@ -37873,18 +38112,14 @@ This action cannot be undone.`;
           /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full mt-2 border-collapse", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sr-only", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Element" }),
-              GRADES.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: g }, String(g))),
+              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: formatGradeOption(g) }, String(g))),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { children: "Comments" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
               const score = assessment.scores.find((s) => s.element === element);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-2 font-semibold text-white w-48", children: element }),
-                GRADES.map((grade) => {
-                  const getGradeLabelText = (g) => {
-                    if (g === "DEMO") return "Demo";
-                    return String(g);
-                  };
+                assessmentGradeOptions.map((grade) => {
                   return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-3 text-center w-12 ${gradeHeaderColors[String(grade)] || ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex flex-col items-center justify-center ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer"}`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "input",
@@ -37898,7 +38133,7 @@ This action cannot be undone.`;
                         className: `h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? "opacity-50 cursor-not-allowed" : ""}`
                       }
                     ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500 mt-1", children: getGradeLabelText(grade) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500 mt-1", children: formatGradeOption(grade) })
                   ] }) }, String(grade));
                 }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 pl-2 relative", children: [
@@ -37965,12 +38200,25 @@ const AirCombatTrainingReportModal = ({
   item,
   sourceEvent,
   reportName = "PT-051",
+  trainingReportTemplate = null,
   currentUserName = "",
   locationCode = "",
   unitCode = "",
   onCancel,
   onSave
 }) => {
+  const reportTemplate = reactExports.useMemo(
+    () => normaliseTrainingReportTemplate(trainingReportTemplate || { displayName: reportName }),
+    [trainingReportTemplate, reportName]
+  );
+  const overviewFields = reportTemplate.modules.overview.fields;
+  const overallFields = reportTemplate.modules.overallAssessment.fields;
+  const commentFields = reportTemplate.modules.comments.fields;
+  const gradeLabelMap = reactExports.useMemo(() => new Map(reportTemplate.grades.options.map((option) => [option.value, option.label])), [reportTemplate.grades.options]);
+  const formatGradeOption = (value) => {
+    const label = gradeLabelMap.get(value) || `Grade ${value}`;
+    return reportTemplate.grades.showNumbers ? `${value} - ${label}` : label;
+  };
   const eventCode = item?.code || sourceEvent?.flightNumber || "";
   const eventDescription = item?.eventDescription || sourceEvent?.notes || item?.module || "";
   const eventType = item?.type || sourceEvent?.type || "";
@@ -37994,8 +38242,9 @@ const AirCombatTrainingReportModal = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between border-b border-gray-700 px-5 py-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-xl font-bold text-white", children: [
-          reportName,
-          " Training Report"
+          reportTemplate.displayName,
+          " ",
+          reportTemplate.genericName
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-gray-400", children: [
           staff.rank,
@@ -38009,24 +38258,24 @@ const AirCombatTrainingReportModal = ({
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 space-y-5 overflow-y-auto p-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 md:grid-cols-4", children: [
-        detailCell("Event", eventCode),
-        detailCell("Training", assignment?.code || item?.phase || "-"),
-        detailCell("Type", eventType),
-        detailCell("Timing", `${formatDecimalTime(defaultStart)} / ${defaultDuration}h`)
+        detailCell(overviewFields.event, eventCode),
+        detailCell(overviewFields.training, assignment?.code || item?.phase || "-"),
+        detailCell(overviewFields.type, eventType),
+        detailCell(overviewFields.timing, `${formatDecimalTime(defaultStart)} / ${defaultDuration}h`)
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/55 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: "Event Details" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: reportTemplate.modules.overview.title }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-white", children: eventCode }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm text-gray-300", children: eventDescription || "No event description recorded." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-3", children: [
-          detailCell("Resource", sourceEvent?.resourceId || "-"),
-          detailCell("Callsign", sourceEvent?.callsign || staff.callsign || "-"),
-          detailCell("Unit", unitCode || staff.unit || "-")
+          detailCell(overviewFields.resource, sourceEvent?.resourceId || "-"),
+          detailCell(overviewFields.callsign, sourceEvent?.callsign || staff.callsign || "-"),
+          detailCell(overviewFields.unit, unitCode || staff.unit || "-")
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Date" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: overviewFields.date }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
@@ -38038,7 +38287,7 @@ const AirCombatTrainingReportModal = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Report Instructor" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: overviewFields.assessor }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
@@ -38049,31 +38298,25 @@ const AirCombatTrainingReportModal = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Overall Grade" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: overallFields.overallGrade }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: overallGrade, onChange: (event) => setOverallGrade(event.target.value), className: "w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No Grade" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "1", children: "1" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "2", children: "2" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "3", children: "3" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "4", children: "4" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "5", children: "5" })
+            reportTemplate.grades.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: String(option.value), children: formatGradeOption(option.value) }, option.value))
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Overall Result" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: overallFields.overallResult }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: overallResult, onChange: (event) => setOverallResult(event.target.value), className: "w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not Set" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "P", children: "Pass" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "F", children: "Fail" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "P", children: reportTemplate.overallResults.passLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "F", children: reportTemplate.overallResults.failLabel })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "DCO Result" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: overallFields.result }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: dcoResult, onChange: (event) => setDcoResult(event.target.value), className: "w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not Set" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "DCO", children: "DCO" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "DPCO", children: "DPCO" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "DNCO", children: "DNCO" })
+            reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.code, children: option.label }, option.code))
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -38082,7 +38325,7 @@ const AirCombatTrainingReportModal = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Notes" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: commentFields.notes }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "textarea",
           {
@@ -38110,7 +38353,7 @@ const AirCombatTrainingReportModal = ({
               const now = (/* @__PURE__ */ new Date()).toISOString();
               await onSave({
                 id: reportId,
-                reportName,
+                reportName: reportTemplate.displayName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
                 staffIdNumber: staff.idNumber,
                 staffName: staff.name,
                 locationCode,
@@ -48490,6 +48733,10 @@ const PlatformConfigurationSettings = ({
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
+  const trainingReportTemplate = normaliseTrainingReportTemplate(
+    primaryOrganisationSettings.trainingReportTemplate || null,
+    primaryOrganisationSettings.trainingReportTerminology || null
+  );
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes || null
   );
@@ -48586,6 +48833,82 @@ const PlatformConfigurationSettings = ({
         ...changes
       })
     }));
+  };
+  const updateTrainingReportTemplate = (updater) => {
+    updatePrimaryOrganisationSettings((settings) => {
+      const currentTemplate = normaliseTrainingReportTemplate(settings.trainingReportTemplate || null, settings.trainingReportTerminology || null);
+      const nextPartial = typeof updater === "function" ? updater(currentTemplate) : updater;
+      const nextTemplate = normaliseTrainingReportTemplate({
+        ...currentTemplate,
+        ...nextPartial
+      });
+      return {
+        ...settings,
+        trainingReportTemplate: nextTemplate,
+        trainingReportTerminology: normaliseTrainingReportTerminology({ name: nextTemplate.displayName })
+      };
+    });
+  };
+  const updateTrainingReportModule = (moduleKey, changes) => {
+    updateTrainingReportTemplate((template) => ({
+      modules: {
+        ...template.modules,
+        [moduleKey]: {
+          ...template.modules[moduleKey],
+          ...changes
+        }
+      }
+    }));
+  };
+  const updateTrainingReportModuleFields = (moduleKey, fieldKey, value) => {
+    updateTrainingReportTemplate((template) => ({
+      modules: {
+        ...template.modules,
+        [moduleKey]: {
+          ...template.modules[moduleKey],
+          fields: {
+            ...template.modules[moduleKey].fields,
+            [fieldKey]: value
+          }
+        }
+      }
+    }));
+  };
+  const updateTrainingReportGrade = (gradeValue, changes) => {
+    updateTrainingReportTemplate((template) => {
+      const nextOptions = template.grades.options.map((option) => option.value === gradeValue ? { ...option, ...changes } : option);
+      const gradesRequiringRepeat = nextOptions.filter((option) => option.requiresRepeat).map((option) => option.value);
+      return {
+        grades: {
+          ...template.grades,
+          options: nextOptions
+        },
+        repeatRules: {
+          ...template.repeatRules,
+          gradesRequiringRepeat
+        }
+      };
+    });
+  };
+  const updateTrainingReportCompletionResult = (code, label) => {
+    updateTrainingReportTemplate((template) => ({
+      completionResults: template.completionResults.map((option) => option.code === code ? { ...option, label } : option)
+    }));
+  };
+  const toggleTrainingReportRuleGrade = (ruleKey, gradeValue, checked) => {
+    updateTrainingReportTemplate((template) => {
+      const current = template.repeatRules[ruleKey].grades || [];
+      const nextGrades = checked ? Array.from(/* @__PURE__ */ new Set([...current, gradeValue])).sort((a, b) => a - b) : current.filter((value) => value !== gradeValue);
+      return {
+        repeatRules: {
+          ...template.repeatRules,
+          [ruleKey]: {
+            ...template.repeatRules[ruleKey],
+            grades: nextGrades
+          }
+        }
+      };
+    });
   };
   const updateInsertEventTypes = (nextEventTypes) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -50351,6 +50674,365 @@ const PlatformConfigurationSettings = ({
         ] })
       ] })
     ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-training-report-template", className: getSectionClass("platform-training-report-template"), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Training Reports",
+          subtitle: "Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models."
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-sky-100", children: "Organisation Training Report Template" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-sky-100/70", children: "These settings rename and configure the existing report layout. Core dimensions and descriptor phrases still come from the Scoring Matrix." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Field,
+            {
+              label: "Generic Form Name",
+              value: trainingReportTemplate.genericName,
+              disabled: !canEdit,
+              maxLength: TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH,
+              onChange: (value) => updateTrainingReportTemplate({ genericName: value }),
+              info: "Generic form name used across models. Example: Training Report."
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Field,
+            {
+              label: "Organisation Form Name",
+              value: trainingReportTemplate.displayName,
+              disabled: !canEdit,
+              maxLength: TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH,
+              onChange: (value) => updateTrainingReportTemplate({ displayName: value }),
+              info: "Customer-specific name. Example: PT-051."
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectField,
+            {
+              label: "Grade Scale",
+              value: String(trainingReportTemplate.grades.scaleMax),
+              disabled: !canEdit,
+              options: ["5", "10"],
+              onChange: (value) => updateTrainingReportTemplate((template) => ({
+                grades: {
+                  ...template.grades,
+                  scaleMax: Number(value) === 10 ? 10 : 5
+                }
+              })),
+              info: "Controls the selectable overall and element grade range."
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            ToggleField,
+            {
+              label: "Show Grade Numbers",
+              checked: trainingReportTemplate.grades.showNumbers,
+              disabled: !canEdit,
+              onChange: (checked) => updateTrainingReportTemplate((template) => ({
+                grades: {
+                  ...template.grades,
+                  showNumbers: checked
+                }
+              }))
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            ToggleField,
+            {
+              label: "Include DEMO Grade",
+              checked: trainingReportTemplate.grades.includeDemo,
+              disabled: !canEdit,
+              onChange: (checked) => updateTrainingReportTemplate((template) => ({
+                grades: {
+                  ...template.grades,
+                  includeDemo: checked
+                }
+              }))
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Modules & Field Labels" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: "Rename only" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 xl:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Overview Module",
+                  value: trainingReportTemplate.modules.overview.title,
+                  disabled: !canEdit,
+                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onChange: (value) => updateTrainingReportModule("overview", { title: value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: Object.entries(trainingReportTemplate.modules.overview.fields).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: key.replace(/([A-Z])/g, " $1"),
+                  value,
+                  disabled: !canEdit,
+                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onChange: (nextValue) => updateTrainingReportModuleFields("overview", key, nextValue)
+                },
+                key
+              )) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Overall Module",
+                  value: trainingReportTemplate.modules.overallAssessment.title,
+                  disabled: !canEdit,
+                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onChange: (value) => updateTrainingReportModule("overallAssessment", { title: value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: Object.entries(trainingReportTemplate.modules.overallAssessment.fields).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: key.replace(/([A-Z])/g, " $1"),
+                  value,
+                  disabled: !canEdit,
+                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onChange: (nextValue) => updateTrainingReportModuleFields("overallAssessment", key, nextValue)
+                },
+                key
+              )) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Comments Module",
+                  value: trainingReportTemplate.modules.comments.title,
+                  disabled: !canEdit,
+                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onChange: (value) => updateTrainingReportModule("comments", { title: value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: Object.entries(trainingReportTemplate.modules.comments.fields).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: key.replace(/([A-Z])/g, " $1"),
+                  value,
+                  disabled: !canEdit,
+                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onChange: (nextValue) => updateTrainingReportModuleFields("comments", key, nextValue)
+                },
+                key
+              )) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Assessment Matrix Module",
+                value: trainingReportTemplate.modules.assessmentMatrix.title,
+                disabled: !canEdit,
+                maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                onChange: (value) => updateTrainingReportModule("assessmentMatrix", { title: value }),
+                info: "Assessment categories and descriptors remain controlled by the Scoring Matrix."
+              }
+            ) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-3 text-sm font-bold uppercase tracking-wide text-gray-200", children: "Results & Grades" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
+            trainingReportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: `${option.code} Text`,
+                value: option.label,
+                disabled: !canEdit,
+                maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                onChange: (value) => updateTrainingReportCompletionResult(option.code, value)
+              },
+              option.code
+            )),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Pass Text",
+                value: trainingReportTemplate.overallResults.passLabel,
+                disabled: !canEdit,
+                maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                onChange: (value) => updateTrainingReportTemplate((template) => ({
+                  overallResults: { ...template.overallResults, passLabel: value }
+                }))
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Fail Text",
+                value: trainingReportTemplate.overallResults.failLabel,
+                disabled: !canEdit,
+                maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                onChange: (value) => updateTrainingReportTemplate((template) => ({
+                  overallResults: { ...template.overallResults, failLabel: value }
+                }))
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Repeat Rule Text",
+                value: trainingReportTemplate.overallResults.doubleRepeatLabel,
+                disabled: !canEdit,
+                maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                onChange: (value) => updateTrainingReportTemplate((template) => ({
+                  overallResults: { ...template.overallResults, doubleRepeatLabel: value }
+                }))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-[10px] uppercase tracking-wide text-gray-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Grade" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Display Text" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Repeat Event" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Two In A Row" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Two In Three" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: trainingReportTemplate.grades.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-800", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-bold text-white", children: option.value }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: fieldClass,
+                  value: option.label,
+                  disabled: !canEdit,
+                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onChange: (event) => updateTrainingReportGrade(option.value, { label: event.target.value })
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  className: "h-5 w-5 rounded border-gray-500 accent-cyan-500",
+                  checked: option.requiresRepeat,
+                  disabled: !canEdit,
+                  onChange: (event) => updateTrainingReportGrade(option.value, { requiresRepeat: event.target.checked })
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  className: "h-5 w-5 rounded border-gray-500 accent-cyan-500",
+                  checked: trainingReportTemplate.repeatRules.consecutive.grades.includes(option.value),
+                  disabled: !canEdit,
+                  onChange: (event) => toggleTrainingReportRuleGrade("consecutive", option.value, event.target.checked)
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  className: "h-5 w-5 rounded border-gray-500 accent-cyan-500",
+                  checked: trainingReportTemplate.repeatRules.rollingWindow.grades.includes(option.value),
+                  disabled: !canEdit,
+                  onChange: (event) => toggleTrainingReportRuleGrade("rollingWindow", option.value, event.target.checked)
+                }
+              ) })
+            ] }, option.value)) })
+          ] }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Consecutive Repeat Rule" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                ToggleField,
+                {
+                  label: "Enable Two In A Row Rule",
+                  checked: trainingReportTemplate.repeatRules.consecutive.enabled,
+                  disabled: !canEdit,
+                  onChange: (checked) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      consecutive: { ...template.repeatRules.consecutive, enabled: checked }
+                    }
+                  }))
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                NumberField,
+                {
+                  label: "Count",
+                  value: trainingReportTemplate.repeatRules.consecutive.count,
+                  disabled: !canEdit,
+                  onChange: (value) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      consecutive: { ...template.repeatRules.consecutive, count: value }
+                    }
+                  })),
+                  info: "Default is 2: two selected grades in a row requires repeat."
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Rolling Window Repeat Rule" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                ToggleField,
+                {
+                  label: "Enable Two In Three Rule",
+                  checked: trainingReportTemplate.repeatRules.rollingWindow.enabled,
+                  disabled: !canEdit,
+                  onChange: (checked) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      rollingWindow: { ...template.repeatRules.rollingWindow, enabled: checked }
+                    }
+                  }))
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                NumberField,
+                {
+                  label: "Count",
+                  value: trainingReportTemplate.repeatRules.rollingWindow.count,
+                  disabled: !canEdit,
+                  onChange: (value) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      rollingWindow: { ...template.repeatRules.rollingWindow, count: value }
+                    }
+                  }))
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                NumberField,
+                {
+                  label: "Window",
+                  value: trainingReportTemplate.repeatRules.rollingWindow.window,
+                  disabled: !canEdit,
+                  onChange: (value) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      rollingWindow: { ...template.repeatRules.rollingWindow, window: value }
+                    }
+                  })),
+                  info: "Default is 3: selected grade twice in three events requires repeat."
+                }
+              )
+            ] })
+          ] })
+        ] })
+      ] })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-rank-terminology", className: getSectionClass("platform-rank-terminology"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
@@ -51430,6 +52112,7 @@ const platformSectionTargets = {
 const isPlatformConfigurationMenuSection = (section) => Object.prototype.hasOwnProperty.call(platformSectionTargets, section);
 const sectionLabels = {
   "scoring-matrix": "Scoring Matrix",
+  "training-report-template": "Training Reports",
   "currencies": "Currencies",
   "sct-events": "SCT Events",
   "people-profile": "NEO Build People Profile",
@@ -51480,6 +52163,11 @@ const sectionIcons = {
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "9", y: "3", width: "6", height: "4", rx: "1" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 12l2 2 4-4" })
+  ] }),
+  "training-report-template": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M7 3h7l3 3v15H7z" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M14 3v4h4" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 11h6M9 15h6M9 19h4" })
   ] }),
   "currencies": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" }),
@@ -51613,6 +52301,7 @@ const sectionIcons = {
 };
 const sectionDescriptions = {
   "scoring-matrix": "Configure scoring logic and weighting",
+  "training-report-template": "Configure report labels, grades and repeat rules",
   "currencies": "Manage qualification expiry dates",
   "sct-events": "Event scoring rules and triggers",
   "people-profile": "Assign NEO Build training basis and exclusions",
@@ -51657,6 +52346,7 @@ const sectionDescriptions = {
 const sectionColors = {
   // SYSTEM CONFIGURATION - sky blue icons
   "scoring-matrix": "from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400",
+  "training-report-template": "from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400",
   "currencies": "from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400",
   "sct-events": "from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400",
   "people-profile": "from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400",
@@ -51748,7 +52438,7 @@ const sectionGroups = [
     description: "Scoring rules, currencies and SCT event standards used across the training system.",
     accent: "sky",
     defaultSection: "scoring-matrix",
-    sections: ["scoring-matrix", "sct-events", "currencies"]
+    sections: ["scoring-matrix", "training-report-template", "sct-events", "currencies"]
   },
   {
     label: "DFP Build Rules",
@@ -52595,7 +53285,17 @@ const SettingsViewWithMenu = (props) => {
             }
           )
         ] }),
-        activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
+        activeSection === "training-report-template" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          PlatformConfigurationSettings,
+          {
+            currentUserPermission: props.currentUserPermission,
+            onShowSuccess: props.onShowSuccess,
+            scrollTarget: "platform-training-report-template",
+            sectionOnly: true,
+            canUsePlatformPermission: props.canUsePlatformPermission
+          }
+        ),
+        activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
         activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           UserListSection,
           {
@@ -71887,6 +72587,10 @@ const App = () => {
     () => getTrainingReportTerminology(platformConfig),
     [platformConfig]
   );
+  const trainingReportTemplate = reactExports.useMemo(
+    () => getTrainingReportTemplate(platformConfig),
+    [platformConfig]
+  );
   const insertEventTypes = reactExports.useMemo(
     () => getInsertEventTypes(platformConfig),
     [platformConfig]
@@ -81607,6 +82311,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               initialAssessment: existingAssessment,
               instructorLabel,
               trainingReportTerminology,
+              trainingReportTemplate,
               onBack: () => {
                 setEventForPt051(null);
                 openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet");
@@ -82940,7 +83645,8 @@ Do you want to replace the existing entry?`,
         assignment: airCombatTrainingReportDraft.assignment,
         item: airCombatTrainingReportDraft.item,
         sourceEvent: airCombatTrainingReportDraft.sourceEvent,
-        reportName: "PT-051",
+        reportName: trainingReportTemplate.displayName,
+        trainingReportTemplate,
         currentUserName,
         locationCode: school,
         unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode,

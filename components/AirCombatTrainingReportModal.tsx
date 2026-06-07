@@ -1,5 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { AirCombatTrainingAssignment, AirCombatTrainingReport, Instructor, ScheduleEvent, SyllabusItemDetail } from '../types';
+import {
+  DEFAULT_TRAINING_REPORT_TEMPLATE,
+  normaliseTrainingReportTemplate,
+  type TrainingReportTemplate,
+} from '../utils/trainingReportTerminology';
 
 interface AirCombatTrainingReportModalProps {
   staff: Instructor;
@@ -7,6 +12,7 @@ interface AirCombatTrainingReportModalProps {
   item?: SyllabusItemDetail;
   sourceEvent?: ScheduleEvent;
   reportName?: string;
+  trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
   currentUserName?: string;
   locationCode?: string;
   unitCode?: string;
@@ -27,12 +33,27 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   item,
   sourceEvent,
   reportName = 'PT-051',
+  trainingReportTemplate = null,
   currentUserName = '',
   locationCode = '',
   unitCode = '',
   onCancel,
   onSave,
 }) => {
+  const reportTemplate = useMemo(
+    () => normaliseTrainingReportTemplate(trainingReportTemplate || { displayName: reportName }),
+    [trainingReportTemplate, reportName],
+  );
+  const overviewFields = reportTemplate.modules.overview.fields;
+  const overallFields = reportTemplate.modules.overallAssessment.fields;
+  const commentFields = reportTemplate.modules.comments.fields;
+  const gradeLabelMap = useMemo(() => (
+    new Map(reportTemplate.grades.options.map((option) => [option.value, option.label]))
+  ), [reportTemplate.grades.options]);
+  const formatGradeOption = (value: number) => {
+    const label = gradeLabelMap.get(value) || `Grade ${value}`;
+    return reportTemplate.grades.showNumbers ? `${value} - ${label}` : label;
+  };
   const eventCode = item?.code || sourceEvent?.flightNumber || '';
   const eventDescription = item?.eventDescription || sourceEvent?.notes || item?.module || '';
   const eventType = item?.type || sourceEvent?.type || '';
@@ -65,7 +86,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
       <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl">
         <div className="flex items-start justify-between border-b border-gray-700 px-5 py-4">
           <div>
-            <h3 className="text-xl font-bold text-white">{reportName} Training Report</h3>
+            <h3 className="text-xl font-bold text-white">{reportTemplate.displayName} {reportTemplate.genericName}</h3>
             <p className="mt-1 text-sm text-gray-400">{staff.rank} {staff.name} - {staff.unit || unitCode || 'Air Combat'}</p>
           </div>
           <button type="button" onClick={onCancel} className="text-2xl text-gray-400 hover:text-white">x</button>
@@ -73,26 +94,26 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
 
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {detailCell('Event', eventCode)}
-            {detailCell('Training', assignment?.code || item?.phase || '-')}
-            {detailCell('Type', eventType)}
-            {detailCell('Timing', `${formatDecimalTime(defaultStart)} / ${defaultDuration}h`)}
+            {detailCell(overviewFields.event, eventCode)}
+            {detailCell(overviewFields.training, assignment?.code || item?.phase || '-')}
+            {detailCell(overviewFields.type, eventType)}
+            {detailCell(overviewFields.timing, `${formatDecimalTime(defaultStart)} / ${defaultDuration}h`)}
           </div>
 
           <div className="rounded-lg border border-gray-700 bg-gray-950/55 p-4">
-            <div className="mb-3 text-[10px] font-bold uppercase tracking-wide text-gray-400">Event Details</div>
+            <div className="mb-3 text-[10px] font-bold uppercase tracking-wide text-gray-400">{reportTemplate.modules.overview.title}</div>
             <div className="text-lg font-bold text-white">{eventCode}</div>
             <div className="mt-1 text-sm text-gray-300">{eventDescription || 'No event description recorded.'}</div>
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
-              {detailCell('Resource', sourceEvent?.resourceId || '-')}
-              {detailCell('Callsign', sourceEvent?.callsign || staff.callsign || '-')}
-              {detailCell('Unit', unitCode || staff.unit || '-')}
+              {detailCell(overviewFields.resource, sourceEvent?.resourceId || '-')}
+              {detailCell(overviewFields.callsign, sourceEvent?.callsign || staff.callsign || '-')}
+              {detailCell(overviewFields.unit, unitCode || staff.unit || '-')}
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">Date</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">{overviewFields.date}</label>
               <input
                 type="date"
                 value={date}
@@ -101,7 +122,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">Report Instructor</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">{overviewFields.assessor}</label>
               <input
                 value={instructorName}
                 onChange={(event) => setInstructorName(event.target.value)}
@@ -109,31 +130,29 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">Overall Grade</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">{overallFields.overallGrade}</label>
               <select value={overallGrade} onChange={(event) => setOverallGrade(event.target.value)} className="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none">
                 <option value="">No Grade</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
+                {reportTemplate.grades.options.map((option) => (
+                  <option key={option.value} value={String(option.value)}>{formatGradeOption(option.value)}</option>
+                ))}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">Overall Result</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">{overallFields.overallResult}</label>
               <select value={overallResult} onChange={(event) => setOverallResult(event.target.value as '' | 'P' | 'F')} className="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none">
                 <option value="">Not Set</option>
-                <option value="P">Pass</option>
-                <option value="F">Fail</option>
+                <option value="P">{reportTemplate.overallResults.passLabel}</option>
+                <option value="F">{reportTemplate.overallResults.failLabel}</option>
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">DCO Result</label>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">{overallFields.result}</label>
               <select value={dcoResult} onChange={(event) => setDcoResult(event.target.value as '' | 'DCO' | 'DPCO' | 'DNCO')} className="w-full rounded border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none">
                 <option value="">Not Set</option>
-                <option value="DCO">DCO</option>
-                <option value="DPCO">DPCO</option>
-                <option value="DNCO">DNCO</option>
+                {reportTemplate.completionResults.map((option) => (
+                  <option key={option.code} value={option.code}>{option.label}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -143,7 +162,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">Notes</label>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400">{commentFields.notes}</label>
             <textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
@@ -171,7 +190,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 const now = new Date().toISOString();
                 await onSave({
                   id: reportId,
-                  reportName,
+                  reportName: reportTemplate.displayName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
                   staffIdNumber: staff.idNumber,
                   staffName: staff.name,
                   locationCode,

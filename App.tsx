@@ -48,7 +48,7 @@ import {
     comparePeopleByConfiguredRank,
     getPersonnelDisplaySettings,
 } from './utils/personnelDisplaySettings';
-import { getTrainingReportTerminology } from './utils/trainingReportTerminology';
+import { getTrainingReportTemplate, getTrainingReportTerminology } from './utils/trainingReportTerminology';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
 import {
@@ -14417,6 +14417,10 @@ const App: React.FC = () => {
         () => getTrainingReportTerminology(platformConfig),
         [platformConfig]
     );
+    const trainingReportTemplate = useMemo(
+        () => getTrainingReportTemplate(platformConfig),
+        [platformConfig]
+    );
     const insertEventTypes = useMemo(
         () => getInsertEventTypes(platformConfig),
         [platformConfig]
@@ -26313,6 +26317,7 @@ appliedUpdates.forEach(update => {
                         initialAssessment={existingAssessment}
                         instructorLabel={instructorLabel}
                         trainingReportTerminology={trainingReportTerminology}
+                        trainingReportTemplate={trainingReportTemplate}
                         onBack={() => {
                             setEventForPt051(null);
                             openTraineeProfileTab(selectedTraineeForHateSheet, 'hatesheet');
@@ -27777,7 +27782,8 @@ appliedUpdates.forEach(update => {
                 assignment={airCombatTrainingReportDraft.assignment}
                 item={airCombatTrainingReportDraft.item}
                 sourceEvent={airCombatTrainingReportDraft.sourceEvent}
-                reportName="PT-051"
+                reportName={trainingReportTemplate.displayName}
+                trainingReportTemplate={trainingReportTemplate}
                 currentUserName={currentUserName}
                 locationCode={school}
                 unitCode={airCombatTrainingReportDraft.staff.unit || activeUnitCode}

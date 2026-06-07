@@ -413,8 +413,9 @@ export interface Score {
   }[];
 }
 
-export type Pt051Grade = 'MIN' | 'DEMO' | 0 | 1 | 2 | 3 | 4 | 5;
-export type Pt051OverallGrade = 'No Grade' | 0 | 1 | 2 | 3 | 4 | 5;
+export type Pt051NumericGrade = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type Pt051Grade = 'MIN' | 'DEMO' | Pt051NumericGrade;
+export type Pt051OverallGrade = 'No Grade' | Pt051NumericGrade;
 
 export interface Pt051Assessment {
   id: string;

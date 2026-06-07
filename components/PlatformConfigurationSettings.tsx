@@ -23,8 +23,13 @@ import {
 } from '../utils/personnelDisplaySettings';
 import {
   TRAINING_REPORT_NAME_MAX_LENGTH,
+  TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH,
+  TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+  TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH,
   normaliseTrainingReportTerminology,
+  normaliseTrainingReportTemplate,
   type TrainingReportTerminology,
+  type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConfigurationSettings';
@@ -1162,6 +1167,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null,
   );
+  const trainingReportTemplate = normaliseTrainingReportTemplate(
+    primaryOrganisationSettings.trainingReportTemplate || null,
+    primaryOrganisationSettings.trainingReportTerminology || null,
+  );
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes || null,
   );
@@ -1273,6 +1282,107 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...changes,
       }),
     }));
+  };
+
+  const updateTrainingReportTemplate = (
+    updater: Partial<TrainingReportTemplate> | ((template: TrainingReportTemplate) => Partial<TrainingReportTemplate> | TrainingReportTemplate),
+  ) => {
+    updatePrimaryOrganisationSettings((settings) => {
+      const currentTemplate = normaliseTrainingReportTemplate(settings.trainingReportTemplate || null, settings.trainingReportTerminology || null);
+      const nextPartial = typeof updater === 'function' ? updater(currentTemplate) : updater;
+      const nextTemplate = normaliseTrainingReportTemplate({
+        ...currentTemplate,
+        ...nextPartial,
+      });
+      return {
+        ...settings,
+        trainingReportTemplate: nextTemplate,
+        trainingReportTerminology: normaliseTrainingReportTerminology({ name: nextTemplate.displayName }),
+      };
+    });
+  };
+
+  const updateTrainingReportModule = (
+    moduleKey: keyof TrainingReportTemplate['modules'],
+    changes: Record<string, any>,
+  ) => {
+    updateTrainingReportTemplate((template) => ({
+      modules: {
+        ...template.modules,
+        [moduleKey]: {
+          ...template.modules[moduleKey],
+          ...changes,
+        },
+      },
+    } as Partial<TrainingReportTemplate>));
+  };
+
+  const updateTrainingReportModuleFields = (
+    moduleKey: 'overview' | 'overallAssessment' | 'comments',
+    fieldKey: string,
+    value: string,
+  ) => {
+    updateTrainingReportTemplate((template) => ({
+      modules: {
+        ...template.modules,
+        [moduleKey]: {
+          ...template.modules[moduleKey],
+          fields: {
+            ...template.modules[moduleKey].fields,
+            [fieldKey]: value,
+          },
+        },
+      },
+    } as Partial<TrainingReportTemplate>));
+  };
+
+  const updateTrainingReportGrade = (gradeValue: number, changes: Partial<{ label: string; requiresRepeat: boolean }>) => {
+    updateTrainingReportTemplate((template) => {
+      const nextOptions = template.grades.options.map((option) => (
+        option.value === gradeValue ? { ...option, ...changes } : option
+      ));
+      const gradesRequiringRepeat = nextOptions.filter((option) => option.requiresRepeat).map((option) => option.value);
+      return {
+        grades: {
+          ...template.grades,
+          options: nextOptions,
+        },
+        repeatRules: {
+          ...template.repeatRules,
+          gradesRequiringRepeat,
+        },
+      };
+    });
+  };
+
+  const updateTrainingReportCompletionResult = (code: 'DCO' | 'DPCO' | 'DNCO', label: string) => {
+    updateTrainingReportTemplate((template) => ({
+      completionResults: template.completionResults.map((option) => (
+        option.code === code ? { ...option, label } : option
+      )),
+    }));
+  };
+
+  const toggleTrainingReportRuleGrade = (
+    ruleKey: 'consecutive' | 'rollingWindow',
+    gradeValue: number,
+    checked: boolean,
+  ) => {
+    updateTrainingReportTemplate((template) => {
+      const current = template.repeatRules[ruleKey].grades || [];
+      const nextGrades = checked
+        ? Array.from(new Set([...current, gradeValue])).sort((a, b) => a - b)
+        : current.filter((value) => value !== gradeValue);
+      return {
+        repeatRules: {
+          ...template.repeatRules,
+          [ruleKey]: {
+            ...template.repeatRules[ruleKey],
+            grades: nextGrades,
+          },
+        },
+      };
+    });
   };
 
   const updateInsertEventTypes = (nextEventTypes: InsertEventTypeConfig[]) => {
@@ -3265,6 +3375,331 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
           )}
+        </div>
+      </section>
+
+      <section id="platform-training-report-template" className={getSectionClass('platform-training-report-template')}>
+        <SectionHeader
+          title="Training Reports"
+          subtitle="Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models."
+        />
+        <div className="space-y-5 p-4">
+          <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3">
+            <h4 className="text-sm font-bold text-sky-100">Organisation Training Report Template</h4>
+            <p className="mt-1 text-sm text-sky-100/70">
+              These settings rename and configure the existing report layout. Core dimensions and descriptor phrases still come from the Scoring Matrix.
+            </p>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-3">
+            <Field
+              label="Generic Form Name"
+              value={trainingReportTemplate.genericName}
+              disabled={!canEdit}
+              maxLength={TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH}
+              onChange={(value) => updateTrainingReportTemplate({ genericName: value })}
+              info="Generic form name used across models. Example: Training Report."
+            />
+            <Field
+              label="Organisation Form Name"
+              value={trainingReportTemplate.displayName}
+              disabled={!canEdit}
+              maxLength={TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH}
+              onChange={(value) => updateTrainingReportTemplate({ displayName: value })}
+              info="Customer-specific name. Example: PT-051."
+            />
+            <SelectField
+              label="Grade Scale"
+              value={String(trainingReportTemplate.grades.scaleMax)}
+              disabled={!canEdit}
+              options={['5', '10']}
+              onChange={(value) => updateTrainingReportTemplate((template) => ({
+                grades: {
+                  ...template.grades,
+                  scaleMax: Number(value) === 10 ? 10 : 5,
+                },
+              }))}
+              info="Controls the selectable overall and element grade range."
+            />
+            <ToggleField
+              label="Show Grade Numbers"
+              checked={trainingReportTemplate.grades.showNumbers}
+              disabled={!canEdit}
+              onChange={(checked) => updateTrainingReportTemplate((template) => ({
+                grades: {
+                  ...template.grades,
+                  showNumbers: checked,
+                },
+              }))}
+            />
+            <ToggleField
+              label="Include DEMO Grade"
+              checked={trainingReportTemplate.grades.includeDemo}
+              disabled={!canEdit}
+              onChange={(checked) => updateTrainingReportTemplate((template) => ({
+                grades: {
+                  ...template.grades,
+                  includeDemo: checked,
+                },
+              }))}
+            />
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Modules & Field Labels</h4>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Rename only</span>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
+                <Field
+                  label="Overview Module"
+                  value={trainingReportTemplate.modules.overview.title}
+                  disabled={!canEdit}
+                  maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                  onChange={(value) => updateTrainingReportModule('overview', { title: value })}
+                />
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {Object.entries(trainingReportTemplate.modules.overview.fields).map(([key, value]) => (
+                    <Field
+                      key={key}
+                      label={key.replace(/([A-Z])/g, ' $1')}
+                      value={value}
+                      disabled={!canEdit}
+                      maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                      onChange={(nextValue) => updateTrainingReportModuleFields('overview', key, nextValue)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
+                <Field
+                  label="Overall Module"
+                  value={trainingReportTemplate.modules.overallAssessment.title}
+                  disabled={!canEdit}
+                  maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                  onChange={(value) => updateTrainingReportModule('overallAssessment', { title: value })}
+                />
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {Object.entries(trainingReportTemplate.modules.overallAssessment.fields).map(([key, value]) => (
+                    <Field
+                      key={key}
+                      label={key.replace(/([A-Z])/g, ' $1')}
+                      value={value}
+                      disabled={!canEdit}
+                      maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                      onChange={(nextValue) => updateTrainingReportModuleFields('overallAssessment', key, nextValue)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
+                <Field
+                  label="Comments Module"
+                  value={trainingReportTemplate.modules.comments.title}
+                  disabled={!canEdit}
+                  maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                  onChange={(value) => updateTrainingReportModule('comments', { title: value })}
+                />
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {Object.entries(trainingReportTemplate.modules.comments.fields).map(([key, value]) => (
+                    <Field
+                      key={key}
+                      label={key.replace(/([A-Z])/g, ' $1')}
+                      value={value}
+                      disabled={!canEdit}
+                      maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                      onChange={(nextValue) => updateTrainingReportModuleFields('comments', key, nextValue)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
+                <Field
+                  label="Assessment Matrix Module"
+                  value={trainingReportTemplate.modules.assessmentMatrix.title}
+                  disabled={!canEdit}
+                  maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                  onChange={(value) => updateTrainingReportModule('assessmentMatrix', { title: value })}
+                  info="Assessment categories and descriptors remain controlled by the Scoring Matrix."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
+            <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-200">Results & Grades</h4>
+            <div className="grid gap-3 lg:grid-cols-3">
+              {trainingReportTemplate.completionResults.map((option) => (
+                <Field
+                  key={option.code}
+                  label={`${option.code} Text`}
+                  value={option.label}
+                  disabled={!canEdit}
+                  maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                  onChange={(value) => updateTrainingReportCompletionResult(option.code, value)}
+                />
+              ))}
+              <Field
+                label="Pass Text"
+                value={trainingReportTemplate.overallResults.passLabel}
+                disabled={!canEdit}
+                maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                onChange={(value) => updateTrainingReportTemplate((template) => ({
+                  overallResults: { ...template.overallResults, passLabel: value },
+                }))}
+              />
+              <Field
+                label="Fail Text"
+                value={trainingReportTemplate.overallResults.failLabel}
+                disabled={!canEdit}
+                maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                onChange={(value) => updateTrainingReportTemplate((template) => ({
+                  overallResults: { ...template.overallResults, failLabel: value },
+                }))}
+              />
+              <Field
+                label="Repeat Rule Text"
+                value={trainingReportTemplate.overallResults.doubleRepeatLabel}
+                disabled={!canEdit}
+                maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                onChange={(value) => updateTrainingReportTemplate((template) => ({
+                  overallResults: { ...template.overallResults, doubleRepeatLabel: value },
+                }))}
+              />
+            </div>
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="text-[10px] uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="px-2 py-2">Grade</th>
+                    <th className="px-2 py-2">Display Text</th>
+                    <th className="px-2 py-2">Repeat Event</th>
+                    <th className="px-2 py-2">Two In A Row</th>
+                    <th className="px-2 py-2">Two In Three</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trainingReportTemplate.grades.options.map((option) => (
+                    <tr key={option.value} className="border-t border-gray-800">
+                      <td className="px-2 py-2 font-bold text-white">{option.value}</td>
+                      <td className="px-2 py-2">
+                        <input
+                          className={fieldClass}
+                          value={option.label}
+                          disabled={!canEdit}
+                          maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
+                          onChange={(event) => updateTrainingReportGrade(option.value, { label: event.target.value })}
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
+                          checked={option.requiresRepeat}
+                          disabled={!canEdit}
+                          onChange={(event) => updateTrainingReportGrade(option.value, { requiresRepeat: event.target.checked })}
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
+                          checked={trainingReportTemplate.repeatRules.consecutive.grades.includes(option.value)}
+                          disabled={!canEdit}
+                          onChange={(event) => toggleTrainingReportRuleGrade('consecutive', option.value, event.target.checked)}
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
+                          checked={trainingReportTemplate.repeatRules.rollingWindow.grades.includes(option.value)}
+                          disabled={!canEdit}
+                          onChange={(event) => toggleTrainingReportRuleGrade('rollingWindow', option.value, event.target.checked)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
+              <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Consecutive Repeat Rule</h4>
+              <div className="mt-3 grid gap-3">
+                <ToggleField
+                  label="Enable Two In A Row Rule"
+                  checked={trainingReportTemplate.repeatRules.consecutive.enabled}
+                  disabled={!canEdit}
+                  onChange={(checked) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      consecutive: { ...template.repeatRules.consecutive, enabled: checked },
+                    },
+                  }))}
+                />
+                <NumberField
+                  label="Count"
+                  value={trainingReportTemplate.repeatRules.consecutive.count}
+                  disabled={!canEdit}
+                  onChange={(value) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      consecutive: { ...template.repeatRules.consecutive, count: value },
+                    },
+                  }))}
+                  info="Default is 2: two selected grades in a row requires repeat."
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
+              <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Rolling Window Repeat Rule</h4>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <ToggleField
+                  label="Enable Two In Three Rule"
+                  checked={trainingReportTemplate.repeatRules.rollingWindow.enabled}
+                  disabled={!canEdit}
+                  onChange={(checked) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      rollingWindow: { ...template.repeatRules.rollingWindow, enabled: checked },
+                    },
+                  }))}
+                />
+                <NumberField
+                  label="Count"
+                  value={trainingReportTemplate.repeatRules.rollingWindow.count}
+                  disabled={!canEdit}
+                  onChange={(value) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      rollingWindow: { ...template.repeatRules.rollingWindow, count: value },
+                    },
+                  }))}
+                />
+                <NumberField
+                  label="Window"
+                  value={trainingReportTemplate.repeatRules.rollingWindow.window}
+                  disabled={!canEdit}
+                  onChange={(value) => updateTrainingReportTemplate((template) => ({
+                    repeatRules: {
+                      ...template.repeatRules,
+                      rollingWindow: { ...template.repeatRules.rollingWindow, window: value },
+                    },
+                  }))}
+                  info="Default is 3: selected grade twice in three events requires repeat."
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

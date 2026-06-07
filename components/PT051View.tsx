@@ -6,7 +6,9 @@ import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
 import {
     DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+    normaliseTrainingReportTemplate,
     type TrainingReportTerminology,
+    type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
 
 interface PT051ViewProps {
@@ -28,6 +30,7 @@ interface PT051ViewProps {
     canEditPt051?: boolean;
     instructorLabel?: string;
     trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
+    trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
 }
 
 const PT051_STRUCTURE = [
@@ -43,8 +46,6 @@ const PT051_STRUCTURE = [
 ];
 
 const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
-const GRADES: (Pt051Grade | 'MIN' | 'DEMO')[] = ['DEMO', 0, 1, 2, 3, 4, 5];
-const OVERALL_GRADES: (Pt051OverallGrade)[] = ['No Grade', 0, 1, 2, 3, 4, 5];
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST'] as const;
 
 const InfoField: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -192,8 +193,32 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
     );
 };
 
-const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
-    const trainingReportName = (trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name;
+const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null }) => {
+    const reportTemplate = useMemo(
+        () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
+        [trainingReportTemplate, trainingReportTerminology],
+    );
+    const trainingReportName = reportTemplate.displayName;
+    const overviewFields = reportTemplate.modules.overview.fields;
+    const overallFields = reportTemplate.modules.overallAssessment.fields;
+    const commentFieldsConfig = reportTemplate.modules.comments.fields;
+    const gradeOptions = reportTemplate.grades.options;
+    const assessmentGradeOptions = useMemo<(Pt051Grade | 'DEMO')[]>(() => [
+        ...(reportTemplate.grades.includeDemo ? ['DEMO' as const] : []),
+        ...gradeOptions.map((option) => option.value as Pt051Grade),
+    ], [gradeOptions, reportTemplate.grades.includeDemo]);
+    const overallGradeOptions = useMemo<Pt051OverallGrade[]>(() => [
+        'No Grade',
+        ...gradeOptions.map((option) => option.value as Pt051OverallGrade),
+    ], [gradeOptions]);
+    const gradeLabelMap = useMemo(() => (
+        new Map(gradeOptions.map((option) => [option.value, option.label]))
+    ), [gradeOptions]);
+    const formatGradeOption = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
+        if (grade === 'No Grade' || grade === 'DEMO' || grade === 'MIN') return String(grade);
+        const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
+        return reportTemplate.grades.showNumbers ? `${grade} - ${label}` : label;
+    };
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
     const { checkAndWarn } = useSystemFreeze();
     const [isDirty, setIsDirty] = useState(false);
@@ -282,7 +307,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     );
     const [dcoResult, setDcoResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>(initialAssessment?.dcoResult || '');
     
-    const previousPerformance = useMemo(() => {
+    const recentPerformanceHistory = useMemo(() => {
         const history: { name: string; score: number | string; date: string; timestamp: number }[] = [];
         const isFlightOrFtd = (eventName: string) => {
             const detail = syllabusDetails.find(d => d.id === eventName || d.code === eventName);
@@ -321,31 +346,52 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         });
         history.sort((a, b) => b.timestamp - a.timestamp);
         const currentEventTime = new Date(event.date).getTime();
-        const past = history.filter(h => h.timestamp < currentEventTime);
-        return past.length > 0 ? past[0] : null;
+        return history.filter(h => h.timestamp < currentEventTime);
     }, [lmpScores, pt051Assessments, trainee.fullName, syllabusDetails, event.date, event.id]);
 
+    const previousPerformance = recentPerformanceHistory.length > 0 ? recentPerformanceHistory[0] : null;
+
+    const shouldRepeatForGrade = (grade: Pt051OverallGrade | null) => {
+        if (typeof grade !== 'number') return false;
+        if (reportTemplate.repeatRules.gradesRequiringRepeat.includes(grade)) return true;
+        if (reportTemplate.repeatRules.consecutive.enabled && reportTemplate.repeatRules.consecutive.grades.includes(grade)) {
+            const previousScores = recentPerformanceHistory
+                .slice(0, Math.max(0, reportTemplate.repeatRules.consecutive.count - 1))
+                .map((entry) => Number(entry.score));
+            if (previousScores.length >= reportTemplate.repeatRules.consecutive.count - 1 && previousScores.every((score) => reportTemplate.repeatRules.consecutive.grades.includes(score))) {
+                return true;
+            }
+        }
+        if (reportTemplate.repeatRules.rollingWindow.enabled && reportTemplate.repeatRules.rollingWindow.grades.includes(grade)) {
+            const previousScores = recentPerformanceHistory
+                .slice(0, Math.max(0, reportTemplate.repeatRules.rollingWindow.window - 1))
+                .map((entry) => Number(entry.score));
+            const matchingCount = previousScores.filter((score) => reportTemplate.repeatRules.rollingWindow.grades.includes(score)).length + 1;
+            if (matchingCount >= reportTemplate.repeatRules.rollingWindow.count) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     useEffect(() => {
-        if (overallGrade === 1 && previousPerformance && Number(previousPerformance.score) === 1) {
+        if (shouldRepeatForGrade(overallGrade)) {
             setShowDoubleMarginalWarning(true);
-            // Automatically set overall result to FAIL (F) on double marginal
             setOverallResult('F');
         } else {
             setShowDoubleMarginalWarning(false);
-            // Don't automatically reset the result when double marginal is cleared
-            // Let the user decide or keep the current automatic logic
         }
-    }, [overallGrade, previousPerformance]);
+    }, [overallGrade, recentPerformanceHistory, reportTemplate]);
 
     useEffect(() => {
         if (overallGrade === 'No Grade' || overallGrade === null) {
             setOverallResult(null);
-        } else if (overallGrade === 0) {
+        } else if (shouldRepeatForGrade(overallGrade)) {
             setOverallResult('F');
-        } else if (overallGrade >= 1 && overallGrade <= 5) {
+        } else if (typeof overallGrade === 'number') {
             setOverallResult('P');
         }
-    }, [overallGrade]);
+    }, [overallGrade, recentPerformanceHistory, reportTemplate]);
 
     const handleGradeChange = (element: string, grade: Pt051Grade | 'MIN' | 'DEMO') => {
         setAssessment(prev => ({
@@ -695,11 +741,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <dl className="lg:col-span-1 space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg">
                         <div>
-                            <dt className="text-sm font-medium text-gray-400">Event Number</dt>
+                            <dt className="text-sm font-medium text-gray-400">{overviewFields.event}</dt>
                             <dd className="mt-1 text-sm text-white font-semibold">{event.flightNumber || 'N/A'}</dd>
                         </div>
                         <div>
-                            <dt className="text-sm font-medium text-gray-400">Event Description</dt>
+                            <dt className="text-sm font-medium text-gray-400">{overviewFields.type}</dt>
                             <dd className="mt-1 text-sm text-white">
                                 {(() => {
                                     const eventNum = (event.flightNumber || '').trim();
@@ -739,7 +785,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             <dd className="mt-1 text-sm text-white font-semibold">{trainee.course}</dd>
                         </div>
                         <div>
-                            <dt className="text-sm font-medium text-gray-400">Date</dt>
+                            <dt className="text-sm font-medium text-gray-400">{overviewFields.date}</dt>
                             <dd className="mt-1">
                                 <input
                                     type="date"
@@ -754,7 +800,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             </dd>
                         </div>
                         <div>
-                            <dt className="text-sm font-medium text-gray-400">Time</dt>
+                            <dt className="text-sm font-medium text-gray-400">{overviewFields.timing}</dt>
                             <dd className="mt-1 flex items-center gap-1">
                                 <input
                                     type="number"
@@ -821,7 +867,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             </dd>
                         </div>
                          <div className="col-span-2">
-                             <dt className="text-sm font-medium text-gray-400">Instructor</dt>
+                             <dt className="text-sm font-medium text-gray-400">{overviewFields.assessor}</dt>
                              <dd className="mt-1">
                                  {/* Dropdown for unit instructors only */}
                                  <select
@@ -842,22 +888,22 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     
                     <div className="lg:col-span-2 space-y-4">
                         <fieldset className="p-4 border border-gray-600 rounded-lg">
-                            <legend className="px-2 text-sm font-semibold text-gray-300">Overall Assessment</legend>
+                            <legend className="px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.overallAssessment.title}</legend>
                             {/* DCO/DPCO/DNCO Radio Buttons - Always available for PT-051 assessments */}
                             <div className="mt-2 mb-4">
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Result</label>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">{overallFields.result}</label>
                                 <div className="flex flex-col space-y-2">
-                                    {['DCO', 'DPCO', 'DNCO'].map((value) => (
-                                        <label key={value} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
+                                    {reportTemplate.completionResults.map((option) => (
+                                        <label key={option.code} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
                                             <input
                                                 type="radio"
                                                 name="dco-result"
-                                                value={value}
-                                                checked={dcoResult === value}
+                                                value={option.code}
+                                                checked={dcoResult === option.code}
                                                 onChange={(e) => setDcoResult(e.target.value as any)}
                                                 className="h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
                                             />
-                                            <span className="text-white font-medium">{value}</span>
+                                            <span className="text-white font-medium">{option.label}</span>
                                         </label>
                                     ))}
                                     <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded">
@@ -875,18 +921,18 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             </div>
                              <div className="mt-2 space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-400">Overall Grade</label>
+                                    <label className="block text-sm font-medium text-gray-400">{overallFields.overallGrade}</label>
                                     <div className="mt-1 flex justify-around p-2 bg-gray-700/50 rounded">
-                                        {OVERALL_GRADES.map(grade => (
+                                        {overallGradeOptions.map(grade => (
                                             <label key={grade} className="flex flex-col items-center space-y-1 text-xs text-gray-300 cursor-pointer">
-                                                <span>{grade}</span>
+                                                <span>{formatGradeOption(grade)}</span>
                                                 <input type="radio" name="overall-grade" value={grade} checked={overallGrade === grade} onChange={() => setOverallGrade(grade)} className={`h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600`} />
                                             </label>
                                         ))}
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-2">Overall Result</label>
+                                    <label className="block text-sm font-medium text-gray-400 mb-2">{overallFields.overallResult}</label>
                                     <div className="mt-1 flex space-x-4">
                                         <label className={`cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${
                                             overallResult === 'P'
@@ -894,7 +940,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                 : 'bg-green-800/50 text-green-200 hover:bg-green-700/50'
                                         } ${overallResult === null ? '!bg-gray-700 !text-gray-500 hover:!bg-gray-600' : ''}`}>
                                             <input type="radio" name="overall-result" value="P" checked={overallResult === 'P'} onChange={() => setOverallResult('P')} className="sr-only" />
-                                            <span className="text-2xl font-bold">PASS</span>
+                                            <span className="text-2xl font-bold">{reportTemplate.overallResults.passLabel}</span>
                                         </label>
                                         <label className={`cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${
                                             overallResult === 'F' || showDoubleMarginalWarning
@@ -902,14 +948,14 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                 : 'bg-red-800/50 text-red-200 hover:bg-red-700/50'
                                         } ${overallResult === null && !showDoubleMarginalWarning ? '!bg-gray-700 !text-gray-500 hover:!bg-gray-600' : ''}`}>
                                             <input type="radio" name="overall-result" value="F" checked={overallResult === 'F'} onChange={() => setOverallResult('F')} className="sr-only" />
-                                            <span className="text-2xl font-bold">{showDoubleMarginalWarning ? 'Double Marg' : 'FAIL'}</span>
+                                            <span className="text-2xl font-bold">{showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel}</span>
                                         </label>
                                     </div>
                                 </div>
                             </div>
                             {/* Ground School Assessment */}
                             <div className="mt-4 pt-4 border-t border-gray-600">
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Ground School Assessment</label>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">{overallFields.groundSchoolAssessment}</label>
                                 <div className="flex items-center space-x-3">
                                     <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
@@ -925,7 +971,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                         <span className="text-xs font-medium text-gray-300">Assessment</span>
                                     </label>
                                     <div className="flex items-center space-x-1">
-                                        <label className="text-xs font-medium text-gray-400">Result:</label>
+                                        <label className="text-xs font-medium text-gray-400">{overallFields.result}:</label>
                                         <div className="relative">
                                             <input
                                                 type="number"
@@ -955,7 +1001,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         </fieldset>
                         {showDoubleMarginalWarning && (
                             <div className="p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-300">
-                                <strong>Warning:</strong> This is the second consecutive marginal (1) grade. A review may be required.
+                                <strong>Warning:</strong> This grade matches the configured repeat rule for this training report. A review may be required.
                             </div>
                         )}
                     </div>
@@ -965,7 +1011,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 <div className="space-y-6 mb-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="relative">
-                            <label className="block text-sm font-medium text-gray-400">{instructorLabel}</label>
+                            <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.assessor || instructorLabel}</label>
                             <div className="mt-1">
                                 {/* Dropdown for unit instructors only */}
                                 <select
@@ -983,7 +1029,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             </div>
                         </div>
                         <div className="relative">
-                            <label className="block text-sm font-medium text-gray-400">Weather</label>
+                            <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.weather}</label>
                             <textarea
                                 value={commentFields['Weather']}
                                 onChange={(e) => handleCommentFieldChange('Weather', e.target.value)}
@@ -1003,7 +1049,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             />
                         </div>
                         <div className="relative">
-                            <label className="block text-sm font-medium text-gray-400">NEST</label>
+                            <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.nest}</label>
                              <input
                                 type="text"
                                 value={commentFields['NEST']}
@@ -1016,7 +1062,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
                     <div className="space-y-6">
                         <div key={'Profile'} className="relative">
-                            <label className="block text-sm font-medium text-gray-400">Profile</label>
+                            <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.profile}</label>
                             <textarea
                                 value={commentFields['Profile']}
                                 onChange={(e) => handleCommentFieldChange('Profile', e.target.value)}
@@ -1036,7 +1082,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             />
                         </div>
                          <div key={'Overall'} className="relative">
-                            <label className="block text-sm font-medium text-gray-400">Overall</label>
+                            <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.overall}</label>
                             <textarea
                                 value={commentFields['Overall']}
                                 onChange={(e) => handleCommentFieldChange('Overall', e.target.value)}
@@ -1069,7 +1115,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                 <thead className="sr-only">
                                     <tr>
                                         <th>Element</th>
-                                        {GRADES.map(g => <th key={String(g)}>{g}</th>)}
+                                        {assessmentGradeOptions.map(g => <th key={String(g)}>{formatGradeOption(g)}</th>)}
                                         <th>Comments</th>
                                     </tr>
                                 </thead>
@@ -1079,12 +1125,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                         return (
                                             <tr key={element} className="border-t border-gray-700">
                                                 <td className="py-3 pr-2 font-semibold text-white w-48">{element}</td>
-                                                {GRADES.map(grade => {
-                                                    const getGradeLabelText = (g: Pt051Grade | 'MIN' | 'DEMO') => {
-                                                        if (g === 'DEMO') return 'Demo';
-                                                        return String(g);
-                                                    };
-
+                                                {assessmentGradeOptions.map(grade => {
                                                     return (
                                                         <td key={String(grade)} className={`py-3 text-center w-12 ${gradeHeaderColors[String(grade)] || ''}`}>
                                                             <label className={`flex flex-col items-center justify-center ${isGroundEvent ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
@@ -1097,7 +1138,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                                     disabled={isGroundEvent}
                                                                     className={`h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                 />
-                                                                <span className="text-xs text-gray-500 mt-1">{getGradeLabelText(grade)}</span>
+                                                                <span className="text-xs text-gray-500 mt-1">{formatGradeOption(grade)}</span>
                                                             </label>
                                                         </td>
                                                     );
