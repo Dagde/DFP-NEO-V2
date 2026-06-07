@@ -63,6 +63,7 @@ export interface TrainingReportTemplate {
     doubleRepeatLabel: string;
   };
   grades: {
+    scaleMin: number;
     scaleMax: number;
     includeDemo: boolean;
     showNumbers: boolean;
@@ -161,6 +162,7 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
     doubleRepeatLabel: 'Repeated Low-performance',
   },
   grades: {
+    scaleMin: 0,
     scaleMax: 10,
     includeDemo: true,
     showNumbers: true,
@@ -208,22 +210,23 @@ const cleanBoolean = (value: unknown, fallback: boolean): boolean => (
   typeof value === 'boolean' ? value : fallback
 );
 
-const normaliseGradeValues = (values: unknown, scaleMax: number, fallback: number[]): number[] => {
+const normaliseGradeValues = (values: unknown, scaleMin: number, scaleMax: number, fallback: number[]): number[] => {
   const source = Array.isArray(values) ? values : fallback;
   const cleaned = source
-    .map((value) => cleanNumber(value, -1, 0, scaleMax))
-    .filter((value) => value >= 0 && value <= scaleMax);
+    .map((value) => cleanNumber(value, -1, scaleMin, scaleMax))
+    .filter((value) => value >= scaleMin && value <= scaleMax);
   return Array.from(new Set(cleaned)).sort((a, b) => a - b);
 };
 
 const normaliseGradeOptions = (
   input: unknown,
+  scaleMin: number,
   scaleMax: number,
   repeatGrades: number[],
 ): TrainingReportGradeOption[] => {
   const source = Array.isArray(input) ? input : [];
-  return Array.from({ length: scaleMax + 1 }, (_, index) => {
-    const value = index;
+  return Array.from({ length: scaleMax - scaleMin + 1 }, (_, index) => {
+    const value = scaleMin + index;
     const existing = source.find((option) => Number(option?.value) === value);
     return {
       value,
@@ -250,15 +253,19 @@ export const normaliseTrainingReportTemplate = (
 ): TrainingReportTemplate => {
   const source = input && typeof input === 'object' ? input as Record<string, any> : {};
   const legacy = normaliseTrainingReportTerminology(legacyTerminology || null);
-  const scaleMax = cleanNumber(source.grades?.scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, 10, 10);
+  const requestedScaleMax = cleanNumber(source.grades?.scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, 0, 10);
+  const scaleMin = cleanNumber(source.grades?.scaleMin, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMin, 0, Math.max(0, requestedScaleMax - 1));
+  const scaleMax = cleanNumber(requestedScaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, scaleMin + 1, 10);
   const fallbackRepeatGrades = normaliseGradeValues(
     source.repeatRules?.gradesRequiringRepeat,
+    scaleMin,
     scaleMax,
     DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.gradesRequiringRepeat,
   );
-  const gradeOptions = normaliseGradeOptions(source.grades?.options, scaleMax, fallbackRepeatGrades);
+  const gradeOptions = normaliseGradeOptions(source.grades?.options, scaleMin, scaleMax, fallbackRepeatGrades);
   const gradesRequiringRepeat = normaliseGradeValues(
     source.repeatRules?.gradesRequiringRepeat,
+    scaleMin,
     scaleMax,
     gradeOptions.filter((option) => option.requiresRepeat).map((option) => option.value),
   );
@@ -299,6 +306,7 @@ export const normaliseTrainingReportTemplate = (
       doubleRepeatLabel: cleanLabel(source.overallResults?.doubleRepeatLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.doubleRepeatLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
     },
     grades: {
+      scaleMin,
       scaleMax,
       includeDemo: cleanBoolean(source.grades?.includeDemo, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.includeDemo),
       showNumbers: cleanBoolean(source.grades?.showNumbers, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.showNumbers),
@@ -311,12 +319,12 @@ export const normaliseTrainingReportTemplate = (
       gradesRequiringRepeat,
       consecutive: {
         enabled: cleanBoolean(source.repeatRules?.consecutive?.enabled, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.enabled),
-        grades: normaliseGradeValues(source.repeatRules?.consecutive?.grades, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.grades),
+        grades: normaliseGradeValues(source.repeatRules?.consecutive?.grades, scaleMin, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.grades),
         count: cleanNumber(source.repeatRules?.consecutive?.count, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.count, 2, 5),
       },
       rollingWindow: {
         enabled: cleanBoolean(source.repeatRules?.rollingWindow?.enabled, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.enabled),
-        grades: normaliseGradeValues(source.repeatRules?.rollingWindow?.grades, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.grades),
+        grades: normaliseGradeValues(source.repeatRules?.rollingWindow?.grades, scaleMin, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.grades),
         count: cleanNumber(source.repeatRules?.rollingWindow?.count, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.count, 2, 5),
         window: cleanNumber(source.repeatRules?.rollingWindow?.window, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.window, 3, 10),
       },

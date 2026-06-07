@@ -2832,6 +2832,7 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
     doubleRepeatLabel: "Repeated Low-performance"
   },
   grades: {
+    scaleMin: 0,
     scaleMax: 10,
     includeDemo: true,
     showNumbers: true,
@@ -2870,15 +2871,15 @@ const cleanNumber$1 = (value, fallback, min, max) => {
   return Math.min(max, Math.max(min, Math.round(numeric)));
 };
 const cleanBoolean = (value, fallback) => typeof value === "boolean" ? value : fallback;
-const normaliseGradeValues = (values, scaleMax, fallback) => {
+const normaliseGradeValues = (values, scaleMin, scaleMax, fallback) => {
   const source = Array.isArray(values) ? values : fallback;
-  const cleaned = source.map((value) => cleanNumber$1(value, -1, 0, scaleMax)).filter((value) => value >= 0 && value <= scaleMax);
+  const cleaned = source.map((value) => cleanNumber$1(value, -1, scaleMin, scaleMax)).filter((value) => value >= scaleMin && value <= scaleMax);
   return Array.from(new Set(cleaned)).sort((a, b) => a - b);
 };
-const normaliseGradeOptions = (input, scaleMax, repeatGrades) => {
+const normaliseGradeOptions = (input, scaleMin, scaleMax, repeatGrades) => {
   const source = Array.isArray(input) ? input : [];
-  return Array.from({ length: scaleMax + 1 }, (_, index) => {
-    const value = index;
+  return Array.from({ length: scaleMax - scaleMin + 1 }, (_, index) => {
+    const value = scaleMin + index;
     const existing = source.find((option) => Number(option?.value) === value);
     return {
       value,
@@ -2897,15 +2898,19 @@ const mergeFields = (defaults, input) => {
 const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
   const source = input && typeof input === "object" ? input : {};
   const legacy = normaliseTrainingReportTerminology(legacyTerminology || null);
-  const scaleMax = cleanNumber$1(source.grades?.scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, 10, 10);
+  const requestedScaleMax = cleanNumber$1(source.grades?.scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, 0, 10);
+  const scaleMin = cleanNumber$1(source.grades?.scaleMin, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMin, 0, Math.max(0, requestedScaleMax - 1));
+  const scaleMax = cleanNumber$1(requestedScaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, scaleMin + 1, 10);
   const fallbackRepeatGrades = normaliseGradeValues(
     source.repeatRules?.gradesRequiringRepeat,
+    scaleMin,
     scaleMax,
     DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.gradesRequiringRepeat
   );
-  const gradeOptions = normaliseGradeOptions(source.grades?.options, scaleMax, fallbackRepeatGrades);
+  const gradeOptions = normaliseGradeOptions(source.grades?.options, scaleMin, scaleMax, fallbackRepeatGrades);
   const gradesRequiringRepeat = normaliseGradeValues(
     source.repeatRules?.gradesRequiringRepeat,
+    scaleMin,
     scaleMax,
     gradeOptions.filter((option) => option.requiresRepeat).map((option) => option.value)
   );
@@ -2943,6 +2948,7 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
       doubleRepeatLabel: cleanLabel$1(source.overallResults?.doubleRepeatLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.doubleRepeatLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)
     },
     grades: {
+      scaleMin,
       scaleMax,
       includeDemo: cleanBoolean(source.grades?.includeDemo, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.includeDemo),
       showNumbers: cleanBoolean(source.grades?.showNumbers, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.showNumbers),
@@ -2955,12 +2961,12 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
       gradesRequiringRepeat,
       consecutive: {
         enabled: cleanBoolean(source.repeatRules?.consecutive?.enabled, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.enabled),
-        grades: normaliseGradeValues(source.repeatRules?.consecutive?.grades, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.grades),
+        grades: normaliseGradeValues(source.repeatRules?.consecutive?.grades, scaleMin, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.grades),
         count: cleanNumber$1(source.repeatRules?.consecutive?.count, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.consecutive.count, 2, 5)
       },
       rollingWindow: {
         enabled: cleanBoolean(source.repeatRules?.rollingWindow?.enabled, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.enabled),
-        grades: normaliseGradeValues(source.repeatRules?.rollingWindow?.grades, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.grades),
+        grades: normaliseGradeValues(source.repeatRules?.rollingWindow?.grades, scaleMin, scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.grades),
         count: cleanNumber$1(source.repeatRules?.rollingWindow?.count, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.count, 2, 5),
         window: cleanNumber$1(source.repeatRules?.rollingWindow?.window, DEFAULT_TRAINING_REPORT_TEMPLATE.repeatRules.rollingWindow.window, 3, 10)
       }
@@ -37277,7 +37283,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     ...gradeOptions.map((option) => option.value)
   ], [gradeOptions]);
   const gradeLabelMap = reactExports.useMemo(() => new Map(gradeOptions.map((option) => [option.value, option.label])), [gradeOptions]);
-  const isLongGradeScale = reportTemplate.grades.scaleMax > 5;
+  const isLongGradeScale = gradeOptions.length > 6;
   const formatGradeOption = (grade) => {
     if (grade === "No Grade" || grade === "DEMO" || grade === "MIN") return String(grade);
     const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
@@ -49005,6 +49011,14 @@ const PlatformConfigurationSettings = ({
       };
     });
   };
+  const updateTrainingReportGradeScale = (changes) => {
+    updateTrainingReportTemplate((template) => ({
+      grades: {
+        ...template.grades,
+        ...changes
+      }
+    }));
+  };
   const updateTrainingReportCompletionResult = (code, label) => {
     updateTrainingReportTemplate((template) => ({
       completionResults: template.completionResults.map((option) => option.code === code ? { ...option, label } : option)
@@ -50843,17 +50857,49 @@ const PlatformConfigurationSettings = ({
               info: "Customer-specific name. Example: PT-051."
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Field,
-            {
-              label: "Grade Scale",
-              value: "0 to 10",
-              disabled: true,
-              onChange: () => {
-              },
-              info: "Training reports now use a 0 to 10 grade scale. The number still controls ordering even when grade numbers are hidden from display."
-            }
-          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              FieldLabel,
+              {
+                label: "Grade Scale",
+                info: "Set the lowest and highest numeric grades available on training reports. The numbers still control ordering and repeat rules even when grade numbers are hidden from display."
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: fieldClass,
+                  type: "number",
+                  min: 0,
+                  max: Math.max(0, trainingReportTemplate.grades.scaleMax - 1),
+                  step: 1,
+                  value: trainingReportTemplate.grades.scaleMin,
+                  disabled: !canEditTrainingReportTemplate,
+                  onChange: (event) => updateTrainingReportGradeScale({ scaleMin: Number(event.target.value) }),
+                  "aria-label": "Grade scale low end"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: fieldClass,
+                  type: "number",
+                  min: trainingReportTemplate.grades.scaleMin + 1,
+                  max: 10,
+                  step: 1,
+                  value: trainingReportTemplate.grades.scaleMax,
+                  disabled: !canEditTrainingReportTemplate,
+                  onChange: (event) => updateTrainingReportGradeScale({ scaleMax: Number(event.target.value) }),
+                  "aria-label": "Grade scale high end"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex justify-between text-[10px] uppercase tracking-wide text-gray-500", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Low end" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "High end" })
+            ] })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             ToggleField,
             {

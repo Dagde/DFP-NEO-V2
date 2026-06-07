@@ -1389,6 +1389,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
+  const updateTrainingReportGradeScale = (changes: Partial<{ scaleMin: number; scaleMax: number }>) => {
+    updateTrainingReportTemplate((template) => ({
+      grades: {
+        ...template.grades,
+        ...changes,
+      },
+    }));
+  };
+
   const updateTrainingReportCompletionResult = (code: 'DCO' | 'DPCO' | 'DNCO', label: string) => {
     updateTrainingReportTemplate((template) => ({
       completionResults: template.completionResults.map((option) => (
@@ -3470,13 +3479,40 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updateTrainingReportTemplate({ displayName: value })}
               info="Customer-specific name. Example: PT-051."
             />
-            <Field
-              label="Grade Scale"
-              value="0 to 10"
-              disabled={true}
-              onChange={() => {}}
-              info="Training reports now use a 0 to 10 grade scale. The number still controls ordering even when grade numbers are hidden from display."
-            />
+            <div>
+              <FieldLabel
+                label="Grade Scale"
+                info="Set the lowest and highest numeric grades available on training reports. The numbers still control ordering and repeat rules even when grade numbers are hidden from display."
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  className={fieldClass}
+                  type="number"
+                  min={0}
+                  max={Math.max(0, trainingReportTemplate.grades.scaleMax - 1)}
+                  step={1}
+                  value={trainingReportTemplate.grades.scaleMin}
+                  disabled={!canEditTrainingReportTemplate}
+                  onChange={(event) => updateTrainingReportGradeScale({ scaleMin: Number(event.target.value) })}
+                  aria-label="Grade scale low end"
+                />
+                <input
+                  className={fieldClass}
+                  type="number"
+                  min={trainingReportTemplate.grades.scaleMin + 1}
+                  max={10}
+                  step={1}
+                  value={trainingReportTemplate.grades.scaleMax}
+                  disabled={!canEditTrainingReportTemplate}
+                  onChange={(event) => updateTrainingReportGradeScale({ scaleMax: Number(event.target.value) })}
+                  aria-label="Grade scale high end"
+                />
+              </div>
+              <div className="mt-1 flex justify-between text-[10px] uppercase tracking-wide text-gray-500">
+                <span>Low end</span>
+                <span>High end</span>
+              </div>
+            </div>
             <ToggleField
               label="Show Grade Numbers"
               checked={trainingReportTemplate.grades.showNumbers}

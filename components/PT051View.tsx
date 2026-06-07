@@ -214,7 +214,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const gradeLabelMap = useMemo(() => (
         new Map(gradeOptions.map((option) => [option.value, option.label]))
     ), [gradeOptions]);
-    const isLongGradeScale = reportTemplate.grades.scaleMax > 5;
+    const isLongGradeScale = gradeOptions.length > 6;
     const formatGradeOption = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
         if (grade === 'No Grade' || grade === 'DEMO' || grade === 'MIN') return String(grade);
         const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
