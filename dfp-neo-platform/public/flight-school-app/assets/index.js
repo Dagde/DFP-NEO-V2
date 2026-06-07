@@ -37283,7 +37283,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     ...gradeOptions.map((option) => option.value)
   ], [gradeOptions]);
   const gradeLabelMap = reactExports.useMemo(() => new Map(gradeOptions.map((option) => [option.value, option.label])), [gradeOptions]);
-  const isLongGradeScale = gradeOptions.length > 6;
+  gradeOptions.length > 6;
   const formatGradeOption = (grade) => {
     if (grade === "No Grade" || grade === "DEMO" || grade === "MIN") return String(grade);
     const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
@@ -37633,6 +37633,9 @@ ${commentFields[key]}`).join("\n\n");
       onBack();
     }
   };
+  const handlePrint = () => {
+    window.print();
+  };
   const handleDeleteAssessment = async () => {
     if (!canEditPt051) {
       await showDarkAlert(`Your permission profile does not allow ${trainingReportName} deletion.`, "Access Denied", "error");
@@ -37758,6 +37761,7 @@ This action cannot be undone.`;
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePrint, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Print" }),
         initialAssessment && initialAssessment.id && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
           console.log("Editing mode enabled for PT-051:", initialAssessment.id);
         }, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Edit" }),
@@ -37973,7 +37977,7 @@ This action cannot be undone.`;
                     title: formatGradeOption(grade),
                     className: `flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
                     children: [
-                      reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }),
+                      reportTemplate.grades.showNumbers && (grade !== "No Grade" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }) : null),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: formatGradeHeaderText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-grade", value: grade, checked: overallGrade === grade, onChange: () => setOverallGrade(grade), className: `h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600` })
                     ]
@@ -38163,11 +38167,11 @@ This action cannot be undone.`;
         const isGroundEvent = event.type === "ground";
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: `p-4 border rounded-lg ${isGroundEvent ? "border-gray-800 bg-gray-800/30 opacity-50" : "border-gray-700"}`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: `px-2 text-sm font-semibold ${isGroundEvent ? "text-gray-500" : "text-gray-300"}`, children: category.category }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1360px] w-full table-fixed border-collapse", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
-              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[72px]" }, String(g))),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[300px]" })
+              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[44px]" }, String(g))),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[480px]" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
@@ -38175,17 +38179,16 @@ This action cannot be undone.`;
                 "th",
                 {
                   title: formatGradeOption(g),
-                  className: `${isLongGradeScale ? "px-1 pb-2 text-[8px] leading-[0.95]" : "px-1 pb-2 text-[10px] leading-tight"} text-center font-black uppercase text-gray-400`,
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-auto flex max-w-[64px] flex-col items-center justify-end whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
+                  className: "h-[78px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-auto flex w-[72px] origin-center -rotate-90 flex-row items-center justify-center gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
                 },
                 String(g)
               )),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", "aria-hidden": "true" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
               const score = assessment.scores.find((s) => s.element === element);
-              const commentCell = (colSpan, showInlineLabel = false) => /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { colSpan, className: "relative py-3 pl-3 pr-2 align-middle", children: [
-                showInlineLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" }),
+              const commentCell = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "textarea",
                   {
@@ -38220,27 +38223,24 @@ This action cannot be undone.`;
                   }
                 )
               ] });
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { rowSpan: 2, className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
-                  assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-1 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `${isLongGradeScale ? "min-h-[46px]" : "min-h-[36px]"} flex items-center justify-center rounded ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "radio",
-                        name: element,
-                        value: String(grade),
-                        checked: score?.grade === grade,
-                        onChange: () => handleGradeChange(element, grade),
-                        disabled: isGroundEvent,
-                        className: `h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? "opacity-50 cursor-not-allowed" : ""}`
-                      }
-                    ),
-                    reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
-                  ] }) }) }, String(grade))),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border-l border-gray-800", "aria-hidden": "true" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { className: "border-t border-gray-800/60", children: commentCell(assessmentGradeOptions.length + 1, true) })
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
+                assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `flex min-h-[36px] items-center justify-center rounded ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      name: element,
+                      value: String(grade),
+                      checked: score?.grade === grade,
+                      onChange: () => handleGradeChange(element, grade),
+                      disabled: isGroundEvent,
+                      className: `h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? "opacity-50 cursor-not-allowed" : ""}`
+                    }
+                  ),
+                  reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
+                ] }) }) }, String(grade))),
+                commentCell()
               ] }, element);
             }) })
           ] }) })

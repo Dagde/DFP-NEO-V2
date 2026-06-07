@@ -633,6 +633,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         }
     };
 
+    const handlePrint = () => {
+        window.print();
+    };
+
     const handleDeleteAssessment = async () => {
         if (!canEditPt051) {
             await showDarkAlert(`Your permission profile does not allow ${trainingReportName} deletion.`, 'Access Denied', 'error');
@@ -748,6 +752,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     </div>
                 </div>
                 <div className="flex items-center gap-[1px]">
+                    <button onClick={handlePrint} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
+                        Print
+                    </button>
                     {/* Show Edit button if this is a saved assessment */}
                     {initialAssessment && initialAssessment.id && (
                         <button onClick={() => {
@@ -974,7 +981,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                 }`}
                                             >
                                                 {reportTemplate.grades.showNumbers && (
-                                                    <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeValue(grade)}</span>
+                                                    grade !== 'No Grade' ? (
+                                                        <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeValue(grade)}</span>
+                                                    ) : null
                                                 )}
                                                 <span className="flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300">
                                                     {formatGradeHeaderText(grade).split(/\s+/).map((word, index) => (
@@ -1167,11 +1176,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         <fieldset key={category.category} className={`p-4 border rounded-lg ${isGroundEvent ? 'border-gray-800 bg-gray-800/30 opacity-50' : 'border-gray-700'}`}>
                             <legend className={`px-2 text-sm font-semibold ${isGroundEvent ? 'text-gray-500' : 'text-gray-300'}`}>{category.category}</legend>
                             <div className="mt-2 overflow-x-auto rounded-md border border-gray-800/80">
-                            <table className="min-w-[1360px] w-full table-fixed border-collapse">
+                            <table className="min-w-[1200px] w-full table-fixed border-collapse">
                                 <colgroup>
                                     <col className="w-[190px]" />
-                                    {assessmentGradeOptions.map(g => <col key={String(g)} className="w-[72px]" />)}
-                                    <col className="w-[300px]" />
+                                    {assessmentGradeOptions.map(g => <col key={String(g)} className="w-[44px]" />)}
+                                    <col className="w-[480px]" />
                                 </colgroup>
                                 <thead>
                                     <tr>
@@ -1180,26 +1189,23 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             <th
                                                 key={String(g)}
                                                 title={formatGradeOption(g)}
-                                                className={`${isLongGradeScale ? 'px-1 pb-2 text-[8px] leading-[0.95]' : 'px-1 pb-2 text-[10px] leading-tight'} text-center font-black uppercase text-gray-400`}
+                                                className="h-[78px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400"
                                             >
-                                                <span className="mx-auto flex max-w-[64px] flex-col items-center justify-end whitespace-nowrap">
+                                                <span className="mx-auto flex w-[72px] origin-center -rotate-90 flex-row items-center justify-center gap-1 whitespace-nowrap">
                                                     {formatGradeHeaderText(g).split(/\s+/).map((word, index) => (
                                                         <span key={`${word}-${index}`}>{word}</span>
                                                     ))}
                                                 </span>
                                             </th>
                                         ))}
-                                        <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500" aria-hidden="true" />
+                                        <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {category.elements.map(element => {
                                         const score = assessment.scores.find(s => s.element === element);
-                                        const commentCell = (colSpan?: number, showInlineLabel = false) => (
-                                            <td colSpan={colSpan} className="relative py-3 pl-3 pr-2 align-middle">
-                                                {showInlineLabel && (
-                                                    <div className="mb-1 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</div>
-                                                )}
+                                        const commentCell = () => (
+                                            <td className="relative py-3 pl-3 pr-2 align-middle">
                                                 <textarea
                                                     value={score?.comment || ''}
                                                     onChange={(e) => handleCommentChange(element, e.target.value)}
@@ -1231,35 +1237,30 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             </td>
                                         );
                                         return (
-                                            <React.Fragment key={element}>
-                                                <tr className="border-t border-gray-700">
-                                                    <td rowSpan={2} className="py-3 pr-3 align-middle font-semibold text-white">{element}</td>
-                                                    {assessmentGradeOptions.map(grade => (
-                                                        <td key={String(grade)} title={formatGradeOption(grade)} className={`border-l border-gray-800 px-1 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || 'border-gray-800'}`}>
-                                                            <label className={`${isLongGradeScale ? 'min-h-[46px]' : 'min-h-[36px]'} flex items-center justify-center rounded ${isGroundEvent ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-white/5'}`}>
-                                                                <span className="flex flex-col items-center justify-center gap-1">
-                                                                    <input
-                                                                        type="radio"
-                                                                        name={element}
-                                                                        value={String(grade)}
-                                                                        checked={score?.grade === grade}
-                                                                        onChange={() => handleGradeChange(element, grade as Pt051Grade)}
-                                                                        disabled={isGroundEvent}
-                                                                        className={`h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                    />
-                                                                    {reportTemplate.grades.showNumbers && (
-                                                                        <span className="text-[10px] font-bold leading-none text-gray-500">{formatGradeNumber(grade)}</span>
-                                                                    )}
-                                                                </span>
-                                                            </label>
-                                                        </td>
-                                                    ))}
-                                                    <td className="border-l border-gray-800" aria-hidden="true" />
-                                                </tr>
-                                                <tr className="border-t border-gray-800/60">
-                                                    {commentCell(assessmentGradeOptions.length + 1, true)}
-                                                </tr>
-                                            </React.Fragment>
+                                            <tr key={element} className="border-t border-gray-700">
+                                                <td className="py-3 pr-3 align-middle font-semibold text-white">{element}</td>
+                                                {assessmentGradeOptions.map(grade => (
+                                                    <td key={String(grade)} title={formatGradeOption(grade)} className={`border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || 'border-gray-800'}`}>
+                                                        <label className={`flex min-h-[36px] items-center justify-center rounded ${isGroundEvent ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-white/5'}`}>
+                                                            <span className="flex flex-col items-center justify-center gap-1">
+                                                                <input
+                                                                    type="radio"
+                                                                    name={element}
+                                                                    value={String(grade)}
+                                                                    checked={score?.grade === grade}
+                                                                    onChange={() => handleGradeChange(element, grade as Pt051Grade)}
+                                                                    disabled={isGroundEvent}
+                                                                    className={`h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                />
+                                                                {reportTemplate.grades.showNumbers && (
+                                                                    <span className="text-[9px] font-bold leading-none text-gray-500">{formatGradeNumber(grade)}</span>
+                                                                )}
+                                                            </span>
+                                                        </label>
+                                                    </td>
+                                                ))}
+                                                {commentCell()}
+                                            </tr>
                                         );
                                     })}
                                 </tbody>
