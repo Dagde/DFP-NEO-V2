@@ -2766,14 +2766,15 @@ const DEFAULT_TRAINING_REPORT_TERMINOLOGY = {
   name: "Report"
 };
 const DEFAULT_GRADE_LABELS = {
-  1: "Unsatisfactory",
-  2: "Marginal",
-  3: "Low Satisfactory",
-  4: "Satisfactory",
-  5: "High Satisfactory",
-  6: "Good",
-  7: "Very Good",
-  8: "Excellent",
+  0: "Unsatisfactory",
+  1: "Marginal",
+  2: "Low Satisfactory",
+  3: "Satisfactory",
+  4: "High Satisfactory",
+  5: "Good",
+  6: "Very Good",
+  7: "Excellent",
+  8: "High Excellent",
   9: "Outstanding",
   10: "Exceptional"
 };
@@ -2828,20 +2829,20 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
   overallResults: {
     passLabel: "PASS",
     failLabel: "FAIL",
-    doubleRepeatLabel: "Double Marg"
+    doubleRepeatLabel: "Repeated Low-performance"
   },
   grades: {
     scaleMax: 10,
     includeDemo: true,
     showNumbers: true,
-    options: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => ({
+    options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => ({
       value,
       label: DEFAULT_GRADE_LABELS[value],
-      requiresRepeat: value === 1
+      requiresRepeat: value === 0
     }))
   },
   repeatRules: {
-    gradesRequiringRepeat: [1],
+    gradesRequiringRepeat: [0],
     consecutive: {
       enabled: true,
       grades: [1],
@@ -2871,13 +2872,13 @@ const cleanNumber$1 = (value, fallback, min, max) => {
 const cleanBoolean = (value, fallback) => typeof value === "boolean" ? value : fallback;
 const normaliseGradeValues = (values, scaleMax, fallback) => {
   const source = Array.isArray(values) ? values : fallback;
-  const cleaned = source.map((value) => cleanNumber$1(value, -1, 1, scaleMax)).filter((value) => value >= 1 && value <= scaleMax);
+  const cleaned = source.map((value) => cleanNumber$1(value, -1, 0, scaleMax)).filter((value) => value >= 0 && value <= scaleMax);
   return Array.from(new Set(cleaned)).sort((a, b) => a - b);
 };
 const normaliseGradeOptions = (input, scaleMax, repeatGrades) => {
   const source = Array.isArray(input) ? input : [];
-  return Array.from({ length: scaleMax }, (_, index) => {
-    const value = index + 1;
+  return Array.from({ length: scaleMax + 1 }, (_, index) => {
+    const value = index;
     const existing = source.find((option) => Number(option?.value) === value);
     return {
       value,
@@ -50765,11 +50766,11 @@ const PlatformConfigurationSettings = ({
             Field,
             {
               label: "Grade Scale",
-              value: "1 to 10",
+              value: "0 to 10",
               disabled: true,
               onChange: () => {
               },
-              info: "Training reports now use a 1 to 10 grade scale. The number still controls ordering even when grade numbers are hidden from display."
+              info: "Training reports now use a 0 to 10 grade scale. The number still controls ordering even when grade numbers are hidden from display."
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50784,7 +50785,7 @@ const PlatformConfigurationSettings = ({
                   showNumbers: checked
                 }
               })),
-              info: "When off, users see only the grade text, but the underlying 1 to 10 value is still retained for ordering and repeat rules."
+              info: "When off, users see only the grade text, but the underlying 0 to 10 value is still retained for ordering and repeat rules."
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50799,7 +50800,7 @@ const PlatformConfigurationSettings = ({
                   includeDemo: checked
                 }
               })),
-              info: "Adds DEMO as a selectable non-numeric instructional grade alongside the 1 to 10 assessment grades."
+              info: "Adds DEMO as a selectable non-numeric instructional grade alongside the 0 to 10 assessment grades."
             }
           )
         ] }),
@@ -50939,7 +50940,7 @@ const PlatformConfigurationSettings = ({
               {
                 label: {
                   DCO: "Duty Completed text",
-                  DPCO: "Duty only Partially Completed",
+                  DPCO: "Duty Partially Completed",
                   DNCO: "Duty Not Completed"
                 }[option.code],
                 value: option.label,
@@ -50948,7 +50949,7 @@ const PlatformConfigurationSettings = ({
                 onChange: (value) => updateTrainingReportCompletionResult(option.code, value),
                 info: {
                   DCO: "Text displayed when the duty or training event was completed. The wording can change, but the outcome remains the completed-duty result.",
-                  DPCO: "Text displayed when the duty was only partially completed. Use this when an event occurred but did not fully satisfy the planned duty or training requirement.",
+                  DPCO: "Text displayed when the duty was partially completed. Use this when an event occurred but did not fully satisfy the planned duty or training requirement.",
                   DNCO: "Text displayed when the duty was not completed. The wording can change, but the outcome remains the not-completed-duty result."
                 }[option.code]
               },
@@ -50983,7 +50984,7 @@ const PlatformConfigurationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Field,
               {
-                label: "Repeat Rule Text",
+                label: "Repeated Low-performance",
                 value: trainingReportTemplate.overallResults.doubleRepeatLabel,
                 disabled: !canEditTrainingReportTemplate,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,

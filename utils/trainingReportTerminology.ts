@@ -94,14 +94,15 @@ export const DEFAULT_TRAINING_REPORT_TERMINOLOGY: TrainingReportTerminology = {
 };
 
 const DEFAULT_GRADE_LABELS: Record<number, string> = {
-  1: 'Unsatisfactory',
-  2: 'Marginal',
-  3: 'Low Satisfactory',
-  4: 'Satisfactory',
-  5: 'High Satisfactory',
-  6: 'Good',
-  7: 'Very Good',
-  8: 'Excellent',
+  0: 'Unsatisfactory',
+  1: 'Marginal',
+  2: 'Low Satisfactory',
+  3: 'Satisfactory',
+  4: 'High Satisfactory',
+  5: 'Good',
+  6: 'Very Good',
+  7: 'Excellent',
+  8: 'High Excellent',
   9: 'Outstanding',
   10: 'Exceptional',
 };
@@ -157,20 +158,20 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
   overallResults: {
     passLabel: 'PASS',
     failLabel: 'FAIL',
-    doubleRepeatLabel: 'Double Marg',
+    doubleRepeatLabel: 'Repeated Low-performance',
   },
   grades: {
     scaleMax: 10,
     includeDemo: true,
     showNumbers: true,
-    options: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => ({
+    options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => ({
       value,
       label: DEFAULT_GRADE_LABELS[value],
-      requiresRepeat: value === 1,
+      requiresRepeat: value === 0,
     })),
   },
   repeatRules: {
-    gradesRequiringRepeat: [1],
+    gradesRequiringRepeat: [0],
     consecutive: {
       enabled: true,
       grades: [1],
@@ -210,8 +211,8 @@ const cleanBoolean = (value: unknown, fallback: boolean): boolean => (
 const normaliseGradeValues = (values: unknown, scaleMax: number, fallback: number[]): number[] => {
   const source = Array.isArray(values) ? values : fallback;
   const cleaned = source
-    .map((value) => cleanNumber(value, -1, 1, scaleMax))
-    .filter((value) => value >= 1 && value <= scaleMax);
+    .map((value) => cleanNumber(value, -1, 0, scaleMax))
+    .filter((value) => value >= 0 && value <= scaleMax);
   return Array.from(new Set(cleaned)).sort((a, b) => a - b);
 };
 
@@ -221,8 +222,8 @@ const normaliseGradeOptions = (
   repeatGrades: number[],
 ): TrainingReportGradeOption[] => {
   const source = Array.isArray(input) ? input : [];
-  return Array.from({ length: scaleMax }, (_, index) => {
-    const value = index + 1;
+  return Array.from({ length: scaleMax + 1 }, (_, index) => {
+    const value = index;
     const existing = source.find((option) => Number(option?.value) === value);
     return {
       value,

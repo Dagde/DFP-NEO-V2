@@ -3472,10 +3472,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             />
             <Field
               label="Grade Scale"
-              value="1 to 10"
+              value="0 to 10"
               disabled={true}
               onChange={() => {}}
-              info="Training reports now use a 1 to 10 grade scale. The number still controls ordering even when grade numbers are hidden from display."
+              info="Training reports now use a 0 to 10 grade scale. The number still controls ordering even when grade numbers are hidden from display."
             />
             <ToggleField
               label="Show Grade Numbers"
@@ -3487,7 +3487,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   showNumbers: checked,
                 },
               }))}
-              info="When off, users see only the grade text, but the underlying 1 to 10 value is still retained for ordering and repeat rules."
+              info="When off, users see only the grade text, but the underlying 0 to 10 value is still retained for ordering and repeat rules."
             />
             <ToggleField
               label="Include DEMO Grade"
@@ -3499,7 +3499,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   includeDemo: checked,
                 },
               }))}
-              info="Adds DEMO as a selectable non-numeric instructional grade alongside the 1 to 10 assessment grades."
+              info="Adds DEMO as a selectable non-numeric instructional grade alongside the 0 to 10 assessment grades."
             />
           </div>
 
@@ -3656,7 +3656,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   key={option.code}
                   label={{
                     DCO: 'Duty Completed text',
-                    DPCO: 'Duty only Partially Completed',
+                    DPCO: 'Duty Partially Completed',
                     DNCO: 'Duty Not Completed',
                   }[option.code]}
                   value={option.label}
@@ -3665,7 +3665,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   onChange={(value) => updateTrainingReportCompletionResult(option.code, value)}
                   info={{
                     DCO: 'Text displayed when the duty or training event was completed. The wording can change, but the outcome remains the completed-duty result.',
-                    DPCO: 'Text displayed when the duty was only partially completed. Use this when an event occurred but did not fully satisfy the planned duty or training requirement.',
+                    DPCO: 'Text displayed when the duty was partially completed. Use this when an event occurred but did not fully satisfy the planned duty or training requirement.',
                     DNCO: 'Text displayed when the duty was not completed. The wording can change, but the outcome remains the not-completed-duty result.',
                   }[option.code]}
                 />
@@ -3691,7 +3691,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 info="Text displayed when the assessment outcome is unsuccessful. Organisations may use wording such as Fail, Unsatisfactory, Not Yet Competent or Not Achieved."
               />
               <Field
-                label="Repeat Rule Text"
+                label="Repeated Low-performance"
                 value={trainingReportTemplate.overallResults.doubleRepeatLabel}
                 disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
