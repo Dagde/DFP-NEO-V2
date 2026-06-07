@@ -787,8 +787,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     const score = assessment.scores.find(item => item.element === element);
                     const gradeText = score?.grade !== null && score?.grade !== undefined ? formatGradeOption(score.grade) : 'Not assessed';
                     const commentText = score?.comment || 'N/A';
-                    const commentLines = doc.splitTextToSize(commentText, contentWidth - 75);
-                    const rowHeight = Math.max(8, commentLines.length * 4 + 3);
+                    const gradeLines = doc.splitTextToSize(gradeText, 22);
+                    const commentLines = doc.splitTextToSize(commentText, contentWidth - 84);
+                    const rowHeight = Math.max(8, gradeLines.length * 4 + 3, commentLines.length * 4 + 3);
                     ensureSpace(rowHeight);
 
                     doc.setFontSize(8.5);
@@ -796,8 +797,8 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     doc.setTextColor(20);
                     doc.text(element, margin + 2, y);
                     doc.setFont('helvetica', 'normal');
-                    doc.text(gradeText, margin + 50, y);
-                    doc.text(commentLines, margin + 75, y);
+                    doc.text(gradeLines, margin + 50, y);
+                    doc.text(commentLines, margin + 84, y);
                     y += rowHeight;
                 });
                 y += 2;
