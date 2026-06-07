@@ -37278,7 +37278,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   ], [gradeOptions]);
   const gradeLabelMap = reactExports.useMemo(() => new Map(gradeOptions.map((option) => [option.value, option.label])), [gradeOptions]);
   const isLongGradeScale = reportTemplate.grades.scaleMax > 5;
-  const useSplitGradeHeader = isLongGradeScale && reportTemplate.grades.showNumbers;
+  const useSplitGradeHeader = isLongGradeScale;
   const formatGradeOption = (grade) => {
     if (grade === "No Grade" || grade === "DEMO" || grade === "MIN") return String(grade);
     const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
@@ -37289,11 +37289,6 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     if (grade === "No Grade") return "No Grade";
     if (grade === "DEMO" || grade === "MIN") return String(grade);
     return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
-  };
-  const formatCompactGradeText = (grade) => {
-    const text = formatGradeText(grade);
-    if (text.length <= 12) return text;
-    return `${text.slice(0, 11)}...`;
   };
   const stopEditableKeyPropagation = (event2) => {
     const target = event2.target;
@@ -38143,19 +38138,19 @@ This action cannot be undone.`;
         const isGroundEvent = event.type === "ground";
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: `p-4 border rounded-lg ${isGroundEvent ? "border-gray-800 bg-gray-800/30 opacity-50" : "border-gray-700"}`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: `px-2 text-sm font-semibold ${isGroundEvent ? "text-gray-500" : "text-gray-300"}`, children: category.category }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1080px] w-full table-fixed border-collapse", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1360px] w-full table-fixed border-collapse", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
-              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[54px]" }, String(g))),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "min-w-[240px]" })
+              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[72px]" }, String(g))),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[300px]" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("thead", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { rowSpan: useSplitGradeHeader ? 2 : 1, className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
-                assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(g), className: "px-1 pb-1 text-center text-[10px] font-black uppercase text-gray-400", children: reportTemplate.grades.showNumbers ? isLongGradeScale ? formatGradeValue(g) : formatGradeOption(g) : formatCompactGradeText(g) }, String(g))),
+                assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(g), className: "px-1 pb-1 text-center text-[10px] font-black uppercase text-gray-400", children: reportTemplate.grades.showNumbers ? isLongGradeScale ? formatGradeValue(g) : formatGradeOption(g) : isLongGradeScale ? " " : formatGradeText(g) }, String(g))),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { rowSpan: useSplitGradeHeader ? 2 : 1, className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
               ] }),
-              useSplitGradeHeader && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(g), className: "px-1 pb-2 text-center text-[9px] font-semibold leading-tight text-gray-500", children: formatCompactGradeText(g) }, `${String(g)}-label`)) })
+              useSplitGradeHeader && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(g), className: "whitespace-normal break-words px-1 pb-2 text-center text-[8px] font-semibold uppercase leading-tight text-gray-500", children: formatGradeText(g) }, `${String(g)}-label`)) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
               const score = assessment.scores.find((s) => s.element === element);

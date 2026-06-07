@@ -215,7 +215,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         new Map(gradeOptions.map((option) => [option.value, option.label]))
     ), [gradeOptions]);
     const isLongGradeScale = reportTemplate.grades.scaleMax > 5;
-    const useSplitGradeHeader = isLongGradeScale && reportTemplate.grades.showNumbers;
+    const useSplitGradeHeader = isLongGradeScale;
     const formatGradeOption = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
         if (grade === 'No Grade' || grade === 'DEMO' || grade === 'MIN') return String(grade);
         const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
@@ -228,11 +228,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         if (grade === 'No Grade') return 'No Grade';
         if (grade === 'DEMO' || grade === 'MIN') return String(grade);
         return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
-    };
-    const formatCompactGradeText = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
-        const text = formatGradeText(grade);
-        if (text.length <= 12) return text;
-        return `${text.slice(0, 11)}...`;
     };
     const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
         const target = event.target as HTMLElement | null;
@@ -1151,11 +1146,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         <fieldset key={category.category} className={`p-4 border rounded-lg ${isGroundEvent ? 'border-gray-800 bg-gray-800/30 opacity-50' : 'border-gray-700'}`}>
                             <legend className={`px-2 text-sm font-semibold ${isGroundEvent ? 'text-gray-500' : 'text-gray-300'}`}>{category.category}</legend>
                             <div className="mt-2 overflow-x-auto rounded-md border border-gray-800/80">
-                            <table className="min-w-[1080px] w-full table-fixed border-collapse">
+                            <table className="min-w-[1360px] w-full table-fixed border-collapse">
                                 <colgroup>
                                     <col className="w-[190px]" />
-                                    {assessmentGradeOptions.map(g => <col key={String(g)} className="w-[54px]" />)}
-                                    <col className="min-w-[240px]" />
+                                    {assessmentGradeOptions.map(g => <col key={String(g)} className="w-[72px]" />)}
+                                    <col className="w-[300px]" />
                                 </colgroup>
                                 <thead>
                                     <tr>
@@ -1164,7 +1159,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             <th key={String(g)} title={formatGradeOption(g)} className="px-1 pb-1 text-center text-[10px] font-black uppercase text-gray-400">
                                                 {reportTemplate.grades.showNumbers
                                                     ? (isLongGradeScale ? formatGradeValue(g) : formatGradeOption(g))
-                                                    : formatCompactGradeText(g)}
+                                                    : (isLongGradeScale ? '\u00a0' : formatGradeText(g))}
                                             </th>
                                         ))}
                                         <th rowSpan={useSplitGradeHeader ? 2 : 1} className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
@@ -1172,8 +1167,8 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     {useSplitGradeHeader && (
                                         <tr>
                                             {assessmentGradeOptions.map(g => (
-                                                <th key={`${String(g)}-label`} title={formatGradeOption(g)} className="px-1 pb-2 text-center text-[9px] font-semibold leading-tight text-gray-500">
-                                                    {formatCompactGradeText(g)}
+                                                <th key={`${String(g)}-label`} title={formatGradeOption(g)} className="whitespace-normal break-words px-1 pb-2 text-center text-[8px] font-semibold uppercase leading-tight text-gray-500">
+                                                    {formatGradeText(g)}
                                                 </th>
                                             ))}
                                         </tr>
