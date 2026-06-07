@@ -37289,6 +37289,18 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     if (grade === "DEMO" || grade === "MIN") return String(grade);
     return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
   };
+  const formatGradeHeaderText = (grade) => {
+    const label = formatGradeText(grade);
+    const compactLabels = {
+      Unsatisfactory: "Unsat",
+      "Low Satisfactory": "Low Sat",
+      Satisfactory: "Sat",
+      "High Satisfactory": "High Sat",
+      "High Excellent": "High Excel",
+      Outstanding: "Outstand"
+    };
+    return compactLabels[label] || label;
+  };
   const formatGradeNumber = (grade) => {
     if (grade === "No Grade") return "None";
     if (grade === "DEMO" || grade === "MIN") return String(grade);
@@ -38154,16 +38166,17 @@ This action cannot be undone.`;
                 "th",
                 {
                   title: formatGradeOption(g),
-                  className: `${isLongGradeScale ? "px-1 pb-2 text-[8px] leading-tight" : "px-1 pb-2 text-[10px] leading-tight"} text-center font-black uppercase text-gray-400 whitespace-normal break-words`,
-                  children: formatGradeText(g)
+                  className: `${isLongGradeScale ? "px-1 pb-2 text-[8px] leading-[0.95]" : "px-1 pb-2 text-[10px] leading-tight"} text-center font-black uppercase text-gray-400`,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-auto flex max-w-[64px] flex-col items-center justify-end whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
                 },
                 String(g)
               )),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: isLongGradeScale ? "" : "Comments" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
               const score = assessment.scores.find((s) => s.element === element);
-              const commentCell = (colSpan) => /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { colSpan, className: "relative py-3 pl-3 pr-2 align-middle", children: [
+              const commentCell = (colSpan, showInlineLabel = false) => /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { colSpan, className: "relative py-3 pl-3 pr-2 align-middle", children: [
+                showInlineLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "textarea",
                   {
@@ -38217,9 +38230,9 @@ This action cannot be undone.`;
                       ),
                       reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
                     ] }) }) }, String(grade))),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pl-3 pr-2 align-middle text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border-l border-gray-800", "aria-hidden": "true" })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { className: "border-t border-gray-800/60", children: commentCell(assessmentGradeOptions.length + 1) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { className: "border-t border-gray-800/60", children: commentCell(assessmentGradeOptions.length + 1, true) })
                 ] }, element);
               }
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [

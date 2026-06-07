@@ -228,6 +228,18 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         if (grade === 'DEMO' || grade === 'MIN') return String(grade);
         return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
     };
+    const formatGradeHeaderText = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
+        const label = formatGradeText(grade);
+        const compactLabels: Record<string, string> = {
+            Unsatisfactory: 'Unsat',
+            'Low Satisfactory': 'Low Sat',
+            Satisfactory: 'Sat',
+            'High Satisfactory': 'High Sat',
+            'High Excellent': 'High Excel',
+            Outstanding: 'Outstand',
+        };
+        return compactLabels[label] || label;
+    };
     const formatGradeNumber = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
         if (grade === 'No Grade') return 'None';
         if (grade === 'DEMO' || grade === 'MIN') return String(grade);
@@ -1163,19 +1175,28 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             <th
                                                 key={String(g)}
                                                 title={formatGradeOption(g)}
-                                                className={`${isLongGradeScale ? 'px-1 pb-2 text-[8px] leading-tight' : 'px-1 pb-2 text-[10px] leading-tight'} text-center font-black uppercase text-gray-400 whitespace-normal break-words`}
+                                                className={`${isLongGradeScale ? 'px-1 pb-2 text-[8px] leading-[0.95]' : 'px-1 pb-2 text-[10px] leading-tight'} text-center font-black uppercase text-gray-400`}
                                             >
-                                                {formatGradeText(g)}
+                                                <span className="mx-auto flex max-w-[64px] flex-col items-center justify-end whitespace-nowrap">
+                                                    {formatGradeHeaderText(g).split(/\s+/).map((word, index) => (
+                                                        <span key={`${word}-${index}`}>{word}</span>
+                                                    ))}
+                                                </span>
                                             </th>
                                         ))}
-                                        <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
+                                        <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                                            {isLongGradeScale ? '' : 'Comments'}
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {category.elements.map(element => {
                                         const score = assessment.scores.find(s => s.element === element);
-                                        const commentCell = (colSpan?: number) => (
+                                        const commentCell = (colSpan?: number, showInlineLabel = false) => (
                                             <td colSpan={colSpan} className="relative py-3 pl-3 pr-2 align-middle">
+                                                {showInlineLabel && (
+                                                    <div className="mb-1 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</div>
+                                                )}
                                                 <textarea
                                                     value={score?.comment || ''}
                                                     onChange={(e) => handleCommentChange(element, e.target.value)}
@@ -1231,10 +1252,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                                 </label>
                                                             </td>
                                                         ))}
-                                                        <td className="py-3 pl-3 pr-2 align-middle text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</td>
+                                                        <td className="border-l border-gray-800" aria-hidden="true" />
                                                     </tr>
                                                     <tr className="border-t border-gray-800/60">
-                                                        {commentCell(assessmentGradeOptions.length + 1)}
+                                                        {commentCell(assessmentGradeOptions.length + 1, true)}
                                                     </tr>
                                                 </React.Fragment>
                                             );
