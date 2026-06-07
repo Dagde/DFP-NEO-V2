@@ -22,6 +22,7 @@ export const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS: AirCombatSchedulingWeights =
 const normaliseCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
 
 export const AIR_COMBAT_ICO_PACKAGE_CODE = 'ICO';
+export const AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS = 1.2;
 export const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
 export const AIR_COMBAT_ICO_POSTFLIGHT_HOURS = 1.0;
 
@@ -34,6 +35,7 @@ export const isIntegratedCombatOperationsTrainingPackageItem = (item?: Partial<S
 export const normaliseIntegratedCombatOperationsTiming = <T extends Partial<SyllabusItemDetail>>(item: T): T => {
   if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
   if (
+    item.flightOrSimHours === AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS &&
     item.preFlightTime === AIR_COMBAT_ICO_PREFLIGHT_HOURS &&
     item.postFlightTime === AIR_COMBAT_ICO_POSTFLIGHT_HOURS
   ) {
@@ -41,6 +43,7 @@ export const normaliseIntegratedCombatOperationsTiming = <T extends Partial<Syll
   }
   return {
     ...item,
+    flightOrSimHours: AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS,
     preFlightTime: AIR_COMBAT_ICO_PREFLIGHT_HOURS,
     postFlightTime: AIR_COMBAT_ICO_POSTFLIGHT_HOURS,
   };

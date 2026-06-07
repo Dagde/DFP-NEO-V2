@@ -36,6 +36,7 @@ const PORT = process.env.PORT || 3000;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE = 'ICO';
+const INTEGRATED_COMBAT_OPERATIONS_FLIGHT_OR_SIM_HOURS = 1.2;
 const INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS = 1.5;
 const INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS = 1.0;
 
@@ -61,6 +62,7 @@ function normaliseSyllabusItemForRuntime(item) {
     return {
       ...item,
       courses,
+      flightOrSimHours: INTEGRATED_COMBAT_OPERATIONS_FLIGHT_OR_SIM_HOURS,
       preFlightTime: INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS,
       postFlightTime: INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS,
     };
@@ -497,20 +499,22 @@ async function migrateCptDurations(db) {
   }
 }
 
-// Migration: Integrated Combat Operations package uses 1.5 hr pre-flight and 1.0 hr post-flight.
+// Migration: Integrated Combat Operations package uses 1.2 flight/sim hours, 1.5 hr pre-flight, and 1.0 hr post-flight.
 async function migrateIntegratedCombatOperationsTiming(db) {
   try {
     const result = await db.$executeRawUnsafe(`
       UPDATE "SyllabusItem"
       SET
-        "preFlightTime" = $1,
-        "postFlightTime" = $2,
+        "flightOrSimHours" = $1,
+        "preFlightTime" = $2,
+        "postFlightTime" = $3,
         "version" = "version" + 1,
         "updatedAt" = NOW()
       WHERE "lmpType" = 'Staff CAT'
-        AND $3 = ANY("courses")
-        AND ("preFlightTime" IS DISTINCT FROM $1 OR "postFlightTime" IS DISTINCT FROM $2)
+        AND $4 = ANY("courses")
+        AND ("flightOrSimHours" IS DISTINCT FROM $1 OR "preFlightTime" IS DISTINCT FROM $2 OR "postFlightTime" IS DISTINCT FROM $3)
     `,
+      INTEGRATED_COMBAT_OPERATIONS_FLIGHT_OR_SIM_HOURS,
       INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS,
       INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS,
       INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE);
