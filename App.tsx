@@ -26376,6 +26376,8 @@ appliedUpdates.forEach(update => {
                         instructorLabel={instructorLabel}
                         trainingReportTerminology={getUnitTrainingReportTerminology(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode)}
                         trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode)}
+                        trainingReportUnitCode={selectedTraineeForHateSheet.unit || activeUnitCode}
+                        trainingReportContextUnitCode={activeUnitCode}
                         onBack={() => {
                             setEventForPt051(null);
                             openTraineeProfileTab(selectedTraineeForHateSheet, 'hatesheet');

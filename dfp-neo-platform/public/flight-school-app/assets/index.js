@@ -37496,7 +37496,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null }) => {
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "" }) => {
   const reportTemplate = reactExports.useMemo(() => {
     const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
     const terminologyName = String(trainingReportTerminology?.name || "").trim();
@@ -37882,6 +37882,24 @@ ${commentFields[key]}`).join("\n\n");
   };
   const handlePrint = async () => {
     try {
+      const resolvePrintReportTemplate = async () => {
+        const latestConfig = await loadPlatformConfigFromDB();
+        if (!latestConfig) return reportTemplate;
+        const unitCodes = [
+          trainingReportUnitCode,
+          trainee.unit,
+          trainingReportContextUnitCode
+        ].flatMap((value) => String(value || "").split("+")).map((value) => value.trim()).filter(Boolean);
+        const uniqueUnitCodes = Array.from(new Set(unitCodes.map((value) => value.toUpperCase())));
+        const templates = uniqueUnitCodes.map((unitCode) => getUnitTrainingReportTemplate(latestConfig, unitCode));
+        const customTemplate = templates.find((template) => template.displayName !== DEFAULT_TRAINING_REPORT_TEMPLATE.displayName);
+        return customTemplate || templates[0] || reportTemplate;
+      };
+      const printReportTemplate = await resolvePrintReportTemplate();
+      const printReportName = printReportTemplate.displayName;
+      const printOverviewFields = printReportTemplate.modules.overview.fields;
+      const printOverallFields = printReportTemplate.modules.overallAssessment.fields;
+      const printCommentFieldsConfig = printReportTemplate.modules.comments.fields;
       const doc = new E({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -37944,8 +37962,8 @@ ${commentFields[key]}`).join("\n\n");
         doc.text(lines, margin, y);
         y += lines.length * 4 + 4;
       };
-      const completionLabel = reportTemplate.completionResults.find((option) => option.code === dcoResult)?.label || dcoResult || "None";
-      const overallResultLabel = overallResult === "P" ? reportTemplate.overallResults.passLabel : overallResult === "F" ? showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel : "Not selected";
+      const completionLabel = printReportTemplate.completionResults.find((option) => option.code === dcoResult)?.label || dcoResult || "None";
+      const overallResultLabel = overallResult === "P" ? printReportTemplate.overallResults.passLabel : overallResult === "F" ? showDoubleMarginalWarning ? printReportTemplate.overallResults.doubleRepeatLabel : printReportTemplate.overallResults.failLabel : "Not selected";
       const reportDate = assessment.date || currentEvent.date || event.date || "";
       const startTime = currentEvent.startTime ?? event.startTime ?? 0;
       const duration = currentEvent.duration ?? event.duration ?? 0;
@@ -37953,39 +37971,39 @@ ${commentFields[key]}`).join("\n\n");
       doc.setFont("helvetica", "bold");
       doc.setFontSize(17);
       doc.setTextColor(10, 25, 45);
-      doc.text(`${trainingReportName} Training Report`, margin, y);
+      doc.text(`${printReportName} Training Report`, margin, y);
       y += 8;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(80);
       doc.text(`${assessment.flightNumber || event.flightNumber || "Event"} - ${trainee.rank || ""} ${trainee.name || trainee.fullName || ""} - ${reportDate}`, margin, y);
       y += 8;
-      addSectionTitle(reportTemplate.modules.overview.title || "Event Details");
+      addSectionTitle(printReportTemplate.modules.overview.title || "Event Details");
       addKeyValueRows([
-        [overviewFields.event, assessment.flightNumber || event.flightNumber || "N/A"],
-        [overviewFields.type, getEventDescription()],
+        [printOverviewFields.event, assessment.flightNumber || event.flightNumber || "N/A"],
+        [printOverviewFields.type, getEventDescription()],
         ["Trainee", `${trainee.rank || ""} ${trainee.name || trainee.fullName || ""}`.trim()],
         ["Course", trainee.course || "N/A"],
-        [overviewFields.date, reportDate || "N/A"],
-        [overviewFields.timing, `${formatTime$1(startTime)} - ${formatTime$1(endTime)}`],
-        [overviewFields.assessor, assessment.instructorName || event.instructor || "N/A"],
-        [overviewFields.resource, currentEvent.resourceId || event.resourceId || "N/A"],
-        [overviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
-        [overviewFields.unit, trainee.unit || "N/A"]
+        [printOverviewFields.date, reportDate || "N/A"],
+        [printOverviewFields.timing, `${formatTime$1(startTime)} - ${formatTime$1(endTime)}`],
+        [printOverviewFields.assessor, assessment.instructorName || event.instructor || "N/A"],
+        [printOverviewFields.resource, currentEvent.resourceId || event.resourceId || "N/A"],
+        [printOverviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
+        [printOverviewFields.unit, trainee.unit || "N/A"]
       ]);
-      addSectionTitle(reportTemplate.modules.overallAssessment.title || "Overall Assessment");
+      addSectionTitle(printReportTemplate.modules.overallAssessment.title || "Overall Assessment");
       addKeyValueRows([
-        [overallFields.result, completionLabel],
-        [overallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : "None"],
-        [overallFields.overallResult, overallResultLabel],
-        [overallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : "Not assessed"]
+        [printOverallFields.result, completionLabel],
+        [printOverallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : "None"],
+        [printOverallFields.overallResult, overallResultLabel],
+        [printOverallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : "Not assessed"]
       ]);
-      addSectionTitle(reportTemplate.modules.comments.title || "Comments");
-      addWrappedText(commentFieldsConfig.assessor || instructorLabel, commentFields.QFI || "N/A");
-      addWrappedText(commentFieldsConfig.weather, commentFields.Weather || "N/A");
-      addWrappedText(commentFieldsConfig.profile, commentFields.Profile || "N/A");
-      addWrappedText(commentFieldsConfig.overall, commentFields.Overall || "N/A");
-      addWrappedText(commentFieldsConfig.nest, commentFields.NEST || "N/A");
+      addSectionTitle(printReportTemplate.modules.comments.title || "Comments");
+      addWrappedText(printCommentFieldsConfig.assessor || instructorLabel, commentFields.QFI || "N/A");
+      addWrappedText(printCommentFieldsConfig.weather, commentFields.Weather || "N/A");
+      addWrappedText(printCommentFieldsConfig.profile, commentFields.Profile || "N/A");
+      addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || "N/A");
+      addWrappedText(printCommentFieldsConfig.nest, commentFields.NEST || "N/A");
       addSectionTitle("Assessment Matrix");
       PT051_STRUCTURE$1.forEach((category) => {
         ensureSpace(12);
@@ -38017,7 +38035,7 @@ ${commentFields[key]}`).join("\n\n");
       });
       addFooter();
       const safeName = [
-        trainingReportName,
+        printReportName,
         assessment.flightNumber || event.flightNumber || "Training-Report",
         trainee.name || trainee.fullName || "Person",
         reportDate || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
@@ -82974,6 +82992,8 @@ ${error instanceof Error ? error.message : String(error)}`,
               instructorLabel,
               trainingReportTerminology: getUnitTrainingReportTerminology(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode),
               trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode),
+              trainingReportUnitCode: selectedTraineeForHateSheet.unit || activeUnitCode,
+              trainingReportContextUnitCode: activeUnitCode,
               onBack: () => {
                 setEventForPt051(null);
                 openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet");

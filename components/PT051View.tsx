@@ -6,11 +6,14 @@ import AuditButton from './AuditButton';
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
 import {
+    DEFAULT_TRAINING_REPORT_TEMPLATE,
     DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+    getUnitTrainingReportTemplate,
     normaliseTrainingReportTemplate,
     type TrainingReportTerminology,
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
+import { loadPlatformConfigFromDB } from '../utils/platformConfigService';
 
 interface PT051ViewProps {
     trainee: Trainee;
@@ -32,6 +35,8 @@ interface PT051ViewProps {
     instructorLabel?: string;
     trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
+    trainingReportUnitCode?: string;
+    trainingReportContextUnitCode?: string;
 }
 
 const PT051_STRUCTURE = [
@@ -194,7 +199,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
     );
 };
 
-const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null }) => {
+const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '' }) => {
     const reportTemplate = useMemo(() => {
         const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
         const terminologyName = String(trainingReportTerminology?.name || '').trim();
@@ -657,6 +662,27 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const handlePrint = async () => {
         try {
+            const resolvePrintReportTemplate = async () => {
+                const latestConfig = await loadPlatformConfigFromDB();
+                if (!latestConfig) return reportTemplate;
+                const unitCodes = [
+                    trainingReportUnitCode,
+                    trainee.unit,
+                    trainingReportContextUnitCode,
+                ]
+                    .flatMap((value) => String(value || '').split('+'))
+                    .map((value) => value.trim())
+                    .filter(Boolean);
+                const uniqueUnitCodes = Array.from(new Set(unitCodes.map((value) => value.toUpperCase())));
+                const templates = uniqueUnitCodes.map((unitCode) => getUnitTrainingReportTemplate(latestConfig, unitCode));
+                const customTemplate = templates.find((template) => template.displayName !== DEFAULT_TRAINING_REPORT_TEMPLATE.displayName);
+                return customTemplate || templates[0] || reportTemplate;
+            };
+            const printReportTemplate = await resolvePrintReportTemplate();
+            const printReportName = printReportTemplate.displayName;
+            const printOverviewFields = printReportTemplate.modules.overview.fields;
+            const printOverallFields = printReportTemplate.modules.overallAssessment.fields;
+            const printCommentFieldsConfig = printReportTemplate.modules.comments.fields;
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
@@ -725,11 +751,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 y += lines.length * 4 + 4;
             };
 
-            const completionLabel = reportTemplate.completionResults.find(option => option.code === dcoResult)?.label || dcoResult || 'None';
+            const completionLabel = printReportTemplate.completionResults.find(option => option.code === dcoResult)?.label || dcoResult || 'None';
             const overallResultLabel = overallResult === 'P'
-                ? reportTemplate.overallResults.passLabel
+                ? printReportTemplate.overallResults.passLabel
                 : overallResult === 'F'
-                    ? (showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel)
+                    ? (showDoubleMarginalWarning ? printReportTemplate.overallResults.doubleRepeatLabel : printReportTemplate.overallResults.failLabel)
                     : 'Not selected';
             const reportDate = assessment.date || currentEvent.date || event.date || '';
             const startTime = currentEvent.startTime ?? event.startTime ?? 0;
@@ -739,7 +765,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(17);
             doc.setTextColor(10, 25, 45);
-            doc.text(`${trainingReportName} Training Report`, margin, y);
+            doc.text(`${printReportName} Training Report`, margin, y);
             y += 8;
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
@@ -747,34 +773,34 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             doc.text(`${assessment.flightNumber || event.flightNumber || 'Event'} - ${trainee.rank || ''} ${trainee.name || trainee.fullName || ''} - ${reportDate}`, margin, y);
             y += 8;
 
-            addSectionTitle(reportTemplate.modules.overview.title || 'Event Details');
+            addSectionTitle(printReportTemplate.modules.overview.title || 'Event Details');
             addKeyValueRows([
-                [overviewFields.event, assessment.flightNumber || event.flightNumber || 'N/A'],
-                [overviewFields.type, getEventDescription()],
+                [printOverviewFields.event, assessment.flightNumber || event.flightNumber || 'N/A'],
+                [printOverviewFields.type, getEventDescription()],
                 ['Trainee', `${trainee.rank || ''} ${trainee.name || trainee.fullName || ''}`.trim()],
                 ['Course', trainee.course || 'N/A'],
-                [overviewFields.date, reportDate || 'N/A'],
-                [overviewFields.timing, `${formatTime(startTime)} - ${formatTime(endTime)}`],
-                [overviewFields.assessor, assessment.instructorName || event.instructor || 'N/A'],
-                [overviewFields.resource, currentEvent.resourceId || event.resourceId || 'N/A'],
-                [overviewFields.callsign, currentEvent.callsign || event.callsign || 'N/A'],
-                [overviewFields.unit, trainee.unit || 'N/A'],
+                [printOverviewFields.date, reportDate || 'N/A'],
+                [printOverviewFields.timing, `${formatTime(startTime)} - ${formatTime(endTime)}`],
+                [printOverviewFields.assessor, assessment.instructorName || event.instructor || 'N/A'],
+                [printOverviewFields.resource, currentEvent.resourceId || event.resourceId || 'N/A'],
+                [printOverviewFields.callsign, currentEvent.callsign || event.callsign || 'N/A'],
+                [printOverviewFields.unit, trainee.unit || 'N/A'],
             ]);
 
-            addSectionTitle(reportTemplate.modules.overallAssessment.title || 'Overall Assessment');
+            addSectionTitle(printReportTemplate.modules.overallAssessment.title || 'Overall Assessment');
             addKeyValueRows([
-                [overallFields.result, completionLabel],
-                [overallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : 'None'],
-                [overallFields.overallResult, overallResultLabel],
-                [overallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : 'Not assessed'],
+                [printOverallFields.result, completionLabel],
+                [printOverallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : 'None'],
+                [printOverallFields.overallResult, overallResultLabel],
+                [printOverallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : 'Not assessed'],
             ]);
 
-            addSectionTitle(reportTemplate.modules.comments.title || 'Comments');
-            addWrappedText(commentFieldsConfig.assessor || instructorLabel, commentFields.QFI || 'N/A');
-            addWrappedText(commentFieldsConfig.weather, commentFields.Weather || 'N/A');
-            addWrappedText(commentFieldsConfig.profile, commentFields.Profile || 'N/A');
-            addWrappedText(commentFieldsConfig.overall, commentFields.Overall || 'N/A');
-            addWrappedText(commentFieldsConfig.nest, commentFields.NEST || 'N/A');
+            addSectionTitle(printReportTemplate.modules.comments.title || 'Comments');
+            addWrappedText(printCommentFieldsConfig.assessor || instructorLabel, commentFields.QFI || 'N/A');
+            addWrappedText(printCommentFieldsConfig.weather, commentFields.Weather || 'N/A');
+            addWrappedText(printCommentFieldsConfig.profile, commentFields.Profile || 'N/A');
+            addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || 'N/A');
+            addWrappedText(printCommentFieldsConfig.nest, commentFields.NEST || 'N/A');
 
             addSectionTitle('Assessment Matrix');
             PT051_STRUCTURE.forEach(category => {
@@ -810,7 +836,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
             addFooter();
             const safeName = [
-                trainingReportName,
+                printReportName,
                 assessment.flightNumber || event.flightNumber || 'Training-Report',
                 trainee.name || trainee.fullName || 'Person',
                 reportDate || new Date().toISOString().slice(0, 10),
