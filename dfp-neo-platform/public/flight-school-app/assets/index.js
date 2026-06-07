@@ -64361,7 +64361,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           formationCallsignDiagnostics: (neoBuildDiag.airCombatPriority.formationCallsignDiagnostics || []).slice(-300),
           skipReasons: (neoBuildDiag.airCombatPriority.skipReasons || []).slice(-700),
           stageTrace: (neoBuildDiag.airCombatPriority.stageTrace || []).slice(-120),
-          placements: (neoBuildDiag.airCombatPriority.placements || []).slice(-240)
+          placements: (neoBuildDiag.airCombatPriority.placements || []).slice(-240),
+          placementCycles: (neoBuildDiag.airCombatPriority.placementCycles || []).slice(-240),
+          schedulerSummary: neoBuildDiag.airCombatPriority.schedulerSummary || null
         } : void 0
       };
       try {
@@ -67279,6 +67281,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     skipReasons: [],
     rejectionReasons: {},
     placements: [],
+    placementCycles: [],
+    schedulerSummary: null,
     stageTrace: [],
     conclusion: []
   };
@@ -67705,6 +67709,70 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }).filter((entry) => !!entry.nextItem).sort(
       (left, right) => left.completedCount - right.completedCount || left.lastEventDateValue - right.lastEventDateValue || left.tieBreak - right.tieBreak
     );
+    const getTrainingListDiagnostic = (kind, code) => {
+      const matchingItems = sortedTrainingItems(kind, code);
+      const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
+      const pilotStaff = instructors.filter((staff) => staff.role === "Pilot" && !staff.isAdminStaff && Boolean(staff.name));
+      const assignedStaff = pilotStaff.map((staff) => {
+        const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+        const list = kind === "training_package" ? assignments.trainingPackages : assignments.courses;
+        const matchingAssignment = list.find((item) => item.trainingKey === expectedKey || item.code === code);
+        if (!matchingAssignment) return null;
+        const completedEvents = getCompletedTrainingEvents(staff.name, code, kind);
+        const nextItem = getNextTrainingItem(staff.name, code, kind);
+        const counts = eventCounts.get(staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false };
+        return {
+          name: staff.name,
+          unit: staff.unit || null,
+          flight: staff.flight || null,
+          assignmentKey: matchingAssignment.trainingKey,
+          assignmentCode: matchingAssignment.code,
+          completedCount: completedEvents.length,
+          completedEvents: completedEvents.slice(-12).map((event) => ({
+            flightNumber: event.flightNumber,
+            date: event.date || null,
+            startTime: event.startTime,
+            source: event._source || null
+          })),
+          nextEvent: nextItem ? {
+            code: nextItem.code,
+            type: nextItem.type,
+            duration: nextItem.duration,
+            resourceNumber: getLmpResourceNumber(nextItem),
+            linkedEvent: getAirCombatLinkedEventCode(nextItem) || null,
+            preFlightTime: nextItem.preFlightTime || 0,
+            postFlightTime: nextItem.postFlightTime || 0,
+            aircraftConfigRequirement: normaliseAircraftConfigRequirement(nextItem)
+          } : null,
+          eventCounts: counts,
+          exclusionReason: nextItem ? null : "NO_NEXT_EVENT_ALL_MATCHING_EVENTS_COMPLETE_OR_MISSING"
+        };
+      }).filter(Boolean);
+      return {
+        kind,
+        code,
+        expectedKey,
+        matchingSyllabusItems: matchingItems.length,
+        matchingSyllabusSample: matchingItems.slice(0, 20).map((item) => ({
+          code: item.code,
+          type: item.type,
+          duration: item.duration,
+          resourceNumber: getLmpResourceNumber(item),
+          linkedEvent: getAirCombatLinkedEventCode(item) || null,
+          courses: item.courses || [],
+          lmpType: item.lmpType || null,
+          isActive: item.isActive !== false,
+          orderKey: item.orderKey || null,
+          sortOrder: item.sortOrder ?? null,
+          aircraftConfigRequirement: normaliseAircraftConfigRequirement(item)
+        })),
+        pilotStaff: pilotStaff.length,
+        assignedStaffCount: assignedStaff.length,
+        assignedWithNextEvent: assignedStaff.filter((entry) => !!entry.nextEvent).length,
+        assignedWithoutNextEvent: assignedStaff.filter((entry) => !entry.nextEvent).length,
+        assignedStaff
+      };
+    };
     const normaliseAirCombatTrainingCode = (value) => String(value || "").trim().toUpperCase().replace(/\s+/g, "");
     const airCombatTrainingCodesMatch = (left, right) => !!normaliseAirCombatTrainingCode(left) && normaliseAirCombatTrainingCode(left) === normaliseAirCombatTrainingCode(right);
     const getTrainingEventType = (item) => item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.toUpperCase().includes("CPT") ? "cpt" : "ground";
@@ -68552,13 +68620,28 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const placeTrainingForKind = (kind) => {
       const codes = kind === "training_package" ? packageCodes : courseCodes;
+      if (codes.length === 0) {
+        pushAirCombatDiag("trainingAttempts", {
+          kind,
+          placed: false,
+          reason: "NO_ASSIGNMENT_CODES_FOR_KIND"
+        }, 1200);
+        countAirCombatRejection("NO_ASSIGNMENT_CODES_FOR_KIND");
+        return false;
+      }
       for (const code of codes) {
         const priorityList = getTrainingPriorityList(kind, code);
         const matchingItems = sortedTrainingItems(kind, code);
+        const listDiagnostic = getTrainingListDiagnostic(kind, code);
         const diagKey = kind === "training_package" ? "trainingPackageStaffPriorityLists" : "courseStaffPriorityLists";
         neoBuildDiag.airCombatPriority[diagKey].push({
           code,
           matchingSyllabusItems: matchingItems.length,
+          assignedStaffCount: listDiagnostic.assignedStaffCount,
+          assignedWithNextEvent: listDiagnostic.assignedWithNextEvent,
+          assignedWithoutNextEvent: listDiagnostic.assignedWithoutNextEvent,
+          matchingSyllabusSample: listDiagnostic.matchingSyllabusSample,
+          assignedStaff: listDiagnostic.assignedStaff,
           list: priorityList.map((entry) => ({
             name: entry.staff.name,
             completedCount: entry.completedCount,
@@ -68573,8 +68656,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             kind,
             code,
             placed: false,
-            reason: "NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE"
+            reason: "NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE",
+            listDiagnostic
           });
+          countAirCombatRejection("NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE");
           continue;
         }
         if (priorityList.length === 0) {
@@ -68590,7 +68675,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             code,
             placed: false,
             reason: "NO_PRIORITY_STAFF_WITH_NEXT_EVENT",
-            matchingSyllabusItems: matchingItems.length
+            matchingSyllabusItems: matchingItems.length,
+            listDiagnostic
           });
           continue;
         }
@@ -68736,20 +68822,65 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     let coursePlaced = 0;
     let packagePlaced = 0;
+    recordAirCombatStage("training-placement-loop-start", {
+      placementLimit,
+      courseCodes,
+      packageCodes,
+      generatedEventsAtLoopStart: generatedEvents.length
+    });
     for (let attempt = 0; attempt < placementLimit; attempt++) {
       const preferredKind = pickNextKind(coursePlaced, packagePlaced);
-      if (!preferredKind) break;
+      const cycleTrace = {
+        attempt: attempt + 1,
+        placementLimit,
+        preferredKind,
+        coursePlacedBefore: coursePlaced,
+        packagePlacedBefore: packagePlaced,
+        generatedEventsBefore: generatedEvents.length,
+        courseCodes,
+        packageCodes
+      };
+      if (!preferredKind) {
+        cycleTrace.placedKind = null;
+        cycleTrace.breakReason = "NO_PREFERRED_KIND";
+        pushAirCombatDiag("placementCycles", cycleTrace, 300);
+        break;
+      }
       let placedKind = null;
       if (placeTrainingForKind(preferredKind)) {
         placedKind = preferredKind;
       } else {
         const fallbackKind = preferredKind === "course" ? "training_package" : "course";
+        cycleTrace.fallbackKind = fallbackKind;
         if (placeTrainingForKind(fallbackKind)) placedKind = fallbackKind;
       }
-      if (!placedKind) break;
+      cycleTrace.placedKind = placedKind;
+      cycleTrace.generatedEventsAfter = generatedEvents.length;
+      cycleTrace.placementsAfter = neoBuildDiag.airCombatPriority.placements.length;
+      if (!placedKind) {
+        cycleTrace.breakReason = "NO_PLACEMENT_FROM_PREFERRED_OR_FALLBACK";
+        pushAirCombatDiag("placementCycles", cycleTrace, 300);
+        break;
+      }
       if (placedKind === "course") coursePlaced++;
       else packagePlaced++;
+      cycleTrace.coursePlacedAfter = coursePlaced;
+      cycleTrace.packagePlacedAfter = packagePlaced;
+      pushAirCombatDiag("placementCycles", cycleTrace, 300);
     }
+    neoBuildDiag.airCombatPriority.schedulerSummary = {
+      placementLimit,
+      courseCodes,
+      packageCodes,
+      coursePlaced,
+      packagePlaced,
+      totalTrainingPlacements: coursePlaced + packagePlaced,
+      generatedEventsAfterTrainingLoop: generatedEvents.length,
+      placementCount: neoBuildDiag.airCombatPriority.placements.length,
+      rejectionReasons: neoBuildDiag.airCombatPriority.rejectionReasons,
+      lastCycle: (neoBuildDiag.airCombatPriority.placementCycles || []).slice(-1)[0] || null
+    };
+    recordAirCombatStage("training-placement-loop-complete", neoBuildDiag.airCombatPriority.schedulerSummary);
   };
   const getCurrencyPriorityPerson = (event) => {
     const personName = event.student || event.pilot || event.instructor || "";
@@ -71063,11 +71194,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat tasking events matched the build date.");
     const trainingInputs = neoBuildDiag.airCombatPriority.trainingInputs;
     if (trainingInputs && trainingInputs.courseCodes.length === 0 && trainingInputs.packageCodes.length === 0) conclusions.push("No Air Combat course or training-package assignments were found on Pilot staff preferences.");
+    const schedulerSummary = neoBuildDiag.airCombatPriority.schedulerSummary;
+    if (trainingInputs && schedulerSummary?.placementLimit === 0 && (trainingInputs.courseCodes.length > 0 || trainingInputs.packageCodes.length > 0)) conclusions.push("Air Combat training assignments existed, but placementLimit was zero; inspect schedulerSummary and placementCycles.");
+    if (schedulerSummary?.lastCycle?.breakReason === "NO_PLACEMENT_FROM_PREFERRED_OR_FALLBACK") conclusions.push(`Air Combat training loop stopped because neither ${schedulerSummary.lastCycle.preferredKind || "preferred kind"} nor ${schedulerSummary.lastCycle.fallbackKind || "fallback kind"} placed an event; inspect placementCycles, courseStaffPriorityLists, trainingPackageStaffPriorityLists, and trainingAttempts.`);
     const allSyllabusMatches = [
       ...trainingInputs?.courseSyllabusMatches || [],
       ...trainingInputs?.trainingPackageSyllabusMatches || []
     ];
     if (allSyllabusMatches.length > 0 && allSyllabusMatches.every((item) => item.matches === 0)) conclusions.push("Training assignments existed, but none matched active syllabus/training-package events by code.");
+    const allTrainingLists = [
+      ...neoBuildDiag.airCombatPriority.courseStaffPriorityLists || [],
+      ...neoBuildDiag.airCombatPriority.trainingPackageStaffPriorityLists || []
+    ];
+    if (allTrainingLists.length > 0 && allTrainingLists.every((item) => (item.assignedStaffCount || 0) > 0 && (item.assignedWithNextEvent || 0) === 0)) conclusions.push("Assigned Air Combat pilots were found, but every assigned pilot had no next event in the matched sequence; inspect assignedStaff in the priority-list diagnostics.");
     if (airCombatPlacements.length === 0 && Object.keys(neoBuildDiag.airCombatPriority.rejectionReasons || {}).length > 0) conclusions.push("Air Combat scheduler ran but every candidate was rejected; see rejectionReasons, taskingAttempts, trainingAttempts, and resourceChecks.");
     if (generatedEventsBeforeFinalCleanup > 0 && sortedEvents.length === 0) conclusions.push("Events existed before final cleanup but were removed by day/night guard or ground conflict repair; see finalCleanup.");
     if (airCombatPlacements.length > 0 && sortedEvents.length === 0) conclusions.push("Air Combat placements were created but none survived final cleanup; see finalCleanup and placements.");
@@ -79000,7 +79139,9 @@ ${conflictLines.join("\n")}${moreText}`,
             conclusion: activeOperationalModel === "air_combat" ? ["Build failed before the Air Combat scheduler diagnostics completed. See runtimeError for the exact exception."] : [`Air Combat scheduler did not run because active model was ${activeOperationalModel || "blank"}.`],
             rejectionReasons: {},
             skipReasons: [],
-            placements: []
+            placements: [],
+            placementCycles: [],
+            schedulerSummary: null
           };
           localStorage.setItem("neo_build_diag_report", JSON.stringify({
             ...existingDiag,
