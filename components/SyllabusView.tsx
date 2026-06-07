@@ -85,6 +85,7 @@ const SCORING_MATRIX_ASSESSABLE_ELEMENTS = [
     'Lookout',
     'Knowledge',
 ];
+const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
 const SCORING_MATRIX_NON_ASSESSABLE_KEYS = new Set(['generic flying elements']);
 
 const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
@@ -96,8 +97,15 @@ const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
         seen.set(key, clean);
     };
     DEFAULT_ASSESSED_ELEMENTS.forEach(add);
-    SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
-    Object.keys(phraseBank || {}).forEach(add);
+    const configuredElements = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
+    if (Array.isArray(configuredElements)) {
+        configuredElements.forEach(add);
+    } else {
+        SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
+        Object.keys(phraseBank || {}).forEach(key => {
+            if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY) add(key);
+        });
+    }
     return Array.from(seen.values());
 };
 

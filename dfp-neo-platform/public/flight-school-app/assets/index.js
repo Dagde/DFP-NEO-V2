@@ -36407,6 +36407,7 @@ const SCORING_MATRIX_ASSESSABLE_ELEMENTS = [
   "Lookout",
   "Knowledge"
 ];
+const SCORING_MATRIX_ELEMENT_LIST_KEY$2 = "__scoringMatrixElements";
 const SCORING_MATRIX_NON_ASSESSABLE_KEYS = /* @__PURE__ */ new Set(["generic flying elements"]);
 const getScoringMatrixElementOptions = (phraseBank) => {
   const seen = /* @__PURE__ */ new Map();
@@ -36417,8 +36418,15 @@ const getScoringMatrixElementOptions = (phraseBank) => {
     seen.set(key, clean);
   };
   DEFAULT_ASSESSED_ELEMENTS.forEach(add);
-  SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
-  Object.keys(phraseBank || {}).forEach(add);
+  const configuredElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$2];
+  if (Array.isArray(configuredElements)) {
+    configuredElements.forEach(add);
+  } else {
+    SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
+    Object.keys(phraseBank || {}).forEach((key) => {
+      if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY$2) add(key);
+    });
+  }
   return Array.from(seen.values());
 };
 const normaliseAssessedElements = (elements, availableElements = []) => {
@@ -40196,6 +40204,17 @@ const INITIAL_ELEMENTS_LIST = [
   "Lookout",
   "Knowledge"
 ];
+const SCORING_MATRIX_ELEMENT_LIST_KEY$1 = "__scoringMatrixElements";
+const getConfiguredScoringMatrixElements$1 = (phraseBank) => {
+  const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$1];
+  if (Array.isArray(savedElements)) {
+    return savedElements.map((element) => String(element || "").trim()).filter(Boolean).filter((element, index, arr) => arr.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
+  }
+  const customElements = Object.keys(phraseBank || {}).filter(
+    (key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$1 && !["Airmanship", "Preparation", "Technique"].includes(key) && !INITIAL_ELEMENTS_LIST.includes(key)
+  );
+  return [...INITIAL_ELEMENTS_LIST, ...customElements];
+};
 const AddElementFlyout = ({ onClose, onSave }) => {
   const [name, setName] = reactExports.useState("");
   const handleSave = () => {
@@ -40269,10 +40288,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
   const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
   const [editModeGrades, setEditModeGrades] = reactExports.useState(/* @__PURE__ */ new Set());
   const [flightElements, setFlightElements] = reactExports.useState(() => {
-    const customElements = Object.keys(phraseBank).filter(
-      (key) => !["Airmanship", "Preparation", "Technique"].includes(key) && !INITIAL_ELEMENTS_LIST.includes(key)
-    );
-    return [...INITIAL_ELEMENTS_LIST, ...customElements];
+    return getConfiguredScoringMatrixElements$1(phraseBank);
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
@@ -40328,9 +40344,11 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
       alert("An element with this name already exists.");
       return;
     }
-    setFlightElements((prev) => [...prev, newElementName]);
+    const nextElements = [...flightElements, newElementName];
+    setFlightElements(nextElements);
     onUpdatePhraseBank({
       ...phraseBank,
+      [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: nextElements,
       [newElementName]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
     });
     setSelectedElement(newElementName);
@@ -40343,6 +40361,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
     elementsToDelete.forEach((el) => {
       delete newPhraseBank[el];
     });
+    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$1] = newFlightElements;
     onUpdatePhraseBank(newPhraseBank);
     if (elementsToDelete.has(selectedElement)) {
       setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
@@ -42022,6 +42041,17 @@ const INITIAL_ELEMENTS_LIST_INLINE = [
   "Lookout",
   "Knowledge"
 ];
+const SCORING_MATRIX_ELEMENT_LIST_KEY = "__scoringMatrixElements";
+const getConfiguredScoringMatrixElements = (phraseBank) => {
+  const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
+  if (Array.isArray(savedElements)) {
+    return savedElements.map((element) => String(element || "").trim()).filter(Boolean).filter((element, index, arr) => arr.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
+  }
+  const customElements = Object.keys(phraseBank || {}).filter(
+    (key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY && !["Airmanship", "Preparation", "Technique"].includes(key) && !INITIAL_ELEMENTS_LIST_INLINE.includes(key)
+  );
+  return [...INITIAL_ELEMENTS_LIST_INLINE, ...customElements];
+};
 const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
   const [showAddElementFlyout, setShowAddElementFlyout] = reactExports.useState(false);
   const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
@@ -42038,10 +42068,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     setEditModeGrades(newSet);
   };
   const [flightElements, setFlightElements] = reactExports.useState(() => {
-    const customElements = Object.keys(phraseBank).filter(
-      (key) => !["Airmanship", "Preparation", "Technique"].includes(key) && !INITIAL_ELEMENTS_LIST_INLINE.includes(key)
-    );
-    return [...INITIAL_ELEMENTS_LIST_INLINE, ...customElements];
+    return getConfiguredScoringMatrixElements(phraseBank);
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
@@ -42069,8 +42096,13 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
       alert("An element with this name already exists.");
       return;
     }
-    setFlightElements((prev) => [...prev, name]);
-    onUpdatePhraseBank({ ...phraseBank, [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] } });
+    const nextElements = [...flightElements, name];
+    setFlightElements(nextElements);
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [SCORING_MATRIX_ELEMENT_LIST_KEY]: nextElements,
+      [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+    });
     setSelectedElement(name);
     setNewElementName("");
     setShowAddElementFlyout(false);
@@ -42087,6 +42119,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     selectedToDelete.forEach((el) => {
       delete newPhraseBank[el];
     });
+    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY] = newFlightElements;
     onUpdatePhraseBank(newPhraseBank);
     if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
     setSelectedToDelete(/* @__PURE__ */ new Set());

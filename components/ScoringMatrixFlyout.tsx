@@ -16,6 +16,23 @@ const INITIAL_ELEMENTS_LIST = [
     'Level medium Turn', 'Level Steep turn', 'Visual - Initial & Pitch', 'Landing',
     'Crosswind', 'Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'
 ];
+const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
+
+const getConfiguredScoringMatrixElements = (phraseBank: PhraseBank): string[] => {
+    const savedElements = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
+    if (Array.isArray(savedElements)) {
+        return savedElements
+            .map(element => String(element || '').trim())
+            .filter(Boolean)
+            .filter((element, index, arr) => arr.findIndex(candidate => candidate.toLowerCase() === element.toLowerCase()) === index);
+    }
+    const customElements = Object.keys(phraseBank || {}).filter(key =>
+        key !== SCORING_MATRIX_ELEMENT_LIST_KEY &&
+        !['Airmanship', 'Preparation', 'Technique'].includes(key) &&
+        !INITIAL_ELEMENTS_LIST.includes(key)
+    );
+    return [...INITIAL_ELEMENTS_LIST, ...customElements];
+};
 
 // Sub-component for the Add Element Flyout
 const AddElementFlyout: React.FC<{
@@ -135,10 +152,7 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
     
     // Convert static list to state to allow adding new elements
     const [flightElements, setFlightElements] = useState<string[]>(() => {
-        const customElements = Object.keys(phraseBank).filter(key => 
-            !['Airmanship', 'Preparation', 'Technique'].includes(key) && !INITIAL_ELEMENTS_LIST.includes(key)
-        );
-        return [...INITIAL_ELEMENTS_LIST, ...customElements];
+        return getConfiguredScoringMatrixElements(phraseBank);
     });
 
     const [selectedElement, setSelectedElement] = useState<string>(flightElements[0]);
@@ -207,14 +221,15 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
             return;
         }
         
-        // Update the list of elements
-        setFlightElements(prev => [...prev, newElementName]);
+        const nextElements = [...flightElements, newElementName];
+        setFlightElements(nextElements);
 
         // Add an entry for the new element to the phrase bank
         onUpdatePhraseBank({
             ...phraseBank,
+            [SCORING_MATRIX_ELEMENT_LIST_KEY]: nextElements,
             [newElementName]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
-        });
+        } as PhraseBank);
 
         // Select the newly added element
         setSelectedElement(newElementName);
@@ -233,6 +248,7 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
         elementsToDelete.forEach(el => {
             delete newPhraseBank[el];
         });
+        (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_LIST_KEY] = newFlightElements;
         onUpdatePhraseBank(newPhraseBank);
         
         // If the currently selected element was deleted, select the first one in the new list

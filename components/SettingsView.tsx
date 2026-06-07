@@ -112,6 +112,23 @@ const INITIAL_ELEMENTS_LIST_INLINE = [
     'Level medium Turn', 'Level Steep turn', 'Visual - Initial & Pitch', 'Landing',
     'Crosswind', 'Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'
 ];
+const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
+
+const getConfiguredScoringMatrixElements = (phraseBank: PhraseBank): string[] => {
+    const savedElements = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
+    if (Array.isArray(savedElements)) {
+        return savedElements
+            .map(element => String(element || '').trim())
+            .filter(Boolean)
+            .filter((element, index, arr) => arr.findIndex(candidate => candidate.toLowerCase() === element.toLowerCase()) === index);
+    }
+    const customElements = Object.keys(phraseBank || {}).filter(key =>
+        key !== SCORING_MATRIX_ELEMENT_LIST_KEY &&
+        !['Airmanship', 'Preparation', 'Technique'].includes(key) &&
+        !INITIAL_ELEMENTS_LIST_INLINE.includes(key)
+    );
+    return [...INITIAL_ELEMENTS_LIST_INLINE, ...customElements];
+};
 
 interface ScoringMatrixInlineProps {
     activeTab: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
@@ -140,10 +157,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
     };
 
     const [flightElements, setFlightElements] = useState<string[]>(() => {
-        const customElements = Object.keys(phraseBank).filter(key =>
-            !['Airmanship', 'Preparation', 'Technique'].includes(key) && !INITIAL_ELEMENTS_LIST_INLINE.includes(key)
-        );
-        return [...INITIAL_ELEMENTS_LIST_INLINE, ...customElements];
+        return getConfiguredScoringMatrixElements(phraseBank);
     });
 
     const [selectedElement, setSelectedElement] = useState<string>(flightElements[0]);
@@ -174,8 +188,13 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
         const name = newElementName.trim();
         if (!name) return;
         if (flightElements.includes(name)) { alert('An element with this name already exists.'); return; }
-        setFlightElements(prev => [...prev, name]);
-        onUpdatePhraseBank({ ...phraseBank, [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] } });
+        const nextElements = [...flightElements, name];
+        setFlightElements(nextElements);
+        onUpdatePhraseBank({
+            ...phraseBank,
+            [SCORING_MATRIX_ELEMENT_LIST_KEY]: nextElements,
+            [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+        } as PhraseBank);
         setSelectedElement(name);
         setNewElementName('');
         setShowAddElementFlyout(false);
@@ -188,6 +207,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
         setFlightElements(newFlightElements);
         const newPhraseBank = { ...phraseBank };
         selectedToDelete.forEach(el => { delete newPhraseBank[el]; });
+        (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_LIST_KEY] = newFlightElements;
         onUpdatePhraseBank(newPhraseBank);
         if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || 'Generic Flying Elements');
         setSelectedToDelete(new Set());
