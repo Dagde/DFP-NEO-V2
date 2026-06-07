@@ -1179,7 +1179,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             <table className="min-w-[1200px] w-full table-fixed border-collapse">
                                 <colgroup>
                                     <col className="w-[190px]" />
-                                    {assessmentGradeOptions.map(g => <col key={String(g)} className="w-[44px]" />)}
+                                    {assessmentGradeOptions.map(g => <col key={String(g)} className="w-[40px]" />)}
                                     <col className="w-[480px]" />
                                 </colgroup>
                                 <thead>
@@ -1189,7 +1189,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             <th
                                                 key={String(g)}
                                                 title={formatGradeOption(g)}
-                                                className="relative h-[98px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400"
+                                                className="relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400"
                                             >
                                                 <span className="absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap">
                                                     {formatGradeHeaderText(g).split(/\s+/).map((word, index) => (

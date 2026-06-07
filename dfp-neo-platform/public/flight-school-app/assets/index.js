@@ -38170,7 +38170,7 @@ This action cannot be undone.`;
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
-              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[44px]" }, String(g))),
+              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[40px]" }, String(g))),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[480px]" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -38179,7 +38179,7 @@ This action cannot be undone.`;
                 "th",
                 {
                   title: formatGradeOption(g),
-                  className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400",
+                  className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400",
                   children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
                 },
                 String(g)
