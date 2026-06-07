@@ -38180,7 +38180,7 @@ This action cannot be undone.`;
                 },
                 String(g)
               )),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: isLongGradeScale ? "" : "Comments" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", "aria-hidden": "true" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
               const score = assessment.scores.find((s) => s.element === element);
@@ -38220,34 +38220,10 @@ This action cannot be undone.`;
                   }
                 )
               ] });
-              if (isLongGradeScale) {
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { rowSpan: 2, className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
-                    assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-1 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `min-h-[46px] flex items-center justify-center rounded ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "radio",
-                          name: element,
-                          value: String(grade),
-                          checked: score?.grade === grade,
-                          onChange: () => handleGradeChange(element, grade),
-                          disabled: isGroundEvent,
-                          className: `h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? "opacity-50 cursor-not-allowed" : ""}`
-                        }
-                      ),
-                      reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
-                    ] }) }) }, String(grade))),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border-l border-gray-800", "aria-hidden": "true" })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { className: "border-t border-gray-800/60", children: commentCell(assessmentGradeOptions.length + 1, true) })
-                ] }, element);
-              }
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
-                assessmentGradeOptions.map((grade) => {
-                  return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-1 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `min-h-[36px] flex flex-col items-center justify-center gap-1 rounded ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`, children: [
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { rowSpan: 2, className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
+                  assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-1 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `${isLongGradeScale ? "min-h-[46px]" : "min-h-[36px]"} flex items-center justify-center rounded ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "input",
                       {
@@ -38261,9 +38237,10 @@ This action cannot be undone.`;
                       }
                     ),
                     reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
-                  ] }) }, String(grade));
-                }),
-                commentCell()
+                  ] }) }) }, String(grade))),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border-l border-gray-800", "aria-hidden": "true" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { className: "border-t border-gray-800/60", children: commentCell(assessmentGradeOptions.length + 1, true) })
               ] }, element);
             }) })
           ] }) })
