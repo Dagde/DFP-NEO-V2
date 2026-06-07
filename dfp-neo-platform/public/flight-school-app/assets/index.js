@@ -37490,10 +37490,14 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
   ] }) });
 };
 const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null }) => {
-  const reportTemplate = reactExports.useMemo(
-    () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
-    [trainingReportTemplate, trainingReportTerminology]
-  );
+  const reportTemplate = reactExports.useMemo(() => {
+    const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
+    const terminologyName = String(trainingReportTerminology?.name || "").trim();
+    if (terminologyName && terminologyName !== DEFAULT_TRAINING_REPORT_TERMINOLOGY.name && terminologyName !== template.displayName) {
+      return { ...template, displayName: terminologyName };
+    }
+    return template;
+  }, [trainingReportTemplate, trainingReportTerminology]);
   const trainingReportName = reportTemplate.displayName;
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
