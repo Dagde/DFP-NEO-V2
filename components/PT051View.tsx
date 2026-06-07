@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { jsPDF } from 'jspdf';
 import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051OverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
 import AuditButton from './AuditButton';
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
@@ -633,8 +634,191 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         }
     };
 
-    const handlePrint = () => {
-        window.print();
+    const getEventDescription = () => {
+        const eventNum = (event.flightNumber || assessment.flightNumber || '').trim();
+        const normaliseCode = (value?: string) => (value || '').replace(/\s+/g, '').toLowerCase();
+        const syllabusDetail = syllabusDetails.find(d => {
+            const id = (d.id || '').trim();
+            const code = (d.code || '').trim();
+            return (
+                id.toLowerCase() === eventNum.toLowerCase() ||
+                code.toLowerCase() === eventNum.toLowerCase() ||
+                normaliseCode(id) === normaliseCode(eventNum) ||
+                normaliseCode(code) === normaliseCode(eventNum)
+            );
+        });
+        const detail = syllabusDetail as (Partial<SyllabusItemDetail> & { title?: string; description?: string }) | undefined;
+        return detail?.eventDescription || detail?.title || detail?.description || 'N/A';
+    };
+
+    const handlePrint = async () => {
+        try {
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 14;
+            const contentWidth = pageWidth - margin * 2;
+            let y = 16;
+
+            const ensureSpace = (requiredHeight: number) => {
+                if (y + requiredHeight <= pageHeight - 16) return;
+                doc.addPage();
+                y = 16;
+            };
+
+            const addFooter = () => {
+                const pageCount = doc.getNumberOfPages();
+                for (let page = 1; page <= pageCount; page += 1) {
+                    doc.setPage(page);
+                    doc.setFontSize(8);
+                    doc.setTextColor(120);
+                    doc.text(`Generated ${new Date().toLocaleString()} - Page ${page} of ${pageCount}`, margin, pageHeight - 8);
+                }
+                doc.setPage(pageCount);
+            };
+
+            const addSectionTitle = (title: string) => {
+                ensureSpace(12);
+                y += 4;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(20, 35, 55);
+                doc.text(title, margin, y);
+                y += 2;
+                doc.setDrawColor(180, 190, 200);
+                doc.line(margin, y, pageWidth - margin, y);
+                y += 6;
+            };
+
+            const addKeyValueRows = (rows: Array<[string, string]>) => {
+                doc.setFontSize(9);
+                rows.forEach(([label, value]) => {
+                    const text = value || 'N/A';
+                    const valueLines = doc.splitTextToSize(text, contentWidth - 48);
+                    const rowHeight = Math.max(7, valueLines.length * 4 + 2);
+                    ensureSpace(rowHeight);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(80);
+                    doc.text(label, margin, y);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(20);
+                    doc.text(valueLines, margin + 48, y);
+                    y += rowHeight;
+                });
+            };
+
+            const addWrappedText = (label: string, value: string) => {
+                const lines = doc.splitTextToSize(value || 'N/A', contentWidth);
+                ensureSpace(9 + lines.length * 4);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.setTextColor(80);
+                doc.text(label, margin, y);
+                y += 5;
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(20);
+                doc.text(lines, margin, y);
+                y += lines.length * 4 + 4;
+            };
+
+            const completionLabel = reportTemplate.completionResults.find(option => option.code === dcoResult)?.label || dcoResult || 'None';
+            const overallResultLabel = overallResult === 'P'
+                ? reportTemplate.overallResults.passLabel
+                : overallResult === 'F'
+                    ? (showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel)
+                    : 'Not selected';
+            const reportDate = assessment.date || currentEvent.date || event.date || '';
+            const startTime = currentEvent.startTime ?? event.startTime ?? 0;
+            const duration = currentEvent.duration ?? event.duration ?? 0;
+            const endTime = startTime + duration;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(17);
+            doc.setTextColor(10, 25, 45);
+            doc.text(`${trainingReportName} Training Report`, margin, y);
+            y += 8;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(80);
+            doc.text(`${assessment.flightNumber || event.flightNumber || 'Event'} - ${trainee.rank || ''} ${trainee.name || trainee.fullName || ''} - ${reportDate}`, margin, y);
+            y += 8;
+
+            addSectionTitle(reportTemplate.modules.overview.title || 'Event Details');
+            addKeyValueRows([
+                [overviewFields.event, assessment.flightNumber || event.flightNumber || 'N/A'],
+                [overviewFields.type, getEventDescription()],
+                ['Trainee', `${trainee.rank || ''} ${trainee.name || trainee.fullName || ''}`.trim()],
+                ['Course', trainee.course || 'N/A'],
+                [overviewFields.date, reportDate || 'N/A'],
+                [overviewFields.timing, `${formatTime(startTime)} - ${formatTime(endTime)}`],
+                [overviewFields.assessor, assessment.instructorName || event.instructor || 'N/A'],
+                [overviewFields.resource, currentEvent.resourceId || event.resourceId || 'N/A'],
+                [overviewFields.callsign, currentEvent.callsign || event.callsign || 'N/A'],
+                [overviewFields.unit, trainee.unit || 'N/A'],
+            ]);
+
+            addSectionTitle(reportTemplate.modules.overallAssessment.title || 'Overall Assessment');
+            addKeyValueRows([
+                [overallFields.result, completionLabel],
+                [overallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : 'None'],
+                [overallFields.overallResult, overallResultLabel],
+                [overallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : 'Not assessed'],
+            ]);
+
+            addSectionTitle(reportTemplate.modules.comments.title || 'Comments');
+            addWrappedText(commentFieldsConfig.assessor || instructorLabel, commentFields.QFI || 'N/A');
+            addWrappedText(commentFieldsConfig.weather, commentFields.Weather || 'N/A');
+            addWrappedText(commentFieldsConfig.profile, commentFields.Profile || 'N/A');
+            addWrappedText(commentFieldsConfig.overall, commentFields.Overall || 'N/A');
+            addWrappedText(commentFieldsConfig.nest, commentFields.NEST || 'N/A');
+
+            addSectionTitle('Assessment Matrix');
+            PT051_STRUCTURE.forEach(category => {
+                ensureSpace(12);
+                doc.setFillColor(235, 240, 245);
+                doc.rect(margin, y - 4, contentWidth, 7, 'F');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.setTextColor(25, 40, 60);
+                doc.text(category.category, margin + 2, y + 1);
+                y += 8;
+
+                category.elements.forEach(element => {
+                    const score = assessment.scores.find(item => item.element === element);
+                    const gradeText = score?.grade !== null && score?.grade !== undefined ? formatGradeOption(score.grade) : 'Not assessed';
+                    const commentText = score?.comment || 'N/A';
+                    const commentLines = doc.splitTextToSize(commentText, contentWidth - 75);
+                    const rowHeight = Math.max(8, commentLines.length * 4 + 3);
+                    ensureSpace(rowHeight);
+
+                    doc.setFontSize(8.5);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(20);
+                    doc.text(element, margin + 2, y);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(gradeText, margin + 50, y);
+                    doc.text(commentLines, margin + 75, y);
+                    y += rowHeight;
+                });
+                y += 2;
+            });
+
+            addFooter();
+            const safeName = [
+                trainingReportName,
+                assessment.flightNumber || event.flightNumber || 'Training-Report',
+                trainee.name || trainee.fullName || 'Person',
+                reportDate || new Date().toISOString().slice(0, 10),
+            ]
+                .join('-')
+                .replace(/[^a-z0-9_-]+/gi, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            doc.save(`${safeName}.pdf`);
+        } catch (error) {
+            console.error('[PT051] PDF export failed:', error);
+            await showDarkAlert('The training report PDF could not be created. Please try again or check the console for details.', 'PDF Export Failed', 'error');
+        }
     };
 
     const handleDeleteAssessment = async () => {

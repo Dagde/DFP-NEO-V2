@@ -5850,14 +5850,14 @@ const Header = ({
     )
   ] });
 };
-const formatTime$6 = (time) => {
+const formatTime$7 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 const formatDeploymentClock = (clock, fallbackHours) => {
   if (clock) return clock.replace(/:/g, "");
-  if (typeof fallbackHours === "number") return formatTime$6(fallbackHours).replace(/:/g, "");
+  if (typeof fallbackHours === "number") return formatTime$7(fallbackHours).replace(/:/g, "");
   return "";
 };
 const formatDeploymentDate = (dateString) => {
@@ -6374,9 +6374,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
                       desc && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#94a3b8", fontWeight: 400, marginLeft: 4 }, children: desc })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 10, color: "#64748b" }, children: [
-                      formatTime$6(t.startTime),
+                      formatTime$7(t.startTime),
                       " – ",
-                      formatTime$6(endTime),
+                      formatTime$7(endTime),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#475569", marginLeft: 6 }, children: [
                         "(",
                         durationStr,
@@ -6389,9 +6389,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { borderTop: "1px solid rgba(147,197,253,0.2)", marginTop: 4, paddingTop: 4, fontSize: 10, color: "#64748b", display: "flex", justifyContent: "space-between" }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                   "Session: ",
-                  formatTime$6(dayStart),
+                  formatTime$7(dayStart),
                   " – ",
-                  formatTime$6(dayStart + dayDuration)
+                  formatTime$7(dayStart + dayDuration)
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#475569" }, children: (() => {
                   const totalMins = Math.round(dayDuration * 60);
@@ -6559,7 +6559,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-6 w-px bg-gray-600" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-semibold text-sky-400", children: event.flightNumber }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-400", children: formatTime$6(effectiveStartTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-400", children: formatTime$7(effectiveStartTime) })
       ] }),
       callsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign })
     ] }) });
@@ -6627,7 +6627,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
               {
                 className: "absolute top-1 left-1 font-mono text-white/60 pointer-events-none",
                 style: { fontSize: `${scaledFontSize * 0.825}px` },
-                children: formatTime$6(effectiveStartTime)
+                children: formatTime$7(effectiveStartTime)
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -6635,7 +6635,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
               {
                 className: "absolute top-1 right-1 font-mono text-white/60 pointer-events-none",
                 style: { fontSize: `${scaledFontSize * 0.825}px` },
-                children: formatTime$6(effectiveStartTime + effectiveDuration)
+                children: formatTime$7(effectiveStartTime + effectiveDuration)
               }
             )
           ] }) : !isSmallTile && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -6643,7 +6643,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
             {
               className: "absolute -top-px left-1 font-mono text-white/60 pointer-events-none",
               style: { fontSize: `${scaledFontSize * 0.75}px` },
-              children: formatTime$6(effectiveStartTime)
+              children: formatTime$7(effectiveStartTime)
             }
           ),
           renderContent(),
@@ -14594,7 +14594,7 @@ const MassBriefConfirmationFlyout = ({
     ) })
   ] }) });
 };
-const formatTime$5 = (time) => {
+const formatTime$6 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round((time - hours) * 60);
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
@@ -14611,11 +14611,11 @@ const VisualAdjustModal = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "Start Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(startTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(startTime) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "End Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(endTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(endTime) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end space-x-2 mt-4", children: [
@@ -14953,13 +14953,13 @@ const getEventTypeFromSyllabus = (syllabusId, syllabusDetails) => {
   if (detail.type === "Ground School") return "ground";
   return "flight";
 };
-const formatTime$4 = (time) => {
+const formatTime$5 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 const normalizeStartTimeValue = (time) => {
-  if (typeof time === "number") return formatTime$4(time);
+  if (typeof time === "number") return formatTime$5(time);
   if (!time) return "00:00";
   if (time.includes(":")) return time;
   const cleaned = time.replace(/\D/g, "").padStart(4, "0").slice(-4);
@@ -15717,7 +15717,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (onVisualAdjustEnd) {
       onVisualAdjustEnd(updatedEvent);
     }
-    setStartTime(formatTime$4(visualAdjustStartTime));
+    setStartTime(formatTime$5(visualAdjustStartTime));
     setDuration(visualAdjustEndTime - visualAdjustStartTime);
   };
   const handleSave = async () => {
@@ -15867,7 +15867,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       for (let m = 0; m < 60; m += 5) {
         const totalHours = h + m / 60;
         const label = `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}`;
-        options.push({ label, value: formatTime$4(totalHours) });
+        options.push({ label, value: formatTime$5(totalHours) });
       }
     }
     return options;
@@ -17226,7 +17226,7 @@ const saveUserPreference = async (userId, key, value) => {
     return false;
   }
 };
-const formatTime$3 = (time) => {
+const formatTime$4 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -17789,7 +17789,7 @@ const FlightTile = ({
     elemRefs.current[elemKey] = el;
   }, style: { display: "inline-flex", alignItems: "center", ...guideGlowStyle(elemKey), ...style }, children });
   const startTimeContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$3(startTime) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$4(startTime) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "select",
       {
@@ -18233,7 +18233,7 @@ const AddFlightTileModal = ({
     for (let h = 6; h <= 23; h++) {
       for (let m = 0; m < 60; m += 15) {
         const val = h + m / 60;
-        opts.push({ value: String(val), label: formatTime$3(val) });
+        opts.push({ value: String(val), label: formatTime$4(val) });
       }
     }
     return opts;
@@ -20769,7 +20769,7 @@ const TafWeatherWidget = ({ onClose }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 pt-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Auto-refreshes every 30 minutes • Data from AVWX" }) })
   ] });
 };
-const formatTime$2 = (time) => {
+const formatTime$3 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -20823,9 +20823,9 @@ const MyDashboard = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-300", children: [
-          formatTime$2(event.startTime),
+          formatTime$3(event.startTime),
           " - ",
-          formatTime$2(event.startTime + event.duration)
+          formatTime$3(event.startTime + event.duration)
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onSelectEvent(event), className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Details" })
       ] })
@@ -21150,7 +21150,7 @@ const FlightTrackingWidget = ({ school, locationName }) => {
     ] }) })
   ] });
 };
-const formatTime$1 = (time) => {
+const formatTime$2 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -21187,7 +21187,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "AUTH" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-3 flex-1", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$2(event.startTime) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white text-sm", children: event.flightNumber }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
@@ -37382,6 +37382,11 @@ const PT051_STRUCTURE$1 = [
 ];
 const ALL_ELEMENTS$1 = PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST"];
+const formatTime$1 = (time) => {
+  const hours = Math.floor(time);
+  const minutes = Math.round(time % 1 * 60);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
 const parseComments = (raw) => {
   const defaults = { QFI: "", Weather: "", Profile: "", Overall: "", NEST: "" };
   if (!raw) return defaults;
@@ -37853,8 +37858,163 @@ ${commentFields[key]}`).join("\n\n");
       onBack();
     }
   };
-  const handlePrint = () => {
-    window.print();
+  const getEventDescription = () => {
+    const eventNum = (event.flightNumber || assessment.flightNumber || "").trim();
+    const normaliseCode2 = (value) => (value || "").replace(/\s+/g, "").toLowerCase();
+    const syllabusDetail = syllabusDetails.find((d) => {
+      const id = (d.id || "").trim();
+      const code = (d.code || "").trim();
+      return id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase() || normaliseCode2(id) === normaliseCode2(eventNum) || normaliseCode2(code) === normaliseCode2(eventNum);
+    });
+    const detail = syllabusDetail;
+    return detail?.eventDescription || detail?.title || detail?.description || "N/A";
+  };
+  const handlePrint = async () => {
+    try {
+      const doc = new E({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+      const contentWidth = pageWidth - margin * 2;
+      let y = 16;
+      const ensureSpace = (requiredHeight) => {
+        if (y + requiredHeight <= pageHeight - 16) return;
+        doc.addPage();
+        y = 16;
+      };
+      const addFooter = () => {
+        const pageCount = doc.getNumberOfPages();
+        for (let page = 1; page <= pageCount; page += 1) {
+          doc.setPage(page);
+          doc.setFontSize(8);
+          doc.setTextColor(120);
+          doc.text(`Generated ${(/* @__PURE__ */ new Date()).toLocaleString()} - Page ${page} of ${pageCount}`, margin, pageHeight - 8);
+        }
+        doc.setPage(pageCount);
+      };
+      const addSectionTitle = (title) => {
+        ensureSpace(12);
+        y += 4;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(20, 35, 55);
+        doc.text(title, margin, y);
+        y += 2;
+        doc.setDrawColor(180, 190, 200);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 6;
+      };
+      const addKeyValueRows = (rows) => {
+        doc.setFontSize(9);
+        rows.forEach(([label, value]) => {
+          const text = value || "N/A";
+          const valueLines = doc.splitTextToSize(text, contentWidth - 48);
+          const rowHeight = Math.max(7, valueLines.length * 4 + 2);
+          ensureSpace(rowHeight);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(80);
+          doc.text(label, margin, y);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(20);
+          doc.text(valueLines, margin + 48, y);
+          y += rowHeight;
+        });
+      };
+      const addWrappedText = (label, value) => {
+        const lines = doc.splitTextToSize(value || "N/A", contentWidth);
+        ensureSpace(9 + lines.length * 4);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+        doc.text(label, margin, y);
+        y += 5;
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(20);
+        doc.text(lines, margin, y);
+        y += lines.length * 4 + 4;
+      };
+      const completionLabel = reportTemplate.completionResults.find((option) => option.code === dcoResult)?.label || dcoResult || "None";
+      const overallResultLabel = overallResult === "P" ? reportTemplate.overallResults.passLabel : overallResult === "F" ? showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel : "Not selected";
+      const reportDate = assessment.date || currentEvent.date || event.date || "";
+      const startTime = currentEvent.startTime ?? event.startTime ?? 0;
+      const duration = currentEvent.duration ?? event.duration ?? 0;
+      const endTime = startTime + duration;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(17);
+      doc.setTextColor(10, 25, 45);
+      doc.text(`${trainingReportName} Training Report`, margin, y);
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(80);
+      doc.text(`${assessment.flightNumber || event.flightNumber || "Event"} - ${trainee.rank || ""} ${trainee.name || trainee.fullName || ""} - ${reportDate}`, margin, y);
+      y += 8;
+      addSectionTitle(reportTemplate.modules.overview.title || "Event Details");
+      addKeyValueRows([
+        [overviewFields.event, assessment.flightNumber || event.flightNumber || "N/A"],
+        [overviewFields.type, getEventDescription()],
+        ["Trainee", `${trainee.rank || ""} ${trainee.name || trainee.fullName || ""}`.trim()],
+        ["Course", trainee.course || "N/A"],
+        [overviewFields.date, reportDate || "N/A"],
+        [overviewFields.timing, `${formatTime$1(startTime)} - ${formatTime$1(endTime)}`],
+        [overviewFields.assessor, assessment.instructorName || event.instructor || "N/A"],
+        [overviewFields.resource, currentEvent.resourceId || event.resourceId || "N/A"],
+        [overviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
+        [overviewFields.unit, trainee.unit || "N/A"]
+      ]);
+      addSectionTitle(reportTemplate.modules.overallAssessment.title || "Overall Assessment");
+      addKeyValueRows([
+        [overallFields.result, completionLabel],
+        [overallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : "None"],
+        [overallFields.overallResult, overallResultLabel],
+        [overallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : "Not assessed"]
+      ]);
+      addSectionTitle(reportTemplate.modules.comments.title || "Comments");
+      addWrappedText(commentFieldsConfig.assessor || instructorLabel, commentFields.QFI || "N/A");
+      addWrappedText(commentFieldsConfig.weather, commentFields.Weather || "N/A");
+      addWrappedText(commentFieldsConfig.profile, commentFields.Profile || "N/A");
+      addWrappedText(commentFieldsConfig.overall, commentFields.Overall || "N/A");
+      addWrappedText(commentFieldsConfig.nest, commentFields.NEST || "N/A");
+      addSectionTitle("Assessment Matrix");
+      PT051_STRUCTURE$1.forEach((category) => {
+        ensureSpace(12);
+        doc.setFillColor(235, 240, 245);
+        doc.rect(margin, y - 4, contentWidth, 7, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(25, 40, 60);
+        doc.text(category.category, margin + 2, y + 1);
+        y += 8;
+        category.elements.forEach((element) => {
+          const score = assessment.scores.find((item) => item.element === element);
+          const gradeText = score?.grade !== null && score?.grade !== void 0 ? formatGradeOption(score.grade) : "Not assessed";
+          const commentText = score?.comment || "N/A";
+          const commentLines = doc.splitTextToSize(commentText, contentWidth - 75);
+          const rowHeight = Math.max(8, commentLines.length * 4 + 3);
+          ensureSpace(rowHeight);
+          doc.setFontSize(8.5);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(20);
+          doc.text(element, margin + 2, y);
+          doc.setFont("helvetica", "normal");
+          doc.text(gradeText, margin + 50, y);
+          doc.text(commentLines, margin + 75, y);
+          y += rowHeight;
+        });
+        y += 2;
+      });
+      addFooter();
+      const safeName = [
+        trainingReportName,
+        assessment.flightNumber || event.flightNumber || "Training-Report",
+        trainee.name || trainee.fullName || "Person",
+        reportDate || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
+      ].join("-").replace(/[^a-z0-9_-]+/gi, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+      doc.save(`${safeName}.pdf`);
+    } catch (error) {
+      console.error("[PT051] PDF export failed:", error);
+      await showDarkAlert("The training report PDF could not be created. Please try again or check the console for details.", "PDF Export Failed", "error");
+    }
   };
   const handleDeleteAssessment = async () => {
     if (!canEditPt051) {
