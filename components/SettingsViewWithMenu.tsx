@@ -45,6 +45,7 @@ interface SettingsViewWithMenuProps {
     onReplaceTrainees: (trainees: Trainee[]) => void;
     onUpdateSyllabus: (syllabus: SyllabusItemDetail[]) => void;
     onShowSuccess: (message: string) => void;
+    onScoringMatrixElementAdded?: (elementName: string) => void;
     onNavigateToProfile?: (user: any) => void;
     eventLimits: EventLimits;
     onUpdateEventLimits: (limits: EventLimits) => void;
@@ -1243,7 +1244,16 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
     const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<Trainee[]>([]);
     const { isFrozen } = useSystemFreeze();
-    const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>('Airmanship');
+    const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>(() => {
+        try {
+            const restoreTab = sessionStorage.getItem('dfp_restore_scoring_matrix_tab');
+            if (restoreTab === 'Airmanship' || restoreTab === 'Preparation' || restoreTab === 'Technique' || restoreTab === 'Elements') {
+                sessionStorage.removeItem('dfp_restore_scoring_matrix_tab');
+                return restoreTab;
+            }
+        } catch (e) { /* ignore */ }
+        return 'Airmanship';
+    });
     const [settingsSearch, setSettingsSearch] = useState('');
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 

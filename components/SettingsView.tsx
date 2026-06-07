@@ -85,6 +85,7 @@ interface SettingsViewProps {
     currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
     scoringMatrixActiveTab?: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
     scoringMatrixReadOnly?: boolean;
+    onScoringMatrixElementAdded?: (elementName: string) => void;
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
     tileStatusSettings?: TileStatusSettings;
@@ -117,9 +118,10 @@ interface ScoringMatrixInlineProps {
     phraseBank: PhraseBank;
     onUpdatePhraseBank: (newBank: PhraseBank) => void;
     readOnly?: boolean;
+    onElementAdded?: (elementName: string) => void;
 }
 
-const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false }) => {
+const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
     const [showAddElementFlyout, setShowAddElementFlyout] = useState(false);
     const [showDeleteElementFlyout, setShowDeleteElementFlyout] = useState(false);
     const [newElementName, setNewElementName] = useState('');
@@ -177,6 +179,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
         setSelectedElement(name);
         setNewElementName('');
         setShowAddElementFlyout(false);
+        onElementAdded?.(name);
     };
 
     const handleDeleteElements = () => {
@@ -467,6 +470,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     activeSection = 'scoring-matrix',
     scoringMatrixActiveTab,
     scoringMatrixReadOnly = false,
+    onScoringMatrixElementAdded,
     maxDispatchPerHour,
     onUpdateMaxDispatchPerHour,
     tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
@@ -1917,6 +1921,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         phraseBank={phraseBank}
                         onUpdatePhraseBank={handleUpdatePhraseBank}
                         readOnly={scoringMatrixReadOnly}
+                        onElementAdded={onScoringMatrixElementAdded}
                     />
                 )}
 

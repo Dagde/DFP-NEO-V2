@@ -53,7 +53,44 @@ const PT051_STRUCTURE = [
 ];
 
 const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
+const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST'] as const;
+
+const normaliseAssessedElements = (elements?: string[]): string[] => {
+    const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS;
+    const seen = new Set<string>();
+    const selected = source
+        .map(element => String(element || '').trim())
+        .filter(Boolean)
+        .filter(element => {
+            const key = element.toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS;
+};
+
+const buildAssessmentStructure = (elements?: string[]) => {
+    const selectedElements = normaliseAssessedElements(elements);
+    const selectedKeys = new Set(selectedElements.map(element => element.toLowerCase()));
+    const usedKeys = new Set<string>();
+    const categories = PT051_STRUCTURE
+        .map(category => ({
+            ...category,
+            elements: category.elements.filter(element => {
+                const include = selectedKeys.has(element.toLowerCase());
+                if (include) usedKeys.add(element.toLowerCase());
+                return include;
+            }),
+        }))
+        .filter(category => category.elements.length > 0);
+    const additionalElements = selectedElements.filter(element => !usedKeys.has(element.toLowerCase()));
+    if (additionalElements.length > 0) {
+        categories.push({ category: 'Additional Elements', elements: additionalElements });
+    }
+    return categories.length > 0 ? categories : [{ category: 'Core Dimensions', elements: DEFAULT_ASSESSED_ELEMENTS }];
+};
 
 const InfoField: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
     <div>
@@ -313,6 +350,31 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         }
         return event;
     });
+    const syllabusEvent = useMemo(() => {
+        const eventCodes = [
+            event.eventCode,
+            event.flightNumber,
+            currentEvent?.eventCode,
+            currentEvent?.flightNumber,
+            initialAssessment?.flightNumber,
+        ]
+            .map(code => String(code || '').trim())
+            .filter(Boolean);
+        return syllabusDetails.find(item => (
+            eventCodes.some(code => (
+                String(item.code || '').trim() === code ||
+                String(item.id || '').trim() === code
+            ))
+        ));
+    }, [event.eventCode, event.flightNumber, currentEvent?.eventCode, currentEvent?.flightNumber, initialAssessment?.flightNumber, syllabusDetails]);
+    const assessmentStructure = useMemo(
+        () => buildAssessmentStructure(syllabusEvent?.assessedElements),
+        [syllabusEvent?.assessedElements]
+    );
+    const assessmentElements = useMemo(
+        () => assessmentStructure.flatMap(category => category.elements),
+        [assessmentStructure]
+    );
     const [assessment, setAssessment] = useState(() => {
         if (initialAssessment) {
             return initialAssessment;
@@ -324,7 +386,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             flightNumber: event.flightNumber,
             date: event.date,
             instructorName: event.instructor || '',
-            scores: ALL_ELEMENTS.map(element => ({
+            scores: assessmentElements.map(element => ({
                 element,
                 grade: null,
                 comment: ''
@@ -334,6 +396,17 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             groundSchoolAssessment: { isAssessment: false, result: undefined },
         } as Pt051Assessment;
     });
+
+    useEffect(() => {
+        setAssessment(prev => {
+            const existingElements = new Set(prev.scores.map(score => score.element));
+            const missingScores = assessmentElements
+                .filter(element => !existingElements.has(element))
+                .map(element => ({ element, grade: null, comment: '' }));
+            if (missingScores.length === 0) return prev;
+            return { ...prev, scores: [...prev.scores, ...missingScores] };
+        });
+    }, [assessmentElements]);
 
     const handleEventUpdate = (updates: Partial<ScheduleEvent>) => {
         const updatedEvent = { ...currentEvent, ...updates };
@@ -447,14 +520,18 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const handleGradeChange = (element: string, grade: Pt051Grade | 'MIN' | 'DEMO') => {
         setAssessment(prev => ({
             ...prev,
-            scores: prev.scores.map(s => s.element === element ? { ...s, grade } : s)
+            scores: prev.scores.some(s => s.element === element)
+                ? prev.scores.map(s => s.element === element ? { ...s, grade } : s)
+                : [...prev.scores, { element, grade, comment: '' }]
         }));
     };
 
     const handleCommentChange = (element: string, comment: string) => {
         setAssessment(prev => ({
             ...prev,
-            scores: prev.scores.map(s => s.element === element ? { ...s, comment } : s)
+            scores: prev.scores.some(s => s.element === element)
+                ? prev.scores.map(s => s.element === element ? { ...s, comment } : s)
+                : [...prev.scores, { element, grade: null, comment }]
         }));
     };
 
@@ -804,7 +881,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             addWrappedText(printCommentFieldsConfig.nest, commentFields.NEST || 'N/A');
 
             addSectionTitle('Assessment Matrix');
-            PT051_STRUCTURE.forEach(category => {
+            assessmentStructure.forEach(category => {
                 ensureSpace(12);
                 doc.setFillColor(235, 240, 245);
                 doc.rect(margin, y - 4, contentWidth, 7, 'F');
@@ -1391,7 +1468,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 
                 {/* BOTTOM SECTION - GRADING */}
                 <div className="space-y-4">
-                     {PT051_STRUCTURE.map(category => {
+                     {assessmentStructure.map(category => {
                         const isGroundEvent = event.type === 'ground';
                         return (
                         <fieldset key={category.category} className={`p-4 border rounded-lg ${isGroundEvent ? 'border-gray-800 bg-gray-800/30 opacity-50' : 'border-gray-700'}`}>

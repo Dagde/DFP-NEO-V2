@@ -511,6 +511,14 @@ const formatLmpSortieLabel = (item: SyllabusItemDetail, resourceDisplayNames: Re
 const formatLmpDurationLabel = (item: SyllabusItemDetail): string =>
     `${formatHours(item.duration)}h`;
 
+const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
+
+const getAssessedElements = (item: SyllabusItemDetail): string[] => (
+    Array.isArray(item.assessedElements) && item.assessedElements.length > 0
+        ? item.assessedElements
+        : DEFAULT_ASSESSED_ELEMENTS
+);
+
 const DetailView: React.FC<{
     item: SyllabusItemDetail;
     score: Score | undefined;
@@ -562,6 +570,17 @@ const DetailView: React.FC<{
                     label={<span className="flex items-center">CONFIG<AircraftConfigInfoIcon definitions={aircraftConfigurations} /></span>}
                     value={formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)}
                 />
+            </div>
+        </fieldset>
+
+        <fieldset className="p-4 border border-gray-700 rounded-lg">
+            <legend className="px-2 text-sm font-semibold text-gray-300">Assessed Elements</legend>
+            <div className="mt-2 flex flex-wrap gap-2 rounded-lg bg-gray-900/45 p-3">
+                {getAssessedElements(item).map(element => (
+                    <span key={element} className="rounded border border-sky-700/50 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold text-sky-100">
+                        {element}
+                    </span>
+                ))}
             </div>
         </fieldset>
 

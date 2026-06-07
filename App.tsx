@@ -26221,6 +26221,17 @@ appliedUpdates.forEach(update => {
                            instructorsData={instructorsData}
                            operationalModel={activeOperationalModel}
                            currentUserName={currentUserName}
+                           scoringMatrixPhraseBank={activeTrainingReportPhraseBank}
+                           onAddScoringMatrixElement={() => {
+                               try {
+                                   sessionStorage.setItem('dfp_restore_settings_section_after_reload', 'scoring-matrix');
+                                   sessionStorage.setItem('dfp_restore_scoring_matrix_tab', 'Elements');
+                                   sessionStorage.setItem('dfp_return_to_lmp_after_scoring_matrix_add', '1');
+                               } catch (error) {
+                                   console.warn('[LMP/Event Details] Unable to store scoring matrix return target:', error);
+                               }
+                               handleNavigation('Settings');
+                           }}
                            onUpdateInstructor={async (data) => {
                                const dbId = (data as any).id;
                                try {
@@ -26287,9 +26298,22 @@ appliedUpdates.forEach(update => {
                     onShowSuccess={setSuccessMessage}
                     eventLimits={eventLimits}
                     onUpdateEventLimits={setEventLimits}
-                        onNavigateToProfile={handleNavigateToProfile}
+                    onNavigateToProfile={handleNavigateToProfile}
                     phraseBank={activeTrainingReportPhraseBank}
                     onUpdatePhraseBank={handleUpdateActiveTrainingReportPhraseBank}
+                    onScoringMatrixElementAdded={(elementName) => {
+                        let shouldReturn = false;
+                        try {
+                            shouldReturn = sessionStorage.getItem('dfp_return_to_lmp_after_scoring_matrix_add') === '1';
+                            sessionStorage.removeItem('dfp_return_to_lmp_after_scoring_matrix_add');
+                        } catch (error) {
+                            console.warn('[Settings] Unable to read LMP return target:', error);
+                        }
+                        if (shouldReturn) {
+                            setSuccessMessage(`Added scoring element "${elementName}". Returning to LMP/Event Details.`);
+                            handleNavigation('Syllabus');
+                        }
+                    }}
                     onNavigate={handleNavigation}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}

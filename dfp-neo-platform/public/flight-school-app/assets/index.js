@@ -10782,7 +10782,7 @@ const PT051_STRUCTURE$2 = [
   { category: "Landing", elements: ["Landing", "Crosswind"] },
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
-const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
+const ALL_ELEMENTS$1 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
 const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
   const { isFrozen } = useSystemFreeze();
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
@@ -10960,7 +10960,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
         overallResult: item.score === 5 ? "P" : null,
         dcoResult: item.score === 5 ? "DCO" : void 0,
         overallComments: item.notes,
-        scores: ALL_ELEMENTS$2.map((element) => ({
+        scores: ALL_ELEMENTS$1.map((element) => ({
           element,
           grade: null,
           comment: ""
@@ -11432,6 +11432,8 @@ const formatLmpSortieLabel = (item, resourceDisplayNames) => {
   return formatDisplayType(getDisplayType(item), resourceDisplayNames);
 };
 const formatLmpDurationLabel = (item) => `${formatHours(item.duration)}h`;
+const DEFAULT_ASSESSED_ELEMENTS$2 = ["Airmanship", "Preparation", "Technique"];
+const getAssessedElements = (item) => Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : DEFAULT_ASSESSED_ELEMENTS$2;
 const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -11483,6 +11485,10 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
         }
       )
     ] })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Assessed Elements" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-2 rounded-lg bg-gray-900/45 p-3", children: getAssessedElements(item).map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-sky-700/50 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold text-sky-100", children: element }, element)) })
   ] }),
   score && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-sky-700 rounded-lg bg-sky-900/10", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-sky-300", children: "Trainee's Score" }),
@@ -12010,8 +12016,38 @@ const PT051_STRUCTURE$1 = [
   { category: "Landing", elements: ["Landing", "Crosswind"] },
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
-const ALL_ELEMENTS$1 = PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
+PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
+const DEFAULT_ASSESSED_ELEMENTS$1 = ["Airmanship", "Preparation", "Technique"];
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST"];
+const normaliseAssessedElements$1 = (elements) => {
+  const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS$1;
+  const seen = /* @__PURE__ */ new Set();
+  const selected = source.map((element) => String(element || "").trim()).filter(Boolean).filter((element) => {
+    const key = element.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS$1;
+};
+const buildAssessmentStructure = (elements) => {
+  const selectedElements = normaliseAssessedElements$1(elements);
+  const selectedKeys = new Set(selectedElements.map((element) => element.toLowerCase()));
+  const usedKeys = /* @__PURE__ */ new Set();
+  const categories = PT051_STRUCTURE$1.map((category) => ({
+    ...category,
+    elements: category.elements.filter((element) => {
+      const include = selectedKeys.has(element.toLowerCase());
+      if (include) usedKeys.add(element.toLowerCase());
+      return include;
+    })
+  })).filter((category) => category.elements.length > 0);
+  const additionalElements = selectedElements.filter((element) => !usedKeys.has(element.toLowerCase()));
+  if (additionalElements.length > 0) {
+    categories.push({ category: "Additional Elements", elements: additionalElements });
+  }
+  return categories.length > 0 ? categories : [{ category: "Core Dimensions", elements: DEFAULT_ASSESSED_ELEMENTS$1 }];
+};
 const formatTime$6 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
@@ -12216,6 +12252,24 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     }
     return event;
   });
+  const syllabusEvent = reactExports.useMemo(() => {
+    const eventCodes = [
+      event.eventCode,
+      event.flightNumber,
+      currentEvent?.eventCode,
+      currentEvent?.flightNumber,
+      initialAssessment?.flightNumber
+    ].map((code) => String(code || "").trim()).filter(Boolean);
+    return syllabusDetails.find((item) => eventCodes.some((code) => String(item.code || "").trim() === code || String(item.id || "").trim() === code));
+  }, [event.eventCode, event.flightNumber, currentEvent?.eventCode, currentEvent?.flightNumber, initialAssessment?.flightNumber, syllabusDetails]);
+  const assessmentStructure = reactExports.useMemo(
+    () => buildAssessmentStructure(syllabusEvent?.assessedElements),
+    [syllabusEvent?.assessedElements]
+  );
+  const assessmentElements = reactExports.useMemo(
+    () => assessmentStructure.flatMap((category) => category.elements),
+    [assessmentStructure]
+  );
   const [assessment, setAssessment] = reactExports.useState(() => {
     if (initialAssessment) {
       return initialAssessment;
@@ -12227,7 +12281,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
       flightNumber: event.flightNumber,
       date: event.date,
       instructorName: event.instructor || "",
-      scores: ALL_ELEMENTS$1.map((element) => ({
+      scores: assessmentElements.map((element) => ({
         element,
         grade: null,
         comment: ""
@@ -12237,6 +12291,14 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
       groundSchoolAssessment: { isAssessment: false, result: void 0 }
     };
   });
+  reactExports.useEffect(() => {
+    setAssessment((prev) => {
+      const existingElements = new Set(prev.scores.map((score) => score.element));
+      const missingScores = assessmentElements.filter((element) => !existingElements.has(element)).map((element) => ({ element, grade: null, comment: "" }));
+      if (missingScores.length === 0) return prev;
+      return { ...prev, scores: [...prev.scores, ...missingScores] };
+    });
+  }, [assessmentElements]);
   const handleEventUpdate = (updates) => {
     const updatedEvent = { ...currentEvent, ...updates };
     setCurrentEvent(updatedEvent);
@@ -12337,13 +12399,13 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const handleGradeChange = (element, grade) => {
     setAssessment((prev) => ({
       ...prev,
-      scores: prev.scores.map((s) => s.element === element ? { ...s, grade } : s)
+      scores: prev.scores.some((s) => s.element === element) ? prev.scores.map((s) => s.element === element ? { ...s, grade } : s) : [...prev.scores, { element, grade, comment: "" }]
     }));
   };
   const handleCommentChange = (element, comment) => {
     setAssessment((prev) => ({
       ...prev,
-      scores: prev.scores.map((s) => s.element === element ? { ...s, comment } : s)
+      scores: prev.scores.some((s) => s.element === element) ? prev.scores.map((s) => s.element === element ? { ...s, comment } : s) : [...prev.scores, { element, grade: null, comment }]
     }));
   };
   const handleCommentFieldChange = (key, value) => {
@@ -12628,7 +12690,7 @@ ${commentFields[key]}`).join("\n\n");
       addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || "N/A");
       addWrappedText(printCommentFieldsConfig.nest, commentFields.NEST || "N/A");
       addSectionTitle("Assessment Matrix");
-      PT051_STRUCTURE$1.forEach((category) => {
+      assessmentStructure.forEach((category) => {
         ensureSpace(12);
         doc.setFillColor(235, 240, 245);
         doc.rect(margin, y - 4, contentWidth, 7, "F");
@@ -13203,7 +13265,7 @@ This action cannot be undone.`;
               ] }, "Overall")
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: PT051_STRUCTURE$1.map((category) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: assessmentStructure.map((category) => {
             const isGroundEvent = event.type === "ground";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: `p-4 border rounded-lg ${isGroundEvent ? "border-gray-800 bg-gray-800/30 opacity-50" : "border-gray-700"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: `px-2 text-sm font-semibold ${isGroundEvent ? "text-gray-500" : "text-gray-300"}`, children: category.category }),
@@ -36198,7 +36260,8 @@ function populatePrerequisites$1(items) {
   return items.map((item, index, arr) => {
     const itemWithDefaults = {
       ...item,
-      acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0 ? item.acceptableAircraftConfigs : ["ANY"]
+      acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0 ? item.acceptableAircraftConfigs : ["ANY"],
+      assessedElements: Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : ["Airmanship", "Preparation", "Technique"]
     };
     const hasExplicitPrereqs = item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
     if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
@@ -36322,6 +36385,54 @@ const DetailList = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
 const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1 = /^\[Linked Event:\s*([^\]]+)\]$/i;
+const DEFAULT_ASSESSED_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
+const getScoringMatrixElementOptions = (phraseBank) => {
+  const seen = /* @__PURE__ */ new Set();
+  const add = (value) => {
+    const clean = String(value || "").trim();
+    if (!clean || seen.has(clean.toLowerCase())) return;
+    seen.add(clean.toLowerCase());
+  };
+  DEFAULT_ASSESSED_ELEMENTS.forEach(add);
+  Object.keys(phraseBank || {}).forEach(add);
+  return Array.from(seen).map((key) => DEFAULT_ASSESSED_ELEMENTS.find((item) => item.toLowerCase() === key) || Object.keys(phraseBank || {}).find((item) => item.toLowerCase() === key) || key);
+};
+const normaliseAssessedElements = (elements, availableElements = []) => {
+  const available = new Set(availableElements.map((item) => item.toLowerCase()));
+  const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS;
+  const selected = source.map((item) => String(item || "").trim()).filter(Boolean).filter((item, index, arr) => arr.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index).filter((item) => available.size === 0 || available.has(item.toLowerCase()));
+  return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS;
+};
+const AssessedElementsWindow = ({ selectedElements, availableElements, isEditing, onChange, onAddElement }) => {
+  const selected = normaliseAssessedElements(selectedElements, availableElements);
+  const selectedSet = new Set(selected.map((item) => item.toLowerCase()));
+  const toggle = (element) => {
+    const isSelected = selectedSet.has(element.toLowerCase());
+    const next = isSelected ? selected.filter((item) => item.toLowerCase() !== element.toLowerCase()) : [...selected, element];
+    onChange(next.length > 0 ? next : DEFAULT_ASSESSED_ELEMENTS);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Assessed Elements" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded-lg bg-gray-900/45 p-3", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Select the Scoring Matrix elements that appear on this event's Training Report." }),
+        onAddElement && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onAddElement, className: "shrink-0 rounded border border-sky-600 bg-sky-900/60 px-3 py-1.5 text-xs font-semibold text-sky-100 hover:bg-sky-800", children: "Add Element" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: availableElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded border border-gray-700 bg-gray-950/70 px-3 py-2 text-xs text-gray-100 hover:border-sky-600/70", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "checkbox",
+            checked: selectedSet.has(element.toLowerCase()),
+            onChange: () => toggle(element),
+            className: "h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: element })
+      ] }, element)) })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: selected.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-sky-700/50 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold text-sky-100", children: element }, element)) }) })
+  ] });
+};
 const getAirCombatLinkedEventCode$1 = (item) => {
   const linkedLine = String(item?.notes || "").split(/\r?\n/).map((line) => line.trim()).find((line) => AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1.test(line));
   const match = linkedLine?.match(AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1);
@@ -36492,7 +36603,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -36843,6 +36954,16 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Sim/Flying", items: item.prerequisitesFlying })
       ] }) })
     ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AssessedElementsWindow,
+      {
+        selectedElements: currentItem.assessedElements,
+        availableElements: scoringMatrixElements,
+        isEditing,
+        onChange: (elements) => handleFieldChange("assessedElements", elements),
+        onAddElement: onAddScoringMatrixElement
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Event Breakdown" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -36900,7 +37021,9 @@ const SyllabusView = ({
   instructorsData = [],
   onUpdateInstructor,
   operationalModel = "flight_school",
-  currentUserName
+  currentUserName,
+  scoringMatrixPhraseBank,
+  onAddScoringMatrixElement
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -36922,6 +37045,10 @@ const SyllabusView = ({
   const activeCollectionTitle = isTrainingPackagesTab ? "Training Packages" : "Master LMP";
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
   const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
+  const scoringMatrixElements = reactExports.useMemo(
+    () => getScoringMatrixElementOptions(scoringMatrixPhraseBank),
+    [scoringMatrixPhraseBank]
+  );
   const [showAssignTrainingModal, setShowAssignTrainingModal] = reactExports.useState(false);
   const [assignTrainingSelection, setAssignTrainingSelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = reactExports.useState(false);
@@ -37715,6 +37842,8 @@ const SyllabusView = ({
             resourceDisplayNames,
             aircraftConfigurations,
             isAirCombatModel,
+            scoringMatrixElements,
+            onAddScoringMatrixElement,
             linkedEventOptions: filteredSyllabusDetails,
             linkedEventOverrides,
             onLinkedEventChange: handleLinkedEventChange
@@ -41869,7 +41998,7 @@ const INITIAL_ELEMENTS_LIST_INLINE = [
   "Lookout",
   "Knowledge"
 ];
-const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false }) => {
+const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
   const [showAddElementFlyout, setShowAddElementFlyout] = reactExports.useState(false);
   const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
   const [newElementName, setNewElementName] = reactExports.useState("");
@@ -41921,6 +42050,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     setSelectedElement(name);
     setNewElementName("");
     setShowAddElementFlyout(false);
+    onElementAdded?.(name);
   };
   const handleDeleteElements = () => {
     if (selectedToDelete.size === 0) {
@@ -42163,6 +42293,7 @@ const SettingsView = ({
   activeSection = "scoring-matrix",
   scoringMatrixActiveTab,
   scoringMatrixReadOnly = false,
+  onScoringMatrixElementAdded,
   maxDispatchPerHour,
   onUpdateMaxDispatchPerHour,
   tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
@@ -43337,7 +43468,8 @@ const SettingsView = ({
           activeTab: scoringMatrixActiveTab || "Airmanship",
           phraseBank,
           onUpdatePhraseBank: handleUpdatePhraseBank,
-          readOnly: scoringMatrixReadOnly
+          readOnly: scoringMatrixReadOnly,
+          onElementAdded: onScoringMatrixElementAdded
         }
       ),
       shouldShowSection("location") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit", children: [
@@ -53932,7 +54064,17 @@ const SettingsViewWithMenu = (props) => {
   const [filteredMockdata, setFilteredMockdata] = reactExports.useState([]);
   const [filteredTraineeMockdata, setFilteredTraineeMockdata] = reactExports.useState([]);
   const { isFrozen } = useSystemFreeze();
-  const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState("Airmanship");
+  const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState(() => {
+    try {
+      const restoreTab = sessionStorage.getItem("dfp_restore_scoring_matrix_tab");
+      if (restoreTab === "Airmanship" || restoreTab === "Preparation" || restoreTab === "Technique" || restoreTab === "Elements") {
+        sessionStorage.removeItem("dfp_restore_scoring_matrix_tab");
+        return restoreTab;
+      }
+    } catch (e) {
+    }
+    return "Airmanship";
+  });
   const [settingsSearch, setSettingsSearch] = reactExports.useState("");
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
   reactExports.useEffect(() => {
@@ -83012,6 +83154,17 @@ ${error instanceof Error ? error.message : String(error)}`,
             instructorsData,
             operationalModel: activeOperationalModel,
             currentUserName,
+            scoringMatrixPhraseBank: activeTrainingReportPhraseBank,
+            onAddScoringMatrixElement: () => {
+              try {
+                sessionStorage.setItem("dfp_restore_settings_section_after_reload", "scoring-matrix");
+                sessionStorage.setItem("dfp_restore_scoring_matrix_tab", "Elements");
+                sessionStorage.setItem("dfp_return_to_lmp_after_scoring_matrix_add", "1");
+              } catch (error) {
+                console.warn("[LMP/Event Details] Unable to store scoring matrix return target:", error);
+              }
+              handleNavigation("Settings");
+            },
             onUpdateInstructor: async (data) => {
               const dbId = data.id;
               try {
@@ -83082,6 +83235,19 @@ ${error instanceof Error ? error.message : String(error)}`,
             onNavigateToProfile: handleNavigateToProfile,
             phraseBank: activeTrainingReportPhraseBank,
             onUpdatePhraseBank: handleUpdateActiveTrainingReportPhraseBank,
+            onScoringMatrixElementAdded: (elementName) => {
+              let shouldReturn = false;
+              try {
+                shouldReturn = sessionStorage.getItem("dfp_return_to_lmp_after_scoring_matrix_add") === "1";
+                sessionStorage.removeItem("dfp_return_to_lmp_after_scoring_matrix_add");
+              } catch (error) {
+                console.warn("[Settings] Unable to read LMP return target:", error);
+              }
+              if (shouldReturn) {
+                setSuccessMessage(`Added scoring element "${elementName}". Returning to LMP/Event Details.`);
+                handleNavigation("Syllabus");
+              }
+            },
             onNavigate: handleNavigation,
             masterCurrencies,
             currencyRequirements,

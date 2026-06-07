@@ -1,7 +1,7 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Instructor, SyllabusItemDetail } from '../types';
+import { Instructor, PhraseBank, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { createSyllabusItem, updateSyllabusItem, retireSyllabusItem, clearSyllabusCache } from '../lib/syllabusService';
@@ -35,6 +35,8 @@ interface SyllabusViewProps {
   onUpdateInstructor?: (data: Instructor) => void | Promise<void>;
   operationalModel?: string;
   currentUserName?: string;
+  scoringMatrixPhraseBank?: PhraseBank;
+  onAddScoringMatrixElement?: () => void;
 }
 
 // Reusable components for view mode
@@ -61,6 +63,93 @@ const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items
 );
 
 const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
+const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
+
+const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
+    const seen = new Set<string>();
+    const add = (value: string) => {
+        const clean = String(value || '').trim();
+        if (!clean || seen.has(clean.toLowerCase())) return;
+        seen.add(clean.toLowerCase());
+    };
+    DEFAULT_ASSESSED_ELEMENTS.forEach(add);
+    Object.keys(phraseBank || {}).forEach(add);
+    return Array.from(seen).map(key => (
+        DEFAULT_ASSESSED_ELEMENTS.find(item => item.toLowerCase() === key) ||
+        Object.keys(phraseBank || {}).find(item => item.toLowerCase() === key) ||
+        key
+    ));
+};
+
+const normaliseAssessedElements = (elements?: string[], availableElements: string[] = []): string[] => {
+    const available = new Set(availableElements.map(item => item.toLowerCase()));
+    const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS;
+    const selected = source
+        .map(item => String(item || '').trim())
+        .filter(Boolean)
+        .filter((item, index, arr) => arr.findIndex(candidate => candidate.toLowerCase() === item.toLowerCase()) === index)
+        .filter(item => available.size === 0 || available.has(item.toLowerCase()));
+    return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS;
+};
+
+const AssessedElementsWindow: React.FC<{
+    selectedElements?: string[];
+    availableElements: string[];
+    isEditing: boolean;
+    onChange: (elements: string[]) => void;
+    onAddElement?: () => void;
+}> = ({ selectedElements, availableElements, isEditing, onChange, onAddElement }) => {
+    const selected = normaliseAssessedElements(selectedElements, availableElements);
+    const selectedSet = new Set(selected.map(item => item.toLowerCase()));
+    const toggle = (element: string) => {
+        const isSelected = selectedSet.has(element.toLowerCase());
+        const next = isSelected
+            ? selected.filter(item => item.toLowerCase() !== element.toLowerCase())
+            : [...selected, element];
+        onChange(next.length > 0 ? next : DEFAULT_ASSESSED_ELEMENTS);
+    };
+
+    return (
+        <fieldset className="p-4 border border-gray-700 rounded-lg">
+            <legend className="px-2 text-sm font-semibold text-gray-300">Assessed Elements</legend>
+            <div className="mt-2 rounded-lg bg-gray-900/45 p-3">
+                {isEditing ? (
+                    <>
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <p className="text-xs text-gray-400">Select the Scoring Matrix elements that appear on this event's Training Report.</p>
+                            {onAddElement && (
+                                <button type="button" onClick={onAddElement} className="shrink-0 rounded border border-sky-600 bg-sky-900/60 px-3 py-1.5 text-xs font-semibold text-sky-100 hover:bg-sky-800">
+                                    Add Element
+                                </button>
+                            )}
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            {availableElements.map(element => (
+                                <label key={element} className="flex cursor-pointer items-center gap-2 rounded border border-gray-700 bg-gray-950/70 px-3 py-2 text-xs text-gray-100 hover:border-sky-600/70">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedSet.has(element.toLowerCase())}
+                                        onChange={() => toggle(element)}
+                                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                    />
+                                    <span className="font-semibold">{element}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex flex-wrap gap-2">
+                        {selected.map(element => (
+                            <span key={element} className="rounded border border-sky-700/50 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold text-sky-100">
+                                {element}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </fieldset>
+    );
+};
 
 const getAirCombatLinkedEventCode = (item?: Partial<SyllabusItemDetail> | null): string => {
     const linkedLine = String(item?.notes || '')
@@ -278,10 +367,12 @@ const DetailView: React.FC<{
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftConfigurations?: AircraftConfigurationDefinition[];
     isAirCombatModel?: boolean;
+    scoringMatrixElements?: string[];
+    onAddScoringMatrixElement?: () => void;
     linkedEventOptions?: SyllabusItemDetail[];
     linkedEventOverrides?: Record<string, string>;
     onLinkedEventChange?: (item: SyllabusItemDetail, linkedEventCode: string) => void | Promise<void>;
-}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -606,7 +697,15 @@ const DetailView: React.FC<{
             </div>
         </fieldset>
 
-        <fieldset className="p-4 border border-gray-700 rounded-lg">
+        <AssessedElementsWindow
+            selectedElements={currentItem.assessedElements}
+            availableElements={scoringMatrixElements}
+            isEditing={isEditing}
+            onChange={(elements) => handleFieldChange('assessedElements', elements)}
+            onAddElement={onAddScoringMatrixElement}
+        />
+
+           <fieldset className="p-4 border border-gray-700 rounded-lg">
             <legend className="px-2 text-sm font-semibold text-gray-300">Event Breakdown</legend>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
                  {isEditing ? (
@@ -695,6 +794,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     onUpdateInstructor,
     operationalModel = 'flight_school',
     currentUserName,
+    scoringMatrixPhraseBank,
+    onAddScoringMatrixElement,
 }) => {
     const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -710,13 +811,17 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       localStorage.getItem('neo_lmp_details_selected_package') || 'BPC+IPC'
   );
   const [editingCourseTitle, setEditingCourseTitle] = useState<string>('');
-  const isTrainingPackagesTab = activeTab === 'packages';
+	  const isTrainingPackagesTab = activeTab === 'packages';
   const activeLmpType = getActiveLmpType(activeTab);
   const activeCollectionNoun = isTrainingPackagesTab ? 'package' : 'course';
   const activeCollectionTitle = isTrainingPackagesTab ? 'Training Packages' : 'Master LMP';
   const activeCollectionSelectLabel = isTrainingPackagesTab ? 'Package:' : 'Course:';
-  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
-  const [showAssignTrainingModal, setShowAssignTrainingModal] = useState(false);
+	  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
+      const scoringMatrixElements = useMemo(
+          () => getScoringMatrixElementOptions(scoringMatrixPhraseBank),
+          [scoringMatrixPhraseBank]
+      );
+	  const [showAssignTrainingModal, setShowAssignTrainingModal] = useState(false);
   const [assignTrainingSelection, setAssignTrainingSelection] = useState<Set<number>>(new Set());
   const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = useState(false);
 
@@ -1603,9 +1708,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     onItemChange={setEditedItem}
                     onDeleteEvent={handleDeleteEventRequest}
                     resourceDisplayNames={resourceDisplayNames}
-                    aircraftConfigurations={aircraftConfigurations}
-                    isAirCombatModel={isAirCombatModel}
-                    linkedEventOptions={filteredSyllabusDetails}
+	                    aircraftConfigurations={aircraftConfigurations}
+	                    isAirCombatModel={isAirCombatModel}
+                        scoringMatrixElements={scoringMatrixElements}
+                        onAddScoringMatrixElement={onAddScoringMatrixElement}
+	                    linkedEventOptions={filteredSyllabusDetails}
                     linkedEventOverrides={linkedEventOverrides}
                     onLinkedEventChange={handleLinkedEventChange}
                 />

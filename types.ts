@@ -352,6 +352,7 @@ export interface SyllabusItemDetail {
   resourcesPhysical: string[];
   resourceNumber?: number;
   acceptableAircraftConfigs?: string[];
+  assessedElements?: string[];
   notes?: string;
   resourcesHuman: string[];
   isRemedial?: boolean;

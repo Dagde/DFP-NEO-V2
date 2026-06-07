@@ -77,6 +77,9 @@ function populatePrerequisites(items: SyllabusItemDetail[]): SyllabusItemDetail[
       acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0
         ? item.acceptableAircraftConfigs
         : ['ANY'],
+      assessedElements: Array.isArray(item.assessedElements) && item.assessedElements.length > 0
+        ? item.assessedElements
+        : ['Airmanship', 'Preparation', 'Technique'],
     };
     const hasExplicitPrereqs =
       (item.prerequisitesGround && item.prerequisitesGround.length > 0) ||
