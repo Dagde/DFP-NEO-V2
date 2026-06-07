@@ -37277,6 +37277,8 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     ...gradeOptions.map((option) => option.value)
   ], [gradeOptions]);
   const gradeLabelMap = reactExports.useMemo(() => new Map(gradeOptions.map((option) => [option.value, option.label])), [gradeOptions]);
+  const isLongGradeScale = reportTemplate.grades.scaleMax > 5;
+  const useSplitGradeHeader = isLongGradeScale && reportTemplate.grades.showNumbers;
   const formatGradeOption = (grade) => {
     if (grade === "No Grade" || grade === "DEMO" || grade === "MIN") return String(grade);
     const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
@@ -37287,6 +37289,11 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     if (grade === "No Grade") return "No Grade";
     if (grade === "DEMO" || grade === "MIN") return String(grade);
     return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
+  };
+  const formatCompactGradeText = (grade) => {
+    const text = formatGradeText(grade);
+    if (text.length <= 12) return text;
+    return `${text.slice(0, 11)}...`;
   };
   const stopEditableKeyPropagation = (event2) => {
     const target = event2.target;
@@ -37946,8 +37953,8 @@ This action cannot be undone.`;
                     title: formatGradeOption(grade),
                     className: `flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
                     children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "line-clamp-2 max-w-full text-[9px] font-semibold leading-tight text-gray-400", children: formatGradeText(grade) }),
+                      reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${reportTemplate.grades.showNumbers ? "text-[9px]" : "text-[10px]"} line-clamp-2 max-w-full font-semibold leading-tight text-gray-300`, children: formatGradeText(grade) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-grade", value: grade, checked: overallGrade === grade, onChange: () => setOverallGrade(grade), className: `h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600` })
                     ]
                   },
@@ -38142,11 +38149,14 @@ This action cannot be undone.`;
               assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[54px]" }, String(g))),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "min-w-[240px]" })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
-              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(g), className: "px-1 pb-2 text-center text-[10px] font-black uppercase text-gray-400", children: formatGradeValue(g) }, String(g))),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
-            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("thead", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { rowSpan: useSplitGradeHeader ? 2 : 1, className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
+                assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(g), className: "px-1 pb-1 text-center text-[10px] font-black uppercase text-gray-400", children: reportTemplate.grades.showNumbers ? isLongGradeScale ? formatGradeValue(g) : formatGradeOption(g) : formatCompactGradeText(g) }, String(g))),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { rowSpan: useSplitGradeHeader ? 2 : 1, className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
+              ] }),
+              useSplitGradeHeader && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { title: formatGradeOption(g), className: "px-1 pb-2 text-center text-[9px] font-semibold leading-tight text-gray-500", children: formatCompactGradeText(g) }, `${String(g)}-label`)) })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
               const score = assessment.scores.find((s) => s.element === element);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
@@ -38165,7 +38175,7 @@ This action cannot be undone.`;
                         className: `h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? "opacity-50 cursor-not-allowed" : ""}`
                       }
                     ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 text-[9px] font-bold leading-none text-gray-500", children: formatGradeValue(grade) })
+                    !isLongGradeScale && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 text-[9px] font-bold leading-none text-gray-500", children: reportTemplate.grades.showNumbers ? formatGradeOption(grade) : formatGradeText(grade) })
                   ] }) }, String(grade));
                 }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: [

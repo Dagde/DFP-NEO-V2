@@ -214,6 +214,8 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const gradeLabelMap = useMemo(() => (
         new Map(gradeOptions.map((option) => [option.value, option.label]))
     ), [gradeOptions]);
+    const isLongGradeScale = reportTemplate.grades.scaleMax > 5;
+    const useSplitGradeHeader = isLongGradeScale && reportTemplate.grades.showNumbers;
     const formatGradeOption = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
         if (grade === 'No Grade' || grade === 'DEMO' || grade === 'MIN') return String(grade);
         const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
@@ -226,6 +228,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         if (grade === 'No Grade') return 'No Grade';
         if (grade === 'DEMO' || grade === 'MIN') return String(grade);
         return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
+    };
+    const formatCompactGradeText = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
+        const text = formatGradeText(grade);
+        if (text.length <= 12) return text;
+        return `${text.slice(0, 11)}...`;
     };
     const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
         const target = event.target as HTMLElement | null;
@@ -952,8 +959,12 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                         : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500'
                                                 }`}
                                             >
-                                                <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeValue(grade)}</span>
-                                                <span className="line-clamp-2 max-w-full text-[9px] font-semibold leading-tight text-gray-400">{formatGradeText(grade)}</span>
+                                                {reportTemplate.grades.showNumbers && (
+                                                    <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeValue(grade)}</span>
+                                                )}
+                                                <span className={`${reportTemplate.grades.showNumbers ? 'text-[9px]' : 'text-[10px]'} line-clamp-2 max-w-full font-semibold leading-tight text-gray-300`}>
+                                                    {formatGradeText(grade)}
+                                                </span>
                                                 <input type="radio" name="overall-grade" value={grade} checked={overallGrade === grade} onChange={() => setOverallGrade(grade)} className={`h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600`} />
                                             </label>
                                         ))}
@@ -1148,14 +1159,25 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                 </colgroup>
                                 <thead>
                                     <tr>
-                                        <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Element</th>
+                                        <th rowSpan={useSplitGradeHeader ? 2 : 1} className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Element</th>
                                         {assessmentGradeOptions.map(g => (
-                                            <th key={String(g)} title={formatGradeOption(g)} className="px-1 pb-2 text-center text-[10px] font-black uppercase text-gray-400">
-                                                {formatGradeValue(g)}
+                                            <th key={String(g)} title={formatGradeOption(g)} className="px-1 pb-1 text-center text-[10px] font-black uppercase text-gray-400">
+                                                {reportTemplate.grades.showNumbers
+                                                    ? (isLongGradeScale ? formatGradeValue(g) : formatGradeOption(g))
+                                                    : formatCompactGradeText(g)}
                                             </th>
                                         ))}
-                                        <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
+                                        <th rowSpan={useSplitGradeHeader ? 2 : 1} className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
                                     </tr>
+                                    {useSplitGradeHeader && (
+                                        <tr>
+                                            {assessmentGradeOptions.map(g => (
+                                                <th key={`${String(g)}-label`} title={formatGradeOption(g)} className="px-1 pb-2 text-center text-[9px] font-semibold leading-tight text-gray-500">
+                                                    {formatCompactGradeText(g)}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    )}
                                 </thead>
                                 <tbody>
                                     {category.elements.map(element => {
@@ -1176,7 +1198,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                                     disabled={isGroundEvent}
                                                                     className={`h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                 />
-                                                                <span className="mt-1 text-[9px] font-bold leading-none text-gray-500">{formatGradeValue(grade)}</span>
+                                                                {!isLongGradeScale && (
+                                                                    <span className="mt-1 text-[9px] font-bold leading-none text-gray-500">
+                                                                        {reportTemplate.grades.showNumbers ? formatGradeOption(grade) : formatGradeText(grade)}
+                                                                    </span>
+                                                                )}
                                                             </label>
                                                         </td>
                                                     );
