@@ -48512,7 +48512,7 @@ const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
   assessor: "The label for the person completing or signing the report. Organisations may call this QFI, instructor, assessor, supervisor, check pilot or another local term."
 };
 const TRAINING_REPORT_OVERALL_FIELD_INFO = {
-  result: "The label for the event completion outcome. You can rename the displayed text, but the underlying DCO/DPCO/DNCO meaning remains available to the system for completion logic.",
+  result: "The label for the duty completion outcome. The wording can be customised, but the system still treats DCO as duty completed, DPCO as duty partially completed and DNCO as duty not completed.",
   overallGrade: "The label for the assessor’s whole-event grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.",
   overallResult: "The label for the final pass/fail style outcome. The organisation can rename the visible text while the system keeps the underlying pass/fail function intact.",
   groundSchoolAssessment: "The label for an optional ground-school assessment result. This is used when an event also records a separate academic or ground assessment percentage."
@@ -50937,39 +50937,47 @@ const PlatformConfigurationSettings = ({
             trainingReportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               Field,
               {
-                label: `${option.code} Text`,
+                label: {
+                  DCO: "Duty Completed text",
+                  DPCO: "Duty only Partially Completed",
+                  DNCO: "Duty Not Completed"
+                }[option.code],
                 value: option.label,
                 disabled: !canEditTrainingReportTemplate,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 onChange: (value) => updateTrainingReportCompletionResult(option.code, value),
-                info: `Renames the ${option.code} completion result while preserving the underlying ${option.code} function.`
+                info: {
+                  DCO: "Text displayed when the duty or training event was completed. The wording can change, but the outcome remains the completed-duty result.",
+                  DPCO: "Text displayed when the duty was only partially completed. Use this when an event occurred but did not fully satisfy the planned duty or training requirement.",
+                  DNCO: "Text displayed when the duty was not completed. The wording can change, but the outcome remains the not-completed-duty result."
+                }[option.code]
               },
               option.code
             )),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Field,
               {
-                label: "Pass Text",
+                label: "Pass Label",
                 value: trainingReportTemplate.overallResults.passLabel,
                 disabled: !canEditTrainingReportTemplate,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 onChange: (value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, passLabel: value }
                 })),
-                info: "Renames the pass outcome shown on the report. The underlying pass function remains unchanged."
+                info: "Text displayed when the assessment outcome is successful. Organisations may use wording such as Pass, Satisfactory, Competent or Achieved."
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Field,
               {
-                label: "Fail Text",
+                label: "Fail Label",
                 value: trainingReportTemplate.overallResults.failLabel,
                 disabled: !canEditTrainingReportTemplate,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 onChange: (value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, failLabel: value }
                 })),
-                info: "Renames the fail outcome shown on the report. The underlying fail function remains unchanged."
+                info: "Text displayed when the assessment outcome is unsuccessful. Organisations may use wording such as Fail, Unsatisfactory, Not Yet Competent or Not Achieved."
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
