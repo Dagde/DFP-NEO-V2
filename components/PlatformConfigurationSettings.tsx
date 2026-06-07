@@ -899,31 +899,31 @@ const downloadTextFile = (filename: string, content: string, mimeType: string) =
 };
 
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
-  event: 'Labels the event identifier shown on the report, such as AA1, IC02 or the scheduled task code.',
-  training: 'Labels the course, package or training sequence that the event belongs to.',
-  type: 'Labels the event type or description area used to identify what activity was assessed.',
-  timing: 'Labels the start time and duration summary for the assessed event.',
-  resource: 'Labels the aircraft, simulator, trainer or other resource used for the event.',
-  callsign: 'Labels the callsign recorded against the sortie or training event.',
-  unit: 'Labels the owning unit or operating unit recorded on the report.',
-  date: 'Labels the report date field.',
-  assessor: 'Labels the person completing or signing the report, such as QFI, instructor, assessor or supervisor.',
+  event: 'The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as AA1, IC02 or a tasking code.',
+  training: 'The label for the training stream that owns the event. In Flight School this may be a course or LMP; in Air Combat it may be a course, package or assigned training sequence.',
+  type: 'The label for the activity classification or event description. It helps the assessor distinguish whether the report is for a flight, simulator, ground event, tasking sortie or other model-specific event type.',
+  timing: 'The label for the scheduled timing summary. This normally shows the planned start time and duration used to identify the training opportunity being assessed.',
+  resource: 'The label for the platform or resource used during the event. This may be an aircraft, simulator, procedural trainer, ground room or another configured resource.',
+  callsign: 'The label for the operational callsign recorded against the event. For formation sorties this helps connect the report to the correct formation element.',
+  unit: 'The label for the unit context attached to the report. This keeps reports separated correctly across organisations, locations and operational units.',
+  date: 'The label for the date the event/report applies to. This date is used for training history, recency and report ordering.',
+  assessor: 'The label for the person completing or signing the report. Organisations may call this QFI, instructor, assessor, supervisor, check pilot or another local term.',
 };
 
 const TRAINING_REPORT_OVERALL_FIELD_INFO: Record<string, string> = {
-  result: 'Labels the completion result control. The text can change, but the codes still retain their existing completion function.',
-  overallGrade: 'Labels the selected whole-event assessment grade.',
-  overallResult: 'Labels the pass/fail outcome. The displayed text can change while the underlying pass/fail function remains the same.',
-  groundSchoolAssessment: 'Labels the optional ground school assessment result area.',
+  result: 'The label for the event completion outcome. You can rename the displayed text, but the underlying DCO/DPCO/DNCO meaning remains available to the system for completion logic.',
+  overallGrade: 'The label for the assessor’s whole-event grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.',
+  overallResult: 'The label for the final pass/fail style outcome. The organisation can rename the visible text while the system keeps the underlying pass/fail function intact.',
+  groundSchoolAssessment: 'The label for an optional ground-school assessment result. This is used when an event also records a separate academic or ground assessment percentage.',
 };
 
 const TRAINING_REPORT_COMMENT_FIELD_INFO: Record<string, string> = {
-  assessor: 'Labels the assessor comment or assessor selector field.',
-  weather: 'Labels the weather/context notes field.',
-  profile: 'Labels the profile, sortie flow or training profile narrative field.',
-  overall: 'Labels the overall narrative assessment field.',
-  nest: 'Labels the NEST or short local reference field.',
-  notes: 'Labels the general notes field used in model-specific training report entry flows.',
+  assessor: 'The label for the assessor reference in the narrative area. It can identify who debriefed or authored the report when that needs to appear separately from the report signer.',
+  weather: 'The label for environmental or contextual notes. Typical use is weather, range conditions, operational constraints or anything that affected the training event.',
+  profile: 'The label for the planned or flown profile narrative. This is where users describe the sequence of activities, sortie flow or training profile being assessed.',
+  overall: 'The label for the main assessor narrative. This is the broad training judgement: what happened, why it mattered and what the staff member or trainee should focus on next.',
+  nest: 'The label for a short local reference field. It can be kept as NEST, renamed to another local tracking code, or used for a compact administrative reference.',
+  notes: 'The label for additional model-specific notes. This supports Air Combat and future models where reports may need tactical, crew, mission or package-specific comments.',
 };
 
 const humaniseFieldKey = (key: string): string => (
@@ -957,6 +957,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = useState(false);
   const [rankTerminologyDirty, setRankTerminologyDirty] = useState(false);
+  const [trainingReportTemplateUnlocked, setTrainingReportTemplateUnlocked] = useState(false);
   const [licenseStatus, setLicenseStatus] = useState<LicenseRuntimeStatus | null>(null);
   const [licenseImportText, setLicenseImportText] = useState('');
   const [licenseImportMessage, setLicenseImportMessage] = useState('');
@@ -976,6 +977,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
+  const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
 
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
@@ -3414,8 +3416,36 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Training Reports"
           subtitle="Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models."
+          action={canEdit ? (
+            trainingReportTemplateUnlocked ? (
+              <button
+                type="button"
+                onClick={() => setTrainingReportTemplateUnlocked(false)}
+                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200"
+              >
+                Lock
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setTrainingReportTemplateUnlocked(true)}
+                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200"
+              >
+                Edit
+              </button>
+            )
+          ) : null}
         />
         <div className="space-y-5 p-4">
+          {!canEdit ? (
+            <div className="rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100">
+              Training Report settings are read-only. Super Admin or Admin permission is required to edit the template.
+            </div>
+          ) : !trainingReportTemplateUnlocked ? (
+            <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80">
+              Training Report settings are locked. Press Edit before changing report names, field labels, grade text or repeat rules.
+            </div>
+          ) : null}
           <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3">
             <h4 className="text-sm font-bold text-sky-100">Organisation Training Report Template</h4>
             <p className="mt-1 text-sm text-sky-100/70">
@@ -3427,7 +3457,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <Field
               label="Generic Form Name"
               value={trainingReportTemplate.genericName}
-              disabled={!canEdit}
+              disabled={!canEditTrainingReportTemplate}
               maxLength={TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH}
               onChange={(value) => updateTrainingReportTemplate({ genericName: value })}
               info="Generic form name used across models. Example: Training Report."
@@ -3435,7 +3465,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <Field
               label="Organisation Form Name"
               value={trainingReportTemplate.displayName}
-              disabled={!canEdit}
+              disabled={!canEditTrainingReportTemplate}
               maxLength={TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH}
               onChange={(value) => updateTrainingReportTemplate({ displayName: value })}
               info="Customer-specific name. Example: PT-051."
@@ -3450,7 +3480,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <ToggleField
               label="Show Grade Numbers"
               checked={trainingReportTemplate.grades.showNumbers}
-              disabled={!canEdit}
+              disabled={!canEditTrainingReportTemplate}
               onChange={(checked) => updateTrainingReportTemplate((template) => ({
                 grades: {
                   ...template.grades,
@@ -3462,7 +3492,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <ToggleField
               label="Include DEMO Grade"
               checked={trainingReportTemplate.grades.includeDemo}
-              disabled={!canEdit}
+              disabled={!canEditTrainingReportTemplate}
               onChange={(checked) => updateTrainingReportTemplate((template) => ({
                 grades: {
                   ...template.grades,
@@ -3483,7 +3513,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <Field
                   label="Overview Module"
                   value={trainingReportTemplate.modules.overview.title}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   onChange={(value) => updateTrainingReportModule('overview', { title: value })}
                   info="Renames the module that displays the event identity, date, timing, resource and assessor context."
@@ -3494,7 +3524,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       key={key}
                       label={humaniseFieldKey(key)}
                       value={value}
-                      disabled={!canEdit}
+                      disabled={!canEditTrainingReportTemplate}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       onChange={(nextValue) => updateTrainingReportModuleFields('overview', key, nextValue)}
                       info={TRAINING_REPORT_OVERVIEW_FIELD_INFO[key] || 'Renames this overview field in the training report.'}
@@ -3520,7 +3550,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <Field
                   label="Overall Module"
                   value={trainingReportTemplate.modules.overallAssessment.title}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   onChange={(value) => updateTrainingReportModule('overallAssessment', { title: value })}
                   info="Renames the module that captures completion result, whole-event grade, pass/fail outcome and ground school assessment."
@@ -3531,7 +3561,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       key={key}
                       label={humaniseFieldKey(key)}
                       value={value}
-                      disabled={!canEdit}
+                      disabled={!canEditTrainingReportTemplate}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       onChange={(nextValue) => updateTrainingReportModuleFields('overallAssessment', key, nextValue)}
                       info={TRAINING_REPORT_OVERALL_FIELD_INFO[key] || 'Renames this overall assessment field in the training report.'}
@@ -3552,7 +3582,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <Field
                   label="Comments Module"
                   value={trainingReportTemplate.modules.comments.title}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   onChange={(value) => updateTrainingReportModule('comments', { title: value })}
                   info="Renames the narrative module used for assessor notes, weather/context, profile notes and the overall narrative."
@@ -3563,7 +3593,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       key={key}
                       label={humaniseFieldKey(key)}
                       value={value}
-                      disabled={!canEdit}
+                      disabled={!canEditTrainingReportTemplate}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       onChange={(nextValue) => updateTrainingReportModuleFields('comments', key, nextValue)}
                       info={TRAINING_REPORT_COMMENT_FIELD_INFO[key] || 'Renames this narrative field in the training report.'}
@@ -3592,7 +3622,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <Field
                   label="Assessment Matrix Module"
                   value={trainingReportTemplate.modules.assessmentMatrix.title}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   onChange={(value) => updateTrainingReportModule('assessmentMatrix', { title: value })}
                   info="Assessment categories and descriptors remain controlled by the Scoring Matrix."
@@ -3626,7 +3656,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   key={option.code}
                   label={`${option.code} Text`}
                   value={option.label}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   onChange={(value) => updateTrainingReportCompletionResult(option.code, value)}
                   info={`Renames the ${option.code} completion result while preserving the underlying ${option.code} function.`}
@@ -3635,7 +3665,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <Field
                 label="Pass Text"
                 value={trainingReportTemplate.overallResults.passLabel}
-                disabled={!canEdit}
+                disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                 onChange={(value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, passLabel: value },
@@ -3645,7 +3675,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <Field
                 label="Fail Text"
                 value={trainingReportTemplate.overallResults.failLabel}
-                disabled={!canEdit}
+                disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                 onChange={(value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, failLabel: value },
@@ -3655,7 +3685,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <Field
                 label="Repeat Rule Text"
                 value={trainingReportTemplate.overallResults.doubleRepeatLabel}
-                disabled={!canEdit}
+                disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                 onChange={(value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, doubleRepeatLabel: value },
@@ -3693,7 +3723,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <input
                           className={fieldClass}
                           value={option.label}
-                          disabled={!canEdit}
+                          disabled={!canEditTrainingReportTemplate}
                           maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                           onChange={(event) => updateTrainingReportGrade(option.value, { label: event.target.value })}
                         />
@@ -3703,7 +3733,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           type="checkbox"
                           className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
                           checked={option.requiresRepeat}
-                          disabled={!canEdit}
+                          disabled={!canEditTrainingReportTemplate}
                           onChange={(event) => updateTrainingReportGrade(option.value, { requiresRepeat: event.target.checked })}
                         />
                       </td>
@@ -3712,7 +3742,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           type="checkbox"
                           className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
                           checked={trainingReportTemplate.repeatRules.consecutive.grades.includes(option.value)}
-                          disabled={!canEdit}
+                          disabled={!canEditTrainingReportTemplate}
                           onChange={(event) => toggleTrainingReportRuleGrade('consecutive', option.value, event.target.checked)}
                         />
                       </td>
@@ -3721,7 +3751,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           type="checkbox"
                           className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
                           checked={trainingReportTemplate.repeatRules.rollingWindow.grades.includes(option.value)}
-                          disabled={!canEdit}
+                          disabled={!canEditTrainingReportTemplate}
                           onChange={(event) => toggleTrainingReportRuleGrade('rollingWindow', option.value, event.target.checked)}
                         />
                       </td>
@@ -3739,7 +3769,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <ToggleField
                   label="Enable Two In A Row Rule"
                   checked={trainingReportTemplate.repeatRules.consecutive.enabled}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   onChange={(checked) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -3751,7 +3781,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <NumberField
                   label="Count"
                   value={trainingReportTemplate.repeatRules.consecutive.count}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   onChange={(value) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -3769,7 +3799,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <ToggleField
                   label="Enable Two In Three Rule"
                   checked={trainingReportTemplate.repeatRules.rollingWindow.enabled}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   onChange={(checked) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -3781,7 +3811,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <NumberField
                   label="Count"
                   value={trainingReportTemplate.repeatRules.rollingWindow.count}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   onChange={(value) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -3793,7 +3823,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <NumberField
                   label="Window"
                   value={trainingReportTemplate.repeatRules.rollingWindow.window}
-                  disabled={!canEdit}
+                  disabled={!canEditTrainingReportTemplate}
                   onChange={(value) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -4228,19 +4258,52 @@ const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: s
   );
 };
 
-const InfoHint = ({ text }: { text: string }) => (
-  <span
-    role="button"
-    tabIndex={0}
-    aria-label="More information"
-    className="group relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 normal-case outline-none transition-colors hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50"
-  >
-    <span aria-hidden="true" className="font-serif text-[11px] font-bold italic leading-none normal-case">i</span>
-    <span className="pointer-events-none fixed left-1/2 top-24 z-[260] hidden w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block">
-      {text}
+const InfoHint = ({ text }: { text: string }) => {
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+  const showHint = (target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+    const margin = 12;
+    const width = Math.min(448, window.innerWidth - margin * 2);
+    const estimatedHeight = 180;
+    const left = Math.min(
+      window.innerWidth - width - margin,
+      Math.max(margin, rect.left + rect.width / 2 - width / 2),
+    );
+    const belowTop = rect.bottom + 8;
+    const top = belowTop + estimatedHeight > window.innerHeight
+      ? Math.max(margin, rect.top - estimatedHeight - 8)
+      : belowTop;
+    setPosition({ left, top });
+  };
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label="More information"
+      onMouseEnter={(event) => showHint(event.currentTarget)}
+      onMouseLeave={() => setPosition(null)}
+      onFocus={(event) => showHint(event.currentTarget)}
+      onBlur={() => setPosition(null)}
+      className="relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 normal-case outline-none transition-colors hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50"
+    >
+      <span aria-hidden="true" className="font-serif text-[11px] font-bold italic leading-none normal-case">i</span>
+      {position ? (
+        <span
+          className="pointer-events-none fixed z-[260] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl"
+          style={{
+            left: `${position.left}px`,
+            top: `${position.top}px`,
+            width: 'min(28rem, calc(100vw - 1.5rem))',
+          }}
+        >
+          {text}
+        </span>
+      ) : null}
     </span>
-  </span>
-);
+  );
+};
 
 const FieldLabel = ({ label, info }: { label: string; info?: string }) => (
   <span className="mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
