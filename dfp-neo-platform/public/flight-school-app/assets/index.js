@@ -3612,12 +3612,13 @@ const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
 };
 const normaliseIntegratedCombatOperationsTiming = (item) => {
   if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
-  if (item.flightOrSimHours === AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS && item.preFlightTime === AIR_COMBAT_ICO_PREFLIGHT_HOURS && item.postFlightTime === AIR_COMBAT_ICO_POSTFLIGHT_HOURS) {
+  if (item.flightOrSimHours === AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS && item.duration === AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS && item.preFlightTime === AIR_COMBAT_ICO_PREFLIGHT_HOURS && item.postFlightTime === AIR_COMBAT_ICO_POSTFLIGHT_HOURS) {
     return item;
   }
   return {
     ...item,
     flightOrSimHours: AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS,
+    duration: AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS,
     preFlightTime: AIR_COMBAT_ICO_PREFLIGHT_HOURS,
     postFlightTime: AIR_COMBAT_ICO_POSTFLIGHT_HOURS
   };
@@ -36263,7 +36264,7 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "8";
+const CACHE_VERSION = "9";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
 function getCachedSyllabus() {
   try {

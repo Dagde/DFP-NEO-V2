@@ -36,6 +36,7 @@ export const normaliseIntegratedCombatOperationsTiming = <T extends Partial<Syll
   if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
   if (
     item.flightOrSimHours === AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS &&
+    item.duration === AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS &&
     item.preFlightTime === AIR_COMBAT_ICO_PREFLIGHT_HOURS &&
     item.postFlightTime === AIR_COMBAT_ICO_POSTFLIGHT_HOURS
   ) {
@@ -44,6 +45,7 @@ export const normaliseIntegratedCombatOperationsTiming = <T extends Partial<Syll
   return {
     ...item,
     flightOrSimHours: AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS,
+    duration: AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS,
     preFlightTime: AIR_COMBAT_ICO_PREFLIGHT_HOURS,
     postFlightTime: AIR_COMBAT_ICO_POSTFLIGHT_HOURS,
   };
