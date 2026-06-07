@@ -51842,12 +51842,15 @@ const TrainingReportPreviewCell = ({ label, value }) => /* @__PURE__ */ jsxRunti
 const TrainingReportModulePreview = ({
   title,
   children
-}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-cyan-500/25 bg-gray-950/60 p-4", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: title }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-cyan-100/80", children: "Preview" })
+}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 overflow-hidden rounded-lg border-2 border-cyan-300 bg-gray-950/80 shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_0_24px_rgba(34,211,238,0.16)]", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-full items-center justify-between bg-cyan-500 px-4 py-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.22em] text-cyan-950", children: "Preview" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-black text-cyan-950", children: title })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-950/30 bg-cyan-100/80 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-cyan-950", children: "Live layout" })
   ] }),
-  children
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children })
 ] });
 const TimeZoneField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
