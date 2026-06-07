@@ -254,6 +254,17 @@ export const normaliseTrainingReportTemplate = (
 ): TrainingReportTemplate => {
   const source = input && typeof input === 'object' ? input as Record<string, any> : {};
   const legacy = normaliseTrainingReportTerminology(legacyTerminology || null);
+  const legacyHasCustomName = legacy.name !== DEFAULT_TRAINING_REPORT_TERMINOLOGY.name;
+  const sourceDisplayName = cleanLabel(source.displayName, '', TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH);
+  const displayName = (
+    legacyHasCustomName && (!sourceDisplayName || sourceDisplayName === DEFAULT_TRAINING_REPORT_TEMPLATE.displayName)
+      ? legacy.name
+      : cleanLabel(
+          source.displayName,
+          legacyHasCustomName ? legacy.name : DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
+          TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH,
+        )
+  );
   const requestedScaleMax = cleanNumber(source.grades?.scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, 0, 10);
   const scaleMin = cleanNumber(source.grades?.scaleMin, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMin, 0, Math.max(0, requestedScaleMax - 1));
   const scaleMax = cleanNumber(requestedScaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, scaleMin + 1, 10);
@@ -274,7 +285,7 @@ export const normaliseTrainingReportTemplate = (
   return {
     version: 1,
     genericName: cleanLabel(source.genericName, DEFAULT_TRAINING_REPORT_TEMPLATE.genericName, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH),
-    displayName: cleanLabel(source.displayName, legacy.name === DEFAULT_TRAINING_REPORT_TERMINOLOGY.name ? DEFAULT_TRAINING_REPORT_TEMPLATE.displayName : legacy.name, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH),
+    displayName,
     modules: {
       overview: {
         title: cleanLabel(source.modules?.overview?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overview.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),

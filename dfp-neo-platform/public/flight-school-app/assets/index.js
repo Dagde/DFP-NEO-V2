@@ -3103,6 +3103,13 @@ const mergeFields = (defaults, input) => {
 const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
   const source = input && typeof input === "object" ? input : {};
   const legacy = normaliseTrainingReportTerminology(legacyTerminology || null);
+  const legacyHasCustomName = legacy.name !== DEFAULT_TRAINING_REPORT_TERMINOLOGY.name;
+  const sourceDisplayName = cleanLabel$1(source.displayName, "", TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH);
+  const displayName = legacyHasCustomName && (!sourceDisplayName || sourceDisplayName === DEFAULT_TRAINING_REPORT_TEMPLATE.displayName) ? legacy.name : cleanLabel$1(
+    source.displayName,
+    legacyHasCustomName ? legacy.name : DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
+    TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH
+  );
   const requestedScaleMax = cleanNumber$1(source.grades?.scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, 0, 10);
   const scaleMin = cleanNumber$1(source.grades?.scaleMin, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMin, 0, Math.max(0, requestedScaleMax - 1));
   const scaleMax = cleanNumber$1(requestedScaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, scaleMin + 1, 10);
@@ -3122,7 +3129,7 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
   return {
     version: 1,
     genericName: cleanLabel$1(source.genericName, DEFAULT_TRAINING_REPORT_TEMPLATE.genericName, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH),
-    displayName: cleanLabel$1(source.displayName, legacy.name === DEFAULT_TRAINING_REPORT_TERMINOLOGY.name ? DEFAULT_TRAINING_REPORT_TEMPLATE.displayName : legacy.name, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH),
+    displayName,
     modules: {
       overview: {
         title: cleanLabel$1(source.modules?.overview?.title, DEFAULT_TRAINING_REPORT_TEMPLATE.modules.overview.title, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
