@@ -67866,6 +67866,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         selectedNames.add(candidate.staff.name);
         return true;
       };
+      const appendSameEventNextStaff = (selectionReason) => {
+        const sameEventEntries = priorityList.filter((entry) => entry.staff.name !== leadEntry.staff.name).filter((entry) => !selectedNames.has(entry.staff.name)).filter((entry) => entry.nextItem && airCombatTrainingCodesMatch(entry.nextItem.code, leadItem.code));
+        for (const entry of sameEventEntries) {
+          appendIfSchedulable({
+            staff: entry.staff,
+            item: entry.nextItem,
+            selectionReason,
+            completedCount: entry.completedCount,
+            lastEventDateValue: entry.lastEventDateValue
+          });
+          if (members.length >= resourceNumber) break;
+        }
+      };
       if (linkedItem) {
         const linkedNextEntries = priorityList.filter((entry) => entry.staff.name !== leadEntry.staff.name).filter((entry) => entry.nextItem && airCombatTrainingCodesMatch(entry.nextItem.code, linkedItem.code));
         for (const entry of linkedNextEntries) {
@@ -67884,18 +67897,28 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             if (members.length >= resourceNumber) break;
           }
         }
-      } else {
-        const sameEventEntries = priorityList.filter((entry) => entry.staff.name !== leadEntry.staff.name).filter((entry) => entry.nextItem && airCombatTrainingCodesMatch(entry.nextItem.code, leadItem.code));
-        for (const entry of sameEventEntries) {
-          appendIfSchedulable({
-            staff: entry.staff,
-            item: entry.nextItem,
-            selectionReason: "same-formation-next-event",
-            completedCount: entry.completedCount,
-            lastEventDateValue: entry.lastEventDateValue
-          });
-          if (members.length >= resourceNumber) break;
+        if (members.length < resourceNumber) {
+          const beforeFallback = members.length;
+          appendSameEventNextStaff("same-event-fallback-after-linked-unavailable");
+          if (members.length > beforeFallback) {
+            pushAirCombatDiag("trainingAttempts", {
+              kind,
+              code,
+              event: leadItem.code,
+              linkedEvent: linkedItem.code,
+              startTime,
+              phase: "linked-event-fallback-to-same-event",
+              requestedFormationSize: resourceNumber,
+              selectedMembers: members.map((member) => ({
+                staff: member.staff.name,
+                event: member.item.code,
+                selectionReason: member.selectionReason
+              }))
+            }, 700);
+          }
         }
+      } else {
+        appendSameEventNextStaff("same-formation-next-event");
       }
       return {
         members,
@@ -71206,7 +71229,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ...neoBuildDiag.airCombatPriority.courseStaffPriorityLists || [],
       ...neoBuildDiag.airCombatPriority.trainingPackageStaffPriorityLists || []
     ];
+    const availableAircraftConfigIds = new Set(Object.values(neoBuildDiag.airCombatPriority.inputs?.resources?.aircraftConfigIdsByResource || {}).filter(Boolean));
+    const missingRequiredConfigs = Array.from(new Set((neoBuildDiag.airCombatPriority.resourceChecks || []).filter((check) => check.reason === "AIRCRAFT_CONFIG_INCOMPATIBLE").flatMap((check) => Array.isArray(check.required) ? check.required : []).map((config2) => String(config2 || "").trim()).filter((config2) => config2 && config2 !== "ANY" && config2 !== "CONFIG N/A" && !availableAircraftConfigIds.has(config2))));
     if (allTrainingLists.length > 0 && allTrainingLists.every((item) => (item.assignedStaffCount || 0) > 0 && (item.assignedWithNextEvent || 0) === 0)) conclusions.push("Assigned Air Combat pilots were found, but every assigned pilot had no next event in the matched sequence; inspect assignedStaff in the priority-list diagnostics.");
+    if (missingRequiredConfigs.length > 0) conclusions.push(`Air Combat training events require aircraft config ${missingRequiredConfigs.join(", ")}, but the active aircraft resource map does not contain that config; inspect inputs.resources.aircraftConfigIdsByResource and resourceChecks.`);
     if (airCombatPlacements.length === 0 && Object.keys(neoBuildDiag.airCombatPriority.rejectionReasons || {}).length > 0) conclusions.push("Air Combat scheduler ran but every candidate was rejected; see rejectionReasons, taskingAttempts, trainingAttempts, and resourceChecks.");
     if (generatedEventsBeforeFinalCleanup > 0 && sortedEvents.length === 0) conclusions.push("Events existed before final cleanup but were removed by day/night guard or ground conflict repair; see finalCleanup.");
     if (airCombatPlacements.length > 0 && sortedEvents.length === 0) conclusions.push("Air Combat placements were created but none survived final cleanup; see finalCleanup and placements.");
