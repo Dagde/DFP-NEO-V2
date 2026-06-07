@@ -21,6 +21,35 @@ export const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS: AirCombatSchedulingWeights =
 
 const normaliseCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
 
+export const AIR_COMBAT_ICO_PACKAGE_CODE = 'ICO';
+export const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
+export const AIR_COMBAT_ICO_POSTFLIGHT_HOURS = 1.0;
+
+export const isIntegratedCombatOperationsTrainingPackageItem = (item?: Partial<SyllabusItemDetail> | null): boolean => {
+  if (!item || item.lmpType !== 'Staff CAT') return false;
+  const courses = Array.isArray(item.courses) ? item.courses : [];
+  return courses.some(course => normaliseCode(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
+};
+
+export const normaliseIntegratedCombatOperationsTiming = <T extends Partial<SyllabusItemDetail>>(item: T): T => {
+  if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
+  if (
+    item.preFlightTime === AIR_COMBAT_ICO_PREFLIGHT_HOURS &&
+    item.postFlightTime === AIR_COMBAT_ICO_POSTFLIGHT_HOURS
+  ) {
+    return item;
+  }
+  return {
+    ...item,
+    preFlightTime: AIR_COMBAT_ICO_PREFLIGHT_HOURS,
+    postFlightTime: AIR_COMBAT_ICO_POSTFLIGHT_HOURS,
+  };
+};
+
+export const normaliseIntegratedCombatOperationsTimings = <T extends Partial<SyllabusItemDetail>>(items: T[]): T[] => (
+  items.map(normaliseIntegratedCombatOperationsTiming)
+);
+
 export const getAirCombatTrainingKindForLmpType = (lmpType?: string | null): AirCombatTrainingKind => (
   lmpType === 'Staff CAT' ? 'training_package' : 'course'
 );

@@ -5,6 +5,7 @@
  */
 
 import { SyllabusItemDetail } from '../types';
+import { normaliseIntegratedCombatOperationsTimings } from '../utils/airCombatTraining';
 
 const API_BASE = '/api';
 const CACHE_KEY = 'dfp-syllabus-cache';
@@ -12,7 +13,7 @@ const CACHE_TIMESTAMP_KEY = 'dfp-syllabus-cache-timestamp';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 // Increment this version when DB schema/data migrations change the syllabus structure.
 // Old caches with a different version are automatically invalidated on next load.
-const CACHE_VERSION = '6'; // v6: Training packages include unit ownership context
+const CACHE_VERSION = '7'; // v7: Integrated Combat Operations package pre/post timing
 const CACHE_VERSION_KEY = 'dfp-syllabus-cache-version';
 
 // ============================================================================
@@ -36,7 +37,7 @@ function getCachedSyllabus(): { data: SyllabusItemDetail[]; expired: boolean } |
       return null;
     }
 
-    const data = JSON.parse(raw) as SyllabusItemDetail[];
+    const data = normaliseIntegratedCombatOperationsTimings(JSON.parse(raw) as SyllabusItemDetail[]);
     const age = Date.now() - parseInt(timestamp, 10);
     const expired = age > CACHE_TTL_MS;
 
@@ -154,7 +155,7 @@ export async function loadSyllabusFromDB(): Promise<SyllabusLoadResult> {
     }
 
     // Process prerequisites (already stored in DB, but re-process for consistency)
-    const processed = populatePrerequisites(rawItems);
+    const processed = normaliseIntegratedCombatOperationsTimings(populatePrerequisites(rawItems));
 
     // Cache the result
     setCachedSyllabus(processed);

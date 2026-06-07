@@ -3601,6 +3601,26 @@ const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
   trainingPackages: 40
 };
 const normaliseCode = (value) => String(value || "").trim().toUpperCase();
+const AIR_COMBAT_ICO_PACKAGE_CODE = "ICO";
+const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
+const AIR_COMBAT_ICO_POSTFLIGHT_HOURS = 1;
+const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
+  if (!item || item.lmpType !== "Staff CAT") return false;
+  const courses = Array.isArray(item.courses) ? item.courses : [];
+  return courses.some((course) => normaliseCode(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
+};
+const normaliseIntegratedCombatOperationsTiming = (item) => {
+  if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
+  if (item.preFlightTime === AIR_COMBAT_ICO_PREFLIGHT_HOURS && item.postFlightTime === AIR_COMBAT_ICO_POSTFLIGHT_HOURS) {
+    return item;
+  }
+  return {
+    ...item,
+    preFlightTime: AIR_COMBAT_ICO_PREFLIGHT_HOURS,
+    postFlightTime: AIR_COMBAT_ICO_POSTFLIGHT_HOURS
+  };
+};
+const normaliseIntegratedCombatOperationsTimings = (items) => items.map(normaliseIntegratedCombatOperationsTiming);
 const getAirCombatTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getAirCombatTrainingKey = (kind, code, locationCode, unitCode) => [
   "air_combat",
@@ -36241,7 +36261,7 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "6";
+const CACHE_VERSION = "7";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
 function getCachedSyllabus() {
   try {
@@ -36257,7 +36277,7 @@ function getCachedSyllabus() {
       localStorage.removeItem(CACHE_VERSION_KEY);
       return null;
     }
-    const data = JSON.parse(raw);
+    const data = normaliseIntegratedCombatOperationsTimings(JSON.parse(raw));
     const age = Date.now() - parseInt(timestamp, 10);
     const expired = age > CACHE_TTL_MS;
     return { data, expired };
@@ -36338,7 +36358,7 @@ async function loadSyllabusFromDB() {
     if (rawItems.length === 0) {
       throw new Error("No syllabus items returned from database");
     }
-    const processed = populatePrerequisites$1(rawItems);
+    const processed = normaliseIntegratedCombatOperationsTimings(populatePrerequisites$1(rawItems));
     setCachedSyllabus(processed);
     console.log(`📚 [Syllabus] Loaded ${processed.length} items from database`);
     return { syllabus: processed, source: "database" };

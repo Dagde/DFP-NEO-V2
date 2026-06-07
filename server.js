@@ -35,6 +35,42 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+const INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE = 'ICO';
+const INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS = 1.5;
+const INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS = 1.0;
+
+function normaliseSyllabusCourses(courses) {
+  if (Array.isArray(courses)) return courses;
+  if (typeof courses === 'string') {
+    try {
+      const parsed = JSON.parse(courses);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+    return courses.split(',').map(course => course.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function normaliseSyllabusItemForRuntime(item) {
+  if (!item) return item;
+  const courses = normaliseSyllabusCourses(item.courses);
+  if (
+    item.lmpType === 'Staff CAT' &&
+    courses.some(course => String(course || '').trim().toUpperCase() === INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE)
+  ) {
+    return {
+      ...item,
+      courses,
+      preFlightTime: INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS,
+      postFlightTime: INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS,
+    };
+  }
+  return {
+    ...item,
+    courses,
+  };
+}
+
 const KNOWN_AIRFIELD_IDENTITIES = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {})
   .filter((profile) => profile?.icao && profile?.iataCode)
   .map((profile) => ({
@@ -183,6 +219,8 @@ async function getPrisma() {
     await ensureSyllabusTablesExist(prisma);
     // Migrate CPT event durations to 1.0 hour
     await migrateCptDurations(prisma);
+    // Ensure Integrated Combat Operations training package timing is authoritative.
+    await migrateIntegratedCombatOperationsTiming(prisma);
     // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
     await migrateAcademicsCoursesField(prisma);
     // Ensure existing Air Combat personnel profile roles endure as Pilot.
@@ -456,6 +494,29 @@ async function migrateCptDurations(db) {
     console.log(`✅ migrateCptDurations (IndividualLMP): updated ${updatedCount} LMP records`);
   } catch (err) {
     console.error('❌ migrateCptDurations (IndividualLMP) failed (non-fatal):', err.message);
+  }
+}
+
+// Migration: Integrated Combat Operations package uses 1.5 hr pre-flight and 1.0 hr post-flight.
+async function migrateIntegratedCombatOperationsTiming(db) {
+  try {
+    const result = await db.$executeRawUnsafe(`
+      UPDATE "SyllabusItem"
+      SET
+        "preFlightTime" = $1,
+        "postFlightTime" = $2,
+        "version" = "version" + 1,
+        "updatedAt" = NOW()
+      WHERE "lmpType" = 'Staff CAT'
+        AND $3 = ANY("courses")
+        AND ("preFlightTime" IS DISTINCT FROM $1 OR "postFlightTime" IS DISTINCT FROM $2)
+    `,
+      INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS,
+      INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS,
+      INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE);
+    console.log(`✅ migrateIntegratedCombatOperationsTiming: updated ${result} ICO package items`);
+  } catch (err) {
+    console.error('❌ migrateIntegratedCombatOperationsTiming failed (non-fatal):', err.message);
   }
 }
 
@@ -3730,11 +3791,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
       const allSyllabusItems = await db.$queryRawUnsafe(
         `SELECT * FROM "SyllabusItem" WHERE "isActive" = true ORDER BY "sortOrder" ASC`
       );
-      const parsedSyllabus = (allSyllabusItems || []).map(item => ({
-        ...item,
-        courses: Array.isArray(item.courses) ? item.courses :
-          (typeof item.courses === 'string' ? JSON.parse(item.courses) : []),
-      }));
+      const parsedSyllabus = (allSyllabusItems || []).map(normaliseSyllabusItemForRuntime);
       const getMasterSyllabus = (lmpType) => {
         if (lmpType === 'FIC') return parsedSyllabus.filter(item => item.courses.includes('FIC'));
         if (lmpType && lmpType !== 'BPC+IPC') return parsedSyllabus.filter(item => item.courses.includes(lmpType));
@@ -4136,11 +4193,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       );
       if (allItems && allItems.length > 0) {
         // courses is stored as JSON array in DB; parse if needed
-        const parsed = allItems.map(item => ({
-          ...item,
-          courses: Array.isArray(item.courses) ? item.courses :
-            (typeof item.courses === 'string' ? JSON.parse(item.courses) : []),
-        }));
+        const parsed = allItems.map(normaliseSyllabusItemForRuntime);
         const ficItems = parsed.filter(item => item.courses.includes('FIC'));
         const bpcIpcItems = parsed.filter(item => !item.courses.includes('FIC'));
         dbSyllabusData = {
@@ -5619,7 +5672,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
       const sortieType = type === 'Flight' ? normaliseUploadSortieType(getUploadString(row, ['Dual/Solo', 'sortieType'])) : null;
       const flightOrSimHours = getUploadNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
       const totalEventHours = getUploadNumber(row, ['Total Event Hours', 'totalEventHours']) ?? 0;
-      const itemData = {
+      const itemData = normaliseSyllabusItemForRuntime({
         code,
         eventDescription: getUploadString(row, ['Event description', 'eventDescription']),
         phase: getUploadString(row, ['Phase']) || courseCode,
@@ -5648,7 +5701,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
         unit: String(req.body?.unitCode || req.body?.unit || '').trim(),
         lmpType,
         isActive: true,
-      };
+      });
 
       const existing = (await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "code" = $1 LIMIT 1`, code))[0];
       if (existing) {
@@ -5789,7 +5842,7 @@ app.get('/api/syllabus', async (req, res) => {
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const query = `SELECT * FROM "SyllabusItem" ${whereClause} ORDER BY "sortOrder" ASC`;
 
-    const items = await db.$queryRawUnsafe(query, ...params);
+    const items = (await db.$queryRawUnsafe(query, ...params)).map(normaliseSyllabusItemForRuntime);
     console.log(`✅ GET /api/syllabus - returning ${items.length} items`);
     res.json({ syllabus: items, count: items.length });
   } catch (error) {
@@ -5812,7 +5865,7 @@ app.get('/api/syllabus/:id', async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Syllabus item not found' });
     }
-    res.json({ item: rows[0] });
+    res.json({ item: normaliseSyllabusItemForRuntime(rows[0]) });
   } catch (error) {
     console.error('❌ GET /api/syllabus/:id error:', error);
     res.status(500).json({ error: 'Failed to fetch syllabus item', details: error.message });
@@ -5857,6 +5910,13 @@ app.post('/api/syllabus', async (req, res) => {
 
     // Also update the courses array to use the final code
     let finalCourses = (body.courses || []).map(c => c === baseCode ? finalCode : c);
+    const itemData = normaliseSyllabusItemForRuntime({
+      ...body,
+      code: finalCode,
+      courses: finalCourses,
+      lmpType: body.lmpType || null,
+    });
+    finalCourses = itemData.courses;
 
     await db.$executeRawUnsafe(`
       INSERT INTO "SyllabusItem" (
@@ -5874,31 +5934,31 @@ app.post('/api/syllabus', async (req, res) => {
         $27,$28,$29,$30,$31,$32,$33,$34,$35,
         $36,$37,NOW(),NOW()
       )`,
-      id, finalCode, body.eventDescription, body.phase, body.module, body.type,
-      body.sortieType || null, body.dayNight || 'Day',
-      finalCourses, body.methodOfDelivery || [], body.methodOfAssessment || [],
-      body.resourcesPhysical || [], Math.max(0, Math.round(Number(body.resourceNumber ?? (body.resourcesPhysical?.length ? 1 : 0)) || 0)),
-      Array.isArray(body.acceptableAircraftConfigs) && body.acceptableAircraftConfigs.length ? body.acceptableAircraftConfigs : ['ANY'],
-      Array.isArray(body.assessedElements) && body.assessedElements.length ? body.assessedElements : ['Airmanship', 'Preparation', 'Technique'],
-      body.resourcesHuman || [],
-      body.eventDetailsCommon || [], body.eventDetailsSortie || [],
-      body.flightOrSimHours || 0, body.totalEventHours || 1, body.duration || 1,
-      body.preFlightTime || 0, body.postFlightTime || 0,
-      body.prerequisites || [], body.prerequisitesGround || [], body.prerequisitesFlying || [],
-      body.location || null, body.unit || null, body.sortOrder || 0,
-      body.lmpType || null, body.twrDiReqd || null, body.cctOnly || null,
-      body.isRemedial || false, true, 1,
-      body.notes || null, body.createdBy || null
+      id, finalCode, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
+      itemData.sortieType || null, itemData.dayNight || 'Day',
+      finalCourses, itemData.methodOfDelivery || [], itemData.methodOfAssessment || [],
+      itemData.resourcesPhysical || [], Math.max(0, Math.round(Number(itemData.resourceNumber ?? (itemData.resourcesPhysical?.length ? 1 : 0)) || 0)),
+      Array.isArray(itemData.acceptableAircraftConfigs) && itemData.acceptableAircraftConfigs.length ? itemData.acceptableAircraftConfigs : ['ANY'],
+      Array.isArray(itemData.assessedElements) && itemData.assessedElements.length ? itemData.assessedElements : ['Airmanship', 'Preparation', 'Technique'],
+      itemData.resourcesHuman || [],
+      itemData.eventDetailsCommon || [], itemData.eventDetailsSortie || [],
+      itemData.flightOrSimHours || 0, itemData.totalEventHours || 1, itemData.duration || 1,
+      itemData.preFlightTime || 0, itemData.postFlightTime || 0,
+      itemData.prerequisites || [], itemData.prerequisitesGround || [], itemData.prerequisitesFlying || [],
+      itemData.location || null, itemData.unit || null, itemData.sortOrder || 0,
+      itemData.lmpType || null, itemData.twrDiReqd || null, itemData.cctOnly || null,
+      itemData.isRemedial || false, true, 1,
+      itemData.notes || null, itemData.createdBy || null
     );
 
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
-    const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
+    const syllabusItem = rows[0] ? normaliseSyllabusItemForRuntime({ ...rows[0], id: rows[0].code || rows[0].id }) : null;
     if (finalCode !== baseCode) {
       console.log(`✅ POST /api/syllabus - created: ${finalCode} (requested: ${baseCode}, was duplicate)`);
     } else {
       console.log(`✅ POST /api/syllabus - created: ${finalCode}`);
     }
-    res.json({ success: true, syllabusItem, item: rows[0] });
+    res.json({ success: true, syllabusItem, item: normaliseSyllabusItemForRuntime(rows[0]) });
   } catch (error) {
     console.error('❌ POST /api/syllabus error:', error);
     res.status(500).json({ error: error.message || 'Failed to create syllabus item', details: error.message });
@@ -5910,11 +5970,22 @@ app.put('/api/syllabus/:id', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
-    const body = req.body;
+    const originalBody = req.body || {};
+    const existingRows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1 LIMIT 1`, id);
+    const body = normaliseSyllabusItemForRuntime({
+      ...(existingRows[0] || {}),
+      ...originalBody,
+      courses: originalBody.courses ?? existingRows[0]?.courses,
+      lmpType: originalBody.lmpType ?? existingRows[0]?.lmpType,
+    });
 
     // Exclude server-managed fields, timestamps, and non-column metadata fields sent from frontend
     const EXCLUDED_FIELDS = ['id', 'createdAt', 'createdBy', 'updatedAt', 'version', 'changeReason'];
-    const fields = Object.keys(body).filter(k => !EXCLUDED_FIELDS.includes(k));
+    const timingFields = body.lmpType === 'Staff CAT' && normaliseSyllabusCourses(body.courses)
+      .some(course => String(course || '').trim().toUpperCase() === INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE)
+      ? ['preFlightTime', 'postFlightTime']
+      : [];
+    const fields = [...new Set([...Object.keys(originalBody), ...timingFields])].filter(k => !EXCLUDED_FIELDS.includes(k));
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
     // Build SET clauses, casting array fields and boolean fields properly
@@ -5946,9 +6017,9 @@ app.put('/api/syllabus/:id', async (req, res) => {
     );
 
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1`, id);
-    const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
+    const syllabusItem = rows[0] ? normaliseSyllabusItemForRuntime({ ...rows[0], id: rows[0].code || rows[0].id }) : null;
     console.log(`✅ PUT /api/syllabus/${id}`);
-    res.json({ success: true, syllabusItem, item: rows[0] });
+    res.json({ success: true, syllabusItem, item: normaliseSyllabusItemForRuntime(rows[0]) });
   } catch (error) {
     console.error('❌ PUT /api/syllabus/:id error:', error);
     res.status(500).json({ error: error.message || 'Failed to update syllabus item', details: error.message });
@@ -8785,11 +8856,7 @@ async function loadMasterSyllabusForLmpType(db, lmpType) {
       `SELECT * FROM "SyllabusItem" WHERE "isActive" = true ORDER BY "sortOrder" ASC`
     );
     if (!allItems || allItems.length === 0) return [];
-    const parsed = allItems.map(item => ({
-      ...item,
-      courses: Array.isArray(item.courses) ? item.courses :
-        (typeof item.courses === 'string' ? JSON.parse(item.courses) : []),
-    }));
+    const parsed = allItems.map(normaliseSyllabusItemForRuntime);
     if (lmpType === 'FIC') return parsed.filter(item => item.courses.includes('FIC'));
     if (lmpType && lmpType !== 'BPC+IPC') return parsed.filter(item => item.courses.includes(lmpType));
     return parsed.filter(item => !item.courses.includes('FIC') && item.type !== 'Academics');
