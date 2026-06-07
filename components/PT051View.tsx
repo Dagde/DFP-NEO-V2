@@ -919,7 +919,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         <div
             className="flex-1 flex flex-col bg-gray-900 overflow-y-auto"
             onKeyDownCapture={stopEditableKeyPropagation}
-            style={embeddedInProfile ? ({ zoom: 0.88, width: '113.64%' } as React.CSSProperties) : undefined}
+            style={embeddedInProfile ? ({ zoom: 0.88, width: '100%' } as React.CSSProperties) : undefined}
         >
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700 sticky top-0 z-10">
