@@ -38057,7 +38057,7 @@ This action cannot be undone.`;
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 mb-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.assessor || instructorLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -38179,8 +38179,8 @@ This action cannot be undone.`;
                 "th",
                 {
                   title: formatGradeOption(g),
-                  className: "h-[78px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mx-auto flex w-[72px] origin-center -rotate-90 flex-row items-center justify-center gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
+                  className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-[38px] left-1/2 flex w-[76px] -translate-x-1/2 -rotate-90 flex-row items-center justify-center gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
                 },
                 String(g)
               )),

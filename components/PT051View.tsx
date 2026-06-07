@@ -1073,7 +1073,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
                 {/* MIDDLE SECTION: Comment Fields */}
                 <div className="space-y-6 mb-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]">
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.assessor || instructorLabel}</label>
                             <div className="mt-1">
@@ -1189,9 +1189,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             <th
                                                 key={String(g)}
                                                 title={formatGradeOption(g)}
-                                                className="h-[78px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400"
+                                                className="relative h-[98px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400"
                                             >
-                                                <span className="mx-auto flex w-[72px] origin-center -rotate-90 flex-row items-center justify-center gap-1 whitespace-nowrap">
+                                                <span className="absolute bottom-[38px] left-1/2 flex w-[76px] -translate-x-1/2 -rotate-90 flex-row items-center justify-center gap-1 whitespace-nowrap">
                                                     {formatGradeHeaderText(g).split(/\s+/).map((word, index) => (
                                                         <span key={`${word}-${index}`}>{word}</span>
                                                     ))}
