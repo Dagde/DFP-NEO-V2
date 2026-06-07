@@ -414,7 +414,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     const sequenceItems = getTrainingSyllabusItems(assignment);
     const sequenceCodeSet = new Set(sequenceItems.map(item => normaliseTrainingCode(item.code)));
     const completedEvents = airCombatStaffHistoryEvents.filter(event => sequenceCodeSet.has(normaliseTrainingCode(event.flightNumber)));
-    const completedCodes = new Set(completedEvents.map(event => normaliseTrainingCode(event.flightNumber)));
+    const completedReportCodes = normaliseAirCombatTrainingReports(instructor.preferences)
+      .filter(report => report.trainingKey === assignment.trainingKey || report.trainingCode === assignment.code)
+      .filter(report => report.dcoResult === 'DCO' || report.dcoResult === 'DPCO')
+      .map(report => normaliseTrainingCode(report.eventCode))
+      .filter(code => sequenceCodeSet.has(code));
+    const completedCodes = new Set([
+      ...completedEvents.map(event => normaliseTrainingCode(event.flightNumber)),
+      ...completedReportCodes,
+    ]);
     const nextItem = sequenceItems.find(item => !completedCodes.has(normaliseTrainingCode(item.code))) || null;
     const completedCount = completedCodes.size;
     const totalCount = sequenceItems.length;
@@ -429,7 +437,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       progressPercent: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
       lastEvent: completedEvents[0] || null,
     };
-  }), [airCombatStaffHistoryEvents, assignedAirCombatTraining, getTrainingSyllabusItems]);
+  }), [airCombatStaffHistoryEvents, assignedAirCombatTraining, getTrainingSyllabusItems, instructor.preferences]);
   const [selectedAirCombatTrainingKey, setSelectedAirCombatTrainingKey] = useState<string | null>(null);
   const [selectedAirCombatTrainingItemId, setSelectedAirCombatTrainingItemId] = useState<string | null>(null);
   const [showAirCombatInsertEventModal, setShowAirCombatInsertEventModal] = useState(false);

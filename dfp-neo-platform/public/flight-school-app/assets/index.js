@@ -33445,7 +33445,11 @@ const InstructorProfileFlyout = ({
     const sequenceItems = getTrainingSyllabusItems(assignment);
     const sequenceCodeSet = new Set(sequenceItems.map((item) => normaliseTrainingCode(item.code)));
     const completedEvents = airCombatStaffHistoryEvents.filter((event) => sequenceCodeSet.has(normaliseTrainingCode(event.flightNumber)));
-    const completedCodes = new Set(completedEvents.map((event) => normaliseTrainingCode(event.flightNumber)));
+    const completedReportCodes = normaliseAirCombatTrainingReports(instructor.preferences).filter((report) => report.trainingKey === assignment.trainingKey || report.trainingCode === assignment.code).filter((report) => report.dcoResult === "DCO" || report.dcoResult === "DPCO").map((report) => normaliseTrainingCode(report.eventCode)).filter((code) => sequenceCodeSet.has(code));
+    const completedCodes = /* @__PURE__ */ new Set([
+      ...completedEvents.map((event) => normaliseTrainingCode(event.flightNumber)),
+      ...completedReportCodes
+    ]);
     const nextItem = sequenceItems.find((item) => !completedCodes.has(normaliseTrainingCode(item.code))) || null;
     const completedCount = completedCodes.size;
     const totalCount = sequenceItems.length;
@@ -33460,7 +33464,7 @@ const InstructorProfileFlyout = ({
       progressPercent: totalCount > 0 ? Math.round(completedCount / totalCount * 100) : 0,
       lastEvent: completedEvents[0] || null
     };
-  }), [airCombatStaffHistoryEvents, assignedAirCombatTraining, getTrainingSyllabusItems]);
+  }), [airCombatStaffHistoryEvents, assignedAirCombatTraining, getTrainingSyllabusItems, instructor.preferences]);
   const [selectedAirCombatTrainingKey, setSelectedAirCombatTrainingKey] = reactExports.useState(null);
   const [selectedAirCombatTrainingItemId, setSelectedAirCombatTrainingItemId] = reactExports.useState(null);
   const [showAirCombatInsertEventModal, setShowAirCombatInsertEventModal] = reactExports.useState(false);
@@ -75974,6 +75978,104 @@ ${error instanceof Error ? error.message : String(error)}`,
       `Created ${report.reportName} Air Combat training report for ${report.staffName} - Event: ${report.eventCode}`
     );
   };
+  const generateAirCombatPostFlightDraftTrainingReport = async (sourceEvent, dcoResult) => {
+    if (normaliseOperationalModel(activeOperationalModel) !== "air_combat") return;
+    const staffName = sourceEvent.pilot || sourceEvent.crew || "";
+    const eventCode = String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim();
+    if (!staffName || !eventCode) return;
+    const staff = allInstructorsData.find((person) => person.name === staffName);
+    if (!staff) {
+      console.warn(`[PostFlight] Air Combat draft report skipped: staff not found for ${staffName}`);
+      return;
+    }
+    const matchingItem = syllabusDetails.find((item) => item.isActive !== false && String(item.code || "").trim().toUpperCase() === eventCode.toUpperCase() && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType));
+    if (!matchingItem) {
+      console.log(`[PostFlight] Air Combat draft report skipped: ${eventCode} is not a course/training package syllabus event`);
+      return;
+    }
+    const preferences = { ...staff.preferences || {} };
+    const assignments = normaliseAirCombatTrainingAssignments(preferences);
+    const allAssignments = [...assignments.courses, ...assignments.trainingPackages];
+    const trainingCodes = new Set([
+      ...matchingItem.courses || [],
+      matchingItem.phase,
+      matchingItem.module
+    ].map((value) => String(value || "").trim()).filter(Boolean));
+    const fallbackAssignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode, currentUserName);
+    const assignment = allAssignments.find((candidate) => candidate.trainingKey === fallbackAssignment.trainingKey || trainingCodes.has(candidate.code)) || fallbackAssignment;
+    const reportTemplate = getUnitTrainingReportTemplate(platformConfig, staff.unit || activeUnitCode);
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const reportId = `air-combat-postflight-${staff.idNumber}-${sourceEvent.id || eventCode}`;
+    const existingReports = normaliseAirCombatTrainingReports(preferences);
+    const existingReport = existingReports.find((report2) => report2.id === reportId || report2.staffIdNumber === staff.idNumber && (report2.eventId === sourceEvent.id || report2.eventCode === eventCode) && report2.date === sourceEvent.date);
+    const report = {
+      ...existingReport || {},
+      id: existingReport?.id || reportId,
+      reportName: existingReport?.reportName || reportTemplate.displayName,
+      staffIdNumber: staff.idNumber,
+      staffName: staff.name,
+      locationCode: school,
+      unitCode: staff.unit || activeUnitCode,
+      trainingKey: assignment.trainingKey,
+      trainingKind: assignment.kind,
+      trainingCode: assignment.code || matchingItem.phase,
+      trainingTitle: assignment.title || matchingItem.module,
+      eventId: sourceEvent.id || matchingItem.id,
+      eventCode,
+      eventDescription: matchingItem.eventDescription || sourceEvent.notes,
+      eventType: matchingItem.type || sourceEvent.type,
+      date: sourceEvent.date || getLocalDateString(),
+      startTime: sourceEvent.startTime,
+      duration: sourceEvent.duration,
+      resourceId: sourceEvent.resourceId,
+      callsign: sourceEvent.callsign || staff.callsign,
+      instructorName: sourceEvent.instructor || existingReport?.instructorName || currentUserName,
+      overallGrade: existingReport?.overallGrade || "",
+      overallResult: existingReport?.overallResult || "",
+      dcoResult,
+      notes: existingReport?.notes || "Generated from post-flight completion. Complete the training report when debrief details are ready.",
+      status: existingReport?.status === "Complete" ? "Complete" : "Draft",
+      createdAt: existingReport?.createdAt || now,
+      createdBy: existingReport?.createdBy || currentUserName,
+      updatedAt: now,
+      updatedBy: currentUserName
+    };
+    const updatedReports = [
+      report,
+      ...existingReports.filter((existing) => existing.id !== report.id)
+    ];
+    const updatedStaff = {
+      ...staff,
+      preferences: {
+        ...preferences,
+        airCombat: {
+          ...preferences.airCombat || {},
+          trainingReports: updatedReports
+        }
+      }
+    };
+    const dbId = updatedStaff.id;
+    if (dbId) {
+      const response = await fetch(`/api/personnel/${dbId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedStaff)
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to save Air Combat post-flight draft report (${response.status})`);
+      }
+    }
+    setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
+    setSelectedPersonForProfile((prev) => prev && "idNumber" in prev && prev.idNumber === updatedStaff.idNumber ? updatedStaff : prev);
+    logAudit(
+      "Air Combat Training Reports",
+      existingReport ? "Edit" : "Create",
+      `${existingReport ? "Updated" : "Generated"} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
+    );
+    console.log(`[PostFlight] ✅ Air Combat draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode} (${dcoResult})`);
+  };
   const handleViewLogbook = reactExports.useCallback((person) => {
     setSelectedPersonForLogbook(person);
     handleNavigation("Logbook");
@@ -83687,6 +83789,16 @@ Do you want to replace the existing entry?`,
                     console.warn("[PostFlight] EventCompletion fetch threw:", ecErr);
                   }
                 }
+                if (eventForPostFlight && (data.result === "DCO" || data.result === "DPCO")) {
+                  try {
+                    await generateAirCombatPostFlightDraftTrainingReport(
+                      eventForPostFlight,
+                      data.result
+                    );
+                  } catch (airCombatReportErr) {
+                    console.warn("[PostFlight] Air Combat draft training report generation failed:", airCombatReportErr);
+                  }
+                }
                 if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {
                   const event = eventForPostFlight;
                   const targetPersons = [];
@@ -83875,7 +83987,8 @@ Do you want to replace the existing entry?`,
                   }
                 }
                 const isCurrencyPostFlightEvent = !!eventForPostFlight && (eventForPostFlight.eventCategory === "currency" || !!eventForPostFlight.currencyDraftId || eventForPostFlight.flightNumber === "CURR");
-                if (!isCurrencyPostFlightEvent && data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && eventForPostFlight) {
+                const isAirCombatPostFlightEvent = normaliseOperationalModel(activeOperationalModel) === "air_combat";
+                if (!isAirCombatPostFlightEvent && !isCurrencyPostFlightEvent && data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && eventForPostFlight) {
                   const pfEvtForPt051 = eventForPostFlight;
                   const pt051TraineeName = pfEvtForPt051.student || pfEvtForPt051.pilot || "";
                   const pt051FlightNumber = pfEvtForPt051.flightNumber || "";
