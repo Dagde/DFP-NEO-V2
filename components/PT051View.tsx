@@ -219,6 +219,25 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
         return reportTemplate.grades.showNumbers ? `${grade} - ${label}` : label;
     };
+    const formatGradeValue = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => (
+        grade === 'No Grade' ? 'None' : String(grade)
+    );
+    const formatGradeText = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
+        if (grade === 'No Grade') return 'No Grade';
+        if (grade === 'DEMO' || grade === 'MIN') return String(grade);
+        return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
+    };
+    const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
+        const target = event.target as HTMLElement | null;
+        if (
+            target instanceof HTMLInputElement ||
+            target instanceof HTMLTextAreaElement ||
+            target instanceof HTMLSelectElement ||
+            target?.isContentEditable
+        ) {
+            event.stopPropagation();
+        }
+    };
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
     const { checkAndWarn } = useSystemFreeze();
     const [isDirty, setIsDirty] = useState(false);
@@ -645,17 +664,17 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const gradeHeaderColors: { [key: string]: string } = {
         'MIN': 'bg-red-800/50',
-        'DEMO': 'bg-red-700/50',
-        '0': 'bg-orange-800/50',
-        '1': 'bg-orange-700/50',
-        '2': 'bg-yellow-800/50',
-        '3': 'bg-yellow-700/50',
-        '4': 'bg-green-800/50',
-        '5': 'bg-green-700/50',
+        'DEMO': 'bg-red-950/35 border-red-500/20',
+        '0': 'bg-red-950/35 border-red-500/20',
+        '1': 'bg-orange-950/35 border-orange-500/20',
+        '2': 'bg-amber-950/35 border-amber-500/20',
+        '3': 'bg-yellow-950/30 border-yellow-500/20',
+        '4': 'bg-lime-950/25 border-lime-500/20',
+        '5': 'bg-emerald-950/25 border-emerald-500/20',
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-900 overflow-y-auto">
+        <div className="flex-1 flex flex-col bg-gray-900 overflow-y-auto" onKeyDownCapture={stopEditableKeyPropagation}>
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700 sticky top-0 z-10">
                 <div className="flex items-center gap-4">
@@ -922,10 +941,19 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                              <div className="mt-2 space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400">{overallFields.overallGrade}</label>
-                                    <div className="mt-1 flex justify-around p-2 bg-gray-700/50 rounded">
+                                    <div className="mt-1 grid grid-cols-4 gap-2 rounded bg-gray-950/45 p-2 sm:grid-cols-6 xl:grid-cols-12">
                                         {overallGradeOptions.map(grade => (
-                                            <label key={grade} className="flex flex-col items-center space-y-1 text-xs text-gray-300 cursor-pointer">
-                                                <span>{formatGradeOption(grade)}</span>
+                                            <label
+                                                key={grade}
+                                                title={formatGradeOption(grade)}
+                                                className={`flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${
+                                                    overallGrade === grade
+                                                        ? 'border-sky-400 bg-sky-500/15 text-white'
+                                                        : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500'
+                                                }`}
+                                            >
+                                                <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeValue(grade)}</span>
+                                                <span className="line-clamp-2 max-w-full text-[9px] font-semibold leading-tight text-gray-400">{formatGradeText(grade)}</span>
                                                 <input type="radio" name="overall-grade" value={grade} checked={overallGrade === grade} onChange={() => setOverallGrade(grade)} className={`h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600`} />
                                             </label>
                                         ))}
@@ -1111,12 +1139,22 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         return (
                         <fieldset key={category.category} className={`p-4 border rounded-lg ${isGroundEvent ? 'border-gray-800 bg-gray-800/30 opacity-50' : 'border-gray-700'}`}>
                             <legend className={`px-2 text-sm font-semibold ${isGroundEvent ? 'text-gray-500' : 'text-gray-300'}`}>{category.category}</legend>
-                            <table className="w-full mt-2 border-collapse">
-                                <thead className="sr-only">
+                            <div className="mt-2 overflow-x-auto rounded-md border border-gray-800/80">
+                            <table className="min-w-[1080px] w-full table-fixed border-collapse">
+                                <colgroup>
+                                    <col className="w-[190px]" />
+                                    {assessmentGradeOptions.map(g => <col key={String(g)} className="w-[54px]" />)}
+                                    <col className="min-w-[240px]" />
+                                </colgroup>
+                                <thead>
                                     <tr>
-                                        <th>Element</th>
-                                        {assessmentGradeOptions.map(g => <th key={String(g)}>{formatGradeOption(g)}</th>)}
-                                        <th>Comments</th>
+                                        <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Element</th>
+                                        {assessmentGradeOptions.map(g => (
+                                            <th key={String(g)} title={formatGradeOption(g)} className="px-1 pb-2 text-center text-[10px] font-black uppercase text-gray-400">
+                                                {formatGradeValue(g)}
+                                            </th>
+                                        ))}
+                                        <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1124,11 +1162,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                         const score = assessment.scores.find(s => s.element === element);
                                         return (
                                             <tr key={element} className="border-t border-gray-700">
-                                                <td className="py-3 pr-2 font-semibold text-white w-48">{element}</td>
+                                                <td className="py-3 pr-3 align-middle font-semibold text-white">{element}</td>
                                                 {assessmentGradeOptions.map(grade => {
                                                     return (
-                                                        <td key={String(grade)} className={`py-3 text-center w-12 ${gradeHeaderColors[String(grade)] || ''}`}>
-                                                            <label className={`flex flex-col items-center justify-center ${isGroundEvent ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                                                        <td key={String(grade)} title={formatGradeOption(grade)} className={`border-l border-gray-800 px-1 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || 'border-gray-800'}`}>
+                                                            <label className={`flex min-h-[44px] flex-col items-center justify-center rounded ${isGroundEvent ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-white/5'}`}>
                                                                 <input 
                                                                     type="radio"
                                                                     name={element}
@@ -1138,18 +1176,18 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                                     disabled={isGroundEvent}
                                                                     className={`h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                 />
-                                                                <span className="text-xs text-gray-500 mt-1">{formatGradeOption(grade)}</span>
+                                                                <span className="mt-1 text-[9px] font-bold leading-none text-gray-500">{formatGradeValue(grade)}</span>
                                                             </label>
                                                         </td>
                                                     );
                                                 })}
-                                                <td className="py-3 pl-2 relative">
+                                                <td className="relative py-3 pl-3 pr-2 align-middle">
                                                     <textarea
                                                         value={score?.comment || ''}
                                                         onChange={(e) => handleCommentChange(element, e.target.value)}
                                                         rows={1}
                                                         placeholder="Comments..."
-                                                        className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
+                                                        className="w-full bg-gray-800 border border-gray-600 rounded p-2 pr-8 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
                                                         style={{ minHeight: '42px' }}
                                                         onInput={(e) => {
                                                             e.currentTarget.style.height = 'auto';
@@ -1178,6 +1216,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     })}
                                 </tbody>
                             </table>
+                            </div>
                         </fieldset>
                         );
                     })}
