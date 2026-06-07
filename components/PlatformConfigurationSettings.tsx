@@ -898,6 +898,38 @@ const downloadTextFile = (filename: string, content: string, mimeType: string) =
   URL.revokeObjectURL(url);
 };
 
+const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
+  event: 'Labels the event identifier shown on the report, such as AA1, IC02 or the scheduled task code.',
+  training: 'Labels the course, package or training sequence that the event belongs to.',
+  type: 'Labels the event type or description area used to identify what activity was assessed.',
+  timing: 'Labels the start time and duration summary for the assessed event.',
+  resource: 'Labels the aircraft, simulator, trainer or other resource used for the event.',
+  callsign: 'Labels the callsign recorded against the sortie or training event.',
+  unit: 'Labels the owning unit or operating unit recorded on the report.',
+  date: 'Labels the report date field.',
+  assessor: 'Labels the person completing or signing the report, such as QFI, instructor, assessor or supervisor.',
+};
+
+const TRAINING_REPORT_OVERALL_FIELD_INFO: Record<string, string> = {
+  result: 'Labels the completion result control. The text can change, but the codes still retain their existing completion function.',
+  overallGrade: 'Labels the selected whole-event assessment grade.',
+  overallResult: 'Labels the pass/fail outcome. The displayed text can change while the underlying pass/fail function remains the same.',
+  groundSchoolAssessment: 'Labels the optional ground school assessment result area.',
+};
+
+const TRAINING_REPORT_COMMENT_FIELD_INFO: Record<string, string> = {
+  assessor: 'Labels the assessor comment or assessor selector field.',
+  weather: 'Labels the weather/context notes field.',
+  profile: 'Labels the profile, sortie flow or training profile narrative field.',
+  overall: 'Labels the overall narrative assessment field.',
+  nest: 'Labels the NEST or short local reference field.',
+  notes: 'Labels the general notes field used in model-specific training report entry flows.',
+};
+
+const humaniseFieldKey = (key: string): string => (
+  key.replace(/([A-Z])/g, ' $1').replace(/^./, (char) => char.toUpperCase())
+);
+
 interface PlatformConfigurationSettingsProps {
   currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
   onShowSuccess: (message: string) => void;
@@ -3408,18 +3440,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updateTrainingReportTemplate({ displayName: value })}
               info="Customer-specific name. Example: PT-051."
             />
-            <SelectField
+            <Field
               label="Grade Scale"
-              value={String(trainingReportTemplate.grades.scaleMax)}
-              disabled={!canEdit}
-              options={['5', '10']}
-              onChange={(value) => updateTrainingReportTemplate((template) => ({
-                grades: {
-                  ...template.grades,
-                  scaleMax: Number(value) === 10 ? 10 : 5,
-                },
-              }))}
-              info="Controls the selectable overall and element grade range."
+              value="1 to 10"
+              disabled={true}
+              onChange={() => {}}
+              info="Training reports now use a 1 to 10 grade scale. The number still controls ordering even when grade numbers are hidden from display."
             />
             <ToggleField
               label="Show Grade Numbers"
@@ -3431,6 +3457,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   showNumbers: checked,
                 },
               }))}
+              info="When off, users see only the grade text, but the underlying 1 to 10 value is still retained for ordering and repeat rules."
             />
             <ToggleField
               label="Include DEMO Grade"
@@ -3442,6 +3469,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   includeDemo: checked,
                 },
               }))}
+              info="Adds DEMO as a selectable non-numeric instructional grade alongside the 1 to 10 assessment grades."
             />
           </div>
 
@@ -3450,7 +3478,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Modules & Field Labels</h4>
               <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Rename only</span>
             </div>
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="space-y-4">
               <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
                 <Field
                   label="Overview Module"
@@ -3458,19 +3486,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   disabled={!canEdit}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   onChange={(value) => updateTrainingReportModule('overview', { title: value })}
+                  info="Renames the module that displays the event identity, date, timing, resource and assessor context."
                 />
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
                   {Object.entries(trainingReportTemplate.modules.overview.fields).map(([key, value]) => (
                     <Field
                       key={key}
-                      label={key.replace(/([A-Z])/g, ' $1')}
+                      label={humaniseFieldKey(key)}
                       value={value}
                       disabled={!canEdit}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       onChange={(nextValue) => updateTrainingReportModuleFields('overview', key, nextValue)}
+                      info={TRAINING_REPORT_OVERVIEW_FIELD_INFO[key] || 'Renames this overview field in the training report.'}
                     />
                   ))}
                 </div>
+                <TrainingReportModulePreview title={trainingReportTemplate.modules.overview.title}>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.event} value="AA1" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.training} value="Air to Air" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.type} value="Flight" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.timing} value="08:00 / 1.2h" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.resource} value="PC-21 5" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.callsign} value="SHOG1" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.unit} value="77SQN" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.date} value="2026-06-07" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.assessor} value="SQNLDR Burns" />
+                  </div>
+                </TrainingReportModulePreview>
               </div>
 
               <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
@@ -3480,19 +3523,29 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   disabled={!canEdit}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   onChange={(value) => updateTrainingReportModule('overallAssessment', { title: value })}
+                  info="Renames the module that captures completion result, whole-event grade, pass/fail outcome and ground school assessment."
                 />
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
                   {Object.entries(trainingReportTemplate.modules.overallAssessment.fields).map(([key, value]) => (
                     <Field
                       key={key}
-                      label={key.replace(/([A-Z])/g, ' $1')}
+                      label={humaniseFieldKey(key)}
                       value={value}
                       disabled={!canEdit}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       onChange={(nextValue) => updateTrainingReportModuleFields('overallAssessment', key, nextValue)}
+                      info={TRAINING_REPORT_OVERALL_FIELD_INFO[key] || 'Renames this overall assessment field in the training report.'}
                     />
                   ))}
                 </div>
+                <TrainingReportModulePreview title={trainingReportTemplate.modules.overallAssessment.title}>
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.result} value={trainingReportTemplate.completionResults.map((option) => option.label).join(' / ')} />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.overallGrade} value={trainingReportTemplate.grades.showNumbers ? '7 - Very Good' : 'Very Good'} />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.overallResult} value={`${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}`} />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.groundSchoolAssessment} value="Assessment / 85%" />
+                  </div>
+                </TrainingReportModulePreview>
               </div>
 
               <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
@@ -3502,19 +3555,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   disabled={!canEdit}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   onChange={(value) => updateTrainingReportModule('comments', { title: value })}
+                  info="Renames the narrative module used for assessor notes, weather/context, profile notes and the overall narrative."
                 />
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
                   {Object.entries(trainingReportTemplate.modules.comments.fields).map(([key, value]) => (
                     <Field
                       key={key}
-                      label={key.replace(/([A-Z])/g, ' $1')}
+                      label={humaniseFieldKey(key)}
                       value={value}
                       disabled={!canEdit}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       onChange={(nextValue) => updateTrainingReportModuleFields('comments', key, nextValue)}
+                      info={TRAINING_REPORT_COMMENT_FIELD_INFO[key] || 'Renames this narrative field in the training report.'}
                     />
                   ))}
                 </div>
+                <TrainingReportModulePreview title={trainingReportTemplate.modules.comments.title}>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.assessor} value="SQNLDR Burns" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.weather} value="VMC, light turbulence" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.nest} value="NEST 2" />
+                    <div className="md:col-span-3">
+                      <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.profile} value="Profile narrative appears here." />
+                    </div>
+                    <div className="md:col-span-3">
+                      <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.overall} value="Overall assessment narrative appears here." />
+                    </div>
+                    <div className="md:col-span-3">
+                      <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.notes} value="Model-specific notes appear here." />
+                    </div>
+                  </div>
+                </TrainingReportModulePreview>
               </div>
 
               <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
@@ -3526,6 +3597,23 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   onChange={(value) => updateTrainingReportModule('assessmentMatrix', { title: value })}
                   info="Assessment categories and descriptors remain controlled by the Scoring Matrix."
                 />
+                <TrainingReportModulePreview title={trainingReportTemplate.modules.assessmentMatrix.title}>
+                  <div className="space-y-3">
+                    <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+                      <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Core Dimensions</div>
+                      <div className="mt-2 grid gap-2 md:grid-cols-3">
+                        {['Airmanship', 'Preparation', 'Technique'].map((dimension) => (
+                          <div key={dimension} className="rounded bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100">
+                            {dimension}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-xs leading-relaxed text-gray-400">
+                      Descriptors and phrases are edited in Settings - Training & Standards - Scoring Matrix.
+                    </div>
+                  </div>
+                </TrainingReportModulePreview>
               </div>
             </div>
           </div>
@@ -3541,6 +3629,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   disabled={!canEdit}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   onChange={(value) => updateTrainingReportCompletionResult(option.code, value)}
+                  info={`Renames the ${option.code} completion result while preserving the underlying ${option.code} function.`}
                 />
               ))}
               <Field
@@ -3551,6 +3640,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 onChange={(value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, passLabel: value },
                 }))}
+                info="Renames the pass outcome shown on the report. The underlying pass function remains unchanged."
               />
               <Field
                 label="Fail Text"
@@ -3560,6 +3650,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 onChange={(value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, failLabel: value },
                 }))}
+                info="Renames the fail outcome shown on the report. The underlying fail function remains unchanged."
               />
               <Field
                 label="Repeat Rule Text"
@@ -3569,6 +3660,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 onChange={(value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, doubleRepeatLabel: value },
                 }))}
+                info="Text shown when a configured repeat rule forces the event into a repeat or fail state."
               />
             </div>
 
@@ -3576,11 +3668,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <table className="min-w-full text-left text-sm">
                 <thead className="text-[10px] uppercase tracking-wide text-gray-500">
                   <tr>
-                    <th className="px-2 py-2">Grade</th>
-                    <th className="px-2 py-2">Display Text</th>
-                    <th className="px-2 py-2">Repeat Event</th>
-                    <th className="px-2 py-2">Two In A Row</th>
-                    <th className="px-2 py-2">Two In Three</th>
+                    <th className="px-2 py-2">
+                      <span className="flex items-center gap-1.5">Grade <InfoHint text="The underlying numeric grade used for ordering and repeat-rule logic. The visible number can be hidden from users." /></span>
+                    </th>
+                    <th className="px-2 py-2">
+                      <span className="flex items-center gap-1.5">Display Text <InfoHint text="The word or phrase shown beside, or instead of, the numeric grade." /></span>
+                    </th>
+                    <th className="px-2 py-2">
+                      <span className="flex items-center gap-1.5">Repeat Event <InfoHint text="When selected, this grade means the event must be repeated." /></span>
+                    </th>
+                    <th className="px-2 py-2">
+                      <span className="flex items-center gap-1.5">Two In A Row <InfoHint text="Includes this grade in the consecutive repeat rule." /></span>
+                    </th>
+                    <th className="px-2 py-2">
+                      <span className="flex items-center gap-1.5">Two In Three <InfoHint text="Includes this grade in the rolling two-in-three repeat rule." /></span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3644,6 +3746,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       consecutive: { ...template.repeatRules.consecutive, enabled: checked },
                     },
                   }))}
+                  info="When enabled, repeated selected grades in consecutive reports require the event to be repeated."
                 />
                 <NumberField
                   label="Count"
@@ -3673,6 +3776,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       rollingWindow: { ...template.repeatRules.rollingWindow, enabled: checked },
                     },
                   }))}
+                  info="When enabled, selected grades occurring repeatedly inside a rolling event window require the event to be repeated."
                 />
                 <NumberField
                   label="Count"
@@ -3684,6 +3788,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       rollingWindow: { ...template.repeatRules.rollingWindow, count: value },
                     },
                   }))}
+                  info="How many matching grades inside the rolling window trigger a repeat."
                 />
                 <NumberField
                   label="Window"
@@ -4131,7 +4236,7 @@ const InfoHint = ({ text }: { text: string }) => (
     className="group relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 normal-case outline-none transition-colors hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50"
   >
     <span aria-hidden="true" className="font-serif text-[11px] font-bold italic leading-none normal-case">i</span>
-    <span className="pointer-events-none absolute left-0 top-5 z-50 hidden w-96 max-w-[min(24rem,calc(100vw-2rem))] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block">
+    <span className="pointer-events-none fixed left-1/2 top-24 z-[260] hidden w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block">
       {text}
     </span>
   </span>
@@ -4263,9 +4368,12 @@ const TextAreaField = ({ label, value, disabled, onChange, info }: { label: stri
   </label>
 );
 
-const ToggleField = ({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled: boolean; onChange: (checked: boolean) => void }) => (
+const ToggleField = ({ label, checked, disabled, onChange, info }: { label: string; checked: boolean; disabled: boolean; onChange: (checked: boolean) => void; info?: string }) => (
   <label className="flex items-center justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2">
-    <span className="text-sm font-semibold text-gray-200">{label}</span>
+    <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-200">
+      <span>{label}</span>
+      {info ? <InfoHint text={info} /> : null}
+    </span>
     <input
       type="checkbox"
       className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
@@ -4283,6 +4391,31 @@ const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = '
       {options.map((option) => <option key={option} value={option}>{optionLabels[option] || option || emptyLabel}</option>)}
     </select>
   </label>
+);
+
+const TrainingReportPreviewCell = ({ label, value }: { label: string; value: string }) => (
+  <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+    <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">{label}</div>
+    <div className="mt-1 text-sm font-semibold text-gray-100">{value}</div>
+  </div>
+);
+
+const TrainingReportModulePreview = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div className="mt-4 rounded-lg border border-cyan-500/25 bg-gray-950/60 p-4">
+    <div className="mb-3 flex items-center justify-between">
+      <h5 className="text-sm font-bold text-white">{title}</h5>
+      <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-cyan-100/80">
+        Preview
+      </span>
+    </div>
+    {children}
+  </div>
 );
 
 const TimeZoneField = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (

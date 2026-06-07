@@ -2766,12 +2766,16 @@ const DEFAULT_TRAINING_REPORT_TERMINOLOGY = {
   name: "Report"
 };
 const DEFAULT_GRADE_LABELS = {
-  0: "Unsatisfactory",
-  1: "Marginal",
-  2: "Low Satisfactory",
-  3: "Satisfactory",
-  4: "High Satisfactory",
-  5: "Excellent"
+  1: "Unsatisfactory",
+  2: "Marginal",
+  3: "Low Satisfactory",
+  4: "Satisfactory",
+  5: "High Satisfactory",
+  6: "Good",
+  7: "Very Good",
+  8: "Excellent",
+  9: "Outstanding",
+  10: "Exceptional"
 };
 const DEFAULT_TRAINING_REPORT_TEMPLATE = {
   version: 1,
@@ -2827,17 +2831,17 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
     doubleRepeatLabel: "Double Marg"
   },
   grades: {
-    scaleMax: 5,
+    scaleMax: 10,
     includeDemo: true,
     showNumbers: true,
-    options: [0, 1, 2, 3, 4, 5].map((value) => ({
+    options: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => ({
       value,
       label: DEFAULT_GRADE_LABELS[value],
-      requiresRepeat: value === 0
+      requiresRepeat: value === 1
     }))
   },
   repeatRules: {
-    gradesRequiringRepeat: [0],
+    gradesRequiringRepeat: [1],
     consecutive: {
       enabled: true,
       grades: [1],
@@ -2867,12 +2871,13 @@ const cleanNumber$1 = (value, fallback, min, max) => {
 const cleanBoolean = (value, fallback) => typeof value === "boolean" ? value : fallback;
 const normaliseGradeValues = (values, scaleMax, fallback) => {
   const source = Array.isArray(values) ? values : fallback;
-  const cleaned = source.map((value) => cleanNumber$1(value, -1, 0, scaleMax)).filter((value) => value >= 0 && value <= scaleMax);
+  const cleaned = source.map((value) => cleanNumber$1(value, -1, 1, scaleMax)).filter((value) => value >= 1 && value <= scaleMax);
   return Array.from(new Set(cleaned)).sort((a, b) => a - b);
 };
 const normaliseGradeOptions = (input, scaleMax, repeatGrades) => {
   const source = Array.isArray(input) ? input : [];
-  return Array.from({ length: scaleMax + 1 }, (_, value) => {
+  return Array.from({ length: scaleMax }, (_, index) => {
+    const value = index + 1;
     const existing = source.find((option) => Number(option?.value) === value);
     return {
       value,
@@ -2891,7 +2896,7 @@ const mergeFields = (defaults, input) => {
 const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
   const source = input && typeof input === "object" ? input : {};
   const legacy = normaliseTrainingReportTerminology(legacyTerminology || null);
-  const scaleMax = cleanNumber$1(source.grades?.scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, 5, 10);
+  const scaleMax = cleanNumber$1(source.grades?.scaleMax, DEFAULT_TRAINING_REPORT_TEMPLATE.grades.scaleMax, 10, 10);
   const fallbackRepeatGrades = normaliseGradeValues(
     source.repeatRules?.gradesRequiringRepeat,
     scaleMax,
@@ -48495,6 +48500,32 @@ const downloadTextFile = (filename, content, mimeType) => {
   link.remove();
   URL.revokeObjectURL(url);
 };
+const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
+  event: "Labels the event identifier shown on the report, such as AA1, IC02 or the scheduled task code.",
+  training: "Labels the course, package or training sequence that the event belongs to.",
+  type: "Labels the event type or description area used to identify what activity was assessed.",
+  timing: "Labels the start time and duration summary for the assessed event.",
+  resource: "Labels the aircraft, simulator, trainer or other resource used for the event.",
+  callsign: "Labels the callsign recorded against the sortie or training event.",
+  unit: "Labels the owning unit or operating unit recorded on the report.",
+  date: "Labels the report date field.",
+  assessor: "Labels the person completing or signing the report, such as QFI, instructor, assessor or supervisor."
+};
+const TRAINING_REPORT_OVERALL_FIELD_INFO = {
+  result: "Labels the completion result control. The text can change, but the codes still retain their existing completion function.",
+  overallGrade: "Labels the selected whole-event assessment grade.",
+  overallResult: "Labels the pass/fail outcome. The displayed text can change while the underlying pass/fail function remains the same.",
+  groundSchoolAssessment: "Labels the optional ground school assessment result area."
+};
+const TRAINING_REPORT_COMMENT_FIELD_INFO = {
+  assessor: "Labels the assessor comment or assessor selector field.",
+  weather: "Labels the weather/context notes field.",
+  profile: "Labels the profile, sortie flow or training profile narrative field.",
+  overall: "Labels the overall narrative assessment field.",
+  nest: "Labels the NEST or short local reference field.",
+  notes: "Labels the general notes field used in model-specific training report entry flows."
+};
+const humaniseFieldKey = (key) => key.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase());
 const PlatformConfigurationSettings = ({
   currentUserPermission,
   onShowSuccess,
@@ -50711,19 +50742,14 @@ const PlatformConfigurationSettings = ({
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
-            SelectField,
+            Field,
             {
               label: "Grade Scale",
-              value: String(trainingReportTemplate.grades.scaleMax),
-              disabled: !canEdit,
-              options: ["5", "10"],
-              onChange: (value) => updateTrainingReportTemplate((template) => ({
-                grades: {
-                  ...template.grades,
-                  scaleMax: Number(value) === 10 ? 10 : 5
-                }
-              })),
-              info: "Controls the selectable overall and element grade range."
+              value: "1 to 10",
+              disabled: true,
+              onChange: () => {
+              },
+              info: "Training reports now use a 1 to 10 grade scale. The number still controls ordering even when grade numbers are hidden from display."
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50737,7 +50763,8 @@ const PlatformConfigurationSettings = ({
                   ...template.grades,
                   showNumbers: checked
                 }
-              }))
+              })),
+              info: "When off, users see only the grade text, but the underlying 1 to 10 value is still retained for ordering and repeat rules."
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50751,7 +50778,8 @@ const PlatformConfigurationSettings = ({
                   ...template.grades,
                   includeDemo: checked
                 }
-              }))
+              })),
+              info: "Adds DEMO as a selectable non-numeric instructional grade alongside the 1 to 10 assessment grades."
             }
           )
         ] }),
@@ -50760,7 +50788,7 @@ const PlatformConfigurationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Modules & Field Labels" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: "Rename only" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 xl:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Field,
@@ -50769,20 +50797,33 @@ const PlatformConfigurationSettings = ({
                   value: trainingReportTemplate.modules.overview.title,
                   disabled: !canEdit,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                  onChange: (value) => updateTrainingReportModule("overview", { title: value })
+                  onChange: (value) => updateTrainingReportModule("overview", { title: value }),
+                  info: "Renames the module that displays the event identity, date, timing, resource and assessor context."
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: Object.entries(trainingReportTemplate.modules.overview.fields).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: Object.entries(trainingReportTemplate.modules.overview.fields).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Field,
                 {
-                  label: key.replace(/([A-Z])/g, " $1"),
+                  label: humaniseFieldKey(key),
                   value,
                   disabled: !canEdit,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                  onChange: (nextValue) => updateTrainingReportModuleFields("overview", key, nextValue)
+                  onChange: (nextValue) => updateTrainingReportModuleFields("overview", key, nextValue),
+                  info: TRAINING_REPORT_OVERVIEW_FIELD_INFO[key] || "Renames this overview field in the training report."
                 },
                 key
-              )) })
+              )) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.overview.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.event, value: "AA1" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.training, value: "Air to Air" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.type, value: "Flight" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.timing, value: "08:00 / 1.2h" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.resource, value: "PC-21 5" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.callsign, value: "SHOG1" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.unit, value: "77SQN" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.date, value: "2026-06-07" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.assessor, value: "SQNLDR Burns" })
+              ] }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50792,20 +50833,28 @@ const PlatformConfigurationSettings = ({
                   value: trainingReportTemplate.modules.overallAssessment.title,
                   disabled: !canEdit,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                  onChange: (value) => updateTrainingReportModule("overallAssessment", { title: value })
+                  onChange: (value) => updateTrainingReportModule("overallAssessment", { title: value }),
+                  info: "Renames the module that captures completion result, whole-event grade, pass/fail outcome and ground school assessment."
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: Object.entries(trainingReportTemplate.modules.overallAssessment.fields).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: Object.entries(trainingReportTemplate.modules.overallAssessment.fields).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Field,
                 {
-                  label: key.replace(/([A-Z])/g, " $1"),
+                  label: humaniseFieldKey(key),
                   value,
                   disabled: !canEdit,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                  onChange: (nextValue) => updateTrainingReportModuleFields("overallAssessment", key, nextValue)
+                  onChange: (nextValue) => updateTrainingReportModuleFields("overallAssessment", key, nextValue),
+                  info: TRAINING_REPORT_OVERALL_FIELD_INFO[key] || "Renames this overall assessment field in the training report."
                 },
                 key
-              )) })
+              )) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.overallAssessment.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.result, value: trainingReportTemplate.completionResults.map((option) => option.label).join(" / ") }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.overallGrade, value: trainingReportTemplate.grades.showNumbers ? "7 - Very Good" : "Very Good" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.overallResult, value: `${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.groundSchoolAssessment, value: "Assessment / 85%" })
+              ] }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50815,32 +50864,51 @@ const PlatformConfigurationSettings = ({
                   value: trainingReportTemplate.modules.comments.title,
                   disabled: !canEdit,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                  onChange: (value) => updateTrainingReportModule("comments", { title: value })
+                  onChange: (value) => updateTrainingReportModule("comments", { title: value }),
+                  info: "Renames the narrative module used for assessor notes, weather/context, profile notes and the overall narrative."
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: Object.entries(trainingReportTemplate.modules.comments.fields).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: Object.entries(trainingReportTemplate.modules.comments.fields).map(([key, value]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Field,
                 {
-                  label: key.replace(/([A-Z])/g, " $1"),
+                  label: humaniseFieldKey(key),
                   value,
                   disabled: !canEdit,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                  onChange: (nextValue) => updateTrainingReportModuleFields("comments", key, nextValue)
+                  onChange: (nextValue) => updateTrainingReportModuleFields("comments", key, nextValue),
+                  info: TRAINING_REPORT_COMMENT_FIELD_INFO[key] || "Renames this narrative field in the training report."
                 },
                 key
-              )) })
+              )) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.comments.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.assessor, value: "SQNLDR Burns" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.weather, value: "VMC, light turbulence" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.nest, value: "NEST 2" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.profile, value: "Profile narrative appears here." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.overall, value: "Overall assessment narrative appears here." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.notes, value: "Model-specific notes appear here." }) })
+              ] }) })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Field,
-              {
-                label: "Assessment Matrix Module",
-                value: trainingReportTemplate.modules.assessmentMatrix.title,
-                disabled: !canEdit,
-                maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                onChange: (value) => updateTrainingReportModule("assessmentMatrix", { title: value }),
-                info: "Assessment categories and descriptors remain controlled by the Scoring Matrix."
-              }
-            ) })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Assessment Matrix Module",
+                  value: trainingReportTemplate.modules.assessmentMatrix.title,
+                  disabled: !canEdit,
+                  maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+                  onChange: (value) => updateTrainingReportModule("assessmentMatrix", { title: value }),
+                  info: "Assessment categories and descriptors remain controlled by the Scoring Matrix."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.assessmentMatrix.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Core Dimensions" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-2 md:grid-cols-3", children: ["Airmanship", "Preparation", "Technique"].map((dimension) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100", children: dimension }, dimension)) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs leading-relaxed text-gray-400", children: "Descriptors and phrases are edited in Settings - Training & Standards - Scoring Matrix." })
+              ] }) })
+            ] })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
@@ -50853,7 +50921,8 @@ const PlatformConfigurationSettings = ({
                 value: option.label,
                 disabled: !canEdit,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
-                onChange: (value) => updateTrainingReportCompletionResult(option.code, value)
+                onChange: (value) => updateTrainingReportCompletionResult(option.code, value),
+                info: `Renames the ${option.code} completion result while preserving the underlying ${option.code} function.`
               },
               option.code
             )),
@@ -50866,7 +50935,8 @@ const PlatformConfigurationSettings = ({
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 onChange: (value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, passLabel: value }
-                }))
+                })),
+                info: "Renames the pass outcome shown on the report. The underlying pass function remains unchanged."
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50878,7 +50948,8 @@ const PlatformConfigurationSettings = ({
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 onChange: (value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, failLabel: value }
-                }))
+                })),
+                info: "Renames the fail outcome shown on the report. The underlying fail function remains unchanged."
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50890,17 +50961,33 @@ const PlatformConfigurationSettings = ({
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 onChange: (value) => updateTrainingReportTemplate((template) => ({
                   overallResults: { ...template.overallResults, doubleRepeatLabel: value }
-                }))
+                })),
+                info: "Text shown when a configured repeat rule forces the event into a repeat or fail state."
               }
             )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-[10px] uppercase tracking-wide text-gray-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Grade" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Display Text" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Repeat Event" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Two In A Row" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: "Two In Three" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+                "Grade ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "The underlying numeric grade used for ordering and repeat-rule logic. The visible number can be hidden from users." })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+                "Display Text ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "The word or phrase shown beside, or instead of, the numeric grade." })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+                "Repeat Event ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "When selected, this grade means the event must be repeated." })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+                "Two In A Row ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Includes this grade in the consecutive repeat rule." })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+                "Two In Three ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Includes this grade in the rolling two-in-three repeat rule." })
+              ] }) })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: trainingReportTemplate.grades.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-800", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-bold text-white", children: option.value }),
@@ -50962,7 +51049,8 @@ const PlatformConfigurationSettings = ({
                       ...template.repeatRules,
                       consecutive: { ...template.repeatRules.consecutive, enabled: checked }
                     }
-                  }))
+                  })),
+                  info: "When enabled, repeated selected grades in consecutive reports require the event to be repeated."
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50996,7 +51084,8 @@ const PlatformConfigurationSettings = ({
                       ...template.repeatRules,
                       rollingWindow: { ...template.repeatRules.rollingWindow, enabled: checked }
                     }
-                  }))
+                  })),
+                  info: "When enabled, selected grades occurring repeatedly inside a rolling event window require the event to be repeated."
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -51010,7 +51099,8 @@ const PlatformConfigurationSettings = ({
                       ...template.repeatRules,
                       rollingWindow: { ...template.repeatRules.rollingWindow, count: value }
                     }
-                  }))
+                  })),
+                  info: "How many matching grades inside the rolling window trigger a repeat."
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -51453,7 +51543,7 @@ const InfoHint = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     className: "group relative inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/60 normal-case outline-none transition-colors hover:border-cyan-300/60 hover:text-cyan-50 focus-visible:border-cyan-200 focus-visible:text-cyan-50",
     children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[11px] font-bold italic leading-none normal-case", children: "i" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-0 top-5 z-50 hidden w-96 max-w-[min(24rem,calc(100vw-2rem))] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none fixed left-1/2 top-24 z-[260] hidden w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
     ]
   }
 );
@@ -51561,8 +51651,11 @@ const TextAreaField = ({ label, value, disabled, onChange, info }) => /* @__PURE
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: `${fieldClass} min-h-[74px] resize-y`, value: value || "", disabled, onChange: (event) => onChange(event.target.value) })
 ] });
-const ToggleField = ({ label, checked, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: label }),
+const ToggleField = ({ label, checked, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 text-sm font-semibold text-gray-200", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
+    info ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: info }) : null
+  ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "input",
     {
@@ -51577,6 +51670,20 @@ const ToggleField = ({ label, checked, disabled, onChange }) => /* @__PURE__ */ 
 const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = "None", info, optionLabels = {} }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: optionLabels[option] || option || emptyLabel }, option)) })
+] });
+const TrainingReportPreviewCell = ({ label, value }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-100", children: value })
+] });
+const TrainingReportModulePreview = ({
+  title,
+  children
+}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-cyan-500/25 bg-gray-950/60 p-4", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: title }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-cyan-100/80", children: "Preview" })
+  ] }),
+  children
 ] });
 const TimeZoneField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
