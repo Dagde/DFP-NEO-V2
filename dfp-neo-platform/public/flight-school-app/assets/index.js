@@ -36386,16 +36386,40 @@ const DetailList = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
 ] });
 const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1 = /^\[Linked Event:\s*([^\]]+)\]$/i;
 const DEFAULT_ASSESSED_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
+const SCORING_MATRIX_ASSESSABLE_ELEMENTS = [
+  "Pre-Post Flight",
+  "Walk Around",
+  "Strap-in",
+  "Ground Checks",
+  "Airborne Checks",
+  "Stationary",
+  "Visual",
+  "Effects of Control",
+  "Trimming",
+  "Straight and Level",
+  "Level medium Turn",
+  "Level Steep turn",
+  "Visual - Initial & Pitch",
+  "Landing",
+  "Crosswind",
+  "Radio Comms",
+  "Situational Awareness",
+  "Lookout",
+  "Knowledge"
+];
+const SCORING_MATRIX_NON_ASSESSABLE_KEYS = /* @__PURE__ */ new Set(["generic flying elements"]);
 const getScoringMatrixElementOptions = (phraseBank) => {
-  const seen = /* @__PURE__ */ new Set();
+  const seen = /* @__PURE__ */ new Map();
   const add = (value) => {
     const clean = String(value || "").trim();
-    if (!clean || seen.has(clean.toLowerCase())) return;
-    seen.add(clean.toLowerCase());
+    const key = clean.toLowerCase();
+    if (!clean || SCORING_MATRIX_NON_ASSESSABLE_KEYS.has(key) || seen.has(key)) return;
+    seen.set(key, clean);
   };
   DEFAULT_ASSESSED_ELEMENTS.forEach(add);
+  SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
   Object.keys(phraseBank || {}).forEach(add);
-  return Array.from(seen).map((key) => DEFAULT_ASSESSED_ELEMENTS.find((item) => item.toLowerCase() === key) || Object.keys(phraseBank || {}).find((item) => item.toLowerCase() === key) || key);
+  return Array.from(seen.values());
 };
 const normaliseAssessedElements = (elements, availableElements = []) => {
   const available = new Set(availableElements.map((item) => item.toLowerCase()));
