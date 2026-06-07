@@ -2,6 +2,7 @@ console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP �
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useTheme } from './context/ThemeContext';
 import { useSystemFreeze } from './context/SystemFreezeContext';
 import LoginModal, { AuthUser, checkSession, logoutUser } from './components/LoginModal';
@@ -78,6 +79,58 @@ import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
+
+const getDiagnosticTimestamp = (timestamp?: string): string =>
+    (timestamp || new Date().toISOString()).replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+
+const downloadJsonDiagnosticFile = (filename: string, report: any): boolean => {
+    if (typeof document === 'undefined' || typeof URL === 'undefined') return false;
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    return true;
+};
+
+const buildNeoBuildDiagnosticExport = (): { report: any; filename: string } | null => {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage?.getItem('neo_build_diag_report');
+    if (!raw) return null;
+
+    const report = JSON.parse(raw);
+    try {
+        const timingRaw = window.localStorage?.getItem('neo_build_timing_report');
+        const runtimeRaw = window.localStorage?.getItem('neo_build_runtime_error_report');
+        if (timingRaw) report.timingReport = JSON.parse(timingRaw);
+        if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
+    } catch (error) {
+        console.warn('[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:', error);
+    }
+
+    return {
+        report,
+        filename: `neo-build-diag-${getDiagnosticTimestamp(report.timestamp)}.json`,
+    };
+};
+
+const downloadNeoBuildDiagnosticReport = (source: string = 'manual'): string | null => {
+    const diagnosticExport = buildNeoBuildDiagnosticExport();
+    if (!diagnosticExport) {
+        console.error('No NEO Build diagnostic report found. Run a build first.');
+        return null;
+    }
+
+    if (!downloadJsonDiagnosticFile(diagnosticExport.filename, diagnosticExport.report)) {
+        console.error('[NEO-BUILD-DIAG] Browser download API is unavailable.');
+        return null;
+    }
+
+    console.log('[NEO-BUILD-DIAG] Download triggered:', diagnosticExport.filename, { source });
+    return diagnosticExport.filename;
+};
 import DarkMessageModal from './components/DarkMessageModal';
 import SystemFreezeBanner from './components/SystemFreezeBanner';
 import DataLoadingMonitor from './components/DataLoadingMonitor';
@@ -484,9 +537,20 @@ const DfpSidePanelTimeline: React.FC<{
                 <div className="mt-4 rounded-md border border-emerald-400/25 bg-emerald-950/20 p-3 text-[11px] text-slate-200">
                     <div className="mb-2 flex items-center justify-between gap-3">
                         <span className="font-semibold text-emerald-100">Air Combat Priority Lists</span>
-                        <span className="text-[10px] font-semibold text-emerald-200/80">
-                            Courses {airCombatPriorityDiag.weights?.courses ?? 60}% / Packages {airCombatPriorityDiag.weights?.trainingPackages ?? 40}%
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-semibold text-emerald-200/80">
+                                Courses {airCombatPriorityDiag.weights?.courses ?? 60}% / Packages {airCombatPriorityDiag.weights?.trainingPackages ?? 40}%
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => downloadNeoBuildDiagnosticReport('air-combat-priority-panel')}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded border border-emerald-300/35 bg-emerald-950/55 text-emerald-100 transition hover:border-emerald-200/70 hover:bg-emerald-900/70 focus:outline-none focus:ring-2 focus:ring-emerald-300/40"
+                                title="Download Air Combat NEO Build diagnostic report"
+                                aria-label="Download Air Combat NEO Build diagnostic report"
+                            >
+                                <ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                        </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                         <div className="rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
@@ -2175,15 +2239,9 @@ function _diagFinalizeInstructors() {
     const raw = localStorage.getItem('instructor_diag_report');
     if (!raw) { console.error('No diagnostic report found. Run a build first.'); return; }
     const report = JSON.parse(raw);
-    const ts = report.timestamp.replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `instructor-diag-${ts}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    console.log('[INSTR-DIAG] Download triggered:', `instructor-diag-${ts}.json`);
+    const filename = `instructor-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
+    downloadJsonDiagnosticFile(filename, report);
+    console.log('[INSTR-DIAG] Download triggered:', filename);
 };
 
 // Flight bottleneck diagnostic download helper
@@ -2191,67 +2249,31 @@ function _diagFinalizeInstructors() {
     const raw = localStorage.getItem("flight_diag_report");
     if (!raw) { console.error("No flight diag report. Run a build first."); return; }
     const report = JSON.parse(raw);
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "flight-diag-" + report.timestamp.replace(/[:.]/g, "-").slice(0, 19) + ".json";
-    a.click();
-    URL.revokeObjectURL(url);
-    console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON");
+    const filename = `flight-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
+    downloadJsonDiagnosticFile(filename, report);
+    console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON:", filename);
 };
 
 (window as any).__downloadBuildConflictDiagnostic = () => {
     const raw = localStorage.getItem('build_conflict_diag_report');
     if (!raw) { console.error('No build conflict diagnostic report found. Run a build first.'); return; }
     const report = JSON.parse(raw);
-    const ts = (report.timestamp || new Date().toISOString()).replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `build-conflict-diag-${ts}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    console.log('[BUILD-CONFLICT-DIAG] Download triggered:', `build-conflict-diag-${ts}.json`);
+    const filename = `build-conflict-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
+    downloadJsonDiagnosticFile(filename, report);
+    console.log('[BUILD-CONFLICT-DIAG] Download triggered:', filename);
 };
 
 (window as any).__downloadNeoBuildDiagnostic = () => {
-    const raw = localStorage.getItem('neo_build_diag_report');
-    if (!raw) { console.error('No NEO Build diagnostic report found. Run a build first.'); return; }
-    const report = JSON.parse(raw);
-    try {
-        const timingRaw = localStorage.getItem('neo_build_timing_report');
-        const runtimeRaw = localStorage.getItem('neo_build_runtime_error_report');
-        if (timingRaw) report.timingReport = JSON.parse(timingRaw);
-        if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
-    } catch (error) {
-        console.warn('[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:', error);
-    }
-    const ts = (report.timestamp || new Date().toISOString()).replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `neo-build-diag-${ts}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    console.log('[NEO-BUILD-DIAG] Download triggered:', `neo-build-diag-${ts}.json`);
+    downloadNeoBuildDiagnosticReport('devtools-helper');
 };
 
 (window as any).__downloadNeoBuildTiming = () => {
     const raw = localStorage.getItem('neo_build_timing_report');
     if (!raw) { console.error('No NEO Build timing report found. Run a build first.'); return; }
     const report = JSON.parse(raw);
-    const ts = (report.timestamp || new Date().toISOString()).replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `neo-build-timing-${ts}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    console.log('[NEO-BUILD-TIMING] Download triggered:', `neo-build-timing-${ts}.json`);
+    const filename = `neo-build-timing-${getDiagnosticTimestamp(report.timestamp)}.json`;
+    downloadJsonDiagnosticFile(filename, report);
+    console.log('[NEO-BUILD-TIMING] Download triggered:', filename);
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -11848,40 +11870,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     saveCurrencyPriorityDiagnostics('final');
     saveNeoBuildDiag('final');
     if (sortedEvents.length === 0 || windowNormalisationWarnings.length > 0 || normalisedFlyingWindowExclusions.length > 0) {
-        console.info('[NEO-Build][ScheduleDiagnostics]', {
+        console.info('[NEO-Build][ScheduleDiagnostics] Report saved for download.', {
             buildDate,
-            input: {
-                instructors: neoBuildDiag.input.instructors,
-                trainees: neoBuildDiag.input.trainees,
-                activeTrainees: neoBuildDiag.activeTrainees,
-                nextEventLists: neoBuildDiag.nextEventLists,
-                resourceInventory: neoBuildDiag.input.resourceInventory,
-            },
             final: neoBuildDiag.final,
             finalCleanup: neoBuildDiag.finalCleanup,
-            windows: neoBuildDiag.input.windows,
-            scheduleFlow: neoBuildDiag.scheduleFlow,
-            scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]: [string, any]) => [
-                name,
-                {
-                    input: diag.input,
-                    attempts: diag.attempts,
-                    successes: diag.successes,
-                    candidateSlots: diag.candidateSlots,
-                    generatedEventsAtStart: diag.generatedEventsAtStart,
-                    generatedEventsAtEnd: diag.generatedEventsAtEnd,
-                    generatedDelta: diag.generatedDelta,
-                    noSearchWindow: diag.noSearchWindow,
-                    noSyllabusItem: diag.noSyllabusItem,
-                    blockedPrimaryMissing: diag.blockedPrimaryMissing,
-                    rejectionReasons: diag.rejectionReasons,
-                    rejectionSamples: diag.rejectionSamples?.slice(0, 12),
-                    searchWindowSamples: diag.searchWindowSamples?.slice(0, 6),
-                }
-            ])),
+            windowWarnings: windowNormalisationWarnings,
+            flyingWindowExclusions: normalisedFlyingWindowExclusions.length,
+            download: 'Use the Air Combat diagnostics download button or run __downloadNeoBuildDiagnostic() in DevTools.',
         });
     }
-    buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report". Run __downloadNeoBuildDiagnostic() in DevTools to export.', {
+    buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report" for JSON download.', {
         activeTrainees: neoBuildDiag.activeTrainees,
         nextEventLists: neoBuildDiag.nextEventLists,
         final: neoBuildDiag.final,
@@ -20948,6 +20946,7 @@ const App: React.FC = () => {
         console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
         console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
         console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
+        localStorage.removeItem('neo_build_runtime_error_report');
         const timingReport = createNeoBuildTimingReport(buildDfpDate, {
             preservedEvents: preservedEvents?.length || 0,
             highestPriorityEvents: highestPriorityEvents.length,
@@ -20958,6 +20957,20 @@ const App: React.FC = () => {
             publishedEventsForBuildDate: (publishedSchedules[buildDfpDate] || []).length,
         });
         markNeoBuildTiming(timingReport, 'runBuildAlgorithm:start');
+        const shouldDownloadAirCombatDiagnostic = activeOperationalModel === 'air_combat';
+        let airCombatDiagnosticDownloaded = false;
+        const downloadAirCombatDiagnosticReport = (source: string) => {
+            if (!shouldDownloadAirCombatDiagnostic || airCombatDiagnosticDownloaded) return;
+            markNeoBuildTiming(timingReport, `diagnostic-export:${source}:start`);
+            const filename = downloadNeoBuildDiagnosticReport(source);
+            if (filename) {
+                airCombatDiagnosticDownloaded = true;
+                markNeoBuildTiming(timingReport, `diagnostic-export:${source}:downloaded`, { filename });
+                setShowInfoNotification(`Air Combat NEO Build diagnostic downloaded: ${filename}`);
+            } else {
+                markNeoBuildTiming(timingReport, `diagnostic-export:${source}:unavailable`);
+            }
+        };
 
         setIsBuildingDfp(true);
         setNextDayBuildEvents([]); // Clear previous build
@@ -21256,6 +21269,7 @@ const App: React.FC = () => {
                     setUnavailabilityNotifications(notifications);
                 }
                 markNeoBuildTiming(timingReport, 'notifications:complete', { notifications: notifications.length });
+                downloadAirCombatDiagnosticReport('build-complete');
 
             } catch (error) {
                 const runtimeErrorReport = {
@@ -21327,6 +21341,7 @@ const App: React.FC = () => {
                 console.error("🚀 [NEO-Build] DFP Build Failed:", error);
                 console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
                 setDfpBuildProgress({ message: 'Error during build!', percentage: 100 });
+                downloadAirCombatDiagnosticReport('build-error');
             } finally {
                 markNeoBuildTiming(timingReport, 'navigation:setTimeout-queued', { delayMs: 1000 });
                 setTimeout(() => {

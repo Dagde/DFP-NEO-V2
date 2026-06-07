@@ -29,6 +29,294 @@ import { E } from "./vendor-pdf.js";
     fetch(link.href, fetchOpts);
   }
 })();
+function ArrowDownTrayIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+  }));
+}
+const ForwardRef$b = /* @__PURE__ */ reactExports.forwardRef(ArrowDownTrayIcon);
+function ArrowTopRightOnSquareIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+  }));
+}
+const ForwardRef$a = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
+function ChartBarIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
+  }));
+}
+const ForwardRef$9 = /* @__PURE__ */ reactExports.forwardRef(ChartBarIcon);
+function ClockIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+  }));
+}
+const ForwardRef$8 = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
+function ComputerDesktopIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"
+  }));
+}
+const ForwardRef$7 = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
+function ExclamationTriangleIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+  }));
+}
+const ForwardRef$6 = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
+function MagnifyingGlassIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+  }));
+}
+const ForwardRef$5 = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
+function PaperAirplaneIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+  }));
+}
+const ForwardRef$4 = /* @__PURE__ */ reactExports.forwardRef(PaperAirplaneIcon);
+function PencilIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+  }));
+}
+const ForwardRef$3 = /* @__PURE__ */ reactExports.forwardRef(PencilIcon);
+function Squares2X2Icon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
+  }));
+}
+const ForwardRef$2 = /* @__PURE__ */ reactExports.forwardRef(Squares2X2Icon);
+function TrashIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+  }));
+}
+const ForwardRef$1 = /* @__PURE__ */ reactExports.forwardRef(TrashIcon);
+function UserGroupIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
+  }));
+}
+const ForwardRef = /* @__PURE__ */ reactExports.forwardRef(UserGroupIcon);
 const ThemeContext = reactExports.createContext({
   theme: "dark",
   setTheme: () => {
@@ -29744,270 +30032,6 @@ const TrainingIntelligenceTab = () => {
     ] })
   ] }) });
 };
-function ArrowTopRightOnSquareIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-  }));
-}
-const ForwardRef$a = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
-function ChartBarIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
-  }));
-}
-const ForwardRef$9 = /* @__PURE__ */ reactExports.forwardRef(ChartBarIcon);
-function ClockIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-  }));
-}
-const ForwardRef$8 = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
-function ComputerDesktopIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"
-  }));
-}
-const ForwardRef$7 = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
-function ExclamationTriangleIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-  }));
-}
-const ForwardRef$6 = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
-function MagnifyingGlassIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-  }));
-}
-const ForwardRef$5 = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
-function PaperAirplaneIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
-  }));
-}
-const ForwardRef$4 = /* @__PURE__ */ reactExports.forwardRef(PaperAirplaneIcon);
-function PencilIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-  }));
-}
-const ForwardRef$3 = /* @__PURE__ */ reactExports.forwardRef(PencilIcon);
-function Squares2X2Icon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
-  }));
-}
-const ForwardRef$2 = /* @__PURE__ */ reactExports.forwardRef(Squares2X2Icon);
-function TrashIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-  }));
-}
-const ForwardRef$1 = /* @__PURE__ */ reactExports.forwardRef(TrashIcon);
-function UserGroupIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
-  }));
-}
-const ForwardRef = /* @__PURE__ */ reactExports.forwardRef(UserGroupIcon);
 const initialCancellationCodes = [
   {
     code: "AD",
@@ -62411,6 +62435,49 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
 };
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
+const getDiagnosticTimestamp = (timestamp) => (timestamp || (/* @__PURE__ */ new Date()).toISOString()).replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
+const downloadJsonDiagnosticFile = (filename, report) => {
+  if (typeof document === "undefined" || typeof URL === "undefined") return false;
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  return true;
+};
+const buildNeoBuildDiagnosticExport = () => {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage?.getItem("neo_build_diag_report");
+  if (!raw) return null;
+  const report = JSON.parse(raw);
+  try {
+    const timingRaw = window.localStorage?.getItem("neo_build_timing_report");
+    const runtimeRaw = window.localStorage?.getItem("neo_build_runtime_error_report");
+    if (timingRaw) report.timingReport = JSON.parse(timingRaw);
+    if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
+  } catch (error) {
+    console.warn("[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:", error);
+  }
+  return {
+    report,
+    filename: `neo-build-diag-${getDiagnosticTimestamp(report.timestamp)}.json`
+  };
+};
+const downloadNeoBuildDiagnosticReport = (source = "manual") => {
+  const diagnosticExport = buildNeoBuildDiagnosticExport();
+  if (!diagnosticExport) {
+    console.error("No NEO Build diagnostic report found. Run a build first.");
+    return null;
+  }
+  if (!downloadJsonDiagnosticFile(diagnosticExport.filename, diagnosticExport.report)) {
+    console.error("[NEO-BUILD-DIAG] Browser download API is unavailable.");
+    return null;
+  }
+  console.log("[NEO-BUILD-DIAG] Download triggered:", diagnosticExport.filename, { source });
+  return diagnosticExport.filename;
+};
 const DfpSidePanelTimeline = ({
   flyingStartTime,
   flyingEndTime,
@@ -62724,12 +62791,25 @@ const DfpSidePanelTimeline = ({
     airCombatPriorityDiag && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-md border border-emerald-400/25 bg-emerald-950/20 p-3 text-[11px] text-slate-200", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-emerald-100", children: "Air Combat Priority Lists" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] font-semibold text-emerald-200/80", children: [
-          "Courses ",
-          airCombatPriorityDiag.weights?.courses ?? 60,
-          "% / Packages ",
-          airCombatPriorityDiag.weights?.trainingPackages ?? 40,
-          "%"
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] font-semibold text-emerald-200/80", children: [
+            "Courses ",
+            airCombatPriorityDiag.weights?.courses ?? 60,
+            "% / Packages ",
+            airCombatPriorityDiag.weights?.trainingPackages ?? 40,
+            "%"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => downloadNeoBuildDiagnosticReport("air-combat-priority-panel"),
+              className: "inline-flex h-7 w-7 items-center justify-center rounded border border-emerald-300/35 bg-emerald-950/55 text-emerald-100 transition hover:border-emerald-200/70 hover:bg-emerald-900/70 focus:outline-none focus:ring-2 focus:ring-emerald-300/40",
+              title: "Download Air Combat NEO Build diagnostic report",
+              "aria-label": "Download Air Combat NEO Build diagnostic report",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-3.5 w-3.5", "aria-hidden": "true" })
+            }
+          )
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
@@ -63651,15 +63731,9 @@ window.__downloadBuildDiagnostic = () => {
     return;
   }
   const report = JSON.parse(raw);
-  const ts = report.timestamp.replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `instructor-diag-${ts}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  console.log("[INSTR-DIAG] Download triggered:", `instructor-diag-${ts}.json`);
+  const filename = `instructor-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
+  downloadJsonDiagnosticFile(filename, report);
+  console.log("[INSTR-DIAG] Download triggered:", filename);
 };
 window.__downloadFlightDiag = () => {
   const raw = localStorage.getItem("flight_diag_report");
@@ -63668,14 +63742,9 @@ window.__downloadFlightDiag = () => {
     return;
   }
   const report = JSON.parse(raw);
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "flight-diag-" + report.timestamp.replace(/[:.]/g, "-").slice(0, 19) + ".json";
-  a.click();
-  URL.revokeObjectURL(url);
-  console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON");
+  const filename = `flight-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
+  downloadJsonDiagnosticFile(filename, report);
+  console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON:", filename);
 };
 window.__downloadBuildConflictDiagnostic = () => {
   const raw = localStorage.getItem("build_conflict_diag_report");
@@ -63684,40 +63753,12 @@ window.__downloadBuildConflictDiagnostic = () => {
     return;
   }
   const report = JSON.parse(raw);
-  const ts = (report.timestamp || (/* @__PURE__ */ new Date()).toISOString()).replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `build-conflict-diag-${ts}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  console.log("[BUILD-CONFLICT-DIAG] Download triggered:", `build-conflict-diag-${ts}.json`);
+  const filename = `build-conflict-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
+  downloadJsonDiagnosticFile(filename, report);
+  console.log("[BUILD-CONFLICT-DIAG] Download triggered:", filename);
 };
 window.__downloadNeoBuildDiagnostic = () => {
-  const raw = localStorage.getItem("neo_build_diag_report");
-  if (!raw) {
-    console.error("No NEO Build diagnostic report found. Run a build first.");
-    return;
-  }
-  const report = JSON.parse(raw);
-  try {
-    const timingRaw = localStorage.getItem("neo_build_timing_report");
-    const runtimeRaw = localStorage.getItem("neo_build_runtime_error_report");
-    if (timingRaw) report.timingReport = JSON.parse(timingRaw);
-    if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
-  } catch (error) {
-    console.warn("[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:", error);
-  }
-  const ts = (report.timestamp || (/* @__PURE__ */ new Date()).toISOString()).replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `neo-build-diag-${ts}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  console.log("[NEO-BUILD-DIAG] Download triggered:", `neo-build-diag-${ts}.json`);
+  downloadNeoBuildDiagnosticReport("devtools-helper");
 };
 window.__downloadNeoBuildTiming = () => {
   const raw = localStorage.getItem("neo_build_timing_report");
@@ -63726,15 +63767,9 @@ window.__downloadNeoBuildTiming = () => {
     return;
   }
   const report = JSON.parse(raw);
-  const ts = (report.timestamp || (/* @__PURE__ */ new Date()).toISOString()).replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `neo-build-timing-${ts}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  console.log("[NEO-BUILD-TIMING] Download triggered:", `neo-build-timing-${ts}.json`);
+  const filename = `neo-build-timing-${getDiagnosticTimestamp(report.timestamp)}.json`;
+  downloadJsonDiagnosticFile(filename, report);
+  console.log("[NEO-BUILD-TIMING] Download triggered:", filename);
 };
 function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
@@ -71631,40 +71666,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   saveCurrencyPriorityDiagnostics("final");
   saveNeoBuildDiag("final");
   if (sortedEvents.length === 0 || windowNormalisationWarnings.length > 0 || normalisedFlyingWindowExclusions.length > 0) {
-    console.info("[NEO-Build][ScheduleDiagnostics]", {
+    console.info("[NEO-Build][ScheduleDiagnostics] Report saved for download.", {
       buildDate,
-      input: {
-        instructors: neoBuildDiag.input.instructors,
-        trainees: neoBuildDiag.input.trainees,
-        activeTrainees: neoBuildDiag.activeTrainees,
-        nextEventLists: neoBuildDiag.nextEventLists,
-        resourceInventory: neoBuildDiag.input.resourceInventory
-      },
       final: neoBuildDiag.final,
       finalCleanup: neoBuildDiag.finalCleanup,
-      windows: neoBuildDiag.input.windows,
-      scheduleFlow: neoBuildDiag.scheduleFlow,
-      scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]) => [
-        name,
-        {
-          input: diag.input,
-          attempts: diag.attempts,
-          successes: diag.successes,
-          candidateSlots: diag.candidateSlots,
-          generatedEventsAtStart: diag.generatedEventsAtStart,
-          generatedEventsAtEnd: diag.generatedEventsAtEnd,
-          generatedDelta: diag.generatedDelta,
-          noSearchWindow: diag.noSearchWindow,
-          noSyllabusItem: diag.noSyllabusItem,
-          blockedPrimaryMissing: diag.blockedPrimaryMissing,
-          rejectionReasons: diag.rejectionReasons,
-          rejectionSamples: diag.rejectionSamples?.slice(0, 12),
-          searchWindowSamples: diag.searchWindowSamples?.slice(0, 6)
-        }
-      ]))
+      windowWarnings: windowNormalisationWarnings,
+      flyingWindowExclusions: normalisedFlyingWindowExclusions.length,
+      download: "Use the Air Combat diagnostics download button or run __downloadNeoBuildDiagnostic() in DevTools."
     });
   }
-  buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report". Run __downloadNeoBuildDiagnostic() in DevTools to export.', {
+  buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report" for JSON download.', {
     activeTrainees: neoBuildDiag.activeTrainees,
     nextEventLists: neoBuildDiag.nextEventLists,
     final: neoBuildDiag.final
@@ -78844,6 +78855,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
     console.log("🚀 [NEO-Build] preservedEvents:", preservedEvents?.length || 0);
     console.log("🚀 [NEO-Build] highestPriorityEvents:", highestPriorityEvents.length);
+    localStorage.removeItem("neo_build_runtime_error_report");
     const timingReport = createNeoBuildTimingReport(buildDfpDate, {
       preservedEvents: preservedEvents?.length || 0,
       highestPriorityEvents: highestPriorityEvents.length,
@@ -78854,6 +78866,20 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       publishedEventsForBuildDate: (publishedSchedules[buildDfpDate] || []).length
     });
     markNeoBuildTiming(timingReport, "runBuildAlgorithm:start");
+    const shouldDownloadAirCombatDiagnostic = activeOperationalModel === "air_combat";
+    let airCombatDiagnosticDownloaded = false;
+    const downloadAirCombatDiagnosticReport = (source) => {
+      if (!shouldDownloadAirCombatDiagnostic || airCombatDiagnosticDownloaded) return;
+      markNeoBuildTiming(timingReport, `diagnostic-export:${source}:start`);
+      const filename = downloadNeoBuildDiagnosticReport(source);
+      if (filename) {
+        airCombatDiagnosticDownloaded = true;
+        markNeoBuildTiming(timingReport, `diagnostic-export:${source}:downloaded`, { filename });
+        setShowInfoNotification(`Air Combat NEO Build diagnostic downloaded: ${filename}`);
+      } else {
+        markNeoBuildTiming(timingReport, `diagnostic-export:${source}:unavailable`);
+      }
+    };
     setIsBuildingDfp(true);
     setNextDayBuildEvents([]);
     const eventsToUse = preservedEvents || highestPriorityEvents;
@@ -79114,6 +79140,7 @@ ${conflictLines.join("\n")}${moreText}`,
           setUnavailabilityNotifications(notifications);
         }
         markNeoBuildTiming(timingReport, "notifications:complete", { notifications: notifications.length });
+        downloadAirCombatDiagnosticReport("build-complete");
       } catch (error) {
         const runtimeErrorReport = {
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -79182,6 +79209,7 @@ ${conflictLines.join("\n")}${moreText}`,
         console.error("🚀 [NEO-Build] DFP Build Failed:", error);
         console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : "No stack trace");
         setDfpBuildProgress({ message: "Error during build!", percentage: 100 });
+        downloadAirCombatDiagnosticReport("build-error");
       } finally {
         markNeoBuildTiming(timingReport, "navigation:setTimeout-queued", { delayMs: 1e3 });
         setTimeout(() => {
