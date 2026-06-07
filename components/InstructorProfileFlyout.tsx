@@ -782,7 +782,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   return (
     <>
       <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center" onClick={onClose}>
-        <div className="bg-[#141e2e] rounded-lg shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col border border-gray-600 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="bg-[#141e2e] rounded-lg shadow-2xl w-[min(94vw,88rem)] max-w-[94vw] max-h-[94vh] flex flex-col border border-gray-600 overflow-hidden" onClick={e => e.stopPropagation()}>
 
           {/* Header */}
           <div className="px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0">
