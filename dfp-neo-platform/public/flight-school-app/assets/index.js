@@ -3602,7 +3602,7 @@ const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
 };
 const normaliseCode = (value) => String(value || "").trim().toUpperCase();
 const AIR_COMBAT_ICO_PACKAGE_CODE = "ICO";
-const AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS = 1.2;
+const AIR_COMBAT_ICO_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
 const AIR_COMBAT_ICO_POSTFLIGHT_HOURS = 1;
 const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
@@ -3612,13 +3612,14 @@ const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
 };
 const normaliseIntegratedCombatOperationsTiming = (item) => {
   if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
-  if (item.flightOrSimHours === AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS && item.duration === AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS && item.preFlightTime === AIR_COMBAT_ICO_PREFLIGHT_HOURS && item.postFlightTime === AIR_COMBAT_ICO_POSTFLIGHT_HOURS) {
+  const flightOrSimHours = Number.isFinite(Number(item.flightOrSimHours)) && Number(item.flightOrSimHours) > 0 ? Number(item.flightOrSimHours) : AIR_COMBAT_ICO_DEFAULT_FLIGHT_OR_SIM_HOURS;
+  if (item.flightOrSimHours === flightOrSimHours && item.duration === flightOrSimHours && item.preFlightTime === AIR_COMBAT_ICO_PREFLIGHT_HOURS && item.postFlightTime === AIR_COMBAT_ICO_POSTFLIGHT_HOURS) {
     return item;
   }
   return {
     ...item,
-    flightOrSimHours: AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS,
-    duration: AIR_COMBAT_ICO_FLIGHT_OR_SIM_HOURS,
+    flightOrSimHours,
+    duration: flightOrSimHours,
     preFlightTime: AIR_COMBAT_ICO_PREFLIGHT_HOURS,
     postFlightTime: AIR_COMBAT_ICO_POSTFLIGHT_HOURS
   };
@@ -36264,7 +36265,7 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "9";
+const CACHE_VERSION = "10";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
 function getCachedSyllabus() {
   try {

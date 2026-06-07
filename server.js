@@ -36,7 +36,7 @@ const PORT = process.env.PORT || 3000;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE = 'ICO';
-const INTEGRATED_COMBAT_OPERATIONS_FLIGHT_OR_SIM_HOURS = 1.2;
+const INTEGRATED_COMBAT_OPERATIONS_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 const INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS = 1.5;
 const INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS = 1.0;
 
@@ -55,6 +55,9 @@ function normaliseSyllabusCourses(courses) {
 function normaliseSyllabusItemForRuntime(item) {
   if (!item) return item;
   const courses = normaliseSyllabusCourses(item.courses);
+  const flightOrSimHours = Number.isFinite(Number(item.flightOrSimHours)) && Number(item.flightOrSimHours) > 0
+    ? Number(item.flightOrSimHours)
+    : INTEGRATED_COMBAT_OPERATIONS_DEFAULT_FLIGHT_OR_SIM_HOURS;
   if (
     item.lmpType === 'Staff CAT' &&
     courses.some(course => String(course || '').trim().toUpperCase() === INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE)
@@ -62,8 +65,8 @@ function normaliseSyllabusItemForRuntime(item) {
     return {
       ...item,
       courses,
-      flightOrSimHours: INTEGRATED_COMBAT_OPERATIONS_FLIGHT_OR_SIM_HOURS,
-      duration: INTEGRATED_COMBAT_OPERATIONS_FLIGHT_OR_SIM_HOURS,
+      flightOrSimHours,
+      duration: flightOrSimHours,
       preFlightTime: INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS,
       postFlightTime: INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS,
     };
@@ -500,23 +503,34 @@ async function migrateCptDurations(db) {
   }
 }
 
-// Migration: Integrated Combat Operations package uses 1.2 flight/sim duration, 1.5 hr pre-flight, and 1.0 hr post-flight.
+// Migration: Integrated Combat Operations package schedule duration follows flight/sim hours.
 async function migrateIntegratedCombatOperationsTiming(db) {
   try {
     const result = await db.$executeRawUnsafe(`
       UPDATE "SyllabusItem"
       SET
-        "flightOrSimHours" = $1,
-        "duration" = $1,
+        "flightOrSimHours" = CASE
+          WHEN "flightOrSimHours" > 0 THEN "flightOrSimHours"
+          ELSE $1
+        END,
+        "duration" = CASE
+          WHEN "flightOrSimHours" > 0 THEN "flightOrSimHours"
+          ELSE $1
+        END,
         "preFlightTime" = $2,
         "postFlightTime" = $3,
         "version" = "version" + 1,
         "updatedAt" = NOW()
       WHERE "lmpType" = 'Staff CAT'
         AND $4 = ANY("courses")
-        AND ("flightOrSimHours" IS DISTINCT FROM $1 OR "duration" IS DISTINCT FROM $1 OR "preFlightTime" IS DISTINCT FROM $2 OR "postFlightTime" IS DISTINCT FROM $3)
+        AND (
+          "flightOrSimHours" <= 0
+          OR "duration" IS DISTINCT FROM CASE WHEN "flightOrSimHours" > 0 THEN "flightOrSimHours" ELSE $1 END
+          OR "preFlightTime" IS DISTINCT FROM $2
+          OR "postFlightTime" IS DISTINCT FROM $3
+        )
     `,
-      INTEGRATED_COMBAT_OPERATIONS_FLIGHT_OR_SIM_HOURS,
+      INTEGRATED_COMBAT_OPERATIONS_DEFAULT_FLIGHT_OR_SIM_HOURS,
       INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS,
       INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS,
       INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE);
