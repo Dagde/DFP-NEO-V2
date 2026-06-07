@@ -37,6 +37,7 @@ interface PT051ViewProps {
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
     trainingReportUnitCode?: string;
     trainingReportContextUnitCode?: string;
+    embeddedInProfile?: boolean;
 }
 
 const PT051_STRUCTURE = [
@@ -199,7 +200,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
     );
 };
 
-const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '' }) => {
+const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '', embeddedInProfile = false }) => {
     const reportTemplate = useMemo(() => {
         const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
         const terminologyName = String(trainingReportTerminology?.name || '').trim();
@@ -915,7 +916,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-900 overflow-y-auto" onKeyDownCapture={stopEditableKeyPropagation}>
+        <div
+            className="flex-1 flex flex-col bg-gray-900 overflow-y-auto"
+            onKeyDownCapture={stopEditableKeyPropagation}
+            style={embeddedInProfile ? ({ zoom: 0.88, width: '113.64%' } as React.CSSProperties) : undefined}
+        >
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700 sticky top-0 z-10">
                 <div className="flex items-center gap-4">

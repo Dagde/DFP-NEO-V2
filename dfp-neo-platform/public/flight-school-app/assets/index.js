@@ -11999,6 +11999,1307 @@ const TraineeLmpView = ({
     ] })
   ] });
 };
+const PT051_STRUCTURE$1 = [
+  { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
+  { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
+  { category: "Takeoff", elements: ["Stationary"] },
+  { category: "Departure", elements: ["Visual"] },
+  { category: "Core Handling Skills", elements: ["Effects of Control", "Trimming", "Straight and Level"] },
+  { category: "Turns", elements: ["Level medium Turn", "Level Steep turn"] },
+  { category: "Recovery", elements: ["Visual - Initial & Pitch"] },
+  { category: "Landing", elements: ["Landing", "Crosswind"] },
+  { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
+];
+const ALL_ELEMENTS$1 = PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
+const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST"];
+const formatTime$6 = (time) => {
+  const hours = Math.floor(time);
+  const minutes = Math.round(time % 1 * 60);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+const parseComments = (raw) => {
+  const defaults = { QFI: "", Weather: "", Profile: "", Overall: "", NEST: "" };
+  if (!raw) return defaults;
+  const result = { ...defaults };
+  COMMENT_SECTIONS.forEach((section, index) => {
+    const nextSection = COMMENT_SECTIONS[index + 1];
+    const startMarker = `${section}:`;
+    const startIndex = raw.indexOf(startMarker);
+    if (startIndex !== -1) {
+      let contentStart = startIndex + startMarker.length;
+      let endIndex = -1;
+      if (nextSection) {
+        const nextMarker = `${nextSection}:`;
+        endIndex = raw.indexOf(nextMarker, contentStart);
+      }
+      let content = "";
+      if (endIndex !== -1) {
+        content = raw.substring(contentStart, endIndex);
+      } else {
+        content = raw.substring(contentStart);
+      }
+      result[section] = content.trim();
+    }
+  });
+  return result;
+};
+const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
+  const [selectedPhrases, setSelectedPhrases] = reactExports.useState(/* @__PURE__ */ new Set());
+  let phraseData = phraseBank?.[element];
+  const isCoreDimension = ["Airmanship", "Preparation", "Technique"].includes(element);
+  if (!phraseData && !isCoreDimension) {
+    phraseData = phraseBank?.["Generic Flying Elements"];
+  }
+  const togglePhrase = (phrase) => {
+    const newSet = new Set(selectedPhrases);
+    if (newSet.has(phrase)) {
+      newSet.delete(phrase);
+    } else {
+      newSet.add(phrase);
+    }
+    setSelectedPhrases(newSet);
+  };
+  const handleInsert = () => {
+    const text = Array.from(selectedPhrases).join(" ");
+    onInsert(text);
+  };
+  const getGradeLabel = (grade) => {
+    switch (grade) {
+      case "5":
+        return "5 - Excellent";
+      case "4":
+        return "4 - High Satisfactory";
+      case "3":
+        return "3 - Satisfactory";
+      case "2":
+        return "2 - Low Satisfactory";
+      case "1":
+        return "1 - Marginal";
+      case "0":
+        return "0 - Unsatisfactory";
+      default:
+        return grade;
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700 flex flex-col max-h-[80vh]", onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-bold text-white", children: [
+        "Select Phrases: ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: element })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 overflow-y-auto flex-1 space-y-4", children: phraseData ? (
+      // Render phrases grouped by grade, sorted descending (5 to 0)
+      Object.entries(phraseData).sort((a, b) => Number(b[0]) - Number(a[0])).map(([grade, phrases]) => {
+        const typedPhrases = phrases;
+        return typedPhrases.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-bold text-gray-500 uppercase mb-2 border-b border-gray-700 pb-1", children: getGradeLabel(grade) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: typedPhrases.map((phrase, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 cursor-pointer p-2 rounded hover:bg-gray-700/50", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: selectedPhrases.has(phrase),
+                onChange: () => togglePhrase(phrase),
+                className: "mt-1 h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-200", children: phrase })
+          ] }, idx)) })
+        ] }, grade);
+      })
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 text-gray-500 italic", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No phrase list available for this element." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-2", children: "Configure in Settings → Scoring Matrix." })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 bg-gray-900/50 flex justify-end space-x-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm font-semibold", children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleInsert, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold", children: "Insert Selected" })
+    ] })
+  ] }) });
+};
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", embeddedInProfile = false }) => {
+  const reportTemplate = reactExports.useMemo(() => {
+    const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
+    const terminologyName = String(trainingReportTerminology?.name || "").trim();
+    if (terminologyName && terminologyName !== DEFAULT_TRAINING_REPORT_TERMINOLOGY.name && terminologyName !== template.displayName) {
+      return { ...template, displayName: terminologyName };
+    }
+    return template;
+  }, [trainingReportTemplate, trainingReportTerminology]);
+  const trainingReportName = reportTemplate.displayName;
+  const overviewFields = reportTemplate.modules.overview.fields;
+  const overallFields = reportTemplate.modules.overallAssessment.fields;
+  const commentFieldsConfig = reportTemplate.modules.comments.fields;
+  const gradeOptions = reportTemplate.grades.options;
+  const assessmentGradeOptions = reactExports.useMemo(() => [
+    ...reportTemplate.grades.includeDemo ? ["DEMO"] : [],
+    ...gradeOptions.map((option) => option.value)
+  ], [gradeOptions, reportTemplate.grades.includeDemo]);
+  const overallGradeOptions = reactExports.useMemo(() => [
+    "No Grade",
+    ...gradeOptions.map((option) => option.value)
+  ], [gradeOptions]);
+  const gradeLabelMap = reactExports.useMemo(() => new Map(gradeOptions.map((option) => [option.value, option.label])), [gradeOptions]);
+  gradeOptions.length > 6;
+  const formatGradeOption = (grade) => {
+    if (grade === "No Grade" || grade === "DEMO" || grade === "MIN") return String(grade);
+    const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
+    return reportTemplate.grades.showNumbers ? `${grade} - ${label}` : label;
+  };
+  const formatGradeValue = (grade) => grade === "No Grade" ? "None" : String(grade);
+  const formatGradeText = (grade) => {
+    if (grade === "No Grade") return "No Grade";
+    if (grade === "DEMO" || grade === "MIN") return String(grade);
+    return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
+  };
+  const formatGradeHeaderText = (grade) => {
+    const label = formatGradeText(grade);
+    const compactLabels = {
+      Unsatisfactory: "Un-sat",
+      Marginal: "Marginal",
+      "Low Satisfactory": "Low Sat",
+      Satisfactory: "Sat",
+      "High Satisfactory": "High Sat",
+      Excellent: "Excel",
+      "High Excellent": "High Excel",
+      Outstanding: "Outstand",
+      Exceptional: "Except"
+    };
+    return compactLabels[label] || label;
+  };
+  const formatGradeNumber = (grade) => {
+    if (grade === "No Grade") return "None";
+    if (grade === "DEMO" || grade === "MIN") return String(grade);
+    return String(grade);
+  };
+  const stopEditableKeyPropagation = (event2) => {
+    const target = event2.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable) {
+      event2.stopPropagation();
+    }
+  };
+  const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
+  const { checkAndWarn } = useSystemFreeze$1();
+  const [isDirty, setIsDirty] = reactExports.useState(false);
+  const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
+  const isFirstRender = reactExports.useRef(true);
+  const isInitialCommentHydration = reactExports.useRef(true);
+  const [showPhraseModal, setShowPhraseModal] = reactExports.useState(false);
+  const [currentPhraseElement, setCurrentPhraseElement] = reactExports.useState(null);
+  const getRadioAccentColor = (grade) => {
+    if (grade === 0) {
+      return "accent-red-500";
+    }
+    if (grade === 1) {
+      return "accent-amber-500";
+    }
+    return "accent-sky-500";
+  };
+  const getOverallRadioAccentColor = (grade) => {
+    if (grade === 0) return "accent-red-500";
+    if (grade === 1) return "accent-amber-500";
+    return "accent-sky-500";
+  };
+  reactExports.useMemo(() => {
+    if (!event.instructor) return null;
+    return instructors.find((i) => i.name === event.instructor) || null;
+  }, [event.instructor, instructors]);
+  const [currentEvent, setCurrentEvent] = reactExports.useState(() => {
+    if (initialAssessment && (initialAssessment.startTime !== void 0 || initialAssessment.duration !== void 0)) {
+      return {
+        ...event,
+        startTime: initialAssessment.startTime || event.startTime,
+        duration: initialAssessment.duration || event.duration
+      };
+    }
+    return event;
+  });
+  const [assessment, setAssessment] = reactExports.useState(() => {
+    if (initialAssessment) {
+      return initialAssessment;
+    }
+    return {
+      id: v4(),
+      traineeFullName: trainee.fullName,
+      eventId: event.id,
+      flightNumber: event.flightNumber,
+      date: event.date,
+      instructorName: event.instructor || "",
+      scores: ALL_ELEMENTS$1.map((element) => ({
+        element,
+        grade: null,
+        comment: ""
+      })),
+      overallGrade: null,
+      overallResult: null,
+      groundSchoolAssessment: { isAssessment: false, result: void 0 }
+    };
+  });
+  const handleEventUpdate = (updates) => {
+    const updatedEvent = { ...currentEvent, ...updates };
+    setCurrentEvent(updatedEvent);
+    if (onEventUpdate) {
+      onEventUpdate(updatedEvent);
+    }
+  };
+  const [commentFields, setCommentFields] = reactExports.useState(() => {
+    const parsed = parseComments(initialAssessment?.overallComments);
+    if (!parsed.QFI && event.instructor) {
+      parsed.QFI = event.instructor;
+    }
+    return parsed;
+  });
+  const [overallGrade, setOverallGrade] = reactExports.useState(initialAssessment?.overallGrade ?? null);
+  const [overallResult, setOverallResult] = reactExports.useState(initialAssessment?.overallResult || null);
+  const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(
+    initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: void 0 }
+  );
+  const [dcoResult, setDcoResult] = reactExports.useState(initialAssessment?.dcoResult || "");
+  const recentPerformanceHistory = reactExports.useMemo(() => {
+    const history = [];
+    const isFlightOrFtd = (eventName) => {
+      const detail = syllabusDetails.find((d) => d.id === eventName || d.code === eventName);
+      if (detail) {
+        return detail.type === "Flight" || detail.type === "FTD";
+      }
+      const name = eventName.toUpperCase();
+      if (name.includes("FTD") || name.startsWith("BGF") || name.startsWith("BIF") || name.startsWith("BNF") || name.startsWith("BNAV") || name.startsWith("SCT")) {
+        if (!name.includes("MB") && !name.includes("TUT") && !name.includes("CPT")) {
+          return true;
+        }
+      }
+      return false;
+    };
+    lmpScores.forEach((s) => {
+      if (isFlightOrFtd(s.event)) {
+        history.push({
+          name: s.event,
+          score: s.score,
+          date: s.date,
+          timestamp: new Date(s.date).getTime()
+        });
+      }
+    });
+    pt051Assessments.forEach((a) => {
+      if (a.traineeFullName === trainee.fullName && a.eventId !== event.id && a.overallGrade !== null && a.overallGrade !== "No Grade") {
+        if (isFlightOrFtd(a.flightNumber)) {
+          history.push({
+            name: a.flightNumber,
+            score: a.overallGrade,
+            date: a.date,
+            timestamp: new Date(a.date).getTime()
+          });
+        }
+      }
+    });
+    history.sort((a, b) => b.timestamp - a.timestamp);
+    const currentEventTime = new Date(event.date).getTime();
+    return history.filter((h) => h.timestamp < currentEventTime);
+  }, [lmpScores, pt051Assessments, trainee.fullName, syllabusDetails, event.date, event.id]);
+  recentPerformanceHistory.length > 0 ? recentPerformanceHistory[0] : null;
+  const shouldRepeatForGrade = (grade) => {
+    if (typeof grade !== "number") return false;
+    if (reportTemplate.repeatRules.gradesRequiringRepeat.includes(grade)) return true;
+    if (reportTemplate.repeatRules.consecutive.enabled && reportTemplate.repeatRules.consecutive.grades.includes(grade)) {
+      const previousScores = recentPerformanceHistory.slice(0, Math.max(0, reportTemplate.repeatRules.consecutive.count - 1)).map((entry) => Number(entry.score));
+      if (previousScores.length >= reportTemplate.repeatRules.consecutive.count - 1 && previousScores.every((score) => reportTemplate.repeatRules.consecutive.grades.includes(score))) {
+        return true;
+      }
+    }
+    if (reportTemplate.repeatRules.rollingWindow.enabled && reportTemplate.repeatRules.rollingWindow.grades.includes(grade)) {
+      const previousScores = recentPerformanceHistory.slice(0, Math.max(0, reportTemplate.repeatRules.rollingWindow.window - 1)).map((entry) => Number(entry.score));
+      const matchingCount = previousScores.filter((score) => reportTemplate.repeatRules.rollingWindow.grades.includes(score)).length + 1;
+      if (matchingCount >= reportTemplate.repeatRules.rollingWindow.count) {
+        return true;
+      }
+    }
+    return false;
+  };
+  reactExports.useEffect(() => {
+    if (shouldRepeatForGrade(overallGrade)) {
+      setShowDoubleMarginalWarning(true);
+      setOverallResult("F");
+    } else {
+      setShowDoubleMarginalWarning(false);
+    }
+  }, [overallGrade, recentPerformanceHistory, reportTemplate]);
+  reactExports.useEffect(() => {
+    if (overallGrade === "No Grade" || overallGrade === null) {
+      setOverallResult(null);
+    } else if (shouldRepeatForGrade(overallGrade)) {
+      setOverallResult("F");
+    } else if (typeof overallGrade === "number") {
+      setOverallResult("P");
+    }
+  }, [overallGrade, recentPerformanceHistory, reportTemplate]);
+  const handleGradeChange = (element, grade) => {
+    setAssessment((prev) => ({
+      ...prev,
+      scores: prev.scores.map((s) => s.element === element ? { ...s, grade } : s)
+    }));
+  };
+  const handleCommentChange = (element, comment) => {
+    setAssessment((prev) => ({
+      ...prev,
+      scores: prev.scores.map((s) => s.element === element ? { ...s, comment } : s)
+    }));
+  };
+  const handleCommentFieldChange = (key, value) => {
+    setCommentFields((prev) => ({ ...prev, [key]: value }));
+    if (key === "QFI") {
+      setAssessment((prev) => ({ ...prev, instructorName: value }));
+    }
+  };
+  const unitInstructors = reactExports.useMemo(() => {
+    return instructors.filter((instructor) => instructor.unit === trainee.unit);
+  }, [instructors, trainee.unit]);
+  const handleInstructorNameChange = (value) => {
+    setAssessment((prev) => ({ ...prev, instructorName: value }));
+    setCommentFields((prev) => ({ ...prev, QFI: value }));
+  };
+  const formatTimeToHHMM = (timeInHours) => {
+    if (timeInHours === null || timeInHours === void 0) return "";
+    let time = timeInHours;
+    if (time >= 24) time -= 24;
+    const hours = Math.floor(time);
+    const minutes = Math.round((time - hours) * 60);
+    return `${hours.toString().padStart(2, "0")}${minutes.toString().padStart(2, "0")}`;
+  };
+  const handleTimeInputChange = (e, field) => {
+    let value = e.currentTarget.value;
+    value = value.replace(/\D/g, "");
+    if (value.length > 4) {
+      value = value.substring(0, 4);
+    }
+    e.currentTarget.value = value;
+  };
+  const handleTimeInputBlur = (field) => {
+    const input = event?.target;
+    if (!input) return;
+    let value = input.value;
+    if (value.length > 0) {
+      const paddedValue = value.padStart(4, "0");
+      const num = parseInt(paddedValue);
+      if (!isNaN(num) && num >= 0 && num <= 2359 && num % 100 < 60) {
+        const hours = Math.floor(num / 100);
+        const minutes = num % 100;
+        const timeInHours = hours + minutes / 60;
+        input.value = paddedValue;
+        if (field === "startTime") {
+          const updatedEvent = { ...currentEvent, startTime: timeInHours };
+          setCurrentEvent(updatedEvent);
+          handleEventUpdate(updatedEvent);
+        } else {
+          const currentStartTime = currentEvent.startTime || 0;
+          const newDuration = timeInHours - currentStartTime;
+          if (newDuration > 0) {
+            const updatedEvent = { ...currentEvent, duration: newDuration };
+            setCurrentEvent(updatedEvent);
+            handleEventUpdate(updatedEvent);
+          }
+        }
+      } else {
+        input.value = "";
+        if (field === "startTime") {
+          const updatedEvent = { ...currentEvent, startTime: null };
+          setCurrentEvent(updatedEvent);
+          handleEventUpdate(updatedEvent);
+        }
+      }
+    }
+  };
+  const handleTimeInputKeyDown = (e, field) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleTimeInputBlur(field);
+      if (field === "startTime") {
+        const endTimeInput = document.querySelector('input[placeholder="hhmm"]:last-of-type');
+        endTimeInput?.focus();
+      }
+    }
+  };
+  const handleOpenPhraseSelector = (element) => {
+    setCurrentPhraseElement(element);
+    setShowPhraseModal(true);
+  };
+  const handleInsertPhrases = (text) => {
+    if (currentPhraseElement) {
+      setAssessment((prev) => ({
+        ...prev,
+        scores: prev.scores.map((s) => s.element === currentPhraseElement ? { ...s, comment: (s.comment ? s.comment + " " : "") + text } : s)
+      }));
+    }
+    setShowPhraseModal(false);
+    setCurrentPhraseElement(null);
+  };
+  reactExports.useEffect(() => {
+    if (isInitialCommentHydration.current) {
+      isInitialCommentHydration.current = false;
+      return;
+    }
+    const combined = COMMENT_SECTIONS.map((key) => `${key}:
+${commentFields[key]}`).join("\n\n");
+    setAssessment((prev) => ({
+      ...prev,
+      overallComments: combined
+    }));
+  }, [commentFields]);
+  const handleSave = async (isAutoSave = false) => {
+    if (!canEditPt051) {
+      if (!isAutoSave) {
+        await showDarkAlert(`Your permission profile allows you to view this ${trainingReportName}, but not edit or save it.`, "Access Denied", "error");
+      }
+      return false;
+    }
+    const _freezeRaw = localStorage.getItem("systemFreezeState");
+    if (_freezeRaw) {
+      const _freeze = JSON.parse(_freezeRaw);
+      if (_freeze.isFrozen && !_freeze.allowedActions?.pt051Entries) {
+        await showDarkAlert(`System is currently frozen. ${trainingReportName} entries are not permitted during a system freeze.`, "System Frozen", "error");
+        return false;
+      }
+    }
+    const finalAssessment = {
+      ...assessment,
+      overallGrade,
+      overallResult,
+      dcoResult,
+      groundSchoolAssessment,
+      // Preserve timing data
+      startTime: currentEvent?.startTime,
+      duration: currentEvent?.duration,
+      endTime: currentEvent ? (currentEvent.startTime || 0) + (currentEvent.duration || 0) : void 0
+    };
+    if (onEventUpdate && currentEvent) {
+      onEventUpdate(currentEvent);
+    }
+    try {
+      await onSave(finalAssessment, isAutoSave);
+      setIsDirty(false);
+      setSaveStatus("Saved");
+      return true;
+    } catch (error) {
+      console.error("[PT051] Save failed:", error);
+      setSaveStatus("Unsaved");
+      return false;
+    }
+  };
+  const handleManualSaveAndExit = async () => {
+    const saved = await handleSave(false);
+    if (saved) {
+      onBack();
+    }
+  };
+  const getEventDescription = () => {
+    const eventNum = (event.flightNumber || assessment.flightNumber || "").trim();
+    const normaliseCode2 = (value) => (value || "").replace(/\s+/g, "").toLowerCase();
+    const syllabusDetail = syllabusDetails.find((d) => {
+      const id = (d.id || "").trim();
+      const code = (d.code || "").trim();
+      return id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase() || normaliseCode2(id) === normaliseCode2(eventNum) || normaliseCode2(code) === normaliseCode2(eventNum);
+    });
+    const detail = syllabusDetail;
+    return detail?.eventDescription || detail?.title || detail?.description || "N/A";
+  };
+  const handlePrint = async () => {
+    try {
+      const resolvePrintReportTemplate = async () => {
+        const latestConfig = await loadPlatformConfigFromDB();
+        if (!latestConfig) return reportTemplate;
+        const unitCodes = [
+          trainingReportUnitCode,
+          trainee.unit,
+          trainingReportContextUnitCode
+        ].flatMap((value) => String(value || "").split("+")).map((value) => value.trim()).filter(Boolean);
+        const uniqueUnitCodes = Array.from(new Set(unitCodes.map((value) => value.toUpperCase())));
+        const templates = uniqueUnitCodes.map((unitCode) => getUnitTrainingReportTemplate(latestConfig, unitCode));
+        const customTemplate = templates.find((template) => template.displayName !== DEFAULT_TRAINING_REPORT_TEMPLATE.displayName);
+        return customTemplate || templates[0] || reportTemplate;
+      };
+      const printReportTemplate = await resolvePrintReportTemplate();
+      const printReportName = printReportTemplate.displayName;
+      const printOverviewFields = printReportTemplate.modules.overview.fields;
+      const printOverallFields = printReportTemplate.modules.overallAssessment.fields;
+      const printCommentFieldsConfig = printReportTemplate.modules.comments.fields;
+      const doc = new E({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+      const contentWidth = pageWidth - margin * 2;
+      let y = 16;
+      const ensureSpace = (requiredHeight) => {
+        if (y + requiredHeight <= pageHeight - 16) return;
+        doc.addPage();
+        y = 16;
+      };
+      const addFooter = () => {
+        const pageCount = doc.getNumberOfPages();
+        for (let page = 1; page <= pageCount; page += 1) {
+          doc.setPage(page);
+          doc.setFontSize(8);
+          doc.setTextColor(120);
+          doc.text(`Generated ${(/* @__PURE__ */ new Date()).toLocaleString()} - Page ${page} of ${pageCount}`, margin, pageHeight - 8);
+        }
+        doc.setPage(pageCount);
+      };
+      const addSectionTitle = (title) => {
+        ensureSpace(12);
+        y += 4;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(20, 35, 55);
+        doc.text(title, margin, y);
+        y += 2;
+        doc.setDrawColor(180, 190, 200);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 6;
+      };
+      const addKeyValueRows = (rows) => {
+        doc.setFontSize(9);
+        rows.forEach(([label, value]) => {
+          const text = value || "N/A";
+          const valueLines = doc.splitTextToSize(text, contentWidth - 48);
+          const rowHeight = Math.max(7, valueLines.length * 4 + 2);
+          ensureSpace(rowHeight);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(80);
+          doc.text(label, margin, y);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(20);
+          doc.text(valueLines, margin + 48, y);
+          y += rowHeight;
+        });
+      };
+      const addWrappedText = (label, value) => {
+        const lines = doc.splitTextToSize(value || "N/A", contentWidth);
+        ensureSpace(9 + lines.length * 4);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+        doc.text(label, margin, y);
+        y += 5;
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(20);
+        doc.text(lines, margin, y);
+        y += lines.length * 4 + 4;
+      };
+      const completionLabel = printReportTemplate.completionResults.find((option) => option.code === dcoResult)?.label || dcoResult || "None";
+      const overallResultLabel = overallResult === "P" ? printReportTemplate.overallResults.passLabel : overallResult === "F" ? showDoubleMarginalWarning ? printReportTemplate.overallResults.doubleRepeatLabel : printReportTemplate.overallResults.failLabel : "Not selected";
+      const reportDate = assessment.date || currentEvent.date || event.date || "";
+      const startTime = currentEvent.startTime ?? event.startTime ?? 0;
+      const duration = currentEvent.duration ?? event.duration ?? 0;
+      const endTime = startTime + duration;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(17);
+      doc.setTextColor(10, 25, 45);
+      doc.text(`${printReportName} Training Report`, margin, y);
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(80);
+      doc.text(`${assessment.flightNumber || event.flightNumber || "Event"} - ${trainee.rank || ""} ${trainee.name || trainee.fullName || ""} - ${reportDate}`, margin, y);
+      y += 8;
+      addSectionTitle(printReportTemplate.modules.overview.title || "Event Details");
+      addKeyValueRows([
+        [printOverviewFields.event, assessment.flightNumber || event.flightNumber || "N/A"],
+        [printOverviewFields.type, getEventDescription()],
+        ["Trainee", `${trainee.rank || ""} ${trainee.name || trainee.fullName || ""}`.trim()],
+        ["Course", trainee.course || "N/A"],
+        [printOverviewFields.date, reportDate || "N/A"],
+        [printOverviewFields.timing, `${formatTime$6(startTime)} - ${formatTime$6(endTime)}`],
+        [printOverviewFields.assessor, assessment.instructorName || event.instructor || "N/A"],
+        [printOverviewFields.resource, currentEvent.resourceId || event.resourceId || "N/A"],
+        [printOverviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
+        [printOverviewFields.unit, trainee.unit || "N/A"]
+      ]);
+      addSectionTitle(printReportTemplate.modules.overallAssessment.title || "Overall Assessment");
+      addKeyValueRows([
+        [printOverallFields.result, completionLabel],
+        [printOverallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : "None"],
+        [printOverallFields.overallResult, overallResultLabel],
+        [printOverallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : "Not assessed"]
+      ]);
+      addSectionTitle(printReportTemplate.modules.comments.title || "Comments");
+      addWrappedText(printCommentFieldsConfig.assessor || instructorLabel, commentFields.QFI || "N/A");
+      addWrappedText(printCommentFieldsConfig.weather, commentFields.Weather || "N/A");
+      addWrappedText(printCommentFieldsConfig.profile, commentFields.Profile || "N/A");
+      addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || "N/A");
+      addWrappedText(printCommentFieldsConfig.nest, commentFields.NEST || "N/A");
+      addSectionTitle("Assessment Matrix");
+      PT051_STRUCTURE$1.forEach((category) => {
+        ensureSpace(12);
+        doc.setFillColor(235, 240, 245);
+        doc.rect(margin, y - 4, contentWidth, 7, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(25, 40, 60);
+        doc.text(category.category, margin + 2, y + 1);
+        y += 8;
+        category.elements.forEach((element) => {
+          const score = assessment.scores.find((item) => item.element === element);
+          const gradeText = score?.grade !== null && score?.grade !== void 0 ? formatGradeOption(score.grade) : "Not assessed";
+          const commentText = score?.comment || "N/A";
+          doc.setFontSize(8.5);
+          doc.setFont("helvetica", "normal");
+          const gradeLines = doc.splitTextToSize(gradeText, 22);
+          const commentLines = doc.splitTextToSize(commentText, contentWidth - 84);
+          const rowHeight = Math.max(8, gradeLines.length * 4 + 3, commentLines.length * 4 + 3);
+          ensureSpace(rowHeight);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(20);
+          doc.text(element, margin + 2, y);
+          doc.setFont("helvetica", "normal");
+          doc.text(gradeLines, margin + 50, y);
+          doc.text(commentLines, margin + 84, y);
+          y += rowHeight;
+        });
+        y += 2;
+      });
+      addFooter();
+      const safeName = [
+        printReportName,
+        assessment.flightNumber || event.flightNumber || "Training-Report",
+        trainee.name || trainee.fullName || "Person",
+        reportDate || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
+      ].join("-").replace(/[^a-z0-9_-]+/gi, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+      doc.save(`${safeName}.pdf`);
+    } catch (error) {
+      console.error("[PT051] PDF export failed:", error);
+      await showDarkAlert("The training report PDF could not be created. Please try again or check the console for details.", "PDF Export Failed", "error");
+    }
+  };
+  const handleDeleteAssessment = async () => {
+    if (!canEditPt051) {
+      await showDarkAlert(`Your permission profile does not allow ${trainingReportName} deletion.`, "Access Denied", "error");
+      return;
+    }
+    await confirmDeleteAssessment();
+  };
+  const confirmDeleteAssessment = async () => {
+    const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?
+
+Trainee: ${assessment.traineeFullName}
+Date: ${assessment.date}
+Grade: ${assessment.overallGrade || "N/A"}
+
+This action cannot be undone.`;
+    console.log("🗑️ PT051View: Delete button clicked");
+    if (await showDarkConfirm(confirmMessage)) {
+      console.log("✅ PT051View: User confirmed deletion");
+      if (onDeleteAssessment && assessment.id) {
+        console.log("🗑️ PT051View: Calling onDeleteAssessment with ID:", assessment.id);
+        await onDeleteAssessment(assessment.id);
+        onBack();
+      } else {
+        console.log("❌ PT051View: onDeleteAssessment or assessment.id is missing");
+      }
+    } else {
+      console.log("❌ PT051View: User cancelled deletion");
+    }
+  };
+  reactExports.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!canEditPt051) return;
+    setIsDirty(true);
+    setSaveStatus("Saving...");
+    const timerId = setTimeout(() => {
+      handleSave(true);
+    }, 1e3);
+    return () => clearTimeout(timerId);
+  }, [assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment, canEditPt051]);
+  reactExports.useEffect(() => {
+    registerDirtyCheck(
+      () => isDirty,
+      () => handleSave(false),
+      () => {
+        setIsDirty(false);
+      }
+    );
+  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment]);
+  const gradeHeaderColors = {
+    "MIN": "bg-red-800/50",
+    "DEMO": "bg-red-950/35 border-red-500/20",
+    "0": "bg-red-950/35 border-red-500/20",
+    "1": "bg-orange-950/35 border-orange-500/20",
+    "2": "bg-amber-950/35 border-amber-500/20",
+    "3": "bg-yellow-950/30 border-yellow-500/20",
+    "4": "bg-lime-950/25 border-lime-500/20",
+    "5": "bg-emerald-950/25 border-emerald-500/20"
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto",
+      onKeyDownCapture: stopEditableKeyPropagation,
+      style: embeddedInProfile ? { zoom: 0.88, width: "113.64%" } : void 0,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700 sticky top-0 z-10", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: assessment.flightNumber || "",
+                  onChange: (e) => setAssessment((prev) => ({ ...prev, flightNumber: e.target.value })),
+                  className: "text-2xl font-bold text-white bg-transparent border-b-2 border-gray-600 focus:border-sky-500 outline-none mb-2 w-full",
+                  placeholder: "Assessment Title"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 text-sm text-gray-400", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "date",
+                    value: assessment.date || currentEvent.date,
+                    onChange: (e) => {
+                      const newDate = e.target.value;
+                      setAssessment((prev) => ({ ...prev, date: newDate }));
+                      handleEventUpdate({ date: newDate });
+                    },
+                    className: "bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white focus:ring-1 focus:ring-sky-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "at" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "text",
+                    placeholder: "hhmm",
+                    value: formatTimeToHHMM(currentEvent.startTime),
+                    onChange: (e) => handleTimeInputChange(e),
+                    onBlur: () => handleTimeInputBlur("startTime"),
+                    onKeyDown: (e) => handleTimeInputKeyDown(e, "startTime"),
+                    className: "w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white focus:ring-1 focus:ring-sky-500 text-center font-mono",
+                    maxLength: "4"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "text",
+                    placeholder: "hhmm",
+                    value: formatTimeToHHMM((currentEvent.startTime || 0) + (currentEvent.duration || 0)),
+                    onChange: (e) => handleTimeInputChange(e),
+                    onBlur: () => handleTimeInputBlur("endTime"),
+                    onKeyDown: (e) => handleTimeInputKeyDown(e, "endTime"),
+                    className: "w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white focus:ring-1 focus:ring-sky-500 text-center font-mono",
+                    maxLength: "4"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center px-3 py-1 rounded-full bg-gray-900/50 border border-gray-700", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-2 h-2 rounded-full mr-2 ${saveStatus === "Saved" ? "bg-green-500" : saveStatus === "Saving..." ? "bg-amber-500 animate-pulse" : "bg-red-500"}` }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-mono uppercase", children: saveStatus === "Saved" ? "All changes saved" : saveStatus })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePrint, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Print" }),
+            initialAssessment && initialAssessment.id && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+              console.log("Editing mode enabled for PT-051:", initialAssessment.id);
+            }, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Edit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManualSaveAndExit, disabled: !canEditPt051, title: canEditPt051 ? void 0 : `Your permission profile does not allow ${trainingReportName} editing`, className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? "opacity-50 cursor-not-allowed" : ""}`, children: "Save" }),
+            assessment.id && onDeleteAssessment && canEditPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handleDeleteAssessment,
+                className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
+                children: "Delete"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onBack, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Back" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `${trainingReportName} Assessment` })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6 w-full max-w-full mx-auto", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "lg:col-span-1 space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.event }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: event.flightNumber || "N/A" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.type }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white", children: (() => {
+                  const eventNum = (event.flightNumber || "").trim();
+                  console.log("🔍 Event Description Debug - Event Number:", eventNum);
+                  console.log("🔍 Event Description Debug - syllabusDetails count:", syllabusDetails.length);
+                  console.log("🔍 Event Description Debug - First 5 syllabus items:", syllabusDetails.slice(0, 5).map((d) => ({ id: d.id, code: d.code, title: d.title })));
+                  let syllabusDetail = syllabusDetails.find((d) => {
+                    const id = (d.id || "").trim();
+                    const code = (d.code || "").trim();
+                    if (id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase()) {
+                      console.log("🔍 Found exact match:", d);
+                      return true;
+                    }
+                    if (id.replace(/\s+/g, "").toLowerCase() === eventNum.replace(/\s+/g, "").toLowerCase() || code.replace(/\s+/g, "").toLowerCase() === eventNum.replace(/\s+/g, "").toLowerCase()) {
+                      console.log("🔍 Found match without spaces:", d);
+                      return true;
+                    }
+                    return false;
+                  });
+                  console.log("🔍 Event Description Debug - Found detail:", syllabusDetail);
+                  return syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || "N/A";
+                })() })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Trainee" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: `${trainee.rank} ${trainee.name}` })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Course" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: trainee.course })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.date }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "date",
+                    value: assessment.date || currentEvent.date,
+                    onChange: (e) => {
+                      const newDate = e.target.value;
+                      setAssessment((prev) => ({ ...prev, date: newDate }));
+                      handleEventUpdate({ date: newDate });
+                    },
+                    className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:ring-1 focus:ring-sky-500"
+                  }
+                ) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.timing }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("dd", { className: "mt-1 flex items-center gap-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: "0",
+                      max: "23",
+                      step: "1",
+                      value: Math.floor(currentEvent.startTime || 0),
+                      onChange: (e) => {
+                        const newStartTime = parseFloat(e.target.value);
+                        const updatedEvent = { ...currentEvent, startTime: newStartTime + currentEvent.startTime % 1 };
+                        handleEventUpdate(updatedEvent);
+                      },
+                      className: "w-12 text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-1 py-1 focus:ring-1 focus:ring-sky-500"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: ":" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: "0",
+                      max: "59",
+                      step: "15",
+                      value: Math.round(currentEvent.startTime % 1 * 60),
+                      onChange: (e) => {
+                        const minutes = parseInt(e.target.value);
+                        const hours = Math.floor(currentEvent.startTime || 0);
+                        const newStartTime = hours + minutes / 60;
+                        const updatedEvent = { ...currentEvent, startTime: newStartTime };
+                        handleEventUpdate(updatedEvent);
+                      },
+                      className: "w-12 text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-1 py-1 focus:ring-1 focus:ring-sky-500"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: "0",
+                      max: "23",
+                      step: "1",
+                      value: Math.floor((currentEvent.startTime || 0) + (currentEvent.duration || 0)),
+                      onChange: (e) => {
+                        const endTime = parseFloat(e.target.value);
+                        const currentEndTime = (currentEvent.startTime || 0) + (currentEvent.duration || 0);
+                        const newDuration = currentEvent.duration + (endTime - currentEndTime);
+                        const updatedEvent = { ...currentEvent, duration: newDuration };
+                        handleEventUpdate(updatedEvent);
+                      },
+                      className: "w-12 text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-1 py-1 focus:ring-1 focus:ring-sky-500"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: ":" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: "0",
+                      max: "59",
+                      step: "15",
+                      value: Math.round(((currentEvent.startTime || 0) + (currentEvent.duration || 0)) % 1 * 60),
+                      onChange: (e) => {
+                        const minutes = parseInt(e.target.value);
+                        const hours = Math.floor((currentEvent.startTime || 0) + (currentEvent.duration || 0));
+                        const endTime = hours + minutes / 60;
+                        const newDuration = endTime - (currentEvent.startTime || 0);
+                        const updatedEvent = { ...currentEvent, duration: newDuration };
+                        handleEventUpdate(updatedEvent);
+                      },
+                      className: "w-12 text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-1 py-1 focus:ring-1 focus:ring-sky-500"
+                    }
+                  )
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.assessor }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: assessment.instructorName || "",
+                    onChange: (e) => handleInstructorNameChange(e.target.value),
+                    className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-full focus:ring-1 focus:ring-sky-500",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
+                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: instructor.name, children: [
+                        instructor.rank,
+                        " ",
+                        instructor.name
+                      ] }, instructor.idNumber))
+                    ]
+                  }
+                ) })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-2 space-y-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 mb-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
+                    reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "dco-result",
+                          value: option.code,
+                          checked: dcoResult === option.code,
+                          onChange: (e) => setDcoResult(e.target.value),
+                          className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
+                    ] }, option.code)),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "dco-result",
+                          value: "",
+                          checked: dcoResult === "",
+                          onChange: (e) => setDcoResult(e.target.value),
+                          className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 font-medium", children: "None" })
+                    ] })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: overallFields.overallGrade }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-4 gap-2 rounded bg-gray-950/45 p-2 sm:grid-cols-6 xl:grid-cols-12", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "label",
+                      {
+                        title: formatGradeOption(grade),
+                        className: `flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
+                        children: [
+                          reportTemplate.grades.showNumbers && (grade !== "No Grade" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }) : null),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: formatGradeHeaderText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-grade", value: grade, checked: overallGrade === grade, onChange: () => setOverallGrade(grade), className: `h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600` })
+                        ]
+                      },
+                      grade
+                    )) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.overallResult }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "P", checked: overallResult === "P", onChange: () => setOverallResult("P"), className: "sr-only" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: reportTemplate.overallResults.passLabel })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "F", checked: overallResult === "F", onChange: () => setOverallResult("F"), className: "sr-only" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel })
+                      ] })
+                    ] })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 pt-4 border-t border-gray-600", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.groundSchoolAssessment }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "checkbox",
+                          checked: groundSchoolAssessment.isAssessment,
+                          onChange: (e) => setGroundSchoolAssessment({
+                            ...groundSchoolAssessment,
+                            isAssessment: e.target.checked,
+                            result: e.target.checked ? groundSchoolAssessment.result || 0 : void 0
+                          }),
+                          className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-gray-300", children: "Assessment" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs font-medium text-gray-400", children: [
+                        overallFields.result,
+                        ":"
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "number",
+                            min: "0",
+                            max: "100",
+                            value: groundSchoolAssessment.isAssessment ? groundSchoolAssessment.result ?? "" : "",
+                            onChange: (e) => {
+                              const value = parseInt(e.target.value) || 0;
+                              setGroundSchoolAssessment({
+                                ...groundSchoolAssessment,
+                                result: Math.min(100, Math.max(0, value))
+                              });
+                            },
+                            disabled: !groundSchoolAssessment.isAssessment,
+                            className: `w-16 px-2 py-1 rounded-md text-center font-semibold text-xs
+                                                    ${groundSchoolAssessment.isAssessment ? "bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-sky-500" : "bg-gray-600/50 text-gray-500 cursor-not-allowed border-gray-600"} border`,
+                            placeholder: "%"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 text-xs", children: "%" })
+                      ] })
+                    ] })
+                  ] })
+                ] })
+              ] }),
+              showDoubleMarginalWarning && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-300", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Warning:" }),
+                " This grade matches the configured repeat rule for this training report. A review may be required."
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 mb-6", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.assessor || instructorLabel }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: commentFields["QFI"] || "",
+                    onChange: (e) => handleCommentFieldChange("QFI", e.target.value),
+                    className: "w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
+                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: instructor.name, children: [
+                        instructor.rank,
+                        " ",
+                        instructor.name
+                      ] }, instructor.idNumber))
+                    ]
+                  }
+                ) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.weather }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "textarea",
+                  {
+                    value: commentFields["Weather"],
+                    onChange: (e) => handleCommentFieldChange("Weather", e.target.value),
+                    rows: 1,
+                    className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
+                    style: { minHeight: "42px" },
+                    onInput: (e) => {
+                      e.currentTarget.style.height = "auto";
+                      e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
+                    },
+                    ref: (el) => {
+                      if (el) {
+                        el.style.height = "auto";
+                        el.style.height = el.scrollHeight + "px";
+                      }
+                    }
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.nest }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "text",
+                    value: commentFields["NEST"],
+                    onChange: (e) => handleCommentFieldChange("NEST", e.target.value),
+                    maxLength: 8,
+                    className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.profile }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "textarea",
+                  {
+                    value: commentFields["Profile"],
+                    onChange: (e) => handleCommentFieldChange("Profile", e.target.value),
+                    rows: 4,
+                    className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
+                    style: { minHeight: "100px" },
+                    onInput: (e) => {
+                      e.currentTarget.style.height = "auto";
+                      e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
+                    },
+                    ref: (el) => {
+                      if (el) {
+                        el.style.height = "auto";
+                        el.style.height = el.scrollHeight + "px";
+                      }
+                    }
+                  }
+                )
+              ] }, "Profile"),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.overall }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "textarea",
+                  {
+                    value: commentFields["Overall"],
+                    onChange: (e) => handleCommentFieldChange("Overall", e.target.value),
+                    rows: 6,
+                    className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
+                    style: { minHeight: "150px" },
+                    onInput: (e) => {
+                      e.currentTarget.style.height = "auto";
+                      e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
+                    },
+                    ref: (el) => {
+                      if (el) {
+                        el.style.height = "auto";
+                        el.style.height = el.scrollHeight + "px";
+                      }
+                    }
+                  }
+                )
+              ] }, "Overall")
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: PT051_STRUCTURE$1.map((category) => {
+            const isGroundEvent = event.type === "ground";
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: `p-4 border rounded-lg ${isGroundEvent ? "border-gray-800 bg-gray-800/30 opacity-50" : "border-gray-700"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: `px-2 text-sm font-semibold ${isGroundEvent ? "text-gray-500" : "text-gray-300"}`, children: category.category }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
+                  assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[40px]" }, String(g))),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[480px]" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
+                  assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "th",
+                    {
+                      title: formatGradeOption(g),
+                      className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
+                    },
+                    String(g)
+                  )),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
+                  const score = assessment.scores.find((s) => s.element === element);
+                  const commentCell = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "textarea",
+                      {
+                        value: score?.comment || "",
+                        onChange: (e) => handleCommentChange(element, e.target.value),
+                        rows: 1,
+                        placeholder: "Comments...",
+                        className: "w-full bg-gray-800 border border-gray-600 rounded p-2 pr-8 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
+                        style: { minHeight: "42px" },
+                        onInput: (e) => {
+                          e.currentTarget.style.height = "auto";
+                          e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
+                        },
+                        ref: (el) => {
+                          if (el) {
+                            el.style.height = "auto";
+                            el.style.height = el.scrollHeight + "px";
+                          }
+                        }
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        onClick: () => handleOpenPhraseSelector(element),
+                        className: "absolute top-4 right-2 text-gray-400 hover:text-sky-400 p-1",
+                        title: "Insert from Phrase Bank",
+                        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z", clipRule: "evenodd" })
+                        ] })
+                      }
+                    )
+                  ] });
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
+                    assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `flex min-h-[36px] items-center justify-center rounded ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: element,
+                          value: String(grade),
+                          checked: score?.grade === grade,
+                          onChange: () => handleGradeChange(element, grade),
+                          disabled: isGroundEvent,
+                          className: `h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? "opacity-50 cursor-not-allowed" : ""}`
+                        }
+                      ),
+                      reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
+                    ] }) }) }, String(grade))),
+                    commentCell()
+                  ] }, element);
+                }) })
+              ] }) })
+            ] }, category.category);
+          }) })
+        ] }),
+        showPhraseModal && currentPhraseElement && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          PhraseSelector,
+          {
+            element: currentPhraseElement,
+            onClose: () => setShowPhraseModal(false),
+            onInsert: handleInsertPhrases,
+            phraseBank
+          }
+        )
+      ]
+    }
+  );
+};
 const TRAINEE_SUSPENDED_MARKER = "__DFP_TRAINEE_SUSPENDED__";
 const getVisiblePermissions = (permissions) => (permissions || []).filter((permission) => permission !== TRAINEE_SUSPENDED_MARKER);
 const isTraineeSuspended = (trainee) => Boolean(trainee?.permissions?.includes(TRAINEE_SUSPENDED_MARKER));
@@ -12098,6 +13399,13 @@ const TraineeProfileFlyout = ({
   userProfile,
   initialActiveTab = null,
   onSelectPt051ForEvent,
+  onSavePt051Assessment,
+  onDeletePt051Assessment,
+  instructorsData = [],
+  registerDirtyCheck = () => {
+  },
+  phraseBank = DEFAULT_PHRASE_BANK,
+  trainingReportTemplate = null,
   canViewPt051 = true,
   canEditPt051 = true,
   canViewIndividualLmp = true,
@@ -12129,14 +13437,19 @@ const TraineeProfileFlyout = ({
   const card3d2 = "rounded-lg border border-gray-500/60 shadow-md";
   const card3dStyle2 = { background: "linear-gradient(180deg, #243044 0%, #1e2d42 60%)", boxShadow: "0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)" };
   const [activeTab, setActiveTab] = reactExports.useState(initialActiveTab);
+  const [inlinePt051Assessment, setInlinePt051Assessment] = reactExports.useState(null);
+  const [inlinePt051Event, setInlinePt051Event] = reactExports.useState(null);
   const [currencyEditState, setCurrencyEditState] = reactExports.useState(null);
   const [localCurrencyStatus, setLocalCurrencyStatus] = reactExports.useState(void 0);
   const localCurrencyStatusRef = reactExports.useRef(void 0);
   const [showCurrencyAudit, setShowCurrencyAudit] = reactExports.useState(false);
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
-  const tabBtnClass = (tab) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? " active" : ""}`;
+  const tabBtnClass = (tab) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab || tab === "hatesheet" && activeTab === "pt051" ? " active" : ""}`;
   const contentScrollRef = reactExports.useRef(null);
   const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
+  const activeTrainingReportUnitCode = trainee.unit || "";
+  const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
+  const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
   const handleTabClick = (tab) => setActiveTab((prev) => {
     const next = prev === tab ? null : tab;
     if (next !== null) {
@@ -12482,6 +13795,99 @@ const TraineeProfileFlyout = ({
       onClose();
     }
   };
+  const buildPt051EventFromAssessment = (assessment) => {
+    const scheduledEvent = events.find((e) => e.id === assessment.eventId) || events.find(
+      (e) => e.flightNumber === assessment.flightNumber && (!assessment.date || !e.date || e.date === assessment.date) && (e.student === trainee.fullName || e.pilot === trainee.fullName || String(e.crew || "").includes(trainee.fullName))
+    );
+    if (scheduledEvent) return scheduledEvent;
+    const flightNum = assessment.flightNumber || "";
+    const eventType = flightNum.includes("CPT") || flightNum.includes("Cpt") ? "cpt" : flightNum.includes("MB") || flightNum.includes("GS") || flightNum.includes("Ground") || flightNum.includes("GROUND") ? "ground" : "flight";
+    return {
+      id: assessment.eventId || `pt051-${trainee.idNumber}-${flightNum}-${assessment.date || "undated"}`,
+      flightNumber: flightNum,
+      date: assessment.date,
+      startTime: assessment.startTime ?? 8,
+      duration: assessment.duration ?? 1,
+      instructor: assessment.instructorName || "",
+      student: trainee.fullName,
+      syllabus: flightNum,
+      aircraft: "",
+      type: eventType,
+      status: "Scheduled",
+      notes: "",
+      crew: []
+    };
+  };
+  const openInlinePt051 = (assessment) => {
+    if (!canViewPt051) {
+      onAccessDenied?.("PT-051 record");
+      return;
+    }
+    setInlinePt051Assessment(assessment);
+    setInlinePt051Event(buildPt051EventFromAssessment(assessment));
+    setActiveTab("pt051");
+    setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 0);
+  };
+  const persistInlinePt051Assessment = async (assessment, isAutoSave) => {
+    if (!canEditPt051) {
+      if (!isAutoSave) onAccessDenied?.("save PT-051 assessment");
+      return;
+    }
+    const eventId = assessment.eventId || inlinePt051Event?.id || `pt051-${trainee.idNumber}-${assessment.flightNumber}-${assessment.date || "undated"}`;
+    const normalizedAssessment = {
+      ...assessment,
+      id: assessment.id || `pt051-${eventId}-${trainee.fullName}`,
+      eventId,
+      traineeFullName: trainee.fullName
+    };
+    onSavePt051Assessment?.(normalizedAssessment);
+    setInlinePt051Assessment(normalizedAssessment);
+    const traineeId = trainee.id;
+    if (!traineeId) {
+      if (!isAutoSave) {
+        alert(`Training Report could not be saved: trainee database record not found for ${trainee.fullName}.`);
+      }
+      return;
+    }
+    const response = await fetch("/api/trainee-performance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...normalizedAssessment,
+        traineeId,
+        course: trainee.course || null,
+        createdBy: currentUserId || null
+      })
+    });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      if (!isAutoSave) alert(`Training Report could not be saved to the database.
+
+${errorText || `HTTP ${response.status}`}`);
+      throw new Error(errorText || `Failed to save Training Report (${response.status})`);
+    }
+  };
+  const deleteInlinePt051Assessment = async (assessmentId) => {
+    if (!canEditPt051) {
+      onAccessDenied?.("delete PT-051 assessment");
+      return;
+    }
+    const eventId = inlinePt051Assessment?.eventId || inlinePt051Event?.id || assessmentId;
+    const response = await fetch(`/api/trainee-performance/${encodeURIComponent(eventId)}`, {
+      method: "DELETE"
+    });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      alert(`Training Report could not be deleted from the database.
+
+${errorText || `HTTP ${response.status}`}`);
+      throw new Error(errorText || `Failed to delete Training Report (${response.status})`);
+    }
+    onDeletePt051Assessment?.(assessmentId, eventId, trainee.fullName);
+    setInlinePt051Assessment(null);
+    setInlinePt051Event(null);
+    setActiveTab("hatesheet");
+  };
   const handleIndividualLMPClick = () => {
     if (!canViewIndividualLmp) {
       onAccessDenied?.("Individual LMP");
@@ -12667,7 +14073,7 @@ const TraineeProfileFlyout = ({
           "div",
           {
             ref: contentScrollRef,
-            className: `flex-1 min-h-0 p-4 relative ${activeTab === "lmp" ? "overflow-hidden flex flex-col" : "overflow-y-auto space-y-3"}`,
+            className: `flex-1 min-h-0 p-4 relative ${activeTab === "lmp" || activeTab === "pt051" ? "overflow-hidden flex flex-col" : "overflow-y-auto space-y-3"}`,
             children: [
               isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               activeTab === "currency" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
@@ -12858,7 +14264,10 @@ const TraineeProfileFlyout = ({
                     onSelectLmpScore: () => {
                     },
                     onSelectPt051: (assessment) => {
-                      if (onSelectPt051ForEvent) onSelectPt051ForEvent(assessment);
+                      openInlinePt051(assessment);
+                      if (onSelectPt051ForEvent) {
+                        logAudit("Performance History", "View", `Opened embedded Training Report for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`);
+                      }
                     },
                     onBackToRoster: () => setActiveTab(null),
                     onInsertPt051: () => {
@@ -12867,6 +14276,40 @@ const TraineeProfileFlyout = ({
                     isLoading: pt051PerformanceLoading,
                     trainingReportTerminology
                   }
+                ) });
+              })(),
+              activeTab === "pt051" && inlinePt051Assessment && inlinePt051Event && (() => {
+                const assessmentKey = `pt051-${inlinePt051Assessment.eventId}-${trainee.fullName}`;
+                const currentAssessment = pt051Assessments?.get(assessmentKey) || Array.from(pt051Assessments?.values() || []).find(
+                  (assessment) => assessment.traineeFullName === trainee.fullName && (assessment.eventId === inlinePt051Assessment.eventId || assessment.flightNumber === inlinePt051Assessment.flightNumber && (!inlinePt051Assessment.date || !assessment.date || assessment.date === inlinePt051Assessment.date))
+                ) || inlinePt051Assessment;
+                return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-0 overflow-hidden h-full min-h-0 flex flex-col", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  PT051View,
+                  {
+                    trainee,
+                    event: inlinePt051Event,
+                    initialAssessment: currentAssessment,
+                    instructorLabel: "QFI",
+                    trainingReportTerminology,
+                    trainingReportTemplate: activeTrainingReportTemplate,
+                    trainingReportUnitCode: activeTrainingReportUnitCode,
+                    trainingReportContextUnitCode: activeTrainingReportUnitCode,
+                    onBack: () => setActiveTab("hatesheet"),
+                    onEventUpdate: setInlinePt051Event,
+                    onDeleteAssessment: deleteInlinePt051Assessment,
+                    onSave: persistInlinePt051Assessment,
+                    instructors: instructorsData,
+                    pt051Assessments: pt051Assessments || /* @__PURE__ */ new Map(),
+                    events,
+                    lmpScores: scores.get(trainee.fullName) || [],
+                    syllabusDetails,
+                    registerDirtyCheck,
+                    phraseBank: activeTrainingReportPhraseBank,
+                    currentUserPin: currentUserId || "1111",
+                    canEditPt051,
+                    embeddedInProfile: true
+                  },
+                  `embedded-${inlinePt051Event.id}-${trainee.fullName}-${currentAssessment?.overallGrade ?? "none"}`
                 ) });
               })(),
               activeTab === "lmp" && (() => {
@@ -12887,7 +14330,7 @@ const TraineeProfileFlyout = ({
                   }
                 ) });
               })(),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + ` p-3 ${activeTab === "lmp" ? "hidden" : ""}`, style: card3dStyle2, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + ` p-3 ${activeTab === "lmp" || activeTab === "pt051" ? "hidden" : ""}`, style: card3dStyle2, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700/70 pb-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "Profile Details" }),
@@ -13030,7 +14473,7 @@ const TraineeProfileFlyout = ({
                   ] }) })
                 ] })
               ) }),
-              activeTab !== "lmp" && !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
+              activeTab !== "lmp" && activeTab !== "pt051" && !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Instructors" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-2", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
@@ -13081,7 +14524,7 @@ const TraineeProfileFlyout = ({
                   ] })
                 ] })
               ] }),
-              activeTab !== "lmp" && !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
+              activeTab !== "lmp" && activeTab !== "pt051" && !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: [
                   "Logbook – Prior Experience (",
                   resourceDisplayNames.aircraft,
@@ -13798,6 +15241,11 @@ const CourseRosterView = ({
   onNavigateToCurrency,
   onAddRemedialPackage,
   onSelectPt051ForEvent,
+  onSavePt051Assessment,
+  onDeletePt051Assessment,
+  instructorsData = [],
+  registerDirtyCheck,
+  phraseBank,
   locations,
   units,
   selectedPersonForProfile,
@@ -13833,6 +15281,7 @@ const CourseRosterView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
   trainingReportTerminology,
+  trainingReportTemplate,
   platformConfig = null
 }) => {
   const { isFrozen } = useSystemFreeze();
@@ -14143,6 +15592,12 @@ const CourseRosterView = ({
           isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
           assessment
         ),
+        onSavePt051Assessment,
+        onDeletePt051Assessment,
+        instructorsData,
+        registerDirtyCheck,
+        phraseBank,
+        trainingReportTemplate,
         onAccessDenied
       }
     ),
@@ -14601,7 +16056,7 @@ const MassBriefConfirmationFlyout = ({
     ) })
   ] }) });
 };
-const formatTime$6 = (time) => {
+const formatTime$5 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round((time - hours) * 60);
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
@@ -14618,11 +16073,11 @@ const VisualAdjustModal = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "Start Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(startTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(startTime) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "End Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(endTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(endTime) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end space-x-2 mt-4", children: [
@@ -14960,13 +16415,13 @@ const getEventTypeFromSyllabus = (syllabusId, syllabusDetails) => {
   if (detail.type === "Ground School") return "ground";
   return "flight";
 };
-const formatTime$5 = (time) => {
+const formatTime$4 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 const normalizeStartTimeValue = (time) => {
-  if (typeof time === "number") return formatTime$5(time);
+  if (typeof time === "number") return formatTime$4(time);
   if (!time) return "00:00";
   if (time.includes(":")) return time;
   const cleaned = time.replace(/\D/g, "").padStart(4, "0").slice(-4);
@@ -15724,7 +17179,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (onVisualAdjustEnd) {
       onVisualAdjustEnd(updatedEvent);
     }
-    setStartTime(formatTime$5(visualAdjustStartTime));
+    setStartTime(formatTime$4(visualAdjustStartTime));
     setDuration(visualAdjustEndTime - visualAdjustStartTime);
   };
   const handleSave = async () => {
@@ -15874,7 +17329,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       for (let m = 0; m < 60; m += 5) {
         const totalHours = h + m / 60;
         const label = `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}`;
-        options.push({ label, value: formatTime$5(totalHours) });
+        options.push({ label, value: formatTime$4(totalHours) });
       }
     }
     return options;
@@ -17233,7 +18688,7 @@ const saveUserPreference = async (userId, key, value) => {
     return false;
   }
 };
-const formatTime$4 = (time) => {
+const formatTime$3 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -17796,7 +19251,7 @@ const FlightTile = ({
     elemRefs.current[elemKey] = el;
   }, style: { display: "inline-flex", alignItems: "center", ...guideGlowStyle(elemKey), ...style }, children });
   const startTimeContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$4(startTime) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$3(startTime) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "select",
       {
@@ -18240,7 +19695,7 @@ const AddFlightTileModal = ({
     for (let h = 6; h <= 23; h++) {
       for (let m = 0; m < 60; m += 15) {
         const val = h + m / 60;
-        opts.push({ value: String(val), label: formatTime$4(val) });
+        opts.push({ value: String(val), label: formatTime$3(val) });
       }
     }
     return opts;
@@ -20776,7 +22231,7 @@ const TafWeatherWidget = ({ onClose }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 pt-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Auto-refreshes every 30 minutes • Data from AVWX" }) })
   ] });
 };
-const formatTime$3 = (time) => {
+const formatTime$2 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -20830,9 +22285,9 @@ const MyDashboard = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-300", children: [
-          formatTime$3(event.startTime),
+          formatTime$2(event.startTime),
           " - ",
-          formatTime$3(event.startTime + event.duration)
+          formatTime$2(event.startTime + event.duration)
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onSelectEvent(event), className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Details" })
       ] })
@@ -21157,7 +22612,7 @@ const FlightTrackingWidget = ({ school, locationName }) => {
     ] }) })
   ] });
 };
-const formatTime$2 = (time) => {
+const formatTime$1 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -21194,7 +22649,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "AUTH" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-3 flex-1", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$2(event.startTime) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white text-sm", children: event.flightNumber }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
@@ -34558,6 +36013,11 @@ const TraineeView = (props) => {
           onNavigateToCurrency: props.onNavigateToCurrency,
           onAddRemedialPackage: props.onAddRemedialPackage,
           onSelectPt051ForEvent: props.onSelectPt051ForEvent,
+          onSavePt051Assessment: props.onSavePt051Assessment,
+          onDeletePt051Assessment: props.onDeletePt051Assessment,
+          instructorsData: props.instructorsData,
+          registerDirtyCheck: props.registerDirtyCheck,
+          phraseBank: props.phraseBank,
           locations: props.locations,
           units: props.units,
           platformConfig: props.platformConfig,
@@ -34584,6 +36044,7 @@ const TraineeView = (props) => {
           resourceDisplayNames: props.resourceDisplayNames,
           personnelDisplaySettings: props.personnelDisplaySettings,
           trainingReportTerminology: props.trainingReportTerminology,
+          trainingReportTemplate: props.trainingReportTemplate,
           pt051Assessments: props.pt051Assessments,
           pt051PerformanceLoading: props.pt051PerformanceLoading,
           userProfile: props.userProfile,
@@ -37375,1299 +38836,6 @@ const UnsavedChangesWarning = ({ onSaveAndExit, onExitWithoutSaving, onCancel })
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onSaveAndExit, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Save & Exit" })
     ] })
   ] }) });
-};
-const PT051_STRUCTURE$1 = [
-  { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
-  { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
-  { category: "Takeoff", elements: ["Stationary"] },
-  { category: "Departure", elements: ["Visual"] },
-  { category: "Core Handling Skills", elements: ["Effects of Control", "Trimming", "Straight and Level"] },
-  { category: "Turns", elements: ["Level medium Turn", "Level Steep turn"] },
-  { category: "Recovery", elements: ["Visual - Initial & Pitch"] },
-  { category: "Landing", elements: ["Landing", "Crosswind"] },
-  { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
-];
-const ALL_ELEMENTS$1 = PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
-const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST"];
-const formatTime$1 = (time) => {
-  const hours = Math.floor(time);
-  const minutes = Math.round(time % 1 * 60);
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-};
-const parseComments = (raw) => {
-  const defaults = { QFI: "", Weather: "", Profile: "", Overall: "", NEST: "" };
-  if (!raw) return defaults;
-  const result = { ...defaults };
-  COMMENT_SECTIONS.forEach((section, index) => {
-    const nextSection = COMMENT_SECTIONS[index + 1];
-    const startMarker = `${section}:`;
-    const startIndex = raw.indexOf(startMarker);
-    if (startIndex !== -1) {
-      let contentStart = startIndex + startMarker.length;
-      let endIndex = -1;
-      if (nextSection) {
-        const nextMarker = `${nextSection}:`;
-        endIndex = raw.indexOf(nextMarker, contentStart);
-      }
-      let content = "";
-      if (endIndex !== -1) {
-        content = raw.substring(contentStart, endIndex);
-      } else {
-        content = raw.substring(contentStart);
-      }
-      result[section] = content.trim();
-    }
-  });
-  return result;
-};
-const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
-  const [selectedPhrases, setSelectedPhrases] = reactExports.useState(/* @__PURE__ */ new Set());
-  let phraseData = phraseBank?.[element];
-  const isCoreDimension = ["Airmanship", "Preparation", "Technique"].includes(element);
-  if (!phraseData && !isCoreDimension) {
-    phraseData = phraseBank?.["Generic Flying Elements"];
-  }
-  const togglePhrase = (phrase) => {
-    const newSet = new Set(selectedPhrases);
-    if (newSet.has(phrase)) {
-      newSet.delete(phrase);
-    } else {
-      newSet.add(phrase);
-    }
-    setSelectedPhrases(newSet);
-  };
-  const handleInsert = () => {
-    const text = Array.from(selectedPhrases).join(" ");
-    onInsert(text);
-  };
-  const getGradeLabel = (grade) => {
-    switch (grade) {
-      case "5":
-        return "5 - Excellent";
-      case "4":
-        return "4 - High Satisfactory";
-      case "3":
-        return "3 - Satisfactory";
-      case "2":
-        return "2 - Low Satisfactory";
-      case "1":
-        return "1 - Marginal";
-      case "0":
-        return "0 - Unsatisfactory";
-      default:
-        return grade;
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700 flex flex-col max-h-[80vh]", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-bold text-white", children: [
-        "Select Phrases: ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: element })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 overflow-y-auto flex-1 space-y-4", children: phraseData ? (
-      // Render phrases grouped by grade, sorted descending (5 to 0)
-      Object.entries(phraseData).sort((a, b) => Number(b[0]) - Number(a[0])).map(([grade, phrases]) => {
-        const typedPhrases = phrases;
-        return typedPhrases.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-bold text-gray-500 uppercase mb-2 border-b border-gray-700 pb-1", children: getGradeLabel(grade) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: typedPhrases.map((phrase, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 cursor-pointer p-2 rounded hover:bg-gray-700/50", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: selectedPhrases.has(phrase),
-                onChange: () => togglePhrase(phrase),
-                className: "mt-1 h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-200", children: phrase })
-          ] }, idx)) })
-        ] }, grade);
-      })
-    ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 text-gray-500 italic", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No phrase list available for this element." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-2", children: "Configure in Settings → Scoring Matrix." })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 bg-gray-900/50 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm font-semibold", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleInsert, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold", children: "Insert Selected" })
-    ] })
-  ] }) });
-};
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "" }) => {
-  const reportTemplate = reactExports.useMemo(() => {
-    const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
-    const terminologyName = String(trainingReportTerminology?.name || "").trim();
-    if (terminologyName && terminologyName !== DEFAULT_TRAINING_REPORT_TERMINOLOGY.name && terminologyName !== template.displayName) {
-      return { ...template, displayName: terminologyName };
-    }
-    return template;
-  }, [trainingReportTemplate, trainingReportTerminology]);
-  const trainingReportName = reportTemplate.displayName;
-  const overviewFields = reportTemplate.modules.overview.fields;
-  const overallFields = reportTemplate.modules.overallAssessment.fields;
-  const commentFieldsConfig = reportTemplate.modules.comments.fields;
-  const gradeOptions = reportTemplate.grades.options;
-  const assessmentGradeOptions = reactExports.useMemo(() => [
-    ...reportTemplate.grades.includeDemo ? ["DEMO"] : [],
-    ...gradeOptions.map((option) => option.value)
-  ], [gradeOptions, reportTemplate.grades.includeDemo]);
-  const overallGradeOptions = reactExports.useMemo(() => [
-    "No Grade",
-    ...gradeOptions.map((option) => option.value)
-  ], [gradeOptions]);
-  const gradeLabelMap = reactExports.useMemo(() => new Map(gradeOptions.map((option) => [option.value, option.label])), [gradeOptions]);
-  gradeOptions.length > 6;
-  const formatGradeOption = (grade) => {
-    if (grade === "No Grade" || grade === "DEMO" || grade === "MIN") return String(grade);
-    const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
-    return reportTemplate.grades.showNumbers ? `${grade} - ${label}` : label;
-  };
-  const formatGradeValue = (grade) => grade === "No Grade" ? "None" : String(grade);
-  const formatGradeText = (grade) => {
-    if (grade === "No Grade") return "No Grade";
-    if (grade === "DEMO" || grade === "MIN") return String(grade);
-    return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
-  };
-  const formatGradeHeaderText = (grade) => {
-    const label = formatGradeText(grade);
-    const compactLabels = {
-      Unsatisfactory: "Un-sat",
-      Marginal: "Marginal",
-      "Low Satisfactory": "Low Sat",
-      Satisfactory: "Sat",
-      "High Satisfactory": "High Sat",
-      Excellent: "Excel",
-      "High Excellent": "High Excel",
-      Outstanding: "Outstand",
-      Exceptional: "Except"
-    };
-    return compactLabels[label] || label;
-  };
-  const formatGradeNumber = (grade) => {
-    if (grade === "No Grade") return "None";
-    if (grade === "DEMO" || grade === "MIN") return String(grade);
-    return String(grade);
-  };
-  const stopEditableKeyPropagation = (event2) => {
-    const target = event2.target;
-    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable) {
-      event2.stopPropagation();
-    }
-  };
-  const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
-  const { checkAndWarn } = useSystemFreeze$1();
-  const [isDirty, setIsDirty] = reactExports.useState(false);
-  const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
-  const isFirstRender = reactExports.useRef(true);
-  const isInitialCommentHydration = reactExports.useRef(true);
-  const [showPhraseModal, setShowPhraseModal] = reactExports.useState(false);
-  const [currentPhraseElement, setCurrentPhraseElement] = reactExports.useState(null);
-  const getRadioAccentColor = (grade) => {
-    if (grade === 0) {
-      return "accent-red-500";
-    }
-    if (grade === 1) {
-      return "accent-amber-500";
-    }
-    return "accent-sky-500";
-  };
-  const getOverallRadioAccentColor = (grade) => {
-    if (grade === 0) return "accent-red-500";
-    if (grade === 1) return "accent-amber-500";
-    return "accent-sky-500";
-  };
-  reactExports.useMemo(() => {
-    if (!event.instructor) return null;
-    return instructors.find((i) => i.name === event.instructor) || null;
-  }, [event.instructor, instructors]);
-  const [currentEvent, setCurrentEvent] = reactExports.useState(() => {
-    if (initialAssessment && (initialAssessment.startTime !== void 0 || initialAssessment.duration !== void 0)) {
-      return {
-        ...event,
-        startTime: initialAssessment.startTime || event.startTime,
-        duration: initialAssessment.duration || event.duration
-      };
-    }
-    return event;
-  });
-  const [assessment, setAssessment] = reactExports.useState(() => {
-    if (initialAssessment) {
-      return initialAssessment;
-    }
-    return {
-      id: v4(),
-      traineeFullName: trainee.fullName,
-      eventId: event.id,
-      flightNumber: event.flightNumber,
-      date: event.date,
-      instructorName: event.instructor || "",
-      scores: ALL_ELEMENTS$1.map((element) => ({
-        element,
-        grade: null,
-        comment: ""
-      })),
-      overallGrade: null,
-      overallResult: null,
-      groundSchoolAssessment: { isAssessment: false, result: void 0 }
-    };
-  });
-  const handleEventUpdate = (updates) => {
-    const updatedEvent = { ...currentEvent, ...updates };
-    setCurrentEvent(updatedEvent);
-    if (onEventUpdate) {
-      onEventUpdate(updatedEvent);
-    }
-  };
-  const [commentFields, setCommentFields] = reactExports.useState(() => {
-    const parsed = parseComments(initialAssessment?.overallComments);
-    if (!parsed.QFI && event.instructor) {
-      parsed.QFI = event.instructor;
-    }
-    return parsed;
-  });
-  const [overallGrade, setOverallGrade] = reactExports.useState(initialAssessment?.overallGrade ?? null);
-  const [overallResult, setOverallResult] = reactExports.useState(initialAssessment?.overallResult || null);
-  const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(
-    initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: void 0 }
-  );
-  const [dcoResult, setDcoResult] = reactExports.useState(initialAssessment?.dcoResult || "");
-  const recentPerformanceHistory = reactExports.useMemo(() => {
-    const history = [];
-    const isFlightOrFtd = (eventName) => {
-      const detail = syllabusDetails.find((d) => d.id === eventName || d.code === eventName);
-      if (detail) {
-        return detail.type === "Flight" || detail.type === "FTD";
-      }
-      const name = eventName.toUpperCase();
-      if (name.includes("FTD") || name.startsWith("BGF") || name.startsWith("BIF") || name.startsWith("BNF") || name.startsWith("BNAV") || name.startsWith("SCT")) {
-        if (!name.includes("MB") && !name.includes("TUT") && !name.includes("CPT")) {
-          return true;
-        }
-      }
-      return false;
-    };
-    lmpScores.forEach((s) => {
-      if (isFlightOrFtd(s.event)) {
-        history.push({
-          name: s.event,
-          score: s.score,
-          date: s.date,
-          timestamp: new Date(s.date).getTime()
-        });
-      }
-    });
-    pt051Assessments.forEach((a) => {
-      if (a.traineeFullName === trainee.fullName && a.eventId !== event.id && a.overallGrade !== null && a.overallGrade !== "No Grade") {
-        if (isFlightOrFtd(a.flightNumber)) {
-          history.push({
-            name: a.flightNumber,
-            score: a.overallGrade,
-            date: a.date,
-            timestamp: new Date(a.date).getTime()
-          });
-        }
-      }
-    });
-    history.sort((a, b) => b.timestamp - a.timestamp);
-    const currentEventTime = new Date(event.date).getTime();
-    return history.filter((h) => h.timestamp < currentEventTime);
-  }, [lmpScores, pt051Assessments, trainee.fullName, syllabusDetails, event.date, event.id]);
-  recentPerformanceHistory.length > 0 ? recentPerformanceHistory[0] : null;
-  const shouldRepeatForGrade = (grade) => {
-    if (typeof grade !== "number") return false;
-    if (reportTemplate.repeatRules.gradesRequiringRepeat.includes(grade)) return true;
-    if (reportTemplate.repeatRules.consecutive.enabled && reportTemplate.repeatRules.consecutive.grades.includes(grade)) {
-      const previousScores = recentPerformanceHistory.slice(0, Math.max(0, reportTemplate.repeatRules.consecutive.count - 1)).map((entry) => Number(entry.score));
-      if (previousScores.length >= reportTemplate.repeatRules.consecutive.count - 1 && previousScores.every((score) => reportTemplate.repeatRules.consecutive.grades.includes(score))) {
-        return true;
-      }
-    }
-    if (reportTemplate.repeatRules.rollingWindow.enabled && reportTemplate.repeatRules.rollingWindow.grades.includes(grade)) {
-      const previousScores = recentPerformanceHistory.slice(0, Math.max(0, reportTemplate.repeatRules.rollingWindow.window - 1)).map((entry) => Number(entry.score));
-      const matchingCount = previousScores.filter((score) => reportTemplate.repeatRules.rollingWindow.grades.includes(score)).length + 1;
-      if (matchingCount >= reportTemplate.repeatRules.rollingWindow.count) {
-        return true;
-      }
-    }
-    return false;
-  };
-  reactExports.useEffect(() => {
-    if (shouldRepeatForGrade(overallGrade)) {
-      setShowDoubleMarginalWarning(true);
-      setOverallResult("F");
-    } else {
-      setShowDoubleMarginalWarning(false);
-    }
-  }, [overallGrade, recentPerformanceHistory, reportTemplate]);
-  reactExports.useEffect(() => {
-    if (overallGrade === "No Grade" || overallGrade === null) {
-      setOverallResult(null);
-    } else if (shouldRepeatForGrade(overallGrade)) {
-      setOverallResult("F");
-    } else if (typeof overallGrade === "number") {
-      setOverallResult("P");
-    }
-  }, [overallGrade, recentPerformanceHistory, reportTemplate]);
-  const handleGradeChange = (element, grade) => {
-    setAssessment((prev) => ({
-      ...prev,
-      scores: prev.scores.map((s) => s.element === element ? { ...s, grade } : s)
-    }));
-  };
-  const handleCommentChange = (element, comment) => {
-    setAssessment((prev) => ({
-      ...prev,
-      scores: prev.scores.map((s) => s.element === element ? { ...s, comment } : s)
-    }));
-  };
-  const handleCommentFieldChange = (key, value) => {
-    setCommentFields((prev) => ({ ...prev, [key]: value }));
-    if (key === "QFI") {
-      setAssessment((prev) => ({ ...prev, instructorName: value }));
-    }
-  };
-  const unitInstructors = reactExports.useMemo(() => {
-    return instructors.filter((instructor) => instructor.unit === trainee.unit);
-  }, [instructors, trainee.unit]);
-  const handleInstructorNameChange = (value) => {
-    setAssessment((prev) => ({ ...prev, instructorName: value }));
-    setCommentFields((prev) => ({ ...prev, QFI: value }));
-  };
-  const formatTimeToHHMM = (timeInHours) => {
-    if (timeInHours === null || timeInHours === void 0) return "";
-    let time = timeInHours;
-    if (time >= 24) time -= 24;
-    const hours = Math.floor(time);
-    const minutes = Math.round((time - hours) * 60);
-    return `${hours.toString().padStart(2, "0")}${minutes.toString().padStart(2, "0")}`;
-  };
-  const handleTimeInputChange = (e, field) => {
-    let value = e.currentTarget.value;
-    value = value.replace(/\D/g, "");
-    if (value.length > 4) {
-      value = value.substring(0, 4);
-    }
-    e.currentTarget.value = value;
-  };
-  const handleTimeInputBlur = (field) => {
-    const input = event?.target;
-    if (!input) return;
-    let value = input.value;
-    if (value.length > 0) {
-      const paddedValue = value.padStart(4, "0");
-      const num = parseInt(paddedValue);
-      if (!isNaN(num) && num >= 0 && num <= 2359 && num % 100 < 60) {
-        const hours = Math.floor(num / 100);
-        const minutes = num % 100;
-        const timeInHours = hours + minutes / 60;
-        input.value = paddedValue;
-        if (field === "startTime") {
-          const updatedEvent = { ...currentEvent, startTime: timeInHours };
-          setCurrentEvent(updatedEvent);
-          handleEventUpdate(updatedEvent);
-        } else {
-          const currentStartTime = currentEvent.startTime || 0;
-          const newDuration = timeInHours - currentStartTime;
-          if (newDuration > 0) {
-            const updatedEvent = { ...currentEvent, duration: newDuration };
-            setCurrentEvent(updatedEvent);
-            handleEventUpdate(updatedEvent);
-          }
-        }
-      } else {
-        input.value = "";
-        if (field === "startTime") {
-          const updatedEvent = { ...currentEvent, startTime: null };
-          setCurrentEvent(updatedEvent);
-          handleEventUpdate(updatedEvent);
-        }
-      }
-    }
-  };
-  const handleTimeInputKeyDown = (e, field) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleTimeInputBlur(field);
-      if (field === "startTime") {
-        const endTimeInput = document.querySelector('input[placeholder="hhmm"]:last-of-type');
-        endTimeInput?.focus();
-      }
-    }
-  };
-  const handleOpenPhraseSelector = (element) => {
-    setCurrentPhraseElement(element);
-    setShowPhraseModal(true);
-  };
-  const handleInsertPhrases = (text) => {
-    if (currentPhraseElement) {
-      setAssessment((prev) => ({
-        ...prev,
-        scores: prev.scores.map((s) => s.element === currentPhraseElement ? { ...s, comment: (s.comment ? s.comment + " " : "") + text } : s)
-      }));
-    }
-    setShowPhraseModal(false);
-    setCurrentPhraseElement(null);
-  };
-  reactExports.useEffect(() => {
-    if (isInitialCommentHydration.current) {
-      isInitialCommentHydration.current = false;
-      return;
-    }
-    const combined = COMMENT_SECTIONS.map((key) => `${key}:
-${commentFields[key]}`).join("\n\n");
-    setAssessment((prev) => ({
-      ...prev,
-      overallComments: combined
-    }));
-  }, [commentFields]);
-  const handleSave = async (isAutoSave = false) => {
-    if (!canEditPt051) {
-      if (!isAutoSave) {
-        await showDarkAlert(`Your permission profile allows you to view this ${trainingReportName}, but not edit or save it.`, "Access Denied", "error");
-      }
-      return false;
-    }
-    const _freezeRaw = localStorage.getItem("systemFreezeState");
-    if (_freezeRaw) {
-      const _freeze = JSON.parse(_freezeRaw);
-      if (_freeze.isFrozen && !_freeze.allowedActions?.pt051Entries) {
-        await showDarkAlert(`System is currently frozen. ${trainingReportName} entries are not permitted during a system freeze.`, "System Frozen", "error");
-        return false;
-      }
-    }
-    const finalAssessment = {
-      ...assessment,
-      overallGrade,
-      overallResult,
-      dcoResult,
-      groundSchoolAssessment,
-      // Preserve timing data
-      startTime: currentEvent?.startTime,
-      duration: currentEvent?.duration,
-      endTime: currentEvent ? (currentEvent.startTime || 0) + (currentEvent.duration || 0) : void 0
-    };
-    if (onEventUpdate && currentEvent) {
-      onEventUpdate(currentEvent);
-    }
-    try {
-      await onSave(finalAssessment, isAutoSave);
-      setIsDirty(false);
-      setSaveStatus("Saved");
-      return true;
-    } catch (error) {
-      console.error("[PT051] Save failed:", error);
-      setSaveStatus("Unsaved");
-      return false;
-    }
-  };
-  const handleManualSaveAndExit = async () => {
-    const saved = await handleSave(false);
-    if (saved) {
-      onBack();
-    }
-  };
-  const getEventDescription = () => {
-    const eventNum = (event.flightNumber || assessment.flightNumber || "").trim();
-    const normaliseCode2 = (value) => (value || "").replace(/\s+/g, "").toLowerCase();
-    const syllabusDetail = syllabusDetails.find((d) => {
-      const id = (d.id || "").trim();
-      const code = (d.code || "").trim();
-      return id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase() || normaliseCode2(id) === normaliseCode2(eventNum) || normaliseCode2(code) === normaliseCode2(eventNum);
-    });
-    const detail = syllabusDetail;
-    return detail?.eventDescription || detail?.title || detail?.description || "N/A";
-  };
-  const handlePrint = async () => {
-    try {
-      const resolvePrintReportTemplate = async () => {
-        const latestConfig = await loadPlatformConfigFromDB();
-        if (!latestConfig) return reportTemplate;
-        const unitCodes = [
-          trainingReportUnitCode,
-          trainee.unit,
-          trainingReportContextUnitCode
-        ].flatMap((value) => String(value || "").split("+")).map((value) => value.trim()).filter(Boolean);
-        const uniqueUnitCodes = Array.from(new Set(unitCodes.map((value) => value.toUpperCase())));
-        const templates = uniqueUnitCodes.map((unitCode) => getUnitTrainingReportTemplate(latestConfig, unitCode));
-        const customTemplate = templates.find((template) => template.displayName !== DEFAULT_TRAINING_REPORT_TEMPLATE.displayName);
-        return customTemplate || templates[0] || reportTemplate;
-      };
-      const printReportTemplate = await resolvePrintReportTemplate();
-      const printReportName = printReportTemplate.displayName;
-      const printOverviewFields = printReportTemplate.modules.overview.fields;
-      const printOverallFields = printReportTemplate.modules.overallAssessment.fields;
-      const printCommentFieldsConfig = printReportTemplate.modules.comments.fields;
-      const doc = new E({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 14;
-      const contentWidth = pageWidth - margin * 2;
-      let y = 16;
-      const ensureSpace = (requiredHeight) => {
-        if (y + requiredHeight <= pageHeight - 16) return;
-        doc.addPage();
-        y = 16;
-      };
-      const addFooter = () => {
-        const pageCount = doc.getNumberOfPages();
-        for (let page = 1; page <= pageCount; page += 1) {
-          doc.setPage(page);
-          doc.setFontSize(8);
-          doc.setTextColor(120);
-          doc.text(`Generated ${(/* @__PURE__ */ new Date()).toLocaleString()} - Page ${page} of ${pageCount}`, margin, pageHeight - 8);
-        }
-        doc.setPage(pageCount);
-      };
-      const addSectionTitle = (title) => {
-        ensureSpace(12);
-        y += 4;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.setTextColor(20, 35, 55);
-        doc.text(title, margin, y);
-        y += 2;
-        doc.setDrawColor(180, 190, 200);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 6;
-      };
-      const addKeyValueRows = (rows) => {
-        doc.setFontSize(9);
-        rows.forEach(([label, value]) => {
-          const text = value || "N/A";
-          const valueLines = doc.splitTextToSize(text, contentWidth - 48);
-          const rowHeight = Math.max(7, valueLines.length * 4 + 2);
-          ensureSpace(rowHeight);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(80);
-          doc.text(label, margin, y);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(20);
-          doc.text(valueLines, margin + 48, y);
-          y += rowHeight;
-        });
-      };
-      const addWrappedText = (label, value) => {
-        const lines = doc.splitTextToSize(value || "N/A", contentWidth);
-        ensureSpace(9 + lines.length * 4);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(80);
-        doc.text(label, margin, y);
-        y += 5;
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(20);
-        doc.text(lines, margin, y);
-        y += lines.length * 4 + 4;
-      };
-      const completionLabel = printReportTemplate.completionResults.find((option) => option.code === dcoResult)?.label || dcoResult || "None";
-      const overallResultLabel = overallResult === "P" ? printReportTemplate.overallResults.passLabel : overallResult === "F" ? showDoubleMarginalWarning ? printReportTemplate.overallResults.doubleRepeatLabel : printReportTemplate.overallResults.failLabel : "Not selected";
-      const reportDate = assessment.date || currentEvent.date || event.date || "";
-      const startTime = currentEvent.startTime ?? event.startTime ?? 0;
-      const duration = currentEvent.duration ?? event.duration ?? 0;
-      const endTime = startTime + duration;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(17);
-      doc.setTextColor(10, 25, 45);
-      doc.text(`${printReportName} Training Report`, margin, y);
-      y += 8;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(80);
-      doc.text(`${assessment.flightNumber || event.flightNumber || "Event"} - ${trainee.rank || ""} ${trainee.name || trainee.fullName || ""} - ${reportDate}`, margin, y);
-      y += 8;
-      addSectionTitle(printReportTemplate.modules.overview.title || "Event Details");
-      addKeyValueRows([
-        [printOverviewFields.event, assessment.flightNumber || event.flightNumber || "N/A"],
-        [printOverviewFields.type, getEventDescription()],
-        ["Trainee", `${trainee.rank || ""} ${trainee.name || trainee.fullName || ""}`.trim()],
-        ["Course", trainee.course || "N/A"],
-        [printOverviewFields.date, reportDate || "N/A"],
-        [printOverviewFields.timing, `${formatTime$1(startTime)} - ${formatTime$1(endTime)}`],
-        [printOverviewFields.assessor, assessment.instructorName || event.instructor || "N/A"],
-        [printOverviewFields.resource, currentEvent.resourceId || event.resourceId || "N/A"],
-        [printOverviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
-        [printOverviewFields.unit, trainee.unit || "N/A"]
-      ]);
-      addSectionTitle(printReportTemplate.modules.overallAssessment.title || "Overall Assessment");
-      addKeyValueRows([
-        [printOverallFields.result, completionLabel],
-        [printOverallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : "None"],
-        [printOverallFields.overallResult, overallResultLabel],
-        [printOverallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : "Not assessed"]
-      ]);
-      addSectionTitle(printReportTemplate.modules.comments.title || "Comments");
-      addWrappedText(printCommentFieldsConfig.assessor || instructorLabel, commentFields.QFI || "N/A");
-      addWrappedText(printCommentFieldsConfig.weather, commentFields.Weather || "N/A");
-      addWrappedText(printCommentFieldsConfig.profile, commentFields.Profile || "N/A");
-      addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || "N/A");
-      addWrappedText(printCommentFieldsConfig.nest, commentFields.NEST || "N/A");
-      addSectionTitle("Assessment Matrix");
-      PT051_STRUCTURE$1.forEach((category) => {
-        ensureSpace(12);
-        doc.setFillColor(235, 240, 245);
-        doc.rect(margin, y - 4, contentWidth, 7, "F");
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(25, 40, 60);
-        doc.text(category.category, margin + 2, y + 1);
-        y += 8;
-        category.elements.forEach((element) => {
-          const score = assessment.scores.find((item) => item.element === element);
-          const gradeText = score?.grade !== null && score?.grade !== void 0 ? formatGradeOption(score.grade) : "Not assessed";
-          const commentText = score?.comment || "N/A";
-          doc.setFontSize(8.5);
-          doc.setFont("helvetica", "normal");
-          const gradeLines = doc.splitTextToSize(gradeText, 22);
-          const commentLines = doc.splitTextToSize(commentText, contentWidth - 84);
-          const rowHeight = Math.max(8, gradeLines.length * 4 + 3, commentLines.length * 4 + 3);
-          ensureSpace(rowHeight);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(20);
-          doc.text(element, margin + 2, y);
-          doc.setFont("helvetica", "normal");
-          doc.text(gradeLines, margin + 50, y);
-          doc.text(commentLines, margin + 84, y);
-          y += rowHeight;
-        });
-        y += 2;
-      });
-      addFooter();
-      const safeName = [
-        printReportName,
-        assessment.flightNumber || event.flightNumber || "Training-Report",
-        trainee.name || trainee.fullName || "Person",
-        reportDate || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
-      ].join("-").replace(/[^a-z0-9_-]+/gi, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-      doc.save(`${safeName}.pdf`);
-    } catch (error) {
-      console.error("[PT051] PDF export failed:", error);
-      await showDarkAlert("The training report PDF could not be created. Please try again or check the console for details.", "PDF Export Failed", "error");
-    }
-  };
-  const handleDeleteAssessment = async () => {
-    if (!canEditPt051) {
-      await showDarkAlert(`Your permission profile does not allow ${trainingReportName} deletion.`, "Access Denied", "error");
-      return;
-    }
-    await confirmDeleteAssessment();
-  };
-  const confirmDeleteAssessment = async () => {
-    const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?
-
-Trainee: ${assessment.traineeFullName}
-Date: ${assessment.date}
-Grade: ${assessment.overallGrade || "N/A"}
-
-This action cannot be undone.`;
-    console.log("🗑️ PT051View: Delete button clicked");
-    if (await showDarkConfirm(confirmMessage)) {
-      console.log("✅ PT051View: User confirmed deletion");
-      if (onDeleteAssessment && assessment.id) {
-        console.log("🗑️ PT051View: Calling onDeleteAssessment with ID:", assessment.id);
-        await onDeleteAssessment(assessment.id);
-        onBack();
-      } else {
-        console.log("❌ PT051View: onDeleteAssessment or assessment.id is missing");
-      }
-    } else {
-      console.log("❌ PT051View: User cancelled deletion");
-    }
-  };
-  reactExports.useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (!canEditPt051) return;
-    setIsDirty(true);
-    setSaveStatus("Saving...");
-    const timerId = setTimeout(() => {
-      handleSave(true);
-    }, 1e3);
-    return () => clearTimeout(timerId);
-  }, [assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment, canEditPt051]);
-  reactExports.useEffect(() => {
-    registerDirtyCheck(
-      () => isDirty,
-      () => handleSave(false),
-      () => {
-        setIsDirty(false);
-      }
-    );
-  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment]);
-  const gradeHeaderColors = {
-    "MIN": "bg-red-800/50",
-    "DEMO": "bg-red-950/35 border-red-500/20",
-    "0": "bg-red-950/35 border-red-500/20",
-    "1": "bg-orange-950/35 border-orange-500/20",
-    "2": "bg-amber-950/35 border-amber-500/20",
-    "3": "bg-yellow-950/30 border-yellow-500/20",
-    "4": "bg-lime-950/25 border-lime-500/20",
-    "5": "bg-emerald-950/25 border-emerald-500/20"
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto", onKeyDownCapture: stopEditableKeyPropagation, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700 sticky top-0 z-10", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: assessment.flightNumber || "",
-              onChange: (e) => setAssessment((prev) => ({ ...prev, flightNumber: e.target.value })),
-              className: "text-2xl font-bold text-white bg-transparent border-b-2 border-gray-600 focus:border-sky-500 outline-none mb-2 w-full",
-              placeholder: "Assessment Title"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 text-sm text-gray-400", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "date",
-                value: assessment.date || currentEvent.date,
-                onChange: (e) => {
-                  const newDate = e.target.value;
-                  setAssessment((prev) => ({ ...prev, date: newDate }));
-                  handleEventUpdate({ date: newDate });
-                },
-                className: "bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white focus:ring-1 focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "at" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                placeholder: "hhmm",
-                value: formatTimeToHHMM(currentEvent.startTime),
-                onChange: (e) => handleTimeInputChange(e),
-                onBlur: () => handleTimeInputBlur("startTime"),
-                onKeyDown: (e) => handleTimeInputKeyDown(e, "startTime"),
-                className: "w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white focus:ring-1 focus:ring-sky-500 text-center font-mono",
-                maxLength: "4"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                placeholder: "hhmm",
-                value: formatTimeToHHMM((currentEvent.startTime || 0) + (currentEvent.duration || 0)),
-                onChange: (e) => handleTimeInputChange(e),
-                onBlur: () => handleTimeInputBlur("endTime"),
-                onKeyDown: (e) => handleTimeInputKeyDown(e, "endTime"),
-                className: "w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white focus:ring-1 focus:ring-sky-500 text-center font-mono",
-                maxLength: "4"
-              }
-            )
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center px-3 py-1 rounded-full bg-gray-900/50 border border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-2 h-2 rounded-full mr-2 ${saveStatus === "Saved" ? "bg-green-500" : saveStatus === "Saving..." ? "bg-amber-500 animate-pulse" : "bg-red-500"}` }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-mono uppercase", children: saveStatus === "Saved" ? "All changes saved" : saveStatus })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePrint, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Print" }),
-        initialAssessment && initialAssessment.id && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
-          console.log("Editing mode enabled for PT-051:", initialAssessment.id);
-        }, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Edit" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManualSaveAndExit, disabled: !canEditPt051, title: canEditPt051 ? void 0 : `Your permission profile does not allow ${trainingReportName} editing`, className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? "opacity-50 cursor-not-allowed" : ""}`, children: "Save" }),
-        assessment.id && onDeleteAssessment && canEditPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: handleDeleteAssessment,
-            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
-            children: "Delete"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onBack, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Back" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `${trainingReportName} Assessment` })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6 w-full max-w-full mx-auto", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "lg:col-span-1 space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.event }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: event.flightNumber || "N/A" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.type }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white", children: (() => {
-              const eventNum = (event.flightNumber || "").trim();
-              console.log("🔍 Event Description Debug - Event Number:", eventNum);
-              console.log("🔍 Event Description Debug - syllabusDetails count:", syllabusDetails.length);
-              console.log("🔍 Event Description Debug - First 5 syllabus items:", syllabusDetails.slice(0, 5).map((d) => ({ id: d.id, code: d.code, title: d.title })));
-              let syllabusDetail = syllabusDetails.find((d) => {
-                const id = (d.id || "").trim();
-                const code = (d.code || "").trim();
-                if (id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase()) {
-                  console.log("🔍 Found exact match:", d);
-                  return true;
-                }
-                if (id.replace(/\s+/g, "").toLowerCase() === eventNum.replace(/\s+/g, "").toLowerCase() || code.replace(/\s+/g, "").toLowerCase() === eventNum.replace(/\s+/g, "").toLowerCase()) {
-                  console.log("🔍 Found match without spaces:", d);
-                  return true;
-                }
-                return false;
-              });
-              console.log("🔍 Event Description Debug - Found detail:", syllabusDetail);
-              return syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || "N/A";
-            })() })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Trainee" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: `${trainee.rank} ${trainee.name}` })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: "Course" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white font-semibold", children: trainee.course })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.date }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "date",
-                value: assessment.date || currentEvent.date,
-                onChange: (e) => {
-                  const newDate = e.target.value;
-                  setAssessment((prev) => ({ ...prev, date: newDate }));
-                  handleEventUpdate({ date: newDate });
-                },
-                className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:ring-1 focus:ring-sky-500"
-              }
-            ) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.timing }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("dd", { className: "mt-1 flex items-center gap-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "number",
-                  min: "0",
-                  max: "23",
-                  step: "1",
-                  value: Math.floor(currentEvent.startTime || 0),
-                  onChange: (e) => {
-                    const newStartTime = parseFloat(e.target.value);
-                    const updatedEvent = { ...currentEvent, startTime: newStartTime + currentEvent.startTime % 1 };
-                    handleEventUpdate(updatedEvent);
-                  },
-                  className: "w-12 text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-1 py-1 focus:ring-1 focus:ring-sky-500"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: ":" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "number",
-                  min: "0",
-                  max: "59",
-                  step: "15",
-                  value: Math.round(currentEvent.startTime % 1 * 60),
-                  onChange: (e) => {
-                    const minutes = parseInt(e.target.value);
-                    const hours = Math.floor(currentEvent.startTime || 0);
-                    const newStartTime = hours + minutes / 60;
-                    const updatedEvent = { ...currentEvent, startTime: newStartTime };
-                    handleEventUpdate(updatedEvent);
-                  },
-                  className: "w-12 text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-1 py-1 focus:ring-1 focus:ring-sky-500"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: "-" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "number",
-                  min: "0",
-                  max: "23",
-                  step: "1",
-                  value: Math.floor((currentEvent.startTime || 0) + (currentEvent.duration || 0)),
-                  onChange: (e) => {
-                    const endTime = parseFloat(e.target.value);
-                    const currentEndTime = (currentEvent.startTime || 0) + (currentEvent.duration || 0);
-                    const newDuration = currentEvent.duration + (endTime - currentEndTime);
-                    const updatedEvent = { ...currentEvent, duration: newDuration };
-                    handleEventUpdate(updatedEvent);
-                  },
-                  className: "w-12 text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-1 py-1 focus:ring-1 focus:ring-sky-500"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: ":" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "number",
-                  min: "0",
-                  max: "59",
-                  step: "15",
-                  value: Math.round(((currentEvent.startTime || 0) + (currentEvent.duration || 0)) % 1 * 60),
-                  onChange: (e) => {
-                    const minutes = parseInt(e.target.value);
-                    const hours = Math.floor((currentEvent.startTime || 0) + (currentEvent.duration || 0));
-                    const endTime = hours + minutes / 60;
-                    const newDuration = endTime - (currentEvent.startTime || 0);
-                    const updatedEvent = { ...currentEvent, duration: newDuration };
-                    handleEventUpdate(updatedEvent);
-                  },
-                  className: "w-12 text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-1 py-1 focus:ring-1 focus:ring-sky-500"
-                }
-              )
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.assessor }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: assessment.instructorName || "",
-                onChange: (e) => handleInstructorNameChange(e.target.value),
-                className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-full focus:ring-1 focus:ring-sky-500",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
-                  unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: instructor.name, children: [
-                    instructor.rank,
-                    " ",
-                    instructor.name
-                  ] }, instructor.idNumber))
-                ]
-              }
-            ) })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-2 space-y-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: reportTemplate.modules.overallAssessment.title }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 mb-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
-                reportTemplate.completionResults.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "radio",
-                      name: "dco-result",
-                      value: option.code,
-                      checked: dcoResult === option.code,
-                      onChange: (e) => setDcoResult(e.target.value),
-                      className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
-                ] }, option.code)),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "radio",
-                      name: "dco-result",
-                      value: "",
-                      checked: dcoResult === "",
-                      onChange: (e) => setDcoResult(e.target.value),
-                      className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 font-medium", children: "None" })
-                ] })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: overallFields.overallGrade }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-4 gap-2 rounded bg-gray-950/45 p-2 sm:grid-cols-6 xl:grid-cols-12", children: overallGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "label",
-                  {
-                    title: formatGradeOption(grade),
-                    className: `flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
-                    children: [
-                      reportTemplate.grades.showNumbers && (grade !== "No Grade" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }) : null),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: formatGradeHeaderText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-grade", value: grade, checked: overallGrade === grade, onChange: () => setOverallGrade(grade), className: `h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600` })
-                    ]
-                  },
-                  grade
-                )) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.overallResult }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "P", checked: overallResult === "P", onChange: () => setOverallResult("P"), className: "sr-only" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: reportTemplate.overallResults.passLabel })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "F", checked: overallResult === "F", onChange: () => setOverallResult("F"), className: "sr-only" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: showDoubleMarginalWarning ? reportTemplate.overallResults.doubleRepeatLabel : reportTemplate.overallResults.failLabel })
-                  ] })
-                ] })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 pt-4 border-t border-gray-600", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.groundSchoolAssessment }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: groundSchoolAssessment.isAssessment,
-                      onChange: (e) => setGroundSchoolAssessment({
-                        ...groundSchoolAssessment,
-                        isAssessment: e.target.checked,
-                        result: e.target.checked ? groundSchoolAssessment.result || 0 : void 0
-                      }),
-                      className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-gray-300", children: "Assessment" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-xs font-medium text-gray-400", children: [
-                    overallFields.result,
-                    ":"
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "number",
-                        min: "0",
-                        max: "100",
-                        value: groundSchoolAssessment.isAssessment ? groundSchoolAssessment.result ?? "" : "",
-                        onChange: (e) => {
-                          const value = parseInt(e.target.value) || 0;
-                          setGroundSchoolAssessment({
-                            ...groundSchoolAssessment,
-                            result: Math.min(100, Math.max(0, value))
-                          });
-                        },
-                        disabled: !groundSchoolAssessment.isAssessment,
-                        className: `w-16 px-2 py-1 rounded-md text-center font-semibold text-xs
-                                                    ${groundSchoolAssessment.isAssessment ? "bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-sky-500" : "bg-gray-600/50 text-gray-500 cursor-not-allowed border-gray-600"} border`,
-                        placeholder: "%"
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 text-xs", children: "%" })
-                  ] })
-                ] })
-              ] })
-            ] })
-          ] }),
-          showDoubleMarginalWarning && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-300", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Warning:" }),
-            " This grade matches the configured repeat rule for this training report. A review may be required."
-          ] })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 mb-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.assessor || instructorLabel }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: commentFields["QFI"] || "",
-                onChange: (e) => handleCommentFieldChange("QFI", e.target.value),
-                className: "w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
-                  unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: instructor.name, children: [
-                    instructor.rank,
-                    " ",
-                    instructor.name
-                  ] }, instructor.idNumber))
-                ]
-              }
-            ) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.weather }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
-              {
-                value: commentFields["Weather"],
-                onChange: (e) => handleCommentFieldChange("Weather", e.target.value),
-                rows: 1,
-                className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
-                style: { minHeight: "42px" },
-                onInput: (e) => {
-                  e.currentTarget.style.height = "auto";
-                  e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                },
-                ref: (el) => {
-                  if (el) {
-                    el.style.height = "auto";
-                    el.style.height = el.scrollHeight + "px";
-                  }
-                }
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.nest }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: commentFields["NEST"],
-                onChange: (e) => handleCommentFieldChange("NEST", e.target.value),
-                maxLength: 8,
-                className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
-              }
-            )
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.profile }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
-              {
-                value: commentFields["Profile"],
-                onChange: (e) => handleCommentFieldChange("Profile", e.target.value),
-                rows: 4,
-                className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
-                style: { minHeight: "100px" },
-                onInput: (e) => {
-                  e.currentTarget.style.height = "auto";
-                  e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                },
-                ref: (el) => {
-                  if (el) {
-                    el.style.height = "auto";
-                    el.style.height = el.scrollHeight + "px";
-                  }
-                }
-              }
-            )
-          ] }, "Profile"),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.overall }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
-              {
-                value: commentFields["Overall"],
-                onChange: (e) => handleCommentFieldChange("Overall", e.target.value),
-                rows: 6,
-                className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
-                style: { minHeight: "150px" },
-                onInput: (e) => {
-                  e.currentTarget.style.height = "auto";
-                  e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                },
-                ref: (el) => {
-                  if (el) {
-                    el.style.height = "auto";
-                    el.style.height = el.scrollHeight + "px";
-                  }
-                }
-              }
-            )
-          ] }, "Overall")
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: PT051_STRUCTURE$1.map((category) => {
-        const isGroundEvent = event.type === "ground";
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: `p-4 border rounded-lg ${isGroundEvent ? "border-gray-800 bg-gray-800/30 opacity-50" : "border-gray-700"}`, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: `px-2 text-sm font-semibold ${isGroundEvent ? "text-gray-500" : "text-gray-300"}`, children: category.category }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
-              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[40px]" }, String(g))),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[480px]" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
-              assessmentGradeOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "th",
-                {
-                  title: formatGradeOption(g),
-                  className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
-                },
-                String(g)
-              )),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
-              const score = assessment.scores.find((s) => s.element === element);
-              const commentCell = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "textarea",
-                  {
-                    value: score?.comment || "",
-                    onChange: (e) => handleCommentChange(element, e.target.value),
-                    rows: 1,
-                    placeholder: "Comments...",
-                    className: "w-full bg-gray-800 border border-gray-600 rounded p-2 pr-8 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
-                    style: { minHeight: "42px" },
-                    onInput: (e) => {
-                      e.currentTarget.style.height = "auto";
-                      e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                    },
-                    ref: (el) => {
-                      if (el) {
-                        el.style.height = "auto";
-                        el.style.height = el.scrollHeight + "px";
-                      }
-                    }
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => handleOpenPhraseSelector(element),
-                    className: "absolute top-4 right-2 text-gray-400 hover:text-sky-400 p-1",
-                    title: "Insert from Phrase Bank",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z", clipRule: "evenodd" })
-                    ] })
-                  }
-                )
-              ] });
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
-                assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { title: formatGradeOption(grade), className: `border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || "border-gray-800"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `flex min-h-[36px] items-center justify-center rounded ${isGroundEvent ? "cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "radio",
-                      name: element,
-                      value: String(grade),
-                      checked: score?.grade === grade,
-                      onChange: () => handleGradeChange(element, grade),
-                      disabled: isGroundEvent,
-                      className: `h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? "opacity-50 cursor-not-allowed" : ""}`
-                    }
-                  ),
-                  reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
-                ] }) }) }, String(grade))),
-                commentCell()
-              ] }, element);
-            }) })
-          ] }) })
-        ] }, category.category);
-      }) })
-    ] }),
-    showPhraseModal && currentPhraseElement && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      PhraseSelector,
-      {
-        element: currentPhraseElement,
-        onClose: () => setShowPhraseModal(false),
-        onInsert: handleInsertPhrases,
-        phraseBank
-      }
-    )
-  ] });
 };
 const formatDecimalTime = (time) => {
   if (!Number.isFinite(Number(time))) return "-";
@@ -73220,7 +73388,7 @@ const App = () => {
     () => getUnitTrainingReportTerminology(platformConfig, activeTrainingReportUnitCode),
     [activeTrainingReportUnitCode, platformConfig]
   );
-  reactExports.useMemo(
+  const trainingReportTemplate = reactExports.useMemo(
     () => getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode),
     [activeTrainingReportUnitCode, platformConfig]
   );
@@ -76518,6 +76686,23 @@ ${error instanceof Error ? error.message : String(error)}`,
       assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
     ].filter(Boolean).join(", ");
     logAudit("Mass Completion", "Edit", `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+  };
+  const onDeletePT051Assessment = (assessmentId, eventId, traineeFullName) => {
+    setPt051Assessments((prev) => {
+      const updated = new Map(prev);
+      updated.delete(`pt051-${eventId}-${traineeFullName}`);
+      Array.from(updated.entries()).forEach(([key, assessment]) => {
+        if (assessment.traineeFullName === traineeFullName && (assessment.eventId === eventId || assessment.id === assessmentId)) {
+          updated.delete(key);
+        }
+      });
+      return updated;
+    });
+    setLoadedPt051Keys((prev) => {
+      const updated = new Set(prev);
+      updated.delete(`${eventId}-${traineeFullName}`);
+      return updated;
+    });
   };
   const findAvailableResourceId = (eventToPlace, existingEvents) => {
     if (eventToPlace.type === "deployment") {
@@ -81744,6 +81929,11 @@ ${error instanceof Error ? error.message : String(error)}`,
             onNavigateToCurrency: handleNavigateToCurrency,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
             onSelectPt051ForEvent: openPt051FromTraineeProfile,
+            onSavePt051Assessment: onSavePT051Assessment,
+            onDeletePt051Assessment: onDeletePT051Assessment,
+            instructorsData,
+            registerDirtyCheck,
+            phraseBank,
             canViewTraineeProfile,
             canViewTraineePt051,
             canEditTraineePt051,
@@ -81859,6 +82049,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             resourceDisplayNames,
             personnelDisplaySettings,
             trainingReportTerminology,
+            trainingReportTemplate,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,
@@ -81892,6 +82083,11 @@ ${error instanceof Error ? error.message : String(error)}`,
             onNavigateToCurrency: handleNavigateToCurrency,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
             onSelectPt051ForEvent: openPt051FromTraineeProfile,
+            onSavePt051Assessment: onSavePT051Assessment,
+            onDeletePt051Assessment: onDeletePT051Assessment,
+            instructorsData,
+            registerDirtyCheck,
+            phraseBank,
             canViewTraineeProfile,
             canViewTraineePt051,
             canEditTraineePt051,
@@ -81992,6 +82188,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             resourceDisplayNames,
             personnelDisplaySettings,
             trainingReportTerminology,
+            trainingReportTemplate,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2

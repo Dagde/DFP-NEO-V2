@@ -3,7 +3,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, Pt051Assessment } from '../types';
+import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, Pt051Assessment, PhraseBank } from '../types';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
 import RestoreCourseConfirmation from './RestoreCourseConfirmation';
 import FlightInfoFlyout from './FlightInfoFlyout';
@@ -12,7 +12,7 @@ import DeleteTraineeConfirmation from './DeleteTraineeConfirmation';
 import CourseEditFlyout from './CourseEditFlyout';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
-import type { TrainingReportTerminology } from '../utils/trainingReportTerminology';
+import type { TrainingReportTemplate, TrainingReportTerminology } from '../utils/trainingReportTerminology';
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
@@ -35,6 +35,11 @@ interface CourseRosterViewProps {
     onNavigateToCurrency: (person: Instructor | Trainee) => void;
     onAddRemedialPackage: (trainee: Trainee) => void;
     onSelectPt051ForEvent?: (trainee: Trainee, assessment: Pt051Assessment) => void;
+    onSavePt051Assessment?: (assessment: Pt051Assessment) => void;
+    onDeletePt051Assessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
+    instructorsData?: Instructor[];
+    registerDirtyCheck?: (isDirty: () => boolean, onSave: () => void, onDiscard: () => void) => void;
+    phraseBank?: PhraseBank;
     locations: string[];
     units: string[];
     selectedPersonForProfile?: Trainee | null;
@@ -71,6 +76,7 @@ interface CourseRosterViewProps {
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
     trainingReportTerminology?: TrainingReportTerminology;
+    trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
     platformConfig?: PlatformConfig | null;
 }
 
@@ -117,6 +123,11 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onNavigateToCurrency,
     onAddRemedialPackage,
     onSelectPt051ForEvent,
+    onSavePt051Assessment,
+    onDeletePt051Assessment,
+    instructorsData = [],
+    registerDirtyCheck,
+    phraseBank,
     locations,
     units,
     selectedPersonForProfile,
@@ -152,6 +163,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
     trainingReportTerminology,
+    trainingReportTemplate,
     platformConfig = null,
 }) => {
     const { isFrozen } = useSystemFreeze();
@@ -532,6 +544,12 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!,
                         assessment
                     )}
+                    onSavePt051Assessment={onSavePt051Assessment}
+                    onDeletePt051Assessment={onDeletePt051Assessment}
+                    instructorsData={instructorsData}
+                    registerDirtyCheck={registerDirtyCheck}
+                    phraseBank={phraseBank}
+                    trainingReportTemplate={trainingReportTemplate}
                     onAccessDenied={onAccessDenied}
                 />
             )}

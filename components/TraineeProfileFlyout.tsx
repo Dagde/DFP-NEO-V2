@@ -2,7 +2,7 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, Pt051Assessment } from '../types';
+import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, Pt051Assessment, PhraseBank } from '../types';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import PauseConfirmationFlyout from './PauseConfirmationFlyout';
 import ScheduleWarningFlyout from './ScheduleWarningFlyout';
@@ -13,6 +13,7 @@ import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 import HateSheetView from './HateSheetView';
 import TraineeLmpView from './TraineeLmpView';
+import PT051View from './PT051View';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -21,7 +22,11 @@ import {
 } from '../utils/personnelDisplaySettings';
 import {
   DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+  DEFAULT_TRAINING_REPORT_TEMPLATE,
+  getUnitTrainingReportPhraseBank,
+  getUnitTrainingReportTemplate,
   type TrainingReportTerminology,
+  type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
@@ -36,6 +41,7 @@ import {
   filterMasterLmpCodesForAccess,
   type PlatformConfig,
 } from '../utils/platformConfigService';
+import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -69,8 +75,14 @@ interface TraineeProfileFlyoutProps {
   pt051PerformanceLoading?: boolean;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   userProfile?: any;
-  initialActiveTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null;
+  initialActiveTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null;
   onSelectPt051ForEvent?: (assessment: Pt051Assessment) => void;
+  onSavePt051Assessment?: (assessment: Pt051Assessment) => void;
+  onDeletePt051Assessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
+  instructorsData?: Instructor[];
+  registerDirtyCheck?: (isDirty: () => boolean, onSave: () => void, onDiscard: () => void) => void;
+  phraseBank?: PhraseBank;
+  trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
   canViewPt051?: boolean;
   canEditPt051?: boolean;
   canViewIndividualLmp?: boolean;
@@ -310,6 +322,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   userProfile,
   initialActiveTab = null,
   onSelectPt051ForEvent,
+  onSavePt051Assessment,
+  onDeletePt051Assessment,
+  instructorsData = [],
+  registerDirtyCheck = () => {},
+  phraseBank = DEFAULT_PHRASE_BANK,
+  trainingReportTemplate = null,
   canViewPt051 = true,
   canEditPt051 = true,
   canViewIndividualLmp = true,
@@ -346,7 +364,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 
     // Tab state — null means no tab open
-    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null>(initialActiveTab);
+    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null>(initialActiveTab);
+    const [inlinePt051Assessment, setInlinePt051Assessment] = useState<Pt051Assessment | null>(null);
+    const [inlinePt051Event, setInlinePt051Event] = useState<ScheduleEvent | null>(null);
     // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
     const [currencyEditState, setCurrencyEditState] = useState<{
       isEditing: boolean; isSaving: boolean;
@@ -358,10 +378,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     // Audit flyout visibility
     const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
-    const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
+    const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab || (tab === 'hatesheet' && activeTab === 'pt051') ? ' active' : ''}`;
     // Ref for scrollable content area - used to scroll to top when a tab opens
     const contentScrollRef = useRef<HTMLDivElement>(null);
     const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
+    const activeTrainingReportUnitCode = trainee.unit || '';
+    const activeTrainingReportTemplate = trainingReportTemplate
+      || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode)
+      || DEFAULT_TRAINING_REPORT_TEMPLATE;
+    const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
 
     const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => {
       const next = prev === tab ? null : tab;
@@ -806,6 +831,110 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
     };
 
+    const buildPt051EventFromAssessment = (assessment: Pt051Assessment): ScheduleEvent => {
+        const scheduledEvent = events.find(e => e.id === assessment.eventId)
+            || events.find(e =>
+                e.flightNumber === assessment.flightNumber &&
+                (!assessment.date || !e.date || e.date === assessment.date) &&
+                (e.student === trainee.fullName || e.pilot === trainee.fullName || String(e.crew || '').includes(trainee.fullName))
+            );
+        if (scheduledEvent) return scheduledEvent;
+
+        const flightNum = assessment.flightNumber || '';
+        const eventType: ScheduleEvent['type'] = flightNum.includes('CPT') || flightNum.includes('Cpt')
+            ? 'cpt'
+            : flightNum.includes('MB') || flightNum.includes('GS') || flightNum.includes('Ground') || flightNum.includes('GROUND')
+                ? 'ground'
+                : 'flight';
+
+        return {
+            id: assessment.eventId || `pt051-${trainee.idNumber}-${flightNum}-${assessment.date || 'undated'}`,
+            flightNumber: flightNum,
+            date: assessment.date,
+            startTime: assessment.startTime ?? 8,
+            duration: assessment.duration ?? 1,
+            instructor: assessment.instructorName || '',
+            student: trainee.fullName,
+            syllabus: flightNum,
+            aircraft: '',
+            type: eventType,
+            status: 'Scheduled',
+            notes: '',
+            crew: []
+        };
+    };
+
+    const openInlinePt051 = (assessment: Pt051Assessment) => {
+        if (!canViewPt051) {
+            onAccessDenied?.('PT-051 record');
+            return;
+        }
+        setInlinePt051Assessment(assessment);
+        setInlinePt051Event(buildPt051EventFromAssessment(assessment));
+        setActiveTab('pt051');
+        setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
+    };
+
+    const persistInlinePt051Assessment = async (assessment: Pt051Assessment, isAutoSave?: boolean) => {
+        if (!canEditPt051) {
+            if (!isAutoSave) onAccessDenied?.('save PT-051 assessment');
+            return;
+        }
+        const eventId = assessment.eventId || inlinePt051Event?.id || `pt051-${trainee.idNumber}-${assessment.flightNumber}-${assessment.date || 'undated'}`;
+        const normalizedAssessment: Pt051Assessment = {
+            ...assessment,
+            id: assessment.id || `pt051-${eventId}-${trainee.fullName}`,
+            eventId,
+            traineeFullName: trainee.fullName,
+        };
+        onSavePt051Assessment?.(normalizedAssessment);
+        setInlinePt051Assessment(normalizedAssessment);
+
+        const traineeId = (trainee as any).id;
+        if (!traineeId) {
+            if (!isAutoSave) {
+                alert(`Training Report could not be saved: trainee database record not found for ${trainee.fullName}.`);
+            }
+            return;
+        }
+
+        const response = await fetch('/api/trainee-performance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...normalizedAssessment,
+                traineeId,
+                course: trainee.course || null,
+                createdBy: currentUserId || null,
+            }),
+        });
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            if (!isAutoSave) alert(`Training Report could not be saved to the database.\n\n${errorText || `HTTP ${response.status}`}`);
+            throw new Error(errorText || `Failed to save Training Report (${response.status})`);
+        }
+    };
+
+    const deleteInlinePt051Assessment = async (assessmentId: string) => {
+        if (!canEditPt051) {
+            onAccessDenied?.('delete PT-051 assessment');
+            return;
+        }
+        const eventId = inlinePt051Assessment?.eventId || inlinePt051Event?.id || assessmentId;
+        const response = await fetch(`/api/trainee-performance/${encodeURIComponent(eventId)}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            alert(`Training Report could not be deleted from the database.\n\n${errorText || `HTTP ${response.status}`}`);
+            throw new Error(errorText || `Failed to delete Training Report (${response.status})`);
+        }
+        onDeletePt051Assessment?.(assessmentId, eventId, trainee.fullName);
+        setInlinePt051Assessment(null);
+        setInlinePt051Event(null);
+        setActiveTab('hatesheet');
+    };
+
     const handleIndividualLMPClick = () => {
         if (!canViewIndividualLmp) {
             onAccessDenied?.('Individual LMP');
@@ -1053,7 +1182,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                   <div
                     ref={contentScrollRef}
                     className={`flex-1 min-h-0 p-4 relative ${
-                      activeTab === 'lmp'
+                      activeTab === 'lmp' || activeTab === 'pt051'
                         ? 'overflow-hidden flex flex-col'
                         : 'overflow-y-auto space-y-3'
                     }`}
@@ -1240,13 +1369,62 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             refreshEvents={() => {}}
                             onSelectLmpScore={() => {}}
                             onSelectPt051={(assessment: Pt051Assessment) => {
-                              if (onSelectPt051ForEvent) onSelectPt051ForEvent(assessment);
+                              openInlinePt051(assessment);
+                              if (onSelectPt051ForEvent) {
+                                logAudit('Performance History', 'View', `Opened embedded Training Report for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`);
+                              }
                             }}
                             onBackToRoster={() => setActiveTab(null)}
                             onInsertPt051={() => {}}
                             canEditPt051={canEditPt051}
                             isLoading={pt051PerformanceLoading}
                             trainingReportTerminology={trainingReportTerminology}
+                          />
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── TRAINING REPORT DETAIL TAB (inline within trainee profile) ── */}
+                    {activeTab === 'pt051' && inlinePt051Assessment && inlinePt051Event && (() => {
+                      const assessmentKey = `pt051-${inlinePt051Assessment.eventId}-${trainee.fullName}`;
+                      const currentAssessment = pt051Assessments?.get(assessmentKey)
+                        || Array.from(pt051Assessments?.values() || []).find((assessment: Pt051Assessment) =>
+                          assessment.traineeFullName === trainee.fullName &&
+                          (
+                            assessment.eventId === inlinePt051Assessment.eventId ||
+                            (
+                              assessment.flightNumber === inlinePt051Assessment.flightNumber &&
+                              (!inlinePt051Assessment.date || !assessment.date || assessment.date === inlinePt051Assessment.date)
+                            )
+                          )
+                        )
+                        || inlinePt051Assessment;
+                      return (
+                        <div className={card3d + " p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
+                          <PT051View
+                            key={`embedded-${inlinePt051Event.id}-${trainee.fullName}-${currentAssessment?.overallGrade ?? 'none'}`}
+                            trainee={trainee}
+                            event={inlinePt051Event}
+                            initialAssessment={currentAssessment}
+                            instructorLabel="QFI"
+                            trainingReportTerminology={trainingReportTerminology}
+                            trainingReportTemplate={activeTrainingReportTemplate}
+                            trainingReportUnitCode={activeTrainingReportUnitCode}
+                            trainingReportContextUnitCode={activeTrainingReportUnitCode}
+                            onBack={() => setActiveTab('hatesheet')}
+                            onEventUpdate={setInlinePt051Event}
+                            onDeleteAssessment={deleteInlinePt051Assessment}
+                            onSave={persistInlinePt051Assessment}
+                            instructors={instructorsData}
+                            pt051Assessments={pt051Assessments || new Map()}
+                            events={events}
+                            lmpScores={scores.get(trainee.fullName) || []}
+                            syllabusDetails={syllabusDetails}
+                            registerDirtyCheck={registerDirtyCheck}
+                            phraseBank={activeTrainingReportPhraseBank}
+                            currentUserPin={currentUserId || '1111'}
+                            canEditPt051={canEditPt051}
+                            embeddedInProfile
                           />
                         </div>
                       );
@@ -1274,7 +1452,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     })()}
 
                     {/* ── SECTION 1: MAIN PROFILE CARD ── */}
-                    <div className={card3d + ` p-3 ${activeTab === 'lmp' ? 'hidden' : ''}`} style={card3dStyle}>
+                    <div className={card3d + ` p-3 ${activeTab === 'lmp' || activeTab === 'pt051' ? 'hidden' : ''}`} style={card3dStyle}>
                       {isEditing ? (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between border-b border-gray-700/70 pb-2">
@@ -1420,7 +1598,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
 
                       {/* ─── SECTION 2: ASSIGNED INSTRUCTORS (always visible, not editing) ─── */}
-                      {activeTab !== 'lmp' && !isEditing && !isCreating && (
+                      {activeTab !== 'lmp' && activeTab !== 'pt051' && !isEditing && !isCreating && (
                         <div className={card3d + " p-3"} style={card3dStyle}>
                           <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Instructors</h4>
                           <div className="grid grid-cols-2 gap-3">
@@ -1507,7 +1685,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       )}
 
                       {/* ─── SECTION 3: LOGBOOK VIEW (always visible, not editing) ─── */}
-                      {activeTab !== 'lmp' && !isEditing && (
+                      {activeTab !== 'lmp' && activeTab !== 'pt051' && !isEditing && (
                         <div className={card3d + " p-3"} style={card3dStyle}>
                           <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience ({resourceDisplayNames.aircraft} only)</h4>
                           <div className="flex gap-2">

@@ -18528,6 +18528,27 @@ const App: React.FC = () => {
         logAudit('Mass Completion', 'Edit', `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
     };
 
+    const onDeletePT051Assessment = (assessmentId: string, eventId: string, traineeFullName: string) => {
+        setPt051Assessments(prev => {
+            const updated = new Map(prev);
+            updated.delete(`pt051-${eventId}-${traineeFullName}`);
+            Array.from(updated.entries()).forEach(([key, assessment]) => {
+                if (
+                    assessment.traineeFullName === traineeFullName &&
+                    (assessment.eventId === eventId || assessment.id === assessmentId)
+                ) {
+                    updated.delete(key);
+                }
+            });
+            return updated;
+        });
+        setLoadedPt051Keys(prev => {
+            const updated = new Set(prev);
+            updated.delete(`${eventId}-${traineeFullName}`);
+            return updated;
+        });
+    };
+
     const findAvailableResourceId = (eventToPlace: ScheduleEvent, existingEvents: ScheduleEvent[]): string => {
         // Handle deployment events - find an available Deployed resource
         if (eventToPlace.type === 'deployment') {
@@ -25066,6 +25087,11 @@ appliedUpdates.forEach(update => {
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
                             onSelectPt051ForEvent={openPt051FromTraineeProfile}
+                            onSavePt051Assessment={onSavePT051Assessment}
+                            onDeletePt051Assessment={onDeletePT051Assessment}
+                            instructorsData={instructorsData}
+                            registerDirtyCheck={registerDirtyCheck}
+                            phraseBank={phraseBank}
                             canViewTraineeProfile={canViewTraineeProfile}
                             canViewTraineePt051={canViewTraineePt051}
                             canEditTraineePt051={canEditTraineePt051}
@@ -25194,6 +25220,7 @@ appliedUpdates.forEach(update => {
                             resourceDisplayNames={resourceDisplayNames}
                             personnelDisplaySettings={personnelDisplaySettings}
                             trainingReportTerminology={trainingReportTerminology}
+                            trainingReportTemplate={trainingReportTemplate}
                             pt051Assessments={pt051Assessments}
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
@@ -25223,6 +25250,11 @@ appliedUpdates.forEach(update => {
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
                             onSelectPt051ForEvent={openPt051FromTraineeProfile}
+                            onSavePt051Assessment={onSavePT051Assessment}
+                            onDeletePt051Assessment={onDeletePT051Assessment}
+                            instructorsData={instructorsData}
+                            registerDirtyCheck={registerDirtyCheck}
+                            phraseBank={phraseBank}
                             canViewTraineeProfile={canViewTraineeProfile}
                             canViewTraineePt051={canViewTraineePt051}
                             canEditTraineePt051={canEditTraineePt051}
@@ -25343,6 +25375,7 @@ appliedUpdates.forEach(update => {
                             resourceDisplayNames={resourceDisplayNames}
                             personnelDisplaySettings={personnelDisplaySettings}
                             trainingReportTerminology={trainingReportTerminology}
+                            trainingReportTemplate={trainingReportTemplate}
                             pt051Assessments={pt051Assessments}
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}

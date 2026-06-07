@@ -28,6 +28,11 @@ interface TraineeViewProps {
   onNavigateToCurrency: (person: any) => void;
   onAddRemedialPackage: (trainee: any) => void;
   onSelectPt051ForEvent?: (trainee: any, assessment: any) => void;
+  onSavePt051Assessment?: (assessment: any) => void;
+  onDeletePt051Assessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
+  instructorsData?: any[];
+  registerDirtyCheck?: (isDirty: () => boolean, onSave: () => void, onDiscard: () => void) => void;
+  phraseBank?: any;
   locations: string[];
   units: string[];
   selectedPersonForProfile: any;
@@ -63,6 +68,7 @@ interface TraineeViewProps {
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
   trainingReportTerminology?: TrainingReportTerminology;
+  trainingReportTemplate?: any;
   platformConfig?: PlatformConfig | null;
 
   // Props for TraineeScheduleView
@@ -143,6 +149,11 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onNavigateToCurrency={props.onNavigateToCurrency}
             onAddRemedialPackage={props.onAddRemedialPackage}
             onSelectPt051ForEvent={props.onSelectPt051ForEvent}
+            onSavePt051Assessment={props.onSavePt051Assessment}
+            onDeletePt051Assessment={props.onDeletePt051Assessment}
+            instructorsData={props.instructorsData}
+            registerDirtyCheck={props.registerDirtyCheck}
+            phraseBank={props.phraseBank}
             locations={props.locations}
             units={props.units}
             platformConfig={props.platformConfig}
@@ -169,6 +180,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             resourceDisplayNames={props.resourceDisplayNames}
             personnelDisplaySettings={props.personnelDisplaySettings}
             trainingReportTerminology={props.trainingReportTerminology}
+            trainingReportTemplate={props.trainingReportTemplate}
             pt051Assessments={props.pt051Assessments}
             pt051PerformanceLoading={props.pt051PerformanceLoading}
             userProfile={props.userProfile}
