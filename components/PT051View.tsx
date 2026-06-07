@@ -228,6 +228,11 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         if (grade === 'DEMO' || grade === 'MIN') return String(grade);
         return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
     };
+    const formatGradeNumber = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
+        if (grade === 'No Grade') return 'None';
+        if (grade === 'DEMO' || grade === 'MIN') return String(grade);
+        return String(grade);
+    };
     const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
         const target = event.target as HTMLElement | null;
         if (
@@ -1154,32 +1159,93 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                 <thead>
                                     <tr>
                                         <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Element</th>
-                                        {isLongGradeScale ? (
-                                            <th colSpan={assessmentGradeOptions.length} className="px-2 pb-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-500">
-                                                Assessment Scale
+                                        {assessmentGradeOptions.map(g => (
+                                            <th
+                                                key={String(g)}
+                                                title={formatGradeOption(g)}
+                                                className={`${isLongGradeScale ? 'px-1 pb-2 text-[8px] leading-tight' : 'px-1 pb-2 text-[10px] leading-tight'} text-center font-black uppercase text-gray-400 whitespace-normal break-words`}
+                                            >
+                                                {formatGradeText(g)}
                                             </th>
-                                        ) : (
-                                            <>
-                                            {assessmentGradeOptions.map(g => (
-                                                <th key={String(g)} title={formatGradeOption(g)} className="px-1 pb-2 text-center text-[10px] font-black uppercase text-gray-400">
-                                                    {reportTemplate.grades.showNumbers ? formatGradeOption(g) : formatGradeText(g)}
-                                                </th>
-                                            ))}
-                                            </>
-                                        )}
+                                        ))}
                                         <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {category.elements.map(element => {
                                         const score = assessment.scores.find(s => s.element === element);
+                                        const commentCell = (colSpan?: number) => (
+                                            <td colSpan={colSpan} className="relative py-3 pl-3 pr-2 align-middle">
+                                                <textarea
+                                                    value={score?.comment || ''}
+                                                    onChange={(e) => handleCommentChange(element, e.target.value)}
+                                                    rows={1}
+                                                    placeholder="Comments..."
+                                                    className="w-full bg-gray-800 border border-gray-600 rounded p-2 pr-8 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
+                                                    style={{ minHeight: '42px' }}
+                                                    onInput={(e) => {
+                                                        e.currentTarget.style.height = 'auto';
+                                                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                                    }}
+                                                    ref={(el) => {
+                                                        if (el) {
+                                                            el.style.height = 'auto';
+                                                            el.style.height = el.scrollHeight + 'px';
+                                                        }
+                                                    }}
+                                                />
+                                                <button
+                                                  onClick={() => handleOpenPhraseSelector(element)}
+                                                  className="absolute top-4 right-2 text-gray-400 hover:text-sky-400 p-1"
+                                                  title="Insert from Phrase Bank"
+                                                >
+                                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                                                    <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z" clipRule="evenodd" />
+                                                  </svg>
+                                                </button>
+                                            </td>
+                                        );
+                                        if (isLongGradeScale) {
+                                            return (
+                                                <React.Fragment key={element}>
+                                                    <tr className="border-t border-gray-700">
+                                                        <td rowSpan={2} className="py-3 pr-3 align-middle font-semibold text-white">{element}</td>
+                                                        {assessmentGradeOptions.map(grade => (
+                                                            <td key={String(grade)} title={formatGradeOption(grade)} className={`border-l border-gray-800 px-1 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || 'border-gray-800'}`}>
+                                                                <label className={`min-h-[46px] flex items-center justify-center rounded ${isGroundEvent ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-white/5'}`}>
+                                                                    <span className="flex flex-col items-center justify-center gap-1">
+                                                                        <input
+                                                                            type="radio"
+                                                                            name={element}
+                                                                            value={String(grade)}
+                                                                            checked={score?.grade === grade}
+                                                                            onChange={() => handleGradeChange(element, grade as Pt051Grade)}
+                                                                            disabled={isGroundEvent}
+                                                                            className={`h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                        />
+                                                                        {reportTemplate.grades.showNumbers && (
+                                                                            <span className="text-[10px] font-bold leading-none text-gray-500">{formatGradeNumber(grade)}</span>
+                                                                        )}
+                                                                    </span>
+                                                                </label>
+                                                            </td>
+                                                        ))}
+                                                        <td className="py-3 pl-3 pr-2 align-middle text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</td>
+                                                    </tr>
+                                                    <tr className="border-t border-gray-800/60">
+                                                        {commentCell(assessmentGradeOptions.length + 1)}
+                                                    </tr>
+                                                </React.Fragment>
+                                            );
+                                        }
                                         return (
                                             <tr key={element} className="border-t border-gray-700">
                                                 <td className="py-3 pr-3 align-middle font-semibold text-white">{element}</td>
                                                 {assessmentGradeOptions.map(grade => {
                                                     return (
                                                         <td key={String(grade)} title={formatGradeOption(grade)} className={`border-l border-gray-800 px-1 py-3 text-center align-middle ${gradeHeaderColors[String(grade)] || 'border-gray-800'}`}>
-                                                            <label className={`${isLongGradeScale ? 'min-h-[76px] flex-col justify-start gap-2 pt-2' : 'min-h-[36px] flex-row gap-1'} flex items-center rounded ${isGroundEvent ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-white/5'}`}>
+                                                            <label className={`min-h-[36px] flex flex-col items-center justify-center gap-1 rounded ${isGroundEvent ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-white/5'}`}>
                                                                 <input 
                                                                     type="radio"
                                                                     name={element}
@@ -1189,43 +1255,14 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                                     disabled={isGroundEvent}
                                                                     className={`h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                 />
-                                                                <span className={`${isLongGradeScale ? 'max-w-full whitespace-normal break-words text-[8px] uppercase leading-tight' : 'text-[9px] leading-none'} font-bold text-gray-500`}>
-                                                                    {reportTemplate.grades.showNumbers ? formatGradeOption(grade) : formatGradeText(grade)}
-                                                                </span>
+                                                                {reportTemplate.grades.showNumbers && (
+                                                                    <span className="text-[10px] font-bold leading-none text-gray-500">{formatGradeNumber(grade)}</span>
+                                                                )}
                                                             </label>
                                                         </td>
                                                     );
                                                 })}
-                                                <td className="relative py-3 pl-3 pr-2 align-middle">
-                                                    <textarea
-                                                        value={score?.comment || ''}
-                                                        onChange={(e) => handleCommentChange(element, e.target.value)}
-                                                        rows={1}
-                                                        placeholder="Comments..."
-                                                        className="w-full bg-gray-800 border border-gray-600 rounded p-2 pr-8 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
-                                                        style={{ minHeight: '42px' }}
-                                                        onInput={(e) => {
-                                                            e.currentTarget.style.height = 'auto';
-                                                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                                        }}
-                                                        ref={(el) => {
-                                                            if (el) {
-                                                                el.style.height = 'auto';
-                                                                el.style.height = el.scrollHeight + 'px';
-                                                            }
-                                                        }}
-                                                    />
-                                                    <button 
-                                                      onClick={() => handleOpenPhraseSelector(element)}
-                                                      className="absolute top-4 right-2 text-gray-400 hover:text-sky-400 p-1"
-                                                      title="Insert from Phrase Bank"
-                                                    >
-                                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                                                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z" clipRule="evenodd" />
-                                                      </svg>
-                                                    </button>
-                                                </td>
+                                                {commentCell()}
                                             </tr>
                                         );
                                     })}
