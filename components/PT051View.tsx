@@ -231,12 +231,15 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const formatGradeHeaderText = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
         const label = formatGradeText(grade);
         const compactLabels: Record<string, string> = {
-            Unsatisfactory: 'Unsat',
+            Unsatisfactory: 'Un-sat',
+            Marginal: 'Marginal',
             'Low Satisfactory': 'Low Sat',
             Satisfactory: 'Sat',
             'High Satisfactory': 'High Sat',
+            Excellent: 'Excel',
             'High Excellent': 'High Excel',
             Outstanding: 'Outstand',
+            Exceptional: 'Except',
         };
         return compactLabels[label] || label;
     };
@@ -973,8 +976,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                 {reportTemplate.grades.showNumbers && (
                                                     <span className="text-[11px] font-black uppercase leading-none text-white">{formatGradeValue(grade)}</span>
                                                 )}
-                                                <span className={`${reportTemplate.grades.showNumbers ? 'text-[9px]' : 'text-[10px]'} line-clamp-2 max-w-full font-semibold leading-tight text-gray-300`}>
-                                                    {formatGradeText(grade)}
+                                                <span className="flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300">
+                                                    {formatGradeHeaderText(grade).split(/\s+/).map((word, index) => (
+                                                        <span key={`${word}-${index}`}>{word}</span>
+                                                    ))}
                                                 </span>
                                                 <input type="radio" name="overall-grade" value={grade} checked={overallGrade === grade} onChange={() => setOverallGrade(grade)} className={`h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600`} />
                                             </label>

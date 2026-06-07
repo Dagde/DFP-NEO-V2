@@ -37292,12 +37292,15 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const formatGradeHeaderText = (grade) => {
     const label = formatGradeText(grade);
     const compactLabels = {
-      Unsatisfactory: "Unsat",
+      Unsatisfactory: "Un-sat",
+      Marginal: "Marginal",
       "Low Satisfactory": "Low Sat",
       Satisfactory: "Sat",
       "High Satisfactory": "High Sat",
+      Excellent: "Excel",
       "High Excellent": "High Excel",
-      Outstanding: "Outstand"
+      Outstanding: "Outstand",
+      Exceptional: "Except"
     };
     return compactLabels[label] || label;
   };
@@ -37965,7 +37968,7 @@ This action cannot be undone.`;
                     className: `flex min-h-[64px] cursor-pointer flex-col items-center justify-between rounded border px-1.5 py-2 text-center transition ${overallGrade === grade ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-gray-500"}`,
                     children: [
                       reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: formatGradeValue(grade) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${reportTemplate.grades.showNumbers ? "text-[9px]" : "text-[10px]"} line-clamp-2 max-w-full font-semibold leading-tight text-gray-300`, children: formatGradeText(grade) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: formatGradeHeaderText(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-grade", value: grade, checked: overallGrade === grade, onChange: () => setOverallGrade(grade), className: `h-4 w-4 ${getOverallRadioAccentColor(grade)} bg-gray-600` })
                     ]
                   },
