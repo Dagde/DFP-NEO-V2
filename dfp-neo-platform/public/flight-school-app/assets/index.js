@@ -48835,6 +48835,19 @@ const PlatformConfigurationSettings = ({
     primaryOrganisationSettings.trainingReportTemplate || null,
     primaryOrganisationSettings.trainingReportTerminology || null
   );
+  const describeTrainingReportGrades = (grades) => {
+    if (!Array.isArray(grades) || grades.length === 0) return "No grades selected";
+    return grades.map((grade) => {
+      const option = trainingReportTemplate.grades.options.find((item) => item.value === grade);
+      return option ? `${grade} - ${option.label}` : String(grade);
+    }).join(", ");
+  };
+  const consecutiveRepeatGradeSummary = describeTrainingReportGrades(
+    trainingReportTemplate.repeatRules.consecutive.grades
+  );
+  const rollingWindowRepeatGradeSummary = describeTrainingReportGrades(
+    trainingReportTemplate.repeatRules.rollingWindow.grades
+  );
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes || null
   );
@@ -51114,12 +51127,12 @@ const PlatformConfigurationSettings = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "When selected, this grade means the event must be repeated." })
               ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
-                "Two In A Row ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Includes this grade in the consecutive repeat rule." })
+                "Use For Two In A Row ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: `Select this grade if two consecutive reports with this grade should trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Currently selected grades: ${consecutiveRepeatGradeSummary}.` })
               ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
-                "Two In Three ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Includes this grade in the rolling two-in-three repeat rule." })
+                "Use For Two In Three ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: `Select this grade if two reports with this grade inside a three-event window should trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Currently selected grades: ${rollingWindowRepeatGradeSummary}.` })
               ] }) })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: trainingReportTemplate.grades.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-800", children: [
@@ -51183,7 +51196,7 @@ const PlatformConfigurationSettings = ({
                       consecutive: { ...template.repeatRules.consecutive, enabled: checked }
                     }
                   })),
-                  info: "When enabled, repeated selected grades in consecutive reports require the event to be repeated."
+                  info: `When enabled, ${trainingReportTemplate.repeatRules.consecutive.count} consecutive reports with any selected grade will trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Selected grades: ${consecutiveRepeatGradeSummary}.`
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -51198,9 +51211,13 @@ const PlatformConfigurationSettings = ({
                       consecutive: { ...template.repeatRules.consecutive, count: value }
                     }
                   })),
-                  info: "Default is 2: two selected grades in a row requires repeat."
+                  info: `How many reports in a row must receive one of the selected grades before the repeat rule applies. Selected grades: ${consecutiveRepeatGradeSummary}.`
                 }
-              )
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-50/80", children: [
+                "Selected grades for this rule: ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-50", children: consecutiveRepeatGradeSummary })
+              ] })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
@@ -51218,7 +51235,7 @@ const PlatformConfigurationSettings = ({
                       rollingWindow: { ...template.repeatRules.rollingWindow, enabled: checked }
                     }
                   })),
-                  info: "When enabled, selected grades occurring repeatedly inside a rolling event window require the event to be repeated."
+                  info: `When enabled, ${trainingReportTemplate.repeatRules.rollingWindow.count} reports with any selected grade inside the last ${trainingReportTemplate.repeatRules.rollingWindow.window} events will trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Selected grades: ${rollingWindowRepeatGradeSummary}.`
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -51233,7 +51250,7 @@ const PlatformConfigurationSettings = ({
                       rollingWindow: { ...template.repeatRules.rollingWindow, count: value }
                     }
                   })),
-                  info: "How many matching grades inside the rolling window trigger a repeat."
+                  info: `How many reports inside the rolling window must receive one of the selected grades before the repeat rule applies. Selected grades: ${rollingWindowRepeatGradeSummary}.`
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -51248,9 +51265,13 @@ const PlatformConfigurationSettings = ({
                       rollingWindow: { ...template.repeatRules.rollingWindow, window: value }
                     }
                   })),
-                  info: "Default is 3: selected grade twice in three events requires repeat."
+                  info: `How many recent events are checked. Example: with Count 2 and Window 3, two reports with selected grades inside the last three events will trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Selected grades: ${rollingWindowRepeatGradeSummary}.`
                 }
-              )
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-50/80 md:col-span-2", children: [
+                "Selected grades for this rule: ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-50", children: rollingWindowRepeatGradeSummary })
+              ] })
             ] })
           ] })
         ] })

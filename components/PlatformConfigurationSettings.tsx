@@ -1205,6 +1205,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     primaryOrganisationSettings.trainingReportTemplate || null,
     primaryOrganisationSettings.trainingReportTerminology || null,
   );
+  const describeTrainingReportGrades = (grades: number[]): string => {
+    if (!Array.isArray(grades) || grades.length === 0) return 'No grades selected';
+    return grades
+      .map((grade) => {
+        const option = trainingReportTemplate.grades.options.find((item) => item.value === grade);
+        return option ? `${grade} - ${option.label}` : String(grade);
+      })
+      .join(', ');
+  };
+  const consecutiveRepeatGradeSummary = describeTrainingReportGrades(
+    trainingReportTemplate.repeatRules.consecutive.grades,
+  );
+  const rollingWindowRepeatGradeSummary = describeTrainingReportGrades(
+    trainingReportTemplate.repeatRules.rollingWindow.grades,
+  );
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes || null,
   );
@@ -3752,10 +3767,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <span className="flex items-center gap-1.5">Repeat Event <InfoHint text="When selected, this grade means the event must be repeated." /></span>
                     </th>
                     <th className="px-2 py-2">
-                      <span className="flex items-center gap-1.5">Two In A Row <InfoHint text="Includes this grade in the consecutive repeat rule." /></span>
+                      <span className="flex items-center gap-1.5">Use For Two In A Row <InfoHint text={`Select this grade if two consecutive reports with this grade should trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Currently selected grades: ${consecutiveRepeatGradeSummary}.`} /></span>
                     </th>
                     <th className="px-2 py-2">
-                      <span className="flex items-center gap-1.5">Two In Three <InfoHint text="Includes this grade in the rolling two-in-three repeat rule." /></span>
+                      <span className="flex items-center gap-1.5">Use For Two In Three <InfoHint text={`Select this grade if two reports with this grade inside a three-event window should trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Currently selected grades: ${rollingWindowRepeatGradeSummary}.`} /></span>
                     </th>
                   </tr>
                 </thead>
@@ -3820,7 +3835,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       consecutive: { ...template.repeatRules.consecutive, enabled: checked },
                     },
                   }))}
-                  info="When enabled, repeated selected grades in consecutive reports require the event to be repeated."
+                  info={`When enabled, ${trainingReportTemplate.repeatRules.consecutive.count} consecutive reports with any selected grade will trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Selected grades: ${consecutiveRepeatGradeSummary}.`}
                 />
                 <NumberField
                   label="Count"
@@ -3832,8 +3847,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       consecutive: { ...template.repeatRules.consecutive, count: value },
                     },
                   }))}
-                  info="Default is 2: two selected grades in a row requires repeat."
+                  info={`How many reports in a row must receive one of the selected grades before the repeat rule applies. Selected grades: ${consecutiveRepeatGradeSummary}.`}
                 />
+                <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-50/80">
+                  Selected grades for this rule: <span className="font-bold text-cyan-50">{consecutiveRepeatGradeSummary}</span>
+                </div>
               </div>
             </div>
 
@@ -3850,7 +3868,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       rollingWindow: { ...template.repeatRules.rollingWindow, enabled: checked },
                     },
                   }))}
-                  info="When enabled, selected grades occurring repeatedly inside a rolling event window require the event to be repeated."
+                  info={`When enabled, ${trainingReportTemplate.repeatRules.rollingWindow.count} reports with any selected grade inside the last ${trainingReportTemplate.repeatRules.rollingWindow.window} events will trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Selected grades: ${rollingWindowRepeatGradeSummary}.`}
                 />
                 <NumberField
                   label="Count"
@@ -3862,7 +3880,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       rollingWindow: { ...template.repeatRules.rollingWindow, count: value },
                     },
                   }))}
-                  info="How many matching grades inside the rolling window trigger a repeat."
+                  info={`How many reports inside the rolling window must receive one of the selected grades before the repeat rule applies. Selected grades: ${rollingWindowRepeatGradeSummary}.`}
                 />
                 <NumberField
                   label="Window"
@@ -3874,8 +3892,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       rollingWindow: { ...template.repeatRules.rollingWindow, window: value },
                     },
                   }))}
-                  info="Default is 3: selected grade twice in three events requires repeat."
+                  info={`How many recent events are checked. Example: with Count 2 and Window 3, two reports with selected grades inside the last three events will trigger ${trainingReportTemplate.overallResults.doubleRepeatLabel}. Selected grades: ${rollingWindowRepeatGradeSummary}.`}
                 />
+                <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-50/80 md:col-span-2">
+                  Selected grades for this rule: <span className="font-bold text-cyan-50">{rollingWindowRepeatGradeSummary}</span>
+                </div>
               </div>
             </div>
           </div>
