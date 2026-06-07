@@ -1191,14 +1191,14 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                                 title={formatGradeOption(g)}
                                                 className="relative h-[98px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400"
                                             >
-                                                <span className="absolute bottom-[38px] left-1/2 flex w-[76px] -translate-x-1/2 -rotate-90 flex-row items-center justify-center gap-1 whitespace-nowrap">
+                                                <span className="absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap">
                                                     {formatGradeHeaderText(g).split(/\s+/).map((word, index) => (
                                                         <span key={`${word}-${index}`}>{word}</span>
                                                     ))}
                                                 </span>
                                             </th>
                                         ))}
-                                        <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
+                                        <th className="h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
                                     </tr>
                                 </thead>
                                 <tbody>

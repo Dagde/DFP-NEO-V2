@@ -38180,11 +38180,11 @@ This action cannot be undone.`;
                 {
                   title: formatGradeOption(g),
                   className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[8px] font-black uppercase leading-[0.95] text-gray-400",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-[38px] left-1/2 flex w-[76px] -translate-x-1/2 -rotate-90 flex-row items-center justify-center gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatGradeHeaderText(g).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) })
                 },
                 String(g)
               )),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: category.elements.map((element) => {
               const score = assessment.scores.find((s) => s.element === element);
