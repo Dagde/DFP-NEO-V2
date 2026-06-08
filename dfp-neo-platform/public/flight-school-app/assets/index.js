@@ -73976,8 +73976,9 @@ const App = () => {
   const aircraftConfigLabelsByResource = reactExports.useMemo(() => {
     const snapshotKey = getDailySnapshotKey(date);
     const dateConfigState = aircraftConfigStateByDate[snapshotKey];
-    return buildAircraftConfigLabelsByResource(dateConfigState || currentAircraftConfigState);
-  }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date]);
+    const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getLocalDateString();
+    return buildAircraftConfigLabelsByResource(isFutureBuildDate ? currentAircraftConfigState : dateConfigState || currentAircraftConfigState);
+  }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date, timezoneOffset]);
   const [flyingStartTime, setFlyingStartTime] = reactExports.useState(8);
   const [flyingEndTime, setFlyingEndTime] = reactExports.useState(17);
   const [ftdStartTime, setFtdStartTime] = reactExports.useState(8);

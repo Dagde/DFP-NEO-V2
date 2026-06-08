@@ -14750,8 +14750,9 @@ const App: React.FC = () => {
     const aircraftConfigLabelsByResource = useMemo(() => {
         const snapshotKey = getDailySnapshotKey(date);
         const dateConfigState = aircraftConfigStateByDate[snapshotKey];
-        return buildAircraftConfigLabelsByResource(dateConfigState || currentAircraftConfigState);
-    }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date]);
+        const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getLocalDateString();
+        return buildAircraftConfigLabelsByResource(isFutureBuildDate ? currentAircraftConfigState : (dateConfigState || currentAircraftConfigState));
+    }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date, timezoneOffset]);
     const [flyingStartTime, setFlyingStartTime] = useState(8.0); // 08:00
     const [flyingEndTime, setFlyingEndTime] = useState(17.0); // 17:00
     const [ftdStartTime, setFtdStartTime] = useState(8.0); // 08:00
