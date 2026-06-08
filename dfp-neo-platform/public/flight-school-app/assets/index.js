@@ -64567,6 +64567,52 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return event.eventCategory === "currency" || !!event.currencyDraftId || event.flightNumber === "CURR";
   };
   const isTaskingPriorityEvent = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+  const countAirCombatDispatchesInWindow = (windowStart, windowEnd) => generatedEvents.filter(
+    (event) => event.type === "flight" && !event.isCancelled && !isStbyResource(event.resourceId) && event.startTime > windowStart && event.startTime <= windowEnd
+  ).length;
+  const getAirCombatHourlyDispatchLimitViolation = (startTime, dispatchCount = 1) => {
+    const dispatchesInPreviousHour = countAirCombatDispatchesInWindow(startTime - 1, startTime);
+    if (dispatchesInPreviousHour + dispatchCount > hourlyDispatchLimit) {
+      return {
+        reason: "HOURLY_DISPATCH_LIMIT",
+        check: "previous-window",
+        windowStart: startTime - 1,
+        windowEnd: startTime,
+        dispatchesInWindow: dispatchesInPreviousHour,
+        proposedDispatches: dispatchCount,
+        limit: hourlyDispatchLimit
+      };
+    }
+    const futureDispatches = generatedEvents.filter(
+      (event) => event.type === "flight" && !event.isCancelled && !isStbyResource(event.resourceId) && event.startTime > startTime && event.startTime <= startTime + 1
+    ).sort((left, right) => left.startTime - right.startTime);
+    for (const futureEvent of futureDispatches) {
+      const windowStart = futureEvent.startTime - 1;
+      const windowEnd = futureEvent.startTime;
+      if (startTime > windowStart && startTime <= windowEnd) {
+        const dispatchesInFutureWindow = countAirCombatDispatchesInWindow(windowStart, windowEnd);
+        if (dispatchesInFutureWindow + dispatchCount > hourlyDispatchLimit) {
+          return {
+            reason: "HOURLY_DISPATCH_LIMIT",
+            check: "future-window",
+            windowStart,
+            windowEnd,
+            dispatchesInWindow: dispatchesInFutureWindow,
+            proposedDispatches: dispatchCount,
+            limit: hourlyDispatchLimit,
+            futureEvent: {
+              id: futureEvent.id,
+              flightNumber: futureEvent.flightNumber,
+              startTime: futureEvent.startTime,
+              resourceId: futureEvent.resourceId,
+              source: futureEvent._source || null
+            }
+          };
+        }
+      }
+    }
+    return null;
+  };
   const remedialInstructorOverrideKey = (traineeName, eventCode) => `${normalizeBuildPersonnelName(traineeName)}::${normalizeLmpEventId(eventCode || "")}`;
   const remedialInstructorOverrides = /* @__PURE__ */ new Map();
   highestPriorityEvents.forEach((event) => {
@@ -67514,9 +67560,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ...resourceOptions.slice(0, preferredIndex)
       ];
     };
-    const countTaskingDispatchesInPreviousHour = (startTime) => generatedEvents.filter(
-      (event) => event.type === "flight" && !isStbyResource(event.resourceId) && event.startTime > startTime - 1 && event.startTime <= startTime
-    ).length;
     const assignTaskingStaff = (candidate, requiredStaffCount) => {
       if (isAirCombatBuild) {
         const priorityList = getTaskStaffPriorityList();
@@ -67649,16 +67692,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           continue;
         }
         const resourceOptionsAtTime = getTaskingResourceOptionsForFlow(priorityEvent, roundedTime);
-        const dispatchesInPreviousHour = countTaskingDispatchesInPreviousHour(roundedTime);
-        if (dispatchesInPreviousHour >= hourlyDispatchLimit) {
+        const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, 1);
+        if (dispatchLimitViolation) {
           if (attemptSummary.length < 12) {
             attemptSummary.push({
               time: roundedTime,
               displayTime: _fmtT(roundedTime),
               outcome: "rejected",
               reason: "HOURLY_DISPATCH_LIMIT",
-              dispatchesInPreviousHour,
-              limit: hourlyDispatchLimit
+              ...dispatchLimitViolation
             });
           }
           if (isAirCombatBuild) {
@@ -67667,7 +67709,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               staff: "Tasking",
               event: priorityEvent.flightNumber,
               reason: "HOURLY_DISPATCH_LIMIT",
-              startTime: roundedTime
+              startTime: roundedTime,
+              dispatchLimitViolation
             });
             countAirCombatRejection("HOURLY_DISPATCH_LIMIT");
           }
@@ -68173,9 +68216,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return null;
     };
-    const countAirCombatFormationDispatchesInPreviousHour = (startTime) => generatedEvents.filter(
-      (event) => event.type === "flight" && !event.resourceId.startsWith("STBY") && !event.resourceId.startsWith("BNF-STBY") && event.startTime > startTime - 1 && event.startTime <= startTime
-    ).length;
     const hasAirCombatNonFormationTakeoffConflict = (startTime) => generatedEvents.some((event) => {
       if (event.type !== "flight") return false;
       if (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY")) return false;
@@ -68425,16 +68465,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         countAirCombatRejection("INSUFFICIENT_AIRCRAFT_FOR_FORMATION");
         return null;
       }
-      const dispatchesInPreviousHour = countAirCombatFormationDispatchesInPreviousHour(startTime);
-      if (dispatchesInPreviousHour + resourceNumber > hourlyDispatchLimit) {
+      const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(startTime, resourceNumber);
+      if (dispatchLimitViolation) {
         pushAirCombatDiag("resourceChecks", {
           event: members[0]?.item.code || null,
           type: "flight",
           startTime,
           reason: "HOURLY_DISPATCH_LIMIT",
-          dispatchesInPreviousHour,
           resourceNumber,
-          limit: hourlyDispatchLimit
+          ...dispatchLimitViolation
         }, 800);
         countAirCombatRejection("HOURLY_DISPATCH_LIMIT");
         return null;
@@ -68884,6 +68923,33 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               recordAirCombatSkip({ list: kind, staff: entry.staff.name, event: item.code, reason: "STATIC_UNAVAILABLE", startTime });
               candidateSlotsRejected++;
               continue;
+            }
+            if (type === "flight") {
+              const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(startTime, 1);
+              if (dispatchLimitViolation) {
+                recordAirCombatSkip({
+                  list: kind,
+                  staff: entry.staff.name,
+                  event: item.code,
+                  reason: "HOURLY_DISPATCH_LIMIT",
+                  startTime,
+                  dispatchLimitViolation
+                });
+                pushAirCombatDiag("trainingAttempts", {
+                  kind,
+                  code,
+                  staff: entry.staff.name,
+                  event: item.code,
+                  type,
+                  startTime,
+                  placed: false,
+                  reason: "HOURLY_DISPATCH_LIMIT",
+                  ...dispatchLimitViolation
+                }, 1200);
+                countAirCombatRejection("HOURLY_DISPATCH_LIMIT");
+                candidateSlotsRejected++;
+                continue;
+              }
             }
             const resource = findResourceForTraining(item, type, startTime);
             if (!resource) {
