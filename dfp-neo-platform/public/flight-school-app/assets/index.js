@@ -37129,6 +37129,15 @@ const SyllabusView = ({
   const activeCollectionTitle = isTrainingPackagesTab ? "Training Packages" : "Master LMP";
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
   const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
+  const availableTabs = reactExports.useMemo(() => {
+    const tabs = [
+      { id: "master", label: "Master LMP" }
+    ];
+    if (isAirCombatModel) {
+      tabs.push({ id: "packages", label: "Training Packages" });
+    }
+    return tabs;
+  }, [isAirCombatModel]);
   const scoringMatrixElements = reactExports.useMemo(
     () => getScoringMatrixElementOptions(scoringMatrixPhraseBank),
     [scoringMatrixPhraseBank]
@@ -37316,6 +37325,15 @@ const SyllabusView = ({
     });
   }, []);
   reactExports.useEffect(() => {
+    if (!isAirCombatModel && activeTab === "packages") {
+      setActiveTab("master");
+      setSelectedCourseType("BPC+IPC");
+      setSelectedItem(null);
+      setHoveredItem(null);
+      setIsEditing(false);
+      setEditedItem(null);
+      return;
+    }
     if (courseLMPs.length === 0) {
       if (selectedCourseType) {
         setSelectedCourseType("");
@@ -37333,7 +37351,7 @@ const SyllabusView = ({
       setIsEditing(false);
       setEditedItem(null);
     }
-  }, [courseLMPs, selectedCourseType]);
+  }, [activeTab, courseLMPs, isAirCombatModel, selectedCourseType]);
   reactExports.useEffect(() => {
     localStorage.setItem("neo_lmp_details_active_tab", activeTab);
     localStorage.setItem("neo_lmp_details_selected_package", selectedCourseType);
@@ -37784,10 +37802,7 @@ const SyllabusView = ({
             ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: getCourseTitle(selectedCourseType) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 inline-flex rounded-md border border-gray-700 bg-gray-950/70 p-1", children: [
-            { id: "master", label: "Master LMP" },
-            { id: "packages", label: "Training Packages" }
-          ].map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 inline-flex rounded-md border border-gray-700 bg-gray-950/70 p-1", children: availableTabs.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
@@ -72742,10 +72757,11 @@ const App = () => {
     const activeUnit = normaliseContextCode(activeUnitCode);
     return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode).filter((item) => {
       if (item.lmpType !== "Staff CAT") return true;
+      if (activeOperationalModel !== "air_combat") return false;
       const packageUnit = normaliseContextCode(item.unit);
       return !packageUnit || packageUnit === activeUnit;
     });
-  }, [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+  }, [activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
   reactExports.useEffect(() => {
     const loadSyllabus = async () => {
       setSyllabusLoading(true);

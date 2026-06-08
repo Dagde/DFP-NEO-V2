@@ -13295,10 +13295,11 @@ const App: React.FC = () => {
         return filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', activeUnitCode)
             .filter((item) => {
                 if (item.lmpType !== 'Staff CAT') return true;
+                if (activeOperationalModel !== 'air_combat') return false;
                 const packageUnit = normaliseContextCode((item as any).unit);
                 return !packageUnit || packageUnit === activeUnit;
             });
-    }, [activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+    }, [activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
 
 // Load syllabus from DB on mount — DB only, no mock data fallback
     useEffect(() => {

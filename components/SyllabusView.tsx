@@ -839,12 +839,21 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       localStorage.getItem('neo_lmp_details_selected_package') || 'BPC+IPC'
   );
   const [editingCourseTitle, setEditingCourseTitle] = useState<string>('');
-	  const isTrainingPackagesTab = activeTab === 'packages';
+  const isTrainingPackagesTab = activeTab === 'packages';
   const activeLmpType = getActiveLmpType(activeTab);
   const activeCollectionNoun = isTrainingPackagesTab ? 'package' : 'course';
   const activeCollectionTitle = isTrainingPackagesTab ? 'Training Packages' : 'Master LMP';
   const activeCollectionSelectLabel = isTrainingPackagesTab ? 'Package:' : 'Course:';
-	  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
+  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
+  const availableTabs = useMemo(() => {
+      const tabs: Array<{ id: LmpDetailsTab; label: string }> = [
+          { id: 'master', label: 'Master LMP' },
+      ];
+      if (isAirCombatModel) {
+          tabs.push({ id: 'packages', label: 'Training Packages' });
+      }
+      return tabs;
+  }, [isAirCombatModel]);
       const scoringMatrixElements = useMemo(
           () => getScoringMatrixElementOptions(scoringMatrixPhraseBank),
           [scoringMatrixPhraseBank]
@@ -1077,6 +1086,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     }, []);
 
   useEffect(() => {
+    if (!isAirCombatModel && activeTab === 'packages') {
+        setActiveTab('master');
+        setSelectedCourseType('BPC+IPC');
+        setSelectedItem(null);
+        setHoveredItem(null);
+        setIsEditing(false);
+        setEditedItem(null);
+        return;
+    }
     if (courseLMPs.length === 0) {
         if (selectedCourseType) {
             setSelectedCourseType('');
@@ -1094,7 +1112,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
         setIsEditing(false);
         setEditedItem(null);
     }
-  }, [courseLMPs, selectedCourseType]);
+  }, [activeTab, courseLMPs, isAirCombatModel, selectedCourseType]);
 
   useEffect(() => {
       localStorage.setItem('neo_lmp_details_active_tab', activeTab);
@@ -1588,10 +1606,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           )}</h1>
           <p className="text-sm text-gray-400">{isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle}</p>
           <div className="mt-3 inline-flex rounded-md border border-gray-700 bg-gray-950/70 p-1">
-            {[
-              { id: 'master' as LmpDetailsTab, label: 'Master LMP' },
-              { id: 'packages' as LmpDetailsTab, label: 'Training Packages' },
-            ].map(tab => (
+            {availableTabs.map(tab => (
               <button
                 key={tab.id}
                 type="button"
