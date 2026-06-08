@@ -2,7 +2,6 @@ console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP �
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useTheme } from './context/ThemeContext';
 import { useSystemFreeze } from './context/SystemFreezeContext';
 import LoginModal, { AuthUser, checkSession, logoutUser } from './components/LoginModal';
@@ -445,7 +444,7 @@ const DfpSidePanelTimeline: React.FC<{
             </div>
             <div
                 ref={scrollRef}
-                className="overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-4 shadow-inner"
+                className="overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-3 shadow-inner [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 aria-label="Scrollable five hour flying window timeline"
             >
                 <div
@@ -524,6 +523,11 @@ const DfpSidePanelTimeline: React.FC<{
                                 {formatCompactTime(marker.time)}
                             </span>
                         ))}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-300/90">
+                        <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}`} /> Day</span>
+                        <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${nightShade}`} /> Night</span>
+                        <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${exclusionShade}`} /> Exclusion</span>
                     </div>
                 </div>
             </div>

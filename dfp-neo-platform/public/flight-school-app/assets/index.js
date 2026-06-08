@@ -62817,7 +62817,7 @@ const DfpSidePanelTimeline = ({
       "div",
       {
         ref: scrollRef,
-        className: "overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-4 shadow-inner",
+        className: "overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-3 shadow-inner [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         "aria-label": "Scrollable five hour flying window timeline",
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
@@ -62901,7 +62901,21 @@ const DfpSidePanelTimeline = ({
                   children: formatCompactTime(marker.time)
                 },
                 `mini-label-${marker.key}`
-              )) })
+              )) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-300/90", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}` }),
+                  " Day"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${nightShade}` }),
+                  " Night"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${exclusionShade}` }),
+                  " Exclusion"
+                ] })
+              ] })
             ]
           }
         )
