@@ -55,6 +55,7 @@ interface NextDayBuildViewProps {
   formatResourceLabel?: (resourceId: string) => string;
   aircraftConfigLabelsByResource?: Record<string, string>;
   aircraftNumberSettings?: AircraftNumberSettings;
+  onExternalEventDrop?: (event: ScheduleEvent, placement: { startTime: number; resourceId: string }) => void;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -121,6 +122,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     formatResourceLabel,
     aircraftConfigLabelsByResource,
     aircraftNumberSettings,
+    onExternalEventDrop,
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
@@ -150,6 +152,40 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timerId);
     }, []);
+
+    const getExternalDropPlacement = (event: React.DragEvent<HTMLDivElement>) => {
+        if (!scheduleGridRef.current) return null;
+        const gridRect = scheduleGridRef.current.getBoundingClientRect();
+        const relativeX = event.clientX - gridRect.left;
+        const relativeY = event.clientY - gridRect.top;
+        const rawStartTime = START_HOUR + (relativeX / (PIXELS_PER_HOUR * zoomLevel));
+        const startTime = Math.max(START_HOUR, Math.min(END_HOUR, Math.round(rawStartTime * 12) / 12));
+        const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT)));
+        const resourceId = resources[rowIndex];
+        if (!resourceId) return null;
+        return { startTime, resourceId };
+    };
+
+    const handleExternalDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        if (!onExternalEventDrop) return;
+        if (!Array.from(event.dataTransfer.types).includes('application/neo-assist-event')) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+    };
+
+    const handleExternalDrop = (event: React.DragEvent<HTMLDivElement>) => {
+        if (!onExternalEventDrop) return;
+        const raw = event.dataTransfer.getData('application/neo-assist-event');
+        if (!raw) return;
+        const placement = getExternalDropPlacement(event);
+        if (!placement) return;
+        event.preventDefault();
+        try {
+            onExternalEventDrop(JSON.parse(raw) as ScheduleEvent, placement);
+        } catch (error) {
+            console.warn('[NEO Assist] Failed to drop assist tile:', error);
+        }
+    };
 
     const formattedDisplayDate = useMemo(() => {
         const [year, month, day] = date.split('-').map(Number);
@@ -949,6 +985,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
+                    onDragOver={handleExternalDragOver}
+                    onDrop={handleExternalDrop}
                     
                 >
                     {renderGridLines()}

@@ -217,6 +217,22 @@ type DfpMiniTimelineDragState = DfpMiniTimelineDragTarget & {
     left: number;
 };
 
+type NeoAssistSection =
+    | 'flying'
+    | 'resources'
+    | 'training'
+    | 'taskings'
+    | 'currency'
+    | 'course'
+    | 'packages'
+    | 'aircraft'
+    | 'crew';
+
+type NeoAssistDropPlacement = {
+    startTime: number;
+    resourceId: string;
+};
+
 const DfpSidePanelTimeline: React.FC<{
     flyingStartTime: number;
     flyingEndTime: number;
@@ -230,6 +246,20 @@ const DfpSidePanelTimeline: React.FC<{
     flyingWindowExclusions: FlyingWindowExclusionPeriod[];
     onUpdateFlyingWindowExclusions: (periods: FlyingWindowExclusionPeriod[]) => void;
     onOpenPrioritiesExclusions: () => void;
+    date: string;
+    resources: string[];
+    instructors: Instructor[];
+    syllabusDetails: SyllabusItemDetail[];
+    taskProfiles: string[];
+    taskProfileAbbreviations: Record<string, string>;
+    coursePriorities: string[];
+    packagePriorities: string[];
+    availableAircraftCount: number;
+    aircraftConfigCapacities: Record<string, string>;
+    availableFtdCount: number;
+    availableCptCount: number;
+    locationCode: string;
+    formatResourceLabel: (resourceId: string) => string;
 }> = ({
     flyingStartTime,
     flyingEndTime,
@@ -243,6 +273,20 @@ const DfpSidePanelTimeline: React.FC<{
     flyingWindowExclusions,
     onUpdateFlyingWindowExclusions,
     onOpenPrioritiesExclusions,
+    date,
+    resources,
+    instructors,
+    syllabusDetails,
+    taskProfiles,
+    taskProfileAbbreviations,
+    coursePriorities,
+    packagePriorities,
+    availableAircraftCount,
+    aircraftConfigCapacities,
+    availableFtdCount,
+    availableCptCount,
+    locationCode,
+    formatResourceLabel,
 }) => {
     const timelineStartHour = 6;
     const timelineEndHour = 25;
@@ -252,6 +296,144 @@ const DfpSidePanelTimeline: React.FC<{
     const chartRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
+    const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('aircraft');
+    const filteredEventOptions = useMemo(() => (
+        syllabusDetails
+            .filter(item => ['Flight', 'FTD', 'Academics'].includes(item.type))
+            .slice(0, 160)
+    ), [syllabusDetails]);
+    const [selectedEventCode, setSelectedEventCode] = useState('');
+    const [selectedTaskProfile, setSelectedTaskProfile] = useState('');
+    const [selectedCrewName, setSelectedCrewName] = useState('');
+    const [selectedResourceKind, setSelectedResourceKind] = useState<'flight' | 'ftd' | 'cpt'>('flight');
+    const [selectedResourceNumber, setSelectedResourceNumber] = useState(1);
+    const [assistCallsign, setAssistCallsign] = useState('');
+
+    const selectedSyllabusItem = useMemo(() => (
+        filteredEventOptions.find(item => item.code === selectedEventCode) || filteredEventOptions[0] || null
+    ), [filteredEventOptions, selectedEventCode]);
+
+    useEffect(() => {
+        if (!selectedEventCode && filteredEventOptions[0]) setSelectedEventCode(filteredEventOptions[0].code);
+    }, [filteredEventOptions, selectedEventCode]);
+
+    useEffect(() => {
+        if (!selectedTaskProfile && taskProfiles[0]) setSelectedTaskProfile(taskProfiles[0]);
+    }, [selectedTaskProfile, taskProfiles]);
+
+    useEffect(() => {
+        if (!selectedCrewName && instructors[0]) setSelectedCrewName(instructors[0].name);
+    }, [instructors, selectedCrewName]);
+
+    const diagnosticCrewPriority = useMemo(() => {
+        if (typeof window === 'undefined') return [];
+        try {
+            const raw = window.localStorage?.getItem('neo_build_diag_report');
+            if (!raw) return [];
+            const report = JSON.parse(raw);
+            const knownNames = new Set(instructors.map(instructor => instructor.name));
+            const ordered: string[] = [];
+            const seen = new Set<string>();
+            const visit = (value: unknown) => {
+                if (!value) return;
+                if (typeof value === 'string') {
+                    const trimmed = value.trim();
+                    if (knownNames.has(trimmed) && !seen.has(trimmed)) {
+                        seen.add(trimmed);
+                        ordered.push(trimmed);
+                    }
+                    return;
+                }
+                if (Array.isArray(value)) {
+                    value.forEach(visit);
+                    return;
+                }
+                if (typeof value === 'object') {
+                    Object.values(value as Record<string, unknown>).forEach(visit);
+                }
+            };
+            visit((report as any).priorityDiagnostics || report);
+            return ordered;
+        } catch {
+            return [];
+        }
+    }, [instructors]);
+
+    const crewOptions = useMemo(() => {
+        const seen = new Set<string>();
+        return [...diagnosticCrewPriority, ...instructors.map(instructor => instructor.name)]
+            .map(name => String(name || '').trim())
+            .filter(name => {
+                if (!name || seen.has(name)) return false;
+                seen.add(name);
+                return true;
+            });
+    }, [diagnosticCrewPriority, instructors]);
+
+    const assistResourceId = useMemo(() => {
+        const number = Math.max(1, Math.floor(Number(selectedResourceNumber) || 1));
+        if (selectedResourceKind === 'ftd') return `FTD ${number}`;
+        if (selectedResourceKind === 'cpt') return `CPT ${number}`;
+        return `PC-21 ${number}`;
+    }, [selectedResourceKind, selectedResourceNumber]);
+
+    const assistEventLabel = useMemo(() => {
+        if (activeAssistSection === 'taskings' && selectedTaskProfile) {
+            const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || '';
+            return abbreviation ? `Task - ${abbreviation}` : 'Task';
+        }
+        return selectedSyllabusItem?.code || 'Event';
+    }, [activeAssistSection, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
+
+    const assistDuration = Math.max(
+        0.1,
+        Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2,
+    );
+
+    const assistDraftEvent: ScheduleEvent = useMemo(() => ({
+        id: `neo-assist-draft-${Date.now()}`,
+        date,
+        type: selectedResourceKind === 'ftd' ? 'ftd' : selectedResourceKind === 'cpt' ? 'cpt' : 'flight',
+        pilot: selectedCrewName || undefined,
+        instructor: selectedCrewName || undefined,
+        flightNumber: assistEventLabel,
+        eventCode: selectedSyllabusItem?.code,
+        taskingName: activeAssistSection === 'taskings' ? selectedTaskProfile : undefined,
+        taskingDisplayLabel: activeAssistSection === 'taskings' ? assistEventLabel : undefined,
+        isTaskingRequest: activeAssistSection === 'taskings',
+        duration: assistDuration,
+        startTime: flyingStartTime,
+        resourceId: assistResourceId,
+        color: activeAssistSection === 'taskings' ? '#0891b2' : selectedResourceKind === 'flight' ? '#059669' : '#0369a1',
+        flightType: 'Solo',
+        locationType: 'Local',
+        origin: locationCode,
+        destination: locationCode,
+        callsign: assistCallsign.trim() || undefined,
+        aircraftNumber: selectedResourceKind === 'flight' ? String(selectedResourceNumber) : undefined,
+        preStart: selectedSyllabusItem ? Math.max(0, flyingStartTime - ((selectedSyllabusItem.preFlightTime || 0) / 60)) : undefined,
+        postEnd: selectedSyllabusItem ? flyingStartTime + assistDuration + ((selectedSyllabusItem.postFlightTime || 0) / 60) : undefined,
+    }), [
+        activeAssistSection,
+        assistCallsign,
+        assistDuration,
+        assistEventLabel,
+        assistResourceId,
+        date,
+        flyingStartTime,
+        locationCode,
+        selectedCrewName,
+        selectedResourceKind,
+        selectedResourceNumber,
+        selectedSyllabusItem,
+        selectedTaskProfile,
+    ]);
+
+    const startAssistTileDrag = (event: React.DragEvent<HTMLDivElement>) => {
+        event.dataTransfer.effectAllowed = 'copy';
+        event.dataTransfer.setData('application/neo-assist-event', JSON.stringify(assistDraftEvent));
+        event.dataTransfer.setData('text/plain', assistEventLabel);
+    };
 
     const normalizeHour = (time: number): number => {
         let value = Number(time) || 0;
@@ -428,6 +610,110 @@ const DfpSidePanelTimeline: React.FC<{
         ])),
     ];
 
+    const assistSections: Array<{ id: NeoAssistSection; label: string }> = [
+        { id: 'flying', label: 'Flying Window' },
+        { id: 'resources', label: 'Resources Available' },
+        { id: 'training', label: 'Training Priority' },
+        { id: 'taskings', label: 'Taskings' },
+        { id: 'currency', label: 'Currency events' },
+        { id: 'course', label: 'Course events' },
+        { id: 'packages', label: 'Packages' },
+        { id: 'aircraft', label: 'Aircraft / Type' },
+        { id: 'crew', label: 'Crew' },
+    ];
+    const resourceNumberLimit = selectedResourceKind === 'ftd'
+        ? Math.max(1, availableFtdCount)
+        : selectedResourceKind === 'cpt'
+            ? Math.max(1, availableCptCount)
+            : Math.max(1, availableAircraftCount);
+    const configSummary = Object.entries(aircraftConfigCapacities || {})
+        .filter(([, count]) => Number(count) > 0)
+        .map(([configId, count]) => `${configId}: ${count}`)
+        .join(', ') || 'No CONFIG split set';
+
+    const renderAssistSection = () => {
+        if (activeAssistSection === 'flying') {
+            return (
+                <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-200">
+                    <span>Day {formatCompactTime(flyingStartTime)}-{formatCompactTime(flyingEndTime)}</span>
+                    <span>Night {allowNightFlying ? `${formatCompactTime(commenceNightFlying)}-${formatCompactTime(ceaseNightFlying)}` : 'Off'}</span>
+                    <span>Sim window configured in Priorities</span>
+                    <span>{flyingWindowExclusions.length} exclusion period{flyingWindowExclusions.length === 1 ? '' : 's'}</span>
+                </div>
+            );
+        }
+        if (activeAssistSection === 'resources') {
+            return (
+                <div className="space-y-1 text-[10px] text-slate-200">
+                    <p>Aircraft {availableAircraftCount} | FTD {availableFtdCount} | CPT {availableCptCount}</p>
+                    <p className="text-slate-400">{configSummary}</p>
+                    <p className="text-slate-500">{resources.length} DFP rows available for manual placement</p>
+                </div>
+            );
+        }
+        if (activeAssistSection === 'training') {
+            return (
+                <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-200">
+                    <div>
+                        <p className="font-semibold text-cyan-100">Course priority</p>
+                        <p className="text-slate-400">{coursePriorities.slice(0, 4).join(', ') || 'No courses set'}</p>
+                    </div>
+                    <div>
+                        <p className="font-semibold text-cyan-100">Package priority</p>
+                        <p className="text-slate-400">{packagePriorities.slice(0, 4).join(', ') || 'No packages set'}</p>
+                    </div>
+                </div>
+            );
+        }
+        if (activeAssistSection === 'taskings') {
+            return (
+                <label className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                    Tasking
+                    <select
+                        value={selectedTaskProfile}
+                        onChange={event => setSelectedTaskProfile(event.target.value)}
+                        className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                    >
+                        {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
+                    </select>
+                </label>
+            );
+        }
+        if (activeAssistSection === 'crew') {
+            return (
+                <label className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                    Crew priority list
+                    <select
+                        value={selectedCrewName}
+                        onChange={event => setSelectedCrewName(event.target.value)}
+                        className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                    >
+                        {crewOptions.map(name => <option key={name} value={name}>{name}</option>)}
+                    </select>
+                    <span className="mt-1 block text-[9px] font-normal normal-case tracking-normal text-slate-500">
+                        Uses the latest NEO Build priority ordering when diagnostic priority data is available.
+                    </span>
+                </label>
+            );
+        }
+        return (
+            <label className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                Event
+                <select
+                    value={selectedEventCode}
+                    onChange={event => setSelectedEventCode(event.target.value)}
+                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                >
+                    {filteredEventOptions.map(item => (
+                        <option key={item.id || item.code} value={item.code}>
+                            {item.code} - {item.eventDescription}
+                        </option>
+                    ))}
+                </select>
+            </label>
+        );
+    };
+
     return (
         <div className="border-b border-cyan-400/15 bg-slate-950/72 p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
@@ -528,6 +814,99 @@ const DfpSidePanelTimeline: React.FC<{
                         <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}`} /> Day</span>
                         <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${nightShade}`} /> Night</span>
                         <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${exclusionShade}`} /> Exclusion</span>
+                    </div>
+                </div>
+            </div>
+            <div className="mt-3 grid grid-cols-[128px_minmax(0,1fr)] gap-3">
+                <div className="space-y-1.5">
+                    {assistSections.map(section => (
+                        <button
+                            key={section.id}
+                            type="button"
+                            onClick={() => setActiveAssistSection(section.id)}
+                            className={`w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${
+                                activeAssistSection === section.id
+                                    ? 'border-cyan-300/70 bg-cyan-400/15 text-cyan-50'
+                                    : 'border-slate-600/70 bg-slate-900/65 text-slate-300 hover:border-cyan-400/45 hover:text-cyan-100'
+                            }`}
+                        >
+                            {section.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="min-w-0 space-y-3">
+                    <div
+                        draggable
+                        onDragStart={startAssistTileDrag}
+                        className="cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing"
+                        title="Drag this tile onto the DFP to create a copy"
+                    >
+                        <div
+                            className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
+                            style={{ backgroundColor: assistDraftEvent.color }}
+                        >
+                            <div className="flex items-start justify-between gap-2 text-[11px] font-bold leading-tight">
+                                <span className="truncate">{selectedCrewName || 'Crew'}</span>
+                                <span className="shrink-0 font-mono">[{assistDuration.toFixed(1)}]</span>
+                            </div>
+                            <div className="mt-0.5 flex items-end justify-between gap-2 text-[10px] font-semibold leading-none">
+                                <span className="rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">{assistDraftEvent.flightType.toUpperCase()}</span>
+                                <span className="truncate font-mono text-cyan-50">{assistEventLabel}</span>
+                            </div>
+                            <div className="absolute bottom-1 right-2 max-w-[45%] truncate text-[9px] font-semibold text-cyan-100/90">
+                                {assistCallsign || formatResourceLabel(assistResourceId)}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Resource
+                            <select
+                                value={selectedResourceKind}
+                                onChange={event => {
+                                    setSelectedResourceKind(event.target.value as 'flight' | 'ftd' | 'cpt');
+                                    setSelectedResourceNumber(1);
+                                }}
+                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                            >
+                                <option value="flight">Flight</option>
+                                <option value="ftd">FTD</option>
+                                <option value="cpt">CPT</option>
+                            </select>
+                        </label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Number
+                            <input
+                                type="number"
+                                min={1}
+                                max={resourceNumberLimit}
+                                value={selectedResourceNumber}
+                                onChange={event => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1)))}
+                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                            />
+                        </label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Callsign
+                            <input
+                                value={assistCallsign}
+                                onChange={event => setAssistCallsign(event.target.value)}
+                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                placeholder="Optional"
+                            />
+                        </label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Crew
+                            <select
+                                value={selectedCrewName}
+                                onChange={event => setSelectedCrewName(event.target.value)}
+                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                            >
+                                {crewOptions.map(name => <option key={name} value={name}>{name}</option>)}
+                            </select>
+                        </label>
+                    </div>
+                    <div className="rounded-md border border-slate-700/75 bg-slate-900/65 p-3">
+                        {renderAssistSection()}
                     </div>
                 </div>
             </div>
@@ -23068,6 +23447,56 @@ appliedUpdates.forEach(update => {
                }
            });    };
 
+    const buildDroppedNeoAssistEvent = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement, eventDate: string): ScheduleEvent => {
+        const resourceId = placement.resourceId || draft.resourceId;
+        const startTime = placement.startTime;
+        const type: ScheduleEvent['type'] = resourceId.startsWith('FTD')
+            ? 'ftd'
+            : resourceId.startsWith('CPT')
+                ? 'cpt'
+                : draft.type || 'flight';
+        const preOffset = typeof draft.preStart === 'number'
+            ? Math.max(0, draft.startTime - draft.preStart)
+            : 0;
+        const postOffset = typeof draft.postEnd === 'number'
+            ? Math.max(0, draft.postEnd - (draft.startTime + draft.duration))
+            : 0;
+
+        return {
+            ...draft,
+            id: uuidv4(),
+            date: eventDate,
+            type,
+            startTime,
+            resourceId,
+            preStart: preOffset > 0 ? startTime - preOffset : undefined,
+            postEnd: postOffset > 0 ? startTime + draft.duration + postOffset : undefined,
+            aircraftNumber: resourceId.startsWith('PC-21') ? draft.aircraftNumber : undefined,
+        };
+    }, []);
+
+    const handleProgramScheduleExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
+        if (isPastDfpDate(date)) {
+            denyPastDfpEdit('add tiles');
+            return;
+        }
+        const droppedEvent = buildDroppedNeoAssistEvent(draft, placement, date);
+        const nextSchedule: ScheduleEvent[] = [...(publishedSchedules[date] || []), droppedEvent];
+        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+            const currentSchedule = prev[date] || [];
+            return { ...prev, [date]: [...currentSchedule, droppedEvent] };
+        });
+        persistScheduleForDate(date, nextSchedule);
+        logAudit('Program Schedule', 'Create', 'Added NEO Assist tile', `${droppedEvent.flightNumber} at ${placement.resourceId}`);
+    }, [buildDroppedNeoAssistEvent, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
+
+    const handleNextDayExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
+        const droppedEvent = buildDroppedNeoAssistEvent(draft, placement, buildDfpDate);
+        const { date: _date, ...nextDayEvent } = droppedEvent;
+        setNextDayBuildEvents(prev => [...prev, nextDayEvent]);
+        logAudit('Next Day Build', 'Create', 'Added NEO Assist tile', `${droppedEvent.flightNumber} at ${placement.resourceId}`);
+    }, [buildDroppedNeoAssistEvent, buildDfpDate]);
+
     const syllabusForModal = useMemo(() => {
         return syllabusDetails.map(item => item.id);
     }, [syllabusDetails]);
@@ -25577,6 +26006,7 @@ appliedUpdates.forEach(update => {
                            aircraftNumberSettings={aircraftNumberSettings}
                            flyingWindowExclusions={flyingWindowExclusions}
                            isReadOnly={isViewingPastDfp}
+                           onExternalEventDrop={handleProgramScheduleExternalEventDrop}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
@@ -26196,6 +26626,7 @@ appliedUpdates.forEach(update => {
                             formatResourceLabel={formatResourceDisplayLabel}
                             aircraftConfigLabelsByResource={nextDayBuildAircraftConfigLabelsByResource}
                             aircraftNumberSettings={aircraftNumberSettings}
+                            onExternalEventDrop={handleNextDayExternalEventDrop}
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu
@@ -28060,6 +28491,20 @@ appliedUpdates.forEach(update => {
                                     onUpdateCeaseNightFlying={setCeaseNightFlying}
                                     flyingWindowExclusions={flyingWindowExclusions}
                                     onUpdateFlyingWindowExclusions={setFlyingWindowExclusions}
+                                    date={date}
+                                    resources={buildResources}
+                                    instructors={instructorsData}
+                                    syllabusDetails={visibleSyllabusDetails}
+                                    taskProfiles={activeTaskProfiles}
+                                    taskProfileAbbreviations={activeTaskProfileAbbreviations}
+                                    coursePriorities={coursePriorities}
+                                    packagePriorities={Array.from(new Set(visibleSyllabusDetails.map(item => item.module).filter(Boolean))).slice(0, 12)}
+                                    availableAircraftCount={neoAvailableAircraftCount}
+                                    aircraftConfigCapacities={neoAircraftConfigCapacities}
+                                    availableFtdCount={availableFtdCount}
+                                    availableCptCount={availableCptCount}
+                                    locationCode={school}
+                                    formatResourceLabel={formatResourceDisplayLabel}
                                     onOpenPrioritiesExclusions={() => {
                                         try {
                                             localStorage.setItem('neo_open_departure_arrival_exclusions', '1');

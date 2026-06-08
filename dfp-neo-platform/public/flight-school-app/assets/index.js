@@ -7491,6 +7491,7 @@ const ScheduleView = ({
   aircraftNumberSettings,
   flyingWindowExclusions = [],
   isReadOnly = false,
+  onExternalEventDrop,
   timezoneOffset = 11
   // Default to UTC+11
 }) => {
@@ -7555,6 +7556,37 @@ const ScheduleView = ({
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
   }, [draggingState]);
+  const getExternalDropPlacement = (event) => {
+    if (!scheduleGridRef.current) return null;
+    const gridRect = scheduleGridRef.current.getBoundingClientRect();
+    const relativeX = event.clientX - gridRect.left;
+    const relativeY = event.clientY - gridRect.top;
+    const rawStartTime = START_HOUR$5 + relativeX / (PIXELS_PER_HOUR$5 * zoomLevel);
+    const startTime = Math.max(START_HOUR$5, Math.min(END_HOUR$5, Math.round(rawStartTime * 12) / 12));
+    const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$5)));
+    const resourceId = resources[rowIndex];
+    if (!resourceId) return null;
+    return { startTime, resourceId };
+  };
+  const handleExternalDragOver = (event) => {
+    if (!onExternalEventDrop || isReadOnly) return;
+    if (!Array.from(event.dataTransfer.types).includes("application/neo-assist-event")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  };
+  const handleExternalDrop = (event) => {
+    if (!onExternalEventDrop || isReadOnly) return;
+    const raw = event.dataTransfer.getData("application/neo-assist-event");
+    if (!raw) return;
+    const placement = getExternalDropPlacement(event);
+    if (!placement) return;
+    event.preventDefault();
+    try {
+      onExternalEventDrop(JSON.parse(raw), placement);
+    } catch (error) {
+      console.warn("[NEO Assist] Failed to drop assist tile:", error);
+    }
+  };
   const formattedDisplayDate = reactExports.useMemo(() => {
     const [year, month, day] = date.split("-").map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
@@ -8367,6 +8399,8 @@ const ScheduleView = ({
             onMouseMove: handleMouseMove,
             onMouseUp: handleMouseUp,
             onMouseLeave: handleMouseUp,
+            onDragOver: handleExternalDragOver,
+            onDrop: handleExternalDrop,
             children: [
               renderGridLines(),
               renderNightShade(),
@@ -22999,7 +23033,8 @@ const NextDayBuildView = ({
   pauseWindowEnd = null,
   formatResourceLabel: formatResourceLabel2,
   aircraftConfigLabelsByResource,
-  aircraftNumberSettings
+  aircraftNumberSettings,
+  onExternalEventDrop
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const scheduleGridRef = reactExports.useRef(null);
@@ -23018,6 +23053,37 @@ const NextDayBuildView = ({
     const timerId = setInterval(() => setCurrentTime(/* @__PURE__ */ new Date()), 1e3);
     return () => clearInterval(timerId);
   }, []);
+  const getExternalDropPlacement = (event) => {
+    if (!scheduleGridRef.current) return null;
+    const gridRect = scheduleGridRef.current.getBoundingClientRect();
+    const relativeX = event.clientX - gridRect.left;
+    const relativeY = event.clientY - gridRect.top;
+    const rawStartTime = START_HOUR$2 + relativeX / (PIXELS_PER_HOUR$2 * zoomLevel);
+    const startTime = Math.max(START_HOUR$2, Math.min(END_HOUR$2, Math.round(rawStartTime * 12) / 12));
+    const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$2)));
+    const resourceId = resources[rowIndex];
+    if (!resourceId) return null;
+    return { startTime, resourceId };
+  };
+  const handleExternalDragOver = (event) => {
+    if (!onExternalEventDrop) return;
+    if (!Array.from(event.dataTransfer.types).includes("application/neo-assist-event")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  };
+  const handleExternalDrop = (event) => {
+    if (!onExternalEventDrop) return;
+    const raw = event.dataTransfer.getData("application/neo-assist-event");
+    if (!raw) return;
+    const placement = getExternalDropPlacement(event);
+    if (!placement) return;
+    event.preventDefault();
+    try {
+      onExternalEventDrop(JSON.parse(raw), placement);
+    } catch (error) {
+      console.warn("[NEO Assist] Failed to drop assist tile:", error);
+    }
+  };
   reactExports.useMemo(() => {
     const [year, month, day] = date.split("-").map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
@@ -23717,6 +23783,8 @@ const NextDayBuildView = ({
             onMouseMove: handleMouseMove,
             onMouseUp: handleMouseUp,
             onMouseLeave: handleMouseUp,
+            onDragOver: handleExternalDragOver,
+            onDrop: handleExternalDrop,
             children: [
               renderGridLines(),
               renderNightShade(),
@@ -62646,7 +62714,21 @@ const DfpSidePanelTimeline = ({
   onUpdateCeaseNightFlying,
   flyingWindowExclusions,
   onUpdateFlyingWindowExclusions,
-  onOpenPrioritiesExclusions
+  onOpenPrioritiesExclusions,
+  date,
+  resources,
+  instructors,
+  syllabusDetails,
+  taskProfiles,
+  taskProfileAbbreviations,
+  coursePriorities,
+  packagePriorities,
+  availableAircraftCount,
+  aircraftConfigCapacities,
+  availableFtdCount,
+  availableCptCount,
+  locationCode,
+  formatResourceLabel: formatResourceLabel2
 }) => {
   const timelineStartHour = 6;
   const timelineEndHour = 25;
@@ -62656,6 +62738,125 @@ const DfpSidePanelTimeline = ({
   const chartRef = reactExports.useRef(null);
   const scrollRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
+  const [activeAssistSection, setActiveAssistSection] = reactExports.useState("aircraft");
+  const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
+  const [selectedEventCode, setSelectedEventCode] = reactExports.useState("");
+  const [selectedTaskProfile, setSelectedTaskProfile] = reactExports.useState("");
+  const [selectedCrewName, setSelectedCrewName] = reactExports.useState("");
+  const [selectedResourceKind, setSelectedResourceKind] = reactExports.useState("flight");
+  const [selectedResourceNumber, setSelectedResourceNumber] = reactExports.useState(1);
+  const [assistCallsign, setAssistCallsign] = reactExports.useState("");
+  const selectedSyllabusItem = reactExports.useMemo(() => filteredEventOptions.find((item) => item.code === selectedEventCode) || filteredEventOptions[0] || null, [filteredEventOptions, selectedEventCode]);
+  reactExports.useEffect(() => {
+    if (!selectedEventCode && filteredEventOptions[0]) setSelectedEventCode(filteredEventOptions[0].code);
+  }, [filteredEventOptions, selectedEventCode]);
+  reactExports.useEffect(() => {
+    if (!selectedTaskProfile && taskProfiles[0]) setSelectedTaskProfile(taskProfiles[0]);
+  }, [selectedTaskProfile, taskProfiles]);
+  reactExports.useEffect(() => {
+    if (!selectedCrewName && instructors[0]) setSelectedCrewName(instructors[0].name);
+  }, [instructors, selectedCrewName]);
+  const diagnosticCrewPriority = reactExports.useMemo(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage?.getItem("neo_build_diag_report");
+      if (!raw) return [];
+      const report = JSON.parse(raw);
+      const knownNames = new Set(instructors.map((instructor) => instructor.name));
+      const ordered = [];
+      const seen = /* @__PURE__ */ new Set();
+      const visit = (value) => {
+        if (!value) return;
+        if (typeof value === "string") {
+          const trimmed = value.trim();
+          if (knownNames.has(trimmed) && !seen.has(trimmed)) {
+            seen.add(trimmed);
+            ordered.push(trimmed);
+          }
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach(visit);
+          return;
+        }
+        if (typeof value === "object") {
+          Object.values(value).forEach(visit);
+        }
+      };
+      visit(report.priorityDiagnostics || report);
+      return ordered;
+    } catch {
+      return [];
+    }
+  }, [instructors]);
+  const crewOptions = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return [...diagnosticCrewPriority, ...instructors.map((instructor) => instructor.name)].map((name) => String(name || "").trim()).filter((name) => {
+      if (!name || seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    });
+  }, [diagnosticCrewPriority, instructors]);
+  const assistResourceId = reactExports.useMemo(() => {
+    const number = Math.max(1, Math.floor(Number(selectedResourceNumber) || 1));
+    if (selectedResourceKind === "ftd") return `FTD ${number}`;
+    if (selectedResourceKind === "cpt") return `CPT ${number}`;
+    return `PC-21 ${number}`;
+  }, [selectedResourceKind, selectedResourceNumber]);
+  const assistEventLabel = reactExports.useMemo(() => {
+    if (activeAssistSection === "taskings" && selectedTaskProfile) {
+      const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || "";
+      return abbreviation ? `Task - ${abbreviation}` : "Task";
+    }
+    return selectedSyllabusItem?.code || "Event";
+  }, [activeAssistSection, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
+  const assistDuration = Math.max(
+    0.1,
+    Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
+  );
+  const assistDraftEvent = reactExports.useMemo(() => ({
+    id: `neo-assist-draft-${Date.now()}`,
+    date,
+    type: selectedResourceKind === "ftd" ? "ftd" : selectedResourceKind === "cpt" ? "cpt" : "flight",
+    pilot: selectedCrewName || void 0,
+    instructor: selectedCrewName || void 0,
+    flightNumber: assistEventLabel,
+    eventCode: selectedSyllabusItem?.code,
+    taskingName: activeAssistSection === "taskings" ? selectedTaskProfile : void 0,
+    taskingDisplayLabel: activeAssistSection === "taskings" ? assistEventLabel : void 0,
+    isTaskingRequest: activeAssistSection === "taskings",
+    duration: assistDuration,
+    startTime: flyingStartTime,
+    resourceId: assistResourceId,
+    color: activeAssistSection === "taskings" ? "#0891b2" : selectedResourceKind === "flight" ? "#059669" : "#0369a1",
+    flightType: "Solo",
+    locationType: "Local",
+    origin: locationCode,
+    destination: locationCode,
+    callsign: assistCallsign.trim() || void 0,
+    aircraftNumber: selectedResourceKind === "flight" ? String(selectedResourceNumber) : void 0,
+    preStart: selectedSyllabusItem ? Math.max(0, flyingStartTime - (selectedSyllabusItem.preFlightTime || 0) / 60) : void 0,
+    postEnd: selectedSyllabusItem ? flyingStartTime + assistDuration + (selectedSyllabusItem.postFlightTime || 0) / 60 : void 0
+  }), [
+    activeAssistSection,
+    assistCallsign,
+    assistDuration,
+    assistEventLabel,
+    assistResourceId,
+    date,
+    flyingStartTime,
+    locationCode,
+    selectedCrewName,
+    selectedResourceKind,
+    selectedResourceNumber,
+    selectedSyllabusItem,
+    selectedTaskProfile
+  ]);
+  const startAssistTileDrag = (event) => {
+    event.dataTransfer.effectAllowed = "copy";
+    event.dataTransfer.setData("application/neo-assist-event", JSON.stringify(assistDraftEvent));
+    event.dataTransfer.setData("text/plain", assistEventLabel);
+  };
   const normalizeHour = (time) => {
     let value = Number(time) || 0;
     if (value < timelineStartHour) value += 24;
@@ -62800,6 +63001,115 @@ const DfpSidePanelTimeline = ({
       { key: `exclusion-${period.id}-end`, time: period.endTime, label: "Exclusion end", color: "bg-rose-100", target: { kind: "exclusion", id: period.id, edge: "end" } }
     ])
   ];
+  const assistSections = [
+    { id: "flying", label: "Flying Window" },
+    { id: "resources", label: "Resources Available" },
+    { id: "training", label: "Training Priority" },
+    { id: "taskings", label: "Taskings" },
+    { id: "currency", label: "Currency events" },
+    { id: "course", label: "Course events" },
+    { id: "packages", label: "Packages" },
+    { id: "aircraft", label: "Aircraft / Type" },
+    { id: "crew", label: "Crew" }
+  ];
+  const resourceNumberLimit = selectedResourceKind === "ftd" ? Math.max(1, availableFtdCount) : selectedResourceKind === "cpt" ? Math.max(1, availableCptCount) : Math.max(1, availableAircraftCount);
+  const configSummary = Object.entries(aircraftConfigCapacities || {}).filter(([, count]) => Number(count) > 0).map(([configId, count]) => `${configId}: ${count}`).join(", ") || "No CONFIG split set";
+  const renderAssistSection = () => {
+    if (activeAssistSection === "flying") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          "Day ",
+          formatCompactTime(flyingStartTime),
+          "-",
+          formatCompactTime(flyingEndTime)
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          "Night ",
+          allowNightFlying ? `${formatCompactTime(commenceNightFlying)}-${formatCompactTime(ceaseNightFlying)}` : "Off"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Sim window configured in Priorities" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          flyingWindowExclusions.length,
+          " exclusion period",
+          flyingWindowExclusions.length === 1 ? "" : "s"
+        ] })
+      ] });
+    }
+    if (activeAssistSection === "resources") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Aircraft ",
+          availableAircraftCount,
+          " | FTD ",
+          availableFtdCount,
+          " | CPT ",
+          availableCptCount
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400", children: configSummary }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-slate-500", children: [
+          resources.length,
+          " DFP rows available for manual placement"
+        ] })
+      ] });
+    }
+    if (activeAssistSection === "training") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-cyan-100", children: "Course priority" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400", children: coursePriorities.slice(0, 4).join(", ") || "No courses set" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-cyan-100", children: "Package priority" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400", children: packagePriorities.slice(0, 4).join(", ") || "No packages set" })
+        ] })
+      ] });
+    }
+    if (activeAssistSection === "taskings") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+        "Tasking",
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "select",
+          {
+            value: selectedTaskProfile,
+            onChange: (event) => setSelectedTaskProfile(event.target.value),
+            className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+            children: taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
+          }
+        )
+      ] });
+    }
+    if (activeAssistSection === "crew") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+        "Crew priority list",
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "select",
+          {
+            value: selectedCrewName,
+            onChange: (event) => setSelectedCrewName(event.target.value),
+            className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+            children: crewOptions.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[9px] font-normal normal-case tracking-normal text-slate-500", children: "Uses the latest NEO Build priority ordering when diagnostic priority data is available." })
+      ] });
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+      "Event",
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "select",
+        {
+          value: selectedEventCode,
+          onChange: (event) => setSelectedEventCode(event.target.value),
+          className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+          children: filteredEventOptions.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: item.code, children: [
+            item.code,
+            " - ",
+            item.eventDescription
+          ] }, item.id || item.code))
+        }
+      )
+    ] });
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-400/15 bg-slate-950/72 p-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "NEO Assist" }) }),
@@ -62920,7 +63230,112 @@ const DfpSidePanelTimeline = ({
           }
         )
       }
-    )
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[128px_minmax(0,1fr)] gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: assistSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => setActiveAssistSection(section.id),
+          className: `w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${activeAssistSection === section.id ? "border-cyan-300/70 bg-cyan-400/15 text-cyan-50" : "border-slate-600/70 bg-slate-900/65 text-slate-300 hover:border-cyan-400/45 hover:text-cyan-100"}`,
+          children: section.label
+        },
+        section.id
+      )) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            draggable: true,
+            onDragStart: startAssistTileDrag,
+            className: "cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing",
+            title: "Drag this tile onto the DFP to create a copy",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
+                style: { backgroundColor: assistDraftEvent.color },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2 text-[11px] font-bold leading-tight", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: selectedCrewName || "Crew" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 font-mono", children: [
+                      "[",
+                      assistDuration.toFixed(1),
+                      "]"
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 flex items-end justify-between gap-2 text-[10px] font-semibold leading-none", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: assistDraftEvent.flightType.toUpperCase() }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-mono text-cyan-50", children: assistEventLabel })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-1 right-2 max-w-[45%] truncate text-[9px] font-semibold text-cyan-100/90", children: assistCallsign || formatResourceLabel2(assistResourceId) })
+                ]
+              }
+            )
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Resource",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: selectedResourceKind,
+                onChange: (event) => {
+                  setSelectedResourceKind(event.target.value);
+                  setSelectedResourceNumber(1);
+                },
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "flight", children: "Flight" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ftd", children: "FTD" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cpt", children: "CPT" })
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Number",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: 1,
+                max: resourceNumberLimit,
+                value: selectedResourceNumber,
+                onChange: (event) => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1))),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Callsign",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                value: assistCallsign,
+                onChange: (event) => setAssistCallsign(event.target.value),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                placeholder: "Optional"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Crew",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: selectedCrewName,
+                onChange: (event) => setSelectedCrewName(event.target.value),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                children: crewOptions.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: renderAssistSection() })
+      ] })
+    ] })
   ] });
 };
 const normalisePersonnelRecord = (person) => {
@@ -77779,6 +78194,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       aircraftConfigState: currentAircraftConfigState,
       savedBy
     };
+    if (baselineEventsForDate !== void 0) {
+      snapshotPayload.baselineEvents = baselineEventsForDate;
+    }
     console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
     fetch(`${apiBase2}/daily-snapshot/save`, {
@@ -80719,6 +81137,44 @@ ${conflictLines.join("\n")}${moreText}`,
       }
     });
   };
+  const buildDroppedNeoAssistEvent = reactExports.useCallback((draft, placement, eventDate) => {
+    const resourceId = placement.resourceId || draft.resourceId;
+    const startTime = placement.startTime;
+    const type = resourceId.startsWith("FTD") ? "ftd" : resourceId.startsWith("CPT") ? "cpt" : draft.type || "flight";
+    const preOffset = typeof draft.preStart === "number" ? Math.max(0, draft.startTime - draft.preStart) : 0;
+    const postOffset = typeof draft.postEnd === "number" ? Math.max(0, draft.postEnd - (draft.startTime + draft.duration)) : 0;
+    return {
+      ...draft,
+      id: v4(),
+      date: eventDate,
+      type,
+      startTime,
+      resourceId,
+      preStart: preOffset > 0 ? startTime - preOffset : void 0,
+      postEnd: postOffset > 0 ? startTime + draft.duration + postOffset : void 0,
+      aircraftNumber: resourceId.startsWith("PC-21") ? draft.aircraftNumber : void 0
+    };
+  }, []);
+  const handleProgramScheduleExternalEventDrop = reactExports.useCallback((draft, placement) => {
+    if (isPastDfpDate(date)) {
+      denyPastDfpEdit("add tiles");
+      return;
+    }
+    const droppedEvent = buildDroppedNeoAssistEvent(draft, placement, date);
+    const nextSchedule = [...publishedSchedules[date] || [], droppedEvent];
+    setPublishedSchedules((prev) => {
+      const currentSchedule = prev[date] || [];
+      return { ...prev, [date]: [...currentSchedule, droppedEvent] };
+    });
+    persistScheduleForDate(date, nextSchedule);
+    logAudit("Program Schedule", "Create", "Added NEO Assist tile", `${droppedEvent.flightNumber} at ${placement.resourceId}`);
+  }, [buildDroppedNeoAssistEvent, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
+  const handleNextDayExternalEventDrop = reactExports.useCallback((draft, placement) => {
+    const droppedEvent = buildDroppedNeoAssistEvent(draft, placement, buildDfpDate);
+    const { date: _date, ...nextDayEvent } = droppedEvent;
+    setNextDayBuildEvents((prev) => [...prev, nextDayEvent]);
+    logAudit("Next Day Build", "Create", "Added NEO Assist tile", `${droppedEvent.flightNumber} at ${placement.resourceId}`);
+  }, [buildDroppedNeoAssistEvent, buildDfpDate]);
   const syllabusForModal = reactExports.useMemo(() => {
     return syllabusDetails.map((item) => item.id);
   }, [syllabusDetails]);
@@ -82666,6 +83122,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftNumberSettings,
             flyingWindowExclusions,
             isReadOnly: isViewingPastDfp,
+            onExternalEventDrop: handleProgramScheduleExternalEventDrop,
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,
@@ -83243,7 +83700,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             pauseWindowEnd: showPausePanel ? pauseOverlayEnd : null,
             formatResourceLabel: formatResourceDisplayLabel,
             aircraftConfigLabelsByResource: nextDayBuildAircraftConfigLabelsByResource,
-            aircraftNumberSettings
+            aircraftNumberSettings,
+            onExternalEventDrop: handleNextDayExternalEventDrop
           }
         );
       case "Priorities":
@@ -84966,6 +85424,20 @@ Do you want to replace the existing entry?`,
                     onUpdateCeaseNightFlying: setCeaseNightFlying,
                     flyingWindowExclusions,
                     onUpdateFlyingWindowExclusions: setFlyingWindowExclusions,
+                    date,
+                    resources: buildResources,
+                    instructors: instructorsData,
+                    syllabusDetails: visibleSyllabusDetails,
+                    taskProfiles: activeTaskProfiles,
+                    taskProfileAbbreviations: activeTaskProfileAbbreviations,
+                    coursePriorities,
+                    packagePriorities: Array.from(new Set(visibleSyllabusDetails.map((item) => item.module).filter(Boolean))).slice(0, 12),
+                    availableAircraftCount: neoAvailableAircraftCount,
+                    aircraftConfigCapacities: neoAircraftConfigCapacities,
+                    availableFtdCount,
+                    availableCptCount,
+                    locationCode: school,
+                    formatResourceLabel: formatResourceDisplayLabel,
                     onOpenPrioritiesExclusions: () => {
                       try {
                         localStorage.setItem("neo_open_departure_arrival_exclusions", "1");

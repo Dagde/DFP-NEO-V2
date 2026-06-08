@@ -83,6 +83,7 @@ interface ScheduleViewProps {
   aircraftNumberSettings?: AircraftNumberSettings;
   flyingWindowExclusions?: FlyingWindowExclusionPeriod[];
   isReadOnly?: boolean;
+  onExternalEventDrop?: (event: ScheduleEvent, placement: { startTime: number; resourceId: string }) => void;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -187,6 +188,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     aircraftNumberSettings,
     flyingWindowExclusions = [],
     isReadOnly = false,
+    onExternalEventDrop,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -281,6 +283,40 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             document.removeEventListener('mouseup', handleGlobalMouseUp);
         };
     }, [draggingState]);
+
+    const getExternalDropPlacement = (event: React.DragEvent<HTMLDivElement>) => {
+        if (!scheduleGridRef.current) return null;
+        const gridRect = scheduleGridRef.current.getBoundingClientRect();
+        const relativeX = event.clientX - gridRect.left;
+        const relativeY = event.clientY - gridRect.top;
+        const rawStartTime = START_HOUR + (relativeX / (PIXELS_PER_HOUR * zoomLevel));
+        const startTime = Math.max(START_HOUR, Math.min(END_HOUR, Math.round(rawStartTime * 12) / 12));
+        const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT)));
+        const resourceId = resources[rowIndex];
+        if (!resourceId) return null;
+        return { startTime, resourceId };
+    };
+
+    const handleExternalDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        if (!onExternalEventDrop || isReadOnly) return;
+        if (!Array.from(event.dataTransfer.types).includes('application/neo-assist-event')) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+    };
+
+    const handleExternalDrop = (event: React.DragEvent<HTMLDivElement>) => {
+        if (!onExternalEventDrop || isReadOnly) return;
+        const raw = event.dataTransfer.getData('application/neo-assist-event');
+        if (!raw) return;
+        const placement = getExternalDropPlacement(event);
+        if (!placement) return;
+        event.preventDefault();
+        try {
+            onExternalEventDrop(JSON.parse(raw) as ScheduleEvent, placement);
+        } catch (error) {
+            console.warn('[NEO Assist] Failed to drop assist tile:', error);
+        }
+    };
 
     const formattedDisplayDate = useMemo(() => {
         const [year, month, day] = date.split('-').map(Number);
@@ -1225,6 +1261,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
+                    onDragOver={handleExternalDragOver}
+                    onDrop={handleExternalDrop}
                 >
                     {renderGridLines()}
                     {renderNightShade()}
