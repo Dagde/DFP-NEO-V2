@@ -1219,7 +1219,35 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     logAudit('Priorities', 'Add', 'Added tasking request row', `Tasking request ${nextRequest.id}`);
   };
 
+  const isTaskingPriorityEventForRequest = (event: ScheduleEvent, requestId: string) => (
+    event.taskingRequestId === requestId || String(event.id || '').startsWith(`tasking-${requestId}-`)
+  );
+
+  const removeTaskingPriorityEvents = (requestId: string) => {
+    highestPriorityEvents
+      .filter(event => isTaskingPriorityEventForRequest(event, requestId))
+      .forEach(event => onDeletePriorityEvent(event.id));
+  };
+
+  useEffect(() => {
+    const submittedTaskingRequestIds = new Set(
+      taskingRequests
+        .filter(request => request.submitted)
+        .map(request => request.id)
+    );
+
+    highestPriorityEvents
+      .filter(event => (
+        (event.isTaskingRequest || event.taskingRequestId || String(event.id || '').startsWith('tasking-')) &&
+        (!event.taskingRequestId || !submittedTaskingRequestIds.has(event.taskingRequestId))
+      ))
+      .forEach(event => onDeletePriorityEvent(event.id));
+  }, [highestPriorityEvents, taskingRequests, onDeletePriorityEvent]);
+
   const updateTaskingRequest = (id: string, updates: Partial<TaskingRequest>) => {
+    if (updates.submitted === false) {
+      removeTaskingPriorityEvents(id);
+    }
     setTaskingRequests(prev => prev.map(request => (
       request.id === id ? { ...request, ...updates, submitted: updates.submitted ?? request.submitted } : request
     )));
@@ -1278,6 +1306,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const removeTaskingRequest = (id: string) => {
     const removed = taskingRequests.find(request => request.id === id);
+    removeTaskingPriorityEvents(id);
     setTaskingRequests(prev => prev.filter(request => request.id !== id));
     logAudit('Priorities', 'Delete', 'Removed tasking request', removed?.tasking || id);
   };
@@ -1286,6 +1315,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const request = taskingRequests.find(item => item.id === id);
     if (!request) return;
     const priorityEvents = buildTaskingPriorityEvents(request);
+    removeTaskingPriorityEvents(id);
     onAddPriorityEvents(priorityEvents);
     updateTaskingRequest(id, { submitted: true });
     logAudit('Priorities', 'Submit', 'Submitted tasking request', `${request.tasking || 'Untitled tasking'} on ${request.date || 'any build date'} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? '' : 's'})`);

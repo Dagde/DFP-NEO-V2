@@ -24930,7 +24930,20 @@ const PrioritiesView = ({
     setTaskingRequests((prev) => [...prev, nextRequest]);
     logAudit("Priorities", "Add", "Added tasking request row", `Tasking request ${nextRequest.id}`);
   };
+  const isTaskingPriorityEventForRequest = (event, requestId) => event.taskingRequestId === requestId || String(event.id || "").startsWith(`tasking-${requestId}-`);
+  const removeTaskingPriorityEvents = (requestId) => {
+    highestPriorityEvents.filter((event) => isTaskingPriorityEventForRequest(event, requestId)).forEach((event) => onDeletePriorityEvent(event.id));
+  };
+  reactExports.useEffect(() => {
+    const submittedTaskingRequestIds = new Set(
+      taskingRequests.filter((request) => request.submitted).map((request) => request.id)
+    );
+    highestPriorityEvents.filter((event) => (event.isTaskingRequest || event.taskingRequestId || String(event.id || "").startsWith("tasking-")) && (!event.taskingRequestId || !submittedTaskingRequestIds.has(event.taskingRequestId))).forEach((event) => onDeletePriorityEvent(event.id));
+  }, [highestPriorityEvents, taskingRequests, onDeletePriorityEvent]);
   const updateTaskingRequest = (id, updates) => {
+    if (updates.submitted === false) {
+      removeTaskingPriorityEvents(id);
+    }
     setTaskingRequests((prev) => prev.map((request) => request.id === id ? { ...request, ...updates, submitted: updates.submitted ?? request.submitted } : request));
   };
   const buildTaskingPriorityEvents = (request) => {
@@ -24984,6 +24997,7 @@ const PrioritiesView = ({
   };
   const removeTaskingRequest = (id) => {
     const removed = taskingRequests.find((request) => request.id === id);
+    removeTaskingPriorityEvents(id);
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
     logAudit("Priorities", "Delete", "Removed tasking request", removed?.tasking || id);
   };
@@ -24991,6 +25005,7 @@ const PrioritiesView = ({
     const request = taskingRequests.find((item) => item.id === id);
     if (!request) return;
     const priorityEvents = buildTaskingPriorityEvents(request);
+    removeTaskingPriorityEvents(id);
     onAddPriorityEvents(priorityEvents);
     updateTaskingRequest(id, { submitted: true });
     logAudit("Priorities", "Submit", "Submitted tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? "" : "s"})`);
