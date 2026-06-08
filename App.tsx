@@ -30,7 +30,7 @@ import {
     normaliseOperationalModel,
     PlatformConfig,
 } from './utils/platformConfigService';
-import { getTaskProfilesForModel } from './utils/taskProfiles';
+import { getTaskProfileAbbreviationsForModel, getTaskProfilesForModel } from './utils/taskProfiles';
 import {
     DEFAULT_RESOURCE_DISPLAY_NAMES,
     formatResourceLabel as formatConfiguredResourceLabel,
@@ -12767,6 +12767,10 @@ const App: React.FC = () => {
     const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
     const activeTaskProfiles = useMemo(
         () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
+        [activeOperationalModel, platformConfig],
+    );
+    const activeTaskProfileAbbreviations = useMemo(
+        () => getTaskProfileAbbreviationsForModel(platformConfig, activeOperationalModel),
         [activeOperationalModel, platformConfig],
     );
     const airCombatSchedulingWeights = useMemo(
@@ -26164,6 +26168,7 @@ appliedUpdates.forEach(update => {
                     currencyNames={currencyNames}
                     resourceDisplayNames={resourceDisplayNames}
                     taskProfiles={activeTaskProfiles}
+                    taskProfileAbbreviations={activeTaskProfileAbbreviations}
                     operationalModel={activeOperationalModel}
                     operationalModelLabel={activeOperationalModelLabel}
                     airCombatSchedulingWeights={airCombatSchedulingWeights}

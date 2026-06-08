@@ -11,8 +11,11 @@ import {
   type PlatformPermissionProfile,
 } from '../utils/platformConfigService';
 import {
+  formatTaskProfileAbbreviationText,
   formatTaskProfileText,
+  normaliseTaskProfileAbbreviationConfig,
   normaliseTaskProfileConfig,
+  parseTaskProfileAbbreviationText,
   parseTaskProfileText,
 } from '../utils/taskProfiles';
 import {
@@ -1547,6 +1550,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
+  const updateTaskProfileAbbreviationsForModel = (model: string, text: string) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      taskProfileAbbreviations: {
+        ...normaliseTaskProfileAbbreviationConfig(settings.taskProfileAbbreviations || null),
+        [model]: parseTaskProfileAbbreviationText(text),
+      },
+    }));
+  };
+
   const updateMasterLmpAccessRules = (rules: PlatformMasterLmpAccessRule[]) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -2729,11 +2742,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Configure one task profile per line. The Tasking field in Build Priorities only shows the list for the active unit's selected model.
+            Configure one task profile per line. Abbreviations are used on tasking tiles as Task - abbreviation.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {OPERATIONAL_MODEL_OPTIONS.map((option) => {
               const profiles = taskProfiles[option.value] || [];
+              const abbreviations = normaliseTaskProfileAbbreviationConfig(primaryOrganisationSettings.taskProfileAbbreviations || null)[option.value] || {};
               return (
                 <div key={option.value} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
                   <div className="mb-3 flex items-start justify-between gap-3">
@@ -2756,6 +2770,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     onChange={(value) => updateTaskProfilesForModel(option.value, value)}
                     info="One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
+                  <div className="mt-3">
+                    <TextAreaField
+                      label="Tile Abbreviations"
+                      value={formatTaskProfileAbbreviationText(abbreviations)}
+                      disabled={!canEdit}
+                      onChange={(value) => updateTaskProfileAbbreviationsForModel(option.value, value)}
+                      info="One abbreviation per line, for example Close Air Support - CAS. Equals signs are also accepted."
+                    />
+                  </div>
                 </div>
               );
             })}

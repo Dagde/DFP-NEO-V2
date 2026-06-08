@@ -280,6 +280,8 @@ export interface ScheduleEvent {
       taskingAircraftIndex?: number;
       taskingAircraftCount?: number;
       isMandatoryTasking?: boolean;
+      taskingName?: string;
+      taskingDisplayLabel?: string;
       
       // Additional fields for enhanced priority events display
       dateCreated?: string;

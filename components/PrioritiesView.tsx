@@ -72,6 +72,7 @@ interface PrioritiesViewProps {
   currencyNames: string[];
   resourceDisplayNames?: ResourceDisplayNames;
   taskProfiles?: string[];
+  taskProfileAbbreviations?: Record<string, string>;
   operationalModel?: string;
   operationalModelLabel?: string;
   airCombatSchedulingWeights?: AirCombatSchedulingWeights;
@@ -658,6 +659,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   currencyNames,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   taskProfiles = [],
+  taskProfileAbbreviations = {},
   operationalModel = 'flight_school',
   operationalModelLabel = 'Flight School Model',
   airCombatSchedulingWeights,
@@ -1255,6 +1257,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const buildTaskingPriorityEvents = (request: TaskingRequest): ScheduleEvent[] => {
     const tasking = request.tasking.trim();
+    const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => (
+      profile.trim().toLowerCase() === tasking.toLowerCase()
+    ))?.[1]?.trim();
+    const taskingDisplayLabel = `Task - ${abbreviation || tasking}`;
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -1280,7 +1286,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       student: '',
       pilot: '',
       group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : 'Tasking',
-      flightNumber: tasking,
+      flightNumber: taskingDisplayLabel,
       duration: Math.max(0.1, Number(request.duration) || 0.1),
       startTime,
       resourceId: '',
@@ -1293,6 +1299,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       isTimeFixed: true,
       isTaskingRequest: true,
       isMandatoryTasking: request.isMandatory !== false,
+      taskingName: tasking,
+      taskingDisplayLabel,
       taskingRequestId: request.id,
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,

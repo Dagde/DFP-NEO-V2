@@ -64,6 +64,7 @@ interface PrioritiesViewWithMenuProps {
   currencyNames: string[];
   resourceDisplayNames?: ResourceDisplayNames;
   taskProfiles?: string[];
+  taskProfileAbbreviations?: Record<string, string>;
   operationalModel?: string;
   operationalModelLabel?: string;
   airCombatSchedulingWeights?: AirCombatSchedulingWeights;

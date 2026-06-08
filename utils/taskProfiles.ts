@@ -7,6 +7,7 @@ import {
 } from './platformConfigService';
 
 export type TaskProfileConfig = Record<OperationalModelCode, string[]>;
+export type TaskProfileAbbreviationConfig = Record<OperationalModelCode, Record<string, string>>;
 
 export const DEFAULT_TASK_PROFILE_CONFIG: TaskProfileConfig = {
   flight_school: [
@@ -53,6 +54,24 @@ export const DEFAULT_TASK_PROFILE_CONFIG: TaskProfileConfig = {
   ],
 };
 
+export const DEFAULT_TASK_PROFILE_ABBREVIATIONS: TaskProfileAbbreviationConfig = {
+  flight_school: {},
+  air_combat: {
+    'Air Defence Alert': 'Air Def',
+    'Offensive Counter Air': 'Off CA',
+    'Defensive Counter Air': 'Def CA',
+    'Close Air Support': 'CAS',
+    'Surface Attack': 'Surf Attack',
+    'Maritime Strike': 'Mar Stirke',
+    'Strategic Strike': 'Strat Strike',
+    'Armed Reconnaissance': 'Armed Rec',
+    'Combat Air Patrol': 'CAP',
+    'Composite Air Operation': 'Comp Air',
+  },
+  fixed_crew: {},
+  air_mobility: {},
+};
+
 const uniqueProfiles = (profiles: unknown[]): string[] => {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -75,6 +94,29 @@ export const parseTaskProfileText = (text: string): string[] => {
 
 export const formatTaskProfileText = (profiles: string[]): string => (
   uniqueProfiles(profiles).join('\n')
+);
+
+export const parseTaskProfileAbbreviationText = (text: string): Record<string, string> => {
+  const abbreviations: Record<string, string> = {};
+  String(text || '').split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const separator = trimmed.includes('=') ? '=' : '-';
+    const separatorIndex = trimmed.indexOf(separator);
+    if (separatorIndex < 0) return;
+    const profile = trimmed.slice(0, separatorIndex).trim();
+    const abbreviation = trimmed.slice(separatorIndex + 1).trim();
+    if (!profile || !abbreviation) return;
+    abbreviations[profile] = abbreviation;
+  });
+  return abbreviations;
+};
+
+export const formatTaskProfileAbbreviationText = (abbreviations: Record<string, string>): string => (
+  Object.entries(abbreviations || {})
+    .filter(([profile, abbreviation]) => String(profile || '').trim() && String(abbreviation || '').trim())
+    .map(([profile, abbreviation]) => `${profile} - ${abbreviation}`)
+    .join('\n')
 );
 
 export const normaliseTaskProfileConfig = (value: unknown): TaskProfileConfig => {
@@ -100,6 +142,33 @@ export const normaliseTaskProfileConfig = (value: unknown): TaskProfileConfig =>
   }, { ...DEFAULT_TASK_PROFILE_CONFIG });
 };
 
+export const normaliseTaskProfileAbbreviationConfig = (value: unknown): TaskProfileAbbreviationConfig => {
+  const source = (value && typeof value === 'object') ? value as Record<string, unknown> : {};
+  return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
+    const aliases = [
+      option.value,
+      option.label,
+      option.label.replace(/\s+Model$/i, ''),
+    ];
+    const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== undefined);
+    const abbreviations = raw === undefined
+      ? DEFAULT_TASK_PROFILE_ABBREVIATIONS[option.value]
+      : typeof raw === 'string'
+        ? parseTaskProfileAbbreviationText(raw)
+        : raw && typeof raw === 'object'
+          ? Object.entries(raw as Record<string, unknown>).reduce((items, [profile, abbreviation]) => {
+              const cleanProfile = String(profile || '').trim();
+              const cleanAbbreviation = String(abbreviation || '').trim();
+              return cleanProfile && cleanAbbreviation ? { ...items, [cleanProfile]: cleanAbbreviation } : items;
+            }, {} as Record<string, string>)
+          : {};
+    return {
+      ...config,
+      [option.value]: abbreviations,
+    };
+  }, { ...DEFAULT_TASK_PROFILE_ABBREVIATIONS });
+};
+
 export const getTaskProfilesForModel = (
   config: PlatformConfig | null | undefined,
   model: unknown = DEFAULT_OPERATIONAL_MODEL,
@@ -110,4 +179,16 @@ export const getTaskProfilesForModel = (
     || organisations[0];
   const taskProfiles = normaliseTaskProfileConfig(primaryOrganisation?.settings?.taskProfiles || null);
   return taskProfiles[activeModel] || [];
+};
+
+export const getTaskProfileAbbreviationsForModel = (
+  config: PlatformConfig | null | undefined,
+  model: unknown = DEFAULT_OPERATIONAL_MODEL,
+): Record<string, string> => {
+  const activeModel = normaliseOperationalModel(model);
+  const organisations = config?.organisations || [];
+  const primaryOrganisation = organisations.find((organisation: any) => String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE')
+    || organisations[0];
+  const abbreviations = normaliseTaskProfileAbbreviationConfig(primaryOrganisation?.settings?.taskProfileAbbreviations || null);
+  return abbreviations[activeModel] || {};
 };
