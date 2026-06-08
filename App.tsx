@@ -20946,7 +20946,33 @@ const App: React.FC = () => {
         console.log(`Pre-Build Step 2: Checking Active DFP for ${buildDfpDate}...`);
 
         const existingEventsForDate = publishedSchedules[buildDfpDate] || [];
-        const fixedExistingEventsForDate = existingEventsForDate.filter(event => event.isTimeFixed);
+        const isTaskingEvent = (event: ScheduleEvent) => (
+            event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-')
+        );
+        const currentTaskingPriorityIds = new Set(
+            syncedPriorityEvents
+                .filter(isTaskingEvent)
+                .map(event => event.id)
+        );
+        const currentTaskingRequestIds = new Set(
+            syncedPriorityEvents
+                .filter(isTaskingEvent)
+                .map(event => event.taskingRequestId)
+                .filter(Boolean) as string[]
+        );
+        const fixedExistingEventsForDate = existingEventsForDate.filter(event => {
+            if (!event.isTimeFixed) return false;
+            if (!isTaskingEvent(event)) return true;
+
+            const stillRequestedTasking =
+                currentTaskingPriorityIds.has(event.id) ||
+                (!!event.taskingRequestId && currentTaskingRequestIds.has(event.taskingRequestId));
+
+            if (!stillRequestedTasking) {
+                console.log(`DEBUG Skipping stale fixed tasking event from Active DFP preservation: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${event.taskingRequestId || 'none'})`);
+            }
+            return stillRequestedTasking;
+        });
 
         console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
 
