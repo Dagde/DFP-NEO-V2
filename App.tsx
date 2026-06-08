@@ -1406,6 +1406,7 @@ interface DfpConfig {
   operationalModel?: string;
   activeUnitCode?: string;
   airCombatSchedulingWeights?: any;
+  taskProfiles?: string[];
   instructors: Instructor[];
   trainees: Trainee[];
   syllabus: SyllabusItemDetail[];
@@ -7191,6 +7192,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const scheduleAirCombatTrainingPriorityEvents = () => {
         if (!isAirCombatBuild) return;
         const slotIncrement = 5 / 60;
+        const taskProfileCodes = new Set(
+            (config.taskProfiles || [])
+                .map(profile => String(profile || '').trim().toUpperCase().replace(/\s+/g, ''))
+                .filter(Boolean)
+        );
+        const isTaskProfileCode = (code: string): boolean => (
+            taskProfileCodes.has(String(code || '').trim().toUpperCase().replace(/\s+/g, ''))
+        );
         const sortedTrainingItems = (kind: 'course' | 'training_package', code: string) => syllabusDetails
             .filter(item => item.isActive !== false)
             .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
@@ -7518,9 +7527,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     .filter(item => !buildActiveUnitCode || item.unitCode === buildActiveUnitCode)
                     .map(item => item.code);
             })
-        )).filter(Boolean).sort();
+        )).filter(Boolean).filter(code => !isTaskProfileCode(code)).sort();
         const courseCodes = assignmentCodes('course');
         const packageCodes = assignmentCodes('training_package');
+        const excludedTaskProfileAssignments = Array.from(new Set(
+            instructors.flatMap(staff => {
+                const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+                return [...assignments.courses, ...assignments.trainingPackages]
+                    .filter(item => !buildActiveUnitCode || item.unitCode === buildActiveUnitCode)
+                    .map(item => item.code)
+                    .filter(code => code && isTaskProfileCode(code));
+            })
+        )).sort();
         const placementLimit = Math.max(0, courseCodes.length + packageCodes.length + instructors.length);
         const syllabusMatchAudit = (kind: 'course' | 'training_package', codes: string[]) => codes.map(code => {
             const matches = sortedTrainingItems(kind, code);
@@ -7542,6 +7560,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         neoBuildDiag.airCombatPriority.trainingInputs = {
             courseCodes,
             packageCodes,
+            excludedTaskProfileAssignments,
             placementLimit,
             courseSyllabusMatches: syllabusMatchAudit('course', courseCodes),
             trainingPackageSyllabusMatches: syllabusMatchAudit('training_package', packageCodes),
@@ -7549,9 +7568,19 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         recordAirCombatStage('training-inputs-built', {
             courseCodes,
             packageCodes,
+            excludedTaskProfileAssignments,
             placementLimit,
             courseMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.courseSyllabusMatches.map((item: any) => ({ code: item.code, matches: item.matches })),
             packageMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.trainingPackageSyllabusMatches.map((item: any) => ({ code: item.code, matches: item.matches })),
+        });
+        excludedTaskProfileAssignments.forEach(code => {
+            recordAirCombatSkip({
+                list: 'training',
+                staff: 'Assigned Training',
+                event: code,
+                reason: 'TASK_PROFILE_NOT_TRAINING_ASSIGNMENT',
+                startTime: null,
+            });
         });
         if (courseCodes.length === 0 && packageCodes.length === 0) {
             recordAirCombatSkip({ list: 'training', staff: 'Assigned Training', event: 'Air Combat build', reason: 'NO_AIR_COMBAT_TRAINING_ASSIGNMENTS', startTime: null });
@@ -21260,6 +21289,7 @@ const App: React.FC = () => {
             operationalModel: activeOperationalModel,
             activeUnitCode,
             airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
+            taskProfiles: activeTaskProfiles,
             instructors: instructorsInBuild,
             trainees: traineesInBuild,
             syllabus: syllabusDetails,
