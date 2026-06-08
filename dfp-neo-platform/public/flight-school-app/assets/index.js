@@ -79033,10 +79033,33 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("🚀 [NEO-Build] startBuildProcess called");
     console.log("🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====");
     console.log("🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...");
-    const syncedPriorityEvents = syncPriorityEventsWithSctAndRemedial();
+    const rawSyncedPriorityEvents = syncPriorityEventsWithSctAndRemedial();
+    const isTaskingEvent = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+    const submittedTaskingRequestIds = (() => {
+      try {
+        const parsed = JSON.parse(localStorage.getItem("neoTaskingRequests") || "[]");
+        if (!Array.isArray(parsed)) return /* @__PURE__ */ new Set();
+        return new Set(
+          parsed.filter((request) => request?.submitted && String(request.id || "").trim()).map((request) => String(request.id).trim())
+        );
+      } catch {
+        return /* @__PURE__ */ new Set();
+      }
+    })();
+    const syncedPriorityEvents = rawSyncedPriorityEvents.filter((event) => {
+      if (!isTaskingEvent(event)) return true;
+      const requestId = String(event.taskingRequestId || "").trim();
+      const stillRequested = !!requestId && submittedTaskingRequestIds.has(requestId);
+      if (!stillRequested) {
+        console.log(`DEBUG Removing stale tasking priority before build: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${requestId || "none"})`);
+      }
+      return stillRequested;
+    });
+    if (syncedPriorityEvents.length !== rawSyncedPriorityEvents.length) {
+      setHighestPriorityEvents(syncedPriorityEvents);
+    }
     console.log(`Pre-Build Step 2: Checking Active DFP for ${buildDfpDate}...`);
     const existingEventsForDate = publishedSchedules[buildDfpDate] || [];
-    const isTaskingEvent = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
     const currentTaskingPriorityIds = new Set(
       syncedPriorityEvents.filter(isTaskingEvent).map((event) => event.id)
     );
