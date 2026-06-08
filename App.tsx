@@ -14753,6 +14753,9 @@ const App: React.FC = () => {
         const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getLocalDateString();
         return buildAircraftConfigLabelsByResource(isFutureBuildDate ? currentAircraftConfigState : (dateConfigState || currentAircraftConfigState));
     }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date, timezoneOffset]);
+    const nextDayBuildAircraftConfigLabelsByResource = useMemo(() => (
+        buildAircraftConfigLabelsByResource(currentAircraftConfigState)
+    ), [buildAircraftConfigLabelsByResource, currentAircraftConfigState]);
     const [flyingStartTime, setFlyingStartTime] = useState(8.0); // 08:00
     const [flyingEndTime, setFlyingEndTime] = useState(17.0); // 17:00
     const [ftdStartTime, setFtdStartTime] = useState(8.0); // 08:00
@@ -21008,7 +21011,7 @@ const App: React.FC = () => {
             publishedEventsForBuildDate: (publishedSchedules[buildDfpDate] || []).length,
         });
         markNeoBuildTiming(timingReport, 'runBuildAlgorithm:start');
-        const shouldDownloadAirCombatDiagnostic = activeOperationalModel === 'air_combat';
+        const shouldDownloadAirCombatDiagnostic = false;
         let airCombatDiagnosticDownloaded = false;
         const downloadAirCombatDiagnosticReport = (source: string) => {
             if (!shouldDownloadAirCombatDiagnostic || airCombatDiagnosticDownloaded) return;
@@ -21229,6 +21232,10 @@ const App: React.FC = () => {
                 console.log('🚀 [NEO-Build] Generated events sample:', generated.slice(0, 3));
 
                 setNextDayBuildEvents(generated);
+                setAircraftConfigStateByDate(prev => ({
+                    ...prev,
+                    [getDailySnapshotKey(buildDfpDate)]: currentAircraftConfigState,
+                }));
                 markNeoBuildTiming(timingReport, 'state:setNextDayBuildEvents', { generated: generated.length });
                 console.log('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
 
@@ -25839,7 +25846,7 @@ appliedUpdates.forEach(update => {
                             pauseWindowStart={showPausePanel ? pauseOverlayStart : null}
                             pauseWindowEnd={showPausePanel ? pauseOverlayEnd : null}
                             formatResourceLabel={formatResourceDisplayLabel}
-                            aircraftConfigLabelsByResource={aircraftConfigLabelsByResource}
+                            aircraftConfigLabelsByResource={nextDayBuildAircraftConfigLabelsByResource}
                             aircraftNumberSettings={aircraftNumberSettings}
                        />;
             case 'Priorities':

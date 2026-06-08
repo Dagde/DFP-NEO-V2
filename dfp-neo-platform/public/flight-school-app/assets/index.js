@@ -73979,6 +73979,7 @@ const App = () => {
     const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getLocalDateString();
     return buildAircraftConfigLabelsByResource(isFutureBuildDate ? currentAircraftConfigState : dateConfigState || currentAircraftConfigState);
   }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date, timezoneOffset]);
+  const nextDayBuildAircraftConfigLabelsByResource = reactExports.useMemo(() => buildAircraftConfigLabelsByResource(currentAircraftConfigState), [buildAircraftConfigLabelsByResource, currentAircraftConfigState]);
   const [flyingStartTime, setFlyingStartTime] = reactExports.useState(8);
   const [flyingEndTime, setFlyingEndTime] = reactExports.useState(17);
   const [ftdStartTime, setFtdStartTime] = reactExports.useState(8);
@@ -78981,19 +78982,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       publishedEventsForBuildDate: (publishedSchedules[buildDfpDate] || []).length
     });
     markNeoBuildTiming(timingReport, "runBuildAlgorithm:start");
-    const shouldDownloadAirCombatDiagnostic = activeOperationalModel === "air_combat";
-    let airCombatDiagnosticDownloaded = false;
     const downloadAirCombatDiagnosticReport = (source) => {
-      if (!shouldDownloadAirCombatDiagnostic || airCombatDiagnosticDownloaded) return;
-      markNeoBuildTiming(timingReport, `diagnostic-export:${source}:start`);
-      const filename = downloadNeoBuildDiagnosticReport(source);
-      if (filename) {
-        airCombatDiagnosticDownloaded = true;
-        markNeoBuildTiming(timingReport, `diagnostic-export:${source}:downloaded`, { filename });
-        setShowInfoNotification(`Air Combat NEO Build diagnostic downloaded: ${filename}`);
-      } else {
-        markNeoBuildTiming(timingReport, `diagnostic-export:${source}:unavailable`);
-      }
+      return;
     };
     setIsBuildingDfp(true);
     setNextDayBuildEvents([]);
@@ -79178,6 +79168,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         console.log("🚀 [NEO-Build] DFP build completed, generated", generated.length, "events");
         console.log("🚀 [NEO-Build] Generated events sample:", generated.slice(0, 3));
         setNextDayBuildEvents(generated);
+        setAircraftConfigStateByDate((prev) => ({
+          ...prev,
+          [getDailySnapshotKey(buildDfpDate)]: currentAircraftConfigState
+        }));
         markNeoBuildTiming(timingReport, "state:setNextDayBuildEvents", { generated: generated.length });
         console.log("🚀 [NEO-Build] setNextDayBuildEvents called with", generated.length, "events");
         const consumedRemedialPriorityIds = new Set(
@@ -79325,7 +79319,6 @@ ${conflictLines.join("\n")}${moreText}`,
         console.error("🚀 [NEO-Build] DFP Build Failed:", error);
         console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : "No stack trace");
         setDfpBuildProgress({ message: "Error during build!", percentage: 100 });
-        downloadAirCombatDiagnosticReport("build-error");
       } finally {
         markNeoBuildTiming(timingReport, "navigation:setTimeout-queued", { delayMs: 1e3 });
         setTimeout(() => {
@@ -82893,7 +82886,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             pauseWindowStart: showPausePanel ? pauseOverlayStart : null,
             pauseWindowEnd: showPausePanel ? pauseOverlayEnd : null,
             formatResourceLabel: formatResourceDisplayLabel,
-            aircraftConfigLabelsByResource,
+            aircraftConfigLabelsByResource: nextDayBuildAircraftConfigLabelsByResource,
             aircraftNumberSettings
           }
         );
