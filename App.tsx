@@ -21282,19 +21282,40 @@ const App: React.FC = () => {
                 .map(event => event.taskingRequestId)
                 .filter(Boolean) as string[]
         );
+        const isCurrentTaskingEvent = (event: ScheduleEvent): boolean => (
+            currentTaskingPriorityIds.has(event.id) ||
+            (!!event.taskingRequestId && currentTaskingRequestIds.has(event.taskingRequestId))
+        );
+        const staleExistingTaskingEventsForDate = existingEventsForDate.filter(event =>
+            isTaskingEvent(event) && !isCurrentTaskingEvent(event)
+        );
+        const buildPublishedSchedulesForRun: Record<string, ScheduleEvent[]> = staleExistingTaskingEventsForDate.length > 0
+            ? {
+                ...publishedSchedules,
+                [buildDfpDate]: existingEventsForDate.filter(event =>
+                    !isTaskingEvent(event) || isCurrentTaskingEvent(event)
+                ),
+            }
+            : publishedSchedules;
         const fixedExistingEventsForDate = existingEventsForDate.filter(event => {
             if (!event.isTimeFixed) return false;
             if (!isTaskingEvent(event)) return true;
 
-            const stillRequestedTasking =
-                currentTaskingPriorityIds.has(event.id) ||
-                (!!event.taskingRequestId && currentTaskingRequestIds.has(event.taskingRequestId));
+            const stillRequestedTasking = isCurrentTaskingEvent(event);
 
             if (!stillRequestedTasking) {
                 console.log(`DEBUG Skipping stale fixed tasking event from Active DFP preservation: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${event.taskingRequestId || 'none'})`);
             }
             return stillRequestedTasking;
         });
+        if (staleExistingTaskingEventsForDate.length > 0) {
+            console.log(`DEBUG Removed ${staleExistingTaskingEventsForDate.length} stale tasking event(s) from build-date published schedule before NEO Build input handoff.`);
+            (window as any).__lastTaskingProvenancePreBuild = {
+                ...((window as any).__lastTaskingProvenancePreBuild || {}),
+                removedStalePublishedTaskingEvents: staleExistingTaskingEventsForDate.map(event => summariseTaskTraceEvent(event, 'removed-stale-published-tasking-before-build-handoff')),
+                sanitizedPublishedScheduleForBuildDate: (buildPublishedSchedulesForRun[buildDfpDate] || []).filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'sanitized-publishedSchedules-buildDate')),
+            };
+        }
 
         console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
 
@@ -21355,7 +21376,7 @@ const App: React.FC = () => {
         let bnfTraineeCount = 0;
 
         activeTrainees.forEach(trainee => {
-            const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+            const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, buildPublishedSchedulesForRun, buildDfpDate);
             if (next && next.code.startsWith('BNF') && next.type === 'Flight') {
                 bnfTraineeCount++;
             }
@@ -21367,7 +21388,7 @@ const App: React.FC = () => {
         setTimeout(() => {
             setShowNightFlyingInfo(false);
             // CRITICAL: Pass the preserved events directly to avoid state timing issues
-            void runBuildAlgorithm(finalPreservedEvents);
+            void runBuildAlgorithm(finalPreservedEvents, buildPublishedSchedulesForRun);
         }, 3000);
     };
 
@@ -21416,11 +21437,12 @@ const App: React.FC = () => {
         startBuildProcess();
     };
 
-    const runBuildAlgorithm = async (preservedEvents?: ScheduleEvent[]) => {
+    const runBuildAlgorithm = async (preservedEvents?: ScheduleEvent[], buildPublishedSchedulesOverride?: Record<string, ScheduleEvent[]>) => {
         console.log('🚀 [NEO-Build] runBuildAlgorithm called');
         console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
         console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
         console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
+        const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
         localStorage.removeItem('neo_build_runtime_error_report');
         const timingReport = createNeoBuildTimingReport(buildDfpDate, {
             preservedEvents: preservedEvents?.length || 0,
@@ -21429,7 +21451,7 @@ const App: React.FC = () => {
             instructors: instructorsData.length,
             currentTraineeLMPs: traineeLMPs.size,
             scoresTrainees: scores.size,
-            publishedEventsForBuildDate: (publishedSchedules[buildDfpDate] || []).length,
+            publishedEventsForBuildDate: (buildPublishedSchedules[buildDfpDate] || []).length,
         });
         markNeoBuildTiming(timingReport, 'runBuildAlgorithm:start');
         const shouldDownloadAirCombatDiagnostic = false;
@@ -21648,7 +21670,7 @@ const App: React.FC = () => {
                 });
 
                 markNeoBuildTiming(timingReport, 'generateDfpInternal:start');
-                const generated = generateDfpInternal(config, setDfpBuildProgress, publishedSchedules);
+                const generated = generateDfpInternal(config, setDfpBuildProgress, buildPublishedSchedules);
                 markNeoBuildTiming(timingReport, 'generateDfpInternal:complete', { generated: generated.length });
                 console.log('🚀 [NEO-Build] DFP build completed, generated', generated.length, 'events');
                 console.log('🚀 [NEO-Build] Generated events sample:', generated.slice(0, 3));

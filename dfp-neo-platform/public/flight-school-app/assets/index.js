@@ -79318,15 +79318,33 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const currentTaskingRequestIds = new Set(
       syncedPriorityEvents.filter(isTaskingEvent).map((event) => event.taskingRequestId).filter(Boolean)
     );
+    const isCurrentTaskingEvent = (event) => currentTaskingPriorityIds.has(event.id) || !!event.taskingRequestId && currentTaskingRequestIds.has(event.taskingRequestId);
+    const staleExistingTaskingEventsForDate = existingEventsForDate.filter(
+      (event) => isTaskingEvent(event) && !isCurrentTaskingEvent(event)
+    );
+    const buildPublishedSchedulesForRun = staleExistingTaskingEventsForDate.length > 0 ? {
+      ...publishedSchedules,
+      [buildDfpDate]: existingEventsForDate.filter(
+        (event) => !isTaskingEvent(event) || isCurrentTaskingEvent(event)
+      )
+    } : publishedSchedules;
     const fixedExistingEventsForDate = existingEventsForDate.filter((event) => {
       if (!event.isTimeFixed) return false;
       if (!isTaskingEvent(event)) return true;
-      const stillRequestedTasking = currentTaskingPriorityIds.has(event.id) || !!event.taskingRequestId && currentTaskingRequestIds.has(event.taskingRequestId);
+      const stillRequestedTasking = isCurrentTaskingEvent(event);
       if (!stillRequestedTasking) {
         console.log(`DEBUG Skipping stale fixed tasking event from Active DFP preservation: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${event.taskingRequestId || "none"})`);
       }
       return stillRequestedTasking;
     });
+    if (staleExistingTaskingEventsForDate.length > 0) {
+      console.log(`DEBUG Removed ${staleExistingTaskingEventsForDate.length} stale tasking event(s) from build-date published schedule before NEO Build input handoff.`);
+      window.__lastTaskingProvenancePreBuild = {
+        ...window.__lastTaskingProvenancePreBuild || {},
+        removedStalePublishedTaskingEvents: staleExistingTaskingEventsForDate.map((event) => summariseTaskTraceEvent(event, "removed-stale-published-tasking-before-build-handoff")),
+        sanitizedPublishedScheduleForBuildDate: (buildPublishedSchedulesForRun[buildDfpDate] || []).filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "sanitized-publishedSchedules-buildDate"))
+      };
+    }
     console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
     let newHighestPriorityEvents = [...syncedPriorityEvents];
     let addedCount = 0;
@@ -79370,7 +79388,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
     let bnfTraineeCount = 0;
     activeTrainees.forEach((trainee) => {
-      const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+      const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, buildPublishedSchedulesForRun, buildDfpDate);
       if (next && next.code.startsWith("BNF") && next.type === "Flight") {
         bnfTraineeCount++;
       }
@@ -79379,7 +79397,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     setShowNightFlyingInfo(true);
     setTimeout(() => {
       setShowNightFlyingInfo(false);
-      void runBuildAlgorithm(finalPreservedEvents);
+      void runBuildAlgorithm(finalPreservedEvents, buildPublishedSchedulesForRun);
     }, 3e3);
   };
   const handleBuildDfp = async () => {
@@ -79416,11 +79434,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     setShowDateWarning(false);
     startBuildProcess();
   };
-  const runBuildAlgorithm = async (preservedEvents) => {
+  const runBuildAlgorithm = async (preservedEvents, buildPublishedSchedulesOverride) => {
     console.log("🚀 [NEO-Build] runBuildAlgorithm called");
     console.log("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
     console.log("🚀 [NEO-Build] preservedEvents:", preservedEvents?.length || 0);
     console.log("🚀 [NEO-Build] highestPriorityEvents:", highestPriorityEvents.length);
+    const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
     localStorage.removeItem("neo_build_runtime_error_report");
     const timingReport = createNeoBuildTimingReport(buildDfpDate, {
       preservedEvents: preservedEvents?.length || 0,
@@ -79429,7 +79448,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       instructors: instructorsData.length,
       currentTraineeLMPs: traineeLMPs.size,
       scoresTrainees: scores.size,
-      publishedEventsForBuildDate: (publishedSchedules[buildDfpDate] || []).length
+      publishedEventsForBuildDate: (buildPublishedSchedules[buildDfpDate] || []).length
     });
     markNeoBuildTiming(timingReport, "runBuildAlgorithm:start");
     const downloadAirCombatDiagnosticReport = (source) => {
@@ -79614,7 +79633,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           buildDate: config.buildDate
         });
         markNeoBuildTiming(timingReport, "generateDfpInternal:start");
-        const generated = generateDfpInternal(config, setDfpBuildProgress, publishedSchedules);
+        const generated = generateDfpInternal(config, setDfpBuildProgress, buildPublishedSchedules);
         markNeoBuildTiming(timingReport, "generateDfpInternal:complete", { generated: generated.length });
         console.log("🚀 [NEO-Build] DFP build completed, generated", generated.length, "events");
         console.log("🚀 [NEO-Build] Generated events sample:", generated.slice(0, 3));
