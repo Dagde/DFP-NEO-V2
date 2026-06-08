@@ -7182,6 +7182,8 @@ const AircraftAvailabilityOverlay = ({
   onUserChange,
   initialAvailability = 15,
   apiBase: apiBase2,
+  locationCode,
+  unitCode,
   showLiveAvailabilityLine,
   isReadOnly = false
 }) => {
@@ -7197,7 +7199,8 @@ const AircraftAvailabilityOverlay = ({
   reactExports.useEffect(() => {
     let cancelled = false;
     const dateKey = dateString ?? formatDate$5(currentDate);
-    const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
+    const contextKey = [locationCode || "default-location", unitCode || "default-unit", dateKey].join("|");
+    const stored = localStorage.getItem(`aircraft-availability-${contextKey}`);
     if (stored) {
       try {
         const data = JSON.parse(stored);
@@ -7217,7 +7220,11 @@ const AircraftAvailabilityOverlay = ({
       let seed = initialAvailability;
       if (apiBase2) {
         try {
-          const res = await fetch(`${apiBase2}/aircraft-availability-current`, { credentials: "include" });
+          const params = new URLSearchParams();
+          if (locationCode) params.set("locationCode", locationCode);
+          if (unitCode) params.set("unitCode", unitCode);
+          const query = params.toString();
+          const res = await fetch(`${apiBase2}/aircraft-availability-current${query ? `?${query}` : ""}`, { credentials: "include" });
           if (res.ok) {
             const data = await res.json();
             if (data.success && !data.isDefault && typeof data.availableCount === "number") {
@@ -7248,7 +7255,7 @@ const AircraftAvailabilityOverlay = ({
     return () => {
       cancelled = true;
     };
-  }, [dateString ?? `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`]);
+  }, [dateString ?? `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`, locationCode, unitCode]);
   reactExports.useEffect(() => {
     if (snapshots.length === 0) return;
     const timeline = convertSnapshotsToTimeline(snapshots);
@@ -7258,6 +7265,7 @@ const AircraftAvailabilityOverlay = ({
       dayFlyingEnd.replace(":", "")
     );
     const dateKey = dateString ?? formatDate$5(currentDate);
+    const contextKey = [locationCode || "default-location", unitCode || "default-unit", dateKey].join("|");
     const record = {
       date: dateKey,
       snapshots,
@@ -7265,9 +7273,9 @@ const AircraftAvailabilityOverlay = ({
       dayFlyingStart,
       dayFlyingEnd
     };
-    localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
+    localStorage.setItem(`aircraft-availability-${contextKey}`, JSON.stringify(record));
     onAvailabilityChangeRef.current(record);
-  }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, dateString]);
+  }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, dateString, locationCode, unitCode]);
   const getYPosition = (count) => count * rowHeight;
   const getXPosition = (time) => {
     const t = new Date(time);
@@ -7728,6 +7736,8 @@ const ScheduleView = ({
   showAircraftAvailability,
   initialAvailability,
   apiBase: apiBase2,
+  locationCode,
+  unitCode,
   dayFlyingStart,
   dayFlyingEnd,
   onAvailabilityChange,
@@ -8633,6 +8643,8 @@ const ScheduleView = ({
                   totalAircraft: airframeCount,
                   initialAvailability: initialAvailability ?? 15,
                   apiBase: apiBase2,
+                  locationCode,
+                  unitCode,
                   dayFlyingStart,
                   dayFlyingEnd,
                   gridHeight: resources.length * ROW_HEIGHT$5,
@@ -74188,6 +74200,8 @@ ${"=".repeat(60)}`);
       totalAircraft: totalAircraftCount,
       changeType,
       recordedBy: sessionUser?.userId ?? null,
+      locationCode: school,
+      unitCode: activeUnitCode,
       notes: notesOverride ?? null,
       flyingWindowStart: windowStart,
       flyingWindowEnd: windowEnd,
@@ -74322,23 +74336,30 @@ ${"=".repeat(60)}`);
   reactExports.useEffect(() => {
     if (!sessionUser?.userId) return;
     if (!settingsLoaded) return;
+    if (!school || !activeUnitCode) return;
     const fetchCurrentAvailability = async () => {
       try {
         const apiBase2 = getApiBaseUrl();
-        const res = await fetch(`${apiBase2}/aircraft-availability-current`, {
+        const params = new URLSearchParams({
+          locationCode: school,
+          unitCode: activeUnitCode
+        });
+        const res = await fetch(`${apiBase2}/aircraft-availability-current?${params.toString()}`, {
           credentials: "include"
         });
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.availableCount !== void 0) {
             if (!data.isDefault) {
-              console.log(`[AV] 🔄 Restored availability from database: ${data.availableCount} aircraft (from ${data.date || "unknown date"})`);
+              console.log(`[AV] 🔄 Restored availability from database for ${school} - ${activeUnitCode}: ${data.availableCount} aircraft (from ${data.date || "unknown date"})`);
               setAvailableAircraftCount(data.availableCount);
               loadedAvailabilityRef.current = data.availableCount;
               availabilityLoadedFromEventsRef.current = true;
             } else {
               console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
+              setAvailableAircraftCount(data.availableCount ?? 15);
               loadedAvailabilityRef.current = 15;
+              availabilityLoadedFromEventsRef.current = false;
             }
           }
         }
@@ -74349,7 +74370,7 @@ ${"=".repeat(60)}`);
       }
     };
     fetchCurrentAvailability();
-  }, [sessionUser?.userId, settingsLoaded]);
+  }, [sessionUser?.userId, settingsLoaded, school, activeUnitCode]);
   reactExports.useEffect(() => {
     if (!sessionUser?.userId || !hasLoadedPersistedAvailability) return;
     const runStartup = async () => {
@@ -74378,6 +74399,8 @@ ${"=".repeat(60)}`);
             date: todayStr,
             flyingWindowStart: windowStart,
             flyingWindowEnd: windowEnd,
+            locationCode: school,
+            unitCode: activeUnitCode,
             clientTimezoneOffsetHours: timezoneOffset
           })
         });
@@ -82269,6 +82292,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             showAircraftAvailability,
             initialAvailability: availableAircraftCount,
             apiBase: getApiBaseUrl(),
+            locationCode: school,
+            unitCode: activeUnitCode,
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             onAvailabilityChange: (record) => {

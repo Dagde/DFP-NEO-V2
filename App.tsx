@@ -15019,6 +15019,8 @@ const App: React.FC = () => {
             totalAircraft: totalAircraftCount,
             changeType,
             recordedBy: sessionUser?.userId ?? null,
+            locationCode: school,
+            unitCode: activeUnitCode,
             notes: notesOverride ?? null,
             flyingWindowStart: windowStart,
             flyingWindowEnd:   windowEnd,
@@ -15173,28 +15175,36 @@ const App: React.FC = () => {
         if (!sessionUser?.userId) return;
         // Wait until settings have been loaded so we always override with the events-table value
         if (!settingsLoaded) return;
+        if (!school || !activeUnitCode) return;
 
         const fetchCurrentAvailability = async () => {
             try {
                 const apiBase = getApiBaseUrl();
-                const res = await fetch(`${apiBase}/aircraft-availability-current`, {
+                const params = new URLSearchParams({
+                    locationCode: school,
+                    unitCode: activeUnitCode,
+                });
+                const res = await fetch(`${apiBase}/aircraft-availability-current?${params.toString()}`, {
                     credentials: 'include'
                 });
 
                 if (res.ok) {
                     const data = await res.json();
                     if (data.success && data.availableCount !== undefined) {
-                        // Always use the persisted value if it exists (even from previous days)
-                        // The server returns the most recent event regardless of date
+                        // Always use the persisted value for the active location/unit if it exists
+                        // (even from previous days) so availability survives restarts without leaking
+                        // changes between units.
                         if (!data.isDefault) {
-                            console.log(`[AV] 🔄 Restored availability from database: ${data.availableCount} aircraft (from ${data.date || 'unknown date'})`);
+                            console.log(`[AV] 🔄 Restored availability from database for ${school} - ${activeUnitCode}: ${data.availableCount} aircraft (from ${data.date || 'unknown date'})`);
                             setAvailableAircraftCount(data.availableCount);
                             // Store in ref for immediate use in startup
                             loadedAvailabilityRef.current = data.availableCount;
                             availabilityLoadedFromEventsRef.current = true;
                         } else {
                             console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
+                            setAvailableAircraftCount(data.availableCount ?? 15);
                             loadedAvailabilityRef.current = 15; // Explicit default
+                            availabilityLoadedFromEventsRef.current = false;
                         }
                     }
                 }
@@ -15207,7 +15217,7 @@ const App: React.FC = () => {
         };
 
         fetchCurrentAvailability();
-    }, [sessionUser?.userId, settingsLoaded]);
+    }, [sessionUser?.userId, settingsLoaded, school, activeUnitCode]);
 
     // Startup: fire once when user logs in AND after persisted availability is loaded
     // - Posts a "startup" event with current availability
@@ -15249,6 +15259,8 @@ const App: React.FC = () => {
                         date: todayStr,
                         flyingWindowStart: windowStart,
                         flyingWindowEnd:   windowEnd,
+                        locationCode: school,
+                        unitCode: activeUnitCode,
                         clientTimezoneOffsetHours: timezoneOffset,
                     })
                 });
@@ -25180,6 +25192,8 @@ appliedUpdates.forEach(update => {
                            showAircraftAvailability={showAircraftAvailability}
                            initialAvailability={availableAircraftCount}
                            apiBase={getApiBaseUrl()}
+                           locationCode={school}
+                           unitCode={activeUnitCode}
                            dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, '0')}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, '0')}`}
                            dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, '0')}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, '0')}`}
                            onAvailabilityChange={(record: DailyAvailabilityRecord) => {

@@ -8174,6 +8174,10 @@ async function ensureAircraftAvailabilityTable(db) {
     try {
       await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityHistory" ADD COLUMN IF NOT EXISTS "totalFleet" INTEGER NOT NULL DEFAULT 0`);
       await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityHistory" ADD COLUMN IF NOT EXISTS "dailyAverage" DOUBLE PRECISION NOT NULL DEFAULT 0`);
+      await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityHistory" ADD COLUMN IF NOT EXISTS "locationCode" TEXT`);
+      await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityHistory" ADD COLUMN IF NOT EXISTS "unitCode" TEXT`);
+      await db.$executeRawUnsafe(`DROP INDEX IF EXISTS "AircraftAvailabilityHistory_date_key"`);
+      await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "AircraftAvailabilityHistory_context_date_idx" ON "AircraftAvailabilityHistory"("locationCode", "unitCode", "date")`);
     } catch (coreColsErr) {
       // Core columns may already exist, ignore
     }
@@ -8203,7 +8207,10 @@ async function ensureAircraftAvailabilityEventTable(db) {
     // Add missing columns if table was created with old schema (idempotent)
     await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityEvent" ADD COLUMN IF NOT EXISTS "changeType" TEXT NOT NULL DEFAULT 'change'`);
     await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityEvent" ADD COLUMN IF NOT EXISTS "recordedBy" TEXT`);
+    await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityEvent" ADD COLUMN IF NOT EXISTS "locationCode" TEXT`);
+    await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityEvent" ADD COLUMN IF NOT EXISTS "unitCode" TEXT`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_event_date ON "AircraftAvailabilityEvent"("date")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_event_context_date ON "AircraftAvailabilityEvent"("locationCode", "unitCode", "date")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_event_timestamp ON "AircraftAvailabilityEvent"("timestamp")`);
     console.log('✅ AircraftAvailabilityEvent table ready');
   } catch (err) {
@@ -8301,11 +8308,21 @@ app.delete('/api/aircraft-availability-history/:id', async (req, res) => {
 app.get('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { date } = req.query;
+    const { date, locationCode, unitCode } = req.query;
     if (!date) return res.status(400).json({ error: 'date query param required' });
+    const whereClauses = [`"date" = $1::text`];
+    const params = [date];
+    if (locationCode) {
+      params.push(String(locationCode));
+      whereClauses.push(`"locationCode" = $${params.length}::text`);
+    }
+    if (unitCode) {
+      params.push(String(unitCode));
+      whereClauses.push(`"unitCode" = $${params.length}::text`);
+    }
     const events = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" ASC`,
-      date
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE ${whereClauses.join(' AND ')} ORDER BY "timestamp" ASC`,
+      ...params
     );
     // Convert BigInt ids to numbers
     const serialized = events.map(e => ({ ...e, id: Number(e.id) }));
@@ -8321,7 +8338,7 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
     // Accept either 'totalFleet' or 'totalAircraft' for backwards compatibility
-    const { date, availableCount, notes, timestamp, changeType, recordedBy, flyingWindowStart, flyingWindowEnd, clientLocalHour, clientTimezoneOffsetHours } = req.body;
+    const { date, availableCount, notes, timestamp, changeType, recordedBy, locationCode, unitCode, flyingWindowStart, flyingWindowEnd, clientLocalHour, clientTimezoneOffsetHours } = req.body;
     const totalFleet = req.body.totalFleet ?? req.body.totalAircraft;
     if (!date || availableCount === undefined) {
       return res.status(400).json({ error: 'date and availableCount are required' });
@@ -8335,9 +8352,19 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     const ALWAYS_INSERT_TYPES = ['reset'];
     const shouldDeduplicate = !ALWAYS_INSERT_TYPES.includes(changeType);
     if (shouldDeduplicate) {
+      const dedupWhere = [`"date" = $1::text`];
+      const dedupParams = [date];
+      if (locationCode) {
+        dedupParams.push(String(locationCode));
+        dedupWhere.push(`"locationCode" = $${dedupParams.length}::text`);
+      }
+      if (unitCode) {
+        dedupParams.push(String(unitCode));
+        dedupWhere.push(`"unitCode" = $${dedupParams.length}::text`);
+      }
       const lastRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" DESC LIMIT 1`,
-        date
+        `SELECT * FROM "AircraftAvailabilityEvent" WHERE ${dedupWhere.join(' AND ')} ORDER BY "timestamp" DESC LIMIT 1`,
+        ...dedupParams
       );
       if (lastRows.length > 0 && Number(lastRows[0].availableCount) === Number(availableCount)) {
         console.log(`[AV-EVENTS] Skipping duplicate ${changeType}: availableCount=${availableCount} unchanged for ${date}`);
@@ -8387,6 +8414,9 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     if (colNames.includes('changeType')) { insertCols.push('"changeType"'); insertVals.push(`$${paramIdx++}::text`); insertParams.push(changeType ?? 'change'); }
     // recordedBy
     if (colNames.includes('recordedBy')) { insertCols.push('"recordedBy"'); insertVals.push(`$${paramIdx++}::text`); insertParams.push(recordedBy ?? null); }
+    // locationCode / unitCode - scope availability so one unit cannot overwrite another unit's current value
+    if (colNames.includes('locationCode')) { insertCols.push('"locationCode"'); insertVals.push(`$${paramIdx++}::text`); insertParams.push(locationCode ? String(locationCode) : null); }
+    if (colNames.includes('unitCode')) { insertCols.push('"unitCode"'); insertVals.push(`$${paramIdx++}::text`); insertParams.push(unitCode ? String(unitCode) : null); }
     // createdAt (if exists and has no default)
     const createdAtCol = colRows.find(c => c.column_name === 'createdAt');
     if (createdAtCol && !createdAtCol.column_default && createdAtCol.is_nullable === 'NO') {
@@ -8403,9 +8433,19 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     await db.$executeRawUnsafe(insertSQL, ...insertParams);
 
     // Fetch the just-inserted row to return it
+    const insertedWhere = [`"date" = $1::text`];
+    const insertedParams = [date];
+    if (locationCode) {
+      insertedParams.push(String(locationCode));
+      insertedWhere.push(`"locationCode" = $${insertedParams.length}::text`);
+    }
+    if (unitCode) {
+      insertedParams.push(String(unitCode));
+      insertedWhere.push(`"unitCode" = $${insertedParams.length}::text`);
+    }
     const rows = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" DESC LIMIT 1`,
-      date
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE ${insertedWhere.join(' AND ')} ORDER BY "timestamp" DESC LIMIT 1`,
+      ...insertedParams
     );
     const event = rows[0] ?? { date, availableCount, totalAircraft: totalFleet };
 
@@ -8422,12 +8462,22 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
   try {
     const db = await getPrisma();
     // Accept clientTimezoneOffsetHours (preferred) or clientLocalHour (fallback inference) for timezone handling
-    const { date, flyingWindowStart, flyingWindowEnd, totalFleet, clientTimezoneOffsetHours, clientLocalHour, clientTimezoneOffset } = req.body;
+    const { date, flyingWindowStart, flyingWindowEnd, totalFleet, locationCode, unitCode, clientTimezoneOffsetHours, clientLocalHour, clientTimezoneOffset } = req.body;
     if (!date) return res.status(400).json({ error: 'date is required' });
 
+    const eventWhere = [`"date" = $1::text`];
+    const eventParams = [date];
+    if (locationCode) {
+      eventParams.push(String(locationCode));
+      eventWhere.push(`"locationCode" = $${eventParams.length}::text`);
+    }
+    if (unitCode) {
+      eventParams.push(String(unitCode));
+      eventWhere.push(`"unitCode" = $${eventParams.length}::text`);
+    }
     const events = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" ASC`,
-      date
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE ${eventWhere.join(' AND ')} ORDER BY "timestamp" ASC`,
+      ...eventParams
     );
 
     if (!events || events.length === 0) {
@@ -8577,9 +8627,19 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
       `);
       const historyColumnNames = historyColumns.map(c => c.column_name);
       const fleetColumn = historyColumnNames.includes('totalAircraft') ? 'totalAircraft' : 'totalFleet';
+      const historyWhere = [`"date" = $1::text`];
+      const historyParams = [date];
+      if (historyColumnNames.includes('locationCode')) {
+        historyParams.push(locationCode ? String(locationCode) : null);
+        historyWhere.push(`"locationCode" IS NOT DISTINCT FROM $${historyParams.length}::text`);
+      }
+      if (historyColumnNames.includes('unitCode')) {
+        historyParams.push(unitCode ? String(unitCode) : null);
+        historyWhere.push(`"unitCode" IS NOT DISTINCT FROM $${historyParams.length}::text`);
+      }
       const existing = await db.$queryRawUnsafe(
-        `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1::text LIMIT 1`,
-        date
+        `SELECT * FROM "AircraftAvailabilityHistory" WHERE ${historyWhere.join(' AND ')} LIMIT 1`,
+        ...historyParams
       );
 
       const summaryValues = {
@@ -8596,12 +8656,12 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
       const writableFields = Object.entries(summaryValues).filter(([key]) => historyColumnNames.includes(key));
 
       if (existing.length > 0) {
-        const setClauses = writableFields.map(([key], idx) => `"${key}" = $${idx + 2}`);
+        const setClauses = writableFields.map(([key], idx) => `"${key}" = $${historyParams.length + idx + 1}`);
         if (historyColumnNames.includes('lastCalculatedAt')) setClauses.push('"lastCalculatedAt" = NOW()');
         if (historyColumnNames.includes('updatedAt')) setClauses.push('"updatedAt" = NOW()');
         await db.$executeRawUnsafe(
-          `UPDATE "AircraftAvailabilityHistory" SET ${setClauses.join(', ')} WHERE "date" = $1::text`,
-          date,
+          `UPDATE "AircraftAvailabilityHistory" SET ${setClauses.join(', ')} WHERE ${historyWhere.join(' AND ')}`,
+          ...historyParams,
           ...writableFields.map(([, value]) => value)
         );
       } else {
@@ -8619,6 +8679,17 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
         insertColumns.push('"date"');
         insertValues.push(`$${paramIdx++}::text`);
         insertParams.push(date);
+
+        if (historyColumnNames.includes('locationCode')) {
+          insertColumns.push('"locationCode"');
+          insertValues.push(`$${paramIdx++}::text`);
+          insertParams.push(locationCode ? String(locationCode) : null);
+        }
+        if (historyColumnNames.includes('unitCode')) {
+          insertColumns.push('"unitCode"');
+          insertValues.push(`$${paramIdx++}::text`);
+          insertParams.push(unitCode ? String(unitCode) : null);
+        }
 
         for (const [key, value] of writableFields) {
           insertColumns.push(`"${key}"`);
@@ -8648,9 +8719,19 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
       console.error('[AV-RECALC] Upsert error (non-fatal):', upsertErr.message);
     }
 
-    const updated = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1::text`, date
-    );
+	    const updatedWhere = [`"date" = $1::text`];
+	    const updatedParams = [date];
+	    if (locationCode) {
+	      updatedParams.push(String(locationCode));
+	      updatedWhere.push(`"locationCode" = $${updatedParams.length}::text`);
+	    }
+	    if (unitCode) {
+	      updatedParams.push(String(unitCode));
+	      updatedWhere.push(`"unitCode" = $${updatedParams.length}::text`);
+	    }
+	    const updated = await db.$queryRawUnsafe(
+	      `SELECT * FROM "AircraftAvailabilityHistory" WHERE ${updatedWhere.join(' AND ')}`, ...updatedParams
+	    );
 
     const record = updated[0] || { date, totalFleet: totalAircraft };
     record.dailyAverage = dailyAverage;
@@ -8664,7 +8745,7 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     if (record.plannedCount != null) record.plannedCount = Number(record.plannedCount);
     if (record.actualCount != null) record.actualCount = Number(record.actualCount);
 
-    console.log(`✅ POST /api/aircraft-availability-recalculate - date: ${date}, average: ${dailyAverage.toFixed(2)}, offset: ${clientUtcOffsetHours}h, effectiveEnd=${effectiveEndTime}`);
+	    console.log(`✅ POST /api/aircraft-availability-recalculate - date: ${date}, context=${locationCode || '*'}-${unitCode || '*'}, average: ${dailyAverage.toFixed(2)}, offset: ${clientUtcOffsetHours}h, effectiveEnd=${effectiveEndTime}`);
     // Return both 'record' and 'summary' so all callers work
     res.json({ success: true, record, summary: record, dailyAverage, date, eventCount: events.length });
   } catch (error) {
@@ -8674,19 +8755,36 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
 });
 
 // GET /api/aircraft-availability-current - Get the current aircraft availability
-// Returns the most recent event (any date) so availability persists across days/restarts
+// Returns the most recent event for the requested location/unit (any date) so availability
+// persists across days/restarts without leaking between units.
 app.get('/api/aircraft-availability-current', async (req, res) => {
-  try {
-    const db = await getPrisma();
+	  try {
+	    const db = await getPrisma();
+	    const locationCode = req.query.locationCode ? String(req.query.locationCode) : '';
+	    const unitCode = req.query.unitCode ? String(req.query.unitCode) : '';
 
-    // Always fetch the most recent event across ALL dates.
-    // This ensures persistence regardless of timezone (client date vs server UTC date may differ).
-    const events = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" ORDER BY "timestamp" DESC LIMIT 1`
-    );
+	    let events = [];
+	    if (locationCode && unitCode) {
+	      events = await db.$queryRawUnsafe(
+	        `SELECT * FROM "AircraftAvailabilityEvent"
+	         WHERE "locationCode" = $1::text AND "unitCode" = $2::text
+	         ORDER BY "timestamp" DESC LIMIT 1`,
+	        locationCode,
+	        unitCode
+	      );
+	    }
 
-    if (events.length === 0) {
-      const today = new Date().toISOString().split('T')[0];
+	    if (events.length === 0 && unitCode) {
+	      events = await db.$queryRawUnsafe(
+	        `SELECT * FROM "AircraftAvailabilityEvent"
+	         WHERE "unitCode" = $1::text
+	         ORDER BY "timestamp" DESC LIMIT 1`,
+	        unitCode
+	      );
+	    }
+
+	    if (events.length === 0) {
+	      const today = new Date().toISOString().split('T')[0];
       return res.json({
         success: true,
         isDefault: true,
@@ -8703,15 +8801,19 @@ app.get('/api/aircraft-availability-current', async (req, res) => {
       isDefault: false,
       availableCount: Number(latest.availableCount),
       totalAircraft: Number(latest.totalAircraft ?? latest.totalFleet ?? 15),
-      date: latest.date,
-      current: {
-        availableCount: Number(latest.availableCount),
-        totalFleet: Number(latest.totalAircraft ?? latest.totalFleet ?? 15),
-        totalAircraft: Number(latest.totalAircraft ?? latest.totalFleet ?? 15),
-        timestamp: latest.timestamp,
-        id: latest.id
-      }
-    });
+	      date: latest.date,
+	      locationCode: latest.locationCode || null,
+	      unitCode: latest.unitCode || null,
+	      current: {
+	        availableCount: Number(latest.availableCount),
+	        totalFleet: Number(latest.totalAircraft ?? latest.totalFleet ?? 15),
+	        totalAircraft: Number(latest.totalAircraft ?? latest.totalFleet ?? 15),
+	        timestamp: latest.timestamp,
+	        id: latest.id,
+	        locationCode: latest.locationCode || null,
+	        unitCode: latest.unitCode || null
+	      }
+	    });
   } catch (error) {
     console.error('❌ GET /api/aircraft-availability-current error:', error);
     res.status(500).json({ error: 'Failed to get current availability', details: error.message });

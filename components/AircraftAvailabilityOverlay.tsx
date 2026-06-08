@@ -23,6 +23,8 @@ interface AircraftAvailabilityOverlayProps {
     initialAvailability?: number;
     // apiBase: for DB fetch on first load of a date with no localStorage data
     apiBase?: string;
+    locationCode?: string;
+    unitCode?: string;
     // Explicitly controls the solid live availability line. Historical dates
     // should render only the dotted trace.
     showLiveAvailabilityLine?: boolean;
@@ -43,6 +45,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     onUserChange,
     initialAvailability = 15,
     apiBase,
+    locationCode,
+    unitCode,
     showLiveAvailabilityLine,
     isReadOnly = false,
 }) => {
@@ -73,7 +77,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         // formatDate uses toISOString() which is UTC-based; if currentDate is UTC midnight it matches
         // the date string, but dateString (the canonical YYYY-MM-DD from App.tsx) is always correct.
         const dateKey = dateString ?? formatDate(currentDate);
-        const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
+        const contextKey = [locationCode || 'default-location', unitCode || 'default-unit', dateKey].join('|');
+        const stored = localStorage.getItem(`aircraft-availability-${contextKey}`);
 
         if (stored) {
             try {
@@ -97,7 +102,11 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             let seed = initialAvailability;
             if (apiBase) {
                 try {
-                    const res = await fetch(`${apiBase}/aircraft-availability-current`, { credentials: 'include' });
+                    const params = new URLSearchParams();
+                    if (locationCode) params.set('locationCode', locationCode);
+                    if (unitCode) params.set('unitCode', unitCode);
+                    const query = params.toString();
+                    const res = await fetch(`${apiBase}/aircraft-availability-current${query ? `?${query}` : ''}`, { credentials: 'include' });
                     if (res.ok) {
                         const data = await res.json();
                         if (data.success && !data.isDefault && typeof data.availableCount === 'number') {
@@ -129,7 +138,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         loadFromDb();
         return () => { cancelled = true; };
     // Use dateString if provided (canonical date, no timezone issues), otherwise use local date fields
-    }, [dateString ?? `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [dateString ?? `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`, locationCode, unitCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Save to localStorage + notify parent whenever snapshots change ────────────
     // Always saves (same as working version) — ensures data is always persisted
@@ -143,6 +152,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         );
         // Use dateString prop if provided (avoids UTC/local timezone mismatch)
         const dateKey = dateString ?? formatDate(currentDate);
+        const contextKey = [locationCode || 'default-location', unitCode || 'default-unit', dateKey].join('|');
         const record: DailyAvailabilityRecord = {
             date: dateKey,
             snapshots,
@@ -150,9 +160,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             dayFlyingStart,
             dayFlyingEnd
         };
-        localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
+        localStorage.setItem(`aircraft-availability-${contextKey}`, JSON.stringify(record));
         onAvailabilityChangeRef.current(record);
-    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, dateString]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, dateString, locationCode, unitCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Coordinate → pixel helpers ──────────────────────────────────────────────
     const getYPosition = (count: number): number => count * rowHeight;
