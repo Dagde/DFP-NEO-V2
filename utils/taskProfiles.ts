@@ -56,18 +56,7 @@ export const DEFAULT_TASK_PROFILE_CONFIG: TaskProfileConfig = {
 
 export const DEFAULT_TASK_PROFILE_ABBREVIATIONS: TaskProfileAbbreviationConfig = {
   flight_school: {},
-  air_combat: {
-    'Air Defence Alert': 'Air Def',
-    'Offensive Counter Air': 'Off CA',
-    'Defensive Counter Air': 'Def CA',
-    'Close Air Support': 'CAS',
-    'Surface Attack': 'Surf Attack',
-    'Maritime Strike': 'Mar Stirke',
-    'Strategic Strike': 'Strat Strike',
-    'Armed Reconnaissance': 'Armed Rec',
-    'Combat Air Patrol': 'CAP',
-    'Composite Air Operation': 'Comp Air',
-  },
+  air_combat: {},
   fixed_crew: {},
   air_mobility: {},
 };
@@ -191,4 +180,22 @@ export const getTaskProfileAbbreviationsForModel = (
     || organisations[0];
   const abbreviations = normaliseTaskProfileAbbreviationConfig(primaryOrganisation?.settings?.taskProfileAbbreviations || null);
   return abbreviations[activeModel] || {};
+};
+
+export const getTaskProfileAbbreviationsForUnit = (
+  config: PlatformConfig | null | undefined,
+  unitCode: unknown,
+): Record<string, string> => {
+  const cleanUnitCode = String(unitCode || '').trim().toUpperCase();
+  if (!cleanUnitCode || cleanUnitCode.includes('+')) return {};
+  const unit = (config?.units || []).find((candidate: any) => (
+    String(candidate.code || '').trim().toUpperCase() === cleanUnitCode
+  ));
+  const raw = unit?.settings?.taskProfileAbbreviations;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  return Object.entries(raw as Record<string, unknown>).reduce((items, [profile, abbreviation]) => {
+    const cleanProfile = String(profile || '').trim();
+    const cleanAbbreviation = String(abbreviation || '').trim();
+    return cleanProfile && cleanAbbreviation ? { ...items, [cleanProfile]: cleanAbbreviation } : items;
+  }, {} as Record<string, string>);
 };

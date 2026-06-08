@@ -13,7 +13,6 @@ import {
 import {
   formatTaskProfileAbbreviationText,
   formatTaskProfileText,
-  normaliseTaskProfileAbbreviationConfig,
   normaliseTaskProfileConfig,
   parseTaskProfileAbbreviationText,
   parseTaskProfileText,
@@ -1550,14 +1549,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
-  const updateTaskProfileAbbreviationsForModel = (model: string, text: string) => {
-    updatePrimaryOrganisationSettings((settings) => ({
-      ...settings,
-      taskProfileAbbreviations: {
-        ...normaliseTaskProfileAbbreviationConfig(settings.taskProfileAbbreviations || null),
-        [model]: parseTaskProfileAbbreviationText(text),
+  const updateTaskProfileAbbreviationsForUnit = (unitIndex: number, text: string) => {
+    const unit = config.units[unitIndex];
+    updateRow('units', unitIndex, {
+      settings: {
+        ...(unit?.settings || {}),
+        taskProfileAbbreviations: parseTaskProfileAbbreviationText(text),
       },
-    }));
+    });
   };
 
   const updateMasterLmpAccessRules = (rules: PlatformMasterLmpAccessRule[]) => {
@@ -2742,12 +2741,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Configure one task profile per line. Abbreviations are used on tasking tiles as Task - abbreviation.
+            Configure model task profiles globally. Configure task tile abbreviations separately for each unit; blank unit abbreviations display tasking tiles as Task.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {OPERATIONAL_MODEL_OPTIONS.map((option) => {
               const profiles = taskProfiles[option.value] || [];
-              const abbreviations = normaliseTaskProfileAbbreviationConfig(primaryOrganisationSettings.taskProfileAbbreviations || null)[option.value] || {};
               return (
                 <div key={option.value} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
                   <div className="mb-3 flex items-start justify-between gap-3">
@@ -2770,18 +2768,40 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     onChange={(value) => updateTaskProfilesForModel(option.value, value)}
                     info="One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
-                  <div className="mt-3">
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-5">
+            <h4 className="mb-2 text-sm font-bold text-white">Unit Task Tile Abbreviations</h4>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {config.units.filter(isActiveRecord).map((unit) => {
+                const unitIndex = config.units.findIndex((candidate) => candidate === unit);
+                const abbreviations = unit.settings?.taskProfileAbbreviations || {};
+                return (
+                  <div key={unit.code} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div>
+                        <h5 className="text-sm font-bold text-white">{unit.code} - {unit.name}</h5>
+                        <p className="mt-1 text-xs text-gray-400">
+                          These abbreviations apply only when this unit is the active DFP context.
+                        </p>
+                      </div>
+                      <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
+                        {Object.keys(abbreviations).length} abbreviations
+                      </span>
+                    </div>
                     <TextAreaField
                       label="Tile Abbreviations"
                       value={formatTaskProfileAbbreviationText(abbreviations)}
                       disabled={!canEdit}
-                      onChange={(value) => updateTaskProfileAbbreviationsForModel(option.value, value)}
+                      onChange={(value) => updateTaskProfileAbbreviationsForUnit(unitIndex, value)}
                       info="One abbreviation per line, for example Close Air Support - CAS. Equals signs are also accepted."
                     />
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>

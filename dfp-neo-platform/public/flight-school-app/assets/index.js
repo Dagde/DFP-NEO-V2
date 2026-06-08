@@ -2740,23 +2740,6 @@ const DEFAULT_TASK_PROFILE_CONFIG = {
     "VIP Transport"
   ]
 };
-const DEFAULT_TASK_PROFILE_ABBREVIATIONS = {
-  flight_school: {},
-  air_combat: {
-    "Air Defence Alert": "Air Def",
-    "Offensive Counter Air": "Off CA",
-    "Defensive Counter Air": "Def CA",
-    "Close Air Support": "CAS",
-    "Surface Attack": "Surf Attack",
-    "Maritime Strike": "Mar Stirke",
-    "Strategic Strike": "Strat Strike",
-    "Armed Reconnaissance": "Armed Rec",
-    "Combat Air Patrol": "CAP",
-    "Composite Air Operation": "Comp Air"
-  },
-  fixed_crew: {},
-  air_mobility: {}
-};
 const uniqueProfiles = (profiles) => {
   const seen = /* @__PURE__ */ new Set();
   const result = [];
@@ -2808,26 +2791,6 @@ const normaliseTaskProfileConfig = (value) => {
     };
   }, { ...DEFAULT_TASK_PROFILE_CONFIG });
 };
-const normaliseTaskProfileAbbreviationConfig = (value) => {
-  const source = value && typeof value === "object" ? value : {};
-  return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
-    const aliases = [
-      option.value,
-      option.label,
-      option.label.replace(/\s+Model$/i, "")
-    ];
-    const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== void 0);
-    const abbreviations = raw === void 0 ? DEFAULT_TASK_PROFILE_ABBREVIATIONS[option.value] : typeof raw === "string" ? parseTaskProfileAbbreviationText(raw) : raw && typeof raw === "object" ? Object.entries(raw).reduce((items, [profile, abbreviation]) => {
-      const cleanProfile = String(profile || "").trim();
-      const cleanAbbreviation = String(abbreviation || "").trim();
-      return cleanProfile && cleanAbbreviation ? { ...items, [cleanProfile]: cleanAbbreviation } : items;
-    }, {}) : {};
-    return {
-      ...config,
-      [option.value]: abbreviations
-    };
-  }, { ...DEFAULT_TASK_PROFILE_ABBREVIATIONS });
-};
 const getTaskProfilesForModel = (config, model = DEFAULT_OPERATIONAL_MODEL) => {
   const activeModel = normaliseOperationalModel(model);
   const organisations = config?.organisations || [];
@@ -2835,12 +2798,17 @@ const getTaskProfilesForModel = (config, model = DEFAULT_OPERATIONAL_MODEL) => {
   const taskProfiles = normaliseTaskProfileConfig(primaryOrganisation?.settings?.taskProfiles || null);
   return taskProfiles[activeModel] || [];
 };
-const getTaskProfileAbbreviationsForModel = (config, model = DEFAULT_OPERATIONAL_MODEL) => {
-  const activeModel = normaliseOperationalModel(model);
-  const organisations = config?.organisations || [];
-  const primaryOrganisation = organisations.find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
-  const abbreviations = normaliseTaskProfileAbbreviationConfig(primaryOrganisation?.settings?.taskProfileAbbreviations || null);
-  return abbreviations[activeModel] || {};
+const getTaskProfileAbbreviationsForUnit = (config, unitCode) => {
+  const cleanUnitCode = String(unitCode || "").trim().toUpperCase();
+  if (!cleanUnitCode || cleanUnitCode.includes("+")) return {};
+  const unit = (config?.units || []).find((candidate) => String(candidate.code || "").trim().toUpperCase() === cleanUnitCode);
+  const raw = unit?.settings?.taskProfileAbbreviations;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.entries(raw).reduce((items, [profile, abbreviation]) => {
+    const cleanProfile = String(profile || "").trim();
+    const cleanAbbreviation = String(abbreviation || "").trim();
+    return cleanProfile && cleanAbbreviation ? { ...items, [cleanProfile]: cleanAbbreviation } : items;
+  }, {});
 };
 const DEFAULT_RESOURCE_DISPLAY_NAMES = {
   aircraft: "PC-21",
@@ -25010,7 +24978,7 @@ const PrioritiesView = ({
   const buildTaskingPriorityEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === tasking.toLowerCase())?.[1]?.trim();
-    const taskingDisplayLabel = `Task - ${abbreviation || tasking}`;
+    const taskingDisplayLabel = abbreviation ? `Task - ${abbreviation}` : "Task";
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -50057,14 +50025,14 @@ const PlatformConfigurationSettings = ({
       }
     }));
   };
-  const updateTaskProfileAbbreviationsForModel = (model, text) => {
-    updatePrimaryOrganisationSettings((settings) => ({
-      ...settings,
-      taskProfileAbbreviations: {
-        ...normaliseTaskProfileAbbreviationConfig(settings.taskProfileAbbreviations || null),
-        [model]: parseTaskProfileAbbreviationText(text)
+  const updateTaskProfileAbbreviationsForUnit = (unitIndex, text) => {
+    const unit = config.units[unitIndex];
+    updateRow("units", unitIndex, {
+      settings: {
+        ...unit?.settings || {},
+        taskProfileAbbreviations: parseTaskProfileAbbreviationText(text)
       }
-    }));
+    });
   };
   const updateMasterLmpAccessRules = (rules) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -51031,10 +50999,9 @@ const PlatformConfigurationSettings = ({
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Configure one task profile per line. Abbreviations are used on tasking tiles as Task - abbreviation." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Configure model task profiles globally. Configure task tile abbreviations separately for each unit; blank unit abbreviations display tasking tiles as Task." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: OPERATIONAL_MODEL_OPTIONS.map((option) => {
           const profiles = taskProfiles[option.value] || [];
-          const abbreviations = normaliseTaskProfileAbbreviationConfig(primaryOrganisationSettings.taskProfileAbbreviations || null)[option.value] || {};
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -51055,19 +51022,42 @@ const PlatformConfigurationSettings = ({
                 onChange: (value) => updateTaskProfilesForModel(option.value, value),
                 info: "One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
               }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              TextAreaField,
-              {
-                label: "Tile Abbreviations",
-                value: formatTaskProfileAbbreviationText(abbreviations),
-                disabled: !canEdit,
-                onChange: (value) => updateTaskProfileAbbreviationsForModel(option.value, value),
-                info: "One abbreviation per line, for example Close Air Support - CAS. Equals signs are also accepted."
-              }
-            ) })
+            )
           ] }, option.value);
-        }) })
+        }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-sm font-bold text-white", children: "Unit Task Tile Abbreviations" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: config.units.filter(isActiveRecord).map((unit) => {
+            const unitIndex = config.units.findIndex((candidate) => candidate === unit);
+            const abbreviations = unit.settings?.taskProfileAbbreviations || {};
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("h5", { className: "text-sm font-bold text-white", children: [
+                    unit.code,
+                    " - ",
+                    unit.name
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "These abbreviations apply only when this unit is the active DFP context." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
+                  Object.keys(abbreviations).length,
+                  " abbreviations"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                TextAreaField,
+                {
+                  label: "Tile Abbreviations",
+                  value: formatTaskProfileAbbreviationText(abbreviations),
+                  disabled: !canEdit,
+                  onChange: (value) => updateTaskProfileAbbreviationsForUnit(unitIndex, value),
+                  info: "One abbreviation per line, for example Close Air Support - CAS. Equals signs are also accepted."
+                }
+              )
+            ] }, unit.code);
+          }) })
+        ] })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-master-lmp-access", className: getSectionClass("platform-master-lmp-access"), children: [
@@ -72532,8 +72522,8 @@ const App = () => {
     [activeOperationalModel, platformConfig]
   );
   const activeTaskProfileAbbreviations = reactExports.useMemo(
-    () => getTaskProfileAbbreviationsForModel(platformConfig, activeOperationalModel),
-    [activeOperationalModel, platformConfig]
+    () => getTaskProfileAbbreviationsForUnit(platformConfig, activeUnitCode),
+    [activeUnitCode, platformConfig]
   );
   const airCombatSchedulingWeights = reactExports.useMemo(
     () => normaliseAirCombatSchedulingWeights(organisationSettings.airCombatScheduling?.defaultWeights),

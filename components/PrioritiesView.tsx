@@ -1260,7 +1260,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => (
       profile.trim().toLowerCase() === tasking.toLowerCase()
     ))?.[1]?.trim();
-    const taskingDisplayLabel = `Task - ${abbreviation || tasking}`;
+    const taskingDisplayLabel = abbreviation ? `Task - ${abbreviation}` : 'Task';
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
