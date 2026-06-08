@@ -1433,6 +1433,7 @@ interface DfpConfig {
   cptTurnaround: number;
   preferredDutyPeriod: number;
   maxCrewDutyPeriod: number;
+  maxDispatchPerHour?: number;
   eventLimits: EventLimits;
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
@@ -2481,6 +2482,7 @@ function generateDfpInternal(
         allowNightFlying, commenceNightFlying: rawCommenceNightFlying, ceaseNightFlying: rawCeaseNightFlying, buildDate,
         highestPriorityEvents, instructorPriority, traineeLMPs, flightTurnaround,
         ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
+        maxDispatchPerHour = 8,
         eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
         flyingWindowExclusions = [],
         getEventDayNightClassification,
@@ -2498,6 +2500,7 @@ function generateDfpInternal(
     const ftdEndTime = normaliseBuildWindowEnd(ftdStartTime, rawFtdEndTime);
     const commenceNightFlying = normaliseBuildWindowStart(rawCommenceNightFlying);
     const ceaseNightFlying = normaliseBuildWindowEnd(commenceNightFlying, rawCeaseNightFlying);
+    const hourlyDispatchLimit = Math.max(1, Math.floor(Number(maxDispatchPerHour) || 8));
     const windowNormalisationWarnings = [
         rawFlyingEndTime <= rawFlyingStartTime ? `Day flying window wraps or is invalid (${rawFlyingStartTime} -> ${rawFlyingEndTime}); build uses ${flyingStartTime} -> ${flyingEndTime}.` : null,
         rawFtdEndTime <= rawFtdStartTime ? `${ftdResourceLabel} window wraps or is invalid (${rawFtdStartTime} -> ${rawFtdEndTime}); build uses ${ftdStartTime} -> ${ftdEndTime}.` : null,
@@ -6164,7 +6167,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 !e.resourceId.startsWith('BNF-STBY')
             );
 
-            // All flights (including solo) count toward the rolling 60-min dispatch cap of 8.
+            // All flights (including solo) count toward the configured rolling 60-min dispatch cap.
             // Solo flights use the runway and must comply with the same capacity limit as duals.
             const takeoffsInLastHour = nonStbyFlights.filter(e =>
                 e.type === 'flight' &&
@@ -6172,9 +6175,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 e.startTime <= startTime &&
                 (!options.allowSameFormationTakeoff || !options.formationGroupId || e.formationId !== options.formationGroupId)
             ).length;
-            if (takeoffsInLastHour >= 8) {
+            if (takeoffsInLastHour >= hourlyDispatchLimit) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
-                return traceScheduleReject('HOURLY_DISPATCH_LIMIT', { takeoffsInLastHour, limit: 8 });
+                return traceScheduleReject('HOURLY_DISPATCH_LIMIT', { takeoffsInLastHour, limit: hourlyDispatchLimit });
             }
 
             // All flights (including solo) must respect the 5-minute takeoff separation rule.
@@ -6811,6 +6814,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 ...resourceOptions.slice(0, preferredIndex),
             ];
         };
+        const countTaskingDispatchesInPreviousHour = (startTime: number): number =>
+            generatedEvents.filter(event =>
+                event.type === 'flight' &&
+                !isStbyResource(event.resourceId) &&
+                event.startTime > startTime - 1 &&
+                event.startTime <= startTime
+            ).length;
         const assignTaskingStaff = (
             candidate: Omit<ScheduleEvent, 'date'>,
             requiredStaffCount: number
@@ -6957,6 +6967,30 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
 
                 const resourceOptionsAtTime = getTaskingResourceOptionsForFlow(priorityEvent, roundedTime);
+                const dispatchesInPreviousHour = countTaskingDispatchesInPreviousHour(roundedTime);
+                if (dispatchesInPreviousHour >= hourlyDispatchLimit) {
+                    if (attemptSummary.length < 12) {
+                        attemptSummary.push({
+                            time: roundedTime,
+                            displayTime: _fmtT(roundedTime),
+                            outcome: 'rejected',
+                            reason: 'HOURLY_DISPATCH_LIMIT',
+                            dispatchesInPreviousHour,
+                            limit: hourlyDispatchLimit,
+                        });
+                    }
+                    if (isAirCombatBuild) {
+                        recordAirCombatSkip({
+                            list: 'task',
+                            staff: 'Tasking',
+                            event: priorityEvent.flightNumber,
+                            reason: 'HOURLY_DISPATCH_LIMIT',
+                            startTime: roundedTime,
+                        });
+                        countAirCombatRejection('HOURLY_DISPATCH_LIMIT');
+                    }
+                    continue;
+                }
                 if (isAirCombatBuild && resourceOptionsAtTime.length === 0) {
                     recordAirCombatSkip({
                         list: 'task',
@@ -7830,7 +7864,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
             const dispatchesInPreviousHour = countAirCombatFormationDispatchesInPreviousHour(startTime);
-            if (dispatchesInPreviousHour + resourceNumber > 8) {
+            if (dispatchesInPreviousHour + resourceNumber > hourlyDispatchLimit) {
                 pushAirCombatDiag('resourceChecks', {
                     event: members[0]?.item.code || null,
                     type: 'flight',
@@ -7838,6 +7872,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     reason: 'HOURLY_DISPATCH_LIMIT',
                     dispatchesInPreviousHour,
                     resourceNumber,
+                    limit: hourlyDispatchLimit,
                 }, 800);
                 countAirCombatRejection('HOURLY_DISPATCH_LIMIT');
                 return null;
@@ -8950,7 +8985,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // SOLO SCHEDULING:
     // Solo flights (BGF11/BGF18 or sortieType='Solo') are scheduled AFTER all dual flights.
-    // They use the same slot-search logic as duals (5-min increments, 8-per-hour cap,
+    // They use the same slot-search logic as duals (5-min increments, configured hourly cap,
     // 5-min separation) but are additionally constrained to a 09:00-15:00 departure window
     // and are grouped into batches of up to 4 to keep solos together in the schedule.
     const _isSoloTrainee = (trainee: Trainee): boolean => {
@@ -9157,7 +9192,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     selectedTrainees: selectedTrainees.map(trainee => trainee.fullName),
                 }, 4000);
                 const dispatchesInPreviousHour = countFormationDispatchesInPreviousHour(time);
-                if (dispatchesInPreviousHour + resourceNumber > 8) {
+                if (dispatchesInPreviousHour + resourceNumber > hourlyDispatchLimit) {
                     traceFormation('groupBuildTrace', {
                         phase: 'formation-slot-rejected',
                         diagnosticLabel,
@@ -9168,6 +9203,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         reason: 'HOURLY_DISPATCH_LIMIT',
                         dispatchesInPreviousHour,
                         resourceNumber,
+                        limit: hourlyDispatchLimit,
                     }, 4000);
                     listDiag.attempts.push({
                         eventKey,
@@ -9177,6 +9213,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         reason: 'HOURLY_DISPATCH_LIMIT',
                         dispatchesInPreviousHour,
                         resourceNumber,
+                        limit: hourlyDispatchLimit,
                     });
                     continue;
                 }
@@ -9977,7 +10014,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         false
     );
 
-    // NEW STBY SCHEDULING PASS - "8 Flights Per Hour" Rule
+    // NEW STBY SCHEDULING PASS - configured flights-per-hour rule
     // STBY flights are extra flights added on top of the main DFP when aircraft run out
     recordProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
 
@@ -10000,15 +10037,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         ).length;
     };
 
-    // Helper: Check if adding a flight at this time would violate the 8-per-hour rule
+    // Helper: Check if adding a flight at this time would violate the hourly dispatch rule
     // Must check both backward (previous 60 min) and forward (impact on future DFP flights)
-    const wouldViolate8PerHourRule = (time: number, events: Omit<ScheduleEvent, 'date'>[]): boolean => {
-        // Check 1: Would adding this flight create more than 8 in the previous 60 minutes?
+    const wouldViolateHourlyDispatchRule = (time: number, events: Omit<ScheduleEvent, 'date'>[]): boolean => {
+        // Check 1: Would adding this flight exceed the configured cap in the previous 60 minutes?
         const oneHourBefore = time - 1.0;
         const flightsInPreviousHour = countFlightStartsInWindow(oneHourBefore, time, events);
-        if (flightsInPreviousHour >= 8) return true; // Already at limit
+        if (flightsInPreviousHour >= hourlyDispatchLimit) return true; // Already at limit
 
-        // Check 2: Would adding this flight cause any future 60-minute window to exceed 8?
+        // Check 2: Would adding this flight cause any future 60-minute window to exceed the cap?
         // Look at all existing DFP flights (not STBY) that are within 60 minutes after this time
         const oneHourAfter = time + 1.0;
         const futureDfpFlights = events.filter(e =>
@@ -10018,7 +10055,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             e.startTime <= oneHourAfter
         );
 
-        // For each future DFP flight, check if adding our STBY flight would cause that window to exceed 8
+        // For each future DFP flight, check if adding our STBY flight would cause that window to exceed the cap.
         for (const dfpFlight of futureDfpFlights) {
             const windowStart = dfpFlight.startTime - 1.0;
             const windowEnd = dfpFlight.startTime;
@@ -10026,7 +10063,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             // If adding our STBY flight at 'time' would be counted in this window
             if (time > windowStart && time <= windowEnd) {
-                if (flightsInWindow >= 8) return true; // Would exceed limit
+                if (flightsInWindow >= hourlyDispatchLimit) return true; // Would exceed limit
             }
         }
 
@@ -10286,7 +10323,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 if (hasFlightStartTime(time, generatedEvents)) continue;
                 const flightEndTime = time + next.duration;
                 if (flightEndTime > flyingEndTime) continue;
-                if (wouldViolate8PerHourRule(time, generatedEvents)) continue;
+                if (wouldViolateHourlyDispatchRule(time, generatedEvents)) continue;
 
                 const isSoloStby = next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id);
                 // Solo flights on STBY: no instructor (solo PIC), correct flightType
@@ -21148,6 +21185,7 @@ const App: React.FC = () => {
             cptTurnaround,
             preferredDutyPeriod,
             maxCrewDutyPeriod,
+            maxDispatchPerHour,
             eventLimits,
             sctFtds: sctFtds,
             sctFlights: sctFlights,
@@ -21853,7 +21891,7 @@ const App: React.FC = () => {
                     continue;
                 }
 
-                if (flightsInLastHour(slot) >= 8) {
+                if (flightsInLastHour(slot) >= maxDispatchPerHour) {
                     slot += slotStep;
                     continue;
                 }

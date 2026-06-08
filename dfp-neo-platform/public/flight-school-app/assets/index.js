@@ -64006,6 +64006,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     cptTurnaround,
     preferredDutyPeriod,
     maxCrewDutyPeriod,
+    maxDispatchPerHour = 8,
     eventLimits,
     sctFtds,
     sctFlights,
@@ -64028,6 +64029,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const ftdEndTime = normaliseBuildWindowEnd(ftdStartTime, rawFtdEndTime);
   const commenceNightFlying = normaliseBuildWindowStart(rawCommenceNightFlying);
   const ceaseNightFlying = normaliseBuildWindowEnd(commenceNightFlying, rawCeaseNightFlying);
+  const hourlyDispatchLimit = Math.max(1, Math.floor(Number(maxDispatchPerHour) || 8));
   const windowNormalisationWarnings = [
     rawFlyingEndTime <= rawFlyingStartTime ? `Day flying window wraps or is invalid (${rawFlyingStartTime} -> ${rawFlyingEndTime}); build uses ${flyingStartTime} -> ${flyingEndTime}.` : null,
     rawFtdEndTime <= rawFtdStartTime ? `${ftdResourceLabel} window wraps or is invalid (${rawFtdStartTime} -> ${rawFtdEndTime}); build uses ${ftdStartTime} -> ${ftdEndTime}.` : null,
@@ -66941,9 +66943,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const takeoffsInLastHour = nonStbyFlights.filter(
         (e) => e.type === "flight" && e.startTime > startTime - 1 && e.startTime <= startTime && (!options.allowSameFormationTakeoff || !options.formationGroupId || e.formationId !== options.formationGroupId)
       ).length;
-      if (takeoffsInLastHour >= 8) {
+      if (takeoffsInLastHour >= hourlyDispatchLimit) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "HOURLY_DISPATCH_LIMIT");
-        return traceScheduleReject("HOURLY_DISPATCH_LIMIT", { takeoffsInLastHour, limit: 8 });
+        return traceScheduleReject("HOURLY_DISPATCH_LIMIT", { takeoffsInLastHour, limit: hourlyDispatchLimit });
       }
       const takeoffConflict = nonStbyFlights.some((e) => {
         if (e.type !== "flight") return false;
@@ -67512,6 +67514,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ...resourceOptions.slice(0, preferredIndex)
       ];
     };
+    const countTaskingDispatchesInPreviousHour = (startTime) => generatedEvents.filter(
+      (event) => event.type === "flight" && !isStbyResource(event.resourceId) && event.startTime > startTime - 1 && event.startTime <= startTime
+    ).length;
     const assignTaskingStaff = (candidate, requiredStaffCount) => {
       if (isAirCombatBuild) {
         const priorityList = getTaskStaffPriorityList();
@@ -67644,6 +67649,30 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           continue;
         }
         const resourceOptionsAtTime = getTaskingResourceOptionsForFlow(priorityEvent, roundedTime);
+        const dispatchesInPreviousHour = countTaskingDispatchesInPreviousHour(roundedTime);
+        if (dispatchesInPreviousHour >= hourlyDispatchLimit) {
+          if (attemptSummary.length < 12) {
+            attemptSummary.push({
+              time: roundedTime,
+              displayTime: _fmtT(roundedTime),
+              outcome: "rejected",
+              reason: "HOURLY_DISPATCH_LIMIT",
+              dispatchesInPreviousHour,
+              limit: hourlyDispatchLimit
+            });
+          }
+          if (isAirCombatBuild) {
+            recordAirCombatSkip({
+              list: "task",
+              staff: "Tasking",
+              event: priorityEvent.flightNumber,
+              reason: "HOURLY_DISPATCH_LIMIT",
+              startTime: roundedTime
+            });
+            countAirCombatRejection("HOURLY_DISPATCH_LIMIT");
+          }
+          continue;
+        }
         if (isAirCombatBuild && resourceOptionsAtTime.length === 0) {
           recordAirCombatSkip({
             list: "task",
@@ -68397,14 +68426,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return null;
       }
       const dispatchesInPreviousHour = countAirCombatFormationDispatchesInPreviousHour(startTime);
-      if (dispatchesInPreviousHour + resourceNumber > 8) {
+      if (dispatchesInPreviousHour + resourceNumber > hourlyDispatchLimit) {
         pushAirCombatDiag("resourceChecks", {
           event: members[0]?.item.code || null,
           type: "flight",
           startTime,
           reason: "HOURLY_DISPATCH_LIMIT",
           dispatchesInPreviousHour,
-          resourceNumber
+          resourceNumber,
+          limit: hourlyDispatchLimit
         }, 800);
         countAirCombatRejection("HOURLY_DISPATCH_LIMIT");
         return null;
@@ -69617,7 +69647,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           selectedTrainees: selectedTrainees.map((trainee) => trainee.fullName)
         }, 4e3);
         const dispatchesInPreviousHour = countFormationDispatchesInPreviousHour(time);
-        if (dispatchesInPreviousHour + resourceNumber > 8) {
+        if (dispatchesInPreviousHour + resourceNumber > hourlyDispatchLimit) {
           traceFormation("groupBuildTrace", {
             phase: "formation-slot-rejected",
             diagnosticLabel,
@@ -69627,7 +69657,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             displayTime: _fmtT(time),
             reason: "HOURLY_DISPATCH_LIMIT",
             dispatchesInPreviousHour,
-            resourceNumber
+            resourceNumber,
+            limit: hourlyDispatchLimit
           }, 4e3);
           listDiag.attempts.push({
             eventKey,
@@ -69636,7 +69667,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             outcome: "rejected",
             reason: "HOURLY_DISPATCH_LIMIT",
             dispatchesInPreviousHour,
-            resourceNumber
+            resourceNumber,
+            limit: hourlyDispatchLimit
           });
           continue;
         }
@@ -70322,10 +70354,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       (e) => e.type === "flight" && e.startTime > windowStart && e.startTime <= windowEnd
     ).length;
   };
-  const wouldViolate8PerHourRule = (time, events) => {
+  const wouldViolateHourlyDispatchRule = (time, events) => {
     const oneHourBefore = time - 1;
     const flightsInPreviousHour = countFlightStartsInWindow(oneHourBefore, time, events);
-    if (flightsInPreviousHour >= 8) return true;
+    if (flightsInPreviousHour >= hourlyDispatchLimit) return true;
     const oneHourAfter = time + 1;
     const futureDfpFlights = events.filter(
       (e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && e.startTime > time && e.startTime <= oneHourAfter
@@ -70335,7 +70367,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const windowEnd = dfpFlight.startTime;
       const flightsInWindow = countFlightStartsInWindow(windowStart, windowEnd, events);
       if (time > windowStart && time <= windowEnd) {
-        if (flightsInWindow >= 8) return true;
+        if (flightsInWindow >= hourlyDispatchLimit) return true;
       }
     }
     return false;
@@ -70471,7 +70503,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (hasFlightStartTime(time, generatedEvents)) continue;
         const flightEndTime = time + next.duration;
         if (flightEndTime > flyingEndTime) continue;
-        if (wouldViolate8PerHourRule(time, generatedEvents)) continue;
+        if (wouldViolateHourlyDispatchRule(time, generatedEvents)) continue;
         const isSoloStby = next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id);
         const stbyInstructor = isSoloStby ? "" : findBestInstructorForStby(trainee, next, time, next.duration, "flight", generatedEvents) || "TBA";
         const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, "STBY");
@@ -79104,6 +79136,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       cptTurnaround,
       preferredDutyPeriod,
       maxCrewDutyPeriod,
+      maxDispatchPerHour,
       eventLimits,
       sctFtds,
       sctFlights,
@@ -79647,7 +79680,7 @@ ${conflictLines.join("\n")}${moreText}`,
           slot += slotStep;
           continue;
         }
-        if (flightsInLastHour(slot) >= 8) {
+        if (flightsInLastHour(slot) >= maxDispatchPerHour) {
           slot += slotStep;
           continue;
         }
