@@ -253,7 +253,6 @@ const DfpSidePanelTimeline: React.FC<{
     const chartRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
-    const [airCombatPriorityDiag, setAirCombatPriorityDiag] = useState<any | null>(null);
 
     const normalizeHour = (time: number): number => {
         let value = Number(time) || 0;
@@ -373,29 +372,6 @@ const DfpSidePanelTimeline: React.FC<{
         const targetHour = Math.max(timelineStartHour, normalizeHour(flyingStartTime) - 0.75);
         const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
         scroller.scrollLeft = Math.max(0, ratio * scroller.scrollWidth - scroller.clientWidth * 0.15);
-    }, []);
-
-    useEffect(() => {
-        const loadAirCombatPriorityDiag = () => {
-            try {
-                const raw = localStorage.getItem('neo_build_diag_report');
-                if (!raw) {
-                    setAirCombatPriorityDiag(null);
-                    return;
-                }
-                const parsed = JSON.parse(raw);
-                setAirCombatPriorityDiag(parsed?.airCombatPriority?.enabled ? parsed.airCombatPriority : null);
-            } catch {
-                setAirCombatPriorityDiag(null);
-            }
-        };
-        loadAirCombatPriorityDiag();
-        const refreshTimer = window.setInterval(loadAirCombatPriorityDiag, 2000);
-        window.addEventListener('storage', loadAirCombatPriorityDiag);
-        return () => {
-            window.clearInterval(refreshTimer);
-            window.removeEventListener('storage', loadAirCombatPriorityDiag);
-        };
     }, []);
 
     useEffect(() => {
@@ -551,98 +527,6 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 </div>
             </div>
-            <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-slate-300">
-                <span className="inline-flex items-center gap-1.5"><span className={`h-3 w-4 rounded-sm ring-1 ring-inset ${dayShade}`} /> Day</span>
-                <span className="inline-flex items-center gap-1.5"><span className={`h-3 w-4 rounded-sm ring-1 ring-inset ${nightShade}`} /> Night</span>
-                <span className="inline-flex items-center gap-1.5"><span className={`h-3 w-4 rounded-sm ring-1 ring-inset ${exclusionShade}`} /> Exclusion</span>
-            </div>
-            {airCombatPriorityDiag && (
-                <div className="mt-4 rounded-md border border-emerald-400/25 bg-emerald-950/20 p-3 text-[11px] text-slate-200">
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="font-semibold text-emerald-100">Air Combat Priority Lists</span>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-semibold text-emerald-200/80">
-                                Courses {airCombatPriorityDiag.weights?.courses ?? 60}% / Packages {airCombatPriorityDiag.weights?.trainingPackages ?? 40}%
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => downloadNeoBuildDiagnosticReport('air-combat-priority-panel')}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded border border-emerald-300/35 bg-emerald-950/55 text-emerald-100 transition hover:border-emerald-200/70 hover:bg-emerald-900/70 focus:outline-none focus:ring-2 focus:ring-emerald-300/40"
-                                title="Download Air Combat NEO Build diagnostic report"
-                                aria-label="Download Air Combat NEO Build diagnostic report"
-                            >
-                                <ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => downloadNeoTaskProvenanceReport('air-combat-priority-panel')}
-                                className="inline-flex h-7 items-center justify-center rounded border border-cyan-300/35 bg-cyan-950/55 px-2 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-900/70 focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
-                                title="Download task provenance report"
-                                aria-label="Download task provenance report"
-                            >
-                                Task Trace
-                            </button>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                        <div className="rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
-                            <span className="block text-[9px] uppercase tracking-[0.08em] text-slate-400">Task</span>
-                            <span className="text-sm font-bold text-white">{airCombatPriorityDiag.taskStaffPriorityList?.length || 0}</span>
-                        </div>
-                        <div className="rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
-                            <span className="block text-[9px] uppercase tracking-[0.08em] text-slate-400">Course</span>
-                            <span className="text-sm font-bold text-white">{airCombatPriorityDiag.courseStaffPriorityLists?.length || 0}</span>
-                        </div>
-                        <div className="rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
-                            <span className="block text-[9px] uppercase tracking-[0.08em] text-slate-400">Package</span>
-                            <span className="text-sm font-bold text-white">{airCombatPriorityDiag.trainingPackageStaffPriorityLists?.length || 0}</span>
-                        </div>
-                    </div>
-                    {(airCombatPriorityDiag.placements?.length || 0) > 0 && (
-                        <div className="mt-2 rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
-                            <span className="font-semibold text-slate-100">{airCombatPriorityDiag.placements.length}</span>
-                            <span className="ml-1 text-slate-400">priority placements this build</span>
-                        </div>
-                    )}
-                    {(airCombatPriorityDiag.conclusion?.length || 0) > 0 && (
-                        <div className="mt-2 rounded border border-amber-400/25 bg-amber-950/20 px-2 py-1.5">
-                            <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-200/80">Build conclusion</span>
-                            {airCombatPriorityDiag.conclusion.slice(0, 3).map((item: string, index: number) => (
-                                <div key={`air-combat-conclusion-${index}`} className="text-[10px] leading-snug text-amber-50/90">{item}</div>
-                            ))}
-                        </div>
-                    )}
-                    {airCombatPriorityDiag.rejectionReasons && Object.keys(airCombatPriorityDiag.rejectionReasons).length > 0 && (
-                        <div className="mt-2 rounded border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
-                            <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">Top rejection reasons</span>
-                            <div className="flex flex-wrap gap-1">
-                                {Object.entries(airCombatPriorityDiag.rejectionReasons)
-                                    .sort((left: any, right: any) => Number(right[1]) - Number(left[1]))
-                                    .slice(0, 5)
-                                    .map(([reason, count]: any) => (
-                                        <span key={reason} className="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-200">
-                                            {reason}: {count}
-                                        </span>
-                                    ))}
-                            </div>
-                        </div>
-                    )}
-                    {(airCombatPriorityDiag.skipReasons?.length || 0) > 0 && (
-                        <div className="mt-2">
-                            <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">Latest skips</span>
-                            <div className="space-y-1">
-                                {airCombatPriorityDiag.skipReasons.slice(-4).map((skip: any, index: number) => (
-                                    <div key={`${skip.staffName || skip.staff || 'staff'}-${skip.reason || 'skip'}-${index}`} className="rounded border border-slate-700/80 bg-slate-950/45 px-2 py-1 text-[10px] text-slate-300">
-                                        <span className="font-semibold text-slate-100">{skip.staffName || skip.staff || 'Staff'}</span>
-                                        <span className="text-slate-500"> - </span>
-                                        <span>{skip.reason || 'Skipped'}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 };
