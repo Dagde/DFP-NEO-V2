@@ -68721,76 +68721,80 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         countAirCombatRejection("NO_AVAILABLE_AREA");
         return null;
       }
-      const resources = [];
-      const reservedResources = /* @__PURE__ */ new Set();
-      for (const member of members) {
-        let placedResource = null;
-        for (let index = 1; index <= availableAircraftCount; index++) {
-          const resourceId = `PC-21 ${index}`;
-          if (reservedResources.has(resourceId)) continue;
-          const aircraftConfigId = getAircraftConfigIdForResource(resourceId);
-          if (!eventAcceptsResourceConfig(member.item, aircraftConfigId)) {
-            pushAirCombatDiag("resourceChecks", {
-              event: member.item.code,
-              type: "flight",
-              startTime,
-              resourceId,
-              aircraftConfigId,
-              reason: "AIRCRAFT_CONFIG_INCOMPATIBLE",
-              required: normaliseAircraftConfigRequirement(member.item),
-              formationGroupId: groupId
-            }, 800);
-            countAirCombatRejection("AIRCRAFT_CONFIG_INCOMPATIBLE");
-            continue;
-          }
-          const candidate = {
-            type: "flight",
-            pilot: member.staff.name,
-            flightNumber: member.item.code,
-            duration: member.item.duration,
-            startTime,
-            resourceId,
-            preStart: member.item.preFlightTime,
-            postEnd: member.item.postFlightTime,
-            acceptableAircraftConfigs: normaliseAircraftConfigRequirement(member.item)
-          };
-          const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
-          if (resourceConflict) {
-            pushAirCombatDiag("resourceChecks", {
-              event: member.item.code,
-              type: "flight",
-              startTime,
-              resourceId,
-              reason: "RESOURCE_CONFLICT",
-              formationGroupId: groupId,
-              conflict: {
-                flightNumber: resourceConflict.flightNumber,
-                startTime: resourceConflict.startTime,
-                duration: resourceConflict.duration,
-                resourceId: resourceConflict.resourceId
-              }
-            }, 800);
-            countAirCombatRejection("RESOURCE_CONFLICT");
-            continue;
-          }
-          placedResource = { resourceId, aircraftConfigId };
-          break;
-        }
-        if (!placedResource) {
+      const evaluateFormationResource = (member, resourceId) => {
+        const aircraftConfigId = getAircraftConfigIdForResource(resourceId);
+        if (!eventAcceptsResourceConfig(member.item, aircraftConfigId)) {
           pushAirCombatDiag("resourceChecks", {
             event: member.item.code,
             type: "flight",
             startTime,
-            reason: "NO_RESOURCE_AVAILABLE_FOR_FORMATION_MEMBER",
+            resourceId,
+            aircraftConfigId,
+            reason: "AIRCRAFT_CONFIG_INCOMPATIBLE",
+            required: normaliseAircraftConfigRequirement(member.item),
             formationGroupId: groupId
           }, 800);
-          countAirCombatRejection("NO_RESOURCE_AVAILABLE_FOR_FORMATION_MEMBER");
+          countAirCombatRejection("AIRCRAFT_CONFIG_INCOMPATIBLE");
           return null;
         }
-        reservedResources.add(placedResource.resourceId);
-        resources.push(placedResource);
+        const candidate = {
+          type: "flight",
+          pilot: member.staff.name,
+          flightNumber: member.item.code,
+          duration: member.item.duration,
+          startTime,
+          resourceId,
+          preStart: member.item.preFlightTime,
+          postEnd: member.item.postFlightTime,
+          acceptableAircraftConfigs: normaliseAircraftConfigRequirement(member.item)
+        };
+        const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
+        if (resourceConflict) {
+          pushAirCombatDiag("resourceChecks", {
+            event: member.item.code,
+            type: "flight",
+            startTime,
+            resourceId,
+            reason: "RESOURCE_CONFLICT",
+            formationGroupId: groupId,
+            conflict: {
+              flightNumber: resourceConflict.flightNumber,
+              startTime: resourceConflict.startTime,
+              duration: resourceConflict.duration,
+              resourceId: resourceConflict.resourceId
+            }
+          }, 800);
+          countAirCombatRejection("RESOURCE_CONFLICT");
+          return null;
+        }
+        return { resourceId, aircraftConfigId };
+      };
+      for (let startIndex = 1; startIndex <= availableAircraftCount - resourceNumber + 1; startIndex++) {
+        const blockResources = Array.from({ length: resourceNumber }, (_, index) => `PC-21 ${startIndex + index}`);
+        const resources = members.map((member, index) => evaluateFormationResource(member, blockResources[index]));
+        if (resources.every(Boolean)) {
+          pushAirCombatDiag("resourceChecks", {
+            event: members[0]?.item.code || null,
+            type: "flight",
+            startTime,
+            reason: "FORMATION_ADJACENT_RESOURCE_BLOCK_SELECTED",
+            formationGroupId: groupId,
+            resourceNumber,
+            resources: resources.map((resource) => resource.resourceId)
+          }, 800);
+          return { resources, area };
+        }
       }
-      return { resources, area };
+      pushAirCombatDiag("resourceChecks", {
+        event: members[0]?.item.code || null,
+        type: "flight",
+        startTime,
+        reason: "NO_ADJACENT_RESOURCE_BLOCK_FOR_FORMATION",
+        resourceNumber,
+        formationGroupId: groupId
+      }, 800);
+      countAirCombatRejection("NO_ADJACENT_RESOURCE_BLOCK_FOR_FORMATION");
+      return null;
     };
     const placeAirCombatFormationTraining = (kind, code, leadEntry, leadItem, matchingItems, priorityList) => {
       const resourceNumber = getLmpResourceNumber(leadItem);

@@ -8091,13 +8091,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 countAirCombatRejection('NO_AVAILABLE_AREA');
                 return null;
             }
-            const resources: Array<{ resourceId: string; aircraftConfigId?: string }> = [];
-            const reservedResources = new Set<string>();
-            for (const member of members) {
-                let placedResource: { resourceId: string; aircraftConfigId?: string } | null = null;
-                for (let index = 1; index <= availableAircraftCount; index++) {
-                    const resourceId = `PC-21 ${index}`;
-                    if (reservedResources.has(resourceId)) continue;
+            const evaluateFormationResource = (
+                member: AirCombatFormationMember,
+                resourceId: string
+            ): { resourceId: string; aircraftConfigId?: string } | null => {
                     const aircraftConfigId = getAircraftConfigIdForResource(resourceId);
                     if (!eventAcceptsResourceConfig(member.item, aircraftConfigId)) {
                         pushAirCombatDiag('resourceChecks', {
@@ -8111,7 +8108,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             formationGroupId: groupId,
                         }, 800);
                         countAirCombatRejection('AIRCRAFT_CONFIG_INCOMPATIBLE');
-                        continue;
+                        return null;
                     }
                     const candidate = {
                         id: `air-combat-formation-resource-${groupId}-${resourceId}`,
@@ -8154,26 +8151,36 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             },
                         }, 800);
                         countAirCombatRejection('RESOURCE_CONFLICT');
-                        continue;
+                        return null;
                     }
-                    placedResource = { resourceId, aircraftConfigId };
-                    break;
-                }
-                if (!placedResource) {
+                    return { resourceId, aircraftConfigId };
+            };
+            for (let startIndex = 1; startIndex <= availableAircraftCount - resourceNumber + 1; startIndex++) {
+                const blockResources = Array.from({ length: resourceNumber }, (_, index) => `PC-21 ${startIndex + index}`);
+                const resources = members.map((member, index) => evaluateFormationResource(member, blockResources[index]));
+                if (resources.every(Boolean)) {
                     pushAirCombatDiag('resourceChecks', {
-                        event: member.item.code,
+                        event: members[0]?.item.code || null,
                         type: 'flight',
                         startTime,
-                        reason: 'NO_RESOURCE_AVAILABLE_FOR_FORMATION_MEMBER',
+                        reason: 'FORMATION_ADJACENT_RESOURCE_BLOCK_SELECTED',
                         formationGroupId: groupId,
+                        resourceNumber,
+                        resources: resources.map(resource => resource!.resourceId),
                     }, 800);
-                    countAirCombatRejection('NO_RESOURCE_AVAILABLE_FOR_FORMATION_MEMBER');
-                    return null;
+                    return { resources: resources as Array<{ resourceId: string; aircraftConfigId?: string }>, area };
                 }
-                reservedResources.add(placedResource.resourceId);
-                resources.push(placedResource);
             }
-            return { resources, area };
+            pushAirCombatDiag('resourceChecks', {
+                event: members[0]?.item.code || null,
+                type: 'flight',
+                startTime,
+                reason: 'NO_ADJACENT_RESOURCE_BLOCK_FOR_FORMATION',
+                resourceNumber,
+                formationGroupId: groupId,
+            }, 800);
+            countAirCombatRejection('NO_ADJACENT_RESOURCE_BLOCK_FOR_FORMATION');
+            return null;
         };
         const placeAirCombatFormationTraining = (
             kind: 'course' | 'training_package',
