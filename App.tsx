@@ -30,7 +30,7 @@ import {
     normaliseOperationalModel,
     PlatformConfig,
 } from './utils/platformConfigService';
-import { getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from './utils/taskProfiles';
+import { DEFAULT_TASK_PROFILE_CONFIG, getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from './utils/taskProfiles';
 import {
     DEFAULT_RESOURCE_DISPLAY_NAMES,
     formatResourceLabel as formatConfiguredResourceLabel,
@@ -130,6 +130,29 @@ const downloadNeoBuildDiagnosticReport = (source: string = 'manual'): string | n
 
     console.log('[NEO-BUILD-DIAG] Download triggered:', diagnosticExport.filename, { source });
     return diagnosticExport.filename;
+};
+
+const downloadNeoTaskProvenanceReport = (source: string = 'manual'): string | null => {
+    const diagnosticExport = buildNeoBuildDiagnosticExport();
+    const taskProvenance = diagnosticExport?.report?.taskProvenance;
+    if (!taskProvenance) {
+        console.error('No NEO task provenance report found. Run a build first.');
+        return null;
+    }
+
+    const filename = `neo-task-provenance-${getDiagnosticTimestamp(diagnosticExport.report.timestamp)}.json`;
+    if (!downloadJsonDiagnosticFile(filename, {
+        timestamp: diagnosticExport.report.timestamp,
+        buildDate: diagnosticExport.report.buildDate,
+        stage: diagnosticExport.report.stage,
+        taskProvenance,
+    })) {
+        console.error('[NEO-TASK-PROVENANCE] Browser download API is unavailable.');
+        return null;
+    }
+
+    console.log('[NEO-TASK-PROVENANCE] Download triggered:', filename, { source });
+    return filename;
 };
 import DarkMessageModal from './components/DarkMessageModal';
 import SystemFreezeBanner from './components/SystemFreezeBanner';
@@ -549,6 +572,15 @@ const DfpSidePanelTimeline: React.FC<{
                                 aria-label="Download Air Combat NEO Build diagnostic report"
                             >
                                 <ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => downloadNeoTaskProvenanceReport('air-combat-priority-panel')}
+                                className="inline-flex h-7 items-center justify-center rounded border border-cyan-300/35 bg-cyan-950/55 px-2 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-900/70 focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
+                                title="Download task provenance report"
+                                aria-label="Download task provenance report"
+                            >
+                                Task Trace
                             </button>
                         </div>
                     </div>
@@ -1447,6 +1479,7 @@ interface DfpConfig {
   aircraftConfigIdsByResource?: Record<string, string>;
   remedialPrioritySyncTrace?: any[];
   remedialDataMovementTrace?: any[];
+  taskProvenancePreBuild?: any;
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
@@ -2268,6 +2301,10 @@ function _diagFinalizeInstructors() {
     downloadNeoBuildDiagnosticReport('devtools-helper');
 };
 
+(window as any).__downloadNeoTaskProvenance = () => {
+    downloadNeoTaskProvenanceReport('devtools-helper');
+};
+
 (window as any).__downloadNeoBuildTiming = () => {
     const raw = localStorage.getItem('neo_build_timing_report');
     if (!raw) { console.error('No NEO Build timing report found. Run a build first.'); return; }
@@ -2978,6 +3015,24 @@ function generateDfpInternal(
             finalAssignments: [] as any[],
             summary: null,
         },
+        taskProvenance: {
+            watchedLabels: Array.from(new Set([
+                ...(DEFAULT_TASK_PROFILE_CONFIG.air_combat || []),
+                'Task',
+                'Tasking',
+                'Maritime Strike',
+            ])),
+            preBuild: config.taskProvenancePreBuild || null,
+            buildInput: {
+                highestPriorityEvents: [] as any[],
+                activeDfpFixedEvents: [] as any[],
+                publishedScheduleForDate: [] as any[],
+            },
+            generatedPushes: [] as any[],
+            finalCleanup: [] as any[],
+            finalEvents: [] as any[],
+            conclusions: [] as any[],
+        },
         airCombatPriority: {
             enabled: buildOperationalModel === 'air_combat',
             model: buildOperationalModel,
@@ -3066,6 +3121,13 @@ function generateDfpInternal(
                     laterScheduledEvents: neoBuildDiag.formationResourceDiagnostics.laterScheduledEvents.slice(-500),
                 },
                 currencyPriorityDiagnostics: getCompactCurrencyPriorityDiagnostics(),
+                taskProvenance: neoBuildDiag.taskProvenance ? {
+                    ...neoBuildDiag.taskProvenance,
+                    generatedPushes: (neoBuildDiag.taskProvenance.generatedPushes || []).slice(-500),
+                    finalCleanup: (neoBuildDiag.taskProvenance.finalCleanup || []).slice(-300),
+                    finalEvents: (neoBuildDiag.taskProvenance.finalEvents || []).slice(-300),
+                    conclusions: (neoBuildDiag.taskProvenance.conclusions || []).slice(-100),
+                } : undefined,
                 airCombatPriority: neoBuildDiag.airCombatPriority ? {
                     ...neoBuildDiag.airCombatPriority,
                     staffAudit: (neoBuildDiag.airCombatPriority.staffAudit || []).slice(0, 120),
@@ -3093,6 +3155,71 @@ function generateDfpInternal(
         }
     };
     saveNeoBuildDiag('build-start');
+
+    const normaliseTaskTraceText = (value?: any): string => String(value || '').trim().toLowerCase();
+    const taskTraceLabels = neoBuildDiag.taskProvenance.watchedLabels as string[];
+    const getTaskTraceMatchedLabels = (event: Partial<ScheduleEvent> | any): string[] => {
+        const text = [
+            event.id,
+            event.flightNumber,
+            event.taskingName,
+            event.taskingDisplayLabel,
+            event.notes,
+            event.group,
+            event.callsign,
+            event._source,
+        ].map(normaliseTaskTraceText).join(' | ');
+        return taskTraceLabels.filter(label => text.includes(normaliseTaskTraceText(label)));
+    };
+    const eventMatchesTaskTrace = (event: Partial<ScheduleEvent> | any): boolean => (
+        event.isTaskingRequest === true ||
+        !!event.taskingRequestId ||
+        String(event.id || '').startsWith('tasking-') ||
+        getTaskTraceMatchedLabels(event).length > 0
+    );
+    const summariseTaskTraceEvent = (event: Partial<ScheduleEvent> | any, phase: string, extra: Record<string, any> = {}) => ({
+        phase,
+        timestamp: new Date().toISOString(),
+        id: event.id || null,
+        date: event.date || buildDate || null,
+        type: event.type || null,
+        flightNumber: event.flightNumber || null,
+        taskingName: event.taskingName || null,
+        taskingDisplayLabel: event.taskingDisplayLabel || null,
+        isTaskingRequest: event.isTaskingRequest === true,
+        taskingRequestId: event.taskingRequestId || null,
+        taskingAircraftIndex: event.taskingAircraftIndex ?? null,
+        taskingAircraftCount: event.taskingAircraftCount ?? null,
+        isMandatoryTasking: event.isMandatoryTasking ?? null,
+        group: event.group || null,
+        startTime: event.startTime ?? null,
+        duration: event.duration ?? null,
+        resourceId: event.resourceId || null,
+        aircraftConfigId: event.aircraftConfigId || null,
+        pilot: event.pilot || null,
+        crew: event.crew || null,
+        instructor: event.instructor || null,
+        student: event.student || null,
+        callsign: event.callsign || null,
+        source: event._source || null,
+        notes: event.notes || null,
+        matchedLabels: getTaskTraceMatchedLabels(event),
+        ...extra,
+    });
+    const traceTaskProvenance = (bucket: 'generatedPushes' | 'finalCleanup' | 'finalEvents' | 'conclusions', phase: string, event: Partial<ScheduleEvent> | any, extra: Record<string, any> = {}) => {
+        if (!eventMatchesTaskTrace(event)) return;
+        neoBuildDiag.taskProvenance[bucket].push(summariseTaskTraceEvent(event, phase, extra));
+    };
+    neoBuildDiag.taskProvenance.buildInput.highestPriorityEvents = highestPriorityEvents
+        .filter(eventMatchesTaskTrace)
+        .map((event: any) => summariseTaskTraceEvent(event, 'build-input-highest-priority'));
+    neoBuildDiag.taskProvenance.buildInput.activeDfpFixedEvents = activeDfpEventsWithoutDate
+        .filter(eventMatchesTaskTrace)
+        .map((event: any) => summariseTaskTraceEvent(event, 'build-input-active-dfp-fixed'));
+    neoBuildDiag.taskProvenance.buildInput.publishedScheduleForDate = (publishedSchedules[buildDate] || [])
+        .filter(eventMatchesTaskTrace)
+        .map((event: any) => summariseTaskTraceEvent(event, 'build-input-published-schedule'));
+    generatedEvents.forEach(event => traceTaskProvenance('generatedPushes', 'initial-generated-from-active-dfp', event));
 
     const eventCounts = new Map<string, { flightFtd: number, ground: number, cpt: number, dutySup: number, isStby: boolean }>();
     originalInstructors.forEach(i => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
@@ -3842,7 +3969,15 @@ function generateDfpInternal(
                 return;
             }
 
-            generatedEvents.push({ ...eventWithoutDate, _source: 'highest-priority', _isNext: undefined, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || '' });
+            const placedPriorityEvent = { ...eventWithoutDate, _source: 'highest-priority', _isNext: undefined, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || '' };
+            generatedEvents.push(placedPriorityEvent);
+            traceTaskProvenance('generatedPushes', 'highest-priority-fixed-placement', placedPriorityEvent, {
+                priorityEventId: event.id,
+                priorityEventType: event.type,
+                priorityDate: event.date || null,
+                isTimeFixed: event.isTimeFixed === true,
+                isTaskingPriority: isTaskingPriorityEvent(event),
+            });
             if (event.isRemedial || event.id?.startsWith('remedial-')) {
                 traceRemedialMovement('priorityPlacementTrace', {
                     phase: 'highest-priority-remedial-inserted-into-generated-events',
@@ -7117,6 +7252,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             if (placedEvent) {
                 generatedEvents.push(placedEvent);
+                traceTaskProvenance('generatedPushes', 'tasking-priority-placement', placedEvent, {
+                    priorityEventId: priorityEvent.id,
+                    taskingRequestId: priorityEvent.taskingRequestId || null,
+                    taskingName: priorityEvent.taskingName || null,
+                    flightNumber: priorityEvent.flightNumber,
+                    flightNumberSource: 'highest-priority-tasking-event',
+                    taskingAircraftIndex: priorityEvent.taskingAircraftIndex || null,
+                    taskingAircraftCount: priorityEvent.taskingAircraftCount || null,
+                });
                 scheduledTaskingPriorityEventIds.add(priorityEvent.id);
                 [placedEvent.pilot, placedEvent.crew].filter(Boolean).forEach(staffName => {
                     const staffCounts = eventCounts.get(staffName as string);
@@ -8206,7 +8350,19 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     countAirCombatRejection('FORMATION_STAGED_CONFLICT');
                     continue;
                 }
-                stagedEvents.forEach(event => generatedEvents.push(event));
+                stagedEvents.forEach((event, index) => {
+                    generatedEvents.push(event);
+                    traceTaskProvenance('generatedPushes', 'air-combat-training-formation-placement', event, {
+                        kind,
+                        assignmentCode: code,
+                        leadEventCode: leadItem.code,
+                        linkedEventCode: linkedCode || null,
+                        selectedStaff: selection.members[index]?.staff?.name || null,
+                        selectedEventCode: selection.members[index]?.item?.code || null,
+                        selectionReason: selection.members[index]?.selectionReason || null,
+                        formationGroupId: groupId,
+                    });
+                });
                 selection.members.forEach(member => {
                     if (!eventCounts.has(member.staff.name)) eventCounts.set(member.staff.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
                     eventCounts.get(member.staff.name)!.flightFtd++;
@@ -8469,6 +8625,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             continue;
                         }
                         generatedEvents.push(candidate);
+                        traceTaskProvenance('generatedPushes', 'air-combat-training-placement', candidate, {
+                            kind,
+                            assignmentCode: code,
+                            assignedStaff: entry.staff.name,
+                            eventCode: item.code,
+                            eventType: type,
+                        });
                         if (!eventCounts.has(entry.staff.name)) eventCounts.set(entry.staff.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
                         const nextCounts = eventCounts.get(entry.staff.name)!;
                         if (type === 'flight' || type === 'ftd') nextCounts.flightFtd++;
@@ -11494,8 +11657,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     };
 
     const generatedEventsBeforeFinalCleanup = generatedEvents.length;
+    generatedEvents
+        .filter(eventMatchesTaskTrace)
+        .forEach(event => traceTaskProvenance('finalCleanup', 'before-final-cleanup', event));
     const dayNightSeparatedEvents = enforceBuildDayNightSeparation(generatedEvents);
+    dayNightSeparatedEvents
+        .filter(eventMatchesTaskTrace)
+        .forEach(event => traceTaskProvenance('finalCleanup', 'after-day-night-guard', event));
     const conflictSafeEvents = repairGeneratedGroundConflicts(dayNightSeparatedEvents);
+    conflictSafeEvents
+        .filter(eventMatchesTaskTrace)
+        .forEach(event => traceTaskProvenance('finalCleanup', 'after-ground-repair', event));
     neoBuildDiag.finalCleanup = {
         beforeDayNightGuard: generatedEventsBeforeFinalCleanup,
         afterDayNightGuard: dayNightSeparatedEvents.length,
@@ -11514,6 +11686,50 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         }
         return a.startTime - b.startTime; // Then by start time within same resource
     });
+    sortedEvents
+        .filter(eventMatchesTaskTrace)
+        .forEach(event => traceTaskProvenance('finalEvents', 'final-sorted-event', event));
+    if (neoBuildDiag.taskProvenance) {
+        const finalWatchedEvents = sortedEvents.filter(eventMatchesTaskTrace);
+        const findMatchingTrace = (event: any, entries: any[] = []) =>
+            entries.find(entry => entry.id === event.id) ||
+            entries.find(entry =>
+                entry.flightNumber === event.flightNumber &&
+                entry.startTime === event.startTime &&
+                entry.resourceId === event.resourceId &&
+                (entry.pilot || '') === (event.pilot || '')
+            ) ||
+            null;
+        neoBuildDiag.taskProvenance.conclusions = finalWatchedEvents.length > 0
+            ? finalWatchedEvents.map(event => {
+                const firstGeneratedTrace = findMatchingTrace(event, neoBuildDiag.taskProvenance.generatedPushes || []);
+                const matchingInputs = [
+                    ...(neoBuildDiag.taskProvenance.buildInput?.highestPriorityEvents || []),
+                    ...(neoBuildDiag.taskProvenance.buildInput?.activeDfpFixedEvents || []),
+                    ...(neoBuildDiag.taskProvenance.buildInput?.publishedScheduleForDate || []),
+                ].filter((entry: any) =>
+                    entry.id === event.id ||
+                    (
+                        entry.flightNumber === event.flightNumber &&
+                        (entry.pilot || '') === (event.pilot || '') &&
+                        (entry.startTime === event.startTime || entry.resourceId === event.resourceId)
+                    )
+                );
+                const matchedLabels = getTaskTraceMatchedLabels(event);
+                return {
+                    phase: 'final-watched-task-label-source-summary',
+                    matchedLabels,
+                    finalEvent: summariseTaskTraceEvent(event, 'final-event'),
+                    firstGeneratedTrace: firstGeneratedTrace || null,
+                    matchingBuildInputs: matchingInputs,
+                    likelySource: firstGeneratedTrace?.phase || matchingInputs[0]?.phase || 'unknown-final-event-no-matching-insertion-trace',
+                };
+            })
+            : [{
+                phase: 'final-watched-task-label-source-summary',
+                outcome: 'No watched task labels survived into the final sorted build.',
+            }];
+    }
     if (neoBuildDiag.airCombatPriority?.enabled) {
         const airCombatPlacements = neoBuildDiag.airCombatPriority.placements || [];
         const conclusions: string[] = [];
@@ -20944,6 +21160,65 @@ const App: React.FC = () => {
         // CRITICAL FIRST STEP: Sync SCT and Remedial requests to Highest Priority
         console.log('🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====');
         console.log('🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...');
+        const taskTraceLabels = Array.from(new Set([
+            ...(DEFAULT_TASK_PROFILE_CONFIG.air_combat || []),
+            'Task',
+            'Tasking',
+            'Maritime Strike',
+        ]));
+        const normaliseTaskTraceText = (value?: any): string => String(value || '').trim().toLowerCase();
+        const eventMatchesTaskTrace = (event: Partial<ScheduleEvent> | any): boolean => {
+            const text = [
+                event.id,
+                event.flightNumber,
+                event.taskingName,
+                event.taskingDisplayLabel,
+                event.notes,
+                event.group,
+                event._source,
+            ].map(normaliseTaskTraceText).join(' | ');
+            return event.isTaskingRequest === true ||
+                !!event.taskingRequestId ||
+                String(event.id || '').startsWith('tasking-') ||
+                taskTraceLabels.some(label => text.includes(normaliseTaskTraceText(label)));
+        };
+        const summariseTaskTraceEvent = (event: Partial<ScheduleEvent> | any, origin: string) => ({
+            origin,
+            id: event.id || null,
+            date: event.date || buildDfpDate || null,
+            type: event.type || null,
+            flightNumber: event.flightNumber || null,
+            taskingName: event.taskingName || null,
+            taskingDisplayLabel: event.taskingDisplayLabel || null,
+            isTaskingRequest: event.isTaskingRequest === true,
+            taskingRequestId: event.taskingRequestId || null,
+            isMandatoryTasking: event.isMandatoryTasking ?? null,
+            group: event.group || null,
+            startTime: event.startTime ?? null,
+            duration: event.duration ?? null,
+            resourceId: event.resourceId || null,
+            pilot: event.pilot || null,
+            crew: event.crew || null,
+            instructor: event.instructor || null,
+            student: event.student || null,
+            source: event._source || null,
+            notes: event.notes || null,
+            matchedLabels: taskTraceLabels.filter(label => [
+                event.flightNumber,
+                event.taskingName,
+                event.taskingDisplayLabel,
+                event.notes,
+                event.group,
+            ].map(normaliseTaskTraceText).join(' | ').includes(normaliseTaskTraceText(label))),
+        });
+        let storedTaskingRequestsForTrace: any[] = [];
+        try {
+            const parsed = JSON.parse(localStorage.getItem('neoTaskingRequests') || '[]');
+            storedTaskingRequestsForTrace = Array.isArray(parsed) ? parsed : [];
+        } catch {
+            storedTaskingRequestsForTrace = [];
+        }
+        const highestPriorityEventsBeforeSync = highestPriorityEvents;
         const rawSyncedPriorityEvents = syncPriorityEventsWithSctAndRemedial();
         const isTaskingEvent = (event: ScheduleEvent) => (
             event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-')
@@ -20970,6 +21245,24 @@ const App: React.FC = () => {
             }
             return stillRequested;
         });
+        const removedStaleTaskingPriorities = rawSyncedPriorityEvents
+            .filter(event => isTaskingEvent(event))
+            .filter(event => !syncedPriorityEvents.some(kept => kept.id === event.id));
+        (window as any).__lastTaskingProvenancePreBuild = {
+            timestamp: new Date().toISOString(),
+            buildDate: buildDfpDate,
+            activeUnitCode,
+            school,
+            watchedLabels: taskTraceLabels,
+            localStorageTaskingRequests: storedTaskingRequestsForTrace,
+            submittedTaskingRequestIds: Array.from(submittedTaskingRequestIds),
+            highestPriorityBeforeSync: highestPriorityEventsBeforeSync.filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'highestPriorityEvents-before-sync')),
+            syncedPriorityBeforePurge: rawSyncedPriorityEvents.filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'syncedPriorityEvents-before-tasking-purge')),
+            removedStaleTaskingPriorities: removedStaleTaskingPriorities.map(event => summariseTaskTraceEvent(event, 'removed-stale-tasking-priority')),
+            syncedPriorityAfterPurge: syncedPriorityEvents.filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'syncedPriorityEvents-after-tasking-purge')),
+            publishedScheduleForBuildDate: (publishedSchedules[buildDfpDate] || []).filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'publishedSchedules-buildDate')),
+            nextDayBuildEventsBeforeBuild: (nextDayBuildEvents || []).filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'nextDayBuildEvents-before-build')),
+        };
         if (syncedPriorityEvents.length !== rawSyncedPriorityEvents.length) {
             setHighestPriorityEvents(syncedPriorityEvents);
         }
@@ -21331,6 +21624,7 @@ const App: React.FC = () => {
             aircraftConfigIdsByResource: buildAircraftConfigIdsByResource(currentAircraftConfigState),
             remedialPrioritySyncTrace: (window as any).__lastRemedialPrioritySyncTrace || [],
             remedialDataMovementTrace: (window as any).__lastRemedialDataMovementTrace || [],
+            taskProvenancePreBuild: (window as any).__lastTaskingProvenancePreBuild || null,
             getEventDayNightClassification: getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,
