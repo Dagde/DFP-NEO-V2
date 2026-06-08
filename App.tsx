@@ -22724,6 +22724,15 @@ const App: React.FC = () => {
             };
 
             const apiBase = getApiBaseUrl();
+            // Publish is authoritative for this date immediately. Mark the snapshot
+            // loaded before switching views so the date loader cannot race in with
+            // an older DB snapshot and overwrite the freshly published NEO Build.
+            loadedSnapshotDates.current.add(snapshotKey);
+            loadingSnapshotDates.current.delete(snapshotKey);
+            setSnapshotDates(prev => (
+                [...new Set([...prev, buildDfpDate])]
+                    .sort((a, b) => b.localeCompare(a))
+            ));
             cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
             fetch(`${apiBase}/daily-snapshot/save`, {
                 method: 'POST',

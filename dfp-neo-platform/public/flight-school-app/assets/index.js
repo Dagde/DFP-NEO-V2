@@ -80467,6 +80467,9 @@ ${conflictLines.join("\n")}${moreText}`,
         baselineEvents: newEventsForDate
       };
       const apiBase2 = getApiBaseUrl();
+      loadedSnapshotDates.current.add(snapshotKey);
+      loadingSnapshotDates.current.delete(snapshotKey);
+      setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, buildDfpDate])].sort((a, b) => b.localeCompare(a)));
       cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
       fetch(`${apiBase2}/daily-snapshot/save`, {
         method: "POST",
