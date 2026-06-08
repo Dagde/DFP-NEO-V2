@@ -26,6 +26,15 @@ export const AIR_COMBAT_ICO_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 export const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
 export const AIR_COMBAT_ICO_POSTFLIGHT_HOURS = 1.0;
 
+export const getAuthoritativeSyllabusDuration = (item?: Partial<SyllabusItemDetail> | null): number => {
+  const flightOrSimHours = Number(item?.flightOrSimHours);
+  if (Number.isFinite(flightOrSimHours) && flightOrSimHours > 0) return flightOrSimHours;
+  const totalEventHours = Number(item?.totalEventHours);
+  if (Number.isFinite(totalEventHours) && totalEventHours > 0) return totalEventHours;
+  const duration = Number(item?.duration);
+  return Number.isFinite(duration) && duration > 0 ? duration : 0;
+};
+
 export const isIntegratedCombatOperationsTrainingPackageItem = (item?: Partial<SyllabusItemDetail> | null): boolean => {
   if (!item || item.lmpType !== 'Staff CAT') return false;
   const courses = Array.isArray(item.courses) ? item.courses : [];
@@ -56,6 +65,18 @@ export const normaliseIntegratedCombatOperationsTiming = <T extends Partial<Syll
 
 export const normaliseIntegratedCombatOperationsTimings = <T extends Partial<SyllabusItemDetail>>(items: T[]): T[] => (
   items.map(normaliseIntegratedCombatOperationsTiming)
+);
+
+export const normaliseSyllabusRuntimeTiming = <T extends Partial<SyllabusItemDetail>>(item: T): T => {
+  const itemWithDuration = {
+    ...item,
+    duration: getAuthoritativeSyllabusDuration(item),
+  };
+  return normaliseIntegratedCombatOperationsTiming(itemWithDuration);
+};
+
+export const normaliseSyllabusRuntimeTimings = <T extends Partial<SyllabusItemDetail>>(items: T[]): T[] => (
+  items.map(normaliseSyllabusRuntimeTiming)
 );
 
 export const getAirCombatTrainingKindForLmpType = (lmpType?: string | null): AirCombatTrainingKind => (

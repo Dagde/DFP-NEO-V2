@@ -3605,6 +3605,14 @@ const AIR_COMBAT_ICO_PACKAGE_CODE = "ICO";
 const AIR_COMBAT_ICO_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
 const AIR_COMBAT_ICO_POSTFLIGHT_HOURS = 1;
+const getAuthoritativeSyllabusDuration = (item) => {
+  const flightOrSimHours = Number(item?.flightOrSimHours);
+  if (Number.isFinite(flightOrSimHours) && flightOrSimHours > 0) return flightOrSimHours;
+  const totalEventHours = Number(item?.totalEventHours);
+  if (Number.isFinite(totalEventHours) && totalEventHours > 0) return totalEventHours;
+  const duration = Number(item?.duration);
+  return Number.isFinite(duration) && duration > 0 ? duration : 0;
+};
 const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
   if (!item || item.lmpType !== "Staff CAT") return false;
   const courses = Array.isArray(item.courses) ? item.courses : [];
@@ -3624,7 +3632,14 @@ const normaliseIntegratedCombatOperationsTiming = (item) => {
     postFlightTime: AIR_COMBAT_ICO_POSTFLIGHT_HOURS
   };
 };
-const normaliseIntegratedCombatOperationsTimings = (items) => items.map(normaliseIntegratedCombatOperationsTiming);
+const normaliseSyllabusRuntimeTiming = (item) => {
+  const itemWithDuration = {
+    ...item,
+    duration: getAuthoritativeSyllabusDuration(item)
+  };
+  return normaliseIntegratedCombatOperationsTiming(itemWithDuration);
+};
+const normaliseSyllabusRuntimeTimings = (items) => items.map(normaliseSyllabusRuntimeTiming);
 const getAirCombatTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getAirCombatTrainingKey = (kind, code, locationCode, unitCode) => [
   "air_combat",
@@ -36265,7 +36280,7 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "10";
+const CACHE_VERSION = "11";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
 function getCachedSyllabus() {
   try {
@@ -36281,7 +36296,7 @@ function getCachedSyllabus() {
       localStorage.removeItem(CACHE_VERSION_KEY);
       return null;
     }
-    const data = normaliseIntegratedCombatOperationsTimings(JSON.parse(raw));
+    const data = normaliseSyllabusRuntimeTimings(JSON.parse(raw));
     const age = Date.now() - parseInt(timestamp, 10);
     const expired = age > CACHE_TTL_MS;
     return { data, expired };
@@ -36362,7 +36377,7 @@ async function loadSyllabusFromDB() {
     if (rawItems.length === 0) {
       throw new Error("No syllabus items returned from database");
     }
-    const processed = normaliseIntegratedCombatOperationsTimings(populatePrerequisites$1(rawItems));
+    const processed = normaliseSyllabusRuntimeTimings(populatePrerequisites$1(rawItems));
     setCachedSyllabus(processed);
     console.log(`📚 [Syllabus] Loaded ${processed.length} items from database`);
     return { syllabus: processed, source: "database" };
@@ -36714,7 +36729,11 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   };
   const handleFieldChange = (field, value) => {
     if (!editedItem) return;
-    onItemChange({ ...editedItem, [field]: value });
+    const updatedItem = { ...editedItem, [field]: value };
+    if (field === "flightOrSimHours" || field === "totalEventHours") {
+      updatedItem.duration = getAuthoritativeSyllabusDuration(updatedItem);
+    }
+    onItemChange(updatedItem);
   };
   const currentItem = isEditing ? editedItem : item;
   if (!currentItem) return null;

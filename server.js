@@ -52,12 +52,22 @@ function normaliseSyllabusCourses(courses) {
   return [];
 }
 
+function getAuthoritativeSyllabusDuration(item) {
+  const flightOrSimHours = Number(item?.flightOrSimHours);
+  if (Number.isFinite(flightOrSimHours) && flightOrSimHours > 0) return flightOrSimHours;
+  const totalEventHours = Number(item?.totalEventHours);
+  if (Number.isFinite(totalEventHours) && totalEventHours > 0) return totalEventHours;
+  const duration = Number(item?.duration);
+  return Number.isFinite(duration) && duration > 0 ? duration : 0;
+}
+
 function normaliseSyllabusItemForRuntime(item) {
   if (!item) return item;
   const courses = normaliseSyllabusCourses(item.courses);
   const flightOrSimHours = Number.isFinite(Number(item.flightOrSimHours)) && Number(item.flightOrSimHours) > 0
     ? Number(item.flightOrSimHours)
     : INTEGRATED_COMBAT_OPERATIONS_DEFAULT_FLIGHT_OR_SIM_HOURS;
+  const duration = getAuthoritativeSyllabusDuration(item);
   if (
     item.lmpType === 'Staff CAT' &&
     courses.some(course => String(course || '').trim().toUpperCase() === INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE)
@@ -74,6 +84,7 @@ function normaliseSyllabusItemForRuntime(item) {
   return {
     ...item,
     courses,
+    duration,
   };
 }
 
@@ -225,6 +236,8 @@ async function getPrisma() {
     await ensureSyllabusTablesExist(prisma);
     // Migrate CPT event durations to 1.0 hour
     await migrateCptDurations(prisma);
+    // Ensure scheduling duration follows the visible syllabus timing fields.
+    await migrateSyllabusDurationsFromVisibleHours(prisma);
     // Ensure Integrated Combat Operations training package timing is authoritative.
     await migrateIntegratedCombatOperationsTiming(prisma);
     // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
@@ -500,6 +513,31 @@ async function migrateCptDurations(db) {
     console.log(`✅ migrateCptDurations (IndividualLMP): updated ${updatedCount} LMP records`);
   } catch (err) {
     console.error('❌ migrateCptDurations (IndividualLMP) failed (non-fatal):', err.message);
+  }
+}
+
+// Migration: scheduled duration follows Flight/Sim Hrs when present, otherwise Total Event Hrs.
+async function migrateSyllabusDurationsFromVisibleHours(db) {
+  try {
+    const result = await db.$executeRawUnsafe(`
+      UPDATE "SyllabusItem"
+      SET
+        "duration" = CASE
+          WHEN "flightOrSimHours" > 0 THEN "flightOrSimHours"
+          WHEN "totalEventHours" > 0 THEN "totalEventHours"
+          ELSE "duration"
+        END,
+        "version" = "version" + 1,
+        "updatedAt" = NOW()
+      WHERE "duration" IS DISTINCT FROM CASE
+        WHEN "flightOrSimHours" > 0 THEN "flightOrSimHours"
+        WHEN "totalEventHours" > 0 THEN "totalEventHours"
+        ELSE "duration"
+      END
+    `);
+    console.log(`✅ migrateSyllabusDurationsFromVisibleHours: updated ${result} syllabus items`);
+  } catch (err) {
+    console.error('❌ migrateSyllabusDurationsFromVisibleHours failed (non-fatal):', err.message);
   }
 }
 
@@ -6005,7 +6043,11 @@ app.put('/api/syllabus/:id', async (req, res) => {
       .some(course => String(course || '').trim().toUpperCase() === INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE)
       ? ['preFlightTime', 'postFlightTime']
       : [];
-    const fields = [...new Set([...Object.keys(originalBody), ...timingFields])].filter(k => !EXCLUDED_FIELDS.includes(k));
+    const durationFields = Object.prototype.hasOwnProperty.call(originalBody, 'flightOrSimHours') ||
+      Object.prototype.hasOwnProperty.call(originalBody, 'totalEventHours')
+      ? ['duration']
+      : [];
+    const fields = [...new Set([...Object.keys(originalBody), ...timingFields, ...durationFields])].filter(k => !EXCLUDED_FIELDS.includes(k));
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
     // Build SET clauses, casting array fields and boolean fields properly

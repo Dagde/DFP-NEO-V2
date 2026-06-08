@@ -16,6 +16,7 @@ import {
 import { normaliseOperationalModel } from '../utils/platformConfigService';
 import {
     getAirCombatAssignmentFromItem,
+    getAuthoritativeSyllabusDuration,
     staffHasAirCombatAssignment,
     setAirCombatTrainingAssignment,
 } from '../utils/airCombatTraining';
@@ -433,7 +434,11 @@ const DetailView: React.FC<{
 
     const handleFieldChange = (field: keyof SyllabusItemDetail, value: any) => {
         if (!editedItem) return;
-        onItemChange({ ...editedItem, [field]: value });
+        const updatedItem = { ...editedItem, [field]: value };
+        if (field === 'flightOrSimHours' || field === 'totalEventHours') {
+            updatedItem.duration = getAuthoritativeSyllabusDuration(updatedItem);
+        }
+        onItemChange(updatedItem);
     };
 
     const currentItem = isEditing ? editedItem : item;
