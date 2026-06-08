@@ -67872,10 +67872,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const scheduleAirCombatTrainingPriorityEvents = () => {
     if (!isAirCombatBuild) return;
     const slotIncrement = 5 / 60;
-    const taskProfileCodes = new Set(
-      (config.taskProfiles || []).map((profile) => String(profile || "").trim().toUpperCase().replace(/\s+/g, "")).filter(Boolean)
-    );
-    const isTaskProfileCode = (code) => taskProfileCodes.has(String(code || "").trim().toUpperCase().replace(/\s+/g, ""));
     const sortedTrainingItems = (kind, code) => syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
       (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
     );
@@ -68127,15 +68123,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
         return (kind === "training_package" ? assignments.trainingPackages : assignments.courses).filter((item) => !buildActiveUnitCode || item.unitCode === buildActiveUnitCode).map((item) => item.code);
       })
-    )).filter(Boolean).filter((code) => !isTaskProfileCode(code)).sort();
+    )).filter(Boolean).sort();
     const courseCodes = assignmentCodes("course");
     const packageCodes = assignmentCodes("training_package");
-    const excludedTaskProfileAssignments = Array.from(new Set(
-      instructors.flatMap((staff) => {
-        const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
-        return [...assignments.courses, ...assignments.trainingPackages].filter((item) => !buildActiveUnitCode || item.unitCode === buildActiveUnitCode).map((item) => item.code).filter((code) => code && isTaskProfileCode(code));
-      })
-    )).sort();
     const placementLimit = Math.max(0, courseCodes.length + packageCodes.length + instructors.length);
     const syllabusMatchAudit = (kind, codes) => codes.map((code) => {
       const matches = sortedTrainingItems(kind, code);
@@ -68157,7 +68147,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     neoBuildDiag.airCombatPriority.trainingInputs = {
       courseCodes,
       packageCodes,
-      excludedTaskProfileAssignments,
       placementLimit,
       courseSyllabusMatches: syllabusMatchAudit("course", courseCodes),
       trainingPackageSyllabusMatches: syllabusMatchAudit("training_package", packageCodes)
@@ -68165,19 +68154,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     recordAirCombatStage("training-inputs-built", {
       courseCodes,
       packageCodes,
-      excludedTaskProfileAssignments,
       placementLimit,
       courseMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.courseSyllabusMatches.map((item) => ({ code: item.code, matches: item.matches })),
       packageMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.trainingPackageSyllabusMatches.map((item) => ({ code: item.code, matches: item.matches }))
-    });
-    excludedTaskProfileAssignments.forEach((code) => {
-      recordAirCombatSkip({
-        list: "training",
-        staff: "Assigned Training",
-        event: code,
-        reason: "TASK_PROFILE_NOT_TRAINING_ASSIGNMENT",
-        startTime: null
-      });
     });
     if (courseCodes.length === 0 && packageCodes.length === 0) {
       recordAirCombatSkip({ list: "training", staff: "Assigned Training", event: "Air Combat build", reason: "NO_AIR_COMBAT_TRAINING_ASSIGNMENTS", startTime: null });
@@ -79216,7 +79195,6 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       operationalModel: activeOperationalModel,
       activeUnitCode,
       airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
-      taskProfiles: activeTaskProfiles,
       instructors: instructorsInBuild,
       trainees: traineesInBuild,
       syllabus: syllabusDetails,
