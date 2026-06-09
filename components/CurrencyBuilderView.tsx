@@ -67,10 +67,10 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
         const combined = [...masterCurrencies, ...currencyRequirements];
         setAllCurrencies(combined);
         // If the previously selected currency is no longer in the list (e.g., deleted), deselect it.
-        if (selectedCurrencyId && !combined.some(c => c.id === selectedCurrencyId)) {
-            setSelectedCurrencyId(null);
-        }
-    }, [masterCurrencies, currencyRequirements, selectedCurrencyId]);
+        setSelectedCurrencyId(currentSelection => (
+            currentSelection && !combined.some(c => c.id === currentSelection) ? null : currentSelection
+        ));
+    }, [masterCurrencies, currencyRequirements]);
 
     const filteredCurrencies = useMemo(() => {
         return allCurrencies

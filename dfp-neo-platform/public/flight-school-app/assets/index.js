@@ -4152,10 +4152,8 @@ const CurrencyBuilderView = ({
   reactExports.useEffect(() => {
     const combined = [...masterCurrencies, ...currencyRequirements];
     setAllCurrencies(combined);
-    if (selectedCurrencyId && !combined.some((c) => c.id === selectedCurrencyId)) {
-      setSelectedCurrencyId(null);
-    }
-  }, [masterCurrencies, currencyRequirements, selectedCurrencyId]);
+    setSelectedCurrencyId((currentSelection) => currentSelection && !combined.some((c) => c.id === currentSelection) ? null : currentSelection);
+  }, [masterCurrencies, currencyRequirements]);
   const filteredCurrencies = reactExports.useMemo(() => {
     return allCurrencies.filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name));
   }, [allCurrencies, searchTerm]);
