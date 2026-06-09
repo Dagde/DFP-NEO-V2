@@ -6,6 +6,7 @@ import { InstructorPriorityConfig } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import type { AirCombatSchedulingWeights } from '../utils/airCombatTraining';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface PrioritiesViewWithMenuProps {
   school: string;
@@ -183,7 +184,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                             </span>
                         </div>
                     </div>
-                    <div className="priorities-content">
+                    <div className="priorities-content" onKeyDownCapture={stopEditableKeyPropagation}>
                         <PrioritiesView {...props} activeSection={activeSection} />
                     </div>
                 </div>

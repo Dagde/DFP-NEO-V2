@@ -23871,16 +23871,6 @@ const NextDayBuildView = ({
     }
   ) });
 };
-const isEditableElement = (target) => {
-  const element = target;
-  if (!element) return false;
-  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement || element.isContentEditable || Boolean(element.closest('[contenteditable="true"]'));
-};
-const stopEditableKeyPropagation = (event) => {
-  if (isEditableElement(event.target)) {
-    event.stopPropagation();
-  }
-};
 const ConfigCapacityInfoHint = ({ definition }) => {
   const description = definition.definition?.trim() || "No definition has been entered for this aircraft configuration.";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -25226,7 +25216,7 @@ const PrioritiesView = ({
       { key: "night-end-label", time: ceaseNightFlying, label: "Night end", text: "text-indigo-100", border: "border-indigo-300/55", bg: "bg-indigo-400/15", level: "top" }
     ] : []
   ];
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { onKeyDownCapture: stopEditableKeyPropagation, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-course-demand space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Third Input" }),
@@ -26356,6 +26346,16 @@ const PrioritiesView = ({
     ] })
   ] });
 };
+const isEditableElement = (target) => {
+  const element = target;
+  if (!element) return false;
+  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement || element.isContentEditable || Boolean(element.closest('[contenteditable="true"]'));
+};
+const stopEditableKeyPropagation = (event) => {
+  if (isEditableElement(event.target)) {
+    event.stopPropagation();
+  }
+};
 const PrioritiesViewWithMenu = (props) => {
   const [activeSection, setActiveSection] = reactExports.useState("build-timeline");
   const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
@@ -26445,7 +26445,7 @@ const PrioritiesViewWithMenu = (props) => {
             " build setup"
           ] })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "priorities-content", children: /* @__PURE__ */ jsxRuntimeExports.jsx(PrioritiesView, { ...props, activeSection }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "priorities-content", onKeyDownCapture: stopEditableKeyPropagation, children: /* @__PURE__ */ jsxRuntimeExports.jsx(PrioritiesView, { ...props, activeSection }) })
       ] })
     ] })
   ] });
