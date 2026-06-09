@@ -264,7 +264,9 @@ const DfpSidePanelTimeline: React.FC<{
     packagePriorities: string[];
     onUpdatePackagePriorities: (priorities: string[]) => void;
     currencyNames: string[];
+    highestPriorityEvents: ScheduleEvent[];
     onAddPriorityEvents: (events: ScheduleEvent[]) => void;
+    onDeletePriorityEvent: (eventId: string) => void | Promise<void>;
     availableAircraftCount: number;
     onUpdateAircraftCount: (count: number) => void;
     aircraftConfigCapacities: Record<string, string>;
@@ -310,7 +312,9 @@ const DfpSidePanelTimeline: React.FC<{
     packagePriorities,
     onUpdatePackagePriorities,
     currencyNames,
+    highestPriorityEvents,
     onAddPriorityEvents,
+    onDeletePriorityEvent,
     availableAircraftCount,
     onUpdateAircraftCount,
     aircraftConfigCapacities,
@@ -377,6 +381,7 @@ const DfpSidePanelTimeline: React.FC<{
         aircraftConfigId: string;
         isMandatory: boolean;
         submitted?: boolean;
+        ignored?: boolean;
     }>>([]);
     const [assistCurrencyDate, setAssistCurrencyDate] = useState(date);
     const [assistCurrencyTakeoff, setAssistCurrencyTakeoff] = useState(flyingStartTime);
@@ -396,7 +401,10 @@ const DfpSidePanelTimeline: React.FC<{
         arrivalPoint: string;
         aircraftConfigId: string;
         submitted?: boolean;
+        ignored?: boolean;
     }>>([]);
+    const [showAssistTaskForm, setShowAssistTaskForm] = useState(false);
+    const [showAssistCurrencyForm, setShowAssistCurrencyForm] = useState(false);
 
     const courseEventOptions = useMemo(() => (
         fullAssistEventOptions.filter(item => item.lmpType !== 'Staff CAT')
@@ -479,6 +487,58 @@ const DfpSidePanelTimeline: React.FC<{
             setSelectedPackageName(packageNames[0]);
         }
     }, [packageNames, selectedPackageName]);
+
+    const selectedCrewRecord = useMemo(() => (
+        instructors.find(person => person.name === selectedCrewName) || null
+    ), [instructors, selectedCrewName]);
+
+    const selectedCrewAssignments = useMemo(() => (
+        selectedCrewRecord
+            ? normaliseAirCombatTrainingAssignments(selectedCrewRecord.preferences)
+            : { courses: [], trainingPackages: [] }
+    ), [selectedCrewRecord]);
+
+    const selectedCrewTrainingReports = useMemo(() => (
+        selectedCrewRecord ? normaliseAirCombatTrainingReports(selectedCrewRecord.preferences) : []
+    ), [selectedCrewRecord]);
+
+    const selectedCrewCourseOptions = useMemo(() => (
+        selectedCrewAssignments.courses.map(assignment => ({
+            key: assignment.trainingKey,
+            code: assignment.code,
+            label: assignment.title || assignment.code,
+            assignment,
+        }))
+    ), [selectedCrewAssignments.courses]);
+
+    const selectedCrewPackageOptions = useMemo(() => (
+        selectedCrewAssignments.trainingPackages.map(assignment => ({
+            key: assignment.trainingKey,
+            code: assignment.code,
+            label: assignment.title || assignment.code,
+            assignment,
+        }))
+    ), [selectedCrewAssignments.trainingPackages]);
+
+    useEffect(() => {
+        if (selectedCrewCourseOptions.length === 0) {
+            if (selectedCourseName) setSelectedCourseName('');
+            return;
+        }
+        if (!selectedCrewCourseOptions.some(option => option.code === selectedCourseName)) {
+            setSelectedCourseName(selectedCrewCourseOptions[0].code);
+        }
+    }, [selectedCrewCourseOptions, selectedCourseName]);
+
+    useEffect(() => {
+        if (selectedCrewPackageOptions.length === 0) {
+            if (selectedPackageName) setSelectedPackageName('');
+            return;
+        }
+        if (!selectedCrewPackageOptions.some(option => option.code === selectedPackageName)) {
+            setSelectedPackageName(selectedCrewPackageOptions[0].code);
+        }
+    }, [selectedCrewPackageOptions, selectedPackageName]);
 
     const diagnosticCrewPriority = useMemo(() => {
         if (typeof window === 'undefined') return [];
@@ -987,13 +1047,60 @@ const DfpSidePanelTimeline: React.FC<{
         const request = assistTaskRequests.find(item => item.id === id);
         if (!request || !request.tasking.trim()) return;
         onAddPriorityEvents(buildTaskRequestEvents(request));
-        setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: true } : item));
+        setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: true, ignored: false } : item));
     };
     const submitAssistCurrencyRequest = (id: string) => {
         const request = assistCurrencyRequests.find(item => item.id === id);
         if (!request || !request.currency.trim()) return;
         onAddPriorityEvents([buildCurrencyRequestEvent(request)]);
-        setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: true } : item));
+        setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: true, ignored: false } : item));
+    };
+    const highestPriorityTaskRows = useMemo(() => {
+        const grouped = new Map<string, ScheduleEvent[]>();
+        highestPriorityEvents
+            .filter(event => event.isTaskingRequest || event.taskingRequestId || String(event.id || '').startsWith('tasking-') || String(event.id || '').startsWith('neo-assist-tasking-'))
+            .forEach(event => {
+                const key = event.taskingRequestId || String(event.id || '');
+                grouped.set(key, [...(grouped.get(key) || []), event]);
+            });
+        return Array.from(grouped.entries()).map(([id, events]) => {
+            const first = events[0];
+            return {
+                id,
+                events,
+                tasking: first.taskingName || first.flightNumber || 'Task',
+                date: first.date || date,
+                takeoff: first.startTime,
+                scheduled: true,
+            };
+        });
+    }, [date, highestPriorityEvents]);
+    const highestPriorityCurrencyRows = useMemo(() => (
+        highestPriorityEvents
+            .filter(event => event.currency || event.currencyDraftId || String(event.id || '').startsWith('neo-assist-currency-'))
+            .map(event => ({
+                id: event.currencyDraftId || event.id,
+                event,
+                currency: event.currency || event.flightNumber || 'Currency',
+                date: event.date || date,
+                takeoff: event.startTime,
+                scheduled: true,
+            }))
+    ), [date, highestPriorityEvents]);
+    const ignorePriorityEvents = (events: ScheduleEvent[]) => {
+        events.forEach(event => {
+            void onDeletePriorityEvent(event.id);
+        });
+    };
+    const ignoreAssistTaskRequest = (id: string) => {
+        const request = assistTaskRequests.find(item => item.id === id);
+        if (request?.submitted) ignorePriorityEvents(buildTaskRequestEvents(request));
+        setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: false, ignored: true } : item));
+    };
+    const ignoreAssistCurrencyRequest = (id: string) => {
+        const request = assistCurrencyRequests.find(item => item.id === id);
+        if (request?.submitted) ignorePriorityEvents([buildCurrencyRequestEvent(request)]);
+        setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: false, ignored: true } : item));
     };
     const fieldClass = 'mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100';
     const taskProfileSelectValue = taskProfiles.includes(selectedTaskProfile) ? selectedTaskProfile : '';
@@ -1005,6 +1112,63 @@ const DfpSidePanelTimeline: React.FC<{
             return parsed.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit' });
         }
         return rawDate;
+    };
+    const normaliseAssistTrainingCode = (value?: string | null): string =>
+        String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const getSelectedCrewTrainingItems = (
+        kind: 'course' | 'training_package',
+        assignmentCode: string,
+    ): SyllabusItemDetail[] => {
+        const assignment = (kind === 'training_package' ? selectedCrewAssignments.trainingPackages : selectedCrewAssignments.courses)
+            .find(item => item.code === assignmentCode);
+        if (!assignment) return [];
+        const matchingCodes = new Set([
+            assignment.code,
+            assignment.title,
+            assignment.trainingKey,
+        ].map(normaliseAssistTrainingCode).filter(Boolean));
+        return fullAssistEventOptions
+            .filter(item => item.isActive !== false)
+            .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
+            .filter(item => {
+                const values = [
+                    ...(item.courses || []),
+                    item.phase,
+                    item.module,
+                ].map(normaliseAssistTrainingCode).filter(Boolean);
+                return values.some(value => matchingCodes.has(value));
+            })
+            .sort((left, right) =>
+                Number((left as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
+                (left.orderKey || '').localeCompare(right.orderKey || '') ||
+                left.code.localeCompare(right.code)
+            );
+    };
+    const getSelectedCrewCompletion = (
+        item: SyllabusItemDetail,
+        kind: 'course' | 'training_package',
+        assignmentCode: string,
+    ): { complete: boolean; dateLabel: string } => {
+        const assignment = (kind === 'training_package' ? selectedCrewAssignments.trainingPackages : selectedCrewAssignments.courses)
+            .find(entry => entry.code === assignmentCode);
+        const itemCode = normaliseAssistTrainingCode(item.code);
+        const report = selectedCrewTrainingReports.find(entry => (
+            normaliseAssistTrainingCode(entry.eventCode) === itemCode &&
+            (
+                !assignment ||
+                entry.trainingKey === assignment.trainingKey ||
+                normaliseAssistTrainingCode(entry.trainingCode) === normaliseAssistTrainingCode(assignment.code)
+            ) &&
+            (entry.dcoResult === 'DCO' || entry.dcoResult === 'DPCO' || entry.status === 'Complete')
+        ));
+        if (report) {
+            return {
+                complete: true,
+                dateLabel: getCompletionDateLabel({ ...item, completedAt: report.date || report.updatedAt || report.createdAt } as SyllabusItemDetail),
+            };
+        }
+        const itemComplete = Boolean((item as any).completedAt || (item as any).isComplete || (item as any).completed || (item as any).completedDate || (item as any).status === 'Complete');
+        return { complete: itemComplete, dateLabel: itemComplete ? getCompletionDateLabel(item) : '' };
     };
 
     const renderAssistSection = () => {
@@ -1237,165 +1401,253 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (activeAssistSection === 'taskings') {
+            const localRows = assistTaskRequests.map(request => ({
+                id: request.id,
+                tasking: request.tasking || 'Task',
+                date: request.date,
+                takeoff: request.takeoff,
+                scheduled: Boolean(request.submitted),
+                ignored: Boolean(request.ignored),
+                source: 'local' as const,
+            }));
+            const visibleRemoteRows = highestPriorityTaskRows.filter(remote => !assistTaskRequests.some(local => local.id === remote.id));
+            const rows = [...localRows, ...visibleRemoteRows.map(row => ({ ...row, ignored: false, source: 'remote' as const }))];
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
-                    <div className="grid grid-cols-2 gap-2">
-                        <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            Tasking
-                            <select
-                                value={taskProfileSelectValue}
-                                onChange={event => setSelectedTaskProfile(event.target.value)}
-                                className={fieldClass}
-                            >
-                                <option value="">Select tasking type</option>
-                                {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
-                            </select>
-                        </label>
-                        <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            Manual tasking name
-                            <input
-                                value={selectedTaskProfile}
-                                onChange={event => setSelectedTaskProfile(event.target.value)}
-                                className={fieldClass}
-                                placeholder="Type tasking manually"
-                            />
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
-                            <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Takeoff
-                            <select value={assistTaskTakeoff} onChange={event => setAssistTaskTakeoff(Number(event.target.value))} className={fieldClass}>
-                                {timeOptions.map(option => <option key={`assist-task-${option.label}`} value={option.value}>{option.label}</option>)}
-                            </select>
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Duration
-                            <input type="number" min={0.1} step={0.1} value={assistTaskDuration} onChange={event => setAssistTaskDuration(Math.max(0.1, Number(event.target.value) || 0.1))} className={fieldClass} />
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Solo/Dual
-                            <select value={assistTaskFlightType} onChange={event => setAssistTaskFlightType(event.target.value as 'Solo' | 'Dual')} className={fieldClass}>
-                                <option value="Solo">Solo</option>
-                                <option value="Dual">Dual</option>
-                            </select>
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Dep Point
-                            <input value={assistTaskDepPoint} onChange={event => setAssistTaskDepPoint(event.target.value.toUpperCase())} className={fieldClass} />
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Arrival Point
-                            <input value={assistTaskArrivalPoint} onChange={event => setAssistTaskArrivalPoint(event.target.value.toUpperCase())} className={fieldClass} />
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">No. Aircraft
-                            <input type="number" min={1} value={assistTaskAircraftCount} onChange={event => setAssistTaskAircraftCount(Math.max(1, Number(event.target.value) || 1))} className={fieldClass} />
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">CONFIG
-                            <select value={assistTaskConfigId} onChange={event => setAssistTaskConfigId(event.target.value)} className={fieldClass}>
-                                {aircraftConfigurationDefinitions.map(definition => <option key={definition.id} value={definition.id}>{definition.label}</option>)}
-                            </select>
-                        </label>
-                        <label className="col-span-2 inline-flex items-center gap-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            <input type="checkbox" checked={assistTaskMandatory} onChange={event => setAssistTaskMandatory(event.target.checked)} />
-                            Mandatory
-                        </label>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => setAssistTaskRequests(prev => [...prev, {
-                            id: uuidv4(),
-                            tasking: selectedTaskProfile,
-                            date: assistTaskDate,
-                            takeoff: assistTaskTakeoff,
-                            duration: assistTaskDuration,
-                            flightType: assistTaskFlightType,
-                            depPoint: assistTaskDepPoint,
-                            arrivalPoint: assistTaskArrivalPoint,
-                            aircraftCount: assistTaskAircraftCount,
-                            aircraftConfigId: assistTaskConfigId,
-                            isMandatory: assistTaskMandatory,
-                        }])}
-                        className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
-                    >
-                        + Add Request
-                    </button>
-                    <div className="max-h-28 space-y-1 overflow-y-auto pr-1">
-                        {assistTaskRequests.map(request => (
-                            <div key={request.id} className="flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                <span className="truncate">{request.tasking || 'Task'} {formatTime(request.takeoff)} {request.depPoint}-{request.arrivalPoint}</span>
-                                <span className="flex items-center gap-1">
-                                    {request.submitted ? <span className="text-emerald-300">Submitted</span> : <button type="button" onClick={() => submitAssistTaskRequest(request.id)} className="rounded border border-emerald-400/50 px-1 text-emerald-100">Submit</button>}
-                                    <button type="button" onClick={() => setAssistTaskRequests(prev => prev.filter(item => item.id !== request.id))} className="rounded border border-rose-400/50 px-1 text-rose-100">Del</button>
+                    <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
+                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No taskings entered.</p>}
+                        {rows.map(row => (
+                            <div key={`${row.source}-${row.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
+                                <span className="min-w-0 truncate">
+                                    <span className="font-semibold text-slate-100">{row.tasking}</span>
+                                    <span className="ml-2 text-slate-400">{row.date || date} {formatTime(row.takeoff)}</span>
+                                </span>
+                                <span className="flex items-center gap-2 text-[9px]">
+                                    <label className="inline-flex items-center gap-1 text-emerald-200">
+                                        <input
+                                            type="radio"
+                                            name={`neo-assist-task-schedule-${row.source}-${row.id}`}
+                                            checked={row.scheduled && !row.ignored}
+                                            onChange={() => {
+                                                if (row.source === 'local') submitAssistTaskRequest(row.id);
+                                            }}
+                                        />
+                                        Schedule
+                                    </label>
+                                    <label className="inline-flex items-center gap-1 text-rose-200">
+                                        <input
+                                            type="radio"
+                                            name={`neo-assist-task-schedule-${row.source}-${row.id}`}
+                                            checked={row.ignored || !row.scheduled}
+                                            onChange={() => {
+                                                if (row.source === 'local') ignoreAssistTaskRequest(row.id);
+                                                else {
+                                                    const remote = highestPriorityTaskRows.find(item => item.id === row.id);
+                                                    if (remote) ignorePriorityEvents(remote.events);
+                                                }
+                                            }}
+                                        />
+                                        Ignore
+                                    </label>
                                 </span>
                             </div>
                         ))}
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowAssistTaskForm(value => !value)}
+                        className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
+                    >
+                        {showAssistTaskForm ? 'Hide Tasking Details' : '+ Add Tasking'}
+                    </button>
+                    {showAssistTaskForm && (
+                        <div className="grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2">
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                Tasking
+                                <select value={taskProfileSelectValue} onChange={event => setSelectedTaskProfile(event.target.value)} className={fieldClass}>
+                                    <option value="">Select tasking type</option>
+                                    {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
+                                </select>
+                            </label>
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual tasking name
+                                <input value={selectedTaskProfile} onChange={event => setSelectedTaskProfile(event.target.value)} className={fieldClass} placeholder="Type tasking manually" />
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
+                                <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Takeoff
+                                <select value={assistTaskTakeoff} onChange={event => setAssistTaskTakeoff(Number(event.target.value))} className={fieldClass}>
+                                    {timeOptions.map(option => <option key={`assist-task-${option.label}`} value={option.value}>{option.label}</option>)}
+                                </select>
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Duration
+                                <input type="number" min={0.1} step={0.1} value={assistTaskDuration} onChange={event => setAssistTaskDuration(Math.max(0.1, Number(event.target.value) || 0.1))} className={fieldClass} />
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Solo/Dual
+                                <select value={assistTaskFlightType} onChange={event => setAssistTaskFlightType(event.target.value as 'Solo' | 'Dual')} className={fieldClass}>
+                                    <option value="Solo">Solo</option>
+                                    <option value="Dual">Dual</option>
+                                </select>
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Dep Point
+                                <input value={assistTaskDepPoint} onChange={event => setAssistTaskDepPoint(event.target.value.toUpperCase())} className={fieldClass} />
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Arrival Point
+                                <input value={assistTaskArrivalPoint} onChange={event => setAssistTaskArrivalPoint(event.target.value.toUpperCase())} className={fieldClass} />
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">No. Aircraft
+                                <input type="number" min={1} value={assistTaskAircraftCount} onChange={event => setAssistTaskAircraftCount(Math.max(1, Number(event.target.value) || 1))} className={fieldClass} />
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">CONFIG
+                                <select value={assistTaskConfigId} onChange={event => setAssistTaskConfigId(event.target.value)} className={fieldClass}>
+                                    {aircraftConfigurationDefinitions.map(definition => <option key={definition.id} value={definition.id}>{definition.label}</option>)}
+                                </select>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAssistTaskRequests(prev => [...prev, {
+                                        id: uuidv4(),
+                                        tasking: selectedTaskProfile,
+                                        date: assistTaskDate,
+                                        takeoff: assistTaskTakeoff,
+                                        duration: assistTaskDuration,
+                                        flightType: assistTaskFlightType,
+                                        depPoint: assistTaskDepPoint,
+                                        arrivalPoint: assistTaskArrivalPoint,
+                                        aircraftCount: assistTaskAircraftCount,
+                                        aircraftConfigId: assistTaskConfigId,
+                                        isMandatory: true,
+                                    }]);
+                                    setShowAssistTaskForm(false);
+                                }}
+                                className="col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100"
+                            >
+                                Request
+                            </button>
+                        </div>
+                    )}
                 </div>
             );
         }
         if (activeAssistSection === 'currency') {
+            const localRows = assistCurrencyRequests.map(request => ({
+                id: request.id,
+                currency: request.currency || 'Currency',
+                date: request.date,
+                takeoff: request.takeoff,
+                scheduled: Boolean(request.submitted),
+                ignored: Boolean(request.ignored),
+                source: 'local' as const,
+            }));
+            const visibleRemoteRows = highestPriorityCurrencyRows.filter(remote => !assistCurrencyRequests.some(local => local.id === remote.id));
+            const rows = [...localRows, ...visibleRemoteRows.map(row => ({ ...row, ignored: false, source: 'remote' as const }))];
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
-                    <div className="grid grid-cols-2 gap-2">
-                        <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Currency
-                            <select value={selectedCurrencyName} onChange={event => setSelectedCurrencyName(event.target.value)} className={fieldClass}>
-                                {currencyNames.length === 0 && <option value="">No currency configured</option>}
-                                {currencyNames.map(name => <option key={name} value={name}>{name}</option>)}
-                            </select>
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
-                            <input type="date" value={assistCurrencyDate} onChange={event => setAssistCurrencyDate(event.target.value)} className={fieldClass} />
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Takeoff
-                            <select value={assistCurrencyTakeoff} onChange={event => setAssistCurrencyTakeoff(Number(event.target.value))} className={fieldClass}>
-                                {timeOptions.map(option => <option key={`assist-currency-${option.label}`} value={option.value}>{option.label}</option>)}
-                            </select>
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Duration
-                            <input type="number" min={0.1} step={0.1} value={assistCurrencyDuration} onChange={event => setAssistCurrencyDuration(Math.max(0.1, Number(event.target.value) || 0.1))} className={fieldClass} />
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Solo/Dual
-                            <select value={assistCurrencyFlightType} onChange={event => setAssistCurrencyFlightType(event.target.value as 'Solo' | 'Dual')} className={fieldClass}>
-                                <option value="Solo">Solo</option>
-                                <option value="Dual">Dual</option>
-                            </select>
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Dep Point
-                            <input value={assistCurrencyDepPoint} onChange={event => setAssistCurrencyDepPoint(event.target.value.toUpperCase())} className={fieldClass} />
-                        </label>
-                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Arrival Point
-                            <input value={assistCurrencyArrivalPoint} onChange={event => setAssistCurrencyArrivalPoint(event.target.value.toUpperCase())} className={fieldClass} />
-                        </label>
-                        <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">CONFIG
-                            <select value={assistCurrencyConfigId} onChange={event => setAssistCurrencyConfigId(event.target.value)} className={fieldClass}>
-                                {aircraftConfigurationDefinitions.map(definition => <option key={definition.id} value={definition.id}>{definition.label}</option>)}
-                            </select>
-                        </label>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => setAssistCurrencyRequests(prev => [...prev, {
-                            id: uuidv4(),
-                            currency: selectedCurrencyName,
-                            date: assistCurrencyDate,
-                            takeoff: assistCurrencyTakeoff,
-                            duration: assistCurrencyDuration,
-                            flightType: assistCurrencyFlightType,
-                            depPoint: assistCurrencyDepPoint,
-                            arrivalPoint: assistCurrencyArrivalPoint,
-                            aircraftConfigId: assistCurrencyConfigId,
-                        }])}
-                        className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
-                    >
-                        + Add Request
-                    </button>
-                    <div className="max-h-28 space-y-1 overflow-y-auto pr-1">
-                        {assistCurrencyRequests.map(request => (
-                            <div key={request.id} className="flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                <span className="truncate">{request.currency || 'Currency'} {formatTime(request.takeoff)} {request.depPoint}-{request.arrivalPoint}</span>
-                                <span className="flex items-center gap-1">
-                                    {request.submitted ? <span className="text-emerald-300">Submitted</span> : <button type="button" onClick={() => submitAssistCurrencyRequest(request.id)} className="rounded border border-emerald-400/50 px-1 text-emerald-100">Submit</button>}
-                                    <button type="button" onClick={() => setAssistCurrencyRequests(prev => prev.filter(item => item.id !== request.id))} className="rounded border border-rose-400/50 px-1 text-rose-100">Del</button>
+                    <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
+                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No currency requests entered.</p>}
+                        {rows.map(row => (
+                            <div key={`${row.source}-${row.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
+                                <span className="min-w-0 truncate">
+                                    <span className="font-semibold text-slate-100">{row.currency}</span>
+                                    <span className="ml-2 text-slate-400">{row.date || date} {formatTime(row.takeoff)}</span>
+                                </span>
+                                <span className="flex items-center gap-2 text-[9px]">
+                                    <label className="inline-flex items-center gap-1 text-emerald-200">
+                                        <input
+                                            type="radio"
+                                            name={`neo-assist-currency-schedule-${row.source}-${row.id}`}
+                                            checked={row.scheduled && !row.ignored}
+                                            onChange={() => {
+                                                if (row.source === 'local') submitAssistCurrencyRequest(row.id);
+                                            }}
+                                        />
+                                        Schedule
+                                    </label>
+                                    <label className="inline-flex items-center gap-1 text-rose-200">
+                                        <input
+                                            type="radio"
+                                            name={`neo-assist-currency-schedule-${row.source}-${row.id}`}
+                                            checked={row.ignored || !row.scheduled}
+                                            onChange={() => {
+                                                if (row.source === 'local') ignoreAssistCurrencyRequest(row.id);
+                                                else {
+                                                    const remote = highestPriorityCurrencyRows.find(item => item.id === row.id);
+                                                    if (remote) ignorePriorityEvents([remote.event]);
+                                                }
+                                            }}
+                                        />
+                                        Ignore
+                                    </label>
                                 </span>
                             </div>
                         ))}
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowAssistCurrencyForm(value => !value)}
+                        className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
+                    >
+                        {showAssistCurrencyForm ? 'Hide Currency Details' : '+ Add Currency'}
+                    </button>
+                    {showAssistCurrencyForm && (
+                        <div className="grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2">
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Currency
+                                <select value={selectedCurrencyName} onChange={event => setSelectedCurrencyName(event.target.value)} className={fieldClass}>
+                                    {currencyNames.length === 0 && <option value="">No currency configured</option>}
+                                    {currencyNames.map(name => <option key={name} value={name}>{name}</option>)}
+                                </select>
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
+                                <input type="date" value={assistCurrencyDate} onChange={event => setAssistCurrencyDate(event.target.value)} className={fieldClass} />
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Takeoff
+                                <select value={assistCurrencyTakeoff} onChange={event => setAssistCurrencyTakeoff(Number(event.target.value))} className={fieldClass}>
+                                    {timeOptions.map(option => <option key={`assist-currency-${option.label}`} value={option.value}>{option.label}</option>)}
+                                </select>
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Duration
+                                <input type="number" min={0.1} step={0.1} value={assistCurrencyDuration} onChange={event => setAssistCurrencyDuration(Math.max(0.1, Number(event.target.value) || 0.1))} className={fieldClass} />
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Solo/Dual
+                                <select value={assistCurrencyFlightType} onChange={event => setAssistCurrencyFlightType(event.target.value as 'Solo' | 'Dual')} className={fieldClass}>
+                                    <option value="Solo">Solo</option>
+                                    <option value="Dual">Dual</option>
+                                </select>
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Dep Point
+                                <input value={assistCurrencyDepPoint} onChange={event => setAssistCurrencyDepPoint(event.target.value.toUpperCase())} className={fieldClass} />
+                            </label>
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Arrival Point
+                                <input value={assistCurrencyArrivalPoint} onChange={event => setAssistCurrencyArrivalPoint(event.target.value.toUpperCase())} className={fieldClass} />
+                            </label>
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">CONFIG
+                                <select value={assistCurrencyConfigId} onChange={event => setAssistCurrencyConfigId(event.target.value)} className={fieldClass}>
+                                    {aircraftConfigurationDefinitions.map(definition => <option key={definition.id} value={definition.id}>{definition.label}</option>)}
+                                </select>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAssistCurrencyRequests(prev => [...prev, {
+                                        id: uuidv4(),
+                                        currency: selectedCurrencyName,
+                                        date: assistCurrencyDate,
+                                        takeoff: assistCurrencyTakeoff,
+                                        duration: assistCurrencyDuration,
+                                        flightType: assistCurrencyFlightType,
+                                        depPoint: assistCurrencyDepPoint,
+                                        arrivalPoint: assistCurrencyArrivalPoint,
+                                        aircraftConfigId: assistCurrencyConfigId,
+                                    }]);
+                                    setShowAssistCurrencyForm(false);
+                                }}
+                                className="col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100"
+                            >
+                                Request
+                            </button>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -1439,37 +1691,45 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (activeAssistSection === 'course' || activeAssistSection === 'packages') {
             const isPackageSection = activeAssistSection === 'packages';
-            const groupNames = isPackageSection ? packageNames : courseNames;
+            const assignedOptions = isPackageSection ? selectedCrewPackageOptions : selectedCrewCourseOptions;
             const selectedGroupName = isPackageSection ? selectedPackageName : selectedCourseName;
             const setSelectedGroupName = isPackageSection ? setSelectedPackageName : setSelectedCourseName;
-            const baseOptions = isPackageSection ? packageEventOptions : courseEventOptions;
-            const eventOptions = baseOptions.filter(item => {
-                if (!selectedGroupName) return true;
-                if (isPackageSection) {
-                    return [item.module, item.courses?.[0], item.phase].filter(Boolean).includes(selectedGroupName);
-                }
-                return item.courses?.includes(selectedGroupName) || item.module === selectedGroupName || item.phase === selectedGroupName;
-            });
+            const eventOptions = selectedCrewName
+                ? getSelectedCrewTrainingItems(isPackageSection ? 'training_package' : 'course', selectedGroupName)
+                : [];
             const selectedCode = activeAssistSection === 'course' ? selectedCourseEventCode : selectedPackageEventCode;
             const setSelectedCode = activeAssistSection === 'course' ? setSelectedCourseEventCode : setSelectedPackageEventCode;
+            const assignmentLabel = assignedOptions.find(option => option.code === selectedGroupName)?.label || selectedGroupName;
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
+                    {!selectedCrewName && (
+                        <p className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-2 text-amber-100">
+                            Select crew first to show assigned {isPackageSection ? 'packages' : 'courses'} and training progress.
+                        </p>
+                    )}
                     <label className="block font-semibold uppercase tracking-[0.1em] text-slate-400">
                         {isPackageSection ? 'Package' : 'Course'}
                         <select
                             value={selectedGroupName}
                             onChange={event => setSelectedGroupName(event.target.value)}
                             className={fieldClass}
+                            disabled={!selectedCrewName || assignedOptions.length === 0}
                         >
-                            {groupNames.length === 0 && <option value="">None assigned</option>}
-                            {groupNames.map(name => <option key={name} value={name}>{name}</option>)}
+                            {assignedOptions.length === 0 && <option value="">None assigned</option>}
+                            {assignedOptions.map(option => <option key={option.key} value={option.code}>{option.label}</option>)}
                         </select>
                     </label>
+                    {selectedCrewName && selectedGroupName && (
+                        <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-1 text-slate-300">
+                            {selectedCrewName} - {assignmentLabel}
+                        </p>
+                    )}
                     <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-                        {eventOptions.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No {isPackageSection ? 'package' : 'course'} events assigned.</p>}
+                        {selectedCrewName && eventOptions.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No events found for this assigned {isPackageSection ? 'package' : 'course'}.</p>}
                         {eventOptions.map(item => {
-                            const isComplete = Boolean((item as any).completedAt || (item as any).isComplete || (item as any).completed || (item as any).completedDate || (item as any).status === 'Complete');
-                            const completionDateLabel = getCompletionDateLabel(item);
+                            const completion = getSelectedCrewCompletion(item, isPackageSection ? 'training_package' : 'course', selectedGroupName);
+                            const isComplete = completion.complete;
+                            const completionDateLabel = completion.dateLabel;
                             const rowClass = isComplete
                                 ? 'border-emerald-400/80 bg-emerald-500/10 ring-1 ring-emerald-400/30'
                                 : selectedCode === item.code
@@ -29339,6 +29599,7 @@ appliedUpdates.forEach(update => {
                                     packagePriorities={packagePriorities}
                                     onUpdatePackagePriorities={setPackagePriorities}
                                     currencyNames={currencyNames}
+                                    highestPriorityEvents={highestPriorityEvents}
                                     onAddPriorityEvents={(eventsToAdd) => {
                                         setHighestPriorityEvents(prev => {
                                             const incomingIds = new Set(eventsToAdd.map(event => event.id));
@@ -29348,6 +29609,7 @@ appliedUpdates.forEach(update => {
                                             ];
                                         });
                                     }}
+                                    onDeletePriorityEvent={handleDeletePriorityEvent}
                                     availableAircraftCount={neoAvailableAircraftCount}
                                     onUpdateAircraftCount={setNeoAvailableAircraftCount}
                                     aircraftConfigCapacities={neoAircraftConfigCapacities}
