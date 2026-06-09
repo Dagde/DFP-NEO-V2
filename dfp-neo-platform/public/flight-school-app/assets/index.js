@@ -63332,7 +63332,7 @@ const DfpSidePanelTimeline = ({
     event.dataTransfer.setData("application/neo-assist-event", JSON.stringify(assistDraftEvent));
     event.dataTransfer.setData("text/plain", assistEventLabel);
     const dragImage = createAssistDragImage();
-    event.dataTransfer.setDragImage(dragImage, 0, 8);
+    event.dataTransfer.setDragImage(dragImage, 0, 0);
     window.setTimeout(() => {
       dragImage.remove();
     }, 0);
