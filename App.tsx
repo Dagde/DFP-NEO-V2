@@ -259,6 +259,8 @@ const DfpSidePanelTimeline: React.FC<{
     taskProfileAbbreviations: Record<string, string>;
     coursePriorities: string[];
     onUpdateCoursePriorities: (priorities: string[]) => void;
+    coursePercentages: Map<string, number>;
+    onUpdateCoursePercentages: (percentages: Map<string, number>) => void;
     packagePriorities: string[];
     availableAircraftCount: number;
     onUpdateAircraftCount: (count: number) => void;
@@ -300,6 +302,8 @@ const DfpSidePanelTimeline: React.FC<{
     taskProfileAbbreviations,
     coursePriorities,
     onUpdateCoursePriorities,
+    coursePercentages,
+    onUpdateCoursePercentages,
     packagePriorities,
     availableAircraftCount,
     onUpdateAircraftCount,
@@ -335,8 +339,9 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedCrewName, setSelectedCrewName] = useState('');
     const [selectedResourceKind, setSelectedResourceKind] = useState<'flight' | 'ftd' | 'cpt'>('flight');
     const [selectedResourceNumber, setSelectedResourceNumber] = useState(1);
+    const [selectedAircraftNumber, setSelectedAircraftNumber] = useState('TBA');
     const [assistCallsign, setAssistCallsign] = useState('');
-    const [selectedAssignedArea, setSelectedAssignedArea] = useState('A');
+    const [selectedAssignedArea, setSelectedAssignedArea] = useState('TBA');
     const [crewSourceMode, setCrewSourceMode] = useState<'priority' | 'staff'>('priority');
     const [selectedCourseEventCode, setSelectedCourseEventCode] = useState('');
     const [selectedPackageEventCode, setSelectedPackageEventCode] = useState('');
@@ -403,7 +408,7 @@ const DfpSidePanelTimeline: React.FC<{
 
     const assignedAreaOptions = useMemo(() => {
         const seen = new Set<string>();
-        return ['', ...trainingAreas, 'A']
+        return ['', ...trainingAreas]
             .map(area => String(area || '').trim())
             .filter(area => {
                 if (seen.has(area)) return false;
@@ -459,8 +464,8 @@ const DfpSidePanelTimeline: React.FC<{
         origin: locationCode,
         destination: locationCode,
         callsign: assistCallsign.trim() || undefined,
-        aircraftNumber: selectedResourceKind === 'flight' ? String(selectedResourceNumber).padStart(3, '0') : undefined,
-        area: selectedAssignedArea || undefined,
+        aircraftNumber: selectedResourceKind === 'flight' ? (selectedAircraftNumber.trim() || 'TBA') : undefined,
+        area: selectedAssignedArea && selectedAssignedArea !== 'TBA' ? selectedAssignedArea : undefined,
         preStart: selectedSyllabusItem ? Math.max(0, flyingStartTime - ((selectedSyllabusItem.preFlightTime || 0) / 60)) : undefined,
         postEnd: selectedSyllabusItem ? flyingStartTime + assistDuration + ((selectedSyllabusItem.postFlightTime || 0) / 60) : undefined,
     }), [
@@ -473,6 +478,7 @@ const DfpSidePanelTimeline: React.FC<{
         flyingStartTime,
         locationCode,
         selectedCrewName,
+        selectedAircraftNumber,
         selectedResourceKind,
         selectedResourceNumber,
         selectedAssignedArea,
@@ -687,8 +693,37 @@ const DfpSidePanelTimeline: React.FC<{
         .join(', ') || 'No CONFIG split set';
     const previewCrewName = selectedCrewName || 'Bloggs, Joe';
     const previewCallsign = assistCallsign.trim() || 'CSIGN';
-    const previewAircraftNumber = String(selectedResourceNumber || 1).padStart(3, '0');
-    const previewAreaCallsign = `${selectedAssignedArea ? `${selectedAssignedArea} ` : ''}${previewCallsign}`;
+    const previewAircraftNumber = selectedResourceKind === 'flight'
+        ? (selectedAircraftNumber.trim() || 'TBA')
+        : 'TBA';
+    const previewAreaCallsign = `${selectedAssignedArea && selectedAssignedArea !== 'TBA' ? `${selectedAssignedArea} ` : ''}${previewCallsign}`;
+    const formatCrewOptionLabel = (name: string): string => {
+        const instructor = instructors.find(item => item.name === name);
+        const rank = String(instructor?.rank || '').trim();
+        return rank ? `${rank} ${name}` : name;
+    };
+    const normaliseCapacityInput = (value: string): string => {
+        const digitsOnly = String(value || '').trim().replace(/[^\d]/g, '');
+        if (!digitsOnly) return '';
+        return String(Math.max(0, parseInt(digitsOnly, 10) || 0));
+    };
+    const nonCleanConfigCapacityTotal = aircraftConfigurationDefinitions
+        .filter(definition => definition.id !== BASE_AIRCRAFT_CONFIG.id)
+        .reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || '', 10) || 0), 0);
+    const hasEnteredConfigCapacity = aircraftConfigurationDefinitions
+        .filter(definition => definition.id !== BASE_AIRCRAFT_CONFIG.id)
+        .some(definition => String(aircraftConfigCapacities[definition.id] || '').trim() !== '');
+    const derivedCleanConfigCapacity = Math.max(0, availableAircraftCount - nonCleanConfigCapacityTotal);
+    const totalCoursePercentage = Array.from(coursePercentages.values()).reduce((sum, value) => sum + value, 0);
+    const updateCoursePercentage = (course: string, direction: 'increase' | 'decrease') => {
+        const nextPercentages = new Map(coursePercentages);
+        const currentPercent = nextPercentages.get(course) ?? 0;
+        const nextPercent = direction === 'increase'
+            ? Math.min(100, currentPercent + 5)
+            : Math.max(5, currentPercent - 5);
+        nextPercentages.set(course, nextPercent);
+        onUpdateCoursePercentages(nextPercentages);
+    };
 
     const renderAssistSection = () => {
         if (activeAssistSection === 'details') {
@@ -721,6 +756,15 @@ const DfpSidePanelTimeline: React.FC<{
                         />
                     </label>
                     <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                        Aircraft Number
+                        <input
+                            value={selectedAircraftNumber}
+                            onChange={event => setSelectedAircraftNumber(event.target.value)}
+                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                            placeholder="TBA"
+                        />
+                    </label>
+                    <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                         Callsign
                         <input
                             list="neo-assist-callsign-options"
@@ -740,6 +784,7 @@ const DfpSidePanelTimeline: React.FC<{
                             onChange={event => setSelectedAssignedArea(event.target.value)}
                             className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
                         >
+                            <option value="TBA" disabled hidden>TBA</option>
                             {assignedAreaOptions.map(area => (
                                 <option key={area || '__blank'} value={area}>{area || 'Blank'}</option>
                             ))}
@@ -760,9 +805,11 @@ const DfpSidePanelTimeline: React.FC<{
                             <div key={`${label}-${fieldLabel}`} className="space-y-1">
                                 <span className="block text-[8px] uppercase tracking-[0.1em] text-slate-500">{fieldLabel as string}</span>
                                 <div className="flex items-center gap-1">
-                                    <button type="button" onClick={() => stepTime(value as number, setter as (time: number) => void, -1 / 12)} className="rounded border border-slate-600 px-1.5 py-1 text-[10px] text-slate-200">-</button>
                                     <span className="min-w-[42px] text-center font-mono text-[11px] text-slate-100">{formatCompactTime(value as number)}</span>
-                                    <button type="button" onClick={() => stepTime(value as number, setter as (time: number) => void, 1 / 12)} className="rounded border border-slate-600 px-1.5 py-1 text-[10px] text-slate-200">+</button>
+                                    <span className="flex flex-col">
+                                        <button type="button" onClick={() => stepTime(value as number, setter as (time: number) => void, 1 / 12)} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none text-slate-200">▲</button>
+                                        <button type="button" onClick={() => stepTime(value as number, setter as (time: number) => void, -1 / 12)} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none text-slate-200">▼</button>
+                                    </span>
                                 </div>
                             </div>
                         ))}
@@ -810,7 +857,10 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (activeAssistSection === 'resources') {
             const updateConfigCapacity = (configId: string, value: string) => {
-                onUpdateAircraftConfigCapacities({ ...aircraftConfigCapacities, [configId]: value });
+                const nextValue = normaliseCapacityInput(value);
+                const nextCapacities = { ...aircraftConfigCapacities, [configId]: nextValue };
+                if (!nextValue) delete nextCapacities[configId];
+                onUpdateAircraftConfigCapacities(nextCapacities);
             };
             return (
                 <div className="space-y-3 text-[10px] text-slate-200">
@@ -828,14 +878,29 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         {aircraftConfigurationDefinitions
-                            .filter(definition => definition.id !== ANY_AIRCRAFT_CONFIG.id)
-                            .map(definition => (
+                            .map(definition => {
+                                const isCleanConfig = definition.id === BASE_AIRCRAFT_CONFIG.id;
+                                const displayValue = isCleanConfig
+                                    ? (hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : '')
+                                    : (aircraftConfigCapacities[definition.id] || '');
+                                return (
                                 <label key={definition.id} className="block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                                     {definition.label}
-                                    <input type="number" min={0} value={aircraftConfigCapacities[definition.id] || ''} onChange={event => updateConfigCapacity(definition.id, event.target.value)} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] text-slate-100" />
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        value={displayValue}
+                                        readOnly={isCleanConfig}
+                                        disabled={isCleanConfig}
+                                        onChange={event => {
+                                            if (!isCleanConfig) updateConfigCapacity(definition.id, event.target.value);
+                                        }}
+                                        className={`mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] text-slate-100 ${isCleanConfig ? 'cursor-not-allowed text-slate-400 opacity-80' : ''}`}
+                                    />
                                 </label>
-                            ))}
+                            )})}
                     </div>
+                    <p className="text-slate-500">CONFIG total auto-balances against total aircraft available.</p>
                     <p className="text-slate-500">{resources.length} DFP rows available for manual placement</p>
                 </div>
             );
@@ -857,13 +922,19 @@ const DfpSidePanelTimeline: React.FC<{
                             {coursePriorities.map(course => (
                                 <div key={course} className="flex items-center justify-between rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
                                     <span>{course}</span>
-                                    <span className="flex gap-1">
+                                    <span className="flex items-center gap-1">
+                                        <span className={`min-w-8 text-center font-mono ${totalCoursePercentage !== 100 ? 'text-amber-300' : 'text-slate-300'}`}>{coursePercentages.get(course) ?? 0}%</span>
+                                        <span className="flex flex-col">
+                                            <button type="button" onClick={() => updateCoursePercentage(course, 'increase')} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none">▲</button>
+                                            <button type="button" onClick={() => updateCoursePercentage(course, 'decrease')} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none">▼</button>
+                                        </span>
                                         <button type="button" onClick={() => moveCourse(course, -1)} className="rounded border border-slate-600 px-1">Up</button>
                                         <button type="button" onClick={() => moveCourse(course, 1)} className="rounded border border-slate-600 px-1">Down</button>
                                     </span>
                                 </div>
                             ))}
                         </div>
+                        <p className={`mt-2 rounded px-2 py-1 text-center font-semibold ${totalCoursePercentage === 100 ? 'bg-emerald-500/15 text-emerald-200' : 'bg-amber-500/15 text-amber-200'}`}>Total: {totalCoursePercentage}%</p>
                     </div>
                     <div>
                         <p className="font-semibold text-cyan-100">Package priority</p>
@@ -907,7 +978,7 @@ const DfpSidePanelTimeline: React.FC<{
                             className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
                         >
                             <option value="">Bloggs, Joe</option>
-                            {displayedCrewOptions.map(name => <option key={name} value={name}>{name}</option>)}
+                            {displayedCrewOptions.map(name => <option key={name} value={name}>{formatCrewOptionLabel(name)}</option>)}
                         </select>
                     </label>
                     <span className="block text-[9px] text-slate-500">
@@ -926,7 +997,7 @@ const DfpSidePanelTimeline: React.FC<{
                 <div className="max-h-64 overflow-y-auto pr-1 text-[10px] text-slate-200">
                     <div className="space-y-1">
                         {eventOptions.map(item => {
-                            const isComplete = Boolean((item as any).completedAt || (item as any).isComplete || (item as any).completed);
+                            const isComplete = Boolean((item as any).completedAt || (item as any).isComplete || (item as any).completed || (item as any).completedDate || (item as any).status === 'Complete');
                             return (
                                 <label key={item.id || item.code} className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1 ${selectedCode === item.code ? 'border-cyan-300/70 bg-cyan-400/10' : 'border-slate-700 bg-slate-950/45'}`}>
                                     <input
@@ -28762,6 +28833,8 @@ appliedUpdates.forEach(update => {
                                     taskProfileAbbreviations={activeTaskProfileAbbreviations}
                                     coursePriorities={coursePriorities}
                                     onUpdateCoursePriorities={setCoursePriorities}
+                                    coursePercentages={coursePercentages}
+                                    onUpdateCoursePercentages={setCoursePercentages}
                                     packagePriorities={Array.from(new Set(visibleSyllabusDetails.map(item => item.module).filter(Boolean))).slice(0, 12)}
                                     availableAircraftCount={neoAvailableAircraftCount}
                                     onUpdateAircraftCount={setNeoAvailableAircraftCount}
