@@ -95,6 +95,10 @@ export interface AppSettingsData {
   // Currency Requirements
   masterCurrencies: any[];
   currencyRequirements: any[];
+  unitCurrencyDefinitions?: Record<string, {
+    masterCurrencies: any[];
+    currencyRequirements: any[];
+  }>;
 
   // Syllabus Details
   syllabusDetails: any[];
@@ -323,6 +327,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     cancellationCodes: state.cancellationCodes || [],
     masterCurrencies: state.masterCurrencies || [],
     currencyRequirements: state.currencyRequirements || [],
+    unitCurrencyDefinitions: state.unitCurrencyDefinitions || {},
     syllabusDetails: state.syllabusDetails || [],
     organisationSettings: state.organisationSettings || {
       staffSharingEnabled: false,

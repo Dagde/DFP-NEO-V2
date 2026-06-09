@@ -7,8 +7,16 @@ interface CurrencyBuilderViewProps {
     onBack: () => void;
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
+    activeUnitCode?: string;
+    importUnitOptions?: Array<{
+        unitCode: string;
+        label: string;
+        currencyCount: number;
+        recencyCount: number;
+    }>;
     onSave: (allCurrencies: CurrencyDefinition[]) => void;
     onDelete: (id: string) => void;
+    onImportFromUnit?: (unitCode: string) => void;
 }
 
 const getNewPrimitive = (): CurrencyRequirement => ({
@@ -39,11 +47,21 @@ const getNewComposite = (): MasterCurrency => ({
     postFlightInputTypes: ['checkbox'],
 });
 
-const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({ onBack, masterCurrencies, currencyRequirements, onSave, onDelete }) => {
+const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
+    onBack,
+    masterCurrencies,
+    currencyRequirements,
+    activeUnitCode,
+    importUnitOptions = [],
+    onSave,
+    onDelete,
+    onImportFromUnit,
+}) => {
     const [allCurrencies, setAllCurrencies] = useState<CurrencyDefinition[]>([]);
     const [selectedCurrencyId, setSelectedCurrencyId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDirty, setIsDirty] = useState(false);
+    const [importSourceUnit, setImportSourceUnit] = useState('');
 
     useEffect(() => {
         const combined = [...masterCurrencies, ...currencyRequirements];
@@ -111,12 +129,24 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({ onBack, maste
         setIsDirty(false);
     };
 
+    const handleImportFromUnit = () => {
+        if (!importSourceUnit || !onImportFromUnit) return;
+        const sourceLabel = importUnitOptions.find(option => option.unitCode === importSourceUnit)?.label || importSourceUnit;
+        const targetLabel = activeUnitCode || 'this unit';
+        if (!window.confirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?\n\nThis replaces the current ${targetLabel} currency/recency list.`)) return;
+        onImportFromUnit(importSourceUnit);
+        setSelectedCurrencyId(null);
+        setIsDirty(false);
+    };
+
     return (
         <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden h-full">
             <header className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Currency Builder</h1>
-                    <p className="text-sm text-gray-400">Define primitive and composite currency rules.</p>
+                    <p className="text-sm text-gray-400">
+                        Define primitive and composite currency rules{activeUnitCode ? ` for ${activeUnitCode}` : ''}.
+                    </p>
                 </div>
                 <div className="flex items-center" style={{ gap: '1px' }}>
                     {isDirty && (
@@ -162,6 +192,33 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({ onBack, maste
                             <button onClick={() => handleAddCurrency('primitive')} className="flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold">+ Primitive</button>
                             <button onClick={() => handleAddCurrency('composite')} className="flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold">+ Composite</button>
                          </div>
+                         {activeUnitCode && importUnitOptions.length > 0 && (
+                            <div className="mt-3 rounded border border-sky-500/30 bg-sky-950/20 p-2">
+                                <label className="block text-[10px] font-semibold uppercase tracking-wide text-sky-300">
+                                    Import from unit
+                                    <select
+                                        value={importSourceUnit}
+                                        onChange={event => setImportSourceUnit(event.target.value)}
+                                        className="mt-1 w-full rounded border border-gray-600 bg-gray-800 px-2 py-1.5 text-xs normal-case tracking-normal text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                    >
+                                        <option value="">Select unit...</option>
+                                        {importUnitOptions.map(option => (
+                                            <option key={option.unitCode} value={option.unitCode}>
+                                                {option.label} ({option.currencyCount} items, {option.recencyCount} recency)
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={handleImportFromUnit}
+                                    disabled={!importSourceUnit || !onImportFromUnit}
+                                    className="mt-2 w-full rounded bg-sky-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400"
+                                >
+                                    Import List
+                                </button>
+                            </div>
+                         )}
                     </div>
                     <div className="flex-1 overflow-y-auto">
                         {filteredCurrencies.map(c => (

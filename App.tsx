@@ -17183,7 +17183,24 @@ const App: React.FC = () => {
     // Currency setup state
     const [masterCurrencies, setMasterCurrencies] = useState<MasterCurrency[]>(INITIAL_MASTER_CURRENCIES);
     const [currencyRequirements, setCurrencyRequirements] = useState<CurrencyRequirement[]>(INITIAL_CURRENCY_REQUIREMENTS);
+    const [fallbackMasterCurrencies, setFallbackMasterCurrencies] = useState<MasterCurrency[]>(INITIAL_MASTER_CURRENCIES);
+    const [fallbackCurrencyRequirements, setFallbackCurrencyRequirements] = useState<CurrencyRequirement[]>(INITIAL_CURRENCY_REQUIREMENTS);
+    const [unitCurrencyDefinitions, setUnitCurrencyDefinitions] = useState<Record<string, {
+        masterCurrencies: MasterCurrency[];
+        currencyRequirements: CurrencyRequirement[];
+    }>>({});
     const [showCurrencySetup, setShowCurrencySetup] = useState(false);
+
+    const activeCurrencyUnitKey = useMemo(() => {
+        const rawUnit = activeContextUnitCodes[0] || String(activeUnitCode || '').split('+')[0] || activeUnitCode;
+        return String(rawUnit || '').trim().toUpperCase();
+    }, [activeContextUnitCodes, activeUnitCode]);
+
+    useEffect(() => {
+        const activeUnitDefinitions = activeCurrencyUnitKey ? unitCurrencyDefinitions[activeCurrencyUnitKey] : null;
+        setMasterCurrencies(activeUnitDefinitions?.masterCurrencies || fallbackMasterCurrencies);
+        setCurrencyRequirements(activeUnitDefinitions?.currencyRequirements || fallbackCurrencyRequirements);
+    }, [activeCurrencyUnitKey, fallbackCurrencyRequirements, fallbackMasterCurrencies, unitCurrencyDefinitions]);
 
     // Unsaved changes state
     const [dirtyCheck, setDirtyCheck] = useState<{ isDirty: () => boolean; onSave: () => void; onDiscard: () => void } | null>(null);
@@ -17458,8 +17475,28 @@ const App: React.FC = () => {
                     const dbReqs = saved.currencyRequirements ?? [];
                     const dbMasters = saved.masterCurrencies ?? [];
                     const merged = mergeWithInitialCurrencies(dbReqs, dbMasters);
-                    setMasterCurrencies(merged.masters);
-                    setCurrencyRequirements(merged.requirements);
+                    setFallbackMasterCurrencies(merged.masters);
+                    setFallbackCurrencyRequirements(merged.requirements);
+                    const savedUnitDefinitions = saved.unitCurrencyDefinitions || {};
+                    const mergedUnitDefinitions = Object.fromEntries(
+                        Object.entries(savedUnitDefinitions).map(([unitCode, definitions]: [string, any]) => {
+                            const unitMerged = mergeWithInitialCurrencies(
+                                Array.isArray(definitions?.currencyRequirements) ? definitions.currencyRequirements : [],
+                                Array.isArray(definitions?.masterCurrencies) ? definitions.masterCurrencies : [],
+                            );
+                            return [
+                                String(unitCode || '').trim().toUpperCase(),
+                                {
+                                    masterCurrencies: unitMerged.masters,
+                                    currencyRequirements: unitMerged.requirements,
+                                },
+                            ];
+                        })
+                    ) as Record<string, { masterCurrencies: MasterCurrency[]; currencyRequirements: CurrencyRequirement[] }>;
+                    setUnitCurrencyDefinitions(mergedUnitDefinitions);
+                    const activeUnitDefinitions = activeCurrencyUnitKey ? mergedUnitDefinitions[activeCurrencyUnitKey] : null;
+                    setMasterCurrencies(activeUnitDefinitions?.masterCurrencies || merged.masters);
+                    setCurrencyRequirements(activeUnitDefinitions?.currencyRequirements || merged.requirements);
                 }
                 // NOTE: syllabusDetails intentionally NOT loaded from settings DB.
                 // syllabusDetails is always loaded from the DB syllabus API (DB only, no mock data).
@@ -17536,6 +17573,7 @@ const App: React.FC = () => {
             cancellationCodes,
             masterCurrencies,
             currencyRequirements,
+            unitCurrencyDefinitions,
             // NOTE: syllabusDetails intentionally excluded from settings save.
             // Syllabus is always loaded from DB via the dedicated syllabus API,
             // never from the general settings blob.
@@ -17558,7 +17596,7 @@ const App: React.FC = () => {
         timezoneOffset, showDepartureDensityOverlay, tileStatusSettings,
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
-        masterCurrencies, currencyRequirements,
+        masterCurrencies, currencyRequirements, unitCurrencyDefinitions,
         organisationSettings,
         coursePriorities, coursePercentages,
     ]);
@@ -26738,20 +26776,86 @@ appliedUpdates.forEach(update => {
         const newReqs = allCurrencies.filter(c => c.type === 'primitive') as CurrencyRequirement[];
         setMasterCurrencies(newMasters);
         setCurrencyRequirements(newReqs);
-        // Save directly to dedicated /api/currencies endpoint for reliable persistence
-        saveCurrenciesToDB(newMasters, newReqs, sessionUser?.userId);
-        setSuccessMessage('Currency rules saved!');
+        if (activeCurrencyUnitKey) {
+            setUnitCurrencyDefinitions(prev => ({
+                ...prev,
+                [activeCurrencyUnitKey]: {
+                    masterCurrencies: newMasters,
+                    currencyRequirements: newReqs,
+                },
+            }));
+            setSuccessMessage(`Currency and recency rules saved for ${activeCurrencyUnitKey}!`);
+        } else {
+            setFallbackMasterCurrencies(newMasters);
+            setFallbackCurrencyRequirements(newReqs);
+            // Save directly to dedicated /api/currencies endpoint for legacy/global fallback persistence
+            saveCurrenciesToDB(newMasters, newReqs, sessionUser?.userId);
+            setSuccessMessage('Currency rules saved!');
+        }
     };
 
     const handleDeleteCurrency = (id: string) => {
-        setMasterCurrencies(prev => prev.filter(c => c.id !== id));
-        setCurrencyRequirements(prev => prev.filter(c => c.id !== id));
+        const nextMasters = masterCurrencies.filter(c => c.id !== id);
+        const nextReqs = currencyRequirements.filter(c => c.id !== id);
+        setMasterCurrencies(nextMasters);
+        setCurrencyRequirements(nextReqs);
+        if (activeCurrencyUnitKey) {
+            setUnitCurrencyDefinitions(prev => ({
+                ...prev,
+                [activeCurrencyUnitKey]: {
+                    masterCurrencies: nextMasters,
+                    currencyRequirements: nextReqs,
+                },
+            }));
+        } else {
+            setFallbackMasterCurrencies(nextMasters);
+            setFallbackCurrencyRequirements(nextReqs);
+        }
         setSuccessMessage('Currency deleted.');
+    };
+
+    const importCurrencyDefinitionsFromUnit = (sourceUnitCode: string) => {
+        const normalisedSourceUnit = String(sourceUnitCode || '').trim().toUpperCase();
+        if (!activeCurrencyUnitKey || !normalisedSourceUnit) return;
+        const sourceDefinitions = unitCurrencyDefinitions[normalisedSourceUnit];
+        if (!sourceDefinitions) return;
+        const importedMasters = sourceDefinitions.masterCurrencies.map(currency => ({ ...currency }));
+        const importedRequirements = sourceDefinitions.currencyRequirements.map(currency => ({ ...currency }));
+        setMasterCurrencies(importedMasters);
+        setCurrencyRequirements(importedRequirements);
+        setUnitCurrencyDefinitions(prev => ({
+            ...prev,
+            [activeCurrencyUnitKey]: {
+                masterCurrencies: importedMasters,
+                currencyRequirements: importedRequirements,
+            },
+        }));
+        setSuccessMessage(`Imported currency and recency rules from ${normalisedSourceUnit} to ${activeCurrencyUnitKey}.`);
     };
 
     const currencyNames = useMemo(() => {
         return [...masterCurrencies.map(c => c.name), ...currencyRequirements.map(c => c.name)].sort();
     }, [masterCurrencies, currencyRequirements]);
+
+    const unitCurrencyImportOptions = useMemo(() => {
+        const knownUnits = new Set([
+            ...units,
+            ...Object.keys(unitCurrencyDefinitions),
+        ].map(unit => String(unit || '').trim().toUpperCase()).filter(Boolean));
+        return Array.from(knownUnits)
+            .filter(unit => unit !== activeCurrencyUnitKey && !!unitCurrencyDefinitions[unit])
+            .sort((a, b) => a.localeCompare(b))
+            .map(unit => ({
+                unitCode: unit,
+                label: unit,
+                currencyCount: (unitCurrencyDefinitions[unit]?.masterCurrencies?.length || 0)
+                    + (unitCurrencyDefinitions[unit]?.currencyRequirements?.length || 0),
+                recencyCount: [
+                    ...(unitCurrencyDefinitions[unit]?.masterCurrencies || []),
+                    ...(unitCurrencyDefinitions[unit]?.currencyRequirements || []),
+                ].filter(currency => currency.showInPostFlightRecency).length,
+            }));
+    }, [activeCurrencyUnitKey, unitCurrencyDefinitions, units]);
 
     // --- ORACLE HANDLERS ---
     const runOracleAnalysis = useCallback(() => {
@@ -28765,8 +28869,11 @@ appliedUpdates.forEach(update => {
                             onBack={() => handleNavigation('Settings')}
                             masterCurrencies={masterCurrencies}
                             currencyRequirements={currencyRequirements}
+                            activeUnitCode={activeCurrencyUnitKey}
+                            importUnitOptions={unitCurrencyImportOptions}
                             onSave={handleSaveCurrencies}
                             onDelete={handleDeleteCurrency}
+                            onImportFromUnit={importCurrencyDefinitionsFromUnit}
                         />;
             case 'PT051':
                 console.log('eventForPt051:', eventForPt051);

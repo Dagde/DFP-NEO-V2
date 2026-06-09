@@ -1615,6 +1615,7 @@ const buildSettingsSnapshot = (state) => {
     cancellationCodes: state.cancellationCodes || [],
     masterCurrencies: state.masterCurrencies || [],
     currencyRequirements: state.currencyRequirements || [],
+    unitCurrencyDefinitions: state.unitCurrencyDefinitions || {},
     syllabusDetails: state.syllabusDetails || [],
     organisationSettings: state.organisationSettings || {
       staffSharingEnabled: false,
@@ -4133,11 +4134,21 @@ const getNewComposite = () => ({
   showInPostFlightRecency: false,
   postFlightInputTypes: ["checkbox"]
 });
-const CurrencyBuilderView = ({ onBack, masterCurrencies, currencyRequirements, onSave, onDelete }) => {
+const CurrencyBuilderView = ({
+  onBack,
+  masterCurrencies,
+  currencyRequirements,
+  activeUnitCode,
+  importUnitOptions = [],
+  onSave,
+  onDelete,
+  onImportFromUnit
+}) => {
   const [allCurrencies, setAllCurrencies] = reactExports.useState([]);
   const [selectedCurrencyId, setSelectedCurrencyId] = reactExports.useState(null);
   const [searchTerm, setSearchTerm] = reactExports.useState("");
   const [isDirty, setIsDirty] = reactExports.useState(false);
+  const [importSourceUnit, setImportSourceUnit] = reactExports.useState("");
   reactExports.useEffect(() => {
     const combined = [...masterCurrencies, ...currencyRequirements];
     setAllCurrencies(combined);
@@ -4190,11 +4201,26 @@ const CurrencyBuilderView = ({ onBack, masterCurrencies, currencyRequirements, o
     onSave(allCurrencies);
     setIsDirty(false);
   };
+  const handleImportFromUnit = () => {
+    if (!importSourceUnit || !onImportFromUnit) return;
+    const sourceLabel = importUnitOptions.find((option) => option.unitCode === importSourceUnit)?.label || importSourceUnit;
+    const targetLabel = activeUnitCode || "this unit";
+    if (!window.confirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?
+
+This replaces the current ${targetLabel} currency/recency list.`)) return;
+    onImportFromUnit(importSourceUnit);
+    setSelectedCurrencyId(null);
+    setIsDirty(false);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Currency Builder" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Define primitive and composite currency rules." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+          "Define primitive and composite currency rules",
+          activeUnitCode ? ` for ${activeUnitCode}` : "",
+          "."
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", style: { gap: "1px" }, children: [
         isDirty && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -4245,6 +4271,40 @@ const CurrencyBuilderView = ({ onBack, masterCurrencies, currencyRequirements, o
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex mt-2 space-x-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("primitive"), className: "flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold", children: "+ Primitive" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("composite"), className: "flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold", children: "+ Composite" })
+          ] }),
+          activeUnitCode && importUnitOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-sky-500/30 bg-sky-950/20 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-wide text-sky-300", children: [
+              "Import from unit",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: importSourceUnit,
+                  onChange: (event) => setImportSourceUnit(event.target.value),
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-800 px-2 py-1.5 text-xs normal-case tracking-normal text-white focus:outline-none focus:ring-1 focus:ring-sky-500",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select unit..." }),
+                    importUnitOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: option.unitCode, children: [
+                      option.label,
+                      " (",
+                      option.currencyCount,
+                      " items, ",
+                      option.recencyCount,
+                      " recency)"
+                    ] }, option.unitCode))
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: handleImportFromUnit,
+                disabled: !importSourceUnit || !onImportFromUnit,
+                className: "mt-2 w-full rounded bg-sky-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400",
+                children: "Import List"
+              }
+            )
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto", children: filteredCurrencies.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -76319,7 +76379,19 @@ ${"=".repeat(60)}`);
   const [eventForPostFlight, setEventForPostFlight] = reactExports.useState(null);
   const [masterCurrencies, setMasterCurrencies] = reactExports.useState(INITIAL_MASTER_CURRENCIES);
   const [currencyRequirements, setCurrencyRequirements] = reactExports.useState(INITIAL_CURRENCY_REQUIREMENTS);
+  const [fallbackMasterCurrencies, setFallbackMasterCurrencies] = reactExports.useState(INITIAL_MASTER_CURRENCIES);
+  const [fallbackCurrencyRequirements, setFallbackCurrencyRequirements] = reactExports.useState(INITIAL_CURRENCY_REQUIREMENTS);
+  const [unitCurrencyDefinitions, setUnitCurrencyDefinitions] = reactExports.useState({});
   const [showCurrencySetup, setShowCurrencySetup] = reactExports.useState(false);
+  const activeCurrencyUnitKey = reactExports.useMemo(() => {
+    const rawUnit = activeContextUnitCodes[0] || String(activeUnitCode || "").split("+")[0] || activeUnitCode;
+    return String(rawUnit || "").trim().toUpperCase();
+  }, [activeContextUnitCodes, activeUnitCode]);
+  reactExports.useEffect(() => {
+    const activeUnitDefinitions = activeCurrencyUnitKey ? unitCurrencyDefinitions[activeCurrencyUnitKey] : null;
+    setMasterCurrencies(activeUnitDefinitions?.masterCurrencies || fallbackMasterCurrencies);
+    setCurrencyRequirements(activeUnitDefinitions?.currencyRequirements || fallbackCurrencyRequirements);
+  }, [activeCurrencyUnitKey, fallbackCurrencyRequirements, fallbackMasterCurrencies, unitCurrencyDefinitions]);
   const [dirtyCheck, setDirtyCheck] = reactExports.useState(null);
   const [showUnsavedWarning, setShowUnsavedWarning] = reactExports.useState(false);
   const [pendingNavigation, setPendingNavigation] = reactExports.useState(null);
@@ -76556,8 +76628,28 @@ ${"=".repeat(60)}`);
           const dbReqs = saved.currencyRequirements ?? [];
           const dbMasters = saved.masterCurrencies ?? [];
           const merged = mergeWithInitialCurrencies(dbReqs, dbMasters);
-          setMasterCurrencies(merged.masters);
-          setCurrencyRequirements(merged.requirements);
+          setFallbackMasterCurrencies(merged.masters);
+          setFallbackCurrencyRequirements(merged.requirements);
+          const savedUnitDefinitions = saved.unitCurrencyDefinitions || {};
+          const mergedUnitDefinitions = Object.fromEntries(
+            Object.entries(savedUnitDefinitions).map(([unitCode, definitions]) => {
+              const unitMerged = mergeWithInitialCurrencies(
+                Array.isArray(definitions?.currencyRequirements) ? definitions.currencyRequirements : [],
+                Array.isArray(definitions?.masterCurrencies) ? definitions.masterCurrencies : []
+              );
+              return [
+                String(unitCode || "").trim().toUpperCase(),
+                {
+                  masterCurrencies: unitMerged.masters,
+                  currencyRequirements: unitMerged.requirements
+                }
+              ];
+            })
+          );
+          setUnitCurrencyDefinitions(mergedUnitDefinitions);
+          const activeUnitDefinitions = activeCurrencyUnitKey ? mergedUnitDefinitions[activeCurrencyUnitKey] : null;
+          setMasterCurrencies(activeUnitDefinitions?.masterCurrencies || merged.masters);
+          setCurrencyRequirements(activeUnitDefinitions?.currencyRequirements || merged.requirements);
         }
         if (saved.organisationSettings) {
           console.log("[App] 🏢 Setting organisationSettings from DB:", JSON.stringify(saved.organisationSettings));
@@ -76626,6 +76718,7 @@ ${"=".repeat(60)}`);
       cancellationCodes,
       masterCurrencies,
       currencyRequirements,
+      unitCurrencyDefinitions,
       // NOTE: syllabusDetails intentionally excluded from settings save.
       // Syllabus is always loaded from DB via the dedicated syllabus API,
       // never from the general settings blob.
@@ -76672,6 +76765,7 @@ ${"=".repeat(60)}`);
     cancellationCodes,
     masterCurrencies,
     currencyRequirements,
+    unitCurrencyDefinitions,
     organisationSettings,
     coursePriorities,
     coursePercentages
@@ -83897,17 +83991,77 @@ ${error instanceof Error ? error.message : String(error)}`,
     const newReqs = allCurrencies.filter((c) => c.type === "primitive");
     setMasterCurrencies(newMasters);
     setCurrencyRequirements(newReqs);
-    saveCurrenciesToDB(newMasters, newReqs, sessionUser?.userId);
-    setSuccessMessage("Currency rules saved!");
+    if (activeCurrencyUnitKey) {
+      setUnitCurrencyDefinitions((prev) => ({
+        ...prev,
+        [activeCurrencyUnitKey]: {
+          masterCurrencies: newMasters,
+          currencyRequirements: newReqs
+        }
+      }));
+      setSuccessMessage(`Currency and recency rules saved for ${activeCurrencyUnitKey}!`);
+    } else {
+      setFallbackMasterCurrencies(newMasters);
+      setFallbackCurrencyRequirements(newReqs);
+      saveCurrenciesToDB(newMasters, newReqs, sessionUser?.userId);
+      setSuccessMessage("Currency rules saved!");
+    }
   };
   const handleDeleteCurrency = (id) => {
-    setMasterCurrencies((prev) => prev.filter((c) => c.id !== id));
-    setCurrencyRequirements((prev) => prev.filter((c) => c.id !== id));
+    const nextMasters = masterCurrencies.filter((c) => c.id !== id);
+    const nextReqs = currencyRequirements.filter((c) => c.id !== id);
+    setMasterCurrencies(nextMasters);
+    setCurrencyRequirements(nextReqs);
+    if (activeCurrencyUnitKey) {
+      setUnitCurrencyDefinitions((prev) => ({
+        ...prev,
+        [activeCurrencyUnitKey]: {
+          masterCurrencies: nextMasters,
+          currencyRequirements: nextReqs
+        }
+      }));
+    } else {
+      setFallbackMasterCurrencies(nextMasters);
+      setFallbackCurrencyRequirements(nextReqs);
+    }
     setSuccessMessage("Currency deleted.");
+  };
+  const importCurrencyDefinitionsFromUnit = (sourceUnitCode) => {
+    const normalisedSourceUnit = String(sourceUnitCode || "").trim().toUpperCase();
+    if (!activeCurrencyUnitKey || !normalisedSourceUnit) return;
+    const sourceDefinitions = unitCurrencyDefinitions[normalisedSourceUnit];
+    if (!sourceDefinitions) return;
+    const importedMasters = sourceDefinitions.masterCurrencies.map((currency) => ({ ...currency }));
+    const importedRequirements = sourceDefinitions.currencyRequirements.map((currency) => ({ ...currency }));
+    setMasterCurrencies(importedMasters);
+    setCurrencyRequirements(importedRequirements);
+    setUnitCurrencyDefinitions((prev) => ({
+      ...prev,
+      [activeCurrencyUnitKey]: {
+        masterCurrencies: importedMasters,
+        currencyRequirements: importedRequirements
+      }
+    }));
+    setSuccessMessage(`Imported currency and recency rules from ${normalisedSourceUnit} to ${activeCurrencyUnitKey}.`);
   };
   const currencyNames = reactExports.useMemo(() => {
     return [...masterCurrencies.map((c) => c.name), ...currencyRequirements.map((c) => c.name)].sort();
   }, [masterCurrencies, currencyRequirements]);
+  const unitCurrencyImportOptions = reactExports.useMemo(() => {
+    const knownUnits = new Set([
+      ...units,
+      ...Object.keys(unitCurrencyDefinitions)
+    ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean));
+    return Array.from(knownUnits).filter((unit) => unit !== activeCurrencyUnitKey && !!unitCurrencyDefinitions[unit]).sort((a, b) => a.localeCompare(b)).map((unit) => ({
+      unitCode: unit,
+      label: unit,
+      currencyCount: (unitCurrencyDefinitions[unit]?.masterCurrencies?.length || 0) + (unitCurrencyDefinitions[unit]?.currencyRequirements?.length || 0),
+      recencyCount: [
+        ...unitCurrencyDefinitions[unit]?.masterCurrencies || [],
+        ...unitCurrencyDefinitions[unit]?.currencyRequirements || []
+      ].filter((currency) => currency.showInPostFlightRecency).length
+    }));
+  }, [activeCurrencyUnitKey, unitCurrencyDefinitions, units]);
   const runOracleAnalysis = reactExports.useCallback(() => {
     const isNextDayContext = oracleContext === "nextDayBuild";
     const currentEvents = (isNextDayContext ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate).filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));
@@ -85762,8 +85916,11 @@ ${error instanceof Error ? error.message : String(error)}`,
             onBack: () => handleNavigation("Settings"),
             masterCurrencies,
             currencyRequirements,
+            activeUnitCode: activeCurrencyUnitKey,
+            importUnitOptions: unitCurrencyImportOptions,
             onSave: handleSaveCurrencies,
-            onDelete: handleDeleteCurrency
+            onDelete: handleDeleteCurrency,
+            onImportFromUnit: importCurrencyDefinitionsFromUnit
           }
         );
       case "PT051":
