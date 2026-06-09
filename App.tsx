@@ -897,12 +897,12 @@ const DfpSidePanelTimeline: React.FC<{
                         className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
                         style={{ backgroundColor: assistDraftEvent.color }}
                     >
-                        <div className="absolute left-2 right-2 top-1 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
+                        <div className="absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
                             <span className="shrink-0 font-mono text-[9px] font-semibold text-white/70">{formatTime(flyingStartTime)}</span>
                             <span className="truncate">{previewCrewName}</span>
                             <span className="shrink-0 whitespace-nowrap font-mono">[{assistDuration.toFixed(1)}] {assistEventLabel}</span>
                         </div>
-                        <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
+                        <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
                             <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
                             <span className="justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">{assistDraftEvent.flightType.toUpperCase()}</span>
                             <span className="truncate text-right font-mono text-cyan-50">
