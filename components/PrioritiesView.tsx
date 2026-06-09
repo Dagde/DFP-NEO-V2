@@ -13,6 +13,7 @@ import {
   normaliseAirCombatSchedulingWeights,
   type AirCombatSchedulingWeights,
 } from '../utils/airCombatTraining';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface PrioritiesViewProps {
   school?: string;
@@ -1855,7 +1856,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   ];
 
      return (
-       <>
+       <div onKeyDownCapture={stopEditableKeyPropagation}>
            <div className="section-course-demand space-y-6">
             <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Third Input</p>
@@ -2978,6 +2979,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
         </div>
         </div>
-       </>
+       </div>
   );
 };

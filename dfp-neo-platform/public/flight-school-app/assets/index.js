@@ -12323,7 +12323,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     if (grade === "DEMO" || grade === "MIN") return String(grade);
     return String(grade);
   };
-  const stopEditableKeyPropagation = (event2) => {
+  const stopEditableKeyPropagation2 = (event2) => {
     const target = event2.target;
     if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable) {
       event2.stopPropagation();
@@ -12910,7 +12910,7 @@ This action cannot be undone.`;
     "div",
     {
       className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto",
-      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDownCapture: stopEditableKeyPropagation2,
       style: embeddedInProfile ? { zoom: 0.88, width: "100%" } : void 0,
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700 sticky top-0 z-10", children: [
@@ -23871,6 +23871,16 @@ const NextDayBuildView = ({
     }
   ) });
 };
+const isEditableElement = (target) => {
+  const element = target;
+  if (!element) return false;
+  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement || element.isContentEditable || Boolean(element.closest('[contenteditable="true"]'));
+};
+const stopEditableKeyPropagation = (event) => {
+  if (isEditableElement(event.target)) {
+    event.stopPropagation();
+  }
+};
 const ConfigCapacityInfoHint = ({ definition }) => {
   const description = definition.definition?.trim() || "No definition has been entered for this aircraft configuration.";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -25216,7 +25226,7 @@ const PrioritiesView = ({
       { key: "night-end-label", time: ceaseNightFlying, label: "Night end", text: "text-indigo-100", border: "border-indigo-300/55", bg: "bg-indigo-400/15", level: "top" }
     ] : []
   ];
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-course-demand space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Third Input" }),
@@ -43641,7 +43651,7 @@ const SettingsView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleDeleteClick(file), className: "p-1 text-gray-400 hover:text-red-400", "aria-label": "Delete file", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z", clipRule: "evenodd" }) }) })
     ] })
   ] }, file.id);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       shouldShowSection("validation") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         ACHistoryPage,
@@ -50805,7 +50815,7 @@ const PlatformConfigurationSettings = ({
       children: "Save"
     }
   );
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: "The page will refresh automatically so the updated platform settings are active everywhere." })
@@ -54435,7 +54445,7 @@ const SettingsViewWithMenu = (props) => {
       setActiveSection(getDefaultSectionForGroup(group));
     }
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", onKeyDownCapture: stopEditableKeyPropagation, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "button",

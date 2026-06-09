@@ -18,6 +18,7 @@ import PeopleProfilePage from './PeopleProfilePage';
 import FormationCallsignsSection from './FormationCallsignsSection';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 import { logAudit } from '../utils/auditLogger';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TileStatusSettings } from '../utils/tileStatusSettings';
@@ -1348,7 +1349,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     };
 
     return (
-        <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900">
+        <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900" onKeyDownCapture={stopEditableKeyPropagation}>
             <aside className="hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
                 <button
                     onClick={() => {

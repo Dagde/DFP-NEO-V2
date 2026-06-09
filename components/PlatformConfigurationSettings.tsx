@@ -39,6 +39,7 @@ import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConf
 import { getAppApiBase } from '../utils/externalDataControls';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import {
   DEFAULT_INSERT_EVENT_TYPES,
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -2442,7 +2443,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   );
 
   return (
-    <div className="relative space-y-8">
+    <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>
       {applyingChanges && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm">
           <div className="rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl">

@@ -22,6 +22,7 @@ import PermissionsManagerWindow from './PermissionsManagerWindow';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { debouncedAuditLog } from '../utils/auditDebounce';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
 import AircraftAvailabilitySettings from './AircraftAvailabilitySettings';
 import EmergencyPage from './EmergencyPage';
@@ -1860,7 +1861,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     );
 
     return (
-        <>
+        <div onKeyDownCapture={stopEditableKeyPropagation}>
             <div className="space-y-6">
                 {/* AC History */}
                 {shouldShowSection('validation') && (
@@ -2804,6 +2805,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {showNewRecordConfirm && unmatchedRowData && <NewRecordConfirmationFlyout rowData={unmatchedRowData} onConfirm={handleConfirmNewRecord} onCancel={handleRejectNewRecord} />}
             {showUpdateError && <UpdateErrorFlyout message={updateErrorMessage} onClose={() => setShowUpdateError(false)} />}
             {showUpdateSummary && <UpdateSummaryFlyout summary={updateSummary} onClose={() => setShowUpdateSummary(false)} />}
-        </>
+        </div>
     );
 };export default SettingsView;
