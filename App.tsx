@@ -259,6 +259,7 @@ const DfpSidePanelTimeline: React.FC<{
     availableFtdCount: number;
     availableCptCount: number;
     locationCode: string;
+    trainingAreas: string[];
     formatResourceLabel: (resourceId: string) => string;
 }> = ({
     flyingStartTime,
@@ -286,6 +287,7 @@ const DfpSidePanelTimeline: React.FC<{
     availableFtdCount,
     availableCptCount,
     locationCode,
+    trainingAreas,
     formatResourceLabel,
 }) => {
     const timelineStartHour = 6;
@@ -308,6 +310,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedResourceKind, setSelectedResourceKind] = useState<'flight' | 'ftd' | 'cpt'>('flight');
     const [selectedResourceNumber, setSelectedResourceNumber] = useState(1);
     const [assistCallsign, setAssistCallsign] = useState('');
+    const [selectedAssignedArea, setSelectedAssignedArea] = useState('A');
 
     const selectedSyllabusItem = useMemo(() => (
         filteredEventOptions.find(item => item.code === selectedEventCode) || filteredEventOptions[0] || null
@@ -320,10 +323,6 @@ const DfpSidePanelTimeline: React.FC<{
     useEffect(() => {
         if (!selectedTaskProfile && taskProfiles[0]) setSelectedTaskProfile(taskProfiles[0]);
     }, [selectedTaskProfile, taskProfiles]);
-
-    useEffect(() => {
-        if (!selectedCrewName && instructors[0]) setSelectedCrewName(instructors[0].name);
-    }, [instructors, selectedCrewName]);
 
     const diagnosticCrewPriority = useMemo(() => {
         if (typeof window === 'undefined') return [];
@@ -370,6 +369,17 @@ const DfpSidePanelTimeline: React.FC<{
             });
     }, [diagnosticCrewPriority, instructors]);
 
+    const assignedAreaOptions = useMemo(() => {
+        const seen = new Set<string>();
+        return ['', ...trainingAreas, 'A']
+            .map(area => String(area || '').trim())
+            .filter(area => {
+                if (seen.has(area)) return false;
+                seen.add(area);
+                return true;
+            });
+    }, [trainingAreas]);
+
     const assistResourceId = useMemo(() => {
         const number = Math.max(1, Math.floor(Number(selectedResourceNumber) || 1));
         if (selectedResourceKind === 'ftd') return `FTD ${number}`;
@@ -394,8 +404,8 @@ const DfpSidePanelTimeline: React.FC<{
         id: `neo-assist-draft-${Date.now()}`,
         date,
         type: selectedResourceKind === 'ftd' ? 'ftd' : selectedResourceKind === 'cpt' ? 'cpt' : 'flight',
-        pilot: selectedCrewName || undefined,
-        instructor: selectedCrewName || undefined,
+        pilot: selectedCrewName || 'Bloggs, Joe',
+        instructor: selectedCrewName || 'Bloggs, Joe',
         flightNumber: assistEventLabel,
         eventCode: selectedSyllabusItem?.code,
         taskingName: activeAssistSection === 'taskings' ? selectedTaskProfile : undefined,
@@ -410,7 +420,8 @@ const DfpSidePanelTimeline: React.FC<{
         origin: locationCode,
         destination: locationCode,
         callsign: assistCallsign.trim() || undefined,
-        aircraftNumber: selectedResourceKind === 'flight' ? String(selectedResourceNumber) : undefined,
+        aircraftNumber: selectedResourceKind === 'flight' ? String(selectedResourceNumber).padStart(3, '0') : undefined,
+        area: selectedAssignedArea || undefined,
         preStart: selectedSyllabusItem ? Math.max(0, flyingStartTime - ((selectedSyllabusItem.preFlightTime || 0) / 60)) : undefined,
         postEnd: selectedSyllabusItem ? flyingStartTime + assistDuration + ((selectedSyllabusItem.postFlightTime || 0) / 60) : undefined,
     }), [
@@ -425,6 +436,7 @@ const DfpSidePanelTimeline: React.FC<{
         selectedCrewName,
         selectedResourceKind,
         selectedResourceNumber,
+        selectedAssignedArea,
         selectedSyllabusItem,
         selectedTaskProfile,
     ]);
@@ -630,6 +642,10 @@ const DfpSidePanelTimeline: React.FC<{
         .filter(([, count]) => Number(count) > 0)
         .map(([configId, count]) => `${configId}: ${count}`)
         .join(', ') || 'No CONFIG split set';
+    const previewCrewName = selectedCrewName || 'Bloggs, Joe';
+    const previewCallsign = assistCallsign.trim() || 'CSIGN';
+    const previewAircraftNumber = String(selectedResourceNumber || 1).padStart(3, '0');
+    const previewAreaCallsign = `${selectedAssignedArea ? `${selectedAssignedArea} ` : ''}${previewCallsign}`;
 
     const renderAssistSection = () => {
         if (activeAssistSection === 'details') {
@@ -669,6 +685,18 @@ const DfpSidePanelTimeline: React.FC<{
                             className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
                             placeholder="Optional"
                         />
+                    </label>
+                    <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                        Assigned Area
+                        <select
+                            value={selectedAssignedArea}
+                            onChange={event => setSelectedAssignedArea(event.target.value)}
+                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                        >
+                            {assignedAreaOptions.map(area => (
+                                <option key={area || '__blank'} value={area}>{area || 'Blank'}</option>
+                            ))}
+                        </select>
                     </label>
                 </div>
             );
@@ -869,14 +897,16 @@ const DfpSidePanelTimeline: React.FC<{
                         className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
                         style={{ backgroundColor: assistDraftEvent.color }}
                     >
-                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
-                            <span className="truncate">{selectedCrewName || 'Crew'}</span>
+                        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
+                            <span className="shrink-0 font-mono text-[9px] font-semibold text-white/70">{formatTime(flyingStartTime)}</span>
+                            <span className="truncate">{previewCrewName}</span>
                             <span className="shrink-0 whitespace-nowrap font-mono">[{assistDuration.toFixed(1)}] {assistEventLabel}</span>
                         </div>
-                        <div className="mt-0.5 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2 text-[10px] font-semibold leading-none">
+                        <div className="mt-0.5 grid grid-cols-[auto_auto_minmax(0,1fr)] items-end gap-2 text-[10px] font-semibold leading-none">
+                            <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
                             <span className="rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">{assistDraftEvent.flightType.toUpperCase()}</span>
                             <span className="truncate text-right font-mono text-cyan-50">
-                                {assistCallsign || formatResourceLabel(assistResourceId)}
+                                {previewAreaCallsign}
                             </span>
                         </div>
                     </div>
@@ -16044,6 +16074,28 @@ const App: React.FC = () => {
         { name: 'Vulcan', code: 'VULC', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' }
     ]);
 
+    const activeTrainingAreas = useMemo(() => {
+        const normalise = (value: unknown) => String(value || '').trim().toUpperCase();
+        const selectedAliases = new Set(
+            [school, ...knownDfpLocationAliases(school)]
+                .map(normalise)
+                .filter(Boolean),
+        );
+        const activeLocation = (platformConfig?.locations || [])
+            .filter((location: any) => location.status !== 'INACTIVE')
+            .find((location: any) => getLocationSelectorAliases(location).some(alias => selectedAliases.has(normalise(alias))));
+        const platformAreas = Array.isArray(activeLocation?.trainingAreas)
+            ? activeLocation.trainingAreas.map((area: unknown) => String(area || '').trim()).filter(Boolean)
+            : [];
+        if (platformAreas.length > 0) return platformAreas;
+
+        const matchingLegacyLocation = Object.keys(locationOpAreas || {}).find(locationName => {
+            const aliases = [locationName, locationAbbreviations[locationName], ...knownDfpLocationAliases(locationName)];
+            return aliases.map(normalise).some(alias => selectedAliases.has(alias));
+        });
+        return matchingLegacyLocation ? locationOpAreas[matchingLegacyLocation] || [] : [];
+    }, [getLocationSelectorAliases, knownDfpLocationAliases, locationAbbreviations, locationOpAreas, platformConfig, school]);
+
 
     // ─── SETTINGS: Load from DB on startup ───────────────────────────────────
 
@@ -28499,6 +28551,7 @@ appliedUpdates.forEach(update => {
                                     availableFtdCount={availableFtdCount}
                                     availableCptCount={availableCptCount}
                                     locationCode={school}
+                                    trainingAreas={activeTrainingAreas}
                                     formatResourceLabel={formatResourceDisplayLabel}
                                     onOpenPrioritiesExclusions={() => {
                                         try {

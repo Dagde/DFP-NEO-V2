@@ -62728,6 +62728,7 @@ const DfpSidePanelTimeline = ({
   availableFtdCount,
   availableCptCount,
   locationCode,
+  trainingAreas,
   formatResourceLabel: formatResourceLabel2
 }) => {
   const timelineStartHour = 6;
@@ -62746,6 +62747,7 @@ const DfpSidePanelTimeline = ({
   const [selectedResourceKind, setSelectedResourceKind] = reactExports.useState("flight");
   const [selectedResourceNumber, setSelectedResourceNumber] = reactExports.useState(1);
   const [assistCallsign, setAssistCallsign] = reactExports.useState("");
+  const [selectedAssignedArea, setSelectedAssignedArea] = reactExports.useState("A");
   const selectedSyllabusItem = reactExports.useMemo(() => filteredEventOptions.find((item) => item.code === selectedEventCode) || filteredEventOptions[0] || null, [filteredEventOptions, selectedEventCode]);
   reactExports.useEffect(() => {
     if (!selectedEventCode && filteredEventOptions[0]) setSelectedEventCode(filteredEventOptions[0].code);
@@ -62753,9 +62755,6 @@ const DfpSidePanelTimeline = ({
   reactExports.useEffect(() => {
     if (!selectedTaskProfile && taskProfiles[0]) setSelectedTaskProfile(taskProfiles[0]);
   }, [selectedTaskProfile, taskProfiles]);
-  reactExports.useEffect(() => {
-    if (!selectedCrewName && instructors[0]) setSelectedCrewName(instructors[0].name);
-  }, [instructors, selectedCrewName]);
   const diagnosticCrewPriority = reactExports.useMemo(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -62797,6 +62796,14 @@ const DfpSidePanelTimeline = ({
       return true;
     });
   }, [diagnosticCrewPriority, instructors]);
+  const assignedAreaOptions = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return ["", ...trainingAreas, "A"].map((area) => String(area || "").trim()).filter((area) => {
+      if (seen.has(area)) return false;
+      seen.add(area);
+      return true;
+    });
+  }, [trainingAreas]);
   const assistResourceId = reactExports.useMemo(() => {
     const number = Math.max(1, Math.floor(Number(selectedResourceNumber) || 1));
     if (selectedResourceKind === "ftd") return `FTD ${number}`;
@@ -62818,8 +62825,8 @@ const DfpSidePanelTimeline = ({
     id: `neo-assist-draft-${Date.now()}`,
     date,
     type: selectedResourceKind === "ftd" ? "ftd" : selectedResourceKind === "cpt" ? "cpt" : "flight",
-    pilot: selectedCrewName || void 0,
-    instructor: selectedCrewName || void 0,
+    pilot: selectedCrewName || "Bloggs, Joe",
+    instructor: selectedCrewName || "Bloggs, Joe",
     flightNumber: assistEventLabel,
     eventCode: selectedSyllabusItem?.code,
     taskingName: activeAssistSection === "taskings" ? selectedTaskProfile : void 0,
@@ -62834,7 +62841,8 @@ const DfpSidePanelTimeline = ({
     origin: locationCode,
     destination: locationCode,
     callsign: assistCallsign.trim() || void 0,
-    aircraftNumber: selectedResourceKind === "flight" ? String(selectedResourceNumber) : void 0,
+    aircraftNumber: selectedResourceKind === "flight" ? String(selectedResourceNumber).padStart(3, "0") : void 0,
+    area: selectedAssignedArea || void 0,
     preStart: selectedSyllabusItem ? Math.max(0, flyingStartTime - (selectedSyllabusItem.preFlightTime || 0) / 60) : void 0,
     postEnd: selectedSyllabusItem ? flyingStartTime + assistDuration + (selectedSyllabusItem.postFlightTime || 0) / 60 : void 0
   }), [
@@ -62849,6 +62857,7 @@ const DfpSidePanelTimeline = ({
     selectedCrewName,
     selectedResourceKind,
     selectedResourceNumber,
+    selectedAssignedArea,
     selectedSyllabusItem,
     selectedTaskProfile
   ]);
@@ -63014,6 +63023,10 @@ const DfpSidePanelTimeline = ({
   ];
   const resourceNumberLimit = selectedResourceKind === "ftd" ? Math.max(1, availableFtdCount) : selectedResourceKind === "cpt" ? Math.max(1, availableCptCount) : Math.max(1, availableAircraftCount);
   const configSummary = Object.entries(aircraftConfigCapacities || {}).filter(([, count]) => Number(count) > 0).map(([configId, count]) => `${configId}: ${count}`).join(", ") || "No CONFIG split set";
+  const previewCrewName = selectedCrewName || "Bloggs, Joe";
+  const previewCallsign = assistCallsign.trim() || "CSIGN";
+  const previewAircraftNumber = String(selectedResourceNumber || 1).padStart(3, "0");
+  const previewAreaCallsign = `${selectedAssignedArea ? `${selectedAssignedArea} ` : ""}${previewCallsign}`;
   const renderAssistSection = () => {
     if (activeAssistSection === "details") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
@@ -63059,6 +63072,18 @@ const DfpSidePanelTimeline = ({
               onChange: (event) => setAssistCallsign(event.target.value),
               className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
               placeholder: "Optional"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+          "Assigned Area",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              value: selectedAssignedArea,
+              onChange: (event) => setSelectedAssignedArea(event.target.value),
+              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+              children: assignedAreaOptions.map((area) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: area, children: area || "Blank" }, area || "__blank"))
             }
           )
         ] })
@@ -63293,8 +63318,9 @@ const DfpSidePanelTimeline = ({
             className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
             style: { backgroundColor: assistDraftEvent.color },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: selectedCrewName || "Crew" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(flyingStartTime) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: previewCrewName }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
                   "[",
                   assistDuration.toFixed(1),
@@ -63302,9 +63328,10 @@ const DfpSidePanelTimeline = ({
                   assistEventLabel
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2 text-[10px] font-semibold leading-none", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 grid grid-cols-[auto_auto_minmax(0,1fr)] items-end gap-2 text-[10px] font-semibold leading-none", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: assistDraftEvent.flightType.toUpperCase() }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: assistCallsign || formatResourceLabel2(assistResourceId) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
               ] })
             ]
           }
@@ -75213,6 +75240,20 @@ ${"=".repeat(60)}`);
     { name: "Voodoo", code: "VODO", unit: "2FTS", location: "Pearce", locationCode: "PEA" },
     { name: "Vulcan", code: "VULC", unit: "2FTS", location: "Pearce", locationCode: "PEA" }
   ]);
+  const activeTrainingAreas = reactExports.useMemo(() => {
+    const normalise = (value) => String(value || "").trim().toUpperCase();
+    const selectedAliases = new Set(
+      [school, ...knownDfpLocationAliases(school)].map(normalise).filter(Boolean)
+    );
+    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliases.has(normalise(alias))));
+    const platformAreas = Array.isArray(activeLocation?.trainingAreas) ? activeLocation.trainingAreas.map((area) => String(area || "").trim()).filter(Boolean) : [];
+    if (platformAreas.length > 0) return platformAreas;
+    const matchingLegacyLocation = Object.keys(locationOpAreas || {}).find((locationName) => {
+      const aliases = [locationName, locationAbbreviations[locationName], ...knownDfpLocationAliases(locationName)];
+      return aliases.map(normalise).some((alias) => selectedAliases.has(alias));
+    });
+    return matchingLegacyLocation ? locationOpAreas[matchingLegacyLocation] || [] : [];
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, locationAbbreviations, locationOpAreas, platformConfig, school]);
   reactExports.useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -85425,6 +85466,7 @@ Do you want to replace the existing entry?`,
                     availableFtdCount,
                     availableCptCount,
                     locationCode: school,
+                    trainingAreas: activeTrainingAreas,
                     formatResourceLabel: formatResourceDisplayLabel,
                     onOpenPrioritiesExclusions: () => {
                       try {
