@@ -24096,6 +24096,7 @@ const TaskingRequestTable = ({
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
+  onSaveTaskingRequest,
   onSubmitTaskingRequest
 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-x-auto pb-24", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
@@ -24126,7 +24127,7 @@ const TaskingRequestTable = ({
               value: request.tasking,
               taskProfiles,
               operationalModelLabel,
-              onChange: (tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false })
+              onChange: (tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false, saved: false })
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24134,7 +24135,7 @@ const TaskingRequestTable = ({
             {
               type: "date",
               value: request.date,
-              onChange: (event) => onUpdateTaskingRequest(request.id, { date: event.target.value, submitted: false }),
+              onChange: (event) => onUpdateTaskingRequest(request.id, { date: event.target.value, submitted: false, saved: false }),
               style: { colorScheme: "dark" },
               className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
             }
@@ -24143,7 +24144,7 @@ const TaskingRequestTable = ({
             "select",
             {
               value: request.takeoff,
-              onChange: (event) => onUpdateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false }),
+              onChange: (event) => onUpdateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false, saved: false }),
               className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500",
               children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `tasking-takeoff-${opt.value}`))
             }
@@ -24155,7 +24156,7 @@ const TaskingRequestTable = ({
               min: 0.1,
               step: 0.1,
               value: request.duration,
-              onChange: (event) => onUpdateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false }),
+              onChange: (event) => onUpdateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false, saved: false }),
               className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
             }
           ) }),
@@ -24163,7 +24164,7 @@ const TaskingRequestTable = ({
             "select",
             {
               value: request.flightType || "Dual",
-              onChange: (event) => onUpdateTaskingRequest(request.id, { flightType: event.target.value, submitted: false }),
+              onChange: (event) => onUpdateTaskingRequest(request.id, { flightType: event.target.value, submitted: false, saved: false }),
               className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
@@ -24176,7 +24177,7 @@ const TaskingRequestTable = ({
             {
               value: request.depPoint,
               suggestions: depPointSuggestions,
-              onChange: (depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false })
+              onChange: (depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false, saved: false })
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24184,7 +24185,7 @@ const TaskingRequestTable = ({
             {
               value: request.arrivalPoint,
               suggestions: arrivalPointSuggestions,
-              onChange: (arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false })
+              onChange: (arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false, saved: false })
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24193,7 +24194,7 @@ const TaskingRequestTable = ({
               type: "number",
               min: 1,
               value: request.aircraftCount,
-              onChange: (event) => onUpdateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false }),
+              onChange: (event) => onUpdateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false, saved: false }),
               className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
             }
           ) }),
@@ -24202,7 +24203,7 @@ const TaskingRequestTable = ({
             {
               value: request.aircraftConfigId,
               definitions: aircraftConfigOptions,
-              onChange: (aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false })
+              onChange: (aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false, saved: false })
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center justify-center gap-2 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white", children: [
@@ -24211,19 +24212,19 @@ const TaskingRequestTable = ({
               {
                 type: "checkbox",
                 checked: request.isMandatory !== false,
-                onChange: (event) => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false }),
+                onChange: (event) => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false, saved: false }),
                 className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
               }
             ),
             "Yes"
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: request.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 text-xs font-semibold", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
-              onClick: () => onSubmitTaskingRequest(request.id),
+              onClick: () => request.submitted || request.saved ? onSubmitTaskingRequest(request.id) : onSaveTaskingRequest(request.id),
               disabled: !canSubmit,
-              className: `px-2 py-1 text-xs rounded font-semibold ${canSubmit ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
-              children: "Submit"
+              className: `px-2 py-1 text-xs rounded font-semibold ${canSubmit ? request.submitted ? "bg-sky-600 hover:bg-sky-700 text-white" : request.saved ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
+              children: request.submitted ? "Re-submit" : request.saved ? "Schedule" : "Save"
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-1 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveTaskingRequest(request.id), className: "p-1 text-gray-400 hover:text-red-400", "aria-label": "Remove tasking request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) }) })
@@ -24642,6 +24643,8 @@ const PrioritiesView = ({
         arrivalPoint: request.arrivalPoint || school,
         aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || "1"), 10) || 1),
         aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+        isMandatory: request.isMandatory !== false,
+        saved: Boolean(request.saved || request.submitted),
         submitted: Boolean(request.submitted)
       })) : [];
     } catch {
@@ -24734,6 +24737,7 @@ const PrioritiesView = ({
       aircraftCount: 1,
       aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
       isMandatory: true,
+      saved: false,
       submitted: false
     };
     setTaskingRequests((prev) => [...prev, nextRequest]);
@@ -24743,6 +24747,7 @@ const PrioritiesView = ({
   const removeTaskingPriorityEvents = (requestId) => {
     highestPriorityEvents.filter((event) => isTaskingPriorityEventForRequest(event, requestId)).forEach((event) => onDeletePriorityEvent(event.id));
   };
+  const isTaskingRequestInHighestPriority = (requestId) => highestPriorityEvents.some((event) => isTaskingPriorityEventForRequest(event, requestId));
   reactExports.useEffect(() => {
     const submittedTaskingRequestIds = new Set(
       taskingRequests.filter((request) => request.submitted).map((request) => request.id)
@@ -24753,7 +24758,12 @@ const PrioritiesView = ({
     if (updates.submitted === false) {
       removeTaskingPriorityEvents(id);
     }
-    setTaskingRequests((prev) => prev.map((request) => request.id === id ? { ...request, ...updates, submitted: updates.submitted ?? request.submitted } : request));
+    setTaskingRequests((prev) => prev.map((request) => request.id === id ? {
+      ...request,
+      ...updates,
+      saved: updates.saved ?? (updates.submitted === false ? false : request.saved),
+      submitted: updates.submitted ?? request.submitted
+    } : request));
   };
   const buildTaskingPriorityEvents = (request) => {
     const tasking = request.tasking.trim();
@@ -24814,13 +24824,22 @@ const PrioritiesView = ({
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
     logAudit("Priorities", "Delete", "Removed tasking request", removed?.tasking || id);
   };
+  const saveTaskingRequest = (id) => {
+    const request = taskingRequests.find((item) => item.id === id);
+    if (!request) return;
+    updateTaskingRequest(id, { saved: true, submitted: false });
+    logAudit("Priorities", "Save", "Saved tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"}`);
+  };
   const submitTaskingRequest = (id) => {
     const request = taskingRequests.find((item) => item.id === id);
     if (!request) return;
+    if (isTaskingRequestInHighestPriority(id)) {
+      window.alert("Already added to Highest Priority Events list");
+      return;
+    }
     const priorityEvents = buildTaskingPriorityEvents(request);
-    removeTaskingPriorityEvents(id);
     onAddPriorityEvents(priorityEvents);
-    updateTaskingRequest(id, { submitted: true });
+    updateTaskingRequest(id, { saved: true, submitted: true });
     logAudit("Priorities", "Submit", "Submitted tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? "" : "s"})`);
   };
   reactExports.useEffect(() => {
@@ -25836,6 +25855,7 @@ const PrioritiesView = ({
             onAddTaskingRequest: addTaskingRequest,
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,
+            onSaveTaskingRequest: saveTaskingRequest,
             onSubmitTaskingRequest: submitTaskingRequest
           }
         )
@@ -63312,17 +63332,33 @@ const DfpSidePanelTimeline = ({
       acceptableAircraftConfigs: [request.aircraftConfigId]
     };
   };
+  const isAssistTaskRequestInHighestPriority = (id) => highestPriorityEvents.some((event) => event.taskingRequestId === id || String(event.id || "").startsWith(`neo-assist-tasking-${id}-`));
+  const saveAssistTaskRequest = (id) => {
+    setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, saved: true, submitted: false, ignored: false } : item));
+  };
   const submitAssistTaskRequest = (id) => {
     const request = assistTaskRequests.find((item) => item.id === id);
     if (!request || !request.tasking.trim()) return;
+    if (isAssistTaskRequestInHighestPriority(id)) {
+      window.alert("Already added to Highest Priority Events list");
+      return;
+    }
     onAddPriorityEvents(buildTaskRequestEvents(request));
-    setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, submitted: true, ignored: false } : item));
+    setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, saved: true, submitted: true, ignored: false } : item));
+  };
+  const isAssistCurrencyRequestInHighestPriority = (id) => highestPriorityEvents.some((event) => event.currencyDraftId === id || String(event.id || "") === `neo-assist-currency-${id}`);
+  const saveAssistCurrencyRequest = (id) => {
+    setAssistCurrencyRequests((prev) => prev.map((item) => item.id === id ? { ...item, saved: true, submitted: false, ignored: false } : item));
   };
   const submitAssistCurrencyRequest = (id) => {
     const request = assistCurrencyRequests.find((item) => item.id === id);
     if (!request || !request.currency.trim()) return;
+    if (isAssistCurrencyRequestInHighestPriority(id)) {
+      window.alert("Already added to Highest Priority Events list");
+      return;
+    }
     onAddPriorityEvents([buildCurrencyRequestEvent(request)]);
-    setAssistCurrencyRequests((prev) => prev.map((item) => item.id === id ? { ...item, submitted: true, ignored: false } : item));
+    setAssistCurrencyRequests((prev) => prev.map((item) => item.id === id ? { ...item, saved: true, submitted: true, ignored: false } : item));
   };
   const highestPriorityTaskRows = reactExports.useMemo(() => {
     const grouped = /* @__PURE__ */ new Map();
@@ -63702,6 +63738,7 @@ const DfpSidePanelTimeline = ({
         tasking: request.tasking || "Task",
         date: request.date,
         takeoff: request.takeoff,
+        saved: Boolean(request.saved),
         scheduled: Boolean(request.submitted),
         ignored: Boolean(request.ignored),
         source: "local"
@@ -63720,39 +63757,31 @@ const DfpSidePanelTimeline = ({
                 formatTime2(row.takeoff)
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2 text-[9px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-emerald-200", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "radio",
-                    name: `neo-assist-task-schedule-${row.source}-${row.id}`,
-                    checked: row.scheduled && !row.ignored,
-                    onChange: () => {
-                      if (row.source === "local") submitAssistTaskRequest(row.id);
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1 text-[9px]", children: [
+              row.source === "local" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => row.scheduled || row.saved ? submitAssistTaskRequest(row.id) : saveAssistTaskRequest(row.id),
+                  className: `rounded px-2 py-1 font-semibold text-white ${row.scheduled ? "bg-sky-600 hover:bg-sky-700" : row.saved ? "bg-orange-500 hover:bg-orange-600" : "bg-green-600 hover:bg-green-700"}`,
+                  children: row.scheduled ? "Re-submit" : row.saved ? "Schedule" : "Save"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => {
+                    if (row.source === "local") ignoreAssistTaskRequest(row.id);
+                    else {
+                      const remote = highestPriorityTaskRows.find((item) => item.id === row.id);
+                      if (remote) ignorePriorityEvents(remote.events);
                     }
-                  }
-                ),
-                "Schedule"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-rose-200", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "radio",
-                    name: `neo-assist-task-schedule-${row.source}-${row.id}`,
-                    checked: row.ignored || !row.scheduled,
-                    onChange: () => {
-                      if (row.source === "local") ignoreAssistTaskRequest(row.id);
-                      else {
-                        const remote = highestPriorityTaskRows.find((item) => item.id === row.id);
-                        if (remote) ignorePriorityEvents(remote.events);
-                      }
-                    }
-                  }
-                ),
-                "Ignore"
-              ] })
+                  },
+                  className: "rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100",
+                  children: "Ignore"
+                }
+              )
             ] })
           ] }, `${row.source}-${row.id}`))
         ] }),
@@ -63828,12 +63857,13 @@ const DfpSidePanelTimeline = ({
                   arrivalPoint: assistTaskArrivalPoint,
                   aircraftCount: assistTaskAircraftCount,
                   aircraftConfigId: assistTaskConfigId,
-                  isMandatory: true
+                  isMandatory: true,
+                  saved: false
                 }]);
                 setShowAssistTaskForm(false);
               },
               className: "col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100",
-              children: "Request"
+              children: "Add Draft"
             }
           )
         ] })
@@ -63845,6 +63875,7 @@ const DfpSidePanelTimeline = ({
         currency: request.currency || "Currency",
         date: request.date,
         takeoff: request.takeoff,
+        saved: Boolean(request.saved),
         scheduled: Boolean(request.submitted),
         ignored: Boolean(request.ignored),
         source: "local"
@@ -63863,39 +63894,31 @@ const DfpSidePanelTimeline = ({
                 formatTime2(row.takeoff)
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2 text-[9px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-emerald-200", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "radio",
-                    name: `neo-assist-currency-schedule-${row.source}-${row.id}`,
-                    checked: row.scheduled && !row.ignored,
-                    onChange: () => {
-                      if (row.source === "local") submitAssistCurrencyRequest(row.id);
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1 text-[9px]", children: [
+              row.source === "local" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => row.scheduled || row.saved ? submitAssistCurrencyRequest(row.id) : saveAssistCurrencyRequest(row.id),
+                  className: `rounded px-2 py-1 font-semibold text-white ${row.scheduled ? "bg-sky-600 hover:bg-sky-700" : row.saved ? "bg-orange-500 hover:bg-orange-600" : "bg-green-600 hover:bg-green-700"}`,
+                  children: row.scheduled ? "Re-submit" : row.saved ? "Schedule" : "Save"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => {
+                    if (row.source === "local") ignoreAssistCurrencyRequest(row.id);
+                    else {
+                      const remote = highestPriorityCurrencyRows.find((item) => item.id === row.id);
+                      if (remote) ignorePriorityEvents([remote.event]);
                     }
-                  }
-                ),
-                "Schedule"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-rose-200", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "radio",
-                    name: `neo-assist-currency-schedule-${row.source}-${row.id}`,
-                    checked: row.ignored || !row.scheduled,
-                    onChange: () => {
-                      if (row.source === "local") ignoreAssistCurrencyRequest(row.id);
-                      else {
-                        const remote = highestPriorityCurrencyRows.find((item) => item.id === row.id);
-                        if (remote) ignorePriorityEvents([remote.event]);
-                      }
-                    }
-                  }
-                ),
-                "Ignore"
-              ] })
+                  },
+                  className: "rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100",
+                  children: "Ignore"
+                }
+              )
             ] })
           ] }, `${row.source}-${row.id}`))
         ] }),
@@ -63961,12 +63984,13 @@ const DfpSidePanelTimeline = ({
                   flightType: assistCurrencyFlightType,
                   depPoint: assistCurrencyDepPoint,
                   arrivalPoint: assistCurrencyArrivalPoint,
-                  aircraftConfigId: assistCurrencyConfigId
+                  aircraftConfigId: assistCurrencyConfigId,
+                  saved: false
                 }]);
                 setShowAssistCurrencyForm(false);
               },
               className: "col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100",
-              children: "Request"
+              children: "Add Draft"
             }
           )
         ] })

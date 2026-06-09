@@ -384,6 +384,7 @@ const DfpSidePanelTimeline: React.FC<{
         aircraftCount: number;
         aircraftConfigId: string;
         isMandatory: boolean;
+        saved?: boolean;
         submitted?: boolean;
         ignored?: boolean;
     }>>([]);
@@ -404,6 +405,7 @@ const DfpSidePanelTimeline: React.FC<{
         depPoint: string;
         arrivalPoint: string;
         aircraftConfigId: string;
+        saved?: boolean;
         submitted?: boolean;
         ignored?: boolean;
     }>>([]);
@@ -1000,17 +1002,40 @@ const DfpSidePanelTimeline: React.FC<{
             acceptableAircraftConfigs: [request.aircraftConfigId],
         };
     };
+    const isAssistTaskRequestInHighestPriority = (id: string) => (
+        highestPriorityEvents.some(event => (
+            event.taskingRequestId === id ||
+            String(event.id || '').startsWith(`neo-assist-tasking-${id}-`)
+        ))
+    );
+    const saveAssistTaskRequest = (id: string) => {
+        setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: false, ignored: false } : item));
+    };
     const submitAssistTaskRequest = (id: string) => {
         const request = assistTaskRequests.find(item => item.id === id);
         if (!request || !request.tasking.trim()) return;
+        if (isAssistTaskRequestInHighestPriority(id)) {
+            window.alert('Already added to Highest Priority Events list');
+            return;
+        }
         onAddPriorityEvents(buildTaskRequestEvents(request));
-        setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: true, ignored: false } : item));
+        setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: true, ignored: false } : item));
+    };
+    const isAssistCurrencyRequestInHighestPriority = (id: string) => (
+        highestPriorityEvents.some(event => event.currencyDraftId === id || String(event.id || '') === `neo-assist-currency-${id}`)
+    );
+    const saveAssistCurrencyRequest = (id: string) => {
+        setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: false, ignored: false } : item));
     };
     const submitAssistCurrencyRequest = (id: string) => {
         const request = assistCurrencyRequests.find(item => item.id === id);
         if (!request || !request.currency.trim()) return;
+        if (isAssistCurrencyRequestInHighestPriority(id)) {
+            window.alert('Already added to Highest Priority Events list');
+            return;
+        }
         onAddPriorityEvents([buildCurrencyRequestEvent(request)]);
-        setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: true, ignored: false } : item));
+        setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: true, ignored: false } : item));
     };
     const highestPriorityTaskRows = useMemo(() => {
         const grouped = new Map<string, ScheduleEvent[]>();
@@ -1411,6 +1436,7 @@ const DfpSidePanelTimeline: React.FC<{
                 tasking: request.tasking || 'Task',
                 date: request.date,
                 takeoff: request.takeoff,
+                saved: Boolean(request.saved),
                 scheduled: Boolean(request.submitted),
                 ignored: Boolean(request.ignored),
                 source: 'local' as const,
@@ -1427,33 +1453,29 @@ const DfpSidePanelTimeline: React.FC<{
                                     <span className="font-semibold text-slate-100">{row.tasking}</span>
                                     <span className="ml-2 text-slate-400">{row.date || date} {formatTime(row.takeoff)}</span>
                                 </span>
-                                <span className="flex items-center gap-2 text-[9px]">
-                                    <label className="inline-flex items-center gap-1 text-emerald-200">
-                                        <input
-                                            type="radio"
-                                            name={`neo-assist-task-schedule-${row.source}-${row.id}`}
-                                            checked={row.scheduled && !row.ignored}
-                                            onChange={() => {
-                                                if (row.source === 'local') submitAssistTaskRequest(row.id);
-                                            }}
-                                        />
-                                        Schedule
-                                    </label>
-                                    <label className="inline-flex items-center gap-1 text-rose-200">
-                                        <input
-                                            type="radio"
-                                            name={`neo-assist-task-schedule-${row.source}-${row.id}`}
-                                            checked={row.ignored || !row.scheduled}
-                                            onChange={() => {
-                                                if (row.source === 'local') ignoreAssistTaskRequest(row.id);
-                                                else {
-                                                    const remote = highestPriorityTaskRows.find(item => item.id === row.id);
-                                                    if (remote) ignorePriorityEvents(remote.events);
-                                                }
-                                            }}
-                                        />
+                                <span className="flex items-center gap-1 text-[9px]">
+                                    {row.source === 'local' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => row.scheduled || row.saved ? submitAssistTaskRequest(row.id) : saveAssistTaskRequest(row.id)}
+                                            className={`rounded px-2 py-1 font-semibold text-white ${row.scheduled ? 'bg-sky-600 hover:bg-sky-700' : row.saved ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-600 hover:bg-green-700'}`}
+                                        >
+                                            {row.scheduled ? 'Re-submit' : row.saved ? 'Schedule' : 'Save'}
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (row.source === 'local') ignoreAssistTaskRequest(row.id);
+                                            else {
+                                                const remote = highestPriorityTaskRows.find(item => item.id === row.id);
+                                                if (remote) ignorePriorityEvents(remote.events);
+                                            }
+                                        }}
+                                        className="rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100"
+                                    >
                                         Ignore
-                                    </label>
+                                    </button>
                                 </span>
                             </div>
                         ))}
@@ -1523,12 +1545,13 @@ const DfpSidePanelTimeline: React.FC<{
                                         aircraftCount: assistTaskAircraftCount,
                                         aircraftConfigId: assistTaskConfigId,
                                         isMandatory: true,
+                                        saved: false,
                                     }]);
                                     setShowAssistTaskForm(false);
                                 }}
                                 className="col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100"
                             >
-                                Request
+                                Add Draft
                             </button>
                         </div>
                     )}
@@ -1541,6 +1564,7 @@ const DfpSidePanelTimeline: React.FC<{
                 currency: request.currency || 'Currency',
                 date: request.date,
                 takeoff: request.takeoff,
+                saved: Boolean(request.saved),
                 scheduled: Boolean(request.submitted),
                 ignored: Boolean(request.ignored),
                 source: 'local' as const,
@@ -1557,33 +1581,29 @@ const DfpSidePanelTimeline: React.FC<{
                                     <span className="font-semibold text-slate-100">{row.currency}</span>
                                     <span className="ml-2 text-slate-400">{row.date || date} {formatTime(row.takeoff)}</span>
                                 </span>
-                                <span className="flex items-center gap-2 text-[9px]">
-                                    <label className="inline-flex items-center gap-1 text-emerald-200">
-                                        <input
-                                            type="radio"
-                                            name={`neo-assist-currency-schedule-${row.source}-${row.id}`}
-                                            checked={row.scheduled && !row.ignored}
-                                            onChange={() => {
-                                                if (row.source === 'local') submitAssistCurrencyRequest(row.id);
-                                            }}
-                                        />
-                                        Schedule
-                                    </label>
-                                    <label className="inline-flex items-center gap-1 text-rose-200">
-                                        <input
-                                            type="radio"
-                                            name={`neo-assist-currency-schedule-${row.source}-${row.id}`}
-                                            checked={row.ignored || !row.scheduled}
-                                            onChange={() => {
-                                                if (row.source === 'local') ignoreAssistCurrencyRequest(row.id);
-                                                else {
-                                                    const remote = highestPriorityCurrencyRows.find(item => item.id === row.id);
-                                                    if (remote) ignorePriorityEvents([remote.event]);
-                                                }
-                                            }}
-                                        />
+                                <span className="flex items-center gap-1 text-[9px]">
+                                    {row.source === 'local' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => row.scheduled || row.saved ? submitAssistCurrencyRequest(row.id) : saveAssistCurrencyRequest(row.id)}
+                                            className={`rounded px-2 py-1 font-semibold text-white ${row.scheduled ? 'bg-sky-600 hover:bg-sky-700' : row.saved ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-600 hover:bg-green-700'}`}
+                                        >
+                                            {row.scheduled ? 'Re-submit' : row.saved ? 'Schedule' : 'Save'}
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (row.source === 'local') ignoreAssistCurrencyRequest(row.id);
+                                            else {
+                                                const remote = highestPriorityCurrencyRows.find(item => item.id === row.id);
+                                                if (remote) ignorePriorityEvents([remote.event]);
+                                            }
+                                        }}
+                                        className="rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100"
+                                    >
                                         Ignore
-                                    </label>
+                                    </button>
                                 </span>
                             </div>
                         ))}
@@ -1644,12 +1664,13 @@ const DfpSidePanelTimeline: React.FC<{
                                         depPoint: assistCurrencyDepPoint,
                                         arrivalPoint: assistCurrencyArrivalPoint,
                                         aircraftConfigId: assistCurrencyConfigId,
+                                        saved: false,
                                     }]);
                                     setShowAssistCurrencyForm(false);
                                 }}
                                 className="col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100"
                             >
-                                Request
+                                Add Draft
                             </button>
                         </div>
                     )}
