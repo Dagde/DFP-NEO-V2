@@ -49,6 +49,7 @@ export interface AppSettingsData {
   commenceNightFlying: number;
   ceaseNightFlying: number;
   flyingWindowExclusions: FlyingWindowExclusionPeriod[];
+  flyingWindowExclusionsByUnit?: Record<string, FlyingWindowExclusionPeriod[]>;
 
   // Aircraft Counts
   availableAircraftCount: number;
@@ -310,6 +311,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     commenceNightFlying: state.commenceNightFlying ?? 18.5,
     ceaseNightFlying: state.ceaseNightFlying ?? 23.5,
     flyingWindowExclusions: Array.isArray(state.flyingWindowExclusions) ? state.flyingWindowExclusions : [],
+    flyingWindowExclusionsByUnit: state.flyingWindowExclusionsByUnit || {},
     availableAircraftCount: state.availableAircraftCount ?? 15,
     availableFtdCount: state.availableFtdCount ?? 5,
     availableCptCount: state.availableCptCount ?? 4,

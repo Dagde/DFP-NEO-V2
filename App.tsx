@@ -16693,6 +16693,22 @@ const App: React.FC = () => {
     const [commenceNightFlying, setCommenceNightFlying] = useState(18.5); // 18:30
     const [ceaseNightFlying, setCeaseNightFlying] = useState(23.5); // 23:30
     const [flyingWindowExclusions, setFlyingWindowExclusions] = useState<FlyingWindowExclusionPeriod[]>([]);
+    const [flyingWindowExclusionsByUnit, setFlyingWindowExclusionsByUnit] = useState<Record<string, FlyingWindowExclusionPeriod[]>>({});
+    const activeFlyingWindowExclusionUnitKey = useMemo(() => (
+        String(activeUnitCode || school || 'DEFAULT').trim().toUpperCase() || 'DEFAULT'
+    ), [activeUnitCode, school]);
+    const handleUpdateFlyingWindowExclusions = useCallback((periods: FlyingWindowExclusionPeriod[]) => {
+        const nextPeriods = Array.isArray(periods) ? periods : [];
+        setFlyingWindowExclusions(nextPeriods);
+        setFlyingWindowExclusionsByUnit(prev => ({
+            ...prev,
+            [activeFlyingWindowExclusionUnitKey]: nextPeriods,
+        }));
+    }, [activeFlyingWindowExclusionUnitKey]);
+
+    useEffect(() => {
+        setFlyingWindowExclusions(flyingWindowExclusionsByUnit[activeFlyingWindowExclusionUnitKey] || []);
+    }, [activeFlyingWindowExclusionUnitKey, flyingWindowExclusionsByUnit]);
 
     const classifyStartBySolarDaylight = useCallback((startTime: number, targetDate: string = date): 'Day' | 'Night' => {
         const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
@@ -17600,7 +17616,27 @@ const App: React.FC = () => {
                 if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
                 if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
                 if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
-                if (Array.isArray(saved.flyingWindowExclusions)) setFlyingWindowExclusions(saved.flyingWindowExclusions);
+                {
+                    const savedExclusionsByUnit = saved.flyingWindowExclusionsByUnit && typeof saved.flyingWindowExclusionsByUnit === 'object'
+                        ? Object.fromEntries(
+                            Object.entries(saved.flyingWindowExclusionsByUnit)
+                                .map(([unitKey, periods]) => [
+                                    String(unitKey || '').trim().toUpperCase(),
+                                    Array.isArray(periods) ? periods : [],
+                                ])
+                                .filter(([unitKey]) => Boolean(unitKey))
+                        ) as Record<string, FlyingWindowExclusionPeriod[]>
+                        : {};
+                    const hasUnitScopedExclusions = Object.keys(savedExclusionsByUnit).length > 0;
+                    const legacyExclusions = Array.isArray(saved.flyingWindowExclusions) ? saved.flyingWindowExclusions : [];
+                    const nextExclusionsByUnit = hasUnitScopedExclusions
+                        ? savedExclusionsByUnit
+                        : legacyExclusions.length > 0
+                            ? { [activeFlyingWindowExclusionUnitKey]: legacyExclusions }
+                            : {};
+                    setFlyingWindowExclusionsByUnit(nextExclusionsByUnit);
+                    setFlyingWindowExclusions(nextExclusionsByUnit[activeFlyingWindowExclusionUnitKey] || []);
+                }
                 // NOTE: availableAircraftCount is intentionally NOT restored from settings here.
                 // It is always loaded from the AircraftAvailabilityEvent table via fetchCurrentAvailability
                 // (which runs after settingsLoaded becomes true), ensuring the events-table value always wins.
@@ -17712,6 +17748,10 @@ const App: React.FC = () => {
         }
 
         console.log('[App] 💾 Auto-save triggered — organisationSettings:', JSON.stringify(organisationSettings));
+        const flyingWindowExclusionsByUnitForSave = {
+            ...flyingWindowExclusionsByUnit,
+            [activeFlyingWindowExclusionUnitKey]: flyingWindowExclusions,
+        };
 
         const snapshot = buildSettingsSnapshot({
             locations,
@@ -17735,6 +17775,7 @@ const App: React.FC = () => {
             commenceNightFlying,
             ceaseNightFlying,
             flyingWindowExclusions,
+            flyingWindowExclusionsByUnit: flyingWindowExclusionsByUnitForSave,
             availableAircraftCount,
             neoAvailableAircraftCount,
             neoAircraftConfigCapacities,
@@ -17768,7 +17809,7 @@ const App: React.FC = () => {
         flightTurnaround, ftdTurnaround, cptTurnaround,
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
-        flyingWindowExclusions,
+        flyingWindowExclusions, flyingWindowExclusionsByUnit, activeFlyingWindowExclusionUnitKey,
         availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, availableFtdCount, availableCptCount,
         timezoneOffset, showDepartureDensityOverlay, tileStatusSettings,
         sctEvents, formationCallsigns, courseColors,
@@ -28214,7 +28255,7 @@ appliedUpdates.forEach(update => {
                     ceaseNightFlying={ceaseNightFlying}
                     onUpdateCeaseNightFlying={setCeaseNightFlying}
                     flyingWindowExclusions={flyingWindowExclusions}
-                    onUpdateFlyingWindowExclusions={setFlyingWindowExclusions}
+                    onUpdateFlyingWindowExclusions={handleUpdateFlyingWindowExclusions}
                     instructorsData={instructorsData}
                     traineesData={traineesData}
                     buildDfpDate={buildDfpDate}
@@ -30053,7 +30094,7 @@ appliedUpdates.forEach(update => {
                                     onUpdateCommenceNightFlying={setCommenceNightFlying}
                                     onUpdateCeaseNightFlying={setCeaseNightFlying}
                                     flyingWindowExclusions={flyingWindowExclusions}
-                                    onUpdateFlyingWindowExclusions={setFlyingWindowExclusions}
+                                    onUpdateFlyingWindowExclusions={handleUpdateFlyingWindowExclusions}
                                     date={date}
                                     resources={buildResources}
                                     instructors={instructorsData}

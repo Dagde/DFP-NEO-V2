@@ -1598,6 +1598,7 @@ const buildSettingsSnapshot = (state) => {
     commenceNightFlying: state.commenceNightFlying ?? 18.5,
     ceaseNightFlying: state.ceaseNightFlying ?? 23.5,
     flyingWindowExclusions: Array.isArray(state.flyingWindowExclusions) ? state.flyingWindowExclusions : [],
+    flyingWindowExclusionsByUnit: state.flyingWindowExclusionsByUnit || {},
     availableAircraftCount: state.availableAircraftCount ?? 15,
     availableFtdCount: state.availableFtdCount ?? 5,
     availableCptCount: state.availableCptCount ?? 4,
@@ -75986,6 +75987,19 @@ const App = () => {
   const [commenceNightFlying, setCommenceNightFlying] = reactExports.useState(18.5);
   const [ceaseNightFlying, setCeaseNightFlying] = reactExports.useState(23.5);
   const [flyingWindowExclusions, setFlyingWindowExclusions] = reactExports.useState([]);
+  const [flyingWindowExclusionsByUnit, setFlyingWindowExclusionsByUnit] = reactExports.useState({});
+  const activeFlyingWindowExclusionUnitKey = reactExports.useMemo(() => String(activeUnitCode || school || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeUnitCode, school]);
+  const handleUpdateFlyingWindowExclusions = reactExports.useCallback((periods) => {
+    const nextPeriods = Array.isArray(periods) ? periods : [];
+    setFlyingWindowExclusions(nextPeriods);
+    setFlyingWindowExclusionsByUnit((prev) => ({
+      ...prev,
+      [activeFlyingWindowExclusionUnitKey]: nextPeriods
+    }));
+  }, [activeFlyingWindowExclusionUnitKey]);
+  reactExports.useEffect(() => {
+    setFlyingWindowExclusions(flyingWindowExclusionsByUnit[activeFlyingWindowExclusionUnitKey] || []);
+  }, [activeFlyingWindowExclusionUnitKey, flyingWindowExclusionsByUnit]);
   const classifyStartBySolarDaylight = reactExports.useCallback((startTime, targetDate = date) => {
     const sunTimes = targetDate === date ? selectedDfpSunTimes : getSunTimesForDate(targetDate);
     const solarClassification = classifyDayNightBySunTimes(startTime, sunTimes);
@@ -76738,7 +76752,19 @@ ${"=".repeat(60)}`);
         if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
         if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
         if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
-        if (Array.isArray(saved.flyingWindowExclusions)) setFlyingWindowExclusions(saved.flyingWindowExclusions);
+        {
+          const savedExclusionsByUnit = saved.flyingWindowExclusionsByUnit && typeof saved.flyingWindowExclusionsByUnit === "object" ? Object.fromEntries(
+            Object.entries(saved.flyingWindowExclusionsByUnit).map(([unitKey, periods]) => [
+              String(unitKey || "").trim().toUpperCase(),
+              Array.isArray(periods) ? periods : []
+            ]).filter(([unitKey]) => Boolean(unitKey))
+          ) : {};
+          const hasUnitScopedExclusions = Object.keys(savedExclusionsByUnit).length > 0;
+          const legacyExclusions = Array.isArray(saved.flyingWindowExclusions) ? saved.flyingWindowExclusions : [];
+          const nextExclusionsByUnit = hasUnitScopedExclusions ? savedExclusionsByUnit : legacyExclusions.length > 0 ? { [activeFlyingWindowExclusionUnitKey]: legacyExclusions } : {};
+          setFlyingWindowExclusionsByUnit(nextExclusionsByUnit);
+          setFlyingWindowExclusions(nextExclusionsByUnit[activeFlyingWindowExclusionUnitKey] || []);
+        }
         if (saved.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
           setAvailableAircraftCount(saved.availableAircraftCount);
         }
@@ -76836,6 +76862,10 @@ ${"=".repeat(60)}`);
       return;
     }
     console.log("[App] 💾 Auto-save triggered — organisationSettings:", JSON.stringify(organisationSettings));
+    const flyingWindowExclusionsByUnitForSave = {
+      ...flyingWindowExclusionsByUnit,
+      [activeFlyingWindowExclusionUnitKey]: flyingWindowExclusions
+    };
     const snapshot = buildSettingsSnapshot({
       locations,
       locationAbbreviations,
@@ -76858,6 +76888,7 @@ ${"=".repeat(60)}`);
       commenceNightFlying,
       ceaseNightFlying,
       flyingWindowExclusions,
+      flyingWindowExclusionsByUnit: flyingWindowExclusionsByUnitForSave,
       availableAircraftCount,
       neoAvailableAircraftCount,
       neoAircraftConfigCapacities,
@@ -76905,6 +76936,8 @@ ${"=".repeat(60)}`);
     commenceNightFlying,
     ceaseNightFlying,
     flyingWindowExclusions,
+    flyingWindowExclusionsByUnit,
+    activeFlyingWindowExclusionUnitKey,
     availableAircraftCount,
     neoAvailableAircraftCount,
     neoAircraftConfigCapacities,
@@ -85255,7 +85288,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             ceaseNightFlying,
             onUpdateCeaseNightFlying: setCeaseNightFlying,
             flyingWindowExclusions,
-            onUpdateFlyingWindowExclusions: setFlyingWindowExclusions,
+            onUpdateFlyingWindowExclusions: handleUpdateFlyingWindowExclusions,
             instructorsData,
             traineesData,
             buildDfpDate,
@@ -86949,7 +86982,7 @@ Do you want to replace the existing entry?`,
                     onUpdateCommenceNightFlying: setCommenceNightFlying,
                     onUpdateCeaseNightFlying: setCeaseNightFlying,
                     flyingWindowExclusions,
-                    onUpdateFlyingWindowExclusions: setFlyingWindowExclusions,
+                    onUpdateFlyingWindowExclusions: handleUpdateFlyingWindowExclusions,
                     date,
                     resources: buildResources,
                     instructors: instructorsData,
