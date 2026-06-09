@@ -55717,17 +55717,17 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
                 rows.push({ c, inputType, fieldKey });
               });
             });
-            const ROWS_PER_COL = 4;
-            const numCols = Math.ceil(rows.length / ROWS_PER_COL);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 bg-gray-700/50 px-3 py-2 rounded border border-gray-600/50 min-w-0 self-stretch flex flex-col", children: [
+            const CURRENCY_COLUMNS = 3;
+            const rowsPerColumn = Math.max(1, Math.ceil(rows.length / CURRENCY_COLUMNS));
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-h-[9.5rem] bg-gray-700/50 px-3 py-3 rounded border border-gray-600/50 min-w-0 self-stretch flex flex-col", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-sky-400 mb-3 leading-none", children: "Currencies" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
                   className: "grid gap-x-4 gap-y-2",
                   style: {
-                    gridTemplateRows: `repeat(${ROWS_PER_COL}, auto)`,
-                    gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))`,
+                    gridTemplateRows: `repeat(${rowsPerColumn}, auto)`,
+                    gridTemplateColumns: `repeat(${CURRENCY_COLUMNS}, minmax(0, 1fr))`,
                     gridAutoFlow: "column"
                   },
                   children: rows.map(({ c, inputType, fieldKey }) => {
@@ -55787,9 +55787,9 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
               )
             ] });
           })(),
-          postFlightRecencyItems.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-[0_0_22rem] max-w-[24rem] bg-gray-700/50 px-3 py-2 rounded border border-emerald-600/40 self-stretch flex flex-col", children: [
+          postFlightRecencyItems.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-[0_0_24rem] max-w-[26rem] min-h-[9.5rem] bg-gray-700/50 px-3 py-3 rounded border border-emerald-600/40 self-stretch flex flex-col", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-emerald-300 mb-3 leading-none", children: "Recency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5 overflow-y-auto max-h-[7rem] pr-1", children: postFlightRecencyItems.map((item) => {
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-1.5", children: postFlightRecencyItems.map((item) => {
               const flightDate = event.date ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
               const isChecked = !!currencyValues[item.id];
               return /* @__PURE__ */ jsxRuntimeExports.jsxs(
