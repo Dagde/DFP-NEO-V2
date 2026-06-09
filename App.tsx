@@ -1319,25 +1319,23 @@ const DfpSidePanelTimeline: React.FC<{
             const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
             return (
                 <div className="space-y-3 text-[10px] text-slate-200">
-                    <div className="rounded border border-cyan-400/25 bg-cyan-500/10 p-2">
-                        <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-cyan-100/70">Air Combat Model</p>
-                        <p className="mt-1 text-[11px] font-semibold text-cyan-50">Operational build priority</p>
+                    <div className="rounded border border-cyan-400/25 bg-cyan-500/10 px-2 py-1.5">
+                        <p className="text-[11px] font-semibold text-cyan-50">Operational build priority</p>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                        <div className="grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
+                        <div className="min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Tasks</p>
-                            <p className="self-center text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
-                            <p className="text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
+                            <p className="mt-2 text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
+                            <p className="mt-0.5 text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
                         </div>
-                        <div className="grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2">
+                        <div className="min-h-[68px] rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-fuchsia-100/70">Currency</p>
-                            <p className="self-center text-sm font-semibold text-fuchsia-50">{scheduledCurrencyCount > 0 ? 'Directed' : 'None'}</p>
-                            <p className="text-[9px] text-fuchsia-100/60">{scheduledCurrencyCount} scheduled</p>
+                            <p className="mt-2 text-sm font-semibold text-fuchsia-50">{scheduledCurrencyCount > 0 ? 'Directed' : 'None'}</p>
+                            <p className="mt-0.5 text-[9px] text-fuchsia-100/60">{scheduledCurrencyCount} scheduled</p>
                         </div>
-                        <div className="grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-violet-500/25 bg-violet-500/10 p-2">
+                        <div className="min-h-[68px] rounded border border-violet-500/25 bg-violet-500/10 p-2">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70">Course/Package</p>
-                            <p className="self-center text-sm font-semibold text-violet-50">{airCombatSchedulingWeights.courses}/{airCombatSchedulingWeights.trainingPackages}</p>
-                            <p className="text-[9px] text-violet-100/60">&nbsp;</p>
+                            <p className="mt-2 text-sm font-semibold text-violet-50">{airCombatSchedulingWeights.courses}/{airCombatSchedulingWeights.trainingPackages}</p>
                         </div>
                     </div>
                     <div className="rounded border border-slate-700 bg-slate-950/45 p-2">

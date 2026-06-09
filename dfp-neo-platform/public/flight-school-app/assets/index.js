@@ -63596,35 +63596,31 @@ const DfpSidePanelTimeline = ({
       const scheduledTaskCount = highestPriorityTaskRows.length;
       const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 p-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.14em] text-cyan-100/70", children: "Air Combat Model" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[11px] font-semibold text-cyan-50", children: "Operational build priority" })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 px-2 py-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-cyan-50", children: "Operational build priority" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Tasks" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "self-center text-sm font-semibold text-cyan-50", children: scheduledTaskCount > 0 ? "Mandatory" : "None" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-cyan-100/60", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-cyan-50", children: scheduledTaskCount > 0 ? "Mandatory" : "None" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-[9px] text-cyan-100/60", children: [
               scheduledTaskCount,
               " scheduled"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[68px] rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-fuchsia-100/70", children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "self-center text-sm font-semibold text-fuchsia-50", children: scheduledCurrencyCount > 0 ? "Directed" : "None" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-fuchsia-100/60", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-fuchsia-50", children: scheduledCurrencyCount > 0 ? "Directed" : "None" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-[9px] text-fuchsia-100/60", children: [
               scheduledCurrencyCount,
               " scheduled"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[68px] rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70", children: "Course/Package" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "self-center text-sm font-semibold text-violet-50", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 text-sm font-semibold text-violet-50", children: [
               airCombatSchedulingWeights.courses,
               "/",
               airCombatSchedulingWeights.trainingPackages
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/60", children: " " })
+            ] })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
