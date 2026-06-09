@@ -62786,6 +62786,8 @@ const DfpSidePanelTimeline = ({
   packagePriorities,
   onUpdatePackagePriorities,
   currencyNames,
+  airCombatSchedulingWeights,
+  onUpdateAirCombatSchedulingWeights,
   highestPriorityEvents,
   onAddPriorityEvents,
   onDeletePriorityEvent,
@@ -63280,6 +63282,13 @@ const DfpSidePanelTimeline = ({
     [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
     onUpdatePackagePriorities(next);
   };
+  const updateAirCombatCourseWeight = (value) => {
+    const courses = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
+    onUpdateAirCombatSchedulingWeights({
+      courses,
+      trainingPackages: 100 - courses
+    });
+  };
   const buildTaskRequestEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = taskProfileAbbreviations[tasking] || "";
@@ -63634,41 +63643,132 @@ const DfpSidePanelTimeline = ({
         [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
         onUpdateCoursePriorities(next);
       };
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-[10px] text-slate-200", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-cyan-100", children: "Course priority" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: coursePriorities.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: course }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `min-w-8 text-center font-mono ${totalCoursePercentage !== 100 ? "text-amber-300" : "text-slate-300"}`, children: [
-                coursePercentages.get(course) ?? 0,
-                "%"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => updateCoursePercentage(course, "increase"), className: "rounded-t border border-slate-600 px-1 text-[8px] leading-none", children: "▲" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => updateCoursePercentage(course, "decrease"), className: "rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none", children: "▼" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, -1), className: "rounded border border-slate-600 px-1", children: "Up" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, 1), className: "rounded border border-slate-600 px-1", children: "Down" })
+      const scheduledTaskCount = highestPriorityTaskRows.length;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Tasks" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-cyan-50", children: scheduledTaskCount > 0 ? "Mandatory" : "None" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-cyan-100/60", children: [
+              scheduledTaskCount,
+              " scheduled"
             ] })
-          ] }, course)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: `mt-2 rounded px-2 py-1 text-center font-semibold ${totalCoursePercentage === 100 ? "bg-emerald-500/15 text-emerald-200" : "bg-amber-500/15 text-amber-200"}`, children: [
-            "Total: ",
-            totalCoursePercentage,
-            "%"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-emerald-500/25 bg-emerald-500/10 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-emerald-100/70", children: "Courses" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm font-semibold text-emerald-50", children: [
+              airCombatSchedulingWeights.courses,
+              "%"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-emerald-100/60", children: "after tasks" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70", children: "Packages" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm font-semibold text-violet-50", children: [
+              airCombatSchedulingWeights.trainingPackages,
+              "%"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/60", children: "after tasks" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-cyan-100", children: "Package priority" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 space-y-1", children: [
-            packagePriorities.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-500", children: "No packages set" }),
-            packagePriorities.map((packageName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: packageName }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-emerald-500/25 bg-emerald-500/10 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-emerald-100", children: "Air Combat Priority Mix" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-emerald-100/65", children: "Shares remaining capacity after mandatory tasking is attempted." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 font-semibold text-emerald-100", children: [
+              airCombatSchedulingWeights.courses,
+              "/",
+              airCombatSchedulingWeights.trainingPackages
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_64px_64px] items-end gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Course Weight" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "range",
+                  min: 0,
+                  max: 100,
+                  step: 5,
+                  value: airCombatSchedulingWeights.courses,
+                  onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
+                  className: "mt-2 w-full accent-emerald-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Courses" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  min: 0,
+                  max: 100,
+                  step: 5,
+                  value: airCombatSchedulingWeights.courses,
+                  onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
+                  className: "mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-white"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Packages" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  value: airCombatSchedulingWeights.trainingPackages,
+                  readOnly: true,
+                  disabled: true,
+                  className: "mt-1 w-full cursor-not-allowed rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400 opacity-80"
+                }
+              )
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 font-semibold text-cyan-100", children: "Course priority" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: coursePriorities.map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-500", children: index + 1 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", children: course }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => movePackage(packageName, -1), className: "rounded border border-slate-600 px-1", children: "Up" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => movePackage(packageName, 1), className: "rounded border border-slate-600 px-1", children: "Down" })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `min-w-8 text-center font-mono ${totalCoursePercentage !== 100 ? "text-amber-300" : "text-slate-300"}`, children: [
+                  coursePercentages.get(course) ?? 0,
+                  "%"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => updateCoursePercentage(course, "increase"), className: "rounded-t border border-slate-600 px-1 text-[8px] leading-none", children: "▲" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => updateCoursePercentage(course, "decrease"), className: "rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none", children: "▼" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, -1), className: "rounded-t border border-slate-600 px-1 text-[8px] leading-none", children: "▲" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, 1), className: "rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none", children: "▼" })
+                ] })
               ] })
-            ] }, packageName))
+            ] }, course)) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: `mt-2 rounded px-2 py-1 text-center font-semibold ${totalCoursePercentage === 100 ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`, children: [
+              "Total: ",
+              totalCoursePercentage,
+              "%"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 font-semibold text-cyan-100", children: "Package priority" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: [
+              packagePriorities.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-500", children: "No packages set" }),
+              packagePriorities.map((packageName, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-500", children: index + 1 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", children: packageName }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => movePackage(packageName, -1), className: "rounded-t border border-slate-600 px-1 text-[8px] leading-none", children: "▲" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => movePackage(packageName, 1), className: "rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none", children: "▼" })
+                ] })
+              ] }, packageName))
+            ] })
           ] })
         ] })
       ] });
@@ -63968,7 +64068,8 @@ const DfpSidePanelTimeline = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: [
             displayedCrewOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-slate-500", children: "No crew available." }),
-            displayedCrewOptions.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-2 py-1 text-[10px] ${selectedCrewName === name ? "border-cyan-300/70 bg-cyan-400/10 text-cyan-50" : "border-slate-700 bg-slate-950/45 text-slate-300"}`, children: [
+            displayedCrewOptions.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[22px_auto_1fr] items-center gap-2 rounded border px-2 py-1 text-[10px] ${selectedCrewName === name ? "border-cyan-300/70 bg-cyan-400/10 text-cyan-50" : "border-slate-700 bg-slate-950/45 text-slate-300"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-slate-500", children: crewSourceMode === "priority" ? index + 1 : "" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -63977,7 +64078,7 @@ const DfpSidePanelTimeline = ({
                   onChange: (event) => setSelectedCrewName(event.target.checked ? name : "")
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCrewOptionLabel(name) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: formatCrewOptionLabel(name) })
             ] }, name))
           ] })
         ] }),
@@ -63990,6 +64091,24 @@ const DfpSidePanelTimeline = ({
       const selectedGroupName = isPackageSection ? selectedPackageName : selectedCourseName;
       const setSelectedGroupName = isPackageSection ? setSelectedPackageName : setSelectedCourseName;
       const eventOptions = selectedCrewName ? getSelectedCrewTrainingItems(isPackageSection ? "training_package" : "course", selectedGroupName) : [];
+      const eventRows = eventOptions.map((item) => {
+        const completion = getSelectedCrewCompletion(item, isPackageSection ? "training_package" : "course", selectedGroupName);
+        return {
+          item,
+          isComplete: completion.complete,
+          completionDateLabel: completion.dateLabel,
+          rowKey: [
+            activeAssistSection,
+            selectedCrewName,
+            selectedGroupName,
+            item.lmpType || "lmp",
+            item.id || "",
+            item.masterEventId || "",
+            item.code || "",
+            item.orderKey || ""
+          ].join("|")
+        };
+      });
       const selectedCode = activeAssistSection === "course" ? selectedCourseEventCode : selectedPackageEventCode;
       const setSelectedCode = activeAssistSection === "course" ? setSelectedCourseEventCode : setSelectedPackageEventCode;
       const assignmentLabel = assignedOptions.find((option) => option.code === selectedGroupName)?.label || selectedGroupName;
@@ -64026,10 +64145,7 @@ const DfpSidePanelTimeline = ({
             isPackageSection ? "package" : "course",
             "."
           ] }),
-          eventOptions.map((item) => {
-            const completion = getSelectedCrewCompletion(item, isPackageSection ? "training_package" : "course", selectedGroupName);
-            const isComplete = completion.complete;
-            const completionDateLabel = completion.dateLabel;
+          eventRows.map(({ item, isComplete, completionDateLabel, rowKey }) => {
             const rowClass = isComplete ? "border-emerald-400/80 bg-emerald-500/10 ring-1 ring-emerald-400/30" : selectedCode === item.code ? "border-cyan-300/70 bg-cyan-400/10" : "border-slate-700 bg-slate-950/45";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[auto_auto_1fr] items-center gap-2 rounded border px-2 py-1 ${rowClass}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -64055,7 +64171,7 @@ const DfpSidePanelTimeline = ({
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-slate-300", children: item.eventDescription || item.module || item.phase || item.code })
               ] })
-            ] }, item.id || item.code);
+            ] }, rowKey);
           })
         ] })
       ] });
@@ -86397,6 +86513,8 @@ Do you want to replace the existing entry?`,
                     packagePriorities,
                     onUpdatePackagePriorities: setPackagePriorities,
                     currencyNames,
+                    airCombatSchedulingWeights,
+                    onUpdateAirCombatSchedulingWeights: handleUpdateAirCombatSchedulingWeights,
                     highestPriorityEvents,
                     onAddPriorityEvents: (eventsToAdd) => {
                       setHighestPriorityEvents((prev) => {

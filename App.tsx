@@ -264,6 +264,8 @@ const DfpSidePanelTimeline: React.FC<{
     packagePriorities: string[];
     onUpdatePackagePriorities: (priorities: string[]) => void;
     currencyNames: string[];
+    airCombatSchedulingWeights: AirCombatSchedulingWeights;
+    onUpdateAirCombatSchedulingWeights: (weights: AirCombatSchedulingWeights) => void;
     highestPriorityEvents: ScheduleEvent[];
     onAddPriorityEvents: (events: ScheduleEvent[]) => void;
     onDeletePriorityEvent: (eventId: string) => void | Promise<void>;
@@ -312,6 +314,8 @@ const DfpSidePanelTimeline: React.FC<{
     packagePriorities,
     onUpdatePackagePriorities,
     currencyNames,
+    airCombatSchedulingWeights,
+    onUpdateAirCombatSchedulingWeights,
     highestPriorityEvents,
     onAddPriorityEvents,
     onDeletePriorityEvent,
@@ -972,6 +976,13 @@ const DfpSidePanelTimeline: React.FC<{
         [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
         onUpdatePackagePriorities(next);
     };
+    const updateAirCombatCourseWeight = (value: number) => {
+        const courses = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
+        onUpdateAirCombatSchedulingWeights({
+            courses,
+            trainingPackages: 100 - courses,
+        });
+    };
     const buildTaskRequestEvents = (request: typeof assistTaskRequests[number]): ScheduleEvent[] => {
         const tasking = request.tasking.trim();
         const abbreviation = taskProfileAbbreviations[tasking] || '';
@@ -1360,41 +1371,112 @@ const DfpSidePanelTimeline: React.FC<{
                 [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
                 onUpdateCoursePriorities(next);
             };
+            const scheduledTaskCount = highestPriorityTaskRows.length;
             return (
-                <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-200">
-                    <div>
-                        <p className="font-semibold text-cyan-100">Course priority</p>
-                        <div className="mt-1 space-y-1">
-                            {coursePriorities.map(course => (
-                                <div key={course} className="flex items-center justify-between rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                    <span>{course}</span>
-                                    <span className="flex items-center gap-1">
-                                        <span className={`min-w-8 text-center font-mono ${totalCoursePercentage !== 100 ? 'text-amber-300' : 'text-slate-300'}`}>{coursePercentages.get(course) ?? 0}%</span>
-                                        <span className="flex flex-col">
-                                            <button type="button" onClick={() => updateCoursePercentage(course, 'increase')} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none">▲</button>
-                                            <button type="button" onClick={() => updateCoursePercentage(course, 'decrease')} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none">▼</button>
-                                        </span>
-                                        <button type="button" onClick={() => moveCourse(course, -1)} className="rounded border border-slate-600 px-1">Up</button>
-                                        <button type="button" onClick={() => moveCourse(course, 1)} className="rounded border border-slate-600 px-1">Down</button>
-                                    </span>
-                                </div>
-                            ))}
+                <div className="space-y-3 text-[10px] text-slate-200">
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Tasks</p>
+                            <p className="mt-1 text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
+                            <p className="text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
                         </div>
-                        <p className={`mt-2 rounded px-2 py-1 text-center font-semibold ${totalCoursePercentage === 100 ? 'bg-emerald-500/15 text-emerald-200' : 'bg-amber-500/15 text-amber-200'}`}>Total: {totalCoursePercentage}%</p>
+                        <div className="rounded border border-emerald-500/25 bg-emerald-500/10 p-2">
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-emerald-100/70">Courses</p>
+                            <p className="mt-1 text-sm font-semibold text-emerald-50">{airCombatSchedulingWeights.courses}%</p>
+                            <p className="text-[9px] text-emerald-100/60">after tasks</p>
+                        </div>
+                        <div className="rounded border border-violet-500/25 bg-violet-500/10 p-2">
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70">Packages</p>
+                            <p className="mt-1 text-sm font-semibold text-violet-50">{airCombatSchedulingWeights.trainingPackages}%</p>
+                            <p className="text-[9px] text-violet-100/60">after tasks</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="font-semibold text-cyan-100">Package priority</p>
-                        <div className="mt-1 space-y-1">
-                            {packagePriorities.length === 0 && <p className="text-slate-500">No packages set</p>}
-                            {packagePriorities.map(packageName => (
-                                <div key={packageName} className="flex items-center justify-between rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                    <span className="truncate">{packageName}</span>
-                                    <span className="flex items-center gap-1">
-                                        <button type="button" onClick={() => movePackage(packageName, -1)} className="rounded border border-slate-600 px-1">Up</button>
-                                        <button type="button" onClick={() => movePackage(packageName, 1)} className="rounded border border-slate-600 px-1">Down</button>
-                                    </span>
-                                </div>
-                            ))}
+                    <div className="rounded border border-emerald-500/25 bg-emerald-500/10 p-2">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                            <div>
+                                <p className="font-semibold text-emerald-100">Air Combat Priority Mix</p>
+                                <p className="text-[9px] text-emerald-100/65">Shares remaining capacity after mandatory tasking is attempted.</p>
+                            </div>
+                            <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 font-semibold text-emerald-100">
+                                {airCombatSchedulingWeights.courses}/{airCombatSchedulingWeights.trainingPackages}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-[1fr_64px_64px] items-end gap-2">
+                            <label className="block">
+                                <span className="block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Course Weight</span>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    step={5}
+                                    value={airCombatSchedulingWeights.courses}
+                                    onChange={event => updateAirCombatCourseWeight(Number(event.target.value))}
+                                    className="mt-2 w-full accent-emerald-500"
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Courses</span>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    step={5}
+                                    value={airCombatSchedulingWeights.courses}
+                                    onChange={event => updateAirCombatCourseWeight(Number(event.target.value))}
+                                    className="mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-white"
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Packages</span>
+                                <input
+                                    type="number"
+                                    value={airCombatSchedulingWeights.trainingPackages}
+                                    readOnly
+                                    disabled
+                                    className="mt-1 w-full cursor-not-allowed rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400 opacity-80"
+                                />
+                            </label>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded border border-slate-700 bg-slate-950/45 p-2">
+                            <p className="mb-1 font-semibold text-cyan-100">Course priority</p>
+                            <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
+                                {coursePriorities.map((course, index) => (
+                                    <div key={course} className="grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
+                                        <span className="font-mono text-slate-500">{index + 1}</span>
+                                        <span className="truncate font-semibold text-slate-100">{course}</span>
+                                        <span className="flex items-center gap-1">
+                                            <span className={`min-w-8 text-center font-mono ${totalCoursePercentage !== 100 ? 'text-amber-300' : 'text-slate-300'}`}>{coursePercentages.get(course) ?? 0}%</span>
+                                            <span className="flex flex-col">
+                                                <button type="button" onClick={() => updateCoursePercentage(course, 'increase')} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none">▲</button>
+                                                <button type="button" onClick={() => updateCoursePercentage(course, 'decrease')} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none">▼</button>
+                                            </span>
+                                            <span className="flex flex-col">
+                                                <button type="button" onClick={() => moveCourse(course, -1)} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none">▲</button>
+                                                <button type="button" onClick={() => moveCourse(course, 1)} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none">▼</button>
+                                            </span>
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className={`mt-2 rounded px-2 py-1 text-center font-semibold ${totalCoursePercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>Total: {totalCoursePercentage}%</p>
+                        </div>
+                        <div className="rounded border border-slate-700 bg-slate-950/45 p-2">
+                            <p className="mb-1 font-semibold text-cyan-100">Package priority</p>
+                            <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
+                                {packagePriorities.length === 0 && <p className="text-slate-500">No packages set</p>}
+                                {packagePriorities.map((packageName, index) => (
+                                    <div key={packageName} className="grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
+                                        <span className="font-mono text-slate-500">{index + 1}</span>
+                                        <span className="truncate font-semibold text-slate-100">{packageName}</span>
+                                        <span className="flex flex-col">
+                                            <button type="button" onClick={() => movePackage(packageName, -1)} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none">▲</button>
+                                            <button type="button" onClick={() => movePackage(packageName, 1)} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none">▼</button>
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1671,14 +1753,17 @@ const DfpSidePanelTimeline: React.FC<{
                         </div>
                         <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
                             {displayedCrewOptions.length === 0 && <p className="text-[10px] text-slate-500">No crew available.</p>}
-                            {displayedCrewOptions.map(name => (
-                                <label key={name} className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1 text-[10px] ${selectedCrewName === name ? 'border-cyan-300/70 bg-cyan-400/10 text-cyan-50' : 'border-slate-700 bg-slate-950/45 text-slate-300'}`}>
+                            {displayedCrewOptions.map((name, index) => (
+                                <label key={name} className={`grid cursor-pointer grid-cols-[22px_auto_1fr] items-center gap-2 rounded border px-2 py-1 text-[10px] ${selectedCrewName === name ? 'border-cyan-300/70 bg-cyan-400/10 text-cyan-50' : 'border-slate-700 bg-slate-950/45 text-slate-300'}`}>
+                                    <span className="font-mono text-[9px] text-slate-500">
+                                        {crewSourceMode === 'priority' ? index + 1 : ''}
+                                    </span>
                                     <input
                                         type="checkbox"
                                         checked={selectedCrewName === name}
                                         onChange={event => setSelectedCrewName(event.target.checked ? name : '')}
                                     />
-                                    <span>{formatCrewOptionLabel(name)}</span>
+                                    <span className="truncate">{formatCrewOptionLabel(name)}</span>
                                 </label>
                             ))}
                         </div>
@@ -1697,6 +1782,24 @@ const DfpSidePanelTimeline: React.FC<{
             const eventOptions = selectedCrewName
                 ? getSelectedCrewTrainingItems(isPackageSection ? 'training_package' : 'course', selectedGroupName)
                 : [];
+            const eventRows = eventOptions.map(item => {
+                const completion = getSelectedCrewCompletion(item, isPackageSection ? 'training_package' : 'course', selectedGroupName);
+                return {
+                    item,
+                    isComplete: completion.complete,
+                    completionDateLabel: completion.dateLabel,
+                    rowKey: [
+                        activeAssistSection,
+                        selectedCrewName,
+                        selectedGroupName,
+                        item.lmpType || 'lmp',
+                        item.id || '',
+                        item.masterEventId || '',
+                        item.code || '',
+                        item.orderKey || '',
+                    ].join('|'),
+                };
+            });
             const selectedCode = activeAssistSection === 'course' ? selectedCourseEventCode : selectedPackageEventCode;
             const setSelectedCode = activeAssistSection === 'course' ? setSelectedCourseEventCode : setSelectedPackageEventCode;
             const assignmentLabel = assignedOptions.find(option => option.code === selectedGroupName)?.label || selectedGroupName;
@@ -1726,17 +1829,14 @@ const DfpSidePanelTimeline: React.FC<{
                     )}
                     <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
                         {selectedCrewName && eventOptions.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No events found for this assigned {isPackageSection ? 'package' : 'course'}.</p>}
-                        {eventOptions.map(item => {
-                            const completion = getSelectedCrewCompletion(item, isPackageSection ? 'training_package' : 'course', selectedGroupName);
-                            const isComplete = completion.complete;
-                            const completionDateLabel = completion.dateLabel;
+                        {eventRows.map(({ item, isComplete, completionDateLabel, rowKey }) => {
                             const rowClass = isComplete
                                 ? 'border-emerald-400/80 bg-emerald-500/10 ring-1 ring-emerald-400/30'
                                 : selectedCode === item.code
                                     ? 'border-cyan-300/70 bg-cyan-400/10'
                                     : 'border-slate-700 bg-slate-950/45';
                             return (
-                                <label key={item.id || item.code} className={`grid cursor-pointer grid-cols-[auto_auto_1fr] items-center gap-2 rounded border px-2 py-1 ${rowClass}`}>
+                                <label key={rowKey} className={`grid cursor-pointer grid-cols-[auto_auto_1fr] items-center gap-2 rounded border px-2 py-1 ${rowClass}`}>
                                     <input
                                         type="radio"
                                         name={`neo-assist-${activeAssistSection}`}
@@ -29599,6 +29699,8 @@ appliedUpdates.forEach(update => {
                                     packagePriorities={packagePriorities}
                                     onUpdatePackagePriorities={setPackagePriorities}
                                     currencyNames={currencyNames}
+                                    airCombatSchedulingWeights={airCombatSchedulingWeights}
+                                    onUpdateAirCombatSchedulingWeights={handleUpdateAirCombatSchedulingWeights}
                                     highestPriorityEvents={highestPriorityEvents}
                                     onAddPriorityEvents={(eventsToAdd) => {
                                         setHighestPriorityEvents(prev => {
