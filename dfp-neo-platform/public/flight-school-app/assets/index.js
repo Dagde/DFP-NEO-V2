@@ -62979,8 +62979,8 @@ const DfpSidePanelTimeline = ({
     if (!selectedEventCode && filteredEventOptions[0]) setSelectedEventCode(filteredEventOptions[0].code);
   }, [filteredEventOptions, selectedEventCode]);
   reactExports.useEffect(() => {
-    if (!selectedTaskProfile && taskProfiles[0]) setSelectedTaskProfile(taskProfiles[0]);
-  }, [selectedTaskProfile, taskProfiles]);
+    if (activeAssistSection === "taskings" && !selectedTaskProfile && taskProfiles[0]) setSelectedTaskProfile(taskProfiles[0]);
+  }, [activeAssistSection, selectedTaskProfile, taskProfiles]);
   reactExports.useEffect(() => {
     if (!selectedCurrencyName && currencyNames[0]) setSelectedCurrencyName(currencyNames[0]);
   }, [selectedCurrencyName, currencyNames]);
@@ -63523,6 +63523,22 @@ const DfpSidePanelTimeline = ({
     setAssistCurrencyRequests((prev) => prev.map((item) => item.id === id ? { ...item, submitted: false, ignored: true } : item));
   };
   const fieldClass2 = "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100";
+  const selectAssistTask = (tasking) => {
+    setSelectedTaskProfile(tasking);
+    setSelectedCourseEventCode("");
+    setSelectedPackageEventCode("");
+  };
+  const selectAssistTrainingEvent = (kind, eventCode) => {
+    setSelectedEventCode(eventCode);
+    setSelectedTaskProfile("");
+    if (kind === "course") {
+      setSelectedCourseEventCode(eventCode);
+      setSelectedPackageEventCode("");
+    } else {
+      setSelectedPackageEventCode(eventCode);
+      setSelectedCourseEventCode("");
+    }
+  };
   const taskProfileSelectValue = taskProfiles.includes(selectedTaskProfile) ? selectedTaskProfile : "";
   const getCompletionDateLabel = (item) => {
     const rawDate = String(item.completedAt || item.completedDate || item.dateCompleted || "").trim();
@@ -63895,6 +63911,7 @@ const DfpSidePanelTimeline = ({
                     name: `neo-assist-task-schedule-${row.source}-${row.id}`,
                     checked: row.scheduled && !row.ignored,
                     onChange: () => {
+                      selectAssistTask(row.tasking);
                       if (row.source === "local") submitAssistTaskRequest(row.id);
                     }
                   }
@@ -63934,14 +63951,14 @@ const DfpSidePanelTimeline = ({
         showAssistTaskForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Tasking",
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => setSelectedTaskProfile(event.target.value), className: fieldClass2, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select tasking type" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Manual tasking name",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => setSelectedTaskProfile(event.target.value), className: fieldClass2, placeholder: "Type tasking manually" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type tasking manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",
@@ -63983,6 +64000,7 @@ const DfpSidePanelTimeline = ({
             {
               type: "button",
               onClick: () => {
+                selectAssistTask(selectedTaskProfile);
                 setAssistTaskRequests((prev) => [...prev, {
                   id: v4(),
                   tasking: selectedTaskProfile,
@@ -64173,7 +64191,6 @@ const DfpSidePanelTimeline = ({
       const isPackageSection = activeAssistSection === "packages";
       const assignedOptions = isPackageSection ? selectedCrewPackageOptions : selectedCrewCourseOptions;
       const selectedGroupName = isPackageSection ? selectedPackageName : selectedCourseName;
-      const setSelectedGroupName = isPackageSection ? setSelectedPackageName : setSelectedCourseName;
       const eventOptions = selectedCrewName ? getSelectedCrewTrainingItems(isPackageSection ? "training_package" : "course", selectedGroupName) : [];
       const eventRows = eventOptions.map((item) => {
         const completion = getSelectedCrewCompletion(item, isPackageSection ? "training_package" : "course", selectedGroupName);
@@ -64194,7 +64211,6 @@ const DfpSidePanelTimeline = ({
         };
       });
       const selectedCode = activeAssistSection === "course" ? selectedCourseEventCode : selectedPackageEventCode;
-      const setSelectedCode = activeAssistSection === "course" ? setSelectedCourseEventCode : setSelectedPackageEventCode;
       const assignmentLabel = assignedOptions.find((option) => option.key === selectedGroupName)?.label || selectedGroupName;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         !selectedCrewName && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-2 text-amber-100", children: [
@@ -64208,7 +64224,15 @@ const DfpSidePanelTimeline = ({
             "select",
             {
               value: selectedGroupName,
-              onChange: (event) => setSelectedGroupName(event.target.value),
+              onChange: (event) => {
+                if (isPackageSection) {
+                  setSelectedPackageName(event.target.value);
+                  setSelectedPackageEventCode("");
+                } else {
+                  setSelectedCourseName(event.target.value);
+                  setSelectedCourseEventCode("");
+                }
+              },
               className: fieldClass2,
               disabled: !selectedCrewName || assignedOptions.length === 0,
               children: [
@@ -64239,8 +64263,7 @@ const DfpSidePanelTimeline = ({
                   name: `neo-assist-${activeAssistSection}`,
                   checked: selectedCode === item.code,
                   onChange: () => {
-                    setSelectedCode(item.code);
-                    setSelectedEventCode(item.code);
+                    selectAssistTrainingEvent(activeAssistSection, item.code);
                   }
                 }
               ),

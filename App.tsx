@@ -467,8 +467,8 @@ const DfpSidePanelTimeline: React.FC<{
     }, [filteredEventOptions, selectedEventCode]);
 
     useEffect(() => {
-        if (!selectedTaskProfile && taskProfiles[0]) setSelectedTaskProfile(taskProfiles[0]);
-    }, [selectedTaskProfile, taskProfiles]);
+        if (activeAssistSection === 'taskings' && !selectedTaskProfile && taskProfiles[0]) setSelectedTaskProfile(taskProfiles[0]);
+    }, [activeAssistSection, selectedTaskProfile, taskProfiles]);
 
     useEffect(() => {
         if (!selectedCurrencyName && currencyNames[0]) setSelectedCurrencyName(currencyNames[0]);
@@ -1147,6 +1147,22 @@ const DfpSidePanelTimeline: React.FC<{
         setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: false, ignored: true } : item));
     };
     const fieldClass = 'mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100';
+    const selectAssistTask = (tasking: string) => {
+        setSelectedTaskProfile(tasking);
+        setSelectedCourseEventCode('');
+        setSelectedPackageEventCode('');
+    };
+    const selectAssistTrainingEvent = (kind: 'course' | 'packages', eventCode: string) => {
+        setSelectedEventCode(eventCode);
+        setSelectedTaskProfile('');
+        if (kind === 'course') {
+            setSelectedCourseEventCode(eventCode);
+            setSelectedPackageEventCode('');
+        } else {
+            setSelectedPackageEventCode(eventCode);
+            setSelectedCourseEventCode('');
+        }
+    };
     const taskProfileSelectValue = taskProfiles.includes(selectedTaskProfile) ? selectedTaskProfile : '';
     const getCompletionDateLabel = (item: SyllabusItemDetail): string => {
         const rawDate = String((item as any).completedAt || (item as any).completedDate || (item as any).dateCompleted || '').trim();
@@ -1532,6 +1548,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                     name={`neo-assist-task-schedule-${row.source}-${row.id}`}
                                                     checked={row.scheduled && !row.ignored}
                                                     onChange={() => {
+                                                        selectAssistTask(row.tasking);
                                                         if (row.source === 'local') submitAssistTaskRequest(row.id);
                                                     }}
                                                 />
@@ -1569,13 +1586,13 @@ const DfpSidePanelTimeline: React.FC<{
                         <div className="grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2">
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
                                 Tasking
-                                <select value={taskProfileSelectValue} onChange={event => setSelectedTaskProfile(event.target.value)} className={fieldClass}>
+                                <select value={taskProfileSelectValue} onChange={event => selectAssistTask(event.target.value)} className={fieldClass}>
                                     <option value="">Select tasking type</option>
                                     {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
                                 </select>
                             </label>
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual tasking name
-                                <input value={selectedTaskProfile} onChange={event => setSelectedTaskProfile(event.target.value)} className={fieldClass} placeholder="Type tasking manually" />
+                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type tasking manually" />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
                                 <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />
@@ -1611,6 +1628,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <button
                                 type="button"
                                 onClick={() => {
+                                    selectAssistTask(selectedTaskProfile);
                                     setAssistTaskRequests(prev => [...prev, {
                                         id: uuidv4(),
                                         tasking: selectedTaskProfile,
@@ -1800,7 +1818,6 @@ const DfpSidePanelTimeline: React.FC<{
             const isPackageSection = activeAssistSection === 'packages';
             const assignedOptions = isPackageSection ? selectedCrewPackageOptions : selectedCrewCourseOptions;
             const selectedGroupName = isPackageSection ? selectedPackageName : selectedCourseName;
-            const setSelectedGroupName = isPackageSection ? setSelectedPackageName : setSelectedCourseName;
             const eventOptions = selectedCrewName
                 ? getSelectedCrewTrainingItems(isPackageSection ? 'training_package' : 'course', selectedGroupName)
                 : [];
@@ -1823,7 +1840,6 @@ const DfpSidePanelTimeline: React.FC<{
                 };
             });
             const selectedCode = activeAssistSection === 'course' ? selectedCourseEventCode : selectedPackageEventCode;
-            const setSelectedCode = activeAssistSection === 'course' ? setSelectedCourseEventCode : setSelectedPackageEventCode;
             const assignmentLabel = assignedOptions.find(option => option.key === selectedGroupName)?.label || selectedGroupName;
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
@@ -1836,7 +1852,15 @@ const DfpSidePanelTimeline: React.FC<{
                         {isPackageSection ? 'Package' : 'Course'}
                         <select
                             value={selectedGroupName}
-                            onChange={event => setSelectedGroupName(event.target.value)}
+                            onChange={event => {
+                                if (isPackageSection) {
+                                    setSelectedPackageName(event.target.value);
+                                    setSelectedPackageEventCode('');
+                                } else {
+                                    setSelectedCourseName(event.target.value);
+                                    setSelectedCourseEventCode('');
+                                }
+                            }}
                             className={fieldClass}
                             disabled={!selectedCrewName || assignedOptions.length === 0}
                         >
@@ -1864,8 +1888,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         name={`neo-assist-${activeAssistSection}`}
                                         checked={selectedCode === item.code}
                                         onChange={() => {
-                                            setSelectedCode(item.code);
-                                            setSelectedEventCode(item.code);
+                                            selectAssistTrainingEvent(activeAssistSection, item.code);
                                         }}
                                     />
                                     <span className={isComplete ? 'text-emerald-300' : 'text-slate-300'}>{isComplete ? '✓' : '□'}</span>
