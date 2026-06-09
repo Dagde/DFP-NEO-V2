@@ -62970,6 +62970,7 @@ const DfpSidePanelTimeline = ({
   const timelineMinGap = 5 / 60;
   const chartRef = reactExports.useRef(null);
   const scrollRef = reactExports.useRef(null);
+  const assistDragPreviewRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
   const [activeAssistSection, setActiveAssistSection] = reactExports.useState("details");
   const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
@@ -63237,6 +63238,16 @@ const DfpSidePanelTimeline = ({
     selectedSyllabusItem,
     selectedTaskProfile
   ]);
+  const positionAssistDragPreview = (clientX, clientY) => {
+    const preview = assistDragPreviewRef.current;
+    if (!preview || !clientX || !clientY) return;
+    preview.style.left = `${clientX}px`;
+    preview.style.top = `${clientY}px`;
+  };
+  const clearAssistDragPreview = () => {
+    assistDragPreviewRef.current?.remove();
+    assistDragPreviewRef.current = null;
+  };
   const createAssistDragImage = () => {
     const pixelsPerHour = 200;
     const rowHeight = 32;
@@ -63245,12 +63256,14 @@ const DfpSidePanelTimeline = ({
     const fontSize = tileWidth < 120 ? 7 : tileWidth < 160 ? 9 : tileWidth < 240 ? 10 : 11;
     const ghost = document.createElement("div");
     ghost.style.position = "fixed";
-    ghost.style.left = "-10000px";
-    ghost.style.top = "-10000px";
+    ghost.style.left = "0px";
+    ghost.style.top = "0px";
     ghost.style.width = `${tileWidth}px`;
     ghost.style.height = `${tileHeight}px`;
     ghost.style.pointerEvents = "none";
     ghost.style.zIndex = "99999";
+    ghost.style.opacity = "0.92";
+    ghost.style.transform = "translate(0, 0)";
     const tile = document.createElement("div");
     tile.style.position = "relative";
     tile.style.width = "100%";
@@ -63331,12 +63344,35 @@ const DfpSidePanelTimeline = ({
     event.dataTransfer.effectAllowed = "copy";
     event.dataTransfer.setData("application/neo-assist-event", JSON.stringify(assistDraftEvent));
     event.dataTransfer.setData("text/plain", assistEventLabel);
-    const dragImage = createAssistDragImage();
-    event.dataTransfer.setDragImage(dragImage, 0, 0);
-    window.setTimeout(() => {
-      dragImage.remove();
-    }, 0);
+    clearAssistDragPreview();
+    const dragPreview = createAssistDragImage();
+    assistDragPreviewRef.current = dragPreview;
+    positionAssistDragPreview(event.clientX, event.clientY);
+    const transparentImage = document.createElement("canvas");
+    transparentImage.width = 1;
+    transparentImage.height = 1;
+    event.dataTransfer.setDragImage(transparentImage, 0, 0);
   };
+  const updateAssistTileDrag = (event) => {
+    positionAssistDragPreview(event.clientX, event.clientY);
+  };
+  reactExports.useEffect(() => {
+    const handleWindowDragOver = (event) => {
+      positionAssistDragPreview(event.clientX, event.clientY);
+    };
+    const handleWindowDragDone = () => {
+      clearAssistDragPreview();
+    };
+    window.addEventListener("dragover", handleWindowDragOver);
+    window.addEventListener("drop", handleWindowDragDone);
+    window.addEventListener("dragend", handleWindowDragDone);
+    return () => {
+      window.removeEventListener("dragover", handleWindowDragOver);
+      window.removeEventListener("drop", handleWindowDragDone);
+      window.removeEventListener("dragend", handleWindowDragDone);
+      clearAssistDragPreview();
+    };
+  }, []);
   const normalizeHour = (time) => {
     let value = Number(time) || 0;
     if (value < timelineStartHour) value += 24;
@@ -64583,6 +64619,9 @@ const DfpSidePanelTimeline = ({
       {
         draggable: true,
         onDragStart: startAssistTileDrag,
+        onDrag: updateAssistTileDrag,
+        onDragOver: updateAssistTileDrag,
+        onDragEnd: clearAssistDragPreview,
         className: "w-full max-w-[360px] cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing",
         title: "Drag this tile onto the DFP to create a copy",
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
