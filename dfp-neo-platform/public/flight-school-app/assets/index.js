@@ -63169,6 +63169,12 @@ const DfpSidePanelTimeline = ({
     if (selectedResourceKind === "cpt") return `CPT ${number}`;
     return `PC-21 ${number}`;
   }, [selectedResourceKind, selectedResourceNumber]);
+  const assistFormationSize = selectedResourceKind === "flight" ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1)) : 1;
+  const getAssistFormationCallsignBase = () => {
+    const raw = (assistCallsign.trim() || "CSIGN").toUpperCase();
+    return raw.replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, "") || "CSIGN";
+  };
+  const getAssistFormationCallsign = (position) => assistFormationSize > 1 ? `${getAssistFormationCallsignBase()}${position}` : assistCallsign.trim() || void 0;
   const assistEventLabel = reactExports.useMemo(() => {
     if (activeAssistSection === "taskings" && selectedTaskProfile) {
       const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || "";
@@ -63209,9 +63215,12 @@ const DfpSidePanelTimeline = ({
     locationType: assistOrigin !== assistDestination ? "Land Away" : "Local",
     origin: assistOrigin,
     destination: assistDestination,
-    callsign: assistCallsign.trim() || void 0,
+    callsign: getAssistFormationCallsign(1),
     aircraftNumber: selectedResourceKind === "flight" ? selectedAircraftNumber.trim() || "TBA" : void 0,
     area: selectedAssignedArea && selectedAssignedArea !== "TBA" ? selectedAssignedArea : void 0,
+    formationType: assistFormationSize > 1 ? "NEO Assist Formation" : void 0,
+    formationPosition: assistFormationSize > 1 ? 1 : void 0,
+    formationSize: assistFormationSize > 1 ? assistFormationSize : void 0,
     aircraftConfigId: assistConfigId,
     acceptableAircraftConfigs: assistConfigId ? [assistConfigId] : void 0,
     preStart: selectedSyllabusItem ? Math.max(0, assistStartTime - (selectedSyllabusItem.preFlightTime || 0) / 60) : void 0,
@@ -63229,6 +63238,7 @@ const DfpSidePanelTimeline = ({
     assistResourceId,
     assistStartTime,
     assistTaskDate,
+    assistFormationSize,
     date,
     selectedCurrencyName,
     selectedCrewName,
@@ -63253,90 +63263,99 @@ const DfpSidePanelTimeline = ({
     const rowHeight = 32;
     const tileWidth = Math.max(48, assistDuration * pixelsPerHour * scheduleZoomLevel);
     const tileHeight = rowHeight - 4;
+    const tileGap = 4;
+    const previewCount = Math.max(1, assistFormationSize);
     const fontSize = tileWidth < 120 ? 7 : tileWidth < 160 ? 9 : tileWidth < 240 ? 10 : 11;
     const ghost = document.createElement("div");
     ghost.style.position = "fixed";
     ghost.style.left = "0px";
     ghost.style.top = "0px";
     ghost.style.width = `${tileWidth}px`;
-    ghost.style.height = `${tileHeight}px`;
+    ghost.style.height = `${tileHeight * previewCount + tileGap * (previewCount - 1)}px`;
     ghost.style.pointerEvents = "none";
     ghost.style.zIndex = "99999";
     ghost.style.opacity = "0.92";
     ghost.style.transform = "translate(0, 0)";
-    const tile = document.createElement("div");
-    tile.style.position = "relative";
-    tile.style.width = "100%";
-    tile.style.height = "100%";
-    tile.style.boxSizing = "border-box";
-    tile.style.overflow = "hidden";
-    tile.style.borderRadius = "3px";
-    tile.style.border = "1px solid rgba(255,255,255,0.14)";
-    tile.style.background = assistDraftEvent.color || "#059669";
-    tile.style.color = "#fff";
-    tile.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    tile.style.fontWeight = "700";
-    tile.style.boxShadow = "inset 3px 0 0 rgba(163,230,53,0.72), 0 6px 16px rgba(0,0,0,0.28)";
-    const top = document.createElement("div");
-    top.style.position = "absolute";
-    top.style.left = "6px";
-    top.style.right = "6px";
-    top.style.top = "2px";
-    top.style.display = "grid";
-    top.style.gridTemplateColumns = "42px minmax(0,1fr) auto";
-    top.style.gap = "6px";
-    top.style.alignItems = "start";
-    top.style.fontSize = `${fontSize}px`;
-    top.style.lineHeight = "1.05";
-    const time = document.createElement("span");
-    time.textContent = formatTime2(assistStartTime);
-    time.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-    time.style.fontSize = `${Math.max(7, fontSize - 2)}px`;
-    time.style.color = "rgba(255,255,255,0.72)";
-    time.style.whiteSpace = "nowrap";
-    const name = document.createElement("span");
-    name.textContent = previewCrewName;
-    name.style.overflow = "hidden";
-    name.style.textOverflow = "ellipsis";
-    name.style.whiteSpace = "nowrap";
-    const eventLabel = document.createElement("span");
-    eventLabel.textContent = `[${assistDuration.toFixed(1)}] ${assistEventLabel}`;
-    eventLabel.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-    eventLabel.style.whiteSpace = "nowrap";
-    top.append(time, name, eventLabel);
-    const bottom = document.createElement("div");
-    bottom.style.position = "absolute";
-    bottom.style.left = "6px";
-    bottom.style.right = "6px";
-    bottom.style.bottom = "3px";
-    bottom.style.display = "grid";
-    bottom.style.gridTemplateColumns = "42px minmax(0,1fr) auto";
-    bottom.style.gap = "6px";
-    bottom.style.alignItems = "end";
-    bottom.style.fontSize = `${Math.max(7, fontSize - 1)}px`;
-    bottom.style.lineHeight = "1";
-    const aircraft = document.createElement("span");
-    aircraft.textContent = previewAircraftNumber;
-    aircraft.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-    aircraft.style.color = "rgba(255,255,255,0.82)";
-    const flightType = document.createElement("span");
-    flightType.textContent = assistDraftEvent.flightType.toUpperCase();
-    flightType.style.justifySelf = "start";
-    flightType.style.borderRadius = "3px";
-    flightType.style.background = "rgba(132,204,22,0.62)";
-    flightType.style.padding = "1px 4px";
-    flightType.style.color = "#f7fee7";
-    const areaCallsign = document.createElement("span");
-    areaCallsign.textContent = previewAreaCallsign;
-    areaCallsign.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-    areaCallsign.style.textAlign = "right";
-    areaCallsign.style.whiteSpace = "nowrap";
-    areaCallsign.style.overflow = "hidden";
-    areaCallsign.style.textOverflow = "ellipsis";
-    areaCallsign.style.color = "#ecfeff";
-    bottom.append(aircraft, flightType, areaCallsign);
-    tile.append(top, bottom);
-    ghost.appendChild(tile);
+    const buildTile = (position) => {
+      const tile = document.createElement("div");
+      tile.style.position = "relative";
+      tile.style.width = "100%";
+      tile.style.height = `${tileHeight}px`;
+      tile.style.marginBottom = position < previewCount ? `${tileGap}px` : "0";
+      tile.style.boxSizing = "border-box";
+      tile.style.overflow = "hidden";
+      tile.style.borderRadius = "3px";
+      tile.style.border = "1px solid rgba(255,255,255,0.14)";
+      tile.style.background = assistDraftEvent.color || "#059669";
+      tile.style.color = "#fff";
+      tile.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      tile.style.fontWeight = "700";
+      tile.style.boxShadow = "inset 3px 0 0 rgba(163,230,53,0.72), 0 6px 16px rgba(0,0,0,0.28)";
+      const top = document.createElement("div");
+      top.style.position = "absolute";
+      top.style.left = "6px";
+      top.style.right = "6px";
+      top.style.top = "2px";
+      top.style.display = "grid";
+      top.style.gridTemplateColumns = "42px minmax(0,1fr) auto";
+      top.style.gap = "6px";
+      top.style.alignItems = "start";
+      top.style.fontSize = `${fontSize}px`;
+      top.style.lineHeight = "1.05";
+      const time = document.createElement("span");
+      time.textContent = formatTime2(assistStartTime);
+      time.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      time.style.fontSize = `${Math.max(7, fontSize - 2)}px`;
+      time.style.color = "rgba(255,255,255,0.72)";
+      time.style.whiteSpace = "nowrap";
+      const name = document.createElement("span");
+      name.textContent = previewCrewName;
+      name.style.overflow = "hidden";
+      name.style.textOverflow = "ellipsis";
+      name.style.whiteSpace = "nowrap";
+      const eventLabel = document.createElement("span");
+      eventLabel.textContent = `[${assistDuration.toFixed(1)}] ${assistEventLabel}`;
+      eventLabel.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      eventLabel.style.whiteSpace = "nowrap";
+      top.append(time, name, eventLabel);
+      const bottom = document.createElement("div");
+      bottom.style.position = "absolute";
+      bottom.style.left = "6px";
+      bottom.style.right = "6px";
+      bottom.style.bottom = "3px";
+      bottom.style.display = "grid";
+      bottom.style.gridTemplateColumns = "42px minmax(0,1fr) auto";
+      bottom.style.gap = "6px";
+      bottom.style.alignItems = "end";
+      bottom.style.fontSize = `${Math.max(7, fontSize - 1)}px`;
+      bottom.style.lineHeight = "1";
+      const aircraft = document.createElement("span");
+      aircraft.textContent = previewAircraftNumber;
+      aircraft.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      aircraft.style.color = "rgba(255,255,255,0.82)";
+      const flightType = document.createElement("span");
+      flightType.textContent = assistDraftEvent.flightType.toUpperCase();
+      flightType.style.justifySelf = "start";
+      flightType.style.borderRadius = "3px";
+      flightType.style.background = "rgba(132,204,22,0.62)";
+      flightType.style.padding = "1px 4px";
+      flightType.style.color = "#f7fee7";
+      const areaCallsign = document.createElement("span");
+      const previewFormationCallsign = assistFormationSize > 1 ? getAssistFormationCallsign(position) : previewCallsign;
+      areaCallsign.textContent = `${selectedAssignedArea && selectedAssignedArea !== "TBA" ? `${selectedAssignedArea} ` : ""}${previewFormationCallsign || "CSIGN"}`;
+      areaCallsign.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      areaCallsign.style.textAlign = "right";
+      areaCallsign.style.whiteSpace = "nowrap";
+      areaCallsign.style.overflow = "hidden";
+      areaCallsign.style.textOverflow = "ellipsis";
+      areaCallsign.style.color = "#ecfeff";
+      bottom.append(aircraft, flightType, areaCallsign);
+      tile.append(top, bottom);
+      return tile;
+    };
+    for (let position = 1; position <= previewCount; position += 1) {
+      ghost.appendChild(buildTile(position));
+    }
     document.body.appendChild(ghost);
     return ghost;
   };
@@ -82545,44 +82564,66 @@ ${conflictLines.join("\n")}${moreText}`,
       }
     });
   };
-  const buildDroppedNeoAssistEvent = reactExports.useCallback((draft, placement, eventDate) => {
-    const resourceId = placement.resourceId || draft.resourceId;
+  const getFormationCallsignBase = (callsign) => {
+    const raw = String(callsign || "CSIGN").trim().toUpperCase();
+    return raw.replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, "") || "CSIGN";
+  };
+  const buildDroppedNeoAssistEvents = reactExports.useCallback((draft, placement, eventDate, resourcePool) => {
+    const firstResourceId = placement.resourceId || draft.resourceId;
     const startTime = placement.startTime;
-    const type = resourceId.startsWith("FTD") ? "ftd" : resourceId.startsWith("CPT") ? "cpt" : draft.type || "flight";
     const preOffset = typeof draft.preStart === "number" ? Math.max(0, draft.startTime - draft.preStart) : 0;
     const postOffset = typeof draft.postEnd === "number" ? Math.max(0, draft.postEnd - (draft.startTime + draft.duration)) : 0;
-    return {
-      ...draft,
-      id: v4(),
-      date: eventDate,
-      type,
-      startTime,
-      resourceId,
-      preStart: preOffset > 0 ? startTime - preOffset : void 0,
-      postEnd: postOffset > 0 ? startTime + draft.duration + postOffset : void 0,
-      aircraftNumber: resourceId.startsWith("PC-21") ? draft.aircraftNumber : void 0
-    };
+    const requestedFormationSize = Math.max(1, Math.floor(Number(draft.formationSize) || 1));
+    const firstResourceIndex = resourcePool.indexOf(firstResourceId);
+    const availableFormationResources = firstResourceIndex >= 0 ? resourcePool.slice(firstResourceIndex).filter((resourceId) => resourceId.startsWith("PC-21")) : [firstResourceId].filter((resourceId) => resourceId.startsWith("PC-21"));
+    const isFlightFormation = requestedFormationSize > 1 && firstResourceId.startsWith("PC-21");
+    const formationSize = isFlightFormation ? Math.min(requestedFormationSize, Math.max(1, availableFormationResources.length)) : 1;
+    const formationId = formationSize > 1 ? v4() : void 0;
+    const callsignBase = getFormationCallsignBase(draft.callsign);
+    return Array.from({ length: formationSize }, (_, index) => {
+      const resourceId = formationSize > 1 ? availableFormationResources[index] || firstResourceId : firstResourceId;
+      const type = resourceId.startsWith("FTD") ? "ftd" : resourceId.startsWith("CPT") ? "cpt" : draft.type || "flight";
+      return {
+        ...draft,
+        id: v4(),
+        date: eventDate,
+        type,
+        startTime,
+        resourceId,
+        preStart: preOffset > 0 ? startTime - preOffset : void 0,
+        postEnd: postOffset > 0 ? startTime + draft.duration + postOffset : void 0,
+        aircraftNumber: resourceId.startsWith("PC-21") ? draft.aircraftNumber : void 0,
+        callsign: formationSize > 1 ? `${callsignBase}${index + 1}` : draft.callsign,
+        formationId,
+        formationType: formationSize > 1 ? "NEO Assist Formation" : draft.formationType,
+        formationPosition: formationSize > 1 ? index + 1 : draft.formationPosition,
+        formationSize: formationSize > 1 ? formationSize : draft.formationSize
+      };
+    });
   }, []);
   const handleProgramScheduleExternalEventDrop = reactExports.useCallback((draft, placement) => {
     if (isPastDfpDate(date)) {
       denyPastDfpEdit("add tiles");
       return;
     }
-    const droppedEvent = buildDroppedNeoAssistEvent(draft, placement, date);
-    const nextSchedule = [...publishedSchedules[date] || [], droppedEvent];
+    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, date, buildResources);
+    const nextSchedule = [...publishedSchedules[date] || [], ...droppedEvents];
     setPublishedSchedules((prev) => {
       const currentSchedule = prev[date] || [];
-      return { ...prev, [date]: [...currentSchedule, droppedEvent] };
+      return { ...prev, [date]: [...currentSchedule, ...droppedEvents] };
     });
     persistScheduleForDate(date, nextSchedule);
-    logAudit("Program Schedule", "Create", "Added NEO Assist tile", `${droppedEvent.flightNumber} at ${placement.resourceId}`);
-  }, [buildDroppedNeoAssistEvent, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
+    logAudit("Program Schedule", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
+  }, [buildDroppedNeoAssistEvents, buildResources, date, denyPastDfpEdit, isPastDfpDate, persistScheduleForDate, publishedSchedules]);
   const handleNextDayExternalEventDrop = reactExports.useCallback((draft, placement) => {
-    const droppedEvent = buildDroppedNeoAssistEvent(draft, placement, buildDfpDate);
-    const { date: _date, ...nextDayEvent } = droppedEvent;
-    setNextDayBuildEvents((prev) => [...prev, nextDayEvent]);
-    logAudit("Next Day Build", "Create", "Added NEO Assist tile", `${droppedEvent.flightNumber} at ${placement.resourceId}`);
-  }, [buildDroppedNeoAssistEvent, buildDfpDate]);
+    const droppedEvents = buildDroppedNeoAssistEvents(draft, placement, buildDfpDate, buildResources);
+    const nextDayEvents = droppedEvents.map((droppedEvent) => {
+      const { date: _date, ...nextDayEvent } = droppedEvent;
+      return nextDayEvent;
+    });
+    setNextDayBuildEvents((prev) => [...prev, ...nextDayEvents]);
+    logAudit("Next Day Build", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
+  }, [buildDroppedNeoAssistEvents, buildDfpDate, buildResources]);
   const syllabusForModal = reactExports.useMemo(() => {
     return syllabusDetails.map((item) => item.id);
   }, [syllabusDetails]);

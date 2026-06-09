@@ -245,6 +245,7 @@ export interface ScheduleEvent {
   formationId?: string;
   formationType?: string;
   formationPosition?: number;
+  formationSize?: number;
   callsign?: string;
   aircraftNumber?: string;
   attendees?: string[];
