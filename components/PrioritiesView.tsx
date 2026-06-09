@@ -98,6 +98,9 @@ const ConfigCapacityInfoHint: React.FC<{ definition: AircraftConfigurationDefini
   );
 };
 
+const TASKING_REQUEST_STORAGE_KEY = 'neoTaskingRequests';
+const TASKING_REQUESTS_UPDATED_EVENT = 'neoTaskingRequestsUpdated';
+
 const AircraftConfigSelect: React.FC<{
   value?: string;
   definitions: AircraftConfigurationDefinition[];
@@ -153,6 +156,7 @@ interface TaskingRequest {
   isMandatory: boolean;
   saved: boolean;
   submitted: boolean;
+  ignored?: boolean;
 }
 
 type TimeOption = {
@@ -438,6 +442,7 @@ interface TaskingRequestTableProps {
   onRemoveTaskingRequest: (id: string) => void;
   onSaveTaskingRequest: (id: string) => void;
   onSubmitTaskingRequest: (id: string) => void;
+  onIgnoreTaskingRequest: (id: string) => void;
 }
 
 const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
@@ -452,6 +457,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   onRemoveTaskingRequest,
   onSaveTaskingRequest,
   onSubmitTaskingRequest,
+  onIgnoreTaskingRequest,
 }) => (
   <div className="overflow-x-auto pb-24">
     <table className="min-w-full text-sm">
@@ -573,21 +579,40 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 </label>
               </td>
               <td className="py-1 px-2 w-24">
-                <button
-                  onClick={() => request.submitted || request.saved ? onSubmitTaskingRequest(request.id) : onSaveTaskingRequest(request.id)}
-                  disabled={!canSubmit}
-                  className={`px-2 py-1 text-xs rounded font-semibold ${
-                    canSubmit
-                      ? request.submitted
-                        ? 'bg-sky-600 hover:bg-sky-700 text-white'
-                        : request.saved
-                          ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                          : 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  {request.submitted ? 'Re-submit' : request.saved ? 'Schedule' : 'Save'}
-                </button>
+                {!request.saved ? (
+                  <button
+                    onClick={() => onSaveTaskingRequest(request.id)}
+                    disabled={!canSubmit}
+                    className={`px-2 py-1 text-xs rounded font-semibold ${
+                      canSubmit
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Save
+                  </button>
+                ) : (
+                  <span className="flex flex-col gap-1 text-[11px]">
+                    <label className="inline-flex items-center gap-1 text-emerald-300">
+                      <input
+                        type="radio"
+                        name={`tasking-schedule-${request.id}`}
+                        checked={request.submitted && !request.ignored}
+                        onChange={() => onSubmitTaskingRequest(request.id)}
+                      />
+                      Schedule
+                    </label>
+                    <label className="inline-flex items-center gap-1 text-rose-300">
+                      <input
+                        type="radio"
+                        name={`tasking-schedule-${request.id}`}
+                        checked={request.ignored || !request.submitted}
+                        onChange={() => onIgnoreTaskingRequest(request.id)}
+                      />
+                      Ignore
+                    </label>
+                  </span>
+                )}
               </td>
               <td className="py-1 px-1 text-right">
                 <button onClick={() => onRemoveTaskingRequest(request.id)} className="p-1 text-gray-400 hover:text-red-400" aria-label="Remove tasking request">
@@ -1065,32 +1090,34 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = useState(false);
   const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
   const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
-  const taskingRequestStorageKey = 'neoTaskingRequests';
   const [taskingAirfieldCatalogue, setTaskingAirfieldCatalogue] = useState<TaskingAirfieldCatalogueEntry[]>([]);
-  const [taskingRequests, setTaskingRequests] = useState<TaskingRequest[]>(() => {
+  const normaliseTaskingRequest = (request: any): TaskingRequest => ({
+    id: request.id || uuidv4(),
+    tasking: request.tasking || '',
+    date: request.date || buildDfpDate,
+    takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
+    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
+    flightType: request.flightType === 'Solo' ? 'Solo' : 'Dual',
+    depPoint: request.depPoint || school,
+    arrivalPoint: request.arrivalPoint || school,
+    aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || '1'), 10) || 1),
+    aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+    isMandatory: request.isMandatory !== false,
+    saved: Boolean(request.saved || request.submitted),
+    submitted: Boolean(request.submitted),
+    ignored: Boolean(request.ignored),
+  });
+  const loadStoredTaskingRequests = (): TaskingRequest[] => {
     try {
-      const stored = localStorage.getItem(taskingRequestStorageKey);
+      const stored = localStorage.getItem(TASKING_REQUEST_STORAGE_KEY);
       const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed)
-        ? parsed.map((request: any) => ({
-            id: request.id || uuidv4(),
-            tasking: request.tasking || '',
-            date: request.date || buildDfpDate,
-            takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
-            duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
-            flightType: request.flightType === 'Solo' ? 'Solo' : 'Dual',
-            depPoint: request.depPoint || school,
-            arrivalPoint: request.arrivalPoint || school,
-            aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || '1'), 10) || 1),
-            aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
-            isMandatory: request.isMandatory !== false,
-            saved: Boolean(request.saved || request.submitted),
-            submitted: Boolean(request.submitted),
-          }))
-        : [];
+      return Array.isArray(parsed) ? parsed.map(normaliseTaskingRequest) : [];
     } catch {
       return [];
     }
+  };
+  const [taskingRequests, setTaskingRequests] = useState<TaskingRequest[]>(() => {
+    return loadStoredTaskingRequests();
   });
   const [currencyDraftEvents, setCurrencyDraftEvents] = useState<Array<{
     id: string;
@@ -1170,8 +1197,24 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   }, [currencyDraftEvents]);
 
   useEffect(() => {
-    localStorage.setItem(taskingRequestStorageKey, JSON.stringify(taskingRequests));
+    localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(taskingRequests));
+    window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
   }, [taskingRequests]);
+
+  useEffect(() => {
+    const syncTaskingRequests = () => {
+      const storedRequests = loadStoredTaskingRequests();
+      setTaskingRequests(prev => (
+        JSON.stringify(prev) === JSON.stringify(storedRequests) ? prev : storedRequests
+      ));
+    };
+    window.addEventListener(TASKING_REQUESTS_UPDATED_EVENT, syncTaskingRequests);
+    window.addEventListener('storage', syncTaskingRequests);
+    return () => {
+      window.removeEventListener(TASKING_REQUESTS_UPDATED_EVENT, syncTaskingRequests);
+      window.removeEventListener('storage', syncTaskingRequests);
+    };
+  }, [buildDfpDate, flyingStartTime, school]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1222,6 +1265,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       isMandatory: true,
       saved: false,
       submitted: false,
+      ignored: false,
     };
     setTaskingRequests(prev => [...prev, nextRequest]);
     logAudit('Priorities', 'Add', 'Added tasking request row', `Tasking request ${nextRequest.id}`);
@@ -1256,6 +1300,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       .forEach(event => onDeletePriorityEvent(event.id));
   }, [highestPriorityEvents, taskingRequests, onDeletePriorityEvent]);
 
+  useEffect(() => {
+    setTaskingRequests(prev => prev.map(request => (
+      request.submitted && !isTaskingRequestInHighestPriority(request.id)
+        ? { ...request, submitted: false, ignored: true }
+        : request
+    )));
+  }, [highestPriorityEvents]);
+
   const updateTaskingRequest = (id: string, updates: Partial<TaskingRequest>) => {
     if (updates.submitted === false) {
       removeTaskingPriorityEvents(id);
@@ -1265,8 +1317,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         ? {
             ...request,
             ...updates,
-            saved: updates.saved ?? (updates.submitted === false ? false : request.saved),
+            saved: updates.saved ?? request.saved,
             submitted: updates.submitted ?? request.submitted,
+            ignored: updates.ignored ?? request.ignored,
           }
         : request
     )));
@@ -1339,7 +1392,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const saveTaskingRequest = (id: string) => {
     const request = taskingRequests.find(item => item.id === id);
     if (!request) return;
-    updateTaskingRequest(id, { saved: true, submitted: false });
+    updateTaskingRequest(id, { saved: true, submitted: false, ignored: false });
     logAudit('Priorities', 'Save', 'Saved tasking request', `${request.tasking || 'Untitled tasking'} on ${request.date || 'any build date'}`);
   };
 
@@ -1352,8 +1405,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     }
     const priorityEvents = buildTaskingPriorityEvents(request);
     onAddPriorityEvents(priorityEvents);
-    updateTaskingRequest(id, { saved: true, submitted: true });
+    updateTaskingRequest(id, { saved: true, submitted: true, ignored: false });
     logAudit('Priorities', 'Submit', 'Submitted tasking request', `${request.tasking || 'Untitled tasking'} on ${request.date || 'any build date'} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? '' : 's'})`);
+  };
+
+  const ignoreTaskingRequest = (id: string) => {
+    const request = taskingRequests.find(item => item.id === id);
+    if (!request) return;
+    removeTaskingPriorityEvents(id);
+    updateTaskingRequest(id, { saved: true, submitted: false, ignored: true });
+    logAudit('Priorities', 'Ignore', 'Ignored tasking request', `${request.tasking || 'Untitled tasking'} on ${request.date || 'any build date'}`);
   };
 
   useEffect(() => {
@@ -2462,6 +2523,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               onRemoveTaskingRequest={removeTaskingRequest}
               onSaveTaskingRequest={saveTaskingRequest}
               onSubmitTaskingRequest={submitTaskingRequest}
+              onIgnoreTaskingRequest={ignoreTaskingRequest}
             />
         </div>
 

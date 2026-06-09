@@ -233,6 +233,9 @@ type NeoAssistDropPlacement = {
     resourceId: string;
 };
 
+const TASKING_REQUEST_STORAGE_KEY = 'neoTaskingRequests';
+const TASKING_REQUESTS_UPDATED_EVENT = 'neoTaskingRequestsUpdated';
+
 const DfpSidePanelTimeline: React.FC<{
     flyingStartTime: number;
     flyingEndTime: number;
@@ -372,6 +375,31 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistTaskAircraftCount, setAssistTaskAircraftCount] = useState(1);
     const [assistTaskConfigId, setAssistTaskConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
     const [assistTaskMandatory, setAssistTaskMandatory] = useState(true);
+    const normaliseAssistTaskRequest = (request: any) => ({
+        id: request.id || uuidv4(),
+        tasking: request.tasking || '',
+        date: request.date || date,
+        takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
+        duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
+        flightType: request.flightType === 'Solo' ? 'Solo' as const : 'Dual' as const,
+        depPoint: request.depPoint || locationCode,
+        arrivalPoint: request.arrivalPoint || locationCode,
+        aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || '1'), 10) || 1),
+        aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+        isMandatory: request.isMandatory !== false,
+        saved: Boolean(request.saved || request.submitted),
+        submitted: Boolean(request.submitted),
+        ignored: Boolean(request.ignored),
+    });
+    const loadStoredAssistTaskRequests = () => {
+        try {
+            const stored = window.localStorage.getItem(TASKING_REQUEST_STORAGE_KEY);
+            const parsed = stored ? JSON.parse(stored) : [];
+            return Array.isArray(parsed) ? parsed.map(normaliseAssistTaskRequest) : [];
+        } catch {
+            return [];
+        }
+    };
     const [assistTaskRequests, setAssistTaskRequests] = useState<Array<{
         id: string;
         tasking: string;
@@ -387,7 +415,7 @@ const DfpSidePanelTimeline: React.FC<{
         saved?: boolean;
         submitted?: boolean;
         ignored?: boolean;
-    }>>([]);
+    }>>(() => loadStoredAssistTaskRequests());
     const [assistCurrencyDate, setAssistCurrencyDate] = useState(date);
     const [assistCurrencyTakeoff, setAssistCurrencyTakeoff] = useState(flyingStartTime);
     const [assistCurrencyDuration, setAssistCurrencyDuration] = useState(1.2);
@@ -457,6 +485,26 @@ const DfpSidePanelTimeline: React.FC<{
         setAssistCurrencyDepPoint(previous => previous || locationCode);
         setAssistCurrencyArrivalPoint(previous => previous || locationCode);
     }, [locationCode]);
+
+    useEffect(() => {
+        window.localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(assistTaskRequests));
+        window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
+    }, [assistTaskRequests]);
+
+    useEffect(() => {
+        const syncTaskingRequests = () => {
+            const storedRequests = loadStoredAssistTaskRequests();
+            setAssistTaskRequests(prev => (
+                JSON.stringify(prev) === JSON.stringify(storedRequests) ? prev : storedRequests
+            ));
+        };
+        window.addEventListener(TASKING_REQUESTS_UPDATED_EVENT, syncTaskingRequests);
+        window.addEventListener('storage', syncTaskingRequests);
+        return () => {
+            window.removeEventListener(TASKING_REQUESTS_UPDATED_EVENT, syncTaskingRequests);
+            window.removeEventListener('storage', syncTaskingRequests);
+        };
+    }, [date, flyingStartTime, locationCode]);
 
     const selectedCrewRecord = useMemo(() => (
         instructors.find(person => person.name === selectedCrewName) || null
@@ -939,7 +987,7 @@ const DfpSidePanelTimeline: React.FC<{
         const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
         const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
         return Array.from({ length: aircraftCount }, (_, index): ScheduleEvent => ({
-            id: `neo-assist-tasking-${request.id}-${index + 1}`,
+            id: `tasking-${request.id}-${index + 1}`,
             date: request.date,
             type: 'flight',
             instructor: '',
@@ -1005,9 +1053,17 @@ const DfpSidePanelTimeline: React.FC<{
     const isAssistTaskRequestInHighestPriority = (id: string) => (
         highestPriorityEvents.some(event => (
             event.taskingRequestId === id ||
+            String(event.id || '').startsWith(`tasking-${id}-`) ||
             String(event.id || '').startsWith(`neo-assist-tasking-${id}-`)
         ))
     );
+    useEffect(() => {
+        setAssistTaskRequests(prev => prev.map(request => (
+            request.submitted && !isAssistTaskRequestInHighestPriority(request.id)
+                ? { ...request, submitted: false, ignored: true }
+                : request
+        )));
+    }, [highestPriorityEvents]);
     const saveAssistTaskRequest = (id: string) => {
         setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: false, ignored: false } : item));
     };
@@ -1076,8 +1132,14 @@ const DfpSidePanelTimeline: React.FC<{
     };
     const ignoreAssistTaskRequest = (id: string) => {
         const request = assistTaskRequests.find(item => item.id === id);
-        if (request?.submitted) ignorePriorityEvents(buildTaskRequestEvents(request));
-        setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: false, ignored: true } : item));
+        ignorePriorityEvents(
+            highestPriorityEvents.filter(event => (
+                event.taskingRequestId === id ||
+                String(event.id || '').startsWith(`tasking-${id}-`) ||
+                String(event.id || '').startsWith(`neo-assist-tasking-${id}-`)
+            ))
+        );
+        setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: false, ignored: true } : item));
     };
     const ignoreAssistCurrencyRequest = (id: string) => {
         const request = assistCurrencyRequests.find(item => item.id === id);
@@ -1453,29 +1515,45 @@ const DfpSidePanelTimeline: React.FC<{
                                     <span className="font-semibold text-slate-100">{row.tasking}</span>
                                     <span className="ml-2 text-slate-400">{row.date || date} {formatTime(row.takeoff)}</span>
                                 </span>
-                                <span className="flex items-center gap-1 text-[9px]">
-                                    {row.source === 'local' && (
+                                <span className="flex items-center gap-2 text-[9px]">
+                                    {row.source === 'local' && !row.saved ? (
                                         <button
                                             type="button"
-                                            onClick={() => row.scheduled || row.saved ? submitAssistTaskRequest(row.id) : saveAssistTaskRequest(row.id)}
-                                            className={`rounded px-2 py-1 font-semibold text-white ${row.scheduled ? 'bg-sky-600 hover:bg-sky-700' : row.saved ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-600 hover:bg-green-700'}`}
+                                            onClick={() => saveAssistTaskRequest(row.id)}
+                                            className="rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700"
                                         >
-                                            {row.scheduled ? 'Re-submit' : row.saved ? 'Schedule' : 'Save'}
+                                            Save
                                         </button>
+                                    ) : (
+                                        <>
+                                            <label className="inline-flex items-center gap-1 text-emerald-200">
+                                                <input
+                                                    type="radio"
+                                                    name={`neo-assist-task-schedule-${row.source}-${row.id}`}
+                                                    checked={row.scheduled && !row.ignored}
+                                                    onChange={() => {
+                                                        if (row.source === 'local') submitAssistTaskRequest(row.id);
+                                                    }}
+                                                />
+                                                Schedule
+                                            </label>
+                                            <label className="inline-flex items-center gap-1 text-rose-200">
+                                                <input
+                                                    type="radio"
+                                                    name={`neo-assist-task-schedule-${row.source}-${row.id}`}
+                                                    checked={row.ignored || !row.scheduled}
+                                                    onChange={() => {
+                                                        if (row.source === 'local') ignoreAssistTaskRequest(row.id);
+                                                        else {
+                                                            const remote = highestPriorityTaskRows.find(item => item.id === row.id);
+                                                            if (remote) ignorePriorityEvents(remote.events);
+                                                        }
+                                                    }}
+                                                />
+                                                Ignore
+                                            </label>
+                                        </>
                                     )}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (row.source === 'local') ignoreAssistTaskRequest(row.id);
-                                            else {
-                                                const remote = highestPriorityTaskRows.find(item => item.id === row.id);
-                                                if (remote) ignorePriorityEvents(remote.events);
-                                            }
-                                        }}
-                                        className="rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100"
-                                    >
-                                        Ignore
-                                    </button>
                                 </span>
                             </div>
                         ))}

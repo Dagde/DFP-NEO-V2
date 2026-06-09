@@ -23890,6 +23890,8 @@ const ConfigCapacityInfoHint = ({ definition }) => {
     }
   );
 };
+const TASKING_REQUEST_STORAGE_KEY$1 = "neoTaskingRequests";
+const TASKING_REQUESTS_UPDATED_EVENT$1 = "neoTaskingRequestsUpdated";
 const AircraftConfigSelect = ({ value, definitions, disabled = false, includeAny = false, onChange }) => {
   const selectedValue = value || BASE_AIRCRAFT_CONFIG.id;
   const selectedDefinition = definitions.find((definition) => definition.id === selectedValue);
@@ -24097,7 +24099,8 @@ const TaskingRequestTable = ({
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
   onSaveTaskingRequest,
-  onSubmitTaskingRequest
+  onSubmitTaskingRequest,
+  onIgnoreTaskingRequest
 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-x-auto pb-24", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -24218,15 +24221,40 @@ const TaskingRequestTable = ({
             ),
             "Yes"
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: !request.saved ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
-              onClick: () => request.submitted || request.saved ? onSubmitTaskingRequest(request.id) : onSaveTaskingRequest(request.id),
+              onClick: () => onSaveTaskingRequest(request.id),
               disabled: !canSubmit,
-              className: `px-2 py-1 text-xs rounded font-semibold ${canSubmit ? request.submitted ? "bg-sky-600 hover:bg-sky-700 text-white" : request.saved ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
-              children: request.submitted ? "Re-submit" : request.saved ? "Schedule" : "Save"
+              className: `px-2 py-1 text-xs rounded font-semibold ${canSubmit ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
+              children: "Save"
             }
-          ) }),
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col gap-1 text-[11px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-emerald-300", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  name: `tasking-schedule-${request.id}`,
+                  checked: request.submitted && !request.ignored,
+                  onChange: () => onSubmitTaskingRequest(request.id)
+                }
+              ),
+              "Schedule"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-rose-300", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  name: `tasking-schedule-${request.id}`,
+                  checked: request.ignored || !request.submitted,
+                  onChange: () => onIgnoreTaskingRequest(request.id)
+                }
+              ),
+              "Ignore"
+            ] })
+          ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-1 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveTaskingRequest(request.id), className: "p-1 text-gray-400 hover:text-red-400", "aria-label": "Remove tasking request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) }) })
         ] }, request.id);
       })
@@ -24626,30 +24654,34 @@ const PrioritiesView = ({
   const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = reactExports.useState(false);
   const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const currencyDraftStorageKey = "neoCurrencyDraftEvents";
-  const taskingRequestStorageKey = "neoTaskingRequests";
   const [taskingAirfieldCatalogue, setTaskingAirfieldCatalogue] = reactExports.useState([]);
-  const [taskingRequests, setTaskingRequests] = reactExports.useState(() => {
+  const normaliseTaskingRequest = (request) => ({
+    id: request.id || v4(),
+    tasking: request.tasking || "",
+    date: request.date || buildDfpDate,
+    takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
+    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
+    flightType: request.flightType === "Solo" ? "Solo" : "Dual",
+    depPoint: request.depPoint || school,
+    arrivalPoint: request.arrivalPoint || school,
+    aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || "1"), 10) || 1),
+    aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+    isMandatory: request.isMandatory !== false,
+    saved: Boolean(request.saved || request.submitted),
+    submitted: Boolean(request.submitted),
+    ignored: Boolean(request.ignored)
+  });
+  const loadStoredTaskingRequests = () => {
     try {
-      const stored = localStorage.getItem(taskingRequestStorageKey);
+      const stored = localStorage.getItem(TASKING_REQUEST_STORAGE_KEY$1);
       const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? parsed.map((request) => ({
-        id: request.id || v4(),
-        tasking: request.tasking || "",
-        date: request.date || buildDfpDate,
-        takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
-        duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
-        flightType: request.flightType === "Solo" ? "Solo" : "Dual",
-        depPoint: request.depPoint || school,
-        arrivalPoint: request.arrivalPoint || school,
-        aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || "1"), 10) || 1),
-        aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
-        isMandatory: request.isMandatory !== false,
-        saved: Boolean(request.saved || request.submitted),
-        submitted: Boolean(request.submitted)
-      })) : [];
+      return Array.isArray(parsed) ? parsed.map(normaliseTaskingRequest) : [];
     } catch {
       return [];
     }
+  };
+  const [taskingRequests, setTaskingRequests] = reactExports.useState(() => {
+    return loadStoredTaskingRequests();
   });
   const [currencyDraftEvents, setCurrencyDraftEvents] = reactExports.useState(() => {
     try {
@@ -24695,8 +24727,21 @@ const PrioritiesView = ({
     localStorage.setItem(currencyDraftStorageKey, JSON.stringify(currencyDraftEvents));
   }, [currencyDraftEvents]);
   reactExports.useEffect(() => {
-    localStorage.setItem(taskingRequestStorageKey, JSON.stringify(taskingRequests));
+    localStorage.setItem(TASKING_REQUEST_STORAGE_KEY$1, JSON.stringify(taskingRequests));
+    window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT$1));
   }, [taskingRequests]);
+  reactExports.useEffect(() => {
+    const syncTaskingRequests = () => {
+      const storedRequests = loadStoredTaskingRequests();
+      setTaskingRequests((prev) => JSON.stringify(prev) === JSON.stringify(storedRequests) ? prev : storedRequests);
+    };
+    window.addEventListener(TASKING_REQUESTS_UPDATED_EVENT$1, syncTaskingRequests);
+    window.addEventListener("storage", syncTaskingRequests);
+    return () => {
+      window.removeEventListener(TASKING_REQUESTS_UPDATED_EVENT$1, syncTaskingRequests);
+      window.removeEventListener("storage", syncTaskingRequests);
+    };
+  }, [buildDfpDate, flyingStartTime, school]);
   reactExports.useEffect(() => {
     let cancelled = false;
     const loadTaskingAirfieldCatalogue = async () => {
@@ -24738,7 +24783,8 @@ const PrioritiesView = ({
       aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
       isMandatory: true,
       saved: false,
-      submitted: false
+      submitted: false,
+      ignored: false
     };
     setTaskingRequests((prev) => [...prev, nextRequest]);
     logAudit("Priorities", "Add", "Added tasking request row", `Tasking request ${nextRequest.id}`);
@@ -24754,6 +24800,9 @@ const PrioritiesView = ({
     );
     highestPriorityEvents.filter((event) => (event.isTaskingRequest || event.taskingRequestId || String(event.id || "").startsWith("tasking-")) && (!event.taskingRequestId || !submittedTaskingRequestIds.has(event.taskingRequestId))).forEach((event) => onDeletePriorityEvent(event.id));
   }, [highestPriorityEvents, taskingRequests, onDeletePriorityEvent]);
+  reactExports.useEffect(() => {
+    setTaskingRequests((prev) => prev.map((request) => request.submitted && !isTaskingRequestInHighestPriority(request.id) ? { ...request, submitted: false, ignored: true } : request));
+  }, [highestPriorityEvents]);
   const updateTaskingRequest = (id, updates) => {
     if (updates.submitted === false) {
       removeTaskingPriorityEvents(id);
@@ -24761,8 +24810,9 @@ const PrioritiesView = ({
     setTaskingRequests((prev) => prev.map((request) => request.id === id ? {
       ...request,
       ...updates,
-      saved: updates.saved ?? (updates.submitted === false ? false : request.saved),
-      submitted: updates.submitted ?? request.submitted
+      saved: updates.saved ?? request.saved,
+      submitted: updates.submitted ?? request.submitted,
+      ignored: updates.ignored ?? request.ignored
     } : request));
   };
   const buildTaskingPriorityEvents = (request) => {
@@ -24827,7 +24877,7 @@ const PrioritiesView = ({
   const saveTaskingRequest = (id) => {
     const request = taskingRequests.find((item) => item.id === id);
     if (!request) return;
-    updateTaskingRequest(id, { saved: true, submitted: false });
+    updateTaskingRequest(id, { saved: true, submitted: false, ignored: false });
     logAudit("Priorities", "Save", "Saved tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"}`);
   };
   const submitTaskingRequest = (id) => {
@@ -24839,8 +24889,15 @@ const PrioritiesView = ({
     }
     const priorityEvents = buildTaskingPriorityEvents(request);
     onAddPriorityEvents(priorityEvents);
-    updateTaskingRequest(id, { saved: true, submitted: true });
+    updateTaskingRequest(id, { saved: true, submitted: true, ignored: false });
     logAudit("Priorities", "Submit", "Submitted tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? "" : "s"})`);
+  };
+  const ignoreTaskingRequest = (id) => {
+    const request = taskingRequests.find((item) => item.id === id);
+    if (!request) return;
+    removeTaskingPriorityEvents(id);
+    updateTaskingRequest(id, { saved: true, submitted: false, ignored: true });
+    logAudit("Priorities", "Ignore", "Ignored tasking request", `${request.tasking || "Untitled tasking"} on ${request.date || "any build date"}`);
   };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
@@ -25856,7 +25913,8 @@ const PrioritiesView = ({
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,
             onSaveTaskingRequest: saveTaskingRequest,
-            onSubmitTaskingRequest: submitTaskingRequest
+            onSubmitTaskingRequest: submitTaskingRequest,
+            onIgnoreTaskingRequest: ignoreTaskingRequest
           }
         )
       ] }),
@@ -62775,6 +62833,8 @@ const downloadNeoTaskProvenanceReport = (source = "manual") => {
   console.log("[NEO-TASK-PROVENANCE] Download triggered:", filename, { source });
   return filename;
 };
+const TASKING_REQUEST_STORAGE_KEY = "neoTaskingRequests";
+const TASKING_REQUESTS_UPDATED_EVENT = "neoTaskingRequestsUpdated";
 const DfpSidePanelTimeline = ({
   flyingStartTime,
   flyingEndTime,
@@ -62860,7 +62920,32 @@ const DfpSidePanelTimeline = ({
   const [assistTaskAircraftCount, setAssistTaskAircraftCount] = reactExports.useState(1);
   const [assistTaskConfigId, setAssistTaskConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const [assistTaskMandatory, setAssistTaskMandatory] = reactExports.useState(true);
-  const [assistTaskRequests, setAssistTaskRequests] = reactExports.useState([]);
+  const normaliseAssistTaskRequest = (request) => ({
+    id: request.id || v4(),
+    tasking: request.tasking || "",
+    date: request.date || date,
+    takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
+    duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : 1,
+    flightType: request.flightType === "Solo" ? "Solo" : "Dual",
+    depPoint: request.depPoint || locationCode,
+    arrivalPoint: request.arrivalPoint || locationCode,
+    aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || "1"), 10) || 1),
+    aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+    isMandatory: request.isMandatory !== false,
+    saved: Boolean(request.saved || request.submitted),
+    submitted: Boolean(request.submitted),
+    ignored: Boolean(request.ignored)
+  });
+  const loadStoredAssistTaskRequests = () => {
+    try {
+      const stored = window.localStorage.getItem(TASKING_REQUEST_STORAGE_KEY);
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed.map(normaliseAssistTaskRequest) : [];
+    } catch {
+      return [];
+    }
+  };
+  const [assistTaskRequests, setAssistTaskRequests] = reactExports.useState(() => loadStoredAssistTaskRequests());
   const [assistCurrencyDate, setAssistCurrencyDate] = reactExports.useState(date);
   const [assistCurrencyTakeoff, setAssistCurrencyTakeoff] = reactExports.useState(flyingStartTime);
   const [assistCurrencyDuration, setAssistCurrencyDuration] = reactExports.useState(1.2);
@@ -62894,6 +62979,22 @@ const DfpSidePanelTimeline = ({
     setAssistCurrencyDepPoint((previous) => previous || locationCode);
     setAssistCurrencyArrivalPoint((previous) => previous || locationCode);
   }, [locationCode]);
+  reactExports.useEffect(() => {
+    window.localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(assistTaskRequests));
+    window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
+  }, [assistTaskRequests]);
+  reactExports.useEffect(() => {
+    const syncTaskingRequests = () => {
+      const storedRequests = loadStoredAssistTaskRequests();
+      setAssistTaskRequests((prev) => JSON.stringify(prev) === JSON.stringify(storedRequests) ? prev : storedRequests);
+    };
+    window.addEventListener(TASKING_REQUESTS_UPDATED_EVENT, syncTaskingRequests);
+    window.addEventListener("storage", syncTaskingRequests);
+    return () => {
+      window.removeEventListener(TASKING_REQUESTS_UPDATED_EVENT, syncTaskingRequests);
+      window.removeEventListener("storage", syncTaskingRequests);
+    };
+  }, [date, flyingStartTime, locationCode]);
   const selectedCrewRecord = reactExports.useMemo(() => instructors.find((person) => person.name === selectedCrewName) || null, [instructors, selectedCrewName]);
   const selectedCrewAssignments = reactExports.useMemo(() => selectedCrewRecord ? normaliseAirCombatTrainingAssignments(selectedCrewRecord.preferences) : { courses: [], trainingPackages: [] }, [selectedCrewRecord]);
   const selectedCrewTrainingReports = reactExports.useMemo(() => selectedCrewRecord ? normaliseAirCombatTrainingReports(selectedCrewRecord.preferences) : [], [selectedCrewRecord]);
@@ -63269,7 +63370,7 @@ const DfpSidePanelTimeline = ({
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
     return Array.from({ length: aircraftCount }, (_, index) => ({
-      id: `neo-assist-tasking-${request.id}-${index + 1}`,
+      id: `tasking-${request.id}-${index + 1}`,
       date: request.date,
       type: "flight",
       instructor: "",
@@ -63332,7 +63433,10 @@ const DfpSidePanelTimeline = ({
       acceptableAircraftConfigs: [request.aircraftConfigId]
     };
   };
-  const isAssistTaskRequestInHighestPriority = (id) => highestPriorityEvents.some((event) => event.taskingRequestId === id || String(event.id || "").startsWith(`neo-assist-tasking-${id}-`));
+  const isAssistTaskRequestInHighestPriority = (id) => highestPriorityEvents.some((event) => event.taskingRequestId === id || String(event.id || "").startsWith(`tasking-${id}-`) || String(event.id || "").startsWith(`neo-assist-tasking-${id}-`));
+  reactExports.useEffect(() => {
+    setAssistTaskRequests((prev) => prev.map((request) => request.submitted && !isAssistTaskRequestInHighestPriority(request.id) ? { ...request, submitted: false, ignored: true } : request));
+  }, [highestPriorityEvents]);
   const saveAssistTaskRequest = (id) => {
     setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, saved: true, submitted: false, ignored: false } : item));
   };
@@ -63392,9 +63496,11 @@ const DfpSidePanelTimeline = ({
     });
   };
   const ignoreAssistTaskRequest = (id) => {
-    const request = assistTaskRequests.find((item) => item.id === id);
-    if (request?.submitted) ignorePriorityEvents(buildTaskRequestEvents(request));
-    setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, submitted: false, ignored: true } : item));
+    assistTaskRequests.find((item) => item.id === id);
+    ignorePriorityEvents(
+      highestPriorityEvents.filter((event) => event.taskingRequestId === id || String(event.id || "").startsWith(`tasking-${id}-`) || String(event.id || "").startsWith(`neo-assist-tasking-${id}-`))
+    );
+    setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, saved: true, submitted: false, ignored: true } : item));
   };
   const ignoreAssistCurrencyRequest = (id) => {
     const request = assistCurrencyRequests.find((item) => item.id === id);
@@ -63757,32 +63863,48 @@ const DfpSidePanelTimeline = ({
                 formatTime2(row.takeoff)
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1 text-[9px]", children: [
-              row.source === "local" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => row.scheduled || row.saved ? submitAssistTaskRequest(row.id) : saveAssistTaskRequest(row.id),
-                  className: `rounded px-2 py-1 font-semibold text-white ${row.scheduled ? "bg-sky-600 hover:bg-sky-700" : row.saved ? "bg-orange-500 hover:bg-orange-600" : "bg-green-600 hover:bg-green-700"}`,
-                  children: row.scheduled ? "Re-submit" : row.saved ? "Schedule" : "Save"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    if (row.source === "local") ignoreAssistTaskRequest(row.id);
-                    else {
-                      const remote = highestPriorityTaskRows.find((item) => item.id === row.id);
-                      if (remote) ignorePriorityEvents(remote.events);
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex items-center gap-2 text-[9px]", children: row.source === "local" && !row.saved ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => saveAssistTaskRequest(row.id),
+                className: "rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700",
+                children: "Save"
+              }
+            ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-emerald-200", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "radio",
+                    name: `neo-assist-task-schedule-${row.source}-${row.id}`,
+                    checked: row.scheduled && !row.ignored,
+                    onChange: () => {
+                      if (row.source === "local") submitAssistTaskRequest(row.id);
                     }
-                  },
-                  className: "rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100",
-                  children: "Ignore"
-                }
-              )
-            ] })
+                  }
+                ),
+                "Schedule"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-rose-200", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "radio",
+                    name: `neo-assist-task-schedule-${row.source}-${row.id}`,
+                    checked: row.ignored || !row.scheduled,
+                    onChange: () => {
+                      if (row.source === "local") ignoreAssistTaskRequest(row.id);
+                      else {
+                        const remote = highestPriorityTaskRows.find((item) => item.id === row.id);
+                        if (remote) ignorePriorityEvents(remote.events);
+                      }
+                    }
+                  }
+                ),
+                "Ignore"
+              ] })
+            ] }) })
           ] }, `${row.source}-${row.id}`))
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
