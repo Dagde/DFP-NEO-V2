@@ -910,16 +910,6 @@ const DfpSidePanelTimeline: React.FC<{
         .filter(definition => definition.id !== BASE_AIRCRAFT_CONFIG.id)
         .some(definition => String(aircraftConfigCapacities[definition.id] || '').trim() !== '');
     const derivedCleanConfigCapacity = Math.max(0, availableAircraftCount - nonCleanConfigCapacityTotal);
-    const totalCoursePercentage = Array.from(coursePercentages.values()).reduce((sum, value) => sum + value, 0);
-    const updateCoursePercentage = (course: string, direction: 'increase' | 'decrease') => {
-        const nextPercentages = new Map(coursePercentages);
-        const currentPercent = nextPercentages.get(course) ?? 0;
-        const nextPercent = direction === 'increase'
-            ? Math.min(100, currentPercent + 5)
-            : Math.max(5, currentPercent - 5);
-        nextPercentages.set(course, nextPercent);
-        onUpdateCoursePercentages(nextPercentages);
-    };
     const timeOptions = useMemo(() => {
         const options: Array<{ label: string; value: number }> = [];
         for (let hour = 0; hour < 24; hour += 1) {
@@ -1342,32 +1332,54 @@ const DfpSidePanelTimeline: React.FC<{
                 onUpdateCoursePriorities(next);
             };
             const scheduledTaskCount = highestPriorityTaskRows.length;
+            const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
             return (
                 <div className="space-y-3 text-[10px] text-slate-200">
+                    <div className="rounded border border-cyan-400/25 bg-cyan-500/10 p-2">
+                        <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-cyan-100/70">Air Combat Model</p>
+                        <p className="mt-1 text-[11px] font-semibold text-cyan-50">Operational build priority</p>
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
                         <div className="rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Tasks</p>
                             <p className="mt-1 text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
                             <p className="text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
                         </div>
-                        <div className="rounded border border-emerald-500/25 bg-emerald-500/10 p-2">
-                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-emerald-100/70">Courses</p>
-                            <p className="mt-1 text-sm font-semibold text-emerald-50">{airCombatSchedulingWeights.courses}%</p>
-                            <p className="text-[9px] text-emerald-100/60">after tasks</p>
+                        <div className="rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2">
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-fuchsia-100/70">Currency</p>
+                            <p className="mt-1 text-sm font-semibold text-fuchsia-50">{scheduledCurrencyCount > 0 ? 'Directed' : 'None'}</p>
+                            <p className="text-[9px] text-fuchsia-100/60">{scheduledCurrencyCount} scheduled</p>
                         </div>
                         <div className="rounded border border-violet-500/25 bg-violet-500/10 p-2">
-                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70">Packages</p>
-                            <p className="mt-1 text-sm font-semibold text-violet-50">{airCombatSchedulingWeights.trainingPackages}%</p>
-                            <p className="text-[9px] text-violet-100/60">after tasks</p>
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70">Training Mix</p>
+                            <p className="mt-1 text-sm font-semibold text-violet-50">{airCombatSchedulingWeights.courses}/{airCombatSchedulingWeights.trainingPackages}</p>
+                            <p className="text-[9px] text-violet-100/60">course/package</p>
                         </div>
                     </div>
-                    <div className="rounded border border-emerald-500/25 bg-emerald-500/10 p-2">
+                    <div className="rounded border border-slate-700 bg-slate-950/45 p-2">
+                        <p className="mb-2 font-semibold text-cyan-100">Priority order</p>
+                        <div className="space-y-1">
+                            {[
+                                ['01', 'Mandatory taskings', `${scheduledTaskCount} scheduled`],
+                                ['02', 'Directed currency', `${scheduledCurrencyCount} scheduled`],
+                                ['03', 'Training packages', `${airCombatSchedulingWeights.trainingPackages}% training share`],
+                                ['04', 'Course events', `${airCombatSchedulingWeights.courses}% training share`],
+                            ].map(([number, label, detail]) => (
+                                <div key={number} className="grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
+                                    <span className="font-mono text-[9px] text-slate-500">{number}</span>
+                                    <span className="font-semibold text-slate-100">{label}</span>
+                                    <span className="text-[9px] text-slate-400">{detail}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="rounded border border-violet-500/25 bg-violet-500/10 p-2">
                         <div className="mb-2 flex items-center justify-between gap-2">
                             <div>
-                                <p className="font-semibold text-emerald-100">Air Combat Priority Mix</p>
-                                <p className="text-[9px] text-emerald-100/65">Shares remaining capacity after mandatory tasking is attempted.</p>
+                                <p className="font-semibold text-violet-100">Training mix</p>
+                                <p className="text-[9px] text-violet-100/65">Balances routine Air Combat training after directed events.</p>
                             </div>
-                            <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 font-semibold text-emerald-100">
+                            <span className="rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100">
                                 {airCombatSchedulingWeights.courses}/{airCombatSchedulingWeights.trainingPackages}
                             </span>
                         </div>
@@ -1381,7 +1393,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     step={5}
                                     value={airCombatSchedulingWeights.courses}
                                     onChange={event => updateAirCombatCourseWeight(Number(event.target.value))}
-                                    className="mt-2 w-full accent-emerald-500"
+                                    className="mt-2 w-full accent-violet-500"
                                 />
                             </label>
                             <label className="block">
@@ -1410,18 +1422,14 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <div className="rounded border border-slate-700 bg-slate-950/45 p-2">
-                            <p className="mb-1 font-semibold text-cyan-100">Course priority</p>
+                            <p className="mb-1 font-semibold text-cyan-100">Course event order</p>
                             <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
+                                {coursePriorities.length === 0 && <p className="text-slate-500">No courses set</p>}
                                 {coursePriorities.map((course, index) => (
                                     <div key={course} className="grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
                                         <span className="font-mono text-slate-500">{index + 1}</span>
                                         <span className="truncate font-semibold text-slate-100">{course}</span>
                                         <span className="flex items-center gap-1">
-                                            <span className={`min-w-8 text-center font-mono ${totalCoursePercentage !== 100 ? 'text-amber-300' : 'text-slate-300'}`}>{coursePercentages.get(course) ?? 0}%</span>
-                                            <span className="flex flex-col">
-                                                <button type="button" onClick={() => updateCoursePercentage(course, 'increase')} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none">▲</button>
-                                                <button type="button" onClick={() => updateCoursePercentage(course, 'decrease')} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none">▼</button>
-                                            </span>
                                             <span className="flex flex-col">
                                                 <button type="button" onClick={() => moveCourse(course, -1)} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none">▲</button>
                                                 <button type="button" onClick={() => moveCourse(course, 1)} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none">▼</button>
@@ -1430,10 +1438,9 @@ const DfpSidePanelTimeline: React.FC<{
                                     </div>
                                 ))}
                             </div>
-                            <p className={`mt-2 rounded px-2 py-1 text-center font-semibold ${totalCoursePercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>Total: {totalCoursePercentage}%</p>
                         </div>
                         <div className="rounded border border-slate-700 bg-slate-950/45 p-2">
-                            <p className="mb-1 font-semibold text-cyan-100">Package priority</p>
+                            <p className="mb-1 font-semibold text-cyan-100">Package event order</p>
                             <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
                                 {packagePriorities.length === 0 && <p className="text-slate-500">No packages set</p>}
                                 {packagePriorities.map((packageName, index) => (

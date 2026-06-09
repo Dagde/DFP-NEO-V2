@@ -63222,14 +63222,6 @@ const DfpSidePanelTimeline = ({
   const nonCleanConfigCapacityTotal = aircraftConfigurationDefinitions.filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id).reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || "", 10) || 0), 0);
   const hasEnteredConfigCapacity = aircraftConfigurationDefinitions.filter((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id).some((definition) => String(aircraftConfigCapacities[definition.id] || "").trim() !== "");
   const derivedCleanConfigCapacity = Math.max(0, availableAircraftCount - nonCleanConfigCapacityTotal);
-  const totalCoursePercentage = Array.from(coursePercentages.values()).reduce((sum, value) => sum + value, 0);
-  const updateCoursePercentage = (course, direction) => {
-    const nextPercentages = new Map(coursePercentages);
-    const currentPercent = nextPercentages.get(course) ?? 0;
-    const nextPercent = direction === "increase" ? Math.min(100, currentPercent + 5) : Math.max(5, currentPercent - 5);
-    nextPercentages.set(course, nextPercent);
-    onUpdateCoursePercentages(nextPercentages);
-  };
   const timeOptions = reactExports.useMemo(() => {
     const options = [];
     for (let hour = 0; hour < 24; hour += 1) {
@@ -63618,7 +63610,12 @@ const DfpSidePanelTimeline = ({
         onUpdateCoursePriorities(next);
       };
       const scheduledTaskCount = highestPriorityTaskRows.length;
+      const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.14em] text-cyan-100/70", children: "Air Combat Model" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[11px] font-semibold text-cyan-50", children: "Operational build priority" })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Tasks" }),
@@ -63628,30 +63625,44 @@ const DfpSidePanelTimeline = ({
               " scheduled"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-emerald-500/25 bg-emerald-500/10 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-emerald-100/70", children: "Courses" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm font-semibold text-emerald-50", children: [
-              airCombatSchedulingWeights.courses,
-              "%"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-emerald-100/60", children: "after tasks" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-fuchsia-100/70", children: "Currency" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-fuchsia-50", children: scheduledCurrencyCount > 0 ? "Directed" : "None" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-fuchsia-100/60", children: [
+              scheduledCurrencyCount,
+              " scheduled"
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70", children: "Packages" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70", children: "Training Mix" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm font-semibold text-violet-50", children: [
-              airCombatSchedulingWeights.trainingPackages,
-              "%"
+              airCombatSchedulingWeights.courses,
+              "/",
+              airCombatSchedulingWeights.trainingPackages
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/60", children: "after tasks" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/60", children: "course/package" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-emerald-500/25 bg-emerald-500/10 p-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-cyan-100", children: "Priority order" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: [
+            ["01", "Mandatory taskings", `${scheduledTaskCount} scheduled`],
+            ["02", "Directed currency", `${scheduledCurrencyCount} scheduled`],
+            ["03", "Training packages", `${airCombatSchedulingWeights.trainingPackages}% training share`],
+            ["04", "Course events", `${airCombatSchedulingWeights.courses}% training share`]
+          ].map(([number, label, detail]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-slate-500", children: number }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-slate-400", children: detail })
+          ] }, number)) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-emerald-100", children: "Air Combat Priority Mix" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-emerald-100/65", children: "Shares remaining capacity after mandatory tasking is attempted." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Training mix" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after directed events." })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 font-semibold text-emerald-100", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100", children: [
               airCombatSchedulingWeights.courses,
               "/",
               airCombatSchedulingWeights.trainingPackages
@@ -63669,7 +63680,7 @@ const DfpSidePanelTimeline = ({
                   step: 5,
                   value: airCombatSchedulingWeights.courses,
                   onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
-                  className: "mt-2 w-full accent-emerald-500"
+                  className: "mt-2 w-full accent-violet-500"
                 }
               )
             ] }),
@@ -63705,33 +63716,21 @@ const DfpSidePanelTimeline = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 font-semibold text-cyan-100", children: "Course priority" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: coursePriorities.map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-500", children: index + 1 }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", children: course }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `min-w-8 text-center font-mono ${totalCoursePercentage !== 100 ? "text-amber-300" : "text-slate-300"}`, children: [
-                  coursePercentages.get(course) ?? 0,
-                  "%"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => updateCoursePercentage(course, "increase"), className: "rounded-t border border-slate-600 px-1 text-[8px] leading-none", children: "▲" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => updateCoursePercentage(course, "decrease"), className: "rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none", children: "▼" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 font-semibold text-cyan-100", children: "Course event order" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: [
+              coursePriorities.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-500", children: "No courses set" }),
+              coursePriorities.map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-500", children: index + 1 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", children: course }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex items-center gap-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, -1), className: "rounded-t border border-slate-600 px-1 text-[8px] leading-none", children: "▲" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, 1), className: "rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none", children: "▼" })
-                ] })
-              ] })
-            ] }, course)) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: `mt-2 rounded px-2 py-1 text-center font-semibold ${totalCoursePercentage === 100 ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`, children: [
-              "Total: ",
-              totalCoursePercentage,
-              "%"
+                ] }) })
+              ] }, course))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 font-semibold text-cyan-100", children: "Package priority" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 font-semibold text-cyan-100", children: "Package event order" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: [
               packagePriorities.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-500", children: "No packages set" }),
               packagePriorities.map((packageName, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
