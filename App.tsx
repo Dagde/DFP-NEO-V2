@@ -922,14 +922,6 @@ const DfpSidePanelTimeline: React.FC<{
         }
         return options;
     }, []);
-    const movePackage = (packageName: string, direction: -1 | 1) => {
-        const index = packagePriorities.indexOf(packageName);
-        const nextIndex = index + direction;
-        if (index < 0 || nextIndex < 0 || nextIndex >= packagePriorities.length) return;
-        const next = [...packagePriorities];
-        [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-        onUpdatePackagePriorities(next);
-    };
     const updateAirCombatCourseWeight = (value: number) => {
         const courses = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
         onUpdateAirCombatSchedulingWeights({
@@ -1323,14 +1315,6 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (activeAssistSection === 'training') {
-            const moveCourse = (course: string, direction: -1 | 1) => {
-                const index = coursePriorities.indexOf(course);
-                const nextIndex = index + direction;
-                if (index < 0 || nextIndex < 0 || nextIndex >= coursePriorities.length) return;
-                const next = [...coursePriorities];
-                [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-                onUpdateCoursePriorities(next);
-            };
             const scheduledTaskCount = highestPriorityTaskRows.length;
             const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
             return (
@@ -1340,20 +1324,20 @@ const DfpSidePanelTimeline: React.FC<{
                         <p className="mt-1 text-[11px] font-semibold text-cyan-50">Operational build priority</p>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                        <div className="rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
+                        <div className="grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Tasks</p>
-                            <p className="mt-1 text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
+                            <p className="self-center text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
                             <p className="text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
                         </div>
-                        <div className="rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2">
+                        <div className="grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-fuchsia-100/70">Currency</p>
-                            <p className="mt-1 text-sm font-semibold text-fuchsia-50">{scheduledCurrencyCount > 0 ? 'Directed' : 'None'}</p>
+                            <p className="self-center text-sm font-semibold text-fuchsia-50">{scheduledCurrencyCount > 0 ? 'Directed' : 'None'}</p>
                             <p className="text-[9px] text-fuchsia-100/60">{scheduledCurrencyCount} scheduled</p>
                         </div>
-                        <div className="rounded border border-violet-500/25 bg-violet-500/10 p-2">
-                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70">Training Mix</p>
-                            <p className="mt-1 text-sm font-semibold text-violet-50">{airCombatSchedulingWeights.courses}/{airCombatSchedulingWeights.trainingPackages}</p>
-                            <p className="text-[9px] text-violet-100/60">course/package</p>
+                        <div className="grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-violet-500/25 bg-violet-500/10 p-2">
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70">Course/Package</p>
+                            <p className="self-center text-sm font-semibold text-violet-50">{airCombatSchedulingWeights.courses}/{airCombatSchedulingWeights.trainingPackages}</p>
+                            <p className="text-[9px] text-violet-100/60">&nbsp;</p>
                         </div>
                     </div>
                     <div className="rounded border border-slate-700 bg-slate-950/45 p-2">
@@ -1376,7 +1360,7 @@ const DfpSidePanelTimeline: React.FC<{
                     <div className="rounded border border-violet-500/25 bg-violet-500/10 p-2">
                         <div className="mb-2 flex items-center justify-between gap-2">
                             <div>
-                                <p className="font-semibold text-violet-100">Training mix</p>
+                                <p className="font-semibold text-violet-100">Course/Package</p>
                                 <p className="text-[9px] text-violet-100/65">Balances routine Air Combat training after directed events.</p>
                             </div>
                             <span className="rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100">
@@ -1418,42 +1402,6 @@ const DfpSidePanelTimeline: React.FC<{
                                     className="mt-1 w-full cursor-not-allowed rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400 opacity-80"
                                 />
                             </label>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div className="rounded border border-slate-700 bg-slate-950/45 p-2">
-                            <p className="mb-1 font-semibold text-cyan-100">Course event order</p>
-                            <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
-                                {coursePriorities.length === 0 && <p className="text-slate-500">No courses set</p>}
-                                {coursePriorities.map((course, index) => (
-                                    <div key={course} className="grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                        <span className="font-mono text-slate-500">{index + 1}</span>
-                                        <span className="truncate font-semibold text-slate-100">{course}</span>
-                                        <span className="flex items-center gap-1">
-                                            <span className="flex flex-col">
-                                                <button type="button" onClick={() => moveCourse(course, -1)} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none">▲</button>
-                                                <button type="button" onClick={() => moveCourse(course, 1)} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none">▼</button>
-                                            </span>
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="rounded border border-slate-700 bg-slate-950/45 p-2">
-                            <p className="mb-1 font-semibold text-cyan-100">Package event order</p>
-                            <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
-                                {packagePriorities.length === 0 && <p className="text-slate-500">No packages set</p>}
-                                {packagePriorities.map((packageName, index) => (
-                                    <div key={packageName} className="grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                        <span className="font-mono text-slate-500">{index + 1}</span>
-                                        <span className="truncate font-semibold text-slate-100">{packageName}</span>
-                                        <span className="flex flex-col">
-                                            <button type="button" onClick={() => movePackage(packageName, -1)} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none">▲</button>
-                                            <button type="button" onClick={() => movePackage(packageName, 1)} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none">▼</button>
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
                     </div>
                 </div>

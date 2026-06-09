@@ -63234,14 +63234,6 @@ const DfpSidePanelTimeline = ({
     }
     return options;
   }, []);
-  const movePackage = (packageName, direction) => {
-    const index = packagePriorities.indexOf(packageName);
-    const nextIndex = index + direction;
-    if (index < 0 || nextIndex < 0 || nextIndex >= packagePriorities.length) return;
-    const next = [...packagePriorities];
-    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-    onUpdatePackagePriorities(next);
-  };
   const updateAirCombatCourseWeight = (value) => {
     const courses = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
     onUpdateAirCombatSchedulingWeights({
@@ -63601,14 +63593,6 @@ const DfpSidePanelTimeline = ({
       ] });
     }
     if (activeAssistSection === "training") {
-      const moveCourse = (course, direction) => {
-        const index = coursePriorities.indexOf(course);
-        const nextIndex = index + direction;
-        if (index < 0 || nextIndex < 0 || nextIndex >= coursePriorities.length) return;
-        const next = [...coursePriorities];
-        [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-        onUpdateCoursePriorities(next);
-      };
       const scheduledTaskCount = highestPriorityTaskRows.length;
       const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
@@ -63617,30 +63601,30 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[11px] font-semibold text-cyan-50", children: "Operational build priority" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Tasks" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-cyan-50", children: scheduledTaskCount > 0 ? "Mandatory" : "None" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "self-center text-sm font-semibold text-cyan-50", children: scheduledTaskCount > 0 ? "Mandatory" : "None" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-cyan-100/60", children: [
               scheduledTaskCount,
               " scheduled"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-fuchsia-100/70", children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-fuchsia-50", children: scheduledCurrencyCount > 0 ? "Directed" : "None" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "self-center text-sm font-semibold text-fuchsia-50", children: scheduledCurrencyCount > 0 ? "Directed" : "None" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-fuchsia-100/60", children: [
               scheduledCurrencyCount,
               " scheduled"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70", children: "Training Mix" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm font-semibold text-violet-50", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-h-[84px] grid-rows-[auto_1fr_auto] rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-violet-100/70", children: "Course/Package" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "self-center text-sm font-semibold text-violet-50", children: [
               airCombatSchedulingWeights.courses,
               "/",
               airCombatSchedulingWeights.trainingPackages
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/60", children: "course/package" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/60", children: " " })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
@@ -63659,7 +63643,7 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Training mix" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Course/Package" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after directed events." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100", children: [
@@ -63711,36 +63695,6 @@ const DfpSidePanelTimeline = ({
                   className: "mt-1 w-full cursor-not-allowed rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400 opacity-80"
                 }
               )
-            ] })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 font-semibold text-cyan-100", children: "Course event order" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: [
-              coursePriorities.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-500", children: "No courses set" }),
-              coursePriorities.map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-500", children: index + 1 }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", children: course }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex items-center gap-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, -1), className: "rounded-t border border-slate-600 px-1 text-[8px] leading-none", children: "▲" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, 1), className: "rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none", children: "▼" })
-                ] }) })
-              ] }, course))
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 font-semibold text-cyan-100", children: "Package event order" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: [
-              packagePriorities.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-500", children: "No packages set" }),
-              packagePriorities.map((packageName, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[18px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-500", children: index + 1 }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", children: packageName }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => movePackage(packageName, -1), className: "rounded-t border border-slate-600 px-1 text-[8px] leading-none", children: "▲" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => movePackage(packageName, 1), className: "rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none", children: "▼" })
-                ] })
-              ] }, packageName))
             ] })
           ] })
         ] })
