@@ -4270,7 +4270,7 @@ This replaces the current ${targetLabel} currency/recency list.`)) return;
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("primitive"), className: "flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold", children: "+ Primitive" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("composite"), className: "flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold", children: "+ Composite" })
           ] }),
-          activeUnitCode && importUnitOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-sky-500/30 bg-sky-950/20 p-2", children: [
+          activeUnitCode && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-sky-500/30 bg-sky-950/20 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-wide text-sky-300", children: [
               "Import from unit",
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -4279,15 +4279,18 @@ This replaces the current ${targetLabel} currency/recency list.`)) return;
                   value: importSourceUnit,
                   onChange: (event) => setImportSourceUnit(event.target.value),
                   className: "mt-1 w-full rounded border border-gray-600 bg-gray-800 px-2 py-1.5 text-xs normal-case tracking-normal text-white focus:outline-none focus:ring-1 focus:ring-sky-500",
+                  disabled: importUnitOptions.length === 0,
                   children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select unit..." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: importUnitOptions.length ? "Select unit..." : "No other units available" }),
                     importUnitOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: option.unitCode, children: [
                       option.label,
                       " (",
                       option.currencyCount,
                       " items, ",
                       option.recencyCount,
-                      " recency)"
+                      " recency",
+                      option.usesFallback ? ", default" : "",
+                      ")"
                     ] }, option.unitCode))
                   ]
                 }
@@ -84027,8 +84030,10 @@ ${error instanceof Error ? error.message : String(error)}`,
   const importCurrencyDefinitionsFromUnit = (sourceUnitCode) => {
     const normalisedSourceUnit = String(sourceUnitCode || "").trim().toUpperCase();
     if (!activeCurrencyUnitKey || !normalisedSourceUnit) return;
-    const sourceDefinitions = unitCurrencyDefinitions[normalisedSourceUnit];
-    if (!sourceDefinitions) return;
+    const sourceDefinitions = unitCurrencyDefinitions[normalisedSourceUnit] || {
+      masterCurrencies: fallbackMasterCurrencies,
+      currencyRequirements: fallbackCurrencyRequirements
+    };
     const importedMasters = sourceDefinitions.masterCurrencies.map((currency) => ({ ...currency }));
     const importedRequirements = sourceDefinitions.currencyRequirements.map((currency) => ({ ...currency }));
     setMasterCurrencies(importedMasters);
@@ -84050,16 +84055,23 @@ ${error instanceof Error ? error.message : String(error)}`,
       ...units,
       ...Object.keys(unitCurrencyDefinitions)
     ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean));
-    return Array.from(knownUnits).filter((unit) => unit !== activeCurrencyUnitKey && !!unitCurrencyDefinitions[unit]).sort((a, b) => a.localeCompare(b)).map((unit) => ({
-      unitCode: unit,
-      label: unit,
-      currencyCount: (unitCurrencyDefinitions[unit]?.masterCurrencies?.length || 0) + (unitCurrencyDefinitions[unit]?.currencyRequirements?.length || 0),
-      recencyCount: [
-        ...unitCurrencyDefinitions[unit]?.masterCurrencies || [],
-        ...unitCurrencyDefinitions[unit]?.currencyRequirements || []
-      ].filter((currency) => currency.showInPostFlightRecency).length
-    }));
-  }, [activeCurrencyUnitKey, unitCurrencyDefinitions, units]);
+    return Array.from(knownUnits).filter((unit) => unit !== activeCurrencyUnitKey).sort((a, b) => a.localeCompare(b)).map((unit) => {
+      const definitions = unitCurrencyDefinitions[unit] || {
+        masterCurrencies: fallbackMasterCurrencies,
+        currencyRequirements: fallbackCurrencyRequirements
+      };
+      return {
+        unitCode: unit,
+        label: unit,
+        currencyCount: (definitions.masterCurrencies?.length || 0) + (definitions.currencyRequirements?.length || 0),
+        recencyCount: [
+          ...definitions.masterCurrencies || [],
+          ...definitions.currencyRequirements || []
+        ].filter((currency) => currency.showInPostFlightRecency).length,
+        usesFallback: !unitCurrencyDefinitions[unit]
+      };
+    });
+  }, [activeCurrencyUnitKey, fallbackCurrencyRequirements, fallbackMasterCurrencies, unitCurrencyDefinitions, units]);
   const runOracleAnalysis = reactExports.useCallback(() => {
     const isNextDayContext = oracleContext === "nextDayBuild";
     const currentEvents = (isNextDayContext ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate).filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));

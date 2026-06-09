@@ -26817,8 +26817,10 @@ appliedUpdates.forEach(update => {
     const importCurrencyDefinitionsFromUnit = (sourceUnitCode: string) => {
         const normalisedSourceUnit = String(sourceUnitCode || '').trim().toUpperCase();
         if (!activeCurrencyUnitKey || !normalisedSourceUnit) return;
-        const sourceDefinitions = unitCurrencyDefinitions[normalisedSourceUnit];
-        if (!sourceDefinitions) return;
+        const sourceDefinitions = unitCurrencyDefinitions[normalisedSourceUnit] || {
+            masterCurrencies: fallbackMasterCurrencies,
+            currencyRequirements: fallbackCurrencyRequirements,
+        };
         const importedMasters = sourceDefinitions.masterCurrencies.map(currency => ({ ...currency }));
         const importedRequirements = sourceDefinitions.currencyRequirements.map(currency => ({ ...currency }));
         setMasterCurrencies(importedMasters);
@@ -26843,19 +26845,26 @@ appliedUpdates.forEach(update => {
             ...Object.keys(unitCurrencyDefinitions),
         ].map(unit => String(unit || '').trim().toUpperCase()).filter(Boolean));
         return Array.from(knownUnits)
-            .filter(unit => unit !== activeCurrencyUnitKey && !!unitCurrencyDefinitions[unit])
+            .filter(unit => unit !== activeCurrencyUnitKey)
             .sort((a, b) => a.localeCompare(b))
-            .map(unit => ({
-                unitCode: unit,
-                label: unit,
-                currencyCount: (unitCurrencyDefinitions[unit]?.masterCurrencies?.length || 0)
-                    + (unitCurrencyDefinitions[unit]?.currencyRequirements?.length || 0),
-                recencyCount: [
-                    ...(unitCurrencyDefinitions[unit]?.masterCurrencies || []),
-                    ...(unitCurrencyDefinitions[unit]?.currencyRequirements || []),
-                ].filter(currency => currency.showInPostFlightRecency).length,
-            }));
-    }, [activeCurrencyUnitKey, unitCurrencyDefinitions, units]);
+            .map(unit => {
+                const definitions = unitCurrencyDefinitions[unit] || {
+                    masterCurrencies: fallbackMasterCurrencies,
+                    currencyRequirements: fallbackCurrencyRequirements,
+                };
+                return {
+                    unitCode: unit,
+                    label: unit,
+                    currencyCount: (definitions.masterCurrencies?.length || 0)
+                        + (definitions.currencyRequirements?.length || 0),
+                    recencyCount: [
+                        ...(definitions.masterCurrencies || []),
+                        ...(definitions.currencyRequirements || []),
+                    ].filter(currency => currency.showInPostFlightRecency).length,
+                    usesFallback: !unitCurrencyDefinitions[unit],
+                };
+            });
+    }, [activeCurrencyUnitKey, fallbackCurrencyRequirements, fallbackMasterCurrencies, unitCurrencyDefinitions, units]);
 
     // --- ORACLE HANDLERS ---
     const runOracleAnalysis = useCallback(() => {

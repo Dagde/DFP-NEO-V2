@@ -13,6 +13,7 @@ interface CurrencyBuilderViewProps {
         label: string;
         currencyCount: number;
         recencyCount: number;
+        usesFallback?: boolean;
     }>;
     onSave: (allCurrencies: CurrencyDefinition[]) => void;
     onDelete: (id: string) => void;
@@ -192,7 +193,7 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                             <button onClick={() => handleAddCurrency('primitive')} className="flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold">+ Primitive</button>
                             <button onClick={() => handleAddCurrency('composite')} className="flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold">+ Composite</button>
                          </div>
-                         {activeUnitCode && importUnitOptions.length > 0 && (
+                         {activeUnitCode && (
                             <div className="mt-3 rounded border border-sky-500/30 bg-sky-950/20 p-2">
                                 <label className="block text-[10px] font-semibold uppercase tracking-wide text-sky-300">
                                     Import from unit
@@ -200,11 +201,12 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                                         value={importSourceUnit}
                                         onChange={event => setImportSourceUnit(event.target.value)}
                                         className="mt-1 w-full rounded border border-gray-600 bg-gray-800 px-2 py-1.5 text-xs normal-case tracking-normal text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                        disabled={importUnitOptions.length === 0}
                                     >
-                                        <option value="">Select unit...</option>
+                                        <option value="">{importUnitOptions.length ? 'Select unit...' : 'No other units available'}</option>
                                         {importUnitOptions.map(option => (
                                             <option key={option.unitCode} value={option.unitCode}>
-                                                {option.label} ({option.currencyCount} items, {option.recencyCount} recency)
+                                                {option.label} ({option.currencyCount} items, {option.recencyCount} recency{option.usesFallback ? ', default' : ''})
                                             </option>
                                         ))}
                                     </select>
