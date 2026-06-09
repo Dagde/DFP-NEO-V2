@@ -238,9 +238,14 @@ const DfpSidePanelTimeline: React.FC<{
     flyingEndTime: number;
     onUpdateFlyingStartTime: (time: number) => void;
     onUpdateFlyingEndTime: (time: number) => void;
+    ftdStartTime: number;
+    ftdEndTime: number;
+    onUpdateFtdStartTime: (time: number) => void;
+    onUpdateFtdEndTime: (time: number) => void;
     allowNightFlying: boolean;
     commenceNightFlying: number;
     ceaseNightFlying: number;
+    onUpdateAllowNightFlying: (value: boolean) => void;
     onUpdateCommenceNightFlying: (time: number) => void;
     onUpdateCeaseNightFlying: (time: number) => void;
     flyingWindowExclusions: FlyingWindowExclusionPeriod[];
@@ -253,22 +258,35 @@ const DfpSidePanelTimeline: React.FC<{
     taskProfiles: string[];
     taskProfileAbbreviations: Record<string, string>;
     coursePriorities: string[];
+    onUpdateCoursePriorities: (priorities: string[]) => void;
     packagePriorities: string[];
     availableAircraftCount: number;
+    onUpdateAircraftCount: (count: number) => void;
     aircraftConfigCapacities: Record<string, string>;
+    aircraftConfigurationDefinitions: AircraftConfigurationDefinition[];
+    onUpdateAircraftConfigCapacities: (capacities: Record<string, string>) => void;
     availableFtdCount: number;
+    onUpdateFtdCount: (count: number) => void;
     availableCptCount: number;
+    onUpdateCptCount: (count: number) => void;
     locationCode: string;
     trainingAreas: string[];
+    callsignOptions: string[];
+    staffListNames: string[];
     formatResourceLabel: (resourceId: string) => string;
 }> = ({
     flyingStartTime,
     flyingEndTime,
     onUpdateFlyingStartTime,
     onUpdateFlyingEndTime,
+    ftdStartTime,
+    ftdEndTime,
+    onUpdateFtdStartTime,
+    onUpdateFtdEndTime,
     allowNightFlying,
     commenceNightFlying,
     ceaseNightFlying,
+    onUpdateAllowNightFlying,
     onUpdateCommenceNightFlying,
     onUpdateCeaseNightFlying,
     flyingWindowExclusions,
@@ -281,13 +299,21 @@ const DfpSidePanelTimeline: React.FC<{
     taskProfiles,
     taskProfileAbbreviations,
     coursePriorities,
+    onUpdateCoursePriorities,
     packagePriorities,
     availableAircraftCount,
+    onUpdateAircraftCount,
     aircraftConfigCapacities,
+    aircraftConfigurationDefinitions,
+    onUpdateAircraftConfigCapacities,
     availableFtdCount,
+    onUpdateFtdCount,
     availableCptCount,
+    onUpdateCptCount,
     locationCode,
     trainingAreas,
+    callsignOptions,
+    staffListNames,
     formatResourceLabel,
 }) => {
     const timelineStartHour = 6;
@@ -311,6 +337,9 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedResourceNumber, setSelectedResourceNumber] = useState(1);
     const [assistCallsign, setAssistCallsign] = useState('');
     const [selectedAssignedArea, setSelectedAssignedArea] = useState('A');
+    const [crewSourceMode, setCrewSourceMode] = useState<'priority' | 'staff'>('priority');
+    const [selectedCourseEventCode, setSelectedCourseEventCode] = useState('');
+    const [selectedPackageEventCode, setSelectedPackageEventCode] = useState('');
 
     const selectedSyllabusItem = useMemo(() => (
         filteredEventOptions.find(item => item.code === selectedEventCode) || filteredEventOptions[0] || null
@@ -368,6 +397,9 @@ const DfpSidePanelTimeline: React.FC<{
                 return true;
             });
     }, [diagnosticCrewPriority, instructors]);
+    const displayedCrewOptions = crewSourceMode === 'priority' && diagnosticCrewPriority.length > 0
+        ? crewOptions
+        : staffListNames;
 
     const assignedAreaOptions = useMemo(() => {
         const seen = new Set<string>();
@@ -379,6 +411,13 @@ const DfpSidePanelTimeline: React.FC<{
                 return true;
             });
     }, [trainingAreas]);
+    const stepTime = (time: number, setter: (nextTime: number) => void, delta: number) => {
+        const nextTime = Math.max(0, Math.min(23.75, Math.round((time + delta) * 12) / 12));
+        setter(nextTime);
+    };
+    const updateNumber = (value: number, setter: (nextValue: number) => void) => {
+        setter(Math.max(0, Math.floor(Number(value) || 0)));
+    };
 
     const assistResourceId = useMemo(() => {
         const number = Math.max(1, Math.floor(Number(selectedResourceNumber) || 1));
@@ -472,6 +511,10 @@ const DfpSidePanelTimeline: React.FC<{
         const hours = Math.floor(bounded);
         const minutes = Math.round((bounded - hours) * 60);
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    };
+    const parseTimeToDecimal = (value: string): number => {
+        const [hours, minutes] = String(value || '').split(':').map(Number);
+        return Math.max(0, Math.min(23.75, (hours || 0) + (minutes || 0) / 60));
     };
 
     const formatCompactTime = (decimalHour: number): string => formatTime(decimalHour).replace(':', '');
@@ -629,9 +672,9 @@ const DfpSidePanelTimeline: React.FC<{
         { id: 'training', label: 'Training Priority' },
         { id: 'taskings', label: 'Taskings' },
         { id: 'currency', label: 'Currency events' },
+        { id: 'crew', label: 'Crew' },
         { id: 'course', label: 'Course events' },
         { id: 'packages', label: 'Packages' },
-        { id: 'crew', label: 'Crew' },
     ];
     const resourceNumberLimit = selectedResourceKind === 'ftd'
         ? Math.max(1, availableFtdCount)
@@ -680,11 +723,15 @@ const DfpSidePanelTimeline: React.FC<{
                     <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                         Callsign
                         <input
+                            list="neo-assist-callsign-options"
                             value={assistCallsign}
                             onChange={event => setAssistCallsign(event.target.value)}
                             className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                            placeholder="Optional"
+                            placeholder="CSIGN"
                         />
+                        <datalist id="neo-assist-callsign-options">
+                            {callsignOptions.map(callsign => <option key={callsign} value={callsign} />)}
+                        </datalist>
                     </label>
                     <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                         Assigned Area
@@ -702,30 +749,121 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (activeAssistSection === 'flying') {
+            const renderWindowControl = (label: string, start: number, end: number, setStart: (time: number) => void, setEnd: (time: number) => void) => (
+                <div className="rounded border border-slate-700 bg-slate-950/55 p-2">
+                    <p className="mb-1 text-[10px] font-semibold text-cyan-100">{label}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {[
+                            ['Start', start, setStart],
+                            ['End', end, setEnd],
+                        ].map(([fieldLabel, value, setter]) => (
+                            <div key={`${label}-${fieldLabel}`} className="space-y-1">
+                                <span className="block text-[8px] uppercase tracking-[0.1em] text-slate-500">{fieldLabel as string}</span>
+                                <div className="flex items-center gap-1">
+                                    <button type="button" onClick={() => stepTime(value as number, setter as (time: number) => void, -1 / 12)} className="rounded border border-slate-600 px-1.5 py-1 text-[10px] text-slate-200">-</button>
+                                    <span className="min-w-[42px] text-center font-mono text-[11px] text-slate-100">{formatCompactTime(value as number)}</span>
+                                    <button type="button" onClick={() => stepTime(value as number, setter as (time: number) => void, 1 / 12)} className="rounded border border-slate-600 px-1.5 py-1 text-[10px] text-slate-200">+</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
             return (
-                <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-200">
-                    <span>Day {formatCompactTime(flyingStartTime)}-{formatCompactTime(flyingEndTime)}</span>
-                    <span>Night {allowNightFlying ? `${formatCompactTime(commenceNightFlying)}-${formatCompactTime(ceaseNightFlying)}` : 'Off'}</span>
-                    <span>Sim window configured in Priorities</span>
-                    <span>{flyingWindowExclusions.length} exclusion period{flyingWindowExclusions.length === 1 ? '' : 's'}</span>
+                <div className="space-y-2 text-[10px] text-slate-200">
+                    <div className="grid grid-cols-2 gap-2">
+                        {renderWindowControl('Flight', flyingStartTime, flyingEndTime, onUpdateFlyingStartTime, onUpdateFlyingEndTime)}
+                        {renderWindowControl('Sim', ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime)}
+                        {renderWindowControl('CPT', ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime)}
+                        <label className="flex items-center gap-2 rounded border border-slate-700 bg-slate-950/55 p-2 text-[10px] text-slate-200">
+                            <input type="checkbox" checked={allowNightFlying} onChange={event => onUpdateAllowNightFlying(event.target.checked)} />
+                            Night window enabled
+                        </label>
+                        {allowNightFlying && renderWindowControl('Night', commenceNightFlying, ceaseNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying)}
+                    </div>
+                    <div className="rounded border border-slate-700 bg-slate-950/55 p-2">
+                        <div className="mb-2 flex items-center justify-between">
+                            <p className="text-[10px] font-semibold text-cyan-100">Exclusion windows</p>
+                            <button
+                                type="button"
+                                onClick={() => onUpdateFlyingWindowExclusions([...flyingWindowExclusions, { id: uuidv4(), startTime: flyingStartTime, endTime: Math.min(23.75, flyingStartTime + 0.5), restriction: 'both' }])}
+                                className="rounded border border-cyan-400/50 px-2 py-1 text-[9px] text-cyan-100"
+                            >
+                                Add
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {flyingWindowExclusions.length === 0 && <p className="text-[10px] text-slate-500">No exclusions configured.</p>}
+                            {flyingWindowExclusions.map(period => (
+                                <div key={period.id} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-800 p-2">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <input type="time" value={formatTime(period.startTime)} onChange={event => updateExclusionPeriod(period.id, { startTime: parseTimeToDecimal(event.target.value) })} className="rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-slate-100" />
+                                        <input type="time" value={formatTime(period.endTime)} onChange={event => updateExclusionPeriod(period.id, { endTime: parseTimeToDecimal(event.target.value) })} className="rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-slate-100" />
+                                    </div>
+                                    <button type="button" onClick={() => onUpdateFlyingWindowExclusions(flyingWindowExclusions.filter(item => item.id !== period.id))} className="rounded border border-rose-400/50 px-2 py-1 text-[9px] text-rose-100">Del</button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             );
         }
         if (activeAssistSection === 'resources') {
+            const updateConfigCapacity = (configId: string, value: string) => {
+                onUpdateAircraftConfigCapacities({ ...aircraftConfigCapacities, [configId]: value });
+            };
             return (
-                <div className="space-y-1 text-[10px] text-slate-200">
-                    <p>Aircraft {availableAircraftCount} | FTD {availableFtdCount} | CPT {availableCptCount}</p>
-                    <p className="text-slate-400">{configSummary}</p>
+                <div className="space-y-3 text-[10px] text-slate-200">
+                    <div className="grid grid-cols-3 gap-2">
+                        {[
+                            ['Aircraft', availableAircraftCount, onUpdateAircraftCount],
+                            ['Sim', availableFtdCount, onUpdateFtdCount],
+                            ['CPT', availableCptCount, onUpdateCptCount],
+                        ].map(([label, value, setter]) => (
+                            <label key={label as string} className="block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                                {label as string}
+                                <input type="number" min={0} value={value as number} onChange={event => updateNumber(Number(event.target.value), setter as (nextValue: number) => void)} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] text-slate-100" />
+                            </label>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        {aircraftConfigurationDefinitions
+                            .filter(definition => definition.id !== ANY_AIRCRAFT_CONFIG.id)
+                            .map(definition => (
+                                <label key={definition.id} className="block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                                    {definition.label}
+                                    <input type="number" min={0} value={aircraftConfigCapacities[definition.id] || ''} onChange={event => updateConfigCapacity(definition.id, event.target.value)} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] text-slate-100" />
+                                </label>
+                            ))}
+                    </div>
                     <p className="text-slate-500">{resources.length} DFP rows available for manual placement</p>
                 </div>
             );
         }
         if (activeAssistSection === 'training') {
+            const moveCourse = (course: string, direction: -1 | 1) => {
+                const index = coursePriorities.indexOf(course);
+                const nextIndex = index + direction;
+                if (index < 0 || nextIndex < 0 || nextIndex >= coursePriorities.length) return;
+                const next = [...coursePriorities];
+                [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+                onUpdateCoursePriorities(next);
+            };
             return (
                 <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-200">
                     <div>
                         <p className="font-semibold text-cyan-100">Course priority</p>
-                        <p className="text-slate-400">{coursePriorities.slice(0, 4).join(', ') || 'No courses set'}</p>
+                        <div className="mt-1 space-y-1">
+                            {coursePriorities.map(course => (
+                                <div key={course} className="flex items-center justify-between rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
+                                    <span>{course}</span>
+                                    <span className="flex gap-1">
+                                        <button type="button" onClick={() => moveCourse(course, -1)} className="rounded border border-slate-600 px-1">Up</button>
+                                        <button type="button" onClick={() => moveCourse(course, 1)} className="rounded border border-slate-600 px-1">Down</button>
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                     <div>
                         <p className="font-semibold text-cyan-100">Package priority</p>
@@ -750,19 +888,64 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (activeAssistSection === 'crew') {
             return (
-                <label className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                    Crew priority list
-                    <select
-                        value={selectedCrewName}
-                        onChange={event => setSelectedCrewName(event.target.value)}
-                        className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                    >
-                        {crewOptions.map(name => <option key={name} value={name}>{name}</option>)}
-                    </select>
-                    <span className="mt-1 block text-[9px] font-normal normal-case tracking-normal text-slate-500">
-                        Uses the latest NEO Build priority ordering when diagnostic priority data is available.
+                <div className="space-y-2">
+                    <div className="flex gap-3 text-[10px] text-slate-300">
+                        <label className="inline-flex items-center gap-1">
+                            <input type="radio" checked={crewSourceMode === 'priority'} onChange={() => setCrewSourceMode('priority')} />
+                            Priority list
+                        </label>
+                        <label className="inline-flex items-center gap-1">
+                            <input type="radio" checked={crewSourceMode === 'staff'} onChange={() => setCrewSourceMode('staff')} />
+                            Staff list
+                        </label>
+                    </div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                        Crew
+                        <select
+                            value={selectedCrewName}
+                            onChange={event => setSelectedCrewName(event.target.value)}
+                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                        >
+                            <option value="">Bloggs, Joe</option>
+                            {displayedCrewOptions.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                    </label>
+                    <span className="block text-[9px] text-slate-500">
+                        Priority list uses the latest NEO Build ordering when diagnostic priority data is available.
                     </span>
-                </label>
+                </div>
+            );
+        }
+        if (activeAssistSection === 'course' || activeAssistSection === 'packages') {
+            const eventOptions = activeAssistSection === 'course'
+                ? filteredEventOptions
+                : filteredEventOptions.filter(item => item.module);
+            const selectedCode = activeAssistSection === 'course' ? selectedCourseEventCode : selectedPackageEventCode;
+            const setSelectedCode = activeAssistSection === 'course' ? setSelectedCourseEventCode : setSelectedPackageEventCode;
+            return (
+                <div className="max-h-64 overflow-y-auto pr-1 text-[10px] text-slate-200">
+                    <div className="space-y-1">
+                        {eventOptions.map(item => {
+                            const isComplete = Boolean((item as any).completedAt || (item as any).isComplete || (item as any).completed);
+                            return (
+                                <label key={item.id || item.code} className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1 ${selectedCode === item.code ? 'border-cyan-300/70 bg-cyan-400/10' : 'border-slate-700 bg-slate-950/45'}`}>
+                                    <input
+                                        type="radio"
+                                        name={`neo-assist-${activeAssistSection}`}
+                                        checked={selectedCode === item.code}
+                                        onChange={() => {
+                                            setSelectedCode(item.code);
+                                            setSelectedEventCode(item.code);
+                                        }}
+                                    />
+                                    <span className={isComplete ? 'text-emerald-300' : 'text-slate-300'}>{isComplete ? '✓' : '□'}</span>
+                                    <span className="font-mono text-slate-100">{item.code}</span>
+                                    <span className="truncate text-slate-400">{item.eventDescription}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
             );
         }
         return (
@@ -16096,6 +16279,34 @@ const App: React.FC = () => {
         return matchingLegacyLocation ? locationOpAreas[matchingLegacyLocation] || [] : [];
     }, [getLocationSelectorAliases, knownDfpLocationAliases, locationAbbreviations, locationOpAreas, platformConfig, school]);
 
+    const neoAssistCallsignOptions = useMemo(() => {
+        const unitSet = activeContextUnitCodeSet;
+        const normalise = (value: unknown) => String(value || '').trim().toUpperCase();
+        const locationAliases = new Set([school, ...knownDfpLocationAliases(school)].map(normalise).filter(Boolean));
+        const options = formationCallsigns
+            .filter(callsign => {
+                const callsignUnit = normalise(callsign.unit);
+                const unitMatches = !callsignUnit || unitSet.has(callsignUnit);
+                const callsignLocationAliases = [
+                    callsign.location,
+                    callsign.locationCode,
+                    ...knownDfpLocationAliases(callsign.location),
+                    ...knownDfpLocationAliases(callsign.locationCode),
+                ].map(normalise).filter(Boolean);
+                const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some(alias => locationAliases.has(alias));
+                return unitMatches && locationMatches;
+            })
+            .map(callsign => String(callsign.code || '').trim())
+            .filter(Boolean);
+        return Array.from(new Set(options)).sort((a, b) => a.localeCompare(b));
+    }, [activeContextUnitCodeSet, formationCallsigns, knownDfpLocationAliases, school]);
+
+    const neoAssistStaffListNames = useMemo(() => (
+        [...instructorsData]
+            .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
+            .map(instructor => instructor.name)
+            .filter(Boolean)
+    ), [instructorsData, personnelDisplaySettings]);
 
     // ─── SETTINGS: Load from DB on startup ───────────────────────────────────
 
@@ -28531,9 +28742,14 @@ appliedUpdates.forEach(update => {
                                     flyingEndTime={flyingEndTime}
                                     onUpdateFlyingStartTime={setFlyingStartTime}
                                     onUpdateFlyingEndTime={setFlyingEndTime}
+                                    ftdStartTime={ftdStartTime}
+                                    ftdEndTime={ftdEndTime}
+                                    onUpdateFtdStartTime={setFtdStartTime}
+                                    onUpdateFtdEndTime={setFtdEndTime}
                                     allowNightFlying={allowNightFlying}
                                     commenceNightFlying={commenceNightFlying}
                                     ceaseNightFlying={ceaseNightFlying}
+                                    onUpdateAllowNightFlying={setAllowNightFlying}
                                     onUpdateCommenceNightFlying={setCommenceNightFlying}
                                     onUpdateCeaseNightFlying={setCeaseNightFlying}
                                     flyingWindowExclusions={flyingWindowExclusions}
@@ -28545,13 +28761,21 @@ appliedUpdates.forEach(update => {
                                     taskProfiles={activeTaskProfiles}
                                     taskProfileAbbreviations={activeTaskProfileAbbreviations}
                                     coursePriorities={coursePriorities}
+                                    onUpdateCoursePriorities={setCoursePriorities}
                                     packagePriorities={Array.from(new Set(visibleSyllabusDetails.map(item => item.module).filter(Boolean))).slice(0, 12)}
                                     availableAircraftCount={neoAvailableAircraftCount}
+                                    onUpdateAircraftCount={setNeoAvailableAircraftCount}
                                     aircraftConfigCapacities={neoAircraftConfigCapacities}
+                                    aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
+                                    onUpdateAircraftConfigCapacities={setNeoAircraftConfigCapacities}
                                     availableFtdCount={availableFtdCount}
+                                    onUpdateFtdCount={setAvailableFtdCount}
                                     availableCptCount={availableCptCount}
+                                    onUpdateCptCount={setAvailableCptCount}
                                     locationCode={school}
                                     trainingAreas={activeTrainingAreas}
+                                    callsignOptions={neoAssistCallsignOptions}
+                                    staffListNames={neoAssistStaffListNames}
                                     formatResourceLabel={formatResourceDisplayLabel}
                                     onOpenPrioritiesExclusions={() => {
                                         try {

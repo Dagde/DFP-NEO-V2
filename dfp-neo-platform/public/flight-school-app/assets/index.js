@@ -62707,9 +62707,14 @@ const DfpSidePanelTimeline = ({
   flyingEndTime,
   onUpdateFlyingStartTime,
   onUpdateFlyingEndTime,
+  ftdStartTime,
+  ftdEndTime,
+  onUpdateFtdStartTime,
+  onUpdateFtdEndTime,
   allowNightFlying,
   commenceNightFlying,
   ceaseNightFlying,
+  onUpdateAllowNightFlying,
   onUpdateCommenceNightFlying,
   onUpdateCeaseNightFlying,
   flyingWindowExclusions,
@@ -62722,13 +62727,21 @@ const DfpSidePanelTimeline = ({
   taskProfiles,
   taskProfileAbbreviations,
   coursePriorities,
+  onUpdateCoursePriorities,
   packagePriorities,
   availableAircraftCount,
+  onUpdateAircraftCount,
   aircraftConfigCapacities,
+  aircraftConfigurationDefinitions,
+  onUpdateAircraftConfigCapacities,
   availableFtdCount,
+  onUpdateFtdCount,
   availableCptCount,
+  onUpdateCptCount,
   locationCode,
   trainingAreas,
+  callsignOptions,
+  staffListNames,
   formatResourceLabel: formatResourceLabel2
 }) => {
   const timelineStartHour = 6;
@@ -62748,6 +62761,9 @@ const DfpSidePanelTimeline = ({
   const [selectedResourceNumber, setSelectedResourceNumber] = reactExports.useState(1);
   const [assistCallsign, setAssistCallsign] = reactExports.useState("");
   const [selectedAssignedArea, setSelectedAssignedArea] = reactExports.useState("A");
+  const [crewSourceMode, setCrewSourceMode] = reactExports.useState("priority");
+  const [selectedCourseEventCode, setSelectedCourseEventCode] = reactExports.useState("");
+  const [selectedPackageEventCode, setSelectedPackageEventCode] = reactExports.useState("");
   const selectedSyllabusItem = reactExports.useMemo(() => filteredEventOptions.find((item) => item.code === selectedEventCode) || filteredEventOptions[0] || null, [filteredEventOptions, selectedEventCode]);
   reactExports.useEffect(() => {
     if (!selectedEventCode && filteredEventOptions[0]) setSelectedEventCode(filteredEventOptions[0].code);
@@ -62796,6 +62812,7 @@ const DfpSidePanelTimeline = ({
       return true;
     });
   }, [diagnosticCrewPriority, instructors]);
+  const displayedCrewOptions = crewSourceMode === "priority" && diagnosticCrewPriority.length > 0 ? crewOptions : staffListNames;
   const assignedAreaOptions = reactExports.useMemo(() => {
     const seen = /* @__PURE__ */ new Set();
     return ["", ...trainingAreas, "A"].map((area) => String(area || "").trim()).filter((area) => {
@@ -62804,6 +62821,13 @@ const DfpSidePanelTimeline = ({
       return true;
     });
   }, [trainingAreas]);
+  const stepTime = (time, setter, delta) => {
+    const nextTime = Math.max(0, Math.min(23.75, Math.round((time + delta) * 12) / 12));
+    setter(nextTime);
+  };
+  const updateNumber = (value, setter) => {
+    setter(Math.max(0, Math.floor(Number(value) || 0)));
+  };
   const assistResourceId = reactExports.useMemo(() => {
     const number = Math.max(1, Math.floor(Number(selectedResourceNumber) || 1));
     if (selectedResourceKind === "ftd") return `FTD ${number}`;
@@ -62888,6 +62912,10 @@ const DfpSidePanelTimeline = ({
     const hours = Math.floor(bounded);
     const minutes = Math.round((bounded - hours) * 60);
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+  const parseTimeToDecimal = (value) => {
+    const [hours, minutes] = String(value || "").split(":").map(Number);
+    return Math.max(0, Math.min(23.75, (hours || 0) + (minutes || 0) / 60));
   };
   const formatCompactTime = (decimalHour) => formatTime2(decimalHour).replace(":", "");
   const formatTick = (hour) => {
@@ -63017,12 +63045,12 @@ const DfpSidePanelTimeline = ({
     { id: "training", label: "Training Priority" },
     { id: "taskings", label: "Taskings" },
     { id: "currency", label: "Currency events" },
+    { id: "crew", label: "Crew" },
     { id: "course", label: "Course events" },
-    { id: "packages", label: "Packages" },
-    { id: "crew", label: "Crew" }
+    { id: "packages", label: "Packages" }
   ];
   const resourceNumberLimit = selectedResourceKind === "ftd" ? Math.max(1, availableFtdCount) : selectedResourceKind === "cpt" ? Math.max(1, availableCptCount) : Math.max(1, availableAircraftCount);
-  const configSummary = Object.entries(aircraftConfigCapacities || {}).filter(([, count]) => Number(count) > 0).map(([configId, count]) => `${configId}: ${count}`).join(", ") || "No CONFIG split set";
+  Object.entries(aircraftConfigCapacities || {}).filter(([, count]) => Number(count) > 0).map(([configId, count]) => `${configId}: ${count}`).join(", ") || "No CONFIG split set";
   const previewCrewName = selectedCrewName || "Bloggs, Joe";
   const previewCallsign = assistCallsign.trim() || "CSIGN";
   const previewAircraftNumber = String(selectedResourceNumber || 1).padStart(3, "0");
@@ -63068,12 +63096,14 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
+              list: "neo-assist-callsign-options",
               value: assistCallsign,
               onChange: (event) => setAssistCallsign(event.target.value),
               className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-              placeholder: "Optional"
+              placeholder: "CSIGN"
             }
-          )
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
           "Assigned Area",
@@ -63090,36 +63120,74 @@ const DfpSidePanelTimeline = ({
       ] });
     }
     if (activeAssistSection === "flying") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-[10px] text-slate-200", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-          "Day ",
-          formatCompactTime(flyingStartTime),
-          "-",
-          formatCompactTime(flyingEndTime)
+      const renderWindowControl = (label, start, end, setStart, setEnd) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/55 p-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 text-[10px] font-semibold text-cyan-100", children: label }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2", children: [
+          ["Start", start, setStart],
+          ["End", end, setEnd]
+        ].map(([fieldLabel, value, setter]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] uppercase tracking-[0.1em] text-slate-500", children: fieldLabel }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => stepTime(value, setter, -1 / 12), className: "rounded border border-slate-600 px-1.5 py-1 text-[10px] text-slate-200", children: "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-[42px] text-center font-mono text-[11px] text-slate-100", children: formatCompactTime(value) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => stepTime(value, setter, 1 / 12), className: "rounded border border-slate-600 px-1.5 py-1 text-[10px] text-slate-200", children: "+" })
+          ] })
+        ] }, `${label}-${fieldLabel}`)) })
+      ] });
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+          renderWindowControl("Flight", flyingStartTime, flyingEndTime, onUpdateFlyingStartTime, onUpdateFlyingEndTime),
+          renderWindowControl("Sim", ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime),
+          renderWindowControl("CPT", ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded border border-slate-700 bg-slate-950/55 p-2 text-[10px] text-slate-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (event) => onUpdateAllowNightFlying(event.target.checked) }),
+            "Night window enabled"
+          ] }),
+          allowNightFlying && renderWindowControl("Night", commenceNightFlying, ceaseNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying)
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-          "Night ",
-          allowNightFlying ? `${formatCompactTime(commenceNightFlying)}-${formatCompactTime(ceaseNightFlying)}` : "Off"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Sim window configured in Priorities" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-          flyingWindowExclusions.length,
-          " exclusion period",
-          flyingWindowExclusions.length === 1 ? "" : "s"
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/55 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-semibold text-cyan-100", children: "Exclusion windows" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => onUpdateFlyingWindowExclusions([...flyingWindowExclusions, { id: v4(), startTime: flyingStartTime, endTime: Math.min(23.75, flyingStartTime + 0.5), restriction: "both" }]),
+                className: "rounded border border-cyan-400/50 px-2 py-1 text-[9px] text-cyan-100",
+                children: "Add"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+            flyingWindowExclusions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-slate-500", children: "No exclusions configured." }),
+            flyingWindowExclusions.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-800 p-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "time", value: formatTime2(period.startTime), onChange: (event) => updateExclusionPeriod(period.id, { startTime: parseTimeToDecimal(event.target.value) }), className: "rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-slate-100" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "time", value: formatTime2(period.endTime), onChange: (event) => updateExclusionPeriod(period.id, { endTime: parseTimeToDecimal(event.target.value) }), className: "rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-slate-100" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => onUpdateFlyingWindowExclusions(flyingWindowExclusions.filter((item) => item.id !== period.id)), className: "rounded border border-rose-400/50 px-2 py-1 text-[9px] text-rose-100", children: "Del" })
+            ] }, period.id))
+          ] })
         ] })
       ] });
     }
     if (activeAssistSection === "resources") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1 text-[10px] text-slate-200", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Aircraft ",
-          availableAircraftCount,
-          " | FTD ",
-          availableFtdCount,
-          " | CPT ",
-          availableCptCount
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400", children: configSummary }),
+      const updateConfigCapacity = (configId, value) => {
+        onUpdateAircraftConfigCapacities({ ...aircraftConfigCapacities, [configId]: value });
+      };
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: [
+          ["Aircraft", availableAircraftCount, onUpdateAircraftCount],
+          ["Sim", availableFtdCount, onUpdateFtdCount],
+          ["CPT", availableCptCount, onUpdateCptCount]
+        ].map(([label, value, setter]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400", children: [
+          label,
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0, value, onChange: (event) => updateNumber(Number(event.target.value), setter), className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] text-slate-100" })
+        ] }, label)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2", children: aircraftConfigurationDefinitions.filter((definition) => definition.id !== ANY_AIRCRAFT_CONFIG.id).map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400", children: [
+          definition.label,
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0, value: aircraftConfigCapacities[definition.id] || "", onChange: (event) => updateConfigCapacity(definition.id, event.target.value), className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] text-slate-100" })
+        ] }, definition.id)) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-slate-500", children: [
           resources.length,
           " DFP rows available for manual placement"
@@ -63127,10 +63195,24 @@ const DfpSidePanelTimeline = ({
       ] });
     }
     if (activeAssistSection === "training") {
+      const moveCourse = (course, direction) => {
+        const index = coursePriorities.indexOf(course);
+        const nextIndex = index + direction;
+        if (index < 0 || nextIndex < 0 || nextIndex >= coursePriorities.length) return;
+        const next = [...coursePriorities];
+        [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+        onUpdateCoursePriorities(next);
+      };
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-cyan-100", children: "Course priority" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400", children: coursePriorities.slice(0, 4).join(", ") || "No courses set" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: coursePriorities.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: course }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex gap-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, -1), className: "rounded border border-slate-600 px-1", children: "Up" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveCourse(course, 1), className: "rounded border border-slate-600 px-1", children: "Down" })
+            ] })
+          ] }, course)) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-cyan-100", children: "Package priority" }),
@@ -63153,19 +63235,59 @@ const DfpSidePanelTimeline = ({
       ] });
     }
     if (activeAssistSection === "crew") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-        "Crew priority list",
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "select",
-          {
-            value: selectedCrewName,
-            onChange: (event) => setSelectedCrewName(event.target.value),
-            className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-            children: crewOptions.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[9px] font-normal normal-case tracking-normal text-slate-500", children: "Uses the latest NEO Build priority ordering when diagnostic priority data is available." })
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 text-[10px] text-slate-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", checked: crewSourceMode === "priority", onChange: () => setCrewSourceMode("priority") }),
+            "Priority list"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", checked: crewSourceMode === "staff", onChange: () => setCrewSourceMode("staff") }),
+            "Staff list"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+          "Crew",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: selectedCrewName,
+              onChange: (event) => setSelectedCrewName(event.target.value),
+              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Bloggs, Joe" }),
+                displayedCrewOptions.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[9px] text-slate-500", children: "Priority list uses the latest NEO Build ordering when diagnostic priority data is available." })
       ] });
+    }
+    if (activeAssistSection === "course" || activeAssistSection === "packages") {
+      const eventOptions = activeAssistSection === "course" ? filteredEventOptions : filteredEventOptions.filter((item) => item.module);
+      const selectedCode = activeAssistSection === "course" ? selectedCourseEventCode : selectedPackageEventCode;
+      const setSelectedCode = activeAssistSection === "course" ? setSelectedCourseEventCode : setSelectedPackageEventCode;
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-64 overflow-y-auto pr-1 text-[10px] text-slate-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: eventOptions.map((item) => {
+        const isComplete = Boolean(item.completedAt || item.isComplete || item.completed);
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-2 py-1 ${selectedCode === item.code ? "border-cyan-300/70 bg-cyan-400/10" : "border-slate-700 bg-slate-950/45"}`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "radio",
+              name: `neo-assist-${activeAssistSection}`,
+              checked: selectedCode === item.code,
+              onChange: () => {
+                setSelectedCode(item.code);
+                setSelectedEventCode(item.code);
+              }
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: isComplete ? "text-emerald-300" : "text-slate-300", children: isComplete ? "✓" : "□" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-100", children: item.code }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-slate-400", children: item.eventDescription })
+        ] }, item.id || item.code);
+      }) }) });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
       "Event",
@@ -75254,6 +75376,25 @@ ${"=".repeat(60)}`);
     });
     return matchingLegacyLocation ? locationOpAreas[matchingLegacyLocation] || [] : [];
   }, [getLocationSelectorAliases, knownDfpLocationAliases, locationAbbreviations, locationOpAreas, platformConfig, school]);
+  const neoAssistCallsignOptions = reactExports.useMemo(() => {
+    const unitSet = activeContextUnitCodeSet;
+    const normalise = (value) => String(value || "").trim().toUpperCase();
+    const locationAliases = new Set([school, ...knownDfpLocationAliases(school)].map(normalise).filter(Boolean));
+    const options = formationCallsigns.filter((callsign) => {
+      const callsignUnit = normalise(callsign.unit);
+      const unitMatches = !callsignUnit || unitSet.has(callsignUnit);
+      const callsignLocationAliases = [
+        callsign.location,
+        callsign.locationCode,
+        ...knownDfpLocationAliases(callsign.location),
+        ...knownDfpLocationAliases(callsign.locationCode)
+      ].map(normalise).filter(Boolean);
+      const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => locationAliases.has(alias));
+      return unitMatches && locationMatches;
+    }).map((callsign) => String(callsign.code || "").trim()).filter(Boolean);
+    return Array.from(new Set(options)).sort((a, b) => a.localeCompare(b));
+  }, [activeContextUnitCodeSet, formationCallsigns, knownDfpLocationAliases, school]);
+  const neoAssistStaffListNames = reactExports.useMemo(() => [...instructorsData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((instructor) => instructor.name).filter(Boolean), [instructorsData, personnelDisplaySettings]);
   reactExports.useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -85446,9 +85587,14 @@ Do you want to replace the existing entry?`,
                     flyingEndTime,
                     onUpdateFlyingStartTime: setFlyingStartTime,
                     onUpdateFlyingEndTime: setFlyingEndTime,
+                    ftdStartTime,
+                    ftdEndTime,
+                    onUpdateFtdStartTime: setFtdStartTime,
+                    onUpdateFtdEndTime: setFtdEndTime,
                     allowNightFlying,
                     commenceNightFlying,
                     ceaseNightFlying,
+                    onUpdateAllowNightFlying: setAllowNightFlying,
                     onUpdateCommenceNightFlying: setCommenceNightFlying,
                     onUpdateCeaseNightFlying: setCeaseNightFlying,
                     flyingWindowExclusions,
@@ -85460,13 +85606,21 @@ Do you want to replace the existing entry?`,
                     taskProfiles: activeTaskProfiles,
                     taskProfileAbbreviations: activeTaskProfileAbbreviations,
                     coursePriorities,
+                    onUpdateCoursePriorities: setCoursePriorities,
                     packagePriorities: Array.from(new Set(visibleSyllabusDetails.map((item) => item.module).filter(Boolean))).slice(0, 12),
                     availableAircraftCount: neoAvailableAircraftCount,
+                    onUpdateAircraftCount: setNeoAvailableAircraftCount,
                     aircraftConfigCapacities: neoAircraftConfigCapacities,
+                    aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
+                    onUpdateAircraftConfigCapacities: setNeoAircraftConfigCapacities,
                     availableFtdCount,
+                    onUpdateFtdCount: setAvailableFtdCount,
                     availableCptCount,
+                    onUpdateCptCount: setAvailableCptCount,
                     locationCode: school,
                     trainingAreas: activeTrainingAreas,
+                    callsignOptions: neoAssistCallsignOptions,
+                    staffListNames: neoAssistStaffListNames,
                     formatResourceLabel: formatResourceDisplayLabel,
                     onOpenPrioritiesExclusions: () => {
                       try {
