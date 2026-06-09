@@ -2662,7 +2662,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <TimeZoneField label="IANA Timezone" value={location.timezone || ''} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezone: value })} info="Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." />
                 </div>
                 <div className="md:col-span-5">
-                  <Field label="Training Areas" value={(location.trainingAreas || []).join(', ')} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { trainingAreas: value.split(',').map((item) => item.trim()).filter(Boolean) })} />
+                  <CommaListField
+                    label="Training Areas"
+                    value={location.trainingAreas || []}
+                    disabled={!canEdit}
+                    onChange={(trainingAreas) => updateRow('locations', index, { trainingAreas })}
+                  />
                 </div>
               </div>
             );
@@ -4577,6 +4582,56 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: s
     ) : null}
   </label>
 );
+
+const parseCommaListFieldValue = (value: string): string[] => (
+  value.split(',').map((item) => item.trim()).filter(Boolean)
+);
+
+const formatCommaListFieldValue = (value: string[]): string => (
+  value.map((item) => String(item || '').trim()).filter(Boolean).join(', ')
+);
+
+const CommaListField = ({
+  label,
+  value,
+  disabled,
+  onChange,
+  info,
+}: {
+  label: string;
+  value: string[];
+  disabled: boolean;
+  onChange: (value: string[]) => void;
+  info?: string;
+}) => {
+  const [draftValue, setDraftValue] = useState(() => formatCommaListFieldValue(value || []));
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(formatCommaListFieldValue(value || []));
+  }, [isEditing, value]);
+
+  const commitDraftValue = () => {
+    const nextValue = parseCommaListFieldValue(draftValue);
+    setDraftValue(formatCommaListFieldValue(nextValue));
+    onChange(nextValue);
+    setIsEditing(false);
+  };
+
+  return (
+    <label>
+      <FieldLabel label={label} info={info} />
+      <input
+        className={fieldClass}
+        value={draftValue}
+        disabled={disabled}
+        onFocus={() => setIsEditing(true)}
+        onChange={(event) => setDraftValue(event.target.value)}
+        onBlur={commitDraftValue}
+      />
+    </label>
+  );
+};
 
 const AirfieldLookupField = ({
   label,

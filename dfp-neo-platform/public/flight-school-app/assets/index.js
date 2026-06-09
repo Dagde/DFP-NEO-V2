@@ -50978,7 +50978,15 @@ const PlatformConfigurationSettings = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TimeZoneField, { label: "IANA Timezone", value: location.timezone || "", disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezone: value }), info: "Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Training Areas", value: (location.trainingAreas || []).join(", "), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { trainingAreas: value.split(",").map((item) => item.trim()).filter(Boolean) }) }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  CommaListField,
+                  {
+                    label: "Training Areas",
+                    value: location.trainingAreas || [],
+                    disabled: !canEdit,
+                    onChange: (trainingAreas) => updateRow("locations", index, { trainingAreas })
+                  }
+                ) })
               ]
             },
             rowKey
@@ -52888,6 +52896,41 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }) => /* @__P
     maxLength
   ] }) : null
 ] });
+const parseCommaListFieldValue = (value) => value.split(",").map((item) => item.trim()).filter(Boolean);
+const formatCommaListFieldValue = (value) => value.map((item) => String(item || "").trim()).filter(Boolean).join(", ");
+const CommaListField = ({
+  label,
+  value,
+  disabled,
+  onChange,
+  info
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(() => formatCommaListFieldValue(value || []));
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(formatCommaListFieldValue(value || []));
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    const nextValue = parseCommaListFieldValue(draftValue);
+    setDraftValue(formatCommaListFieldValue(nextValue));
+    onChange(nextValue);
+    setIsEditing(false);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: fieldClass,
+        value: draftValue,
+        disabled,
+        onFocus: () => setIsEditing(true),
+        onChange: (event) => setDraftValue(event.target.value),
+        onBlur: commitDraftValue
+      }
+    )
+  ] });
+};
 const AirfieldLookupField = ({
   label,
   value,
