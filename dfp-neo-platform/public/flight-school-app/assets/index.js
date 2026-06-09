@@ -63318,7 +63318,7 @@ const DfpSidePanelTimeline = ({
             className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
             style: { backgroundColor: assistDraftEvent.color },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 right-2 top-1 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(flyingStartTime) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: previewCrewName }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
@@ -63328,9 +63328,9 @@ const DfpSidePanelTimeline = ({
                   assistEventLabel
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 grid grid-cols-[auto_auto_minmax(0,1fr)] items-end gap-2 text-[10px] font-semibold leading-none", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: assistDraftEvent.flightType.toUpperCase() }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: assistDraftEvent.flightType.toUpperCase() }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
               ] })
             ]
