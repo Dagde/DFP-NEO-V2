@@ -160,6 +160,9 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       const aInactive = !!currencyStatus.find(s => s.currencyName === a.name)?.isInactive;
       const bInactive = !!currencyStatus.find(s => s.currencyName === b.name)?.isInactive;
       if (aInactive !== bInactive) return aInactive ? 1 : -1; // active first
+      const aRecency = !!a.showInPostFlightRecency;
+      const bRecency = !!b.showInPostFlightRecency;
+      if (aRecency !== bRecency) return aRecency ? 1 : -1; // recency items grouped after normal currencies
       return a.name.localeCompare(b.name); // then alphabetical within each group
     });
   }, [masterCurrencies, currencyRequirements, currencyStatus]);
@@ -172,6 +175,9 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       const aInactive = !!editedInactive.get(a.name);
       const bInactive = !!editedInactive.get(b.name);
       if (aInactive !== bInactive) return aInactive ? 1 : -1;
+      const aRecency = !!a.showInPostFlightRecency;
+      const bRecency = !!b.showInPostFlightRecency;
+      if (aRecency !== bRecency) return aRecency ? 1 : -1;
       return a.name.localeCompare(b.name);
     });
   }, [visibleCurrencyDefinitions, isEditing, editedInactive]);
@@ -488,7 +494,10 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
               const prevIsInactive = idx > 0
                 ? (isEditing ? !!editedInactive.get(sortedCurrencyDefinitions[idx - 1].name) : !!currencyStatus.find(s => s.currencyName === sortedCurrencyDefinitions[idx - 1].name)?.isInactive)
                 : false;
+              const isRecency = !!def.showInPostFlightRecency;
+              const prevIsRecency = idx > 0 ? !!sortedCurrencyDefinitions[idx - 1].showInPostFlightRecency : false;
               const showDivider = isInactive && !prevIsInactive && idx > 0;
+              const showRecencyDivider = !isInactive && isRecency && !prevIsRecency;
               const periodInDays = 'validityDays' in def ? def.validityDays : null;
               const periodText = getPeriodText(periodInDays);
               const validityDays = periodInDays ?? 365;
@@ -509,6 +518,17 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
 
               return (
                 <React.Fragment key={def.name}>
+                  {showRecencyDivider && (
+                    <tr>
+                      <td colSpan={isEditing ? 7 : 6} className="px-2 py-1 bg-emerald-900/20">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-px bg-emerald-700/50" />
+                          <span className="text-[9px] font-semibold text-emerald-300 uppercase tracking-wider whitespace-nowrap">Recency Items</span>
+                          <div className="flex-1 h-px bg-emerald-700/50" />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {showDivider && (
                     <tr>
                       <td colSpan={isEditing ? 7 : 6} className="px-2 py-1 bg-gray-700/30">
@@ -529,6 +549,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
                   <td className="px-2 py-1.5 font-medium max-w-[160px]">
                     <div className="flex flex-row items-center">
                       <span className={`${isInactive ? 'text-gray-400' : 'text-gray-200'}`} title={def.name}>{def.name}</span>
+                      {isRecency && <span className="ml-2 rounded border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-200 whitespace-nowrap">Recency</span>}
                       {isInactive && <span className="ml-2 text-[9px] text-orange-400 font-normal whitespace-nowrap">Inactive</span>}
                     </div>
                   </td>

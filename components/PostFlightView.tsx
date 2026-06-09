@@ -1059,6 +1059,37 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             </div>
                         );
                     })()}
+
+                    {postFlightRecencyItems.length > 0 && (
+                        <div className="flex-[0_0_22rem] max-w-[24rem] bg-gray-700/50 px-3 py-2 rounded border border-emerald-600/40 self-stretch flex flex-col">
+                            <p className="text-sm font-medium text-emerald-300 mb-3 leading-none">Recency</p>
+                            <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-[7rem] pr-1">
+                                {postFlightRecencyItems.map(item => {
+                                    const flightDate = event.date ?? new Date().toISOString().slice(0, 10);
+                                    const isChecked = !!currencyValues[item.id];
+                                    return (
+                                        <label
+                                            key={item.id}
+                                            className={`flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded border px-2 text-xs font-semibold cursor-pointer transition-colors ${
+                                                isChecked
+                                                    ? 'border-emerald-400/60 bg-emerald-500/20 text-emerald-50'
+                                                    : 'border-gray-600 bg-gray-800/70 text-gray-200 hover:border-emerald-400/60'
+                                            }`}
+                                            title={item.name}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={e => handleCurrencyChange(item.id, e.target.checked ? flightDate : '')}
+                                                className="h-3.5 w-3.5 flex-shrink-0 rounded accent-emerald-500 cursor-pointer"
+                                            />
+                                            <span className="truncate">{item.name}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Main "Times" Window */}
@@ -1291,36 +1322,6 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         <ApproachInput label="TACAN" isChecked={tacanChecked} setIsChecked={setTacanChecked} count={tacanCount} setCount={setTacanCount} />
                         <ApproachInput label="VOR/DME" isChecked={vorChecked} setIsChecked={setVorChecked} count={vorCount} setCount={setVorCount} />
 
-                        {postFlightRecencyItems.length > 0 && (
-                            <div className="flex-shrink-0 min-w-[18rem] max-w-[26rem]">
-                                <label className="block text-sm font-medium text-gray-400">Recency</label>
-                                <div className="mt-1 flex flex-wrap gap-1 max-h-[76px] overflow-y-auto rounded-md border border-gray-600 bg-gray-800/40 p-1">
-                                    {postFlightRecencyItems.map(item => {
-                                        const flightDate = event.date ?? new Date().toISOString().slice(0, 10);
-                                        const isChecked = !!currencyValues[item.id];
-                                        return (
-                                            <label
-                                                key={item.id}
-                                                className={`flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded border px-2 text-xs font-semibold cursor-pointer transition-colors ${
-                                                    isChecked
-                                                        ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-100'
-                                                        : 'border-gray-600 bg-gray-700/70 text-gray-200 hover:border-sky-500/60'
-                                                }`}
-                                                title={item.name}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isChecked}
-                                                    onChange={e => handleCurrencyChange(item.id, e.target.checked ? flightDate : '')}
-                                                    className="h-3.5 w-3.5 flex-shrink-0 rounded accent-sky-500 cursor-pointer"
-                                                />
-                                                <span className="truncate">{item.name}</span>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </fieldset>
 

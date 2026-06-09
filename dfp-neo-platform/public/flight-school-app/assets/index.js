@@ -10486,6 +10486,9 @@ const CurrencyPanel = ({
       const aInactive = !!currencyStatus.find((s) => s.currencyName === a.name)?.isInactive;
       const bInactive = !!currencyStatus.find((s) => s.currencyName === b.name)?.isInactive;
       if (aInactive !== bInactive) return aInactive ? 1 : -1;
+      const aRecency = !!a.showInPostFlightRecency;
+      const bRecency = !!b.showInPostFlightRecency;
+      if (aRecency !== bRecency) return aRecency ? 1 : -1;
       return a.name.localeCompare(b.name);
     });
   }, [masterCurrencies, currencyRequirements, currencyStatus]);
@@ -10495,6 +10498,9 @@ const CurrencyPanel = ({
       const aInactive = !!editedInactive.get(a.name);
       const bInactive = !!editedInactive.get(b.name);
       if (aInactive !== bInactive) return aInactive ? 1 : -1;
+      const aRecency = !!a.showInPostFlightRecency;
+      const bRecency = !!b.showInPostFlightRecency;
+      if (aRecency !== bRecency) return aRecency ? 1 : -1;
       return a.name.localeCompare(b.name);
     });
   }, [visibleCurrencyDefinitions, isEditing, editedInactive]);
@@ -10735,7 +10741,10 @@ const CurrencyPanel = ({
         const record = getCurrencyStatus(def.name);
         const isInactive = isEditing ? !!editedInactive.get(def.name) : !!record?.isInactive;
         const prevIsInactive = idx > 0 ? isEditing ? !!editedInactive.get(sortedCurrencyDefinitions[idx - 1].name) : !!currencyStatus.find((s) => s.currencyName === sortedCurrencyDefinitions[idx - 1].name)?.isInactive : false;
+        const isRecency = !!def.showInPostFlightRecency;
+        const prevIsRecency = idx > 0 ? !!sortedCurrencyDefinitions[idx - 1].showInPostFlightRecency : false;
         const showDivider = isInactive && !prevIsInactive && idx > 0;
+        const showRecencyDivider = !isInactive && isRecency && !prevIsRecency;
         const periodInDays = "validityDays" in def ? def.validityDays : null;
         const periodText = getPeriodText(periodInDays);
         const validityDays = periodInDays ?? 365;
@@ -10748,6 +10757,11 @@ const CurrencyPanel = ({
         const daysColor = isInactive ? "text-gray-400" : daysRemaining !== null ? getDaysColor(daysRemaining) : "text-gray-500";
         const rowClass = isInactive ? "bg-gray-800/50 hover:bg-gray-700/40 transition-colors" : "hover:bg-gray-700/40 transition-colors";
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
+          showRecencyDivider && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: isEditing ? 7 : 6, className: "px-2 py-1 bg-emerald-900/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 h-px bg-emerald-700/50" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-semibold text-emerald-300 uppercase tracking-wider whitespace-nowrap", children: "Recency Items" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 h-px bg-emerald-700/50" })
+          ] }) }) }),
           showDivider && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: isEditing ? 7 : 6, className: "px-2 py-1 bg-gray-700/30", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 h-px bg-gray-600/60" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap", children: "Inactive Currencies" }),
@@ -10757,6 +10771,7 @@ const CurrencyPanel = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-1.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-2.5 h-2.5 rounded-sm mx-auto ${dotColor}` }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-1.5 font-medium max-w-[160px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-row items-center", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${isInactive ? "text-gray-400" : "text-gray-200"}`, title: def.name, children: def.name }),
+              isRecency && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 rounded border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-200 whitespace-nowrap", children: "Recency" }),
               isInactive && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-[9px] text-orange-400 font-normal whitespace-nowrap", children: "Inactive" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-1.5 text-center text-gray-400 whitespace-nowrap", children: periodText }),
@@ -55771,7 +55786,34 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
                 }
               )
             ] });
-          })()
+          })(),
+          postFlightRecencyItems.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-[0_0_22rem] max-w-[24rem] bg-gray-700/50 px-3 py-2 rounded border border-emerald-600/40 self-stretch flex flex-col", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-emerald-300 mb-3 leading-none", children: "Recency" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5 overflow-y-auto max-h-[7rem] pr-1", children: postFlightRecencyItems.map((item) => {
+              const flightDate = event.date ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+              const isChecked = !!currencyValues[item.id];
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "label",
+                {
+                  className: `flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded border px-2 text-xs font-semibold cursor-pointer transition-colors ${isChecked ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-50" : "border-gray-600 bg-gray-800/70 text-gray-200 hover:border-emerald-400/60"}`,
+                  title: item.name,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: isChecked,
+                        onChange: (e) => handleCurrencyChange(item.id, e.target.checked ? flightDate : ""),
+                        className: "h-3.5 w-3.5 flex-shrink-0 rounded accent-emerald-500 cursor-pointer"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: item.name })
+                  ]
+                },
+                item.id
+              );
+            }) })
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-lg font-semibold text-gray-300", children: "Times" }),
@@ -55997,34 +56039,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
             /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "ILS/GLS", isChecked: ilsChecked, setIsChecked: setIlsChecked, count: ilsCount, setCount: setIlsCount }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "RNP", isChecked: rnpChecked, setIsChecked: setRnpChecked, count: rnpCount, setCount: setRnpCount }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "TACAN", isChecked: tacanChecked, setIsChecked: setTacanChecked, count: tacanCount, setCount: setTacanCount }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "VOR/DME", isChecked: vorChecked, setIsChecked: setVorChecked, count: vorCount, setCount: setVorCount }),
-            postFlightRecencyItems.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 min-w-[18rem] max-w-[26rem]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Recency" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex flex-wrap gap-1 max-h-[76px] overflow-y-auto rounded-md border border-gray-600 bg-gray-800/40 p-1", children: postFlightRecencyItems.map((item) => {
-                const flightDate = event.date ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-                const isChecked = !!currencyValues[item.id];
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "label",
-                  {
-                    className: `flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded border px-2 text-xs font-semibold cursor-pointer transition-colors ${isChecked ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100" : "border-gray-600 bg-gray-700/70 text-gray-200 hover:border-sky-500/60"}`,
-                    title: item.name,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "checkbox",
-                          checked: isChecked,
-                          onChange: (e) => handleCurrencyChange(item.id, e.target.checked ? flightDate : ""),
-                          className: "h-3.5 w-3.5 flex-shrink-0 rounded accent-sky-500 cursor-pointer"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: item.name })
-                    ]
-                  },
-                  item.id
-                );
-              }) })
-            ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "VOR/DME", isChecked: vorChecked, setIsChecked: setVorChecked, count: vorCount, setCount: setVorCount })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-900 border border-gray-600 rounded-md min-w-max", children: [
