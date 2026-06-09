@@ -62960,7 +62960,8 @@ const DfpSidePanelTimeline = ({
   trainingAreas,
   callsignOptions,
   staffListNames,
-  formatResourceLabel: formatResourceLabel2
+  formatResourceLabel: formatResourceLabel2,
+  scheduleZoomLevel = 1
 }) => {
   const timelineStartHour = 6;
   const timelineEndHour = 25;
@@ -63236,10 +63237,105 @@ const DfpSidePanelTimeline = ({
     selectedSyllabusItem,
     selectedTaskProfile
   ]);
+  const createAssistDragImage = () => {
+    const pixelsPerHour = 200;
+    const rowHeight = 32;
+    const tileWidth = Math.max(48, assistDuration * pixelsPerHour * scheduleZoomLevel);
+    const tileHeight = rowHeight - 4;
+    const fontSize = tileWidth < 120 ? 7 : tileWidth < 160 ? 9 : tileWidth < 240 ? 10 : 11;
+    const ghost = document.createElement("div");
+    ghost.style.position = "fixed";
+    ghost.style.left = "-10000px";
+    ghost.style.top = "-10000px";
+    ghost.style.width = `${tileWidth}px`;
+    ghost.style.height = `${tileHeight}px`;
+    ghost.style.pointerEvents = "none";
+    ghost.style.zIndex = "99999";
+    const tile = document.createElement("div");
+    tile.style.position = "relative";
+    tile.style.width = "100%";
+    tile.style.height = "100%";
+    tile.style.boxSizing = "border-box";
+    tile.style.overflow = "hidden";
+    tile.style.borderRadius = "3px";
+    tile.style.border = "1px solid rgba(255,255,255,0.14)";
+    tile.style.background = assistDraftEvent.color || "#059669";
+    tile.style.color = "#fff";
+    tile.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    tile.style.fontWeight = "700";
+    tile.style.boxShadow = "inset 3px 0 0 rgba(163,230,53,0.72), 0 6px 16px rgba(0,0,0,0.28)";
+    const top = document.createElement("div");
+    top.style.position = "absolute";
+    top.style.left = "6px";
+    top.style.right = "6px";
+    top.style.top = "2px";
+    top.style.display = "grid";
+    top.style.gridTemplateColumns = "42px minmax(0,1fr) auto";
+    top.style.gap = "6px";
+    top.style.alignItems = "start";
+    top.style.fontSize = `${fontSize}px`;
+    top.style.lineHeight = "1.05";
+    const time = document.createElement("span");
+    time.textContent = formatTime2(assistStartTime);
+    time.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    time.style.fontSize = `${Math.max(7, fontSize - 2)}px`;
+    time.style.color = "rgba(255,255,255,0.72)";
+    time.style.whiteSpace = "nowrap";
+    const name = document.createElement("span");
+    name.textContent = previewCrewName;
+    name.style.overflow = "hidden";
+    name.style.textOverflow = "ellipsis";
+    name.style.whiteSpace = "nowrap";
+    const eventLabel = document.createElement("span");
+    eventLabel.textContent = `[${assistDuration.toFixed(1)}] ${assistEventLabel}`;
+    eventLabel.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    eventLabel.style.whiteSpace = "nowrap";
+    top.append(time, name, eventLabel);
+    const bottom = document.createElement("div");
+    bottom.style.position = "absolute";
+    bottom.style.left = "6px";
+    bottom.style.right = "6px";
+    bottom.style.bottom = "3px";
+    bottom.style.display = "grid";
+    bottom.style.gridTemplateColumns = "42px minmax(0,1fr) auto";
+    bottom.style.gap = "6px";
+    bottom.style.alignItems = "end";
+    bottom.style.fontSize = `${Math.max(7, fontSize - 1)}px`;
+    bottom.style.lineHeight = "1";
+    const aircraft = document.createElement("span");
+    aircraft.textContent = previewAircraftNumber;
+    aircraft.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    aircraft.style.color = "rgba(255,255,255,0.82)";
+    const flightType = document.createElement("span");
+    flightType.textContent = assistDraftEvent.flightType.toUpperCase();
+    flightType.style.justifySelf = "start";
+    flightType.style.borderRadius = "3px";
+    flightType.style.background = "rgba(132,204,22,0.62)";
+    flightType.style.padding = "1px 4px";
+    flightType.style.color = "#f7fee7";
+    const areaCallsign = document.createElement("span");
+    areaCallsign.textContent = previewAreaCallsign;
+    areaCallsign.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+    areaCallsign.style.textAlign = "right";
+    areaCallsign.style.whiteSpace = "nowrap";
+    areaCallsign.style.overflow = "hidden";
+    areaCallsign.style.textOverflow = "ellipsis";
+    areaCallsign.style.color = "#ecfeff";
+    bottom.append(aircraft, flightType, areaCallsign);
+    tile.append(top, bottom);
+    ghost.appendChild(tile);
+    document.body.appendChild(ghost);
+    return ghost;
+  };
   const startAssistTileDrag = (event) => {
     event.dataTransfer.effectAllowed = "copy";
     event.dataTransfer.setData("application/neo-assist-event", JSON.stringify(assistDraftEvent));
     event.dataTransfer.setData("text/plain", assistEventLabel);
+    const dragImage = createAssistDragImage();
+    event.dataTransfer.setDragImage(dragImage, 0, 8);
+    window.setTimeout(() => {
+      dragImage.remove();
+    }, 0);
   };
   const normalizeHour = (time) => {
     let value = Number(time) || 0;
@@ -64496,7 +64592,7 @@ const DfpSidePanelTimeline = ({
             style: { backgroundColor: assistDraftEvent.color },
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(flyingStartTime) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(assistStartTime) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: previewCrewName }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
                   "[",
@@ -86814,6 +86910,7 @@ Do you want to replace the existing entry?`,
                     callsignOptions: neoAssistCallsignOptions,
                     staffListNames: neoAssistStaffListNames,
                     formatResourceLabel: formatResourceDisplayLabel,
+                    scheduleZoomLevel: zoomLevel,
                     onOpenPrioritiesExclusions: () => {
                       try {
                         localStorage.setItem("neo_open_departure_arrival_exclusions", "1");
