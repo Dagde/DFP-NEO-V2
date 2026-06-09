@@ -62784,6 +62784,9 @@ const DfpSidePanelTimeline = ({
   coursePercentages,
   onUpdateCoursePercentages,
   packagePriorities,
+  onUpdatePackagePriorities,
+  currencyNames,
+  onAddPriorityEvents,
   availableAircraftCount,
   onUpdateAircraftCount,
   aircraftConfigCapacities,
@@ -62811,6 +62814,7 @@ const DfpSidePanelTimeline = ({
   const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
   const [selectedEventCode, setSelectedEventCode] = reactExports.useState("");
   const [selectedTaskProfile, setSelectedTaskProfile] = reactExports.useState("");
+  const [selectedCurrencyName, setSelectedCurrencyName] = reactExports.useState("");
   const [selectedCrewName, setSelectedCrewName] = reactExports.useState("");
   const [selectedResourceKind, setSelectedResourceKind] = reactExports.useState("flight");
   const [selectedResourceNumber, setSelectedResourceNumber] = reactExports.useState(1);
@@ -62820,13 +62824,81 @@ const DfpSidePanelTimeline = ({
   const [crewSourceMode, setCrewSourceMode] = reactExports.useState("priority");
   const [selectedCourseEventCode, setSelectedCourseEventCode] = reactExports.useState("");
   const [selectedPackageEventCode, setSelectedPackageEventCode] = reactExports.useState("");
-  const selectedSyllabusItem = reactExports.useMemo(() => filteredEventOptions.find((item) => item.code === selectedEventCode) || filteredEventOptions[0] || null, [filteredEventOptions, selectedEventCode]);
+  const [selectedCourseName, setSelectedCourseName] = reactExports.useState("");
+  const [selectedPackageName, setSelectedPackageName] = reactExports.useState("");
+  const [assistTaskDate, setAssistTaskDate] = reactExports.useState(date);
+  const [assistTaskTakeoff, setAssistTaskTakeoff] = reactExports.useState(flyingStartTime);
+  const [assistTaskDuration, setAssistTaskDuration] = reactExports.useState(1.2);
+  const [assistTaskFlightType, setAssistTaskFlightType] = reactExports.useState("Solo");
+  const [assistTaskDepPoint, setAssistTaskDepPoint] = reactExports.useState(locationCode);
+  const [assistTaskArrivalPoint, setAssistTaskArrivalPoint] = reactExports.useState(locationCode);
+  const [assistTaskAircraftCount, setAssistTaskAircraftCount] = reactExports.useState(1);
+  const [assistTaskConfigId, setAssistTaskConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
+  const [assistTaskMandatory, setAssistTaskMandatory] = reactExports.useState(true);
+  const [assistTaskRequests, setAssistTaskRequests] = reactExports.useState([]);
+  const [assistCurrencyDate, setAssistCurrencyDate] = reactExports.useState(date);
+  const [assistCurrencyTakeoff, setAssistCurrencyTakeoff] = reactExports.useState(flyingStartTime);
+  const [assistCurrencyDuration, setAssistCurrencyDuration] = reactExports.useState(1.2);
+  const [assistCurrencyFlightType, setAssistCurrencyFlightType] = reactExports.useState("Solo");
+  const [assistCurrencyDepPoint, setAssistCurrencyDepPoint] = reactExports.useState(locationCode);
+  const [assistCurrencyArrivalPoint, setAssistCurrencyArrivalPoint] = reactExports.useState(locationCode);
+  const [assistCurrencyConfigId, setAssistCurrencyConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
+  const [assistCurrencyRequests, setAssistCurrencyRequests] = reactExports.useState([]);
+  const courseEventOptions = reactExports.useMemo(() => filteredEventOptions.filter((item) => item.lmpType !== "Staff CAT"), [filteredEventOptions]);
+  const packageEventOptions = reactExports.useMemo(() => filteredEventOptions.filter((item) => item.lmpType === "Staff CAT"), [filteredEventOptions]);
+  const activeSyllabusOptions = activeAssistSection === "packages" ? packageEventOptions : activeAssistSection === "course" ? courseEventOptions : filteredEventOptions;
+  const selectedSyllabusItem = reactExports.useMemo(() => activeSyllabusOptions.find((item) => item.code === selectedEventCode) || filteredEventOptions.find((item) => item.code === selectedEventCode) || activeSyllabusOptions[0] || filteredEventOptions[0] || null, [activeSyllabusOptions, filteredEventOptions, selectedEventCode]);
   reactExports.useEffect(() => {
     if (!selectedEventCode && filteredEventOptions[0]) setSelectedEventCode(filteredEventOptions[0].code);
   }, [filteredEventOptions, selectedEventCode]);
   reactExports.useEffect(() => {
     if (!selectedTaskProfile && taskProfiles[0]) setSelectedTaskProfile(taskProfiles[0]);
   }, [selectedTaskProfile, taskProfiles]);
+  reactExports.useEffect(() => {
+    if (!selectedCurrencyName && currencyNames[0]) setSelectedCurrencyName(currencyNames[0]);
+  }, [selectedCurrencyName, currencyNames]);
+  reactExports.useEffect(() => {
+    setAssistTaskDate(date);
+    setAssistCurrencyDate(date);
+  }, [date]);
+  reactExports.useEffect(() => {
+    setAssistTaskDepPoint((previous) => previous || locationCode);
+    setAssistTaskArrivalPoint((previous) => previous || locationCode);
+    setAssistCurrencyDepPoint((previous) => previous || locationCode);
+    setAssistCurrencyArrivalPoint((previous) => previous || locationCode);
+  }, [locationCode]);
+  const courseNames = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return [
+      ...coursePriorities,
+      ...courseEventOptions.flatMap((item) => item.courses?.length ? item.courses : [item.module || item.phase || "Course"])
+    ].map((name) => String(name || "").trim()).filter((name) => {
+      if (!name || seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    });
+  }, [courseEventOptions, coursePriorities]);
+  const packageNames = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return [
+      ...packagePriorities,
+      ...packageEventOptions.map((item) => item.module || item.courses?.[0] || item.phase || "Package")
+    ].map((name) => String(name || "").trim()).filter((name) => {
+      if (!name || seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    });
+  }, [packageEventOptions, packagePriorities]);
+  reactExports.useEffect(() => {
+    if ((!selectedCourseName || !courseNames.includes(selectedCourseName)) && courseNames[0]) {
+      setSelectedCourseName(courseNames[0]);
+    }
+  }, [courseNames, selectedCourseName]);
+  reactExports.useEffect(() => {
+    if ((!selectedPackageName || !packageNames.includes(selectedPackageName)) && packageNames[0]) {
+      setSelectedPackageName(packageNames[0]);
+    }
+  }, [packageNames, selectedPackageName]);
   const diagnosticCrewPriority = reactExports.useMemo(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -62895,15 +62967,23 @@ const DfpSidePanelTimeline = ({
       const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || "";
       return abbreviation ? `Task - ${abbreviation}` : "Task";
     }
+    if (activeAssistSection === "currency" && selectedCurrencyName) {
+      return selectedCurrencyName;
+    }
     return selectedSyllabusItem?.code || "Event";
-  }, [activeAssistSection, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
+  }, [activeAssistSection, selectedCurrencyName, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
   const assistDuration = Math.max(
     0.1,
-    Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
+    activeAssistSection === "taskings" ? Number(assistTaskDuration) || 1.2 : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || 1.2 : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
   );
+  const assistStartTime = activeAssistSection === "taskings" ? assistTaskTakeoff : activeAssistSection === "currency" ? assistCurrencyTakeoff : flyingStartTime;
+  const assistFlightType = activeAssistSection === "taskings" ? assistTaskFlightType : activeAssistSection === "currency" ? assistCurrencyFlightType : "Solo";
+  const assistOrigin = activeAssistSection === "taskings" ? assistTaskDepPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyDepPoint.trim().toUpperCase() : locationCode;
+  const assistDestination = activeAssistSection === "taskings" ? assistTaskArrivalPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyArrivalPoint.trim().toUpperCase() : locationCode;
+  const assistConfigId = activeAssistSection === "taskings" ? assistTaskConfigId : activeAssistSection === "currency" ? assistCurrencyConfigId : selectedSyllabusItem?.acceptableAircraftConfigs?.[0];
   const assistDraftEvent = reactExports.useMemo(() => ({
     id: `neo-assist-draft-${Date.now()}`,
-    date,
+    date: activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date,
     type: selectedResourceKind === "ftd" ? "ftd" : selectedResourceKind === "cpt" ? "cpt" : "flight",
     pilot: selectedCrewName || "Bloggs, Joe",
     instructor: selectedCrewName || "Bloggs, Joe",
@@ -62912,32 +62992,41 @@ const DfpSidePanelTimeline = ({
     taskingName: activeAssistSection === "taskings" ? selectedTaskProfile : void 0,
     taskingDisplayLabel: activeAssistSection === "taskings" ? assistEventLabel : void 0,
     isTaskingRequest: activeAssistSection === "taskings",
+    currency: activeAssistSection === "currency" ? selectedCurrencyName : void 0,
     duration: assistDuration,
-    startTime: flyingStartTime,
+    startTime: assistStartTime,
     resourceId: assistResourceId,
-    color: activeAssistSection === "taskings" ? "#0891b2" : selectedResourceKind === "flight" ? "#059669" : "#0369a1",
-    flightType: "Solo",
-    locationType: "Local",
-    origin: locationCode,
-    destination: locationCode,
+    color: activeAssistSection === "taskings" ? "#0891b2" : activeAssistSection === "currency" ? "#7c3aed" : selectedResourceKind === "flight" ? "#059669" : "#0369a1",
+    flightType: assistFlightType,
+    soloOrDual: assistFlightType,
+    locationType: assistOrigin !== assistDestination ? "Land Away" : "Local",
+    origin: assistOrigin,
+    destination: assistDestination,
     callsign: assistCallsign.trim() || void 0,
     aircraftNumber: selectedResourceKind === "flight" ? selectedAircraftNumber.trim() || "TBA" : void 0,
     area: selectedAssignedArea && selectedAssignedArea !== "TBA" ? selectedAssignedArea : void 0,
-    preStart: selectedSyllabusItem ? Math.max(0, flyingStartTime - (selectedSyllabusItem.preFlightTime || 0) / 60) : void 0,
-    postEnd: selectedSyllabusItem ? flyingStartTime + assistDuration + (selectedSyllabusItem.postFlightTime || 0) / 60 : void 0
+    aircraftConfigId: assistConfigId,
+    acceptableAircraftConfigs: assistConfigId ? [assistConfigId] : void 0,
+    preStart: selectedSyllabusItem ? Math.max(0, assistStartTime - (selectedSyllabusItem.preFlightTime || 0) / 60) : void 0,
+    postEnd: selectedSyllabusItem ? assistStartTime + assistDuration + (selectedSyllabusItem.postFlightTime || 0) / 60 : void 0
   }), [
     activeAssistSection,
     assistCallsign,
+    assistConfigId,
+    assistCurrencyDate,
     assistDuration,
     assistEventLabel,
+    assistFlightType,
+    assistOrigin,
+    assistDestination,
     assistResourceId,
+    assistStartTime,
+    assistTaskDate,
     date,
-    flyingStartTime,
-    locationCode,
+    selectedCurrencyName,
     selectedCrewName,
     selectedAircraftNumber,
     selectedResourceKind,
-    selectedResourceNumber,
     selectedAssignedArea,
     selectedSyllabusItem,
     selectedTaskProfile
@@ -63133,6 +63222,110 @@ const DfpSidePanelTimeline = ({
     nextPercentages.set(course, nextPercent);
     onUpdateCoursePercentages(nextPercentages);
   };
+  const timeOptions = reactExports.useMemo(() => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour += 1) {
+      for (let minute = 0; minute < 60; minute += 5) {
+        options.push({
+          label: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+          value: hour + minute / 60
+        });
+      }
+    }
+    return options;
+  }, []);
+  const movePackage = (packageName, direction) => {
+    const index = packagePriorities.indexOf(packageName);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= packagePriorities.length) return;
+    const next = [...packagePriorities];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    onUpdatePackagePriorities(next);
+  };
+  const buildTaskRequestEvents = (request) => {
+    const tasking = request.tasking.trim();
+    const abbreviation = taskProfileAbbreviations[tasking] || "";
+    const label = abbreviation ? `Task - ${abbreviation}` : "Task";
+    const depPoint = request.depPoint.trim().toUpperCase();
+    const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
+    const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
+    return Array.from({ length: aircraftCount }, (_, index) => ({
+      id: `neo-assist-tasking-${request.id}-${index + 1}`,
+      date: request.date,
+      type: "flight",
+      instructor: "",
+      student: "",
+      pilot: "",
+      group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : "Tasking",
+      flightNumber: label,
+      duration: Math.max(0.1, Number(request.duration) || 1.2),
+      startTime: request.takeoff,
+      resourceId: "",
+      color: "bg-cyan-500/80",
+      flightType: request.flightType,
+      soloOrDual: request.flightType,
+      locationType: depPoint !== arrivalPoint ? "Land Away" : "Local",
+      origin: depPoint,
+      destination: arrivalPoint,
+      isTimeFixed: true,
+      isTaskingRequest: true,
+      isMandatoryTasking: request.isMandatory !== false,
+      taskingName: tasking,
+      taskingDisplayLabel: label,
+      taskingRequestId: request.id,
+      taskingAircraftIndex: index + 1,
+      taskingAircraftCount: aircraftCount,
+      dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
+      notes: `NEO Assist tasking request: ${tasking}`,
+      priority: "High",
+      aircraftConfigId: request.aircraftConfigId,
+      acceptableAircraftConfigs: [request.aircraftConfigId]
+    }));
+  };
+  const buildCurrencyRequestEvent = (request) => {
+    const depPoint = request.depPoint.trim().toUpperCase();
+    const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
+    return {
+      id: `neo-assist-currency-${request.id}`,
+      date: request.date,
+      type: "flight",
+      instructor: "",
+      student: "",
+      pilot: selectedCrewName || "",
+      group: "Currency",
+      flightNumber: request.currency || "Currency",
+      duration: Math.max(0.1, Number(request.duration) || 1.2),
+      startTime: request.takeoff,
+      resourceId: "",
+      color: "#7c3aed",
+      flightType: request.flightType,
+      soloOrDual: request.flightType,
+      locationType: depPoint !== arrivalPoint ? "Land Away" : "Local",
+      origin: depPoint,
+      destination: arrivalPoint,
+      isTimeFixed: true,
+      currency: request.currency,
+      currencyDraftId: request.id,
+      dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
+      notes: `NEO Assist currency request: ${request.currency}`,
+      priority: "High",
+      aircraftConfigId: request.aircraftConfigId,
+      acceptableAircraftConfigs: [request.aircraftConfigId]
+    };
+  };
+  const submitAssistTaskRequest = (id) => {
+    const request = assistTaskRequests.find((item) => item.id === id);
+    if (!request || !request.tasking.trim()) return;
+    onAddPriorityEvents(buildTaskRequestEvents(request));
+    setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, submitted: true } : item));
+  };
+  const submitAssistCurrencyRequest = (id) => {
+    const request = assistCurrencyRequests.find((item) => item.id === id);
+    if (!request || !request.currency.trim()) return;
+    onAddPriorityEvents([buildCurrencyRequestEvent(request)]);
+    setAssistCurrencyRequests((prev) => prev.map((item) => item.id === id ? { ...item, submitted: true } : item));
+  };
+  const fieldClass2 = "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100";
   const renderAssistSection = () => {
     if (activeAssistSection === "details") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
@@ -63345,22 +63538,190 @@ const DfpSidePanelTimeline = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-cyan-100", children: "Package priority" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400", children: packagePriorities.slice(0, 4).join(", ") || "No packages set" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 space-y-1", children: [
+            packagePriorities.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-500", children: "No packages set" }),
+            packagePriorities.map((packageName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: packageName }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => movePackage(packageName, -1), className: "rounded border border-slate-600 px-1", children: "Up" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => movePackage(packageName, 1), className: "rounded border border-slate-600 px-1", children: "Down" })
+              ] })
+            ] }, packageName))
+          ] })
         ] })
       ] });
     }
     if (activeAssistSection === "taskings") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-        "Tasking",
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Tasking",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                list: "neo-assist-tasking-options",
+                value: selectedTaskProfile,
+                onChange: (event) => setSelectedTaskProfile(event.target.value),
+                className: fieldClass2,
+                placeholder: "Task type"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-tasking-options", children: taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile }, profile)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Date",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: assistTaskDate, onChange: (event) => setAssistTaskDate(event.target.value), className: fieldClass2 })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Takeoff",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: assistTaskTakeoff, onChange: (event) => setAssistTaskTakeoff(Number(event.target.value)), className: fieldClass2, children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `assist-task-${option.label}`)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Duration",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0.1, step: 0.1, value: assistTaskDuration, onChange: (event) => setAssistTaskDuration(Math.max(0.1, Number(event.target.value) || 0.1)), className: fieldClass2 })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Solo/Dual",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: assistTaskFlightType, onChange: (event) => setAssistTaskFlightType(event.target.value), className: fieldClass2, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Dep Point",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: assistTaskDepPoint, onChange: (event) => setAssistTaskDepPoint(event.target.value.toUpperCase()), className: fieldClass2 })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Arrival Point",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: assistTaskArrivalPoint, onChange: (event) => setAssistTaskArrivalPoint(event.target.value.toUpperCase()), className: fieldClass2 })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "No. Aircraft",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 1, value: assistTaskAircraftCount, onChange: (event) => setAssistTaskAircraftCount(Math.max(1, Number(event.target.value) || 1)), className: fieldClass2 })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "CONFIG",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: assistTaskConfigId, onChange: (event) => setAssistTaskConfigId(event.target.value), className: fieldClass2, children: aircraftConfigurationDefinitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 inline-flex items-center gap-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: assistTaskMandatory, onChange: (event) => setAssistTaskMandatory(event.target.checked) }),
+            "Mandatory"
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "select",
+          "button",
           {
-            value: selectedTaskProfile,
-            onChange: (event) => setSelectedTaskProfile(event.target.value),
-            className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-            children: taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
+            type: "button",
+            onClick: () => setAssistTaskRequests((prev) => [...prev, {
+              id: v4(),
+              tasking: selectedTaskProfile,
+              date: assistTaskDate,
+              takeoff: assistTaskTakeoff,
+              duration: assistTaskDuration,
+              flightType: assistTaskFlightType,
+              depPoint: assistTaskDepPoint,
+              arrivalPoint: assistTaskArrivalPoint,
+              aircraftCount: assistTaskAircraftCount,
+              aircraftConfigId: assistTaskConfigId,
+              isMandatory: assistTaskMandatory
+            }]),
+            className: "rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100",
+            children: "+ Add Request"
           }
-        )
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-28 space-y-1 overflow-y-auto pr-1", children: assistTaskRequests.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+            request.tasking || "Task",
+            " ",
+            formatTime2(request.takeoff),
+            " ",
+            request.depPoint,
+            "-",
+            request.arrivalPoint
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
+            request.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-emerald-300", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => submitAssistTaskRequest(request.id), className: "rounded border border-emerald-400/50 px-1 text-emerald-100", children: "Submit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setAssistTaskRequests((prev) => prev.filter((item) => item.id !== request.id)), className: "rounded border border-rose-400/50 px-1 text-rose-100", children: "Del" })
+          ] })
+        ] }, request.id)) })
+      ] });
+    }
+    if (activeAssistSection === "currency") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Currency",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedCurrencyName, onChange: (event) => setSelectedCurrencyName(event.target.value), className: fieldClass2, children: [
+              currencyNames.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No currency configured" }),
+              currencyNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Date",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: assistCurrencyDate, onChange: (event) => setAssistCurrencyDate(event.target.value), className: fieldClass2 })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Takeoff",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: assistCurrencyTakeoff, onChange: (event) => setAssistCurrencyTakeoff(Number(event.target.value)), className: fieldClass2, children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `assist-currency-${option.label}`)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Duration",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0.1, step: 0.1, value: assistCurrencyDuration, onChange: (event) => setAssistCurrencyDuration(Math.max(0.1, Number(event.target.value) || 0.1)), className: fieldClass2 })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Solo/Dual",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: assistCurrencyFlightType, onChange: (event) => setAssistCurrencyFlightType(event.target.value), className: fieldClass2, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Dep Point",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: assistCurrencyDepPoint, onChange: (event) => setAssistCurrencyDepPoint(event.target.value.toUpperCase()), className: fieldClass2 })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Arrival Point",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: assistCurrencyArrivalPoint, onChange: (event) => setAssistCurrencyArrivalPoint(event.target.value.toUpperCase()), className: fieldClass2 })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "CONFIG",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: assistCurrencyConfigId, onChange: (event) => setAssistCurrencyConfigId(event.target.value), className: fieldClass2, children: aircraftConfigurationDefinitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id)) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setAssistCurrencyRequests((prev) => [...prev, {
+              id: v4(),
+              currency: selectedCurrencyName,
+              date: assistCurrencyDate,
+              takeoff: assistCurrencyTakeoff,
+              duration: assistCurrencyDuration,
+              flightType: assistCurrencyFlightType,
+              depPoint: assistCurrencyDepPoint,
+              arrivalPoint: assistCurrencyArrivalPoint,
+              aircraftConfigId: assistCurrencyConfigId
+            }]),
+            className: "rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100",
+            children: "+ Add Request"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-28 space-y-1 overflow-y-auto pr-1", children: assistCurrencyRequests.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+            request.currency || "Currency",
+            " ",
+            formatTime2(request.takeoff),
+            " ",
+            request.depPoint,
+            "-",
+            request.arrivalPoint
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
+            request.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-emerald-300", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => submitAssistCurrencyRequest(request.id), className: "rounded border border-emerald-400/50 px-1 text-emerald-100", children: "Submit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setAssistCurrencyRequests((prev) => prev.filter((item) => item.id !== request.id)), className: "rounded border border-rose-400/50 px-1 text-rose-100", children: "Del" })
+          ] })
+        ] }, request.id)) })
       ] });
     }
     if (activeAssistSection === "crew") {
@@ -63375,48 +63736,88 @@ const DfpSidePanelTimeline = ({
             "Staff list"
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-          "Crew",
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: selectedCrewName,
-              onChange: (event) => setSelectedCrewName(event.target.value),
-              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Bloggs, Joe" }),
-                displayedCrewOptions.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: formatCrewOptionLabel(name) }, name))
-              ]
-            }
-          )
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/55 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Crew" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setSelectedCrewName(""), className: "rounded border border-slate-600 px-1 text-[9px] normal-case tracking-normal text-slate-300", children: "Clear" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: [
+            displayedCrewOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-slate-500", children: "No crew available." }),
+            displayedCrewOptions.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-2 py-1 text-[10px] ${selectedCrewName === name ? "border-cyan-300/70 bg-cyan-400/10 text-cyan-50" : "border-slate-700 bg-slate-950/45 text-slate-300"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: selectedCrewName === name,
+                  onChange: (event) => setSelectedCrewName(event.target.checked ? name : "")
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatCrewOptionLabel(name) })
+            ] }, name))
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[9px] text-slate-500", children: "Priority list uses the latest NEO Build ordering when diagnostic priority data is available." })
       ] });
     }
     if (activeAssistSection === "course" || activeAssistSection === "packages") {
-      const eventOptions = activeAssistSection === "course" ? filteredEventOptions : filteredEventOptions.filter((item) => item.module);
+      const isPackageSection = activeAssistSection === "packages";
+      const groupNames = isPackageSection ? packageNames : courseNames;
+      const selectedGroupName = isPackageSection ? selectedPackageName : selectedCourseName;
+      const setSelectedGroupName = isPackageSection ? setSelectedPackageName : setSelectedCourseName;
+      const baseOptions = isPackageSection ? packageEventOptions : courseEventOptions;
+      const eventOptions = baseOptions.filter((item) => {
+        if (!selectedGroupName) return true;
+        if (isPackageSection) {
+          return [item.module, item.courses?.[0], item.phase].filter(Boolean).includes(selectedGroupName);
+        }
+        return item.courses?.includes(selectedGroupName) || item.module === selectedGroupName || item.phase === selectedGroupName;
+      });
       const selectedCode = activeAssistSection === "course" ? selectedCourseEventCode : selectedPackageEventCode;
       const setSelectedCode = activeAssistSection === "course" ? setSelectedCourseEventCode : setSelectedPackageEventCode;
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-64 overflow-y-auto pr-1 text-[10px] text-slate-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: eventOptions.map((item) => {
-        const isComplete = Boolean(item.completedAt || item.isComplete || item.completed || item.completedDate || item.status === "Complete");
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-2 py-1 ${selectedCode === item.code ? "border-cyan-300/70 bg-cyan-400/10" : "border-slate-700 bg-slate-950/45"}`, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+          isPackageSection ? "Package" : "Course",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
             {
-              type: "radio",
-              name: `neo-assist-${activeAssistSection}`,
-              checked: selectedCode === item.code,
-              onChange: () => {
-                setSelectedCode(item.code);
-                setSelectedEventCode(item.code);
-              }
+              value: selectedGroupName,
+              onChange: (event) => setSelectedGroupName(event.target.value),
+              className: fieldClass2,
+              children: [
+                groupNames.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None assigned" }),
+                groupNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+              ]
             }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: isComplete ? "text-emerald-300" : "text-slate-300", children: isComplete ? "✓" : "□" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-100", children: item.code }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-slate-400", children: item.eventDescription })
-        ] }, item.id || item.code);
-      }) }) });
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-56 space-y-1 overflow-y-auto pr-1", children: [
+          eventOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: [
+            "No ",
+            isPackageSection ? "package" : "course",
+            " events assigned."
+          ] }),
+          eventOptions.map((item) => {
+            const isComplete = Boolean(item.completedAt || item.isComplete || item.completed || item.completedDate || item.status === "Complete");
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-2 py-1 ${selectedCode === item.code ? "border-cyan-300/70 bg-cyan-400/10" : "border-slate-700 bg-slate-950/45"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  name: `neo-assist-${activeAssistSection}`,
+                  checked: selectedCode === item.code,
+                  onChange: () => {
+                    setSelectedCode(item.code);
+                    setSelectedEventCode(item.code);
+                  }
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: isComplete ? "text-emerald-300" : "text-slate-300", children: isComplete ? "✓" : "□" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-100", children: item.code }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-slate-400", children: item.eventDescription })
+            ] }, item.id || item.code);
+          })
+        ] })
+      ] });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
       "Event",
@@ -74554,6 +74955,7 @@ const App = () => {
   const [archivedCourses, setArchivedCourses] = reactExports.useState({});
   const [coursePriorities, setCoursePriorities] = reactExports.useState([]);
   const [coursePercentages, setCoursePercentages] = reactExports.useState(/* @__PURE__ */ new Map());
+  const [packagePriorities, setPackagePriorities] = reactExports.useState([]);
   const [traineeLMPs, setTraineeLMPs] = reactExports.useState(/* @__PURE__ */ new Map());
   const hasConfiguredCourseUnitScope = reactExports.useMemo(
     () => (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE"),
@@ -74631,6 +75033,19 @@ const App = () => {
       return changed ? updated : prev;
     });
   }, [traineesData, courseColors]);
+  reactExports.useEffect(() => {
+    const visiblePackageNames = Array.from(new Set(
+      visibleSyllabusDetails.filter((item) => item.lmpType === "Staff CAT").map((item) => item.module || item.courses?.[0] || item.phase).map((name) => String(name || "").trim()).filter(Boolean)
+    ));
+    setPackagePriorities((prev) => {
+      const visibleSet = new Set(visiblePackageNames);
+      const filtered = prev.filter((name) => visibleSet.has(name));
+      const existing = new Set(filtered);
+      const additions = visiblePackageNames.filter((name) => !existing.has(name));
+      if (filtered.length === prev.length && additions.length === 0) return prev;
+      return [...filtered, ...additions];
+    });
+  }, [visibleSyllabusDetails]);
   const [eventLimits, setEventLimits] = reactExports.useState({
     exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
     instructor: { maxFlightFtd: 2, maxDutySup: 31, maxTotal: 3 },
@@ -85738,7 +86153,18 @@ Do you want to replace the existing entry?`,
                     onUpdateCoursePriorities: setCoursePriorities,
                     coursePercentages,
                     onUpdateCoursePercentages: setCoursePercentages,
-                    packagePriorities: Array.from(new Set(visibleSyllabusDetails.map((item) => item.module).filter(Boolean))).slice(0, 12),
+                    packagePriorities,
+                    onUpdatePackagePriorities: setPackagePriorities,
+                    currencyNames,
+                    onAddPriorityEvents: (eventsToAdd) => {
+                      setHighestPriorityEvents((prev) => {
+                        const incomingIds = new Set(eventsToAdd.map((event) => event.id));
+                        return [
+                          ...prev.filter((event) => !incomingIds.has(event.id)),
+                          ...eventsToAdd
+                        ];
+                      });
+                    },
                     availableAircraftCount: neoAvailableAircraftCount,
                     onUpdateAircraftCount: setNeoAvailableAircraftCount,
                     aircraftConfigCapacities: neoAircraftConfigCapacities,
