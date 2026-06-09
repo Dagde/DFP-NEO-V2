@@ -62812,6 +62812,7 @@ const DfpSidePanelTimeline = ({
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
   const [activeAssistSection, setActiveAssistSection] = reactExports.useState("details");
   const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
+  const fullAssistEventOptions = reactExports.useMemo(() => syllabusDetails, [syllabusDetails]);
   const [selectedEventCode, setSelectedEventCode] = reactExports.useState("");
   const [selectedTaskProfile, setSelectedTaskProfile] = reactExports.useState("");
   const [selectedCurrencyName, setSelectedCurrencyName] = reactExports.useState("");
@@ -62844,8 +62845,8 @@ const DfpSidePanelTimeline = ({
   const [assistCurrencyArrivalPoint, setAssistCurrencyArrivalPoint] = reactExports.useState(locationCode);
   const [assistCurrencyConfigId, setAssistCurrencyConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const [assistCurrencyRequests, setAssistCurrencyRequests] = reactExports.useState([]);
-  const courseEventOptions = reactExports.useMemo(() => filteredEventOptions.filter((item) => item.lmpType !== "Staff CAT"), [filteredEventOptions]);
-  const packageEventOptions = reactExports.useMemo(() => filteredEventOptions.filter((item) => item.lmpType === "Staff CAT"), [filteredEventOptions]);
+  const courseEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType !== "Staff CAT"), [fullAssistEventOptions]);
+  const packageEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType === "Staff CAT"), [fullAssistEventOptions]);
   const activeSyllabusOptions = activeAssistSection === "packages" ? packageEventOptions : activeAssistSection === "course" ? courseEventOptions : filteredEventOptions;
   const selectedSyllabusItem = reactExports.useMemo(() => activeSyllabusOptions.find((item) => item.code === selectedEventCode) || filteredEventOptions.find((item) => item.code === selectedEventCode) || activeSyllabusOptions[0] || filteredEventOptions[0] || null, [activeSyllabusOptions, filteredEventOptions, selectedEventCode]);
   reactExports.useEffect(() => {
@@ -63326,6 +63327,16 @@ const DfpSidePanelTimeline = ({
     setAssistCurrencyRequests((prev) => prev.map((item) => item.id === id ? { ...item, submitted: true } : item));
   };
   const fieldClass2 = "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100";
+  const taskProfileSelectValue = taskProfiles.includes(selectedTaskProfile) ? selectedTaskProfile : "";
+  const getCompletionDateLabel = (item) => {
+    const rawDate = String(item.completedAt || item.completedDate || item.dateCompleted || "").trim();
+    if (!rawDate) return "";
+    const parsed = new Date(rawDate);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" });
+    }
+    return rawDate;
+  };
   const renderAssistSection = () => {
     if (activeAssistSection === "details") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
@@ -63556,17 +63567,30 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Tasking",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: taskProfileSelectValue,
+                onChange: (event) => setSelectedTaskProfile(event.target.value),
+                className: fieldClass2,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select tasking type" }),
+                  taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Manual tasking name",
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
-                list: "neo-assist-tasking-options",
                 value: selectedTaskProfile,
                 onChange: (event) => setSelectedTaskProfile(event.target.value),
                 className: fieldClass2,
-                placeholder: "Task type"
+                placeholder: "Type tasking manually"
               }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-tasking-options", children: taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile }, profile)) })
+            )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",
@@ -63798,7 +63822,9 @@ const DfpSidePanelTimeline = ({
           ] }),
           eventOptions.map((item) => {
             const isComplete = Boolean(item.completedAt || item.isComplete || item.completed || item.completedDate || item.status === "Complete");
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-2 py-1 ${selectedCode === item.code ? "border-cyan-300/70 bg-cyan-400/10" : "border-slate-700 bg-slate-950/45"}`, children: [
+            const completionDateLabel = getCompletionDateLabel(item);
+            const rowClass = isComplete ? "border-emerald-400/80 bg-emerald-500/10 ring-1 ring-emerald-400/30" : selectedCode === item.code ? "border-cyan-300/70 bg-cyan-400/10" : "border-slate-700 bg-slate-950/45";
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[auto_auto_1fr] items-center gap-2 rounded border px-2 py-1 ${rowClass}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -63812,8 +63838,16 @@ const DfpSidePanelTimeline = ({
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: isComplete ? "text-emerald-300" : "text-slate-300", children: isComplete ? "✓" : "□" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-100", children: item.code }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-slate-400", children: item.eventDescription })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-slate-100", children: item.code }),
+                  isComplete && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-200", children: [
+                    "Completed",
+                    completionDateLabel ? ` ${completionDateLabel}` : ""
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-slate-300", children: item.eventDescription || item.module || item.phase || item.code })
+              ] })
             ] }, item.id || item.code);
           })
         ] })

@@ -340,6 +340,7 @@ const DfpSidePanelTimeline: React.FC<{
             .filter(item => ['Flight', 'FTD', 'Academics'].includes(item.type))
             .slice(0, 160)
     ), [syllabusDetails]);
+    const fullAssistEventOptions = useMemo(() => syllabusDetails, [syllabusDetails]);
     const [selectedEventCode, setSelectedEventCode] = useState('');
     const [selectedTaskProfile, setSelectedTaskProfile] = useState('');
     const [selectedCurrencyName, setSelectedCurrencyName] = useState('');
@@ -398,12 +399,12 @@ const DfpSidePanelTimeline: React.FC<{
     }>>([]);
 
     const courseEventOptions = useMemo(() => (
-        filteredEventOptions.filter(item => item.lmpType !== 'Staff CAT')
-    ), [filteredEventOptions]);
+        fullAssistEventOptions.filter(item => item.lmpType !== 'Staff CAT')
+    ), [fullAssistEventOptions]);
 
     const packageEventOptions = useMemo(() => (
-        filteredEventOptions.filter(item => item.lmpType === 'Staff CAT')
-    ), [filteredEventOptions]);
+        fullAssistEventOptions.filter(item => item.lmpType === 'Staff CAT')
+    ), [fullAssistEventOptions]);
 
     const activeSyllabusOptions = activeAssistSection === 'packages'
         ? packageEventOptions
@@ -995,6 +996,16 @@ const DfpSidePanelTimeline: React.FC<{
         setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: true } : item));
     };
     const fieldClass = 'mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100';
+    const taskProfileSelectValue = taskProfiles.includes(selectedTaskProfile) ? selectedTaskProfile : '';
+    const getCompletionDateLabel = (item: SyllabusItemDetail): string => {
+        const rawDate = String((item as any).completedAt || (item as any).completedDate || (item as any).dateCompleted || '').trim();
+        if (!rawDate) return '';
+        const parsed = new Date(rawDate);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit' });
+        }
+        return rawDate;
+    };
 
     const renderAssistSection = () => {
         if (activeAssistSection === 'details') {
@@ -1231,16 +1242,23 @@ const DfpSidePanelTimeline: React.FC<{
                     <div className="grid grid-cols-2 gap-2">
                         <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
                             Tasking
+                            <select
+                                value={taskProfileSelectValue}
+                                onChange={event => setSelectedTaskProfile(event.target.value)}
+                                className={fieldClass}
+                            >
+                                <option value="">Select tasking type</option>
+                                {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
+                            </select>
+                        </label>
+                        <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Manual tasking name
                             <input
-                                list="neo-assist-tasking-options"
                                 value={selectedTaskProfile}
                                 onChange={event => setSelectedTaskProfile(event.target.value)}
                                 className={fieldClass}
-                                placeholder="Task type"
+                                placeholder="Type tasking manually"
                             />
-                            <datalist id="neo-assist-tasking-options">
-                                {taskProfiles.map(profile => <option key={profile} value={profile} />)}
-                            </datalist>
                         </label>
                         <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
                             <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />
@@ -1451,8 +1469,14 @@ const DfpSidePanelTimeline: React.FC<{
                         {eventOptions.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No {isPackageSection ? 'package' : 'course'} events assigned.</p>}
                         {eventOptions.map(item => {
                             const isComplete = Boolean((item as any).completedAt || (item as any).isComplete || (item as any).completed || (item as any).completedDate || (item as any).status === 'Complete');
+                            const completionDateLabel = getCompletionDateLabel(item);
+                            const rowClass = isComplete
+                                ? 'border-emerald-400/80 bg-emerald-500/10 ring-1 ring-emerald-400/30'
+                                : selectedCode === item.code
+                                    ? 'border-cyan-300/70 bg-cyan-400/10'
+                                    : 'border-slate-700 bg-slate-950/45';
                             return (
-                                <label key={item.id || item.code} className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1 ${selectedCode === item.code ? 'border-cyan-300/70 bg-cyan-400/10' : 'border-slate-700 bg-slate-950/45'}`}>
+                                <label key={item.id || item.code} className={`grid cursor-pointer grid-cols-[auto_auto_1fr] items-center gap-2 rounded border px-2 py-1 ${rowClass}`}>
                                     <input
                                         type="radio"
                                         name={`neo-assist-${activeAssistSection}`}
@@ -1463,8 +1487,13 @@ const DfpSidePanelTimeline: React.FC<{
                                         }}
                                     />
                                     <span className={isComplete ? 'text-emerald-300' : 'text-slate-300'}>{isComplete ? '✓' : '□'}</span>
-                                    <span className="font-mono text-slate-100">{item.code}</span>
-                                    <span className="truncate text-slate-400">{item.eventDescription}</span>
+                                    <span className="min-w-0">
+                                        <span className="flex items-center gap-2">
+                                            <span className="font-mono text-slate-100">{item.code}</span>
+                                            {isComplete && <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-200">Completed{completionDateLabel ? ` ${completionDateLabel}` : ''}</span>}
+                                        </span>
+                                        <span className="block truncate text-slate-300">{item.eventDescription || item.module || item.phase || item.code}</span>
+                                    </span>
                                 </label>
                             );
                         })}
