@@ -225,7 +225,7 @@ type NeoAssistSection =
     | 'currency'
     | 'course'
     | 'packages'
-    | 'aircraft'
+    | 'details'
     | 'crew';
 
 type NeoAssistDropPlacement = {
@@ -296,7 +296,7 @@ const DfpSidePanelTimeline: React.FC<{
     const chartRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
-    const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('aircraft');
+    const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('details');
     const filteredEventOptions = useMemo(() => (
         syllabusDetails
             .filter(item => ['Flight', 'FTD', 'Academics'].includes(item.type))
@@ -611,6 +611,7 @@ const DfpSidePanelTimeline: React.FC<{
     ];
 
     const assistSections: Array<{ id: NeoAssistSection; label: string }> = [
+        { id: 'details', label: 'Details' },
         { id: 'flying', label: 'Flying Window' },
         { id: 'resources', label: 'Resources Available' },
         { id: 'training', label: 'Training Priority' },
@@ -618,7 +619,6 @@ const DfpSidePanelTimeline: React.FC<{
         { id: 'currency', label: 'Currency events' },
         { id: 'course', label: 'Course events' },
         { id: 'packages', label: 'Packages' },
-        { id: 'aircraft', label: 'Aircraft / Type' },
         { id: 'crew', label: 'Crew' },
     ];
     const resourceNumberLimit = selectedResourceKind === 'ftd'
@@ -632,6 +632,47 @@ const DfpSidePanelTimeline: React.FC<{
         .join(', ') || 'No CONFIG split set';
 
     const renderAssistSection = () => {
+        if (activeAssistSection === 'details') {
+            return (
+                <div className="grid grid-cols-2 gap-2">
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                        Resource
+                        <select
+                            value={selectedResourceKind}
+                            onChange={event => {
+                                setSelectedResourceKind(event.target.value as 'flight' | 'ftd' | 'cpt');
+                                setSelectedResourceNumber(1);
+                            }}
+                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                        >
+                            <option value="flight">Flight</option>
+                            <option value="ftd">FTD</option>
+                            <option value="cpt">CPT</option>
+                        </select>
+                    </label>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                        Number
+                        <input
+                            type="number"
+                            min={1}
+                            max={resourceNumberLimit}
+                            value={selectedResourceNumber}
+                            onChange={event => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1)))}
+                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                        />
+                    </label>
+                    <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                        Callsign
+                        <input
+                            value={assistCallsign}
+                            onChange={event => setAssistCallsign(event.target.value)}
+                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                            placeholder="Optional"
+                        />
+                    </label>
+                </div>
+            );
+        }
         if (activeAssistSection === 'flying') {
             return (
                 <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-200">
@@ -817,6 +858,30 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 </div>
             </div>
+            <div className="mt-3 flex justify-center">
+                <div
+                    draggable
+                    onDragStart={startAssistTileDrag}
+                    className="w-full max-w-[360px] cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing"
+                    title="Drag this tile onto the DFP to create a copy"
+                >
+                    <div
+                        className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
+                        style={{ backgroundColor: assistDraftEvent.color }}
+                    >
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
+                            <span className="truncate">{selectedCrewName || 'Crew'}</span>
+                            <span className="shrink-0 whitespace-nowrap font-mono">[{assistDuration.toFixed(1)}] {assistEventLabel}</span>
+                        </div>
+                        <div className="mt-0.5 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2 text-[10px] font-semibold leading-none">
+                            <span className="rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">{assistDraftEvent.flightType.toUpperCase()}</span>
+                            <span className="truncate text-right font-mono text-cyan-50">
+                                {assistCallsign || formatResourceLabel(assistResourceId)}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div className="mt-3 grid grid-cols-[128px_minmax(0,1fr)] gap-3">
                 <div className="space-y-1.5">
                     {assistSections.map(section => (
@@ -835,76 +900,6 @@ const DfpSidePanelTimeline: React.FC<{
                     ))}
                 </div>
                 <div className="min-w-0 space-y-3">
-                    <div
-                        draggable
-                        onDragStart={startAssistTileDrag}
-                        className="cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing"
-                        title="Drag this tile onto the DFP to create a copy"
-                    >
-                        <div
-                            className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
-                            style={{ backgroundColor: assistDraftEvent.color }}
-                        >
-                            <div className="flex items-start justify-between gap-2 text-[11px] font-bold leading-tight">
-                                <span className="truncate">{selectedCrewName || 'Crew'}</span>
-                                <span className="shrink-0 font-mono">[{assistDuration.toFixed(1)}]</span>
-                            </div>
-                            <div className="mt-0.5 flex items-end justify-between gap-2 text-[10px] font-semibold leading-none">
-                                <span className="rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">{assistDraftEvent.flightType.toUpperCase()}</span>
-                                <span className="truncate font-mono text-cyan-50">{assistEventLabel}</span>
-                            </div>
-                            <div className="absolute bottom-1 right-2 max-w-[45%] truncate text-[9px] font-semibold text-cyan-100/90">
-                                {assistCallsign || formatResourceLabel(assistResourceId)}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            Resource
-                            <select
-                                value={selectedResourceKind}
-                                onChange={event => {
-                                    setSelectedResourceKind(event.target.value as 'flight' | 'ftd' | 'cpt');
-                                    setSelectedResourceNumber(1);
-                                }}
-                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                            >
-                                <option value="flight">Flight</option>
-                                <option value="ftd">FTD</option>
-                                <option value="cpt">CPT</option>
-                            </select>
-                        </label>
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            Number
-                            <input
-                                type="number"
-                                min={1}
-                                max={resourceNumberLimit}
-                                value={selectedResourceNumber}
-                                onChange={event => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1)))}
-                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                            />
-                        </label>
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            Callsign
-                            <input
-                                value={assistCallsign}
-                                onChange={event => setAssistCallsign(event.target.value)}
-                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                                placeholder="Optional"
-                            />
-                        </label>
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            Crew
-                            <select
-                                value={selectedCrewName}
-                                onChange={event => setSelectedCrewName(event.target.value)}
-                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                            >
-                                {crewOptions.map(name => <option key={name} value={name}>{name}</option>)}
-                            </select>
-                        </label>
-                    </div>
                     <div className="rounded-md border border-slate-700/75 bg-slate-900/65 p-3">
                         {renderAssistSection()}
                     </div>

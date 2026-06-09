@@ -62738,7 +62738,7 @@ const DfpSidePanelTimeline = ({
   const chartRef = reactExports.useRef(null);
   const scrollRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
-  const [activeAssistSection, setActiveAssistSection] = reactExports.useState("aircraft");
+  const [activeAssistSection, setActiveAssistSection] = reactExports.useState("details");
   const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
   const [selectedEventCode, setSelectedEventCode] = reactExports.useState("");
   const [selectedTaskProfile, setSelectedTaskProfile] = reactExports.useState("");
@@ -63002,6 +63002,7 @@ const DfpSidePanelTimeline = ({
     ])
   ];
   const assistSections = [
+    { id: "details", label: "Details" },
     { id: "flying", label: "Flying Window" },
     { id: "resources", label: "Resources Available" },
     { id: "training", label: "Training Priority" },
@@ -63009,12 +63010,60 @@ const DfpSidePanelTimeline = ({
     { id: "currency", label: "Currency events" },
     { id: "course", label: "Course events" },
     { id: "packages", label: "Packages" },
-    { id: "aircraft", label: "Aircraft / Type" },
     { id: "crew", label: "Crew" }
   ];
   const resourceNumberLimit = selectedResourceKind === "ftd" ? Math.max(1, availableFtdCount) : selectedResourceKind === "cpt" ? Math.max(1, availableCptCount) : Math.max(1, availableAircraftCount);
   const configSummary = Object.entries(aircraftConfigCapacities || {}).filter(([, count]) => Number(count) > 0).map(([configId, count]) => `${configId}: ${count}`).join(", ") || "No CONFIG split set";
   const renderAssistSection = () => {
+    if (activeAssistSection === "details") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+          "Resource",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: selectedResourceKind,
+              onChange: (event) => {
+                setSelectedResourceKind(event.target.value);
+                setSelectedResourceNumber(1);
+              },
+              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "flight", children: "Flight" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ftd", children: "FTD" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cpt", children: "CPT" })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+          "Number",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: 1,
+              max: resourceNumberLimit,
+              value: selectedResourceNumber,
+              onChange: (event) => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1))),
+              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+          "Callsign",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              value: assistCallsign,
+              onChange: (event) => setAssistCallsign(event.target.value),
+              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+              placeholder: "Optional"
+            }
+          )
+        ] })
+      ] });
+    }
     if (activeAssistSection === "flying") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -63231,6 +63280,37 @@ const DfpSidePanelTimeline = ({
         )
       }
     ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        draggable: true,
+        onDragStart: startAssistTileDrag,
+        className: "w-full max-w-[360px] cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing",
+        title: "Drag this tile onto the DFP to create a copy",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
+            style: { backgroundColor: assistDraftEvent.color },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: selectedCrewName || "Crew" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
+                  "[",
+                  assistDuration.toFixed(1),
+                  "] ",
+                  assistEventLabel
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2 text-[10px] font-semibold leading-none", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: assistDraftEvent.flightType.toUpperCase() }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: assistCallsign || formatResourceLabel2(assistResourceId) })
+              ] })
+            ]
+          }
+        )
+      }
+    ) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[128px_minmax(0,1fr)] gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: assistSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
@@ -63242,99 +63322,7 @@ const DfpSidePanelTimeline = ({
         },
         section.id
       )) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            draggable: true,
-            onDragStart: startAssistTileDrag,
-            className: "cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing",
-            title: "Drag this tile onto the DFP to create a copy",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "div",
-              {
-                className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
-                style: { backgroundColor: assistDraftEvent.color },
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2 text-[11px] font-bold leading-tight", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: selectedCrewName || "Crew" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 font-mono", children: [
-                      "[",
-                      assistDuration.toFixed(1),
-                      "]"
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 flex items-end justify-between gap-2 text-[10px] font-semibold leading-none", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: assistDraftEvent.flightType.toUpperCase() }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-mono text-cyan-50", children: assistEventLabel })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-1 right-2 max-w-[45%] truncate text-[9px] font-semibold text-cyan-100/90", children: assistCallsign || formatResourceLabel2(assistResourceId) })
-                ]
-              }
-            )
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Resource",
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: selectedResourceKind,
-                onChange: (event) => {
-                  setSelectedResourceKind(event.target.value);
-                  setSelectedResourceNumber(1);
-                },
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "flight", children: "Flight" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ftd", children: "FTD" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cpt", children: "CPT" })
-                ]
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Number",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "number",
-                min: 1,
-                max: resourceNumberLimit,
-                value: selectedResourceNumber,
-                onChange: (event) => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1))),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Callsign",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                value: assistCallsign,
-                onChange: (event) => setAssistCallsign(event.target.value),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-                placeholder: "Optional"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Crew",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: selectedCrewName,
-                onChange: (event) => setSelectedCrewName(event.target.value),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-                children: crewOptions.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
-              }
-            )
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: renderAssistSection() })
-      ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: renderAssistSection() }) })
     ] })
   ] });
 };
