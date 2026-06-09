@@ -62874,49 +62874,17 @@ const DfpSidePanelTimeline = ({
     setAssistCurrencyDepPoint((previous) => previous || locationCode);
     setAssistCurrencyArrivalPoint((previous) => previous || locationCode);
   }, [locationCode]);
-  const courseNames = reactExports.useMemo(() => {
-    const seen = /* @__PURE__ */ new Set();
-    return [
-      ...coursePriorities,
-      ...courseEventOptions.flatMap((item) => item.courses?.length ? item.courses : [item.module || item.phase || "Course"])
-    ].map((name) => String(name || "").trim()).filter((name) => {
-      if (!name || seen.has(name)) return false;
-      seen.add(name);
-      return true;
-    });
-  }, [courseEventOptions, coursePriorities]);
-  const packageNames = reactExports.useMemo(() => {
-    const seen = /* @__PURE__ */ new Set();
-    return [
-      ...packagePriorities,
-      ...packageEventOptions.map((item) => item.module || item.courses?.[0] || item.phase || "Package")
-    ].map((name) => String(name || "").trim()).filter((name) => {
-      if (!name || seen.has(name)) return false;
-      seen.add(name);
-      return true;
-    });
-  }, [packageEventOptions, packagePriorities]);
-  reactExports.useEffect(() => {
-    if ((!selectedCourseName || !courseNames.includes(selectedCourseName)) && courseNames[0]) {
-      setSelectedCourseName(courseNames[0]);
-    }
-  }, [courseNames, selectedCourseName]);
-  reactExports.useEffect(() => {
-    if ((!selectedPackageName || !packageNames.includes(selectedPackageName)) && packageNames[0]) {
-      setSelectedPackageName(packageNames[0]);
-    }
-  }, [packageNames, selectedPackageName]);
   const selectedCrewRecord = reactExports.useMemo(() => instructors.find((person) => person.name === selectedCrewName) || null, [instructors, selectedCrewName]);
   const selectedCrewAssignments = reactExports.useMemo(() => selectedCrewRecord ? normaliseAirCombatTrainingAssignments(selectedCrewRecord.preferences) : { courses: [], trainingPackages: [] }, [selectedCrewRecord]);
   const selectedCrewTrainingReports = reactExports.useMemo(() => selectedCrewRecord ? normaliseAirCombatTrainingReports(selectedCrewRecord.preferences) : [], [selectedCrewRecord]);
-  const selectedCrewCourseOptions = reactExports.useMemo(() => selectedCrewAssignments.courses.map((assignment) => ({
-    key: assignment.trainingKey,
+  const selectedCrewCourseOptions = reactExports.useMemo(() => selectedCrewAssignments.courses.map((assignment, index) => ({
+    key: assignment.trainingKey || `course:${assignment.code}:${assignment.title}:${index}`,
     code: assignment.code,
     label: assignment.title || assignment.code,
     assignment
   })), [selectedCrewAssignments.courses]);
-  const selectedCrewPackageOptions = reactExports.useMemo(() => selectedCrewAssignments.trainingPackages.map((assignment) => ({
-    key: assignment.trainingKey,
+  const selectedCrewPackageOptions = reactExports.useMemo(() => selectedCrewAssignments.trainingPackages.map((assignment, index) => ({
+    key: assignment.trainingKey || `training-package:${assignment.code}:${assignment.title}:${index}`,
     code: assignment.code,
     label: assignment.title || assignment.code,
     assignment
@@ -62926,8 +62894,8 @@ const DfpSidePanelTimeline = ({
       if (selectedCourseName) setSelectedCourseName("");
       return;
     }
-    if (!selectedCrewCourseOptions.some((option) => option.code === selectedCourseName)) {
-      setSelectedCourseName(selectedCrewCourseOptions[0].code);
+    if (!selectedCrewCourseOptions.some((option) => option.key === selectedCourseName)) {
+      setSelectedCourseName(selectedCrewCourseOptions[0].key);
     }
   }, [selectedCrewCourseOptions, selectedCourseName]);
   reactExports.useEffect(() => {
@@ -62935,8 +62903,8 @@ const DfpSidePanelTimeline = ({
       if (selectedPackageName) setSelectedPackageName("");
       return;
     }
-    if (!selectedCrewPackageOptions.some((option) => option.code === selectedPackageName)) {
-      setSelectedPackageName(selectedCrewPackageOptions[0].code);
+    if (!selectedCrewPackageOptions.some((option) => option.key === selectedPackageName)) {
+      setSelectedPackageName(selectedCrewPackageOptions[0].key);
     }
   }, [selectedCrewPackageOptions, selectedPackageName]);
   const diagnosticCrewPriority = reactExports.useMemo(() => {
@@ -63425,8 +63393,11 @@ const DfpSidePanelTimeline = ({
     return rawDate;
   };
   const normaliseAssistTrainingCode = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const getSelectedCrewTrainingItems = (kind, assignmentCode) => {
-    const assignment = (kind === "training_package" ? selectedCrewAssignments.trainingPackages : selectedCrewAssignments.courses).find((item) => item.code === assignmentCode);
+  const getSelectedCrewTrainingItems = (kind, assignmentKey) => {
+    const assignment = (kind === "training_package" ? selectedCrewAssignments.trainingPackages : selectedCrewAssignments.courses).find((item, index) => {
+      const key = item.trainingKey || `${kind === "training_package" ? "training-package" : "course"}:${item.code}:${item.title}:${index}`;
+      return key === assignmentKey;
+    });
     if (!assignment) return [];
     const matchingCodes = new Set([
       assignment.code,
@@ -63444,8 +63415,11 @@ const DfpSidePanelTimeline = ({
       (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
     );
   };
-  const getSelectedCrewCompletion = (item, kind, assignmentCode) => {
-    const assignment = (kind === "training_package" ? selectedCrewAssignments.trainingPackages : selectedCrewAssignments.courses).find((entry) => entry.code === assignmentCode);
+  const getSelectedCrewCompletion = (item, kind, assignmentKey) => {
+    const assignment = (kind === "training_package" ? selectedCrewAssignments.trainingPackages : selectedCrewAssignments.courses).find((entry, index) => {
+      const key = entry.trainingKey || `${kind === "training_package" ? "training-package" : "course"}:${entry.code}:${entry.title}:${index}`;
+      return key === assignmentKey;
+    });
     const itemCode = normaliseAssistTrainingCode(item.code);
     const report = selectedCrewTrainingReports.find((entry) => normaliseAssistTrainingCode(entry.eventCode) === itemCode && (!assignment || entry.trainingKey === assignment.trainingKey || normaliseAssistTrainingCode(entry.trainingCode) === normaliseAssistTrainingCode(assignment.code)) && (entry.dcoResult === "DCO" || entry.dcoResult === "DPCO" || entry.status === "Complete"));
     if (report) {
@@ -64111,7 +64085,7 @@ const DfpSidePanelTimeline = ({
       });
       const selectedCode = activeAssistSection === "course" ? selectedCourseEventCode : selectedPackageEventCode;
       const setSelectedCode = activeAssistSection === "course" ? setSelectedCourseEventCode : setSelectedPackageEventCode;
-      const assignmentLabel = assignedOptions.find((option) => option.code === selectedGroupName)?.label || selectedGroupName;
+      const assignmentLabel = assignedOptions.find((option) => option.key === selectedGroupName)?.label || selectedGroupName;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         !selectedCrewName && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-2 text-amber-100", children: [
           "Select crew first to show assigned ",
@@ -64129,7 +64103,7 @@ const DfpSidePanelTimeline = ({
               disabled: !selectedCrewName || assignedOptions.length === 0,
               children: [
                 assignedOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None assigned" }),
-                assignedOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.code, children: option.label }, option.key))
+                assignedOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
               ]
             }
           )

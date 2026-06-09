@@ -456,42 +456,6 @@ const DfpSidePanelTimeline: React.FC<{
         setAssistCurrencyArrivalPoint(previous => previous || locationCode);
     }, [locationCode]);
 
-    const courseNames = useMemo(() => {
-        const seen = new Set<string>();
-        return [
-            ...coursePriorities,
-            ...courseEventOptions.flatMap(item => item.courses?.length ? item.courses : [item.module || item.phase || 'Course']),
-        ].map(name => String(name || '').trim()).filter(name => {
-            if (!name || seen.has(name)) return false;
-            seen.add(name);
-            return true;
-        });
-    }, [courseEventOptions, coursePriorities]);
-
-    const packageNames = useMemo(() => {
-        const seen = new Set<string>();
-        return [
-            ...packagePriorities,
-            ...packageEventOptions.map(item => item.module || item.courses?.[0] || item.phase || 'Package'),
-        ].map(name => String(name || '').trim()).filter(name => {
-            if (!name || seen.has(name)) return false;
-            seen.add(name);
-            return true;
-        });
-    }, [packageEventOptions, packagePriorities]);
-
-    useEffect(() => {
-        if ((!selectedCourseName || !courseNames.includes(selectedCourseName)) && courseNames[0]) {
-            setSelectedCourseName(courseNames[0]);
-        }
-    }, [courseNames, selectedCourseName]);
-
-    useEffect(() => {
-        if ((!selectedPackageName || !packageNames.includes(selectedPackageName)) && packageNames[0]) {
-            setSelectedPackageName(packageNames[0]);
-        }
-    }, [packageNames, selectedPackageName]);
-
     const selectedCrewRecord = useMemo(() => (
         instructors.find(person => person.name === selectedCrewName) || null
     ), [instructors, selectedCrewName]);
@@ -507,8 +471,8 @@ const DfpSidePanelTimeline: React.FC<{
     ), [selectedCrewRecord]);
 
     const selectedCrewCourseOptions = useMemo(() => (
-        selectedCrewAssignments.courses.map(assignment => ({
-            key: assignment.trainingKey,
+        selectedCrewAssignments.courses.map((assignment, index) => ({
+            key: assignment.trainingKey || `course:${assignment.code}:${assignment.title}:${index}`,
             code: assignment.code,
             label: assignment.title || assignment.code,
             assignment,
@@ -516,8 +480,8 @@ const DfpSidePanelTimeline: React.FC<{
     ), [selectedCrewAssignments.courses]);
 
     const selectedCrewPackageOptions = useMemo(() => (
-        selectedCrewAssignments.trainingPackages.map(assignment => ({
-            key: assignment.trainingKey,
+        selectedCrewAssignments.trainingPackages.map((assignment, index) => ({
+            key: assignment.trainingKey || `training-package:${assignment.code}:${assignment.title}:${index}`,
             code: assignment.code,
             label: assignment.title || assignment.code,
             assignment,
@@ -529,8 +493,8 @@ const DfpSidePanelTimeline: React.FC<{
             if (selectedCourseName) setSelectedCourseName('');
             return;
         }
-        if (!selectedCrewCourseOptions.some(option => option.code === selectedCourseName)) {
-            setSelectedCourseName(selectedCrewCourseOptions[0].code);
+        if (!selectedCrewCourseOptions.some(option => option.key === selectedCourseName)) {
+            setSelectedCourseName(selectedCrewCourseOptions[0].key);
         }
     }, [selectedCrewCourseOptions, selectedCourseName]);
 
@@ -539,8 +503,8 @@ const DfpSidePanelTimeline: React.FC<{
             if (selectedPackageName) setSelectedPackageName('');
             return;
         }
-        if (!selectedCrewPackageOptions.some(option => option.code === selectedPackageName)) {
-            setSelectedPackageName(selectedCrewPackageOptions[0].code);
+        if (!selectedCrewPackageOptions.some(option => option.key === selectedPackageName)) {
+            setSelectedPackageName(selectedCrewPackageOptions[0].key);
         }
     }, [selectedCrewPackageOptions, selectedPackageName]);
 
@@ -1128,10 +1092,13 @@ const DfpSidePanelTimeline: React.FC<{
         String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     const getSelectedCrewTrainingItems = (
         kind: 'course' | 'training_package',
-        assignmentCode: string,
+        assignmentKey: string,
     ): SyllabusItemDetail[] => {
         const assignment = (kind === 'training_package' ? selectedCrewAssignments.trainingPackages : selectedCrewAssignments.courses)
-            .find(item => item.code === assignmentCode);
+            .find((item, index) => {
+                const key = item.trainingKey || `${kind === 'training_package' ? 'training-package' : 'course'}:${item.code}:${item.title}:${index}`;
+                return key === assignmentKey;
+            });
         if (!assignment) return [];
         const matchingCodes = new Set([
             assignment.code,
@@ -1158,10 +1125,13 @@ const DfpSidePanelTimeline: React.FC<{
     const getSelectedCrewCompletion = (
         item: SyllabusItemDetail,
         kind: 'course' | 'training_package',
-        assignmentCode: string,
+        assignmentKey: string,
     ): { complete: boolean; dateLabel: string } => {
         const assignment = (kind === 'training_package' ? selectedCrewAssignments.trainingPackages : selectedCrewAssignments.courses)
-            .find(entry => entry.code === assignmentCode);
+            .find((entry, index) => {
+                const key = entry.trainingKey || `${kind === 'training_package' ? 'training-package' : 'course'}:${entry.code}:${entry.title}:${index}`;
+                return key === assignmentKey;
+            });
         const itemCode = normaliseAssistTrainingCode(item.code);
         const report = selectedCrewTrainingReports.find(entry => (
             normaliseAssistTrainingCode(entry.eventCode) === itemCode &&
@@ -1802,7 +1772,7 @@ const DfpSidePanelTimeline: React.FC<{
             });
             const selectedCode = activeAssistSection === 'course' ? selectedCourseEventCode : selectedPackageEventCode;
             const setSelectedCode = activeAssistSection === 'course' ? setSelectedCourseEventCode : setSelectedPackageEventCode;
-            const assignmentLabel = assignedOptions.find(option => option.code === selectedGroupName)?.label || selectedGroupName;
+            const assignmentLabel = assignedOptions.find(option => option.key === selectedGroupName)?.label || selectedGroupName;
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
                     {!selectedCrewName && (
@@ -1819,7 +1789,7 @@ const DfpSidePanelTimeline: React.FC<{
                             disabled={!selectedCrewName || assignedOptions.length === 0}
                         >
                             {assignedOptions.length === 0 && <option value="">None assigned</option>}
-                            {assignedOptions.map(option => <option key={option.key} value={option.code}>{option.label}</option>)}
+                            {assignedOptions.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
                         </select>
                     </label>
                     {selectedCrewName && selectedGroupName && (
