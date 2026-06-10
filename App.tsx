@@ -764,6 +764,12 @@ const DfpSidePanelTimeline: React.FC<{
         : activeAssistSection === 'currency'
             ? assistCurrencyConfigId
             : selectedSyllabusItem?.acceptableAircraftConfigs?.[0];
+    const getAssistTileDisplayColor = (color?: string) => {
+        if (!color) return '#047857';
+        if (color === 'bg-emerald-500/70') return 'rgba(16,185,129,0.42)';
+        if (color === 'bg-sky-500/70') return 'rgba(14,165,233,0.42)';
+        return color.startsWith('bg-') ? '#047857' : color;
+    };
 
     const assistDraftEvent: ScheduleEvent = useMemo(() => ({
         id: `neo-assist-draft-${Date.now()}`,
@@ -784,7 +790,7 @@ const DfpSidePanelTimeline: React.FC<{
         duration: assistDuration,
         startTime: assistStartTime,
         resourceId: assistResourceId,
-        color: activeAssistSection === 'taskings' ? '#0891b2' : activeAssistSection === 'currency' ? '#7c3aed' : selectedResourceKind === 'flight' ? '#047857' : '#0369a1',
+        color: activeAssistSection === 'taskings' ? '#0891b2' : activeAssistSection === 'currency' ? '#7c3aed' : selectedResourceKind === 'flight' ? 'bg-emerald-500/70' : '#0369a1',
         flightType: assistFlightType,
         soloOrDual: assistFlightType,
         locationType: assistOrigin !== assistDestination ? 'Land Away' : 'Local',
@@ -867,7 +873,7 @@ const DfpSidePanelTimeline: React.FC<{
             tile.style.overflow = 'hidden';
             tile.style.borderRadius = '3px';
             tile.style.border = '1px solid rgba(255,255,255,0.14)';
-            tile.style.background = assistDraftEvent.color || '#047857';
+            tile.style.background = getAssistTileDisplayColor(assistDraftEvent.color);
             tile.style.color = '#fff';
             tile.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
             tile.style.fontWeight = '700';
@@ -2921,7 +2927,7 @@ const DfpSidePanelTimeline: React.FC<{
                 >
                     <div
                         className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
-                        style={{ backgroundColor: assistDraftEvent.color }}
+                        style={{ backgroundColor: getAssistTileDisplayColor(assistDraftEvent.color) }}
                     >
                         <div className="absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
                             <span className="shrink-0 font-mono text-[9px] font-semibold text-white/70">{formatTime(assistStartTime)}</span>
