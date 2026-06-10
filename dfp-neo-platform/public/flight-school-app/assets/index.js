@@ -50622,6 +50622,31 @@ const PlatformConfigurationSettings = ({
     setSelectedUnitIndex(Math.max(0, unitIndex - 1));
     setEditingUnitIndex(null);
   };
+  const addAircraftType = () => {
+    setConfig((prev) => {
+      const existingCodes = new Set(prev.aircraftTypes.map((aircraft) => String(aircraft.code || "").trim().toUpperCase()));
+      let suffix = prev.aircraftTypes.length + 1;
+      let code = `AIRCRAFT-${suffix}`;
+      while (existingCodes.has(code.toUpperCase())) {
+        suffix += 1;
+        code = `AIRCRAFT-${suffix}`;
+      }
+      return {
+        ...prev,
+        aircraftTypes: [
+          ...prev.aircraftTypes,
+          {
+            id: createClientRecordId("aircraft-type"),
+            code,
+            name: "New Aircraft Type",
+            category: "Other",
+            status: "ACTIVE",
+            crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION
+          }
+        ]
+      };
+    });
+  };
   const addResourcePool = () => {
     const defaultLocation = config.locations[0]?.code || "ESL";
     const newPoolId = createClientRecordId("pool");
@@ -51439,7 +51464,17 @@ const PlatformConfigurationSettings = ({
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-resource-pools", className: getSectionClass("platform-resource-pools"), children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Aircraft Types & Resource Pools", subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources.", action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }) : null }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Aircraft Types & Resource Pools",
+          subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addAircraftType, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Aircraft Type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" })
+          ] }) : null
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 lg:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => {
           const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);

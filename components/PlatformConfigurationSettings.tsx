@@ -36,7 +36,7 @@ import {
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConfigurationSettings';
-import { normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import { getAppApiBase } from '../utils/externalDataControls';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
@@ -1963,6 +1963,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setEditingUnitIndex(null);
   };
 
+  const addAircraftType = () => {
+    setConfig((prev) => {
+      const existingCodes = new Set(prev.aircraftTypes.map((aircraft: any) => String(aircraft.code || '').trim().toUpperCase()));
+      let suffix = prev.aircraftTypes.length + 1;
+      let code = `AIRCRAFT-${suffix}`;
+      while (existingCodes.has(code.toUpperCase())) {
+        suffix += 1;
+        code = `AIRCRAFT-${suffix}`;
+      }
+
+      return {
+        ...prev,
+        aircraftTypes: [
+          ...prev.aircraftTypes,
+          {
+            id: createClientRecordId('aircraft-type'),
+            code,
+            name: 'New Aircraft Type',
+            category: 'Other',
+            status: 'ACTIVE',
+            crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION,
+          },
+        ],
+      };
+    });
+  };
+
   const addResourcePool = () => {
     const defaultLocation = config.locations[0]?.code || 'ESL';
     const newPoolId = createClientRecordId('pool');
@@ -2906,7 +2933,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       </section>
 
       <section id="platform-resource-pools" className={getSectionClass('platform-resource-pools')}>
-        <SectionHeader title="Aircraft Types & Resource Pools" subtitle="Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources." action={canEdit ? <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button> : null} />
+        <SectionHeader
+          title="Aircraft Types & Resource Pools"
+          subtitle="Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources."
+          action={canEdit ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={addAircraftType} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Aircraft Type</button>
+              <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button>
+            </div>
+          ) : null}
+        />
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <div className="space-y-3">
             {config.aircraftTypes.map((aircraft, index) => {
