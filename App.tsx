@@ -349,7 +349,7 @@ const DfpSidePanelTimeline: React.FC<{
     const timelineStartHour = 6;
     const timelineEndHour = 25;
     const timelineSpanHours = timelineEndHour - timelineStartHour;
-    const visibleWindowHours = 5;
+    const visibleWindowHours = 10;
     const timelineMinGap = 5 / 60;
     const miniTimelineBodyHeight = 80;
     const chartRef = useRef<HTMLDivElement | null>(null);
@@ -1033,9 +1033,9 @@ const DfpSidePanelTimeline: React.FC<{
 
     const formatCompactTime = (decimalHour: number): string => formatTime(decimalHour).replace(':', '');
     const formatTick = (hour: number): string => {
-        if (hour === 24) return '0000';
-        if (hour === 25) return '0100';
-        return `${String(hour).padStart(2, '0')}00`;
+        if (hour === 24) return '00';
+        if (hour === 25) return '01';
+        return String(hour).padStart(2, '0');
     };
 
     const getTimeFromPointer = (clientX: number): number => {
@@ -2735,11 +2735,11 @@ const DfpSidePanelTimeline: React.FC<{
             <div
                 ref={scrollRef}
                 className="overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-3 shadow-inner [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                aria-label="Scrollable five hour flying window timeline"
+                aria-label="Scrollable ten hour flying window timeline"
             >
                 <div
                     className="relative"
-                    style={{ width: `${(timelineSpanHours / visibleWindowHours) * 100}%`, minWidth: '1320px' }}
+                    style={{ width: `${(timelineSpanHours / visibleWindowHours) * 100}%`, minWidth: '660px' }}
                 >
                     <div className="relative mb-1 h-4">
                         {ticks.map(hour => (
