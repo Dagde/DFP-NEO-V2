@@ -49093,6 +49093,67 @@ const AppearanceSettings = () => {
     ] })
   ] });
 };
+const DEFAULT_CREW_POSITION_TERMINOLOGY = {
+  positions: [
+    { id: "pilot", genericName: "Pilot", label: "Pilot" },
+    { id: "combat-systems-operator", genericName: "Combat Systems Operator", label: "Combat Systems Operator" },
+    { id: "airborne-mission-commander", genericName: "Airborne Mission Commander", label: "Airborne Mission Commander" },
+    { id: "flight-engineer", genericName: "Flight Engineer", label: "Flight Engineer" },
+    { id: "loadmaster", genericName: "Loadmaster", label: "Loadmaster" },
+    { id: "crew", genericName: "Crew", label: "Crew" }
+  ]
+};
+const makeCrewPositionId = (genericName, index) => {
+  const slug = String(genericName || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || `crew-position-${index + 1}`;
+};
+const normaliseEntry = (entry, index) => {
+  if (!entry || typeof entry !== "object") return null;
+  const fallback = DEFAULT_CREW_POSITION_TERMINOLOGY.positions[index];
+  const genericName = String(entry.genericName || entry.generic || entry.name || fallback?.genericName || "").trim();
+  if (!genericName) return null;
+  const label = String(entry.label || entry.displayName || genericName).trim() || genericName;
+  return {
+    id: String(entry.id || makeCrewPositionId(genericName, index)).trim() || makeCrewPositionId(genericName, index),
+    genericName,
+    label
+  };
+};
+const normaliseCrewPositionTerminology = (source) => {
+  let sourcePositions = [];
+  if (Array.isArray(source)) {
+    sourcePositions = source;
+  } else if (Array.isArray(source?.positions)) {
+    sourcePositions = source.positions;
+  } else if (source && typeof source === "object") {
+    sourcePositions = Object.entries(source).map(([genericName, label]) => ({ genericName, label }));
+  }
+  const positions = [
+    ...DEFAULT_CREW_POSITION_TERMINOLOGY.positions,
+    ...sourcePositions
+  ].map(normaliseEntry).filter((entry) => Boolean(entry));
+  const byGenericName = /* @__PURE__ */ new Map();
+  positions.forEach((entry) => {
+    const key = entry.genericName.trim().toUpperCase();
+    if (!key) return;
+    byGenericName.set(key, entry);
+  });
+  return { positions: Array.from(byGenericName.values()) };
+};
+const getCrewPositionLabelMap = (terminology) => normaliseCrewPositionTerminology(terminology).positions.reduce((labels, entry) => ({
+  ...labels,
+  [entry.genericName]: entry.label
+}), {});
+const getCrewPositionOptions = (terminology, extraValues = []) => {
+  const options = normaliseCrewPositionTerminology(terminology).positions.map((entry) => entry.genericName);
+  extraValues.forEach((value) => {
+    const trimmed = String(value || "").trim();
+    if (trimmed && !options.some((option) => option.toUpperCase() === trimmed.toUpperCase())) {
+      options.push(trimmed);
+    }
+  });
+  return options;
+};
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
 const emptyConfig = {
@@ -50014,6 +50075,11 @@ const PlatformConfigurationSettings = ({
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
+  const crewPositionTerminology = normaliseCrewPositionTerminology(
+    primaryOrganisationSettings.crewPositionTerminology || null
+  );
+  const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
+  const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0]?.trim() : String(activeUnitCode || "").trim();
   const activeTrainingReportUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()) || config.units.find(isActiveRecord) || config.units[0] || null;
   const activeTrainingReportUnitIndex = activeTrainingReportUnit ? config.units.findIndex((unit) => unit === activeTrainingReportUnit) : -1;
@@ -50140,6 +50206,62 @@ const PlatformConfigurationSettings = ({
         ...changes
       })
     }));
+  };
+  const updateCrewPositionTerminology = (positions, renamedPosition) => {
+    setRankTerminologyDirty(true);
+    setConfig((prev) => {
+      const organisations = prev.organisations.length > 0 ? [...prev.organisations] : [{ code: "RAAF", name: "RAAF", status: "ACTIVE", settings: {} }];
+      const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
+      const orgIndex = activeIndex >= 0 ? activeIndex : 0;
+      const currentOrg = organisations[orgIndex] || organisations[0];
+      const nextTerminology = normaliseCrewPositionTerminology({ positions });
+      organisations[orgIndex] = {
+        ...currentOrg,
+        settings: {
+          ...currentOrg.settings || {},
+          crewPositionTerminology: nextTerminology
+        }
+      };
+      const from = String(renamedPosition?.from || "").trim();
+      const to = String(renamedPosition?.to || "").trim();
+      const shouldRenameSeats = Boolean(from && to && from.toUpperCase() !== to.toUpperCase());
+      return {
+        ...prev,
+        organisations,
+        aircraftTypes: shouldRenameSeats ? prev.aircraftTypes.map((aircraft) => {
+          const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+          const seats = crewComposition.seats.map((seat) => String(seat.role || "").trim().toUpperCase() === from.toUpperCase() ? { ...seat, role: to } : seat);
+          return {
+            ...aircraft,
+            crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats })
+          };
+        }) : prev.aircraftTypes
+      };
+    });
+  };
+  const updateCrewPositionEntry = (entryId, changes) => {
+    const currentEntry = crewPositionTerminology.positions.find((entry) => entry.id === entryId);
+    if (!currentEntry) return;
+    const nextGenericName = String(changes.genericName ?? currentEntry.genericName).trim() || currentEntry.genericName;
+    const nextLabel = String(changes.label ?? currentEntry.label).trim() || nextGenericName;
+    const nextPositions = crewPositionTerminology.positions.map((entry) => entry.id === entryId ? { ...entry, genericName: nextGenericName, label: nextLabel } : entry);
+    updateCrewPositionTerminology(nextPositions, { from: currentEntry.genericName, to: nextGenericName });
+  };
+  const addCrewPositionEntry = () => {
+    const genericName = `Crew Position ${crewPositionTerminology.positions.length + 1}`;
+    updateCrewPositionTerminology([
+      ...crewPositionTerminology.positions,
+      {
+        id: createClientRecordId("crew-position"),
+        genericName,
+        label: genericName
+      }
+    ]);
+  };
+  const removeCrewPositionEntry = (entryId) => {
+    const nextPositions = crewPositionTerminology.positions.filter((entry) => entry.id !== entryId);
+    if (nextPositions.length === crewPositionTerminology.positions.length || nextPositions.length === 0) return;
+    updateCrewPositionTerminology(nextPositions);
   };
   const updateTrainingReportTemplate = (updater) => {
     if (activeTrainingReportUnitIndex < 0) return;
@@ -51478,6 +51600,10 @@ const PlatformConfigurationSettings = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 lg:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => {
           const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+          const crewPositionOptions = getCrewPositionOptions(
+            crewPositionTerminology,
+            crewComposition.seats.map((seat) => seat.role)
+          );
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
@@ -51485,7 +51611,7 @@ const PlatformConfigurationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-orange-400/25 bg-orange-500/10 p-3 md:col-span-3 md:grid-cols-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-orange-100", children: "Crew Composition" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-orange-100/75", children: "Defines the number of crew seats and aircrew role for this aircraft type. Single-seat aircraft automatically use Solo in new flight entry flows." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-orange-100/75", children: "Defines the number of crew seats and aircrew role for this aircraft type. Seat roles use the organisation labels from Rank, Terminology & Labels. Single-seat aircraft automatically use Solo in new flight entry flows." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 NumberField,
@@ -51497,11 +51623,13 @@ const PlatformConfigurationSettings = ({
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:col-span-2 md:grid-cols-2", children: crewComposition.seats.map((seat, seatIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Field,
+                SelectField,
                 {
                   label: `Seat ${seatIndex + 1} Role`,
                   value: seat.role,
                   disabled: !canEdit,
+                  options: crewPositionOptions,
+                  optionLabels: crewPositionLabelMap,
                   onChange: (value) => updateAircraftSeatRole(index, seatIndex, value)
                 },
                 seat.id || `aircraft-seat-${seatIndex}`
@@ -52798,6 +52926,60 @@ const PlatformConfigurationSettings = ({
             info: `The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`
           }
         ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-orange-400/25 bg-orange-500/10 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-orange-100", children: "Crew Position Labels" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-orange-100/75", children: "Generic positions are the stable aircraft seat roles. Organisation labels are the words this organisation uses for those positions." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: addCrewPositionEntry,
+                disabled: !canEditRankTerminology,
+                className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                children: "Add Position"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: crewPositionTerminology.positions.map((entry) => {
+            const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_auto]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Generic Position",
+                  value: entry.genericName,
+                  disabled: !canEditRankTerminology || isDefaultEntry,
+                  onChange: (value) => updateCrewPositionEntry(entry.id, { genericName: value }),
+                  info: isDefaultEntry ? "Baseline generic positions stay fixed so aircraft seat links remain stable." : "The generic position saved on aircraft seat configuration."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Organisation Label",
+                  value: entry.label,
+                  disabled: !canEditRankTerminology,
+                  onChange: (value) => updateCrewPositionEntry(entry.id, { label: value }),
+                  info: "The label users see when selecting crew positions. Example: Combat Systems Operator can be labelled Weapon System Operator."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => removeCrewPositionEntry(entry.id),
+                  disabled: !canEditRankTerminology || isDefaultEntry,
+                  className: "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40",
+                  title: isDefaultEntry ? "Default crew positions cannot be removed." : "Remove crew position",
+                  children: "Delete"
+                }
+              ) })
+            ] }, entry.id);
+          }) })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             TextAreaField,

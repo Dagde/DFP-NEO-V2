@@ -37,6 +37,13 @@ import {
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConfigurationSettings';
 import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import {
+  DEFAULT_CREW_POSITION_TERMINOLOGY,
+  getCrewPositionLabelMap,
+  getCrewPositionOptions,
+  normaliseCrewPositionTerminology,
+  type CrewPositionTerminologyEntry,
+} from '../utils/crewPositionTerminology';
 import { getAppApiBase } from '../utils/externalDataControls';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
@@ -1211,6 +1218,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null,
   );
+  const crewPositionTerminology = normaliseCrewPositionTerminology(
+    primaryOrganisationSettings.crewPositionTerminology || null,
+  );
+  const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
+  const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || '').includes('+')
     ? String(activeUnitCode || '').split('+')[0]?.trim()
     : String(activeUnitCode || '').trim();
@@ -1364,6 +1376,85 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...changes,
       }),
     }));
+  };
+
+  const updateCrewPositionTerminology = (
+    positions: CrewPositionTerminologyEntry[],
+    renamedPosition?: { from: string; to: string },
+  ) => {
+    setRankTerminologyDirty(true);
+    setConfig((prev) => {
+      const organisations = prev.organisations.length > 0
+        ? [...prev.organisations]
+        : [{ code: 'RAAF', name: 'RAAF', status: 'ACTIVE', settings: {} }];
+      const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
+      const orgIndex = activeIndex >= 0 ? activeIndex : 0;
+      const currentOrg = organisations[orgIndex] || organisations[0];
+      const nextTerminology = normaliseCrewPositionTerminology({ positions });
+      organisations[orgIndex] = {
+        ...currentOrg,
+        settings: {
+          ...(currentOrg.settings || {}),
+          crewPositionTerminology: nextTerminology,
+        },
+      };
+
+      const from = String(renamedPosition?.from || '').trim();
+      const to = String(renamedPosition?.to || '').trim();
+      const shouldRenameSeats = Boolean(from && to && from.toUpperCase() !== to.toUpperCase());
+      return {
+        ...prev,
+        organisations,
+        aircraftTypes: shouldRenameSeats
+          ? prev.aircraftTypes.map((aircraft) => {
+              const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+              const seats = crewComposition.seats.map((seat) => (
+                String(seat.role || '').trim().toUpperCase() === from.toUpperCase()
+                  ? { ...seat, role: to }
+                  : seat
+              ));
+              return {
+                ...aircraft,
+                crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats }),
+              };
+            })
+          : prev.aircraftTypes,
+      };
+    });
+  };
+
+  const updateCrewPositionEntry = (
+    entryId: string,
+    changes: Partial<Pick<CrewPositionTerminologyEntry, 'genericName' | 'label'>>,
+  ) => {
+    const currentEntry = crewPositionTerminology.positions.find((entry) => entry.id === entryId);
+    if (!currentEntry) return;
+    const nextGenericName = String(changes.genericName ?? currentEntry.genericName).trim() || currentEntry.genericName;
+    const nextLabel = String(changes.label ?? currentEntry.label).trim() || nextGenericName;
+    const nextPositions = crewPositionTerminology.positions.map((entry) => (
+      entry.id === entryId
+        ? { ...entry, genericName: nextGenericName, label: nextLabel }
+        : entry
+    ));
+    updateCrewPositionTerminology(nextPositions, { from: currentEntry.genericName, to: nextGenericName });
+  };
+
+  const addCrewPositionEntry = () => {
+    const genericName = `Crew Position ${crewPositionTerminology.positions.length + 1}`;
+    updateCrewPositionTerminology([
+      ...crewPositionTerminology.positions,
+      {
+        id: createClientRecordId('crew-position'),
+        genericName,
+        label: genericName,
+      },
+    ]);
+  };
+
+  const removeCrewPositionEntry = (entryId: string) => {
+    const nextPositions = crewPositionTerminology.positions.filter((entry) => entry.id !== entryId);
+    if (nextPositions.length === crewPositionTerminology.positions.length || nextPositions.length === 0) return;
+    updateCrewPositionTerminology(nextPositions);
   };
 
   const updateTrainingReportTemplate = (
@@ -2947,6 +3038,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="space-y-3">
             {config.aircraftTypes.map((aircraft, index) => {
               const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+              const crewPositionOptions = getCrewPositionOptions(
+                crewPositionTerminology,
+                crewComposition.seats.map((seat) => seat.role),
+              );
               return (
                 <div key={aircraft.id || `platform-aircraft-type-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
                   <Field label="Code" value={aircraft.code} disabled={!canEdit} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
@@ -2956,7 +3051,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className="md:col-span-3">
                       <div className="text-sm font-bold text-orange-100">Crew Composition</div>
                       <div className="mt-1 text-xs text-orange-100/75">
-                        Defines the number of crew seats and aircrew role for this aircraft type. Single-seat aircraft automatically use Solo in new flight entry flows.
+                        Defines the number of crew seats and aircrew role for this aircraft type. Seat roles use the organisation labels from Rank, Terminology & Labels. Single-seat aircraft automatically use Solo in new flight entry flows.
                       </div>
                     </div>
                     <NumberField
@@ -2967,11 +3062,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     />
                     <div className="grid gap-2 md:col-span-2 md:grid-cols-2">
                       {crewComposition.seats.map((seat, seatIndex) => (
-                        <Field
+                        <SelectField
                           key={seat.id || `aircraft-seat-${seatIndex}`}
                           label={`Seat ${seatIndex + 1} Role`}
                           value={seat.role}
                           disabled={!canEdit}
+                          options={crewPositionOptions}
+                          optionLabels={crewPositionLabelMap}
                           onChange={(value) => updateAircraftSeatRole(index, seatIndex, value)}
                         />
                       ))}
@@ -4257,6 +4354,58 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updateTrainingReportTerminology({ name: value })}
               info={`The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`}
             />
+          </div>
+          <div className="rounded-lg border border-orange-400/25 bg-orange-500/10 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-orange-100">Crew Position Labels</h5>
+                <p className="mt-1 text-xs leading-relaxed text-orange-100/75">
+                  Generic positions are the stable aircraft seat roles. Organisation labels are the words this organisation uses for those positions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addCrewPositionEntry}
+                disabled={!canEditRankTerminology}
+                className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Add Position
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {crewPositionTerminology.positions.map((entry) => {
+                const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
+                return (
+                  <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_auto]">
+                    <Field
+                      label="Generic Position"
+                      value={entry.genericName}
+                      disabled={!canEditRankTerminology || isDefaultEntry}
+                      onChange={(value) => updateCrewPositionEntry(entry.id, { genericName: value })}
+                      info={isDefaultEntry ? 'Baseline generic positions stay fixed so aircraft seat links remain stable.' : 'The generic position saved on aircraft seat configuration.'}
+                    />
+                    <Field
+                      label="Organisation Label"
+                      value={entry.label}
+                      disabled={!canEditRankTerminology}
+                      onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })}
+                      info="The label users see when selecting crew positions. Example: Combat Systems Operator can be labelled Weapon System Operator."
+                    />
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => removeCrewPositionEntry(entry.id)}
+                        disabled={!canEditRankTerminology || isDefaultEntry}
+                        className="w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                        title={isDefaultEntry ? 'Default crew positions cannot be removed.' : 'Remove crew position'}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <TextAreaField
