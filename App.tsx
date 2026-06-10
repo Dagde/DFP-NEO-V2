@@ -193,6 +193,7 @@ import {
     CancellationRecord,
     StaffCallsignInfo,
     FlyingWindowExclusionPeriod,
+    FlyingWindowExclusionRestriction,
     AirCombatTrainingAssignment,
     AirCombatTrainingReport
 } from './types';
@@ -351,6 +352,7 @@ const DfpSidePanelTimeline: React.FC<{
     const chartRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const assistDragPreviewRef = useRef<HTMLElement | null>(null);
+    const wizardRepeatRef = useRef<number | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
     const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('details');
     const filteredEventOptions = useMemo(() => (
@@ -453,6 +455,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [showWizardExclusionEditor, setShowWizardExclusionEditor] = useState(false);
     const [wizardExclusionStart, setWizardExclusionStart] = useState(flyingStartTime);
     const [wizardExclusionEnd, setWizardExclusionEnd] = useState(Math.min(23.75, flyingStartTime + 0.5));
+    const [wizardExclusionRestriction, setWizardExclusionRestriction] = useState<FlyingWindowExclusionRestriction>('both');
     const [showWizardConfigEditor, setShowWizardConfigEditor] = useState(false);
 
     const courseEventOptions = useMemo(() => (
@@ -505,6 +508,10 @@ const DfpSidePanelTimeline: React.FC<{
         window.localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(assistTaskRequests));
         window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
     }, [assistTaskRequests]);
+
+    useEffect(() => () => {
+        if (wizardRepeatRef.current !== null) window.clearInterval(wizardRepeatRef.current);
+    }, []);
 
     useEffect(() => {
         const syncTaskingRequests = () => {
@@ -634,6 +641,22 @@ const DfpSidePanelTimeline: React.FC<{
     const stepTime = (time: number, setter: (nextTime: number) => void, delta: number) => {
         const nextTime = Math.max(0, Math.min(23.75, Math.round((time + delta) * 12) / 12));
         setter(nextTime);
+    };
+    const stopWizardRepeat = () => {
+        if (wizardRepeatRef.current !== null) {
+            window.clearInterval(wizardRepeatRef.current);
+            wizardRepeatRef.current = null;
+        }
+    };
+    const startWizardRepeat = (action: () => void) => {
+        action();
+        stopWizardRepeat();
+        wizardRepeatRef.current = window.setInterval(action, 140);
+    };
+    const updateWizardExclusionStartTime = (nextStart: number) => {
+        const boundedStart = Math.max(0, Math.min(23.25, nextStart));
+        setWizardExclusionStart(boundedStart);
+        setWizardExclusionEnd(Math.min(23.75, boundedStart + 0.5));
     };
     const updateNumber = (value: number, setter: (nextValue: number) => void) => {
         setter(Math.max(0, Math.floor(Number(value) || 0)));
@@ -1349,32 +1372,49 @@ const DfpSidePanelTimeline: React.FC<{
     const advanceWizard = () => moveWizardTo(wizardStep + 1);
     const retreatWizard = () => moveWizardTo(wizardStep - 1);
     const wizardChoiceClass = 'rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
+    const wizardKeepButtonClass = 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-xs font-bold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
     const wizardSmallButtonClass = 'rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
     const renderWizardTimeBox = (
         label: string,
         value: number,
         setter: (nextValue: number) => void,
-    ) => (
-        <div className="rounded-xl border border-slate-300 bg-white p-4 text-center shadow-sm">
+    ) => {
+        const makeRepeatAction = (delta: number) => {
+            let nextValue = value;
+            return () => {
+                nextValue = Math.max(0, Math.min(23.75, Math.round((nextValue + delta) * 12) / 12));
+                setter(nextValue);
+            };
+        };
+        const bindRepeat = (delta: number) => ({
+            onPointerDown: () => startWizardRepeat(makeRepeatAction(delta)),
+            onPointerUp: stopWizardRepeat,
+            onPointerLeave: stopWizardRepeat,
+            onPointerCancel: stopWizardRepeat,
+            onMouseUp: stopWizardRepeat,
+        });
+        return (
+        <div className="rounded-xl border border-slate-300 bg-white p-3 text-center shadow-sm">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-            <p className="mt-2 font-mono text-3xl font-black text-slate-950">{formatCompactTime(value)}</p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-                <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-3 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" onClick={() => stepTime(value, setter, -1 / 12)}>-</button>
-                <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-3 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" onClick={() => stepTime(value, setter, 1 / 12)}>+</button>
+            <p className="mt-2 font-mono text-2xl font-black text-slate-950">{formatCompactTime(value)}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" {...bindRepeat(-1 / 12)}>-</button>
+                <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" {...bindRepeat(1 / 12)}>+</button>
             </div>
         </div>
-    );
+        );
+    };
     const renderWizardCapacityBox = (
         label: string,
         value: number,
         setter: (nextValue: number) => void,
     ) => (
-        <div className="rounded-xl border border-slate-300 bg-white p-5 text-center shadow-sm">
+        <div className="sm:col-span-2 mx-auto w-full max-w-[460px] rounded-xl border border-slate-300 bg-white p-5 text-center shadow-sm">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
             <p className="mt-2 text-5xl font-black text-slate-950">{value}</p>
-            <div className="mt-5 grid grid-cols-3 gap-3">
+            <div className="mt-5 grid grid-cols-[1fr_1.35fr_1fr] gap-3">
                 <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-3 text-3xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" onClick={() => setter(Math.max(0, value - 1))}>-</button>
-                <button type="button" className="rounded-lg bg-orange-500 px-3 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600" onClick={advanceWizard}>Use</button>
+                <button type="button" className="rounded-lg bg-orange-500 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600" onClick={advanceWizard}>Use</button>
                 <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-3 text-3xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" onClick={() => setter(value + 1)}>+</button>
             </div>
         </div>
@@ -1435,7 +1475,7 @@ const DfpSidePanelTimeline: React.FC<{
                 'Are the day flying times right?',
                 <p>Current day window is <strong>{formatCompactTime(flyingStartTime)} to {formatCompactTime(flyingEndTime)}</strong>.</p>,
                 <>
-                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep these times</button>
+                    <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Keep these times</button>
                     <div className="rounded-xl border border-slate-300 bg-white/60 p-3">
                         <div className="grid gap-3 md:grid-cols-2">
                             {renderWizardTimeBox('Start time', flyingStartTime, onUpdateFlyingStartTime)}
@@ -1454,7 +1494,7 @@ const DfpSidePanelTimeline: React.FC<{
                     : <p>Night flying is not included, so I will skip the night window for this build.</p>,
                 allowNightFlying ? (
                     <>
-                        <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep these times</button>
+                        <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Keep these times</button>
                         <div className="rounded-xl border border-slate-300 bg-white/60 p-3">
                             <div className="grid gap-3 md:grid-cols-2">
                                 {renderWizardTimeBox('Start time', commenceNightFlying, onUpdateCommenceNightFlying)}
@@ -1463,7 +1503,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <button type="button" className="mt-3 w-full rounded-lg bg-orange-500 px-3 py-3 text-sm font-bold text-white hover:bg-orange-600" onClick={advanceWizard}>Use these times</button>
                         </div>
                     </>
-                ) : <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Continue</button>,
+                ) : <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Continue</button>,
             );
         }
         if (wizardStep === 3) {
@@ -1480,8 +1520,24 @@ const DfpSidePanelTimeline: React.FC<{
                     {showWizardExclusionEditor && (
                         <div className="sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-3">
                             <div className="grid gap-3 md:grid-cols-2">
-                                {renderWizardTimeBox('Start of exclusion', wizardExclusionStart, setWizardExclusionStart)}
+                                {renderWizardTimeBox('Start of exclusion', wizardExclusionStart, updateWizardExclusionStartTime)}
                                 {renderWizardTimeBox('End of exclusion', wizardExclusionEnd, setWizardExclusionEnd)}
+                            </div>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                                {[
+                                    ['departures', 'No Departures'],
+                                    ['arrivals', 'No Arrival'],
+                                    ['both', 'Total Exclusion'],
+                                ].map(([value, label]) => (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        onClick={() => setWizardExclusionRestriction(value as FlyingWindowExclusionRestriction)}
+                                        className={`rounded-lg border px-3 py-3 text-center text-xs font-bold transition ${wizardExclusionRestriction === value ? 'border-orange-400 bg-orange-100 text-orange-900' : 'border-slate-300 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50'}`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
                             </div>
                             <button
                                 type="button"
@@ -1493,7 +1549,7 @@ const DfpSidePanelTimeline: React.FC<{
                                             id: uuidv4(),
                                             startTime: wizardExclusionStart,
                                             endTime: Math.max(wizardExclusionStart + timelineMinGap, wizardExclusionEnd),
-                                            restriction: 'both',
+                                            restriction: wizardExclusionRestriction,
                                         },
                                     ]);
                                     setShowWizardExclusionEditor(false);
@@ -1511,7 +1567,7 @@ const DfpSidePanelTimeline: React.FC<{
                 'How many aircraft are available?',
                 <p>Current aircraft available is <strong>{availableAircraftCount}</strong>.</p>,
                 <>
-                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep {availableAircraftCount}</button>
+                    <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Keep {availableAircraftCount}</button>
                     {renderWizardCapacityBox('Aircraft available', availableAircraftCount, onUpdateAircraftCount)}
                 </>,
             );
@@ -1521,7 +1577,7 @@ const DfpSidePanelTimeline: React.FC<{
                 `How many ${simulatorResourceLabel} devices are available?`,
                 <p>Current simulator capacity is <strong>{availableFtdCount}</strong>.</p>,
                 <>
-                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep {availableFtdCount}</button>
+                    <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Keep {availableFtdCount}</button>
                     {renderWizardCapacityBox(`${simulatorResourceLabel} available`, availableFtdCount, onUpdateFtdCount)}
                 </>,
             );
@@ -1531,7 +1587,7 @@ const DfpSidePanelTimeline: React.FC<{
                 `How many ${proceduralTrainerResourceLabel} devices are available?`,
                 <p>Current procedural trainer capacity is <strong>{availableCptCount}</strong>.</p>,
                 <>
-                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep {availableCptCount}</button>
+                    <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Keep {availableCptCount}</button>
                     {renderWizardCapacityBox(`${proceduralTrainerResourceLabel} available`, availableCptCount, onUpdateCptCount)}
                 </>,
             );
@@ -1585,7 +1641,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </button>
                 )).concat(
                     <button key="taskings-next" type="button" className={wizardChoiceClass} onClick={advanceWizard}>Done with taskings</button>
-                ) : <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Continue</button>,
+                ) : <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Continue</button>,
             );
         }
         if (wizardStep === 9) {
@@ -1603,7 +1659,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </button>,
                 ])).concat(
                     <button key="currency-next" type="button" className={wizardChoiceClass} onClick={advanceWizard}>Done with currency</button>
-                ) : <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Continue</button>,
+                ) : <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Continue</button>,
             );
         }
         if (wizardStep === 10) {

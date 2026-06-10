@@ -62974,6 +62974,7 @@ const DfpSidePanelTimeline = ({
   const chartRef = reactExports.useRef(null);
   const scrollRef = reactExports.useRef(null);
   const assistDragPreviewRef = reactExports.useRef(null);
+  const wizardRepeatRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
   const [activeAssistSection, setActiveAssistSection] = reactExports.useState("details");
   const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
@@ -63044,6 +63045,7 @@ const DfpSidePanelTimeline = ({
   const [showWizardExclusionEditor, setShowWizardExclusionEditor] = reactExports.useState(false);
   const [wizardExclusionStart, setWizardExclusionStart] = reactExports.useState(flyingStartTime);
   const [wizardExclusionEnd, setWizardExclusionEnd] = reactExports.useState(Math.min(23.75, flyingStartTime + 0.5));
+  const [wizardExclusionRestriction, setWizardExclusionRestriction] = reactExports.useState("both");
   const [showWizardConfigEditor, setShowWizardConfigEditor] = reactExports.useState(false);
   const courseEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType !== "Staff CAT"), [fullAssistEventOptions]);
   const packageEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType === "Staff CAT"), [fullAssistEventOptions]);
@@ -63072,6 +63074,9 @@ const DfpSidePanelTimeline = ({
     window.localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(assistTaskRequests));
     window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
   }, [assistTaskRequests]);
+  reactExports.useEffect(() => () => {
+    if (wizardRepeatRef.current !== null) window.clearInterval(wizardRepeatRef.current);
+  }, []);
   reactExports.useEffect(() => {
     const syncTaskingRequests = () => {
       const storedRequests = loadStoredAssistTaskRequests();
@@ -63170,6 +63175,22 @@ const DfpSidePanelTimeline = ({
   const stepTime = (time, setter, delta) => {
     const nextTime = Math.max(0, Math.min(23.75, Math.round((time + delta) * 12) / 12));
     setter(nextTime);
+  };
+  const stopWizardRepeat = () => {
+    if (wizardRepeatRef.current !== null) {
+      window.clearInterval(wizardRepeatRef.current);
+      wizardRepeatRef.current = null;
+    }
+  };
+  const startWizardRepeat = (action) => {
+    action();
+    stopWizardRepeat();
+    wizardRepeatRef.current = window.setInterval(action, 140);
+  };
+  const updateWizardExclusionStartTime = (nextStart) => {
+    const boundedStart = Math.max(0, Math.min(23.25, nextStart));
+    setWizardExclusionStart(boundedStart);
+    setWizardExclusionEnd(Math.min(23.75, boundedStart + 0.5));
   };
   const updateNumber = (value, setter) => {
     setter(Math.max(0, Math.floor(Number(value) || 0)));
@@ -63762,20 +63783,37 @@ const DfpSidePanelTimeline = ({
   const advanceWizard = () => moveWizardTo(wizardStep + 1);
   const retreatWizard = () => moveWizardTo(wizardStep - 1);
   const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
-  const renderWizardTimeBox = (label, value, setter) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-white p-4 text-center shadow-sm", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold uppercase tracking-[0.16em] text-slate-500", children: label }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 font-mono text-3xl font-black text-slate-950", children: formatCompactTime(value) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-2 gap-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg border border-slate-300 bg-slate-50 py-3 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50", onClick: () => stepTime(value, setter, -1 / 12), children: "-" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg border border-slate-300 bg-slate-50 py-3 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50", onClick: () => stepTime(value, setter, 1 / 12), children: "+" })
-    ] })
-  ] });
-  const renderWizardCapacityBox = (label, value, setter) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-white p-5 text-center shadow-sm", children: [
+  const wizardKeepButtonClass = "rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-xs font-bold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
+  const renderWizardTimeBox = (label, value, setter) => {
+    const makeRepeatAction = (delta) => {
+      let nextValue = value;
+      return () => {
+        nextValue = Math.max(0, Math.min(23.75, Math.round((nextValue + delta) * 12) / 12));
+        setter(nextValue);
+      };
+    };
+    const bindRepeat = (delta) => ({
+      onPointerDown: () => startWizardRepeat(makeRepeatAction(delta)),
+      onPointerUp: stopWizardRepeat,
+      onPointerLeave: stopWizardRepeat,
+      onPointerCancel: stopWizardRepeat,
+      onMouseUp: stopWizardRepeat
+    });
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-white p-3 text-center shadow-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold uppercase tracking-[0.16em] text-slate-500", children: label }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 font-mono text-2xl font-black text-slate-950", children: formatCompactTime(value) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-2 gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50", ...bindRepeat(-1 / 12), children: "-" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50", ...bindRepeat(1 / 12), children: "+" })
+      ] })
+    ] });
+  };
+  const renderWizardCapacityBox = (label, value, setter) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sm:col-span-2 mx-auto w-full max-w-[460px] rounded-xl border border-slate-300 bg-white p-5 text-center shadow-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold uppercase tracking-[0.16em] text-slate-500", children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-5xl font-black text-slate-950", children: value }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid grid-cols-3 gap-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid grid-cols-[1fr_1.35fr_1fr] gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg border border-slate-300 bg-slate-50 py-3 text-3xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50", onClick: () => setter(Math.max(0, value - 1)), children: "-" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg bg-orange-500 px-3 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600", onClick: advanceWizard, children: "Use" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg bg-orange-500 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600", onClick: advanceWizard, children: "Use" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg border border-slate-300 bg-slate-50 py-3 text-3xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50", onClick: () => setter(value + 1), children: "+" })
     ] })
   ] });
@@ -63841,7 +63879,7 @@ const DfpSidePanelTimeline = ({
           "."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Keep these times" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: "Keep these times" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-white/60 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
               renderWizardTimeBox("Start time", flyingStartTime, onUpdateFlyingStartTime),
@@ -63865,7 +63903,7 @@ const DfpSidePanelTimeline = ({
           "."
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Night flying is not included, so I will skip the night window for this build." }),
         allowNightFlying ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Keep these times" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: "Keep these times" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-white/60 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
               renderWizardTimeBox("Start time", commenceNightFlying, onUpdateCommenceNightFlying),
@@ -63873,7 +63911,7 @@ const DfpSidePanelTimeline = ({
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "mt-3 w-full rounded-lg bg-orange-500 px-3 py-3 text-sm font-bold text-white hover:bg-orange-600", onClick: advanceWizard, children: "Use these times" })
           ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Continue" })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: "Continue" })
       );
     }
     if (wizardStep === 3) {
@@ -63894,9 +63932,23 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => setShowWizardExclusionEditor((value) => !value), children: "Add" }),
           showWizardExclusionEditor && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-              renderWizardTimeBox("Start of exclusion", wizardExclusionStart, setWizardExclusionStart),
+              renderWizardTimeBox("Start of exclusion", wizardExclusionStart, updateWizardExclusionStartTime),
               renderWizardTimeBox("End of exclusion", wizardExclusionEnd, setWizardExclusionEnd)
             ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-2 sm:grid-cols-3", children: [
+              ["departures", "No Departures"],
+              ["arrivals", "No Arrival"],
+              ["both", "Total Exclusion"]
+            ].map(([value, label]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setWizardExclusionRestriction(value),
+                className: `rounded-lg border px-3 py-3 text-center text-xs font-bold transition ${wizardExclusionRestriction === value ? "border-orange-400 bg-orange-100 text-orange-900" : "border-slate-300 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50"}`,
+                children: label
+              },
+              value
+            )) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -63909,7 +63961,7 @@ const DfpSidePanelTimeline = ({
                       id: v4(),
                       startTime: wizardExclusionStart,
                       endTime: Math.max(wizardExclusionStart + timelineMinGap, wizardExclusionEnd),
-                      restriction: "both"
+                      restriction: wizardExclusionRestriction
                     }
                   ]);
                   setShowWizardExclusionEditor(false);
@@ -63930,7 +63982,7 @@ const DfpSidePanelTimeline = ({
           "."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: [
             "Keep ",
             availableAircraftCount
           ] }),
@@ -63947,7 +63999,7 @@ const DfpSidePanelTimeline = ({
           "."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: [
             "Keep ",
             availableFtdCount
           ] }),
@@ -63964,7 +64016,7 @@ const DfpSidePanelTimeline = ({
           "."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: [
             "Keep ",
             availableCptCount
           ] }),
@@ -64012,7 +64064,7 @@ const DfpSidePanelTimeline = ({
           formatCompactTime(request.takeoff)
         ] }, request.id)).concat(
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Done with taskings" }, "taskings-next")
-        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Continue" })
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: "Continue" })
       );
     }
     if (wizardStep === 9) {
@@ -64032,7 +64084,7 @@ const DfpSidePanelTimeline = ({
           ] }, `${request.id}-normal`)
         ]).concat(
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Done with currency" }, "currency-next")
-        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Continue" })
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardKeepButtonClass, onClick: advanceWizard, children: "Continue" })
       );
     }
     if (wizardStep === 10) {
