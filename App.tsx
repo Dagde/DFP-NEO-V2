@@ -1263,6 +1263,94 @@ const DfpSidePanelTimeline: React.FC<{
         const rank = String(instructor?.rank || '').trim();
         return rank ? `${rank} ${name}` : name;
     };
+    const hoursOverlap = (firstStart: number, firstEnd: number, secondStart: number, secondEnd: number): boolean =>
+        firstStart < secondEnd && secondStart < firstEnd;
+    const getSyllabusDurationOffset = (value: unknown): number => {
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+    };
+    const getScheduleEventBookingWindow = (event: ScheduleEvent): { start: number; end: number } => {
+        const startTime = Number(event.startTime) || 0;
+        const duration = Math.max(0, Number(event.duration) || 0);
+        const syllabusItem = syllabusDetails.find(item =>
+            item.id === event.flightNumber ||
+            item.code === event.flightNumber ||
+            item.id === event.eventCode ||
+            item.code === event.eventCode
+        );
+        const preStart = Number.isFinite(Number(event.preStart))
+            ? Number(event.preStart)
+            : startTime - getSyllabusDurationOffset(syllabusItem?.preFlightTime);
+        const postEnd = Number.isFinite(Number(event.postEnd))
+            ? Number(event.postEnd)
+            : startTime + duration + getSyllabusDurationOffset(syllabusItem?.postFlightTime);
+        return {
+            start: Math.max(0, preStart),
+            end: Math.min(24, Math.max(preStart, postEnd)),
+        };
+    };
+    const assistBookingWindow = useMemo(() => ({
+        start: Math.max(0, assistStartTime - getSyllabusDurationOffset(selectedSyllabusItem?.preFlightTime)),
+        end: Math.min(24, assistStartTime + assistDuration + getSyllabusDurationOffset(selectedSyllabusItem?.postFlightTime)),
+    }), [assistDuration, assistStartTime, selectedSyllabusItem]);
+    const getUnavailabilityConflictReason = (person: Instructor | undefined): string | null => {
+        if (!person?.unavailability?.length) return null;
+        for (const period of person.unavailability) {
+            const isInDateRange = period.allDay
+                ? date >= period.startDate && date < period.endDate
+                : date >= period.startDate && date <= period.endDate;
+            if (!isInDateRange) continue;
+            if (period.reason === 'TMUF - Ground Duties only' && selectedResourceKind !== 'flight') continue;
+            if (period.allDay) return period.reason || 'Unavailable';
+
+            const unavailableStart = timeStringToHours(period.startTime);
+            const unavailableEnd = timeStringToHours(period.endTime);
+            if (unavailableStart === null || unavailableEnd === null) continue;
+
+            const dayStart = date === period.startDate ? unavailableStart : 0;
+            const dayEnd = date === period.endDate ? unavailableEnd : 24;
+            if (hoursOverlap(assistBookingWindow.start, assistBookingWindow.end, dayStart, dayEnd)) {
+                return period.reason || 'Unavailable';
+            }
+        }
+        return null;
+    };
+    const isCrewStatusEvent = (event: ScheduleEvent): boolean => {
+        const eventType = String(event.type || '').toLowerCase();
+        const resourceId = String(event.resourceId || '').toUpperCase();
+        return isDutySupervisorEvent(event) ||
+            eventType === 'flight' ||
+            eventType === 'ftd' ||
+            eventType === 'cpt' ||
+            resourceId.startsWith('FTD') ||
+            resourceId.startsWith('CPT');
+    };
+    const crewStatusByName = useMemo(() => {
+        const statusMap = new Map<string, { status: 'unavailable' | 'scheduled'; reason: string }>();
+        displayedCrewOptions.forEach(name => {
+            const instructor = instructors.find(item => item.name === name);
+            const unavailableReason = getUnavailabilityConflictReason(instructor);
+            if (unavailableReason) {
+                statusMap.set(name, { status: 'unavailable', reason: unavailableReason });
+                return;
+            }
+
+            const conflictingEvent = activeDfpEvents.find(event => {
+                if (event.date && event.date !== date) return false;
+                if (!isCrewStatusEvent(event)) return false;
+                if (!getPersonnel(event).includes(name)) return false;
+                const bookingWindow = getScheduleEventBookingWindow(event);
+                return hoursOverlap(assistBookingWindow.start, assistBookingWindow.end, bookingWindow.start, bookingWindow.end);
+            });
+            if (conflictingEvent) {
+                statusMap.set(name, {
+                    status: 'scheduled',
+                    reason: `${conflictingEvent.flightNumber || conflictingEvent.resourceId || 'Scheduled event'} ${formatTime(conflictingEvent.startTime)}`,
+                });
+            }
+        });
+        return statusMap;
+    }, [activeDfpEvents, assistBookingWindow, date, displayedCrewOptions, instructors, selectedResourceKind, syllabusDetails]);
     const normaliseCapacityInput = (value: string): string => {
         const digitsOnly = String(value || '').trim().replace(/[^\d]/g, '');
         if (!digitsOnly) return '';
@@ -2629,8 +2717,18 @@ const DfpSidePanelTimeline: React.FC<{
                                 const selectedOrder = selectedCrewNames.indexOf(name) + 1;
                                 const isSelected = selectedOrder > 0;
                                 const selectionFull = canSelectFormationCrew && !isSelected && selectedCrewNames.length >= assistFormationSize;
+                                const crewStatus = crewStatusByName.get(name);
+                                const crewStatusTextClass = crewStatus?.status === 'unavailable'
+                                    ? 'text-red-300'
+                                    : crewStatus?.status === 'scheduled'
+                                        ? 'text-amber-300'
+                                        : isSelected ? 'text-cyan-50' : 'text-slate-300';
                                 return (
-                                    <label key={name} className={`grid cursor-pointer grid-cols-[22px_auto_24px_1fr] items-center gap-x-3 rounded border px-2 py-1 text-[10px] ${isSelected ? 'border-cyan-300/70 bg-cyan-400/10 text-cyan-50' : 'border-slate-700 bg-slate-950/45 text-slate-300'} ${selectionFull ? 'opacity-55' : ''}`}>
+                                    <label
+                                        key={name}
+                                        title={crewStatus ? `${formatCrewOptionLabel(name)} - ${crewStatus.reason}` : formatCrewOptionLabel(name)}
+                                        className={`grid cursor-pointer grid-cols-[22px_auto_24px_1fr] items-center gap-x-3 rounded border px-2 py-1 text-[10px] ${isSelected ? 'border-cyan-300/70 bg-cyan-400/10 text-cyan-50' : 'border-slate-700 bg-slate-950/45 text-slate-300'} ${selectionFull ? 'opacity-55' : ''}`}
+                                    >
                                         <span className="font-mono text-[9px] text-slate-500">
                                             {crewSourceMode === 'priority' ? index + 1 : ''}
                                         </span>
@@ -2647,7 +2745,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                 </span>
                                             )}
                                         </span>
-                                        <span className="truncate">{formatCrewOptionLabel(name)}</span>
+                                        <span className={`truncate ${crewStatusTextClass}`}>{formatCrewOptionLabel(name)}</span>
                                     </label>
                                 );
                             })}
