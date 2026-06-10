@@ -8060,18 +8060,32 @@ const ScheduleView = ({
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     const shades = [];
-    if (firstLightHour !== null && lastLightHour !== null && lastLightHour > firstLightHour) {
-      const left = (firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
-      const width = (lastLightHour - firstLightHour) * PIXELS_PER_HOUR$5 * zoomLevel;
+    if (firstLightHour !== null && firstLightHour > START_HOUR$5) {
+      const width = (firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
-            "data-schedule-day-shade": "true",
+            "data-schedule-night-shade": "true",
             className: "absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]",
+            style: { width: `${width}px` }
+          },
+          "night-shade-morning"
+        )
+      );
+    }
+    if (lastLightHour !== null && lastLightHour < END_HOUR$5) {
+      const left = (lastLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+      const width = (END_HOUR$5 - lastLightHour) * PIXELS_PER_HOUR$5 * zoomLevel;
+      shades.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            "data-schedule-night-shade": "true",
+            className: "absolute top-0 h-full bg-white/5 pointer-events-none z-[1]",
             style: { left: `${left}px`, width: `${width}px` }
           },
-          "day-shade"
+          "night-shade-evening"
         )
       );
     }
@@ -8997,17 +9011,30 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     const shades = [];
-    if (firstLightHour !== null && lastLightHour !== null && lastLightHour > firstLightHour) {
-      const left = (firstLightHour - START_HOUR$4) * PIXELS_PER_HOUR$4 * zoomLevel;
-      const width = (lastLightHour - firstLightHour) * PIXELS_PER_HOUR$4 * zoomLevel;
+    if (firstLightHour !== null && firstLightHour > START_HOUR$4) {
+      const width = (firstLightHour - START_HOUR$4) * PIXELS_PER_HOUR$4 * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
             className: "absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]",
+            style: { width: `${width}px` }
+          },
+          "night-shade-morning"
+        )
+      );
+    }
+    if (lastLightHour !== null && lastLightHour < END_HOUR$4) {
+      const left = (lastLightHour - START_HOUR$4) * PIXELS_PER_HOUR$4 * zoomLevel;
+      const width = (END_HOUR$4 - lastLightHour) * PIXELS_PER_HOUR$4 * zoomLevel;
+      shades.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "absolute top-0 h-full bg-white/5 pointer-events-none z-[1]",
             style: { left: `${left}px`, width: `${width}px` }
           },
-          "day-shade"
+          "night-shade-evening"
         )
       );
     }
@@ -9635,17 +9662,30 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     const shades = [];
-    if (firstLightHour !== null && lastLightHour !== null && lastLightHour > firstLightHour) {
-      const left = (firstLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
-      const width = (lastLightHour - firstLightHour) * PIXELS_PER_HOUR$3 * zoomLevel;
+    if (firstLightHour !== null && firstLightHour > START_HOUR$3) {
+      const width = (firstLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
             className: "absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]",
+            style: { width: `${width}px` }
+          },
+          "night-shade-morning"
+        )
+      );
+    }
+    if (lastLightHour !== null && lastLightHour < END_HOUR$3) {
+      const left = (lastLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
+      const width = (END_HOUR$3 - lastLightHour) * PIXELS_PER_HOUR$3 * zoomLevel;
+      shades.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "absolute top-0 h-full bg-white/5 pointer-events-none z-[1]",
             style: { left: `${left}px`, width: `${width}px` }
           },
-          "day-shade"
+          "night-shade-evening"
         )
       );
     }
@@ -23620,17 +23660,30 @@ const NextDayBuildView = ({
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     const shades = [];
-    if (firstLightHour !== null && lastLightHour !== null && lastLightHour > firstLightHour) {
-      const left = (firstLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
-      const width = (lastLightHour - firstLightHour) * PIXELS_PER_HOUR$2 * zoomLevel;
+    if (firstLightHour !== null && firstLightHour > START_HOUR$2) {
+      const width = (firstLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
             className: "absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]",
+            style: { width: `${width}px` }
+          },
+          "night-shade-morning"
+        )
+      );
+    }
+    if (lastLightHour !== null && lastLightHour < END_HOUR$2) {
+      const left = (lastLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+      const width = (END_HOUR$2 - lastLightHour) * PIXELS_PER_HOUR$2 * zoomLevel;
+      shades.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "absolute top-0 h-full bg-white/5 pointer-events-none z-[1]",
             style: { left: `${left}px`, width: `${width}px` }
           },
-          "day-shade"
+          "night-shade-evening"
         )
       );
     }
@@ -61087,17 +61140,30 @@ const NextDayInstructorScheduleView = ({
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     const shades = [];
-    if (firstLightHour !== null && lastLightHour !== null && lastLightHour > firstLightHour) {
-      const left = (firstLightHour - START_HOUR$1) * PIXELS_PER_HOUR$1 * zoomLevel;
-      const width = (lastLightHour - firstLightHour) * PIXELS_PER_HOUR$1 * zoomLevel;
+    if (firstLightHour !== null && firstLightHour > START_HOUR$1) {
+      const width = (firstLightHour - START_HOUR$1) * PIXELS_PER_HOUR$1 * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
             className: "absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]",
+            style: { width: `${width}px` }
+          },
+          "night-shade-morning"
+        )
+      );
+    }
+    if (lastLightHour !== null && lastLightHour < END_HOUR$1) {
+      const left = (lastLightHour - START_HOUR$1) * PIXELS_PER_HOUR$1 * zoomLevel;
+      const width = (END_HOUR$1 - lastLightHour) * PIXELS_PER_HOUR$1 * zoomLevel;
+      shades.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "absolute top-0 h-full bg-white/5 pointer-events-none z-[1]",
             style: { left: `${left}px`, width: `${width}px` }
           },
-          "day-shade"
+          "night-shade-evening"
         )
       );
     }
@@ -61538,17 +61604,30 @@ const NextDayTraineeScheduleView = ({
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     const shades = [];
-    if (firstLightHour !== null && lastLightHour !== null && lastLightHour > firstLightHour) {
-      const left = (firstLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
-      const width = (lastLightHour - firstLightHour) * PIXELS_PER_HOUR * zoomLevel;
+    if (firstLightHour !== null && firstLightHour > START_HOUR) {
+      const width = (firstLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
             className: "absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]",
+            style: { width: `${width}px` }
+          },
+          "night-shade-morning"
+        )
+      );
+    }
+    if (lastLightHour !== null && lastLightHour < END_HOUR) {
+      const left = (lastLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+      const width = (END_HOUR - lastLightHour) * PIXELS_PER_HOUR * zoomLevel;
+      shades.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "absolute top-0 h-full bg-white/5 pointer-events-none z-[1]",
             style: { left: `${left}px`, width: `${width}px` }
           },
-          "day-shade"
+          "night-shade-evening"
         )
       );
     }
