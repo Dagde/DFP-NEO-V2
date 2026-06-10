@@ -1397,7 +1397,7 @@ const DfpSidePanelTimeline: React.FC<{
         return (
         <div className="rounded-xl border border-slate-300 bg-white p-3 text-center shadow-sm">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-            <p className="mt-2 pl-2 text-left font-mono text-xl font-black text-slate-950">{formatCompactTime(value)}</p>
+            <p className="mt-2 -translate-x-[6px] pl-2 text-left font-mono text-xl font-black text-slate-950">{formatCompactTime(value)}</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" {...bindRepeat(-1 / 12)}>-</button>
                 <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" {...bindRepeat(1 / 12)}>+</button>

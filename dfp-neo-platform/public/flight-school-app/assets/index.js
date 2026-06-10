@@ -63802,7 +63802,7 @@ const DfpSidePanelTimeline = ({
     });
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-white p-3 text-center shadow-sm", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold uppercase tracking-[0.16em] text-slate-500", children: label }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 pl-2 text-left font-mono text-xl font-black text-slate-950", children: formatCompactTime(value) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 -translate-x-[6px] pl-2 text-left font-mono text-xl font-black text-slate-950", children: formatCompactTime(value) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-2 gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50", ...bindRepeat(-1 / 12), children: "-" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50", ...bindRepeat(1 / 12), children: "+" })
