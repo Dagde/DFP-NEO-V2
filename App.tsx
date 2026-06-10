@@ -2769,7 +2769,15 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             </div>
             {isAirCombatWizardMode ? (
-                <div className="mt-3 min-h-[520px] bg-slate-200 p-5 text-slate-900">
+                <div
+                    className="mt-3 min-h-[520px] bg-slate-200 p-5 text-slate-900"
+                    style={{
+                        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black 18px), linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)',
+                        WebkitMaskComposite: 'source-in',
+                        maskImage: 'linear-gradient(to bottom, transparent 0, black 18px), linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)',
+                        maskComposite: 'intersect',
+                    }}
+                >
                     <style>{`
                         @keyframes neoWizardIn {
                             from { opacity: 0; transform: translateX(28px); }

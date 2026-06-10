@@ -65203,8 +65203,18 @@ const DfpSidePanelTimeline = ({
         )
       }
     ),
-    isAirCombatWizardMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 min-h-[520px] bg-slate-200 p-5 text-slate-900", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
+    isAirCombatWizardMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "mt-3 min-h-[520px] bg-slate-200 p-5 text-slate-900",
+        style: {
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0, black 18px), linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)",
+          WebkitMaskComposite: "source-in",
+          maskImage: "linear-gradient(to bottom, transparent 0, black 18px), linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)",
+          maskComposite: "intersect"
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
                         @keyframes neoWizardIn {
                             from { opacity: 0; transform: translateX(28px); }
                             to { opacity: 1; transform: translateX(0); }
@@ -65214,8 +65224,10 @@ const DfpSidePanelTimeline = ({
                             to { opacity: 0; transform: translateX(-28px); }
                         }
                     ` }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto max-w-[560px]", children: renderWizardStep() })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto max-w-[560px]", children: renderWizardStep() })
+        ]
+      }
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "div",
         {
