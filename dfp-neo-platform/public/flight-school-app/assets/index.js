@@ -62931,6 +62931,7 @@ const DfpSidePanelTimeline = ({
   onUpdateFlyingWindowExclusions,
   onOpenPrioritiesExclusions,
   date,
+  activeDfpEvents,
   resources,
   instructors,
   syllabusDetails,
@@ -62971,6 +62972,7 @@ const DfpSidePanelTimeline = ({
   const timelineSpanHours = timelineEndHour - timelineStartHour;
   const visibleWindowHours = 5;
   const timelineMinGap = 5 / 60;
+  const miniTimelineBodyHeight = 80;
   const chartRef = reactExports.useRef(null);
   const scrollRef = reactExports.useRef(null);
   const assistDragPreviewRef = reactExports.useRef(null);
@@ -63445,6 +63447,34 @@ const DfpSidePanelTimeline = ({
     if (endHour <= startHour) endHour = Math.min(timelineEndHour, endHour + 24);
     return Math.max(0.35, (Math.min(timelineEndHour, endHour) - startHour) / timelineSpanHours * 100);
   };
+  const miniTimelineResourceIndex = reactExports.useMemo(() => new Map(resources.map((resourceId, index) => [resourceId, index])), [resources]);
+  const miniTimelineEvents = reactExports.useMemo(() => {
+    const rowCount = Math.max(resources.length, 1);
+    const tileHeight = Math.max(3, Math.min(7, Math.floor((miniTimelineBodyHeight - 10) / rowCount) - 1 || 3));
+    const usableHeight = Math.max(1, miniTimelineBodyHeight - tileHeight - 6);
+    return (activeDfpEvents || []).filter(
+      (event) => event && Number.isFinite(Number(event.startTime)) && Number.isFinite(Number(event.duration)) && Number(event.duration) > 0 && event.type !== "deployment"
+    ).map((event, index) => {
+      const start = Math.max(timelineStartHour, Number(event.startTime));
+      const end = Math.min(timelineEndHour, Number(event.startTime) + Number(event.duration));
+      if (end <= timelineStartHour || start >= timelineEndHour || end <= start) return null;
+      const resourceIndex = miniTimelineResourceIndex.get(event.resourceId);
+      const rowIndex = resourceIndex ?? Math.min(rowCount - 1, index % rowCount);
+      const top = 3 + (rowCount <= 1 ? usableHeight / 2 : rowIndex / Math.max(1, rowCount - 1) * usableHeight);
+      const color = event.color || "bg-emerald-500";
+      const isInlineColor = color.startsWith("#") || color.startsWith("rgb");
+      return {
+        id: `${event.id || index}-${event.resourceId || "resource"}-${event.startTime}`,
+        event,
+        left: getLeft(start),
+        width: Math.max(0.18, getWidth(start, end)),
+        top,
+        height: tileHeight,
+        color,
+        isInlineColor
+      };
+    }).filter(Boolean);
+  }, [activeDfpEvents, getLeft, getWidth, miniTimelineResourceIndex, resources.length]);
   const formatTime2 = (decimalHour) => {
     const bounded = Math.max(0, Math.min(23 + 59 / 60, Number(decimalHour) || 0));
     const hours = Math.floor(bounded);
@@ -65144,6 +65174,22 @@ const DfpSidePanelTimeline = ({
                     title: `Exclusion ${formatTime2(period.startTime)}-${formatTime2(period.endTime)}`
                   },
                   period.id
+                )),
+                miniTimelineEvents.map((tile) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: `absolute z-20 rounded-[2px] border border-white/25 opacity-95 shadow-[0_0_4px_rgba(15,23,42,0.55)] ${tile.isInlineColor ? "" : tile.color}`,
+                    style: {
+                      left: `${tile.left}%`,
+                      top: `${tile.top}px`,
+                      width: `${tile.width}%`,
+                      minWidth: "3px",
+                      height: `${tile.height}px`,
+                      backgroundColor: tile.isInlineColor ? tile.color : void 0
+                    },
+                    title: `${formatTime2(tile.event.startTime)} ${tile.event.flightNumber || tile.event.type}`
+                  },
+                  tile.id
                 )),
                 ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "div",
@@ -87581,6 +87627,7 @@ Do you want to replace the existing entry?`,
                     flyingWindowExclusions,
                     onUpdateFlyingWindowExclusions: handleUpdateFlyingWindowExclusions,
                     date,
+                    activeDfpEvents: publishedSchedules[date] || [],
                     resources: buildResources,
                     instructors: instructorsData,
                     syllabusDetails: visibleSyllabusDetails,
