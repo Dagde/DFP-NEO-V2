@@ -62963,7 +62963,8 @@ const DfpSidePanelTimeline = ({
   staffListNames,
   formatResourceLabel: formatResourceLabel2,
   operationalModel,
-  scheduleZoomLevel = 1
+  scheduleZoomLevel = 1,
+  onRunNeoBuild
 }) => {
   const timelineStartHour = 6;
   const timelineEndHour = 25;
@@ -63038,6 +63039,8 @@ const DfpSidePanelTimeline = ({
   const [showAssistCurrencyForm, setShowAssistCurrencyForm] = reactExports.useState(false);
   const [airCombatAssistMode, setAirCombatAssistMode] = reactExports.useState("tile");
   const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = reactExports.useState(null);
+  const [wizardStep, setWizardStep] = reactExports.useState(0);
+  const [wizardTransition, setWizardTransition] = reactExports.useState("in");
   const courseEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType !== "Staff CAT"), [fullAssistEventOptions]);
   const packageEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType === "Staff CAT"), [fullAssistEventOptions]);
   const activeSyllabusOptions = activeAssistSection === "packages" ? packageEventOptions : activeAssistSection === "course" ? courseEventOptions : filteredEventOptions;
@@ -63176,6 +63179,7 @@ const DfpSidePanelTimeline = ({
   const assistFormationSize = selectedResourceKind === "flight" ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1)) : 1;
   const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === "air_combat";
   const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
+  const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === "wizard";
   const getAssistFormationCallsignBase = () => {
     const raw = (assistCallsign.trim() || "CSIGN").toUpperCase();
     return raw.replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, "") || "CSIGN";
@@ -63742,6 +63746,291 @@ const DfpSidePanelTimeline = ({
     const request = assistCurrencyRequests.find((item) => item.id === id);
     if (request?.submitted) ignorePriorityEvents([buildCurrencyRequestEvent(request)]);
     setAssistCurrencyRequests((prev) => prev.map((item) => item.id === id ? { ...item, submitted: false, ignored: true } : item));
+  };
+  const wizardStepsCount = 12;
+  const moveWizardTo = (nextStep) => {
+    setWizardTransition("out");
+    window.setTimeout(() => {
+      setWizardStep(Math.max(0, Math.min(wizardStepsCount - 1, nextStep)));
+      setWizardTransition("in");
+    }, 180);
+  };
+  const advanceWizard = () => moveWizardTo(wizardStep + 1);
+  const retreatWizard = () => moveWizardTo(wizardStep - 1);
+  const wizardChoiceClass = "rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
+  const wizardSmallButtonClass = "rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900";
+  const renderWizardStep = () => {
+    const savedTaskRequests = assistTaskRequests.filter((request) => request.saved && !request.ignored);
+    const savedCurrencyRequests = assistCurrencyRequests.filter((request) => request.saved && !request.ignored);
+    const configSummaryText = aircraftConfigurationDefinitions.map((definition) => {
+      const value = definition.id === BASE_AIRCRAFT_CONFIG.id && hasEnteredConfigCapacity ? derivedCleanConfigCapacity : aircraftConfigCapacities[definition.id];
+      return `${definition.label}: ${value || 0}`;
+    }).join(" | ");
+    const questionShell = (title, body, actions) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${wizardTransition === "out" ? "animate-[neoWizardOut_180ms_ease-in_forwards]" : "animate-[neoWizardIn_220ms_ease-out]"} rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm`, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
+            "Step ",
+            wizardStep + 1,
+            " of ",
+            wizardStepsCount
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: title })
+        ] }),
+        wizardStep > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: retreatWizard, className: "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100", children: "Back" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-5 text-sm leading-6 text-slate-700", children: body }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2", children: actions })
+    ] }, wizardStep);
+    if (wizardStep === 0) {
+      return questionShell(
+        "What sort of flying should NEO plan?",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "I will set up the Air Combat build one decision at a time. Start with the operating period you want the build to use." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => {
+            onUpdateAllowNightFlying(false);
+            advanceWizard();
+          }, children: "Day only" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => {
+            onUpdateAllowNightFlying(true);
+            advanceWizard();
+          }, children: "Day and night" })
+        ] })
+      );
+    }
+    if (wizardStep === 1) {
+      return questionShell(
+        "Are the day flying times right?",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Current day window is ",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+            formatCompactTime(flyingStartTime),
+            " to ",
+            formatCompactTime(flyingEndTime)
+          ] }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Keep these times" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => stepTime(flyingStartTime, onUpdateFlyingStartTime, -1 / 12), children: "Start -5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => stepTime(flyingStartTime, onUpdateFlyingStartTime, 1 / 12), children: "Start +5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => stepTime(flyingEndTime, onUpdateFlyingEndTime, -1 / 12), children: "End -5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => stepTime(flyingEndTime, onUpdateFlyingEndTime, 1 / 12), children: "End +5" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "mt-3 w-full rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600", onClick: advanceWizard, children: "Use these times" })
+          ] })
+        ] })
+      );
+    }
+    if (wizardStep === 2) {
+      return questionShell(
+        allowNightFlying ? "Are the night flying times right?" : "Night flying is off",
+        allowNightFlying ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Current night window is ",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+            formatCompactTime(commenceNightFlying),
+            " to ",
+            formatCompactTime(ceaseNightFlying)
+          ] }),
+          "."
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Night flying is not included, so I will skip the night window for this build." }),
+        allowNightFlying ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Keep these times" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => stepTime(commenceNightFlying, onUpdateCommenceNightFlying, -1 / 12), children: "Start -5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => stepTime(commenceNightFlying, onUpdateCommenceNightFlying, 1 / 12), children: "Start +5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => stepTime(ceaseNightFlying, onUpdateCeaseNightFlying, -1 / 12), children: "End -5" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => stepTime(ceaseNightFlying, onUpdateCeaseNightFlying, 1 / 12), children: "End +5" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "mt-3 w-full rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600", onClick: advanceWizard, children: "Use these times" })
+          ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Continue" })
+      );
+    }
+    if (wizardStep === 3) {
+      const exclusionText = flyingWindowExclusions.length ? flyingWindowExclusions.map((period) => `${formatCompactTime(period.startTime)}-${formatCompactTime(period.endTime)} ${period.restriction || "both"}`).join(", ") : "No exclusions set";
+      return questionShell(
+        "Are the exclusion periods right?",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Current exclusions: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: exclusionText }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Yes, keep them" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => {
+            onUpdateFlyingWindowExclusions([]);
+            advanceWizard();
+          }, children: "Clear exclusions for this build" })
+        ] })
+      );
+    }
+    if (wizardStep === 4) {
+      return questionShell(
+        "How many aircraft are available?",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Current aircraft available is ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: availableAircraftCount }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: [
+            "Keep ",
+            availableAircraftCount
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onUpdateAircraftCount(Math.max(0, availableAircraftCount - 1)), children: "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-10 text-center text-xl font-bold", children: availableAircraftCount }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onUpdateAircraftCount(availableAircraftCount + 1), children: "+" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600", onClick: advanceWizard, children: "Use" })
+          ] })
+        ] })
+      );
+    }
+    if (wizardStep === 5) {
+      return questionShell(
+        `How many ${simulatorResourceLabel} devices are available?`,
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Current simulator capacity is ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: availableFtdCount }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: [
+            "Keep ",
+            availableFtdCount
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onUpdateFtdCount(Math.max(0, availableFtdCount - 1)), children: "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-10 text-center text-xl font-bold", children: availableFtdCount }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onUpdateFtdCount(availableFtdCount + 1), children: "+" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600", onClick: advanceWizard, children: "Use" })
+          ] })
+        ] })
+      );
+    }
+    if (wizardStep === 6) {
+      return questionShell(
+        `How many ${proceduralTrainerResourceLabel} devices are available?`,
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Current procedural trainer capacity is ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: availableCptCount }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: [
+            "Keep ",
+            availableCptCount
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onUpdateCptCount(Math.max(0, availableCptCount - 1)), children: "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-10 text-center text-xl font-bold", children: availableCptCount }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onUpdateCptCount(availableCptCount + 1), children: "+" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600", onClick: advanceWizard, children: "Use" })
+          ] })
+        ] })
+      );
+    }
+    if (wizardStep === 7) {
+      return questionShell(
+        "Is the aircraft CONFIG split right?",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Current split: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: configSummaryText }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Keep this split" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => {
+            const firstConfig = aircraftConfigurationDefinitions.find((definition) => definition.id !== BASE_AIRCRAFT_CONFIG.id);
+            if (firstConfig) onUpdateAircraftConfigCapacities({ [firstConfig.id]: String(Math.max(0, availableAircraftCount)) });
+            advanceWizard();
+          }, children: "Put all aircraft into first non-clean CONFIG" })
+        ] })
+      );
+    }
+    if (wizardStep === 8) {
+      return questionShell(
+        "Which saved taskings must be scheduled?",
+        savedTaskRequests.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select any saved task that must go into Highest Priority Events." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved taskings are waiting in NEO Assist." }),
+        savedTaskRequests.length ? savedTaskRequests.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: () => submitAssistTaskRequest(request.id), children: [
+          "Schedule ",
+          request.tasking || "Task",
+          " at ",
+          formatCompactTime(request.takeoff)
+        ] }, request.id)).concat(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Done with taskings" }, "taskings-next")
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Continue" })
+      );
+    }
+    if (wizardStep === 9) {
+      return questionShell(
+        "How should currency requests be treated?",
+        savedCurrencyRequests.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Essential currency goes into Highest Priority Events. Normal currency stays available for ordinary planning." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved currency requests are waiting in NEO Assist." }),
+        savedCurrencyRequests.length ? savedCurrencyRequests.flatMap((request) => [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: () => submitAssistCurrencyRequest(request.id), children: [
+            "Essential: ",
+            request.currency || "Currency",
+            " at ",
+            formatCompactTime(request.takeoff)
+          ] }, `${request.id}-essential`),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: () => saveAssistCurrencyRequest(request.id), children: [
+            "Normal priority: ",
+            request.currency || "Currency"
+          ] }, `${request.id}-normal`)
+        ]).concat(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Done with currency" }, "currency-next")
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: advanceWizard, children: "Continue" })
+      );
+    }
+    if (wizardStep === 10) {
+      return questionShell(
+        "Should normal training be included?",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Current routine training mix is ",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+            airCombatSchedulingWeights.courses,
+            "% course events"
+          ] }),
+          " and ",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+            airCombatSchedulingWeights.trainingPackages,
+            "% package events"
+          ] }),
+          "."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => {
+            onUpdateAirCombatSchedulingWeights({ courses: 60, trainingPackages: 40 });
+            advanceWizard();
+          }, children: "Yes, use normal training" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => {
+            onUpdateAirCombatSchedulingWeights({ courses: 0, trainingPackages: 0 });
+            advanceWizard();
+          }, children: "No, directed events only" })
+        ] })
+      );
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${wizardTransition === "out" ? "animate-[neoWizardOut_180ms_ease-in_forwards]" : "animate-[neoWizardIn_220ms_ease-out]"} rounded-xl border border-slate-300 bg-slate-50 p-5 text-center text-slate-900 shadow-sm`, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Final review" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: "Ready to build?" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mx-auto mt-3 max-w-md text-sm leading-6 text-slate-700", children: "I have updated the Air Combat NEO Build settings from your answers. Press NEO Build when you are ready to generate the schedule." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex justify-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: retreatWizard, className: "rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100", children: "Back" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: onRunNeoBuild,
+            className: "rounded-md border border-orange-300 bg-gradient-to-b from-orange-400 to-orange-500 px-7 py-3 text-sm font-bold text-white shadow-[0_0_18px_rgba(251,146,60,0.38)] hover:from-orange-300 hover:to-orange-500",
+            children: "NEO Build"
+          }
+        )
+      ] })
+    ] }, wizardStep);
   };
   const fieldClass2 = "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100";
   const selectAssistTask = (tasking) => {
@@ -64786,54 +65075,68 @@ const DfpSidePanelTimeline = ({
         )
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "div",
-      {
-        draggable: true,
-        onDragStart: startAssistTileDrag,
-        onDrag: updateAssistTileDrag,
-        onDragOver: updateAssistTileDrag,
-        onDragEnd: clearAssistDragPreview,
-        className: "w-full max-w-[360px] cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing",
-        title: "Drag this tile onto the DFP to create a copy",
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
-            style: { backgroundColor: assistDraftEvent.color },
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(assistStartTime) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: previewCrewName }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
-                  "[",
-                  assistDuration.toFixed(1),
-                  "] ",
-                  assistEventLabel
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: assistDraftEvent.flightType.toUpperCase() }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
-              ] })
-            ]
-          }
-        )
-      }
-    ) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[128px_minmax(0,1fr)] gap-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: assistSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
+    isAirCombatWizardMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 min-h-[520px] bg-slate-200 p-5 text-slate-900", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
+                        @keyframes neoWizardIn {
+                            from { opacity: 0; transform: translateX(28px); }
+                            to { opacity: 1; transform: translateX(0); }
+                        }
+                        @keyframes neoWizardOut {
+                            from { opacity: 1; transform: translateX(0); }
+                            to { opacity: 0; transform: translateX(-28px); }
+                        }
+                    ` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto max-w-[560px]", children: renderWizardStep() })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
         {
-          type: "button",
-          onClick: () => setActiveAssistSection(section.id),
-          className: `w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${activeAssistSection === section.id ? "border-cyan-300/70 bg-cyan-400/15 text-cyan-50" : "border-slate-600/70 bg-slate-900/65 text-slate-300 hover:border-cyan-400/45 hover:text-cyan-100"}`,
-          children: section.label
-        },
-        section.id
-      )) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: renderAssistSection() }) })
+          draggable: true,
+          onDragStart: startAssistTileDrag,
+          onDrag: updateAssistTileDrag,
+          onDragOver: updateAssistTileDrag,
+          onDragEnd: clearAssistDragPreview,
+          className: "w-full max-w-[360px] cursor-grab rounded-md border border-emerald-300/35 bg-slate-950/70 p-2 active:cursor-grabbing",
+          title: "Drag this tile onto the DFP to create a copy",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
+              style: { backgroundColor: assistDraftEvent.color },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(assistStartTime) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: previewCrewName }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
+                    "[",
+                    assistDuration.toFixed(1),
+                    "] ",
+                    assistEventLabel
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: assistDraftEvent.flightType.toUpperCase() }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
+                ] })
+              ]
+            }
+          )
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[128px_minmax(0,1fr)] gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: assistSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setActiveAssistSection(section.id),
+            className: `w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${activeAssistSection === section.id ? "border-cyan-300/70 bg-cyan-400/15 text-cyan-50" : "border-slate-600/70 bg-slate-900/65 text-slate-300 hover:border-cyan-400/45 hover:text-cyan-100"}`,
+            children: section.label
+          },
+          section.id
+        )) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: renderAssistSection() }) })
+      ] })
     ] })
   ] });
 };
@@ -87177,6 +87480,7 @@ Do you want to replace the existing entry?`,
                     formatResourceLabel: formatResourceDisplayLabel,
                     operationalModel: activeOperationalModel,
                     scheduleZoomLevel: zoomLevel,
+                    onRunNeoBuild: handleBuildDfp,
                     onOpenPrioritiesExclusions: () => {
                       try {
                         localStorage.setItem("neo_open_departure_arrival_exclusions", "1");

@@ -288,6 +288,7 @@ const DfpSidePanelTimeline: React.FC<{
     formatResourceLabel: (resourceId: string) => string;
     operationalModel?: string;
     scheduleZoomLevel?: number;
+    onRunNeoBuild?: () => void;
 }> = ({
     flyingStartTime,
     flyingEndTime,
@@ -340,6 +341,7 @@ const DfpSidePanelTimeline: React.FC<{
     formatResourceLabel,
     operationalModel,
     scheduleZoomLevel = 1,
+    onRunNeoBuild,
 }) => {
     const timelineStartHour = 6;
     const timelineEndHour = 25;
@@ -446,6 +448,8 @@ const DfpSidePanelTimeline: React.FC<{
     const [showAssistCurrencyForm, setShowAssistCurrencyForm] = useState(false);
     const [airCombatAssistMode, setAirCombatAssistMode] = useState<'tile' | 'wizard'>('tile');
     const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = useState<{ kind: 'task' | 'currency'; id: string } | null>(null);
+    const [wizardStep, setWizardStep] = useState(0);
+    const [wizardTransition, setWizardTransition] = useState<'in' | 'out'>('in');
 
     const courseEventOptions = useMemo(() => (
         fullAssistEventOptions.filter(item => item.lmpType !== 'Staff CAT')
@@ -643,6 +647,7 @@ const DfpSidePanelTimeline: React.FC<{
         : 1;
     const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === 'air_combat';
     const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
+    const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === 'wizard';
     const getAssistFormationCallsignBase = () => {
         const raw = (assistCallsign.trim() || 'CSIGN').toUpperCase();
         return raw.replace(/[^A-Z0-9]/g, '').replace(/\d+$/g, '') || 'CSIGN';
@@ -1328,6 +1333,232 @@ const DfpSidePanelTimeline: React.FC<{
         const request = assistCurrencyRequests.find(item => item.id === id);
         if (request?.submitted) ignorePriorityEvents([buildCurrencyRequestEvent(request)]);
         setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: false, ignored: true } : item));
+    };
+    const wizardStepsCount = 12;
+    const moveWizardTo = (nextStep: number) => {
+        setWizardTransition('out');
+        window.setTimeout(() => {
+            setWizardStep(Math.max(0, Math.min(wizardStepsCount - 1, nextStep)));
+            setWizardTransition('in');
+        }, 180);
+    };
+    const advanceWizard = () => moveWizardTo(wizardStep + 1);
+    const retreatWizard = () => moveWizardTo(wizardStep - 1);
+    const wizardChoiceClass = 'rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
+    const wizardSmallButtonClass = 'rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
+    const renderWizardStep = () => {
+        const savedTaskRequests = assistTaskRequests.filter(request => request.saved && !request.ignored);
+        const savedCurrencyRequests = assistCurrencyRequests.filter(request => request.saved && !request.ignored);
+        const configSummaryText = aircraftConfigurationDefinitions
+            .map(definition => {
+                const value = definition.id === BASE_AIRCRAFT_CONFIG.id && hasEnteredConfigCapacity
+                    ? derivedCleanConfigCapacity
+                    : aircraftConfigCapacities[definition.id];
+                return `${definition.label}: ${value || 0}`;
+            })
+            .join(' | ');
+        const questionShell = (title: string, body: React.ReactNode, actions: React.ReactNode) => (
+            <div key={wizardStep} className={`${wizardTransition === 'out' ? 'animate-[neoWizardOut_180ms_ease-in_forwards]' : 'animate-[neoWizardIn_220ms_ease-out]'} rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm`}>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Step {wizardStep + 1} of {wizardStepsCount}</p>
+                        <h4 className="mt-1 text-xl font-bold text-slate-950">{title}</h4>
+                    </div>
+                    {wizardStep > 0 && (
+                        <button type="button" onClick={retreatWizard} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                            Back
+                        </button>
+                    )}
+                </div>
+                <div className="mb-5 text-sm leading-6 text-slate-700">{body}</div>
+                <div className="grid gap-2 sm:grid-cols-2">{actions}</div>
+            </div>
+        );
+
+        if (wizardStep === 0) {
+            return questionShell(
+                'What sort of flying should NEO plan?',
+                <p>I will set up the Air Combat build one decision at a time. Start with the operating period you want the build to use.</p>,
+                <>
+                    <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateAllowNightFlying(false); advanceWizard(); }}>Day only</button>
+                    <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateAllowNightFlying(true); advanceWizard(); }}>Day and night</button>
+                </>,
+            );
+        }
+        if (wizardStep === 1) {
+            return questionShell(
+                'Are the day flying times right?',
+                <p>Current day window is <strong>{formatCompactTime(flyingStartTime)} to {formatCompactTime(flyingEndTime)}</strong>.</p>,
+                <>
+                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep these times</button>
+                    <div className="rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="grid grid-cols-2 gap-2">
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => stepTime(flyingStartTime, onUpdateFlyingStartTime, -1 / 12)}>Start -5</button>
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => stepTime(flyingStartTime, onUpdateFlyingStartTime, 1 / 12)}>Start +5</button>
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => stepTime(flyingEndTime, onUpdateFlyingEndTime, -1 / 12)}>End -5</button>
+                            <button type="button" className={wizardSmallButtonClass} onClick={() => stepTime(flyingEndTime, onUpdateFlyingEndTime, 1 / 12)}>End +5</button>
+                        </div>
+                        <button type="button" className="mt-3 w-full rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600" onClick={advanceWizard}>Use these times</button>
+                    </div>
+                </>,
+            );
+        }
+        if (wizardStep === 2) {
+            return questionShell(
+                allowNightFlying ? 'Are the night flying times right?' : 'Night flying is off',
+                allowNightFlying
+                    ? <p>Current night window is <strong>{formatCompactTime(commenceNightFlying)} to {formatCompactTime(ceaseNightFlying)}</strong>.</p>
+                    : <p>Night flying is not included, so I will skip the night window for this build.</p>,
+                allowNightFlying ? (
+                    <>
+                        <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep these times</button>
+                        <div className="rounded-lg border border-slate-300 bg-white p-3">
+                            <div className="grid grid-cols-2 gap-2">
+                                <button type="button" className={wizardSmallButtonClass} onClick={() => stepTime(commenceNightFlying, onUpdateCommenceNightFlying, -1 / 12)}>Start -5</button>
+                                <button type="button" className={wizardSmallButtonClass} onClick={() => stepTime(commenceNightFlying, onUpdateCommenceNightFlying, 1 / 12)}>Start +5</button>
+                                <button type="button" className={wizardSmallButtonClass} onClick={() => stepTime(ceaseNightFlying, onUpdateCeaseNightFlying, -1 / 12)}>End -5</button>
+                                <button type="button" className={wizardSmallButtonClass} onClick={() => stepTime(ceaseNightFlying, onUpdateCeaseNightFlying, 1 / 12)}>End +5</button>
+                            </div>
+                            <button type="button" className="mt-3 w-full rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600" onClick={advanceWizard}>Use these times</button>
+                        </div>
+                    </>
+                ) : <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Continue</button>,
+            );
+        }
+        if (wizardStep === 3) {
+            const exclusionText = flyingWindowExclusions.length
+                ? flyingWindowExclusions.map(period => `${formatCompactTime(period.startTime)}-${formatCompactTime(period.endTime)} ${period.restriction || 'both'}`).join(', ')
+                : 'No exclusions set';
+            return questionShell(
+                'Are the exclusion periods right?',
+                <p>Current exclusions: <strong>{exclusionText}</strong>.</p>,
+                <>
+                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Yes, keep them</button>
+                    <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateFlyingWindowExclusions([]); advanceWizard(); }}>Clear exclusions for this build</button>
+                </>,
+            );
+        }
+        if (wizardStep === 4) {
+            return questionShell(
+                'How many aircraft are available?',
+                <p>Current aircraft available is <strong>{availableAircraftCount}</strong>.</p>,
+                <>
+                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep {availableAircraftCount}</button>
+                    <div className="flex items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white p-3">
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => onUpdateAircraftCount(Math.max(0, availableAircraftCount - 1))}>-</button>
+                        <span className="min-w-10 text-center text-xl font-bold">{availableAircraftCount}</span>
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => onUpdateAircraftCount(availableAircraftCount + 1)}>+</button>
+                        <button type="button" className="rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600" onClick={advanceWizard}>Use</button>
+                    </div>
+                </>,
+            );
+        }
+        if (wizardStep === 5) {
+            return questionShell(
+                `How many ${simulatorResourceLabel} devices are available?`,
+                <p>Current simulator capacity is <strong>{availableFtdCount}</strong>.</p>,
+                <>
+                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep {availableFtdCount}</button>
+                    <div className="flex items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white p-3">
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => onUpdateFtdCount(Math.max(0, availableFtdCount - 1))}>-</button>
+                        <span className="min-w-10 text-center text-xl font-bold">{availableFtdCount}</span>
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => onUpdateFtdCount(availableFtdCount + 1)}>+</button>
+                        <button type="button" className="rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600" onClick={advanceWizard}>Use</button>
+                    </div>
+                </>,
+            );
+        }
+        if (wizardStep === 6) {
+            return questionShell(
+                `How many ${proceduralTrainerResourceLabel} devices are available?`,
+                <p>Current procedural trainer capacity is <strong>{availableCptCount}</strong>.</p>,
+                <>
+                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep {availableCptCount}</button>
+                    <div className="flex items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white p-3">
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => onUpdateCptCount(Math.max(0, availableCptCount - 1))}>-</button>
+                        <span className="min-w-10 text-center text-xl font-bold">{availableCptCount}</span>
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => onUpdateCptCount(availableCptCount + 1)}>+</button>
+                        <button type="button" className="rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600" onClick={advanceWizard}>Use</button>
+                    </div>
+                </>,
+            );
+        }
+        if (wizardStep === 7) {
+            return questionShell(
+                'Is the aircraft CONFIG split right?',
+                <p>Current split: <strong>{configSummaryText}</strong>.</p>,
+                <>
+                    <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Keep this split</button>
+                    <button type="button" className={wizardChoiceClass} onClick={() => {
+                        const firstConfig = aircraftConfigurationDefinitions.find(definition => definition.id !== BASE_AIRCRAFT_CONFIG.id);
+                        if (firstConfig) onUpdateAircraftConfigCapacities({ [firstConfig.id]: String(Math.max(0, availableAircraftCount)) });
+                        advanceWizard();
+                    }}>Put all aircraft into first non-clean CONFIG</button>
+                </>,
+            );
+        }
+        if (wizardStep === 8) {
+            return questionShell(
+                'Which saved taskings must be scheduled?',
+                savedTaskRequests.length
+                    ? <p>Select any saved task that must go into Highest Priority Events.</p>
+                    : <p>No saved taskings are waiting in NEO Assist.</p>,
+                savedTaskRequests.length ? savedTaskRequests.map(request => (
+                    <button key={request.id} type="button" className={wizardChoiceClass} onClick={() => submitAssistTaskRequest(request.id)}>
+                        Schedule {request.tasking || 'Task'} at {formatCompactTime(request.takeoff)}
+                    </button>
+                )).concat(
+                    <button key="taskings-next" type="button" className={wizardChoiceClass} onClick={advanceWizard}>Done with taskings</button>
+                ) : <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Continue</button>,
+            );
+        }
+        if (wizardStep === 9) {
+            return questionShell(
+                'How should currency requests be treated?',
+                savedCurrencyRequests.length
+                    ? <p>Essential currency goes into Highest Priority Events. Normal currency stays available for ordinary planning.</p>
+                    : <p>No saved currency requests are waiting in NEO Assist.</p>,
+                savedCurrencyRequests.length ? savedCurrencyRequests.flatMap(request => ([
+                    <button key={`${request.id}-essential`} type="button" className={wizardChoiceClass} onClick={() => submitAssistCurrencyRequest(request.id)}>
+                        Essential: {request.currency || 'Currency'} at {formatCompactTime(request.takeoff)}
+                    </button>,
+                    <button key={`${request.id}-normal`} type="button" className={wizardChoiceClass} onClick={() => saveAssistCurrencyRequest(request.id)}>
+                        Normal priority: {request.currency || 'Currency'}
+                    </button>,
+                ])).concat(
+                    <button key="currency-next" type="button" className={wizardChoiceClass} onClick={advanceWizard}>Done with currency</button>
+                ) : <button type="button" className={wizardChoiceClass} onClick={advanceWizard}>Continue</button>,
+            );
+        }
+        if (wizardStep === 10) {
+            return questionShell(
+                'Should normal training be included?',
+                <p>Current routine training mix is <strong>{airCombatSchedulingWeights.courses}% course events</strong> and <strong>{airCombatSchedulingWeights.trainingPackages}% package events</strong>.</p>,
+                <>
+                    <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateAirCombatSchedulingWeights({ courses: 60, trainingPackages: 40 }); advanceWizard(); }}>Yes, use normal training</button>
+                    <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateAirCombatSchedulingWeights({ courses: 0, trainingPackages: 0 }); advanceWizard(); }}>No, directed events only</button>
+                </>,
+            );
+        }
+        return (
+            <div key={wizardStep} className={`${wizardTransition === 'out' ? 'animate-[neoWizardOut_180ms_ease-in_forwards]' : 'animate-[neoWizardIn_220ms_ease-out]'} rounded-xl border border-slate-300 bg-slate-50 p-5 text-center text-slate-900 shadow-sm`}>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Final review</p>
+                <h4 className="mt-1 text-xl font-bold text-slate-950">Ready to build?</h4>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-700">
+                    I have updated the Air Combat NEO Build settings from your answers. Press NEO Build when you are ready to generate the schedule.
+                </p>
+                <div className="mt-5 flex justify-center gap-3">
+                    <button type="button" onClick={retreatWizard} className="rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">Back</button>
+                    <button
+                        type="button"
+                        onClick={onRunNeoBuild}
+                        className="rounded-md border border-orange-300 bg-gradient-to-b from-orange-400 to-orange-500 px-7 py-3 text-sm font-bold text-white shadow-[0_0_18px_rgba(251,146,60,0.38)] hover:from-orange-300 hover:to-orange-500"
+                    >
+                        NEO Build
+                    </button>
+                </div>
+            </div>
+        );
     };
     const fieldClass = 'mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100';
     const selectAssistTask = (tasking: string) => {
@@ -2389,6 +2620,24 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 </div>
             </div>
+            {isAirCombatWizardMode ? (
+                <div className="mt-3 min-h-[520px] bg-slate-200 p-5 text-slate-900">
+                    <style>{`
+                        @keyframes neoWizardIn {
+                            from { opacity: 0; transform: translateX(28px); }
+                            to { opacity: 1; transform: translateX(0); }
+                        }
+                        @keyframes neoWizardOut {
+                            from { opacity: 1; transform: translateX(0); }
+                            to { opacity: 0; transform: translateX(-28px); }
+                        }
+                    `}</style>
+                    <div className="mx-auto max-w-[560px]">
+                        {renderWizardStep()}
+                    </div>
+                </div>
+            ) : (
+                <>
             <div className="mt-3 flex justify-center">
                 <div
                     draggable
@@ -2441,6 +2690,8 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 </div>
             </div>
+                </>
+            )}
         </div>
     );
 };
@@ -30325,6 +30576,7 @@ appliedUpdates.forEach(update => {
                                     formatResourceLabel={formatResourceDisplayLabel}
                                     operationalModel={activeOperationalModel}
                                     scheduleZoomLevel={zoomLevel}
+                                    onRunNeoBuild={handleBuildDfp}
                                     onOpenPrioritiesExclusions={() => {
                                         try {
                                             localStorage.setItem('neo_open_departure_arrival_exclusions', '1');
