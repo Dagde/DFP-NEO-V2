@@ -818,25 +818,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const firstLightHour = timeStringToHours(daylightTimes.firstLight);
         const lastLightHour = timeStringToHours(daylightTimes.lastLight);
         const shades = [];
-        if (firstLightHour !== null && firstLightHour > START_HOUR) {
-            const width = (firstLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+        if (firstLightHour !== null && lastLightHour !== null && lastLightHour > firstLightHour) {
+            const left = (firstLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+            const width = (lastLightHour - firstLightHour) * PIXELS_PER_HOUR * zoomLevel;
             shades.push(
                 <div
-                    key="night-shade-morning"
-                    data-schedule-night-shade="true"
+                    key="day-shade"
+                    data-schedule-day-shade="true"
                     className="absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]"
-                    style={{ width: `${width}px` }}
-                />
-            );
-        }
-        if (lastLightHour !== null && lastLightHour < END_HOUR) {
-            const left = (lastLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
-            const width = (END_HOUR - lastLightHour) * PIXELS_PER_HOUR * zoomLevel;
-            shades.push(
-                <div
-                    key="night-shade-evening"
-                    data-schedule-night-shade="true"
-                    className="absolute top-0 h-full bg-white/5 pointer-events-none z-[1]"
                     style={{ left: `${left}px`, width: `${width}px` }}
                 />
             );
