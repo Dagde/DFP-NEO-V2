@@ -1704,7 +1704,7 @@ const DfpSidePanelTimeline: React.FC<{
                     <button
                         type="button"
                         onClick={onRunNeoBuild}
-                        className="btn-aluminium-brushed flex h-[55px] w-[75px] items-center justify-center rounded-md text-[12px] font-semibold"
+                        className="btn-aluminium-brushed flex h-[55px] w-[75px] items-center justify-center rounded-md text-[12px] font-semibold shadow-[0_12px_18px_rgba(31,41,55,0.32),0_4px_7px_rgba(15,23,42,0.24),inset_0_1px_0_rgba(255,255,255,0.82)] ring-1 ring-slate-700/20"
                     >
                         <span className="text-center leading-tight" style={{ color: '#fb923c' }}>NEO Build</span>
                     </button>
