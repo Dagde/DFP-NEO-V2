@@ -62985,6 +62985,7 @@ const DfpSidePanelTimeline = ({
   const [selectedTaskProfile, setSelectedTaskProfile] = reactExports.useState("");
   const [selectedCurrencyName, setSelectedCurrencyName] = reactExports.useState("");
   const [selectedCrewName, setSelectedCrewName] = reactExports.useState("");
+  const [selectedCrewNames, setSelectedCrewNames] = reactExports.useState([]);
   const [selectedResourceKind, setSelectedResourceKind] = reactExports.useState("flight");
   const [selectedResourceNumber, setSelectedResourceNumber] = reactExports.useState(1);
   const [selectedAircraftNumber, setSelectedAircraftNumber] = reactExports.useState("TBA");
@@ -63207,6 +63208,33 @@ const DfpSidePanelTimeline = ({
   const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === "air_combat";
   const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
   const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === "wizard";
+  const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === "flight" && assistFormationSize > 1;
+  const setCrewSelection = (name, checked) => {
+    if (!canSelectFormationCrew) {
+      const nextName = checked ? name : "";
+      setSelectedCrewName(nextName);
+      setSelectedCrewNames(nextName ? [nextName] : []);
+      return;
+    }
+    setSelectedCrewNames((prev) => {
+      let next = checked ? prev.includes(name) ? prev : [...prev, name] : prev.filter((item) => item !== name);
+      next = next.slice(0, assistFormationSize);
+      setSelectedCrewName(next[0] || "");
+      return next;
+    });
+  };
+  const clearCrewSelection = () => {
+    setSelectedCrewName("");
+    setSelectedCrewNames([]);
+  };
+  reactExports.useEffect(() => {
+    setSelectedCrewNames((prev) => {
+      const next = canSelectFormationCrew ? prev.slice(0, assistFormationSize) : selectedCrewName ? [selectedCrewName] : [];
+      if (next.join("|") === prev.join("|")) return prev;
+      setSelectedCrewName(next[0] || "");
+      return next;
+    });
+  }, [assistFormationSize, canSelectFormationCrew, selectedCrewName]);
   const getAssistFormationCallsignBase = () => {
     const raw = (assistCallsign.trim() || "CSIGN").toUpperCase();
     return raw.replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, "") || "CSIGN";
@@ -63259,6 +63287,7 @@ const DfpSidePanelTimeline = ({
     formationType: assistFormationSize > 1 ? "NEO Assist Formation" : void 0,
     formationPosition: assistFormationSize > 1 ? 1 : void 0,
     formationSize: assistFormationSize > 1 ? assistFormationSize : void 0,
+    crewSelectionOrder: selectedCrewNames,
     aircraftConfigId: assistConfigId,
     acceptableAircraftConfigs: assistConfigId ? [assistConfigId] : void 0,
     preStart: selectedSyllabusItem ? Math.max(0, assistStartTime - (selectedSyllabusItem.preFlightTime || 0) / 60) : void 0,
@@ -63280,6 +63309,7 @@ const DfpSidePanelTimeline = ({
     date,
     selectedCurrencyName,
     selectedCrewName,
+    selectedCrewNames,
     selectedAircraftNumber,
     selectedResourceKind,
     selectedAssignedArea,
@@ -64957,22 +64987,29 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/55 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Crew" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setSelectedCrewName(""), className: "rounded border border-slate-600 px-1 text-[9px] normal-case tracking-normal text-slate-300", children: "Clear" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: clearCrewSelection, className: "rounded border border-slate-600 px-1 text-[9px] normal-case tracking-normal text-slate-300", children: "Clear" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: [
             displayedCrewOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-slate-500", children: "No crew available." }),
-            displayedCrewOptions.map((name, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[22px_auto_1fr] items-center gap-2 rounded border px-2 py-1 text-[10px] ${selectedCrewName === name ? "border-cyan-300/70 bg-cyan-400/10 text-cyan-50" : "border-slate-700 bg-slate-950/45 text-slate-300"}`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-slate-500", children: crewSourceMode === "priority" ? index + 1 : "" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: selectedCrewName === name,
-                  onChange: (event) => setSelectedCrewName(event.target.checked ? name : "")
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: formatCrewOptionLabel(name) })
-            ] }, name))
+            displayedCrewOptions.map((name, index) => {
+              const selectedOrder = selectedCrewNames.indexOf(name) + 1;
+              const isSelected = selectedOrder > 0;
+              const selectionFull = canSelectFormationCrew && !isSelected && selectedCrewNames.length >= assistFormationSize;
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[22px_auto_24px_1fr] items-center gap-x-3 rounded border px-2 py-1 text-[10px] ${isSelected ? "border-cyan-300/70 bg-cyan-400/10 text-cyan-50" : "border-slate-700 bg-slate-950/45 text-slate-300"} ${selectionFull ? "opacity-55" : ""}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-slate-500", children: crewSourceMode === "priority" ? index + 1 : "" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: isSelected,
+                    disabled: selectionFull,
+                    onChange: (event) => setCrewSelection(name, event.target.checked)
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-5 w-6 items-center justify-center", children: canSelectFormationCrew && isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-4 min-w-4 items-center justify-center rounded bg-emerald-500 px-1 text-[9px] font-bold leading-none text-emerald-950 shadow-[0_0_6px_rgba(16,185,129,0.35)]", children: selectedOrder }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: formatCrewOptionLabel(name) })
+              ] }, name);
+            })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[9px] text-slate-500", children: "Priority list uses the latest NEO Build ordering when diagnostic priority data is available." })
@@ -83256,14 +83293,18 @@ ${conflictLines.join("\n")}${moreText}`,
     const formationSize = isFlightFormation ? Math.min(requestedFormationSize, Math.max(1, availableFormationResources.length)) : 1;
     const formationId = formationSize > 1 ? v4() : void 0;
     const callsignBase = getFormationCallsignBase(draft.callsign);
+    const crewSelectionOrder = Array.isArray(draft.crewSelectionOrder) ? draft.crewSelectionOrder.filter((name) => typeof name === "string" && name.trim().length > 0) : [];
     return Array.from({ length: formationSize }, (_, index) => {
       const resourceId = formationSize > 1 ? availableFormationResources[index] || firstResourceId : firstResourceId;
       const type = resourceId.startsWith("FTD") ? "ftd" : resourceId.startsWith("CPT") ? "cpt" : draft.type || "flight";
+      const crewName = crewSelectionOrder[index] || (formationSize === 1 ? draft.pilot || draft.instructor || "" : "") || draft.pilot || draft.instructor || "";
       return {
         ...draft,
         id: v4(),
         date: eventDate,
         type,
+        pilot: crewName,
+        instructor: crewName,
         startTime,
         resourceId,
         preStart: preOffset > 0 ? startTime - preOffset : void 0,

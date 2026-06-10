@@ -368,6 +368,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedTaskProfile, setSelectedTaskProfile] = useState('');
     const [selectedCurrencyName, setSelectedCurrencyName] = useState('');
     const [selectedCrewName, setSelectedCrewName] = useState('');
+    const [selectedCrewNames, setSelectedCrewNames] = useState<string[]>([]);
     const [selectedResourceKind, setSelectedResourceKind] = useState<'flight' | 'ftd' | 'cpt'>('flight');
     const [selectedResourceNumber, setSelectedResourceNumber] = useState(1);
     const [selectedAircraftNumber, setSelectedAircraftNumber] = useState('TBA');
@@ -678,6 +679,37 @@ const DfpSidePanelTimeline: React.FC<{
     const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === 'air_combat';
     const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
     const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === 'wizard';
+    const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === 'flight' && assistFormationSize > 1;
+    const setCrewSelection = (name: string, checked: boolean) => {
+        if (!canSelectFormationCrew) {
+            const nextName = checked ? name : '';
+            setSelectedCrewName(nextName);
+            setSelectedCrewNames(nextName ? [nextName] : []);
+            return;
+        }
+        setSelectedCrewNames(prev => {
+            let next = checked
+                ? (prev.includes(name) ? prev : [...prev, name])
+                : prev.filter(item => item !== name);
+            next = next.slice(0, assistFormationSize);
+            setSelectedCrewName(next[0] || '');
+            return next;
+        });
+    };
+    const clearCrewSelection = () => {
+        setSelectedCrewName('');
+        setSelectedCrewNames([]);
+    };
+    useEffect(() => {
+        setSelectedCrewNames(prev => {
+            const next = canSelectFormationCrew
+                ? prev.slice(0, assistFormationSize)
+                : (selectedCrewName ? [selectedCrewName] : []);
+            if (next.join('|') === prev.join('|')) return prev;
+            setSelectedCrewName(next[0] || '');
+            return next;
+        });
+    }, [assistFormationSize, canSelectFormationCrew, selectedCrewName]);
     const getAssistFormationCallsignBase = () => {
         const raw = (assistCallsign.trim() || 'CSIGN').toUpperCase();
         return raw.replace(/[^A-Z0-9]/g, '').replace(/\d+$/g, '') || 'CSIGN';
@@ -764,6 +796,7 @@ const DfpSidePanelTimeline: React.FC<{
         formationType: assistFormationSize > 1 ? 'NEO Assist Formation' : undefined,
         formationPosition: assistFormationSize > 1 ? 1 : undefined,
         formationSize: assistFormationSize > 1 ? assistFormationSize : undefined,
+        crewSelectionOrder: selectedCrewNames,
         aircraftConfigId: assistConfigId,
         acceptableAircraftConfigs: assistConfigId ? [assistConfigId] : undefined,
         preStart: selectedSyllabusItem ? Math.max(0, assistStartTime - ((selectedSyllabusItem.preFlightTime || 0) / 60)) : undefined,
@@ -785,6 +818,7 @@ const DfpSidePanelTimeline: React.FC<{
         date,
         selectedCurrencyName,
         selectedCrewName,
+        selectedCrewNames,
         selectedAircraftNumber,
         selectedResourceKind,
         selectedAssignedArea,
@@ -2558,23 +2592,36 @@ const DfpSidePanelTimeline: React.FC<{
                     <div className="rounded border border-slate-700 bg-slate-950/55 p-2">
                         <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                             <span>Crew</span>
-                            <button type="button" onClick={() => setSelectedCrewName('')} className="rounded border border-slate-600 px-1 text-[9px] normal-case tracking-normal text-slate-300">Clear</button>
+                            <button type="button" onClick={clearCrewSelection} className="rounded border border-slate-600 px-1 text-[9px] normal-case tracking-normal text-slate-300">Clear</button>
                         </div>
                         <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
                             {displayedCrewOptions.length === 0 && <p className="text-[10px] text-slate-500">No crew available.</p>}
-                            {displayedCrewOptions.map((name, index) => (
-                                <label key={name} className={`grid cursor-pointer grid-cols-[22px_auto_1fr] items-center gap-2 rounded border px-2 py-1 text-[10px] ${selectedCrewName === name ? 'border-cyan-300/70 bg-cyan-400/10 text-cyan-50' : 'border-slate-700 bg-slate-950/45 text-slate-300'}`}>
-                                    <span className="font-mono text-[9px] text-slate-500">
-                                        {crewSourceMode === 'priority' ? index + 1 : ''}
-                                    </span>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedCrewName === name}
-                                        onChange={event => setSelectedCrewName(event.target.checked ? name : '')}
-                                    />
-                                    <span className="truncate">{formatCrewOptionLabel(name)}</span>
-                                </label>
-                            ))}
+                            {displayedCrewOptions.map((name, index) => {
+                                const selectedOrder = selectedCrewNames.indexOf(name) + 1;
+                                const isSelected = selectedOrder > 0;
+                                const selectionFull = canSelectFormationCrew && !isSelected && selectedCrewNames.length >= assistFormationSize;
+                                return (
+                                    <label key={name} className={`grid cursor-pointer grid-cols-[22px_auto_24px_1fr] items-center gap-x-3 rounded border px-2 py-1 text-[10px] ${isSelected ? 'border-cyan-300/70 bg-cyan-400/10 text-cyan-50' : 'border-slate-700 bg-slate-950/45 text-slate-300'} ${selectionFull ? 'opacity-55' : ''}`}>
+                                        <span className="font-mono text-[9px] text-slate-500">
+                                            {crewSourceMode === 'priority' ? index + 1 : ''}
+                                        </span>
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            disabled={selectionFull}
+                                            onChange={event => setCrewSelection(name, event.target.checked)}
+                                        />
+                                        <span className="flex h-5 w-6 items-center justify-center">
+                                            {canSelectFormationCrew && isSelected && (
+                                                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-emerald-500 px-1 text-[9px] font-bold leading-none text-emerald-950 shadow-[0_0_6px_rgba(16,185,129,0.35)]">
+                                                    {selectedOrder}
+                                                </span>
+                                            )}
+                                        </span>
+                                        <span className="truncate">{formatCrewOptionLabel(name)}</span>
+                                    </label>
+                                );
+                            })}
                         </div>
                     </div>
                     <span className="block text-[9px] text-slate-500">
@@ -25626,6 +25673,9 @@ appliedUpdates.forEach(update => {
             : 1;
         const formationId = formationSize > 1 ? uuidv4() : undefined;
         const callsignBase = getFormationCallsignBase(draft.callsign);
+        const crewSelectionOrder = Array.isArray(draft.crewSelectionOrder)
+            ? draft.crewSelectionOrder.filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
+            : [];
 
         return Array.from({ length: formationSize }, (_, index) => {
             const resourceId = formationSize > 1
@@ -25636,12 +25686,15 @@ appliedUpdates.forEach(update => {
                 : resourceId.startsWith('CPT')
                     ? 'cpt'
                     : draft.type || 'flight';
+            const crewName = crewSelectionOrder[index] || (formationSize === 1 ? (draft.pilot || draft.instructor || '') : '') || draft.pilot || draft.instructor || '';
 
             return {
                 ...draft,
                 id: uuidv4(),
                 date: eventDate,
                 type,
+                pilot: crewName,
+                instructor: crewName,
                 startTime,
                 resourceId,
                 preStart: preOffset > 0 ? startTime - preOffset : undefined,
