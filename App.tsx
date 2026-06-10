@@ -2111,9 +2111,12 @@ const DfpSidePanelTimeline: React.FC<{
                     >
                         NEO - Tile
                     </button>
-                    <h3 className="rounded-md border border-orange-400/70 bg-orange-500/10 px-4 py-1.5 text-center text-sm font-semibold text-orange-50 shadow-[0_0_18px_rgba(251,146,60,0.55)] animate-pulse">
-                        NEO Assist
-                    </h3>
+                    <div className="relative justify-self-center px-4 py-1.5">
+                        <span className="absolute inset-x-0 top-1/2 h-6 -translate-y-1/2 rounded-full bg-orange-500/35 blur-md animate-[pulse_3.5s_ease-in-out_infinite]" aria-hidden="true" />
+                        <h3 className="relative text-center text-sm font-semibold text-white">
+                            NEO Assist
+                        </h3>
+                    </div>
                     <button
                         type="button"
                         className="justify-self-end rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18"
