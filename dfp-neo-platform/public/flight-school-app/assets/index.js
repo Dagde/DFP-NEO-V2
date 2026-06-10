@@ -63275,7 +63275,7 @@ const DfpSidePanelTimeline = ({
     duration: assistDuration,
     startTime: assistStartTime,
     resourceId: assistResourceId,
-    color: activeAssistSection === "taskings" ? "#0891b2" : activeAssistSection === "currency" ? "#7c3aed" : selectedResourceKind === "flight" ? "#059669" : "#0369a1",
+    color: activeAssistSection === "taskings" ? "#0891b2" : activeAssistSection === "currency" ? "#7c3aed" : selectedResourceKind === "flight" ? "rgba(16,185,129,0.70)" : "#0369a1",
     flightType: assistFlightType,
     soloOrDual: assistFlightType,
     locationType: assistOrigin !== assistDestination ? "Land Away" : "Local",
@@ -63354,7 +63354,7 @@ const DfpSidePanelTimeline = ({
       tile.style.overflow = "hidden";
       tile.style.borderRadius = "3px";
       tile.style.border = "1px solid rgba(255,255,255,0.14)";
-      tile.style.background = assistDraftEvent.color || "#059669";
+      tile.style.background = assistDraftEvent.color || "rgba(16,185,129,0.70)";
       tile.style.color = "#fff";
       tile.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       tile.style.fontWeight = "700";
