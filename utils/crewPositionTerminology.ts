@@ -31,9 +31,11 @@ const makeCrewPositionId = (genericName: string, index: number): string => {
 const normaliseEntry = (entry: any, index: number): CrewPositionTerminologyEntry | null => {
   if (!entry || typeof entry !== 'object') return null;
   const fallback = DEFAULT_CREW_POSITION_TERMINOLOGY.positions[index];
-  const genericName = String(entry.genericName || entry.generic || entry.name || fallback?.genericName || '').trim();
-  if (!genericName) return null;
-  const label = String(entry.label || entry.displayName || genericName).trim() || genericName;
+  const rawGenericName = String(entry.genericName || entry.generic || entry.name || fallback?.genericName || '');
+  const genericName = rawGenericName.trim() ? rawGenericName : String(fallback?.genericName || '').trim();
+  if (!genericName.trim()) return null;
+  const rawLabel = String(entry.label || entry.displayName || '');
+  const label = rawLabel.trim() ? rawLabel : genericName;
   return {
     id: String(entry.id || makeCrewPositionId(genericName, index)).trim() || makeCrewPositionId(genericName, index),
     genericName,

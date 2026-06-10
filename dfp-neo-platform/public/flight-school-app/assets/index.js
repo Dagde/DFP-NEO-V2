@@ -49110,9 +49110,11 @@ const makeCrewPositionId = (genericName, index) => {
 const normaliseEntry = (entry, index) => {
   if (!entry || typeof entry !== "object") return null;
   const fallback = DEFAULT_CREW_POSITION_TERMINOLOGY.positions[index];
-  const genericName = String(entry.genericName || entry.generic || entry.name || fallback?.genericName || "").trim();
-  if (!genericName) return null;
-  const label = String(entry.label || entry.displayName || genericName).trim() || genericName;
+  const rawGenericName = String(entry.genericName || entry.generic || entry.name || fallback?.genericName || "");
+  const genericName = rawGenericName.trim() ? rawGenericName : String(fallback?.genericName || "").trim();
+  if (!genericName.trim()) return null;
+  const rawLabel = String(entry.label || entry.displayName || "");
+  const label = rawLabel.trim() ? rawLabel : genericName;
   return {
     id: String(entry.id || makeCrewPositionId(genericName, index)).trim() || makeCrewPositionId(genericName, index),
     genericName,
@@ -50242,8 +50244,8 @@ const PlatformConfigurationSettings = ({
   const updateCrewPositionEntry = (entryId, changes) => {
     const currentEntry = crewPositionTerminology.positions.find((entry) => entry.id === entryId);
     if (!currentEntry) return;
-    const nextGenericName = String(changes.genericName ?? currentEntry.genericName).trim() || currentEntry.genericName;
-    const nextLabel = String(changes.label ?? currentEntry.label).trim() || nextGenericName;
+    const nextGenericName = changes.genericName !== void 0 ? String(changes.genericName) : currentEntry.genericName;
+    const nextLabel = changes.label !== void 0 ? String(changes.label) : currentEntry.label;
     const nextPositions = crewPositionTerminology.positions.map((entry) => entry.id === entryId ? { ...entry, genericName: nextGenericName, label: nextLabel } : entry);
     updateCrewPositionTerminology(nextPositions, { from: currentEntry.genericName, to: nextGenericName });
   };

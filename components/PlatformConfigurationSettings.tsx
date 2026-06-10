@@ -1429,8 +1429,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   ) => {
     const currentEntry = crewPositionTerminology.positions.find((entry) => entry.id === entryId);
     if (!currentEntry) return;
-    const nextGenericName = String(changes.genericName ?? currentEntry.genericName).trim() || currentEntry.genericName;
-    const nextLabel = String(changes.label ?? currentEntry.label).trim() || nextGenericName;
+    const nextGenericName = changes.genericName !== undefined
+      ? String(changes.genericName)
+      : currentEntry.genericName;
+    const nextLabel = changes.label !== undefined
+      ? String(changes.label)
+      : currentEntry.label;
     const nextPositions = crewPositionTerminology.positions.map((entry) => (
       entry.id === entryId
         ? { ...entry, genericName: nextGenericName, label: nextLabel }
