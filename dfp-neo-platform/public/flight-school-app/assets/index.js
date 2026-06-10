@@ -64143,21 +64143,21 @@ const DfpSidePanelTimeline = ({
       );
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${wizardTransition === "out" ? "animate-[neoWizardOut_180ms_ease-in_forwards]" : "animate-[neoWizardIn_220ms_ease-out]"} rounded-xl border border-slate-300 bg-slate-50 p-5 text-center text-slate-900 shadow-sm`, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Final review" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3 text-left", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Final review" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: retreatWizard, className: "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100", children: "Back" })
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: "Ready to build?" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mx-auto mt-3 max-w-md text-sm leading-6 text-slate-700", children: "I have updated the Air Combat NEO Build settings from your answers. Press NEO Build when you are ready to generate the schedule." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex justify-center gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: retreatWizard, className: "rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100", children: "Back" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: onRunNeoBuild,
-            className: "rounded-md border border-orange-300 bg-gradient-to-b from-orange-400 to-orange-500 px-7 py-3 text-sm font-bold text-white shadow-[0_0_18px_rgba(251,146,60,0.38)] hover:from-orange-300 hover:to-orange-500",
-            children: "NEO Build"
-          }
-        )
-      ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-5 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: onRunNeoBuild,
+          className: "btn-aluminium-brushed flex h-[55px] w-[75px] items-center justify-center rounded-md text-[12px] font-semibold",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#fb923c" }, children: "NEO Build" })
+        }
+      ) })
     ] }, wizardStep);
   };
   const fieldClass2 = "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100";
@@ -65206,7 +65206,7 @@ const DfpSidePanelTimeline = ({
     isAirCombatWizardMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        className: "mt-3 min-h-[520px] bg-slate-200 p-5 text-slate-900",
+        className: "mt-3 min-h-[520px] bg-[#fb923c] p-5 text-slate-900",
         style: {
           WebkitMaskImage: "linear-gradient(to bottom, transparent 0, black 18px), linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)",
           WebkitMaskComposite: "source-in",
