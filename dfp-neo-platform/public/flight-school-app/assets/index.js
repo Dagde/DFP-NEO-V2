@@ -64142,14 +64142,16 @@ const DfpSidePanelTimeline = ({
         ] })
       );
     }
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${wizardTransition === "out" ? "animate-[neoWizardOut_180ms_ease-in_forwards]" : "animate-[neoWizardIn_220ms_ease-out]"} rounded-xl border border-slate-300 bg-slate-50 p-5 text-center text-slate-900 shadow-sm`, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3 text-left", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Final review" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: retreatWizard, className: "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100", children: "Back" })
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${wizardTransition === "out" ? "animate-[neoWizardOut_180ms_ease-in_forwards]" : "animate-[neoWizardIn_220ms_ease-out]"}`, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-300 bg-slate-50 p-5 text-center text-slate-900 shadow-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3 text-left", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: "Final review" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: retreatWizard, className: "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100", children: "Back" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: "Ready to build?" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mx-auto mt-3 max-w-md text-sm leading-6 text-slate-700", children: "I have updated the Air Combat NEO Build settings from your answers. Press NEO Build when you are ready to generate the schedule." })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: "Ready to build?" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mx-auto mt-3 max-w-md text-sm leading-6 text-slate-700", children: "I have updated the Air Combat NEO Build settings from your answers. Press NEO Build when you are ready to generate the schedule." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-5 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-24 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
