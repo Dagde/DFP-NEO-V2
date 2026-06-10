@@ -70,6 +70,7 @@ interface PrioritiesViewWithMenuProps {
   operationalModelLabel?: string;
   airCombatSchedulingWeights?: AirCombatSchedulingWeights;
   onUpdateAirCombatSchedulingWeights?: (weights: AirCombatSchedulingWeights) => void;
+  isSingleSeatAircraft?: boolean;
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';

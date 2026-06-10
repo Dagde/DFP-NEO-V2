@@ -2643,6 +2643,40 @@ const formatAircraftConfigurationSummary = (selected, definitions = []) => {
   const definitionMap = new Map(definitions.map((definition) => [definition.id, definition.label]));
   return normalised.map((id) => definitionMap.get(id) || id).join(", ") || "ANY";
 };
+const DEFAULT_AIRCRAFT_CREW_COMPOSITION = {
+  crewCount: 2,
+  seats: [
+    { id: "seat-1", role: "Pilot" },
+    { id: "seat-2", role: "Crew" }
+  ]
+};
+const clampCrewCount = (value) => {
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed)) return DEFAULT_AIRCRAFT_CREW_COMPOSITION.crewCount;
+  return Math.max(1, Math.min(12, parsed));
+};
+const defaultRoleForSeat = (index) => {
+  if (index === 0) return "Pilot";
+  return `Crew ${index + 1}`;
+};
+const normaliseAircraftCrewComposition = (source) => {
+  const raw = source?.crewComposition && typeof source.crewComposition === "object" ? source.crewComposition : source;
+  const rawSeats = Array.isArray(raw?.seats) ? raw.seats : [];
+  const crewCount = clampCrewCount(raw?.crewCount ?? rawSeats.length);
+  const seats = Array.from({ length: crewCount }, (_, index) => {
+    const existing = rawSeats[index] || {};
+    return {
+      id: String(existing.id || `seat-${index + 1}`),
+      role: String(existing.role || defaultRoleForSeat(index)).trim() || defaultRoleForSeat(index)
+    };
+  });
+  return { crewCount, seats };
+};
+const getAircraftTypeCrewComposition = (platformConfig, aircraftTypeCode) => {
+  const normalisedCode = String(aircraftTypeCode || "").trim().toUpperCase();
+  const aircraftType = (platformConfig?.aircraftTypes || []).find((candidate) => String(candidate?.code || "").trim().toUpperCase() === normalisedCode);
+  return normaliseAircraftCrewComposition(aircraftType?.crewComposition);
+};
 const DEFAULT_STAFF_RANK_ORDER = [
   "AIRMSHL",
   "AVM",
@@ -19795,10 +19829,16 @@ const AddFlightTileModal = ({
   userId,
   aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
   aircraftConfigurationDefinitions = [],
+  aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
   personnelDisplaySettings
 }) => {
+  const resolvedAircraftCrewComposition = reactExports.useMemo(
+    () => normaliseAircraftCrewComposition(aircraftCrewComposition),
+    [aircraftCrewComposition]
+  );
+  const isSingleSeatAircraft = resolvedAircraftCrewComposition.crewCount === 1;
   const [eventCategory, setEventCategory] = reactExports.useState("lmp_event");
-  const [flightType, setFlightType] = reactExports.useState("Dual");
+  const [flightType, setFlightType] = reactExports.useState(isSingleSeatAircraft ? "Solo" : "Dual");
   const [picName, setPicName] = reactExports.useState("");
   const [studentName, setStudentName] = reactExports.useState("");
   const [flightNumber, setFlightNumber] = reactExports.useState("");
@@ -19935,8 +19975,12 @@ const AddFlightTileModal = ({
   }, [formationType, formationTypes]);
   reactExports.useEffect(() => {
     const additionalCrewCount = flightNumber === "SCT FORM" ? Math.max(0, aircraftCount - 1) : 0;
-    setFormationCrew((prev) => Array.from({ length: additionalCrewCount }, (_, index) => prev[index] || { flightType: "Solo", picName: "", studentName: "", callsign: `${formationType || formationTypes[0] || ""}${index + 2}` }));
-  }, [aircraftCount, flightNumber, formationType, formationTypes]);
+    setFormationCrew((prev) => Array.from({ length: additionalCrewCount }, (_, index) => ({
+      ...prev[index] || { flightType: "Solo", picName: "", studentName: "", callsign: `${formationType || formationTypes[0] || ""}${index + 2}` },
+      flightType: isSingleSeatAircraft ? "Solo" : prev[index]?.flightType || "Solo",
+      studentName: isSingleSeatAircraft ? "" : prev[index]?.studentName || ""
+    })));
+  }, [aircraftCount, flightNumber, formationType, formationTypes, isSingleSeatAircraft]);
   const areaOptions = reactExports.useMemo(() => opAreas.map((a) => ({ value: a, label: a })), [opAreas]);
   const aircraftOptions = reactExports.useMemo(() => [{ value: "", label: "Skip aircraft number" }, ...Array.from({ length: 49 }, (_, i) => {
     const n = String(i + 1).padStart(3, "0");
@@ -20132,9 +20176,15 @@ const AddFlightTileModal = ({
     setGuidedStep("startTime");
   }, [eventCategory]);
   reactExports.useEffect(() => {
-    if (eventCategory === "sct" || eventCategory === "twr_di") setFlightType("Solo");
+    if (isSingleSeatAircraft || eventCategory === "sct" || eventCategory === "twr_di") setFlightType("Solo");
     else setFlightType("Dual");
-  }, [eventCategory]);
+  }, [eventCategory, isSingleSeatAircraft]);
+  reactExports.useEffect(() => {
+    if (!isSingleSeatAircraft) return;
+    setFlightType("Solo");
+    setStudentName("");
+    setFormationCrew((prev) => prev.map((crewMember) => ({ ...crewMember, flightType: "Solo", studentName: "" })));
+  }, [isSingleSeatAircraft]);
   reactExports.useEffect(() => {
     if (eventCategory === "lmp_currency") setFlightNumber("CURR");
   }, [eventCategory]);
@@ -20153,8 +20203,8 @@ const AddFlightTileModal = ({
     const lmp = traineeLMPs.get(name);
     if (!lmp) return;
     const item = lmp.find((i) => i.id === flightNumber || i.code === flightNumber);
-    if (item?.sortieType) setFlightType(item.sortieType);
-  }, [picName, studentName, flightNumber, traineeLMPs]);
+    if (!isSingleSeatAircraft && item?.sortieType) setFlightType(item.sortieType);
+  }, [picName, studentName, flightNumber, traineeLMPs, isSingleSeatAircraft]);
   const resolveLmpDurationForEvent = (code, fallback) => {
     if (!code) return void 0;
     const selectedName = flightType === "Solo" ? picName : studentName;
@@ -20416,7 +20466,10 @@ const AddFlightTileModal = ({
                     onCallsignChange: setCallsign
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2", children: "Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right. Click SOLO badge to switch to Dual." })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500 mt-2", children: [
+                  "Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.",
+                  isSingleSeatAircraft ? " This aircraft type is configured as single-seat, so new flights are Solo." : " Click SOLO badge to switch to Dual."
+                ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer py-2 mb-3", children: [
@@ -20505,7 +20558,7 @@ const AddFlightTileModal = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mb-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Flight Type" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                      isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-100", children: "Solo - single-seat aircraft" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "button",
                           {
@@ -20623,7 +20676,7 @@ const AddFlightTileModal = ({
                         )
                       ] })
                     ] }),
-                    formationCrew.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: formationCrew.map((crewMember, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[90px_1fr_1fr] gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3", children: [
+                    formationCrew.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: formationCrew.map((crewMember, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? "grid-cols-[90px_1fr]" : "grid-cols-[90px_1fr_1fr]"}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Aircraft" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center", children: [
@@ -20650,7 +20703,7 @@ const AddFlightTileModal = ({
                           }
                         ) })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      !isSingleSeatAircraft && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Crew" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm", children: crewMember.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                           PersonDropdown,
@@ -24172,6 +24225,7 @@ const TaskingRequestTable = ({
   airfieldLookup,
   taskProfiles,
   operationalModelLabel,
+  isSingleSeatAircraft,
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
@@ -24240,7 +24294,7 @@ const TaskingRequestTable = ({
               className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
             }
           ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100", children: "Solo" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
               value: request.flightType || "Dual",
@@ -24404,7 +24458,8 @@ const PrioritiesView = ({
   operationalModel = "flight_school",
   operationalModelLabel = "Flight School Model",
   airCombatSchedulingWeights,
-  onUpdateAirCombatSchedulingWeights
+  onUpdateAirCombatSchedulingWeights,
+  isSingleSeatAircraft = false
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -24853,7 +24908,7 @@ const PrioritiesView = ({
       date: buildDfpDate,
       takeoff: flyingStartTime,
       duration: 1,
-      flightType: "Dual",
+      flightType: isSingleSeatAircraft ? "Solo" : "Dual",
       depPoint: school,
       arrivalPoint: school,
       aircraftCount: 1,
@@ -24884,12 +24939,13 @@ const PrioritiesView = ({
     if (updates.submitted === false) {
       removeTaskingPriorityEvents(id);
     }
+    const nextUpdates = isSingleSeatAircraft ? { ...updates, flightType: "Solo" } : updates;
     setTaskingRequests((prev) => prev.map((request) => request.id === id ? {
       ...request,
-      ...updates,
-      saved: updates.saved ?? request.saved,
-      submitted: updates.submitted ?? request.submitted,
-      ignored: updates.ignored ?? request.ignored
+      ...nextUpdates,
+      saved: nextUpdates.saved ?? request.saved,
+      submitted: nextUpdates.submitted ?? request.submitted,
+      ignored: nextUpdates.ignored ?? request.ignored
     } : request));
   };
   const buildTaskingPriorityEvents = (request) => {
@@ -24901,7 +24957,7 @@ const PrioritiesView = ({
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
     const aircraftConfigId = request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
-    const flightType = request.flightType === "Solo" ? "Solo" : "Dual";
+    const flightType = isSingleSeatAircraft || request.flightType === "Solo" ? "Solo" : "Dual";
     const notes = [
       `Tasking request: ${tasking}`,
       `Date: ${request.date || "Any build date"}`,
@@ -25251,7 +25307,7 @@ const PrioritiesView = ({
               instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: req.event, onChange: (e) => onUpdateSctRequest(req.id, "event", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: e }, e)) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.flightType, onChange: (e) => onUpdateSctRequest(req.id, "flightType", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: type === "flight" && isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100", children: "Solo" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.flightType, onChange: (e) => onUpdateSctRequest(req.id, "flightType", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
             ] }) }),
@@ -25986,6 +26042,7 @@ const PrioritiesView = ({
             airfieldLookup: taskingAirfieldLookup,
             taskProfiles,
             operationalModelLabel,
+            isSingleSeatAircraft,
             onAddTaskingRequest: addTaskingRequest,
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,
@@ -50313,6 +50370,22 @@ const PlatformConfigurationSettings = ({
       [collection]: prev[collection].map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item)
     }));
   };
+  const updateAircraftCrewCount = (aircraftIndex, crewCount) => {
+    const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
+    const nextCount = Math.max(1, Math.min(12, Math.round(Number(crewCount) || 1)));
+    const next = normaliseAircraftCrewComposition({
+      crewCount: nextCount,
+      seats: current.seats
+    });
+    updateRow("aircraftTypes", aircraftIndex, { crewComposition: next });
+  };
+  const updateAircraftSeatRole = (aircraftIndex, seatIndex, role) => {
+    const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
+    const seats = current.seats.map((seat, index) => index === seatIndex ? { ...seat, role } : seat);
+    updateRow("aircraftTypes", aircraftIndex, {
+      crewComposition: normaliseAircraftCrewComposition({ ...current, seats })
+    });
+  };
   const applyKnownAirfieldToLocation = (index, entry, currentLocation = config.locations[index]) => {
     updateRow("locations", index, getAirfieldCatalogueLocationChanges(entry, currentLocation, true));
   };
@@ -51368,11 +51441,39 @@ const PlatformConfigurationSettings = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-resource-pools", className: getSectionClass("platform-resource-pools"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Aircraft Types & Resource Pools", subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources.", action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }) : null }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 lg:grid-cols-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) })
-        ] }, aircraft.id || `platform-aircraft-type-${index}`)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => {
+          const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-orange-400/25 bg-orange-500/10 p-3 md:col-span-3 md:grid-cols-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-orange-100", children: "Crew Composition" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-orange-100/75", children: "Defines the number of crew seats and aircrew role for this aircraft type. Single-seat aircraft automatically use Solo in new flight entry flows." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                NumberField,
+                {
+                  label: "Crew Seats",
+                  value: crewComposition.crewCount,
+                  disabled: !canEdit,
+                  onChange: (value) => updateAircraftCrewCount(index, value)
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:col-span-2 md:grid-cols-2", children: crewComposition.seats.map((seat, seatIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: `Seat ${seatIndex + 1} Role`,
+                  value: seat.role,
+                  disabled: !canEdit,
+                  onChange: (value) => updateAircraftSeatRole(index, seatIndex, value)
+                },
+                seat.id || `aircraft-seat-${seatIndex}`
+              )) })
+            ] })
+          ] }, aircraft.id || `platform-aircraft-type-${index}`);
+        }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.resourcePools.map((pool, index) => {
           const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
           const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
@@ -62953,6 +63054,7 @@ const DfpSidePanelTimeline = ({
   onUpdateAircraftCount,
   aircraftConfigCapacities,
   aircraftConfigurationDefinitions,
+  aircraftCrewComposition,
   onUpdateAircraftConfigCapacities,
   availableFtdCount,
   onUpdateFtdCount,
@@ -63208,6 +63310,7 @@ const DfpSidePanelTimeline = ({
   const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === "air_combat";
   const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
   const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === "wizard";
+  const isSingleSeatFlightResource = selectedResourceKind === "flight" && aircraftCrewComposition.crewCount === 1;
   const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === "flight" && assistFormationSize > 1;
   const setCrewSelection = (name, checked) => {
     if (!canSelectFormationCrew) {
@@ -63227,6 +63330,11 @@ const DfpSidePanelTimeline = ({
     setSelectedCrewName("");
     setSelectedCrewNames([]);
   };
+  reactExports.useEffect(() => {
+    if (!isSingleSeatFlightResource) return;
+    setAssistTaskFlightType("Solo");
+    setAssistCurrencyFlightType("Solo");
+  }, [isSingleSeatFlightResource]);
   reactExports.useEffect(() => {
     setSelectedCrewNames((prev) => {
       const next = canSelectFormationCrew ? prev.slice(0, assistFormationSize) : selectedCrewName ? [selectedCrewName] : [];
@@ -63256,7 +63364,9 @@ const DfpSidePanelTimeline = ({
     activeAssistSection === "taskings" ? Number(assistTaskDuration) || 1.2 : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || 1.2 : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
   );
   const assistStartTime = activeAssistSection === "taskings" ? assistTaskTakeoff : activeAssistSection === "currency" ? assistCurrencyTakeoff : flyingStartTime;
-  const assistFlightType = activeAssistSection === "taskings" ? assistTaskFlightType : activeAssistSection === "currency" ? assistCurrencyFlightType : "Solo";
+  const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? "Solo" : assistTaskFlightType;
+  const effectiveAssistCurrencyFlightType = isSingleSeatFlightResource ? "Solo" : assistCurrencyFlightType;
+  const assistFlightType = activeAssistSection === "taskings" ? effectiveAssistTaskFlightType : activeAssistSection === "currency" ? effectiveAssistCurrencyFlightType : "Solo";
   const assistOrigin = activeAssistSection === "taskings" ? assistTaskDepPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyDepPoint.trim().toUpperCase() : locationCode;
   const assistDestination = activeAssistSection === "taskings" ? assistTaskArrivalPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyArrivalPoint.trim().toUpperCase() : locationCode;
   const assistConfigId = activeAssistSection === "taskings" ? assistTaskConfigId : activeAssistSection === "currency" ? assistCurrencyConfigId : selectedSyllabusItem?.acceptableAircraftConfigs?.[0];
@@ -64241,7 +64351,7 @@ const DfpSidePanelTimeline = ({
     setAssistTaskDate(row.date || date);
     if (Number.isFinite(Number(row.takeoff))) setAssistTaskTakeoff(Number(row.takeoff));
     if (Number.isFinite(Number(row.duration)) && Number(row.duration) > 0) setAssistTaskDuration(Number(row.duration));
-    if (row.flightType) setAssistTaskFlightType(row.flightType);
+    if (row.flightType) setAssistTaskFlightType(isSingleSeatFlightResource ? "Solo" : row.flightType);
     if (row.depPoint) setAssistTaskDepPoint(row.depPoint);
     if (row.arrivalPoint) setAssistTaskArrivalPoint(row.arrivalPoint);
     if (Number.isFinite(Number(row.aircraftCount))) setAssistTaskAircraftCount(Math.max(1, Number(row.aircraftCount) || 1));
@@ -64256,7 +64366,7 @@ const DfpSidePanelTimeline = ({
     setAssistCurrencyDate(row.date || date);
     if (Number.isFinite(Number(row.takeoff))) setAssistCurrencyTakeoff(Number(row.takeoff));
     if (Number.isFinite(Number(row.duration)) && Number(row.duration) > 0) setAssistCurrencyDuration(Number(row.duration));
-    if (row.flightType) setAssistCurrencyFlightType(row.flightType);
+    if (row.flightType) setAssistCurrencyFlightType(isSingleSeatFlightResource ? "Solo" : row.flightType);
     if (row.depPoint) setAssistCurrencyDepPoint(row.depPoint);
     if (row.arrivalPoint) setAssistCurrencyArrivalPoint(row.arrivalPoint);
     if (row.aircraftConfigId) setAssistCurrencyConfigId(row.aircraftConfigId);
@@ -64771,7 +64881,7 @@ const DfpSidePanelTimeline = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Solo/Dual",
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: assistTaskFlightType, onChange: (event) => setAssistTaskFlightType(event.target.value), className: fieldClass2, children: [
+            isSingleSeatFlightResource ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${fieldClass2} border-amber-400/50 bg-amber-500/10 text-amber-100`, children: "Solo - single-seat aircraft" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: assistTaskFlightType, onChange: (event) => setAssistTaskFlightType(event.target.value), className: fieldClass2, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
             ] })
@@ -64804,7 +64914,7 @@ const DfpSidePanelTimeline = ({
                   date: assistTaskDate,
                   takeoff: assistTaskTakeoff,
                   duration: assistTaskDuration,
-                  flightType: assistTaskFlightType,
+                  flightType: effectiveAssistTaskFlightType,
                   depPoint: assistTaskDepPoint,
                   arrivalPoint: assistTaskArrivalPoint,
                   aircraftCount: assistTaskAircraftCount,
@@ -64935,7 +65045,7 @@ const DfpSidePanelTimeline = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Solo/Dual",
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: assistCurrencyFlightType, onChange: (event) => setAssistCurrencyFlightType(event.target.value), className: fieldClass2, children: [
+            isSingleSeatFlightResource ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${fieldClass2} border-amber-400/50 bg-amber-500/10 text-amber-100`, children: "Solo - single-seat aircraft" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: assistCurrencyFlightType, onChange: (event) => setAssistCurrencyFlightType(event.target.value), className: fieldClass2, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
             ] })
@@ -64963,7 +65073,7 @@ const DfpSidePanelTimeline = ({
                   date: assistCurrencyDate,
                   takeoff: assistCurrencyTakeoff,
                   duration: assistCurrencyDuration,
-                  flightType: assistCurrencyFlightType,
+                  flightType: effectiveAssistCurrencyFlightType,
                   depPoint: assistCurrencyDepPoint,
                   arrivalPoint: assistCurrencyArrivalPoint,
                   aircraftConfigId: assistCurrencyConfigId,
@@ -75087,6 +75197,10 @@ const App = () => {
   const activePlatformResourcePool = reactExports.useMemo(
     () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
     [activeResourcePoolUnitCode, platformConfig, school]
+  );
+  const activeAircraftCrewComposition = reactExports.useMemo(
+    () => getAircraftTypeCrewComposition(platformConfig, activePlatformResourcePool?.aircraftTypeCode),
+    [activePlatformResourcePool?.aircraftTypeCode, platformConfig]
   );
   const activeLocationSolarProfile = reactExports.useMemo(() => {
     const normalisedSchool = String(school || "").trim().toUpperCase();
@@ -85984,6 +86098,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             buildDfpDate,
             highestPriorityEvents,
             activeScheduleEvents: Object.values(publishedSchedules).flat(),
+            isSingleSeatAircraft: activeAircraftCrewComposition.crewCount === 1,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             onAddPriorityEvents: (eventsToAdd) => {
               setHighestPriorityEvents((prev) => {
@@ -86006,7 +86121,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 id: v4(),
                 name: "",
                 event: "SCT GF",
-                flightType: "Dual",
+                flightType: type === "flight" && activeAircraftCrewComposition.crewCount === 1 ? "Solo" : "Dual",
                 currency: "",
                 currencyExpire: "",
                 priority: "Medium",
@@ -86058,14 +86173,15 @@ ${error instanceof Error ? error.message : String(error)}`,
               }
             },
             onUpdateSctRequest: async (id, field, value, type) => {
-              const updater = (prev) => prev.map((r) => r.id === id ? { ...r, [field]: value } : r);
+              const effectiveValue = type === "flight" && field === "flightType" && activeAircraftCrewComposition.crewCount === 1 ? "Solo" : value;
+              const updater = (prev) => prev.map((r) => r.id === id ? { ...r, [field]: effectiveValue } : r);
               if (type === "flight") setSctFlights(updater);
               else setSctFtds(updater);
               try {
                 await fetch(`/api/sct-requests/${id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ [field]: value })
+                  body: JSON.stringify({ [field]: effectiveValue })
                 });
               } catch (err) {
                 console.error("Failed to update SCT request:", err);
@@ -86073,7 +86189,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               setTimeout(() => {
                 const requests = type === "flight" ? sctFlights : sctFtds;
                 const request = requests.find((r) => r.id === id);
-                const updatedRequest = request ? { ...request, [field]: value } : null;
+                const updatedRequest = request ? { ...request, [field]: effectiveValue } : null;
                 if (updatedRequest && (updatedRequest.priority === "High" || updatedRequest.includeInBuild)) {
                   syncPriorityEventsWithSctAndRemedial();
                 }
@@ -87704,6 +87820,7 @@ Do you want to replace the existing entry?`,
                     onUpdateAircraftCount: setNeoAvailableAircraftCount,
                     aircraftConfigCapacities: neoAircraftConfigCapacities,
                     aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
+                    aircraftCrewComposition: activeAircraftCrewComposition,
                     onUpdateAircraftConfigCapacities: setNeoAircraftConfigCapacities,
                     availableFtdCount,
                     onUpdateFtdCount: setAvailableFtdCount,
@@ -87851,6 +87968,7 @@ Do you want to replace the existing entry?`,
           userId: getCurrentUserId() ?? void 0,
           aircraftNumberSettings,
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
+          aircraftCrewComposition: activeAircraftCrewComposition,
           personnelDisplaySettings
         }
       ),

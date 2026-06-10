@@ -36,6 +36,7 @@ import {
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConfigurationSettings';
+import { normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import { getAppApiBase } from '../utils/externalDataControls';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
@@ -1646,6 +1647,26 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
+  const updateAircraftCrewCount = (aircraftIndex: number, crewCount: number) => {
+    const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
+    const nextCount = Math.max(1, Math.min(12, Math.round(Number(crewCount) || 1)));
+    const next = normaliseAircraftCrewComposition({
+      crewCount: nextCount,
+      seats: current.seats,
+    });
+    updateRow('aircraftTypes', aircraftIndex, { crewComposition: next });
+  };
+
+  const updateAircraftSeatRole = (aircraftIndex: number, seatIndex: number, role: string) => {
+    const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
+    const seats = current.seats.map((seat, index) => (
+      index === seatIndex ? { ...seat, role } : seat
+    ));
+    updateRow('aircraftTypes', aircraftIndex, {
+      crewComposition: normaliseAircraftCrewComposition({ ...current, seats }),
+    });
+  };
+
   const applyKnownAirfieldToLocation = (
     index: number,
     entry: AirfieldCatalogueEntry,
@@ -2888,13 +2909,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader title="Aircraft Types & Resource Pools" subtitle="Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources." action={canEdit ? <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button> : null} />
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <div className="space-y-3">
-            {config.aircraftTypes.map((aircraft, index) => (
-              <div key={aircraft.id || `platform-aircraft-type-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
-                <Field label="Code" value={aircraft.code} disabled={!canEdit} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
-                <Field label="Name" value={aircraft.name} disabled={!canEdit} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
-                <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEdit} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
-              </div>
-            ))}
+            {config.aircraftTypes.map((aircraft, index) => {
+              const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+              return (
+                <div key={aircraft.id || `platform-aircraft-type-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
+                  <Field label="Code" value={aircraft.code} disabled={!canEdit} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
+                  <Field label="Name" value={aircraft.name} disabled={!canEdit} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
+                  <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEdit} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
+                  <div className="grid gap-3 rounded-lg border border-orange-400/25 bg-orange-500/10 p-3 md:col-span-3 md:grid-cols-3">
+                    <div className="md:col-span-3">
+                      <div className="text-sm font-bold text-orange-100">Crew Composition</div>
+                      <div className="mt-1 text-xs text-orange-100/75">
+                        Defines the number of crew seats and aircrew role for this aircraft type. Single-seat aircraft automatically use Solo in new flight entry flows.
+                      </div>
+                    </div>
+                    <NumberField
+                      label="Crew Seats"
+                      value={crewComposition.crewCount}
+                      disabled={!canEdit}
+                      onChange={(value) => updateAircraftCrewCount(index, value)}
+                    />
+                    <div className="grid gap-2 md:col-span-2 md:grid-cols-2">
+                      {crewComposition.seats.map((seat, seatIndex) => (
+                        <Field
+                          key={seat.id || `aircraft-seat-${seatIndex}`}
+                          label={`Seat ${seatIndex + 1} Role`}
+                          value={seat.role}
+                          disabled={!canEdit}
+                          onChange={(value) => updateAircraftSeatRole(index, seatIndex, value)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <div className="space-y-3">
             {config.resourcePools.map((pool, index) => {

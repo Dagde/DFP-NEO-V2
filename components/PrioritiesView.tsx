@@ -77,6 +77,7 @@ interface PrioritiesViewProps {
   operationalModelLabel?: string;
   airCombatSchedulingWeights?: AirCombatSchedulingWeights;
   onUpdateAirCombatSchedulingWeights?: (weights: AirCombatSchedulingWeights) => void;
+  isSingleSeatAircraft?: boolean;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
 
@@ -437,6 +438,7 @@ interface TaskingRequestTableProps {
   airfieldLookup: TaskingAirfieldLookup;
   taskProfiles: string[];
   operationalModelLabel: string;
+  isSingleSeatAircraft: boolean;
   onAddTaskingRequest: () => void;
   onUpdateTaskingRequest: (id: string, updates: Partial<TaskingRequest>) => void;
   onRemoveTaskingRequest: (id: string) => void;
@@ -452,6 +454,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   airfieldLookup,
   taskProfiles,
   operationalModelLabel,
+  isSingleSeatAircraft,
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
@@ -528,14 +531,20 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 />
               </td>
               <td className="py-1 px-2 w-28">
-                <select
-                  value={request.flightType || 'Dual'}
-                  onChange={event => onUpdateTaskingRequest(request.id, { flightType: event.target.value as 'Solo' | 'Dual', submitted: false, saved: false })}
-                  className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
-                >
-                  <option value="Solo">Solo</option>
-                  <option value="Dual">Dual</option>
-                </select>
+                {isSingleSeatAircraft ? (
+                  <div className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100">
+                    Solo
+                  </div>
+                ) : (
+                  <select
+                    value={request.flightType || 'Dual'}
+                    onChange={event => onUpdateTaskingRequest(request.id, { flightType: event.target.value as 'Solo' | 'Dual', submitted: false, saved: false })}
+                    className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+                  >
+                    <option value="Solo">Solo</option>
+                    <option value="Dual">Dual</option>
+                  </select>
+                )}
               </td>
               <td className="relative py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]">
                 <TaskingAirfieldCodeInput
@@ -692,6 +701,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   operationalModelLabel = 'Flight School Model',
   airCombatSchedulingWeights,
   onUpdateAirCombatSchedulingWeights,
+  isSingleSeatAircraft = false,
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -1257,7 +1267,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       date: buildDfpDate,
       takeoff: flyingStartTime,
       duration: 1,
-      flightType: 'Dual',
+      flightType: isSingleSeatAircraft ? 'Solo' : 'Dual',
       depPoint: school,
       arrivalPoint: school,
       aircraftCount: 1,
@@ -1312,14 +1322,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (updates.submitted === false) {
       removeTaskingPriorityEvents(id);
     }
+    const nextUpdates = isSingleSeatAircraft ? { ...updates, flightType: 'Solo' as const } : updates;
     setTaskingRequests(prev => prev.map(request => (
       request.id === id
         ? {
             ...request,
-            ...updates,
-            saved: updates.saved ?? request.saved,
-            submitted: updates.submitted ?? request.submitted,
-            ignored: updates.ignored ?? request.ignored,
+            ...nextUpdates,
+            saved: nextUpdates.saved ?? request.saved,
+            submitted: nextUpdates.submitted ?? request.submitted,
+            ignored: nextUpdates.ignored ?? request.ignored,
           }
         : request
     )));
@@ -1336,7 +1347,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
     const aircraftConfigId = request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
-    const flightType = request.flightType === 'Solo' ? 'Solo' : 'Dual';
+    const flightType = isSingleSeatAircraft || request.flightType === 'Solo' ? 'Solo' : 'Dual';
     const notes = [
       `Tasking request: ${tasking}`,
       `Date: ${request.date || 'Any build date'}`,
@@ -1747,10 +1758,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </select>
                               </td>
                               <td className="py-1 px-2 w-32">
-                                  <select value={req.flightType} onChange={e => onUpdateSctRequest(req.id, 'flightType', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
-                                      <option value="Solo">Solo</option>
-                                      <option value="Dual">Dual</option>
-                                  </select>
+                                  {type === 'flight' && isSingleSeatAircraft ? (
+                                      <div className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100">
+                                          Solo
+                                      </div>
+                                  ) : (
+                                      <select value={req.flightType} onChange={e => onUpdateSctRequest(req.id, 'flightType', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+                                          <option value="Solo">Solo</option>
+                                          <option value="Dual">Dual</option>
+                                      </select>
+                                  )}
                               </td>
                                <td className="py-1 px-2 w-48">
                                   <CurrencySelect request={req} type={type} />
@@ -2518,6 +2535,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               airfieldLookup={taskingAirfieldLookup}
               taskProfiles={taskProfiles}
               operationalModelLabel={operationalModelLabel}
+              isSingleSeatAircraft={isSingleSeatAircraft}
               onAddTaskingRequest={addTaskingRequest}
               onUpdateTaskingRequest={updateTaskingRequest}
               onRemoveTaskingRequest={removeTaskingRequest}

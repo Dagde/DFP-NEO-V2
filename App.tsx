@@ -38,6 +38,7 @@ import {
 } from './utils/resourceDisplayNames';
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from './utils/aircraftConfigurationSettings';
+import { getAircraftTypeCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
 import {
     readTileStatusSettingsFromLocalStorage,
     normaliseTileStatusSettings,
@@ -278,6 +279,7 @@ const DfpSidePanelTimeline: React.FC<{
     onUpdateAircraftCount: (count: number) => void;
     aircraftConfigCapacities: Record<string, string>;
     aircraftConfigurationDefinitions: AircraftConfigurationDefinition[];
+    aircraftCrewComposition: AircraftCrewComposition;
     onUpdateAircraftConfigCapacities: (capacities: Record<string, string>) => void;
     availableFtdCount: number;
     onUpdateFtdCount: (count: number) => void;
@@ -332,6 +334,7 @@ const DfpSidePanelTimeline: React.FC<{
     onUpdateAircraftCount,
     aircraftConfigCapacities,
     aircraftConfigurationDefinitions,
+    aircraftCrewComposition,
     onUpdateAircraftConfigCapacities,
     availableFtdCount,
     onUpdateFtdCount,
@@ -679,6 +682,7 @@ const DfpSidePanelTimeline: React.FC<{
     const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === 'air_combat';
     const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
     const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === 'wizard';
+    const isSingleSeatFlightResource = selectedResourceKind === 'flight' && aircraftCrewComposition.crewCount === 1;
     const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === 'flight' && assistFormationSize > 1;
     const setCrewSelection = (name: string, checked: boolean) => {
         if (!canSelectFormationCrew) {
@@ -700,6 +704,11 @@ const DfpSidePanelTimeline: React.FC<{
         setSelectedCrewName('');
         setSelectedCrewNames([]);
     };
+    useEffect(() => {
+        if (!isSingleSeatFlightResource) return;
+        setAssistTaskFlightType('Solo');
+        setAssistCurrencyFlightType('Solo');
+    }, [isSingleSeatFlightResource]);
     useEffect(() => {
         setSelectedCrewNames(prev => {
             const next = canSelectFormationCrew
@@ -744,10 +753,12 @@ const DfpSidePanelTimeline: React.FC<{
         : activeAssistSection === 'currency'
             ? assistCurrencyTakeoff
             : flyingStartTime;
+    const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? 'Solo' : assistTaskFlightType;
+    const effectiveAssistCurrencyFlightType = isSingleSeatFlightResource ? 'Solo' : assistCurrencyFlightType;
     const assistFlightType = activeAssistSection === 'taskings'
-        ? assistTaskFlightType
+        ? effectiveAssistTaskFlightType
         : activeAssistSection === 'currency'
-            ? assistCurrencyFlightType
+            ? effectiveAssistCurrencyFlightType
             : 'Solo';
     const assistOrigin = activeAssistSection === 'taskings'
         ? assistTaskDepPoint.trim().toUpperCase()
@@ -1825,7 +1836,7 @@ const DfpSidePanelTimeline: React.FC<{
         setAssistTaskDate(row.date || date);
         if (Number.isFinite(Number(row.takeoff))) setAssistTaskTakeoff(Number(row.takeoff));
         if (Number.isFinite(Number(row.duration)) && Number(row.duration) > 0) setAssistTaskDuration(Number(row.duration));
-        if (row.flightType) setAssistTaskFlightType(row.flightType);
+        if (row.flightType) setAssistTaskFlightType(isSingleSeatFlightResource ? 'Solo' : row.flightType);
         if (row.depPoint) setAssistTaskDepPoint(row.depPoint);
         if (row.arrivalPoint) setAssistTaskArrivalPoint(row.arrivalPoint);
         if (Number.isFinite(Number(row.aircraftCount))) setAssistTaskAircraftCount(Math.max(1, Number(row.aircraftCount) || 1));
@@ -1850,7 +1861,7 @@ const DfpSidePanelTimeline: React.FC<{
         setAssistCurrencyDate(row.date || date);
         if (Number.isFinite(Number(row.takeoff))) setAssistCurrencyTakeoff(Number(row.takeoff));
         if (Number.isFinite(Number(row.duration)) && Number(row.duration) > 0) setAssistCurrencyDuration(Number(row.duration));
-        if (row.flightType) setAssistCurrencyFlightType(row.flightType);
+        if (row.flightType) setAssistCurrencyFlightType(isSingleSeatFlightResource ? 'Solo' : row.flightType);
         if (row.depPoint) setAssistCurrencyDepPoint(row.depPoint);
         if (row.arrivalPoint) setAssistCurrencyArrivalPoint(row.arrivalPoint);
         if (row.aircraftConfigId) setAssistCurrencyConfigId(row.aircraftConfigId);
@@ -2382,10 +2393,16 @@ const DfpSidePanelTimeline: React.FC<{
                                 <input type="number" min={0.1} step={0.1} value={assistTaskDuration} onChange={event => setAssistTaskDuration(Math.max(0.1, Number(event.target.value) || 0.1))} className={fieldClass} />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Solo/Dual
-                                <select value={assistTaskFlightType} onChange={event => setAssistTaskFlightType(event.target.value as 'Solo' | 'Dual')} className={fieldClass}>
-                                    <option value="Solo">Solo</option>
-                                    <option value="Dual">Dual</option>
-                                </select>
+                                {isSingleSeatFlightResource ? (
+                                    <div className={`${fieldClass} border-amber-400/50 bg-amber-500/10 text-amber-100`}>
+                                        Solo - single-seat aircraft
+                                    </div>
+                                ) : (
+                                    <select value={assistTaskFlightType} onChange={event => setAssistTaskFlightType(event.target.value as 'Solo' | 'Dual')} className={fieldClass}>
+                                        <option value="Solo">Solo</option>
+                                        <option value="Dual">Dual</option>
+                                    </select>
+                                )}
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Dep Point
                                 <input value={assistTaskDepPoint} onChange={event => setAssistTaskDepPoint(event.target.value.toUpperCase())} className={fieldClass} />
@@ -2411,7 +2428,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         date: assistTaskDate,
                                         takeoff: assistTaskTakeoff,
                                         duration: assistTaskDuration,
-                                        flightType: assistTaskFlightType,
+                                        flightType: effectiveAssistTaskFlightType,
                                         depPoint: assistTaskDepPoint,
                                         arrivalPoint: assistTaskArrivalPoint,
                                         aircraftCount: assistTaskAircraftCount,
@@ -2540,10 +2557,16 @@ const DfpSidePanelTimeline: React.FC<{
                                 <input type="number" min={0.1} step={0.1} value={assistCurrencyDuration} onChange={event => setAssistCurrencyDuration(Math.max(0.1, Number(event.target.value) || 0.1))} className={fieldClass} />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Solo/Dual
-                                <select value={assistCurrencyFlightType} onChange={event => setAssistCurrencyFlightType(event.target.value as 'Solo' | 'Dual')} className={fieldClass}>
-                                    <option value="Solo">Solo</option>
-                                    <option value="Dual">Dual</option>
-                                </select>
+                                {isSingleSeatFlightResource ? (
+                                    <div className={`${fieldClass} border-amber-400/50 bg-amber-500/10 text-amber-100`}>
+                                        Solo - single-seat aircraft
+                                    </div>
+                                ) : (
+                                    <select value={assistCurrencyFlightType} onChange={event => setAssistCurrencyFlightType(event.target.value as 'Solo' | 'Dual')} className={fieldClass}>
+                                        <option value="Solo">Solo</option>
+                                        <option value="Dual">Dual</option>
+                                    </select>
+                                )}
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Dep Point
                                 <input value={assistCurrencyDepPoint} onChange={event => setAssistCurrencyDepPoint(event.target.value.toUpperCase())} className={fieldClass} />
@@ -2565,7 +2588,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         date: assistCurrencyDate,
                                         takeoff: assistCurrencyTakeoff,
                                         duration: assistCurrencyDuration,
-                                        flightType: assistCurrencyFlightType,
+                                        flightType: effectiveAssistCurrencyFlightType,
                                         depPoint: assistCurrencyDepPoint,
                                         arrivalPoint: assistCurrencyArrivalPoint,
                                         aircraftConfigId: assistCurrencyConfigId,
@@ -15390,6 +15413,11 @@ const App: React.FC = () => {
     const activePlatformResourcePool = useMemo(
         () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
         [activeResourcePoolUnitCode, platformConfig, school],
+    );
+
+    const activeAircraftCrewComposition = useMemo(
+        () => getAircraftTypeCrewComposition(platformConfig, activePlatformResourcePool?.aircraftTypeCode),
+        [activePlatformResourcePool?.aircraftTypeCode, platformConfig],
     );
 
     const activeLocationSolarProfile = useMemo(() => {
@@ -28983,6 +29011,7 @@ appliedUpdates.forEach(update => {
                     buildDfpDate={buildDfpDate}
                     highestPriorityEvents={highestPriorityEvents}
                     activeScheduleEvents={Object.values(publishedSchedules).flat()}
+                    isSingleSeatAircraft={activeAircraftCrewComposition.crewCount === 1}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     onAddPriorityEvents={(eventsToAdd) => {
                         setHighestPriorityEvents(prev => {
@@ -29005,7 +29034,7 @@ appliedUpdates.forEach(update => {
                           id: uuidv4(),
                           name: '',
                           event: 'SCT GF',
-                          flightType: 'Dual',
+                          flightType: type === 'flight' && activeAircraftCrewComposition.crewCount === 1 ? 'Solo' : 'Dual',
                           currency: '',
                           currencyExpire: '',
                           priority: 'Medium' as 'Medium',
@@ -29056,7 +29085,10 @@ appliedUpdates.forEach(update => {
                       } catch (err) { console.error('Failed to delete SCT request:', err); }
                     }}
                     onUpdateSctRequest={async (id, field, value, type) => {
-                      const updater = (prev: SctRequest[]) => prev.map(r => r.id === id ? { ...r, [field]: value } : r);
+                      const effectiveValue = type === 'flight' && field === 'flightType' && activeAircraftCrewComposition.crewCount === 1
+                        ? 'Solo'
+                        : value;
+                      const updater = (prev: SctRequest[]) => prev.map(r => r.id === id ? { ...r, [field]: effectiveValue } : r);
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
                       // Persist to DB
@@ -29064,14 +29096,14 @@ appliedUpdates.forEach(update => {
                         await fetch(`/api/sct-requests/${id}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ [field]: value })
+                          body: JSON.stringify({ [field]: effectiveValue })
                         });
                       } catch (err) { console.error('Failed to update SCT request:', err); }
                       // Trigger priority sync
                       setTimeout(() => {
                         const requests = type === 'flight' ? sctFlights : sctFtds;
                         const request = requests.find(r => r.id === id);
-                        const updatedRequest = request ? { ...request, [field]: value } : null;
+                        const updatedRequest = request ? { ...request, [field]: effectiveValue } : null;
                         if (updatedRequest && (updatedRequest.priority === 'High' || updatedRequest.includeInBuild)) {
                           syncPriorityEventsWithSctAndRemedial();
                         }
@@ -30848,6 +30880,7 @@ appliedUpdates.forEach(update => {
                                     onUpdateAircraftCount={setNeoAvailableAircraftCount}
                                     aircraftConfigCapacities={neoAircraftConfigCapacities}
                                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
+                                    aircraftCrewComposition={activeAircraftCrewComposition}
                                     onUpdateAircraftConfigCapacities={setNeoAircraftConfigCapacities}
                                     availableFtdCount={availableFtdCount}
                                     onUpdateFtdCount={setAvailableFtdCount}
@@ -30988,6 +31021,7 @@ appliedUpdates.forEach(update => {
                     userId={getCurrentUserId() ?? undefined}
                     aircraftNumberSettings={aircraftNumberSettings}
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
+                    aircraftCrewComposition={activeAircraftCrewComposition}
                     personnelDisplaySettings={personnelDisplaySettings}
                 />
             )}

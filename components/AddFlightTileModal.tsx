@@ -10,6 +10,7 @@ import {
   type AircraftNumberSettings,
 } from '../utils/aircraftNumberFormat';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, normaliseAircraftCrewComposition, type AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 
 interface AddFlightTileModalProps {
   onClose: () => void;
@@ -29,6 +30,7 @@ interface AddFlightTileModalProps {
   userId?: string;
   aircraftNumberSettings?: AircraftNumberSettings;
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
+  aircraftCrewComposition?: AircraftCrewComposition;
   personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
@@ -1024,10 +1026,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   userId,
   aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
   aircraftConfigurationDefinitions = [],
+  aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
   personnelDisplaySettings,
 }) => {
+  const resolvedAircraftCrewComposition = useMemo(
+    () => normaliseAircraftCrewComposition(aircraftCrewComposition),
+    [aircraftCrewComposition],
+  );
+  const isSingleSeatAircraft = resolvedAircraftCrewComposition.crewCount === 1;
   const [eventCategory, setEventCategory] = useState<'lmp_event'|'lmp_currency'|'sct'|'staff_cat'|'twr_di'>('lmp_event');
-  const [flightType,    setFlightType]    = useState<'Dual'|'Solo'>('Dual');
+  const [flightType,    setFlightType]    = useState<'Dual'|'Solo'>(isSingleSeatAircraft ? 'Solo' : 'Dual');
   const [picName,       setPicName]       = useState('');
   const [studentName,   setStudentName]   = useState('');
   const [flightNumber,  setFlightNumber]  = useState('');
@@ -1200,9 +1208,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   useEffect(() => {
     const additionalCrewCount = flightNumber === 'SCT FORM' ? Math.max(0, aircraftCount - 1) : 0;
     setFormationCrew(prev => Array.from({ length: additionalCrewCount }, (_, index) => (
-      prev[index] || { flightType: 'Solo', picName: '', studentName: '', callsign: `${formationType || formationTypes[0] || ''}${index + 2}` }
+      {
+        ...(prev[index] || { flightType: 'Solo', picName: '', studentName: '', callsign: `${formationType || formationTypes[0] || ''}${index + 2}` }),
+        flightType: isSingleSeatAircraft ? 'Solo' : (prev[index]?.flightType || 'Solo'),
+        studentName: isSingleSeatAircraft ? '' : (prev[index]?.studentName || ''),
+      }
     )));
-  }, [aircraftCount, flightNumber, formationType, formationTypes]);
+  }, [aircraftCount, flightNumber, formationType, formationTypes, isSingleSeatAircraft]);
 
   const areaOptions = useMemo(() => opAreas.map(a => ({ value: a, label: a })), [opAreas]);
 
@@ -1433,9 +1445,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [eventCategory]);
 
   useEffect(() => {
-    if (eventCategory === 'sct' || eventCategory === 'twr_di') setFlightType('Solo');
+    if (isSingleSeatAircraft || eventCategory === 'sct' || eventCategory === 'twr_di') setFlightType('Solo');
     else setFlightType('Dual');
-  }, [eventCategory]);
+  }, [eventCategory, isSingleSeatAircraft]);
+
+  useEffect(() => {
+    if (!isSingleSeatAircraft) return;
+    setFlightType('Solo');
+    setStudentName('');
+    setFormationCrew(prev => prev.map(crewMember => ({ ...crewMember, flightType: 'Solo', studentName: '' })));
+  }, [isSingleSeatAircraft]);
 
   useEffect(() => {
     if (eventCategory === 'lmp_currency') setFlightNumber('CURR');
@@ -1458,8 +1477,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const lmp = traineeLMPs.get(name);
     if (!lmp) return;
     const item = lmp.find(i => i.id === flightNumber || i.code === flightNumber);
-    if (item?.sortieType) setFlightType(item.sortieType as 'Dual'|'Solo');
-  }, [picName, studentName, flightNumber, traineeLMPs]);
+    if (!isSingleSeatAircraft && item?.sortieType) setFlightType(item.sortieType as 'Dual'|'Solo');
+  }, [picName, studentName, flightNumber, traineeLMPs, isSingleSeatAircraft]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const resolveLmpDurationForEvent = (code: string, fallback?: number): number | undefined => {
@@ -1742,7 +1761,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right. Click SOLO badge to switch to Dual.
+                Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.{isSingleSeatAircraft ? ' This aircraft type is configured as single-seat, so new flights are Solo.' : ' Click SOLO badge to switch to Dual.'}
               </p>
             </div>
           )}
@@ -1799,22 +1818,28 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Flight Type</label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setFlightType('Dual')}
-                        className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Dual' ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                      >
-                        Dual
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFlightType('Solo')}
-                        className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Solo' ? 'bg-amber-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                      >
-                        Solo
-                      </button>
-                    </div>
+                    {isSingleSeatAircraft ? (
+                      <div className="rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-100">
+                        Solo - single-seat aircraft
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFlightType('Dual')}
+                          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Dual' ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                        >
+                          Dual
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFlightType('Solo')}
+                          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Solo' ? 'bg-amber-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                        >
+                          Solo
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">CONFIG</label>
@@ -1906,7 +1931,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     {formationCrew.length > 0 && (
                       <div className="mt-4 space-y-3">
                         {formationCrew.map((crewMember, index) => (
-                          <div key={index} className="grid grid-cols-[90px_1fr_1fr] gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3">
+                          <div key={index} className={`grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? 'grid-cols-[90px_1fr]' : 'grid-cols-[90px_1fr_1fr]'}`}>
                             <div>
                               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft</label>
                               <div className="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center">
@@ -1931,35 +1956,37 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                                 />
                               </div>
                             </div>
-                            <div>
-                              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
-                              <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
-                                {crewMember.flightType === 'Dual' ? (
-                                  <PersonDropdown
-                                    value={crewMember.studentName}
-                                    displayValue={crewMember.studentName}
-                                    onChange={(name) => updateFormationCrew(index, { studentName: name })}
-                                    allUnits={allUnits}
-                                    getLayer2={getLayer2}
-                                    getNames={getNames}
-                                    placeholder="Select crew"
-                                    fontSize={14}
-                                    color={crewMember.studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
-                                    allowSolo
-                                    onSoloSelect={() => updateFormationCrew(index, { flightType: 'Solo', studentName: '' })}
-                                    dropdownId={`formation-crew-dropdown-${index}`}
-                                  />
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => updateFormationCrew(index, { flightType: 'Dual' })}
-                                    className="w-full text-left text-sm font-semibold text-amber-300"
-                                  >
-                                    SOLO
-                                  </button>
-                                )}
+                            {!isSingleSeatAircraft && (
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
+                                <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
+                                  {crewMember.flightType === 'Dual' ? (
+                                    <PersonDropdown
+                                      value={crewMember.studentName}
+                                      displayValue={crewMember.studentName}
+                                      onChange={(name) => updateFormationCrew(index, { studentName: name })}
+                                      allUnits={allUnits}
+                                      getLayer2={getLayer2}
+                                      getNames={getNames}
+                                      placeholder="Select crew"
+                                      fontSize={14}
+                                      color={crewMember.studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
+                                      allowSolo
+                                      onSoloSelect={() => updateFormationCrew(index, { flightType: 'Solo', studentName: '' })}
+                                      dropdownId={`formation-crew-dropdown-${index}`}
+                                    />
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => updateFormationCrew(index, { flightType: 'Dual' })}
+                                      className="w-full text-left text-sm font-semibold text-amber-300"
+                                    >
+                                      SOLO
+                                    </button>
+                                  )}
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         ))}
                       </div>
