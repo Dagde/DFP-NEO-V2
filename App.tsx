@@ -444,6 +444,8 @@ const DfpSidePanelTimeline: React.FC<{
     }>>([]);
     const [showAssistTaskForm, setShowAssistTaskForm] = useState(false);
     const [showAssistCurrencyForm, setShowAssistCurrencyForm] = useState(false);
+    const [airCombatAssistMode, setAirCombatAssistMode] = useState<'tile' | 'wizard'>('tile');
+    const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = useState<{ kind: 'task' | 'currency'; id: string } | null>(null);
 
     const courseEventOptions = useMemo(() => (
         fullAssistEventOptions.filter(item => item.lmpType !== 'Staff CAT')
@@ -639,6 +641,8 @@ const DfpSidePanelTimeline: React.FC<{
     const assistFormationSize = selectedResourceKind === 'flight'
         ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1))
         : 1;
+    const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === 'air_combat';
+    const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
     const getAssistFormationCallsignBase = () => {
         const raw = (assistCallsign.trim() || 'CSIGN').toUpperCase();
         return raw.replace(/[^A-Z0-9]/g, '').replace(/\d+$/g, '') || 'CSIGN';
@@ -650,13 +654,14 @@ const DfpSidePanelTimeline: React.FC<{
     const assistEventLabel = useMemo(() => {
         if (activeAssistSection === 'taskings' && selectedTaskProfile) {
             const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || '';
+            if (isAirCombatTileMode) return abbreviation ? `Task - ${abbreviation}` : `Task - ${selectedTaskProfile}`;
             return abbreviation ? `Task - ${abbreviation}` : 'Task';
         }
         if (activeAssistSection === 'currency' && selectedCurrencyName) {
             return selectedCurrencyName;
         }
         return selectedSyllabusItem?.code || 'Event';
-    }, [activeAssistSection, selectedCurrencyName, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
+    }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
 
     const assistDuration = Math.max(
         0.1,
@@ -1119,12 +1124,13 @@ const DfpSidePanelTimeline: React.FC<{
         ? (selectedAircraftNumber.trim() || 'TBA')
         : 'TBA';
     const previewAreaCallsign = `${selectedAssignedArea && selectedAssignedArea !== 'TBA' ? `${selectedAssignedArea} ` : ''}${previewCallsign}`;
+    const simulatorResourceLabel = formatResourceLabel('FTD 1').replace(/\s+1$/, '');
+    const proceduralTrainerResourceLabel = formatResourceLabel('CPT 1').replace(/\s+1$/, '');
     const formatCrewOptionLabel = (name: string): string => {
         const instructor = instructors.find(item => item.name === name);
         const rank = String(instructor?.rank || '').trim();
         return rank ? `${rank} ${name}` : name;
     };
-    const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === 'air_combat';
     const normaliseCapacityInput = (value: string): string => {
         const digitsOnly = String(value || '').trim().replace(/[^\d]/g, '');
         if (!digitsOnly) return '';
@@ -1329,6 +1335,54 @@ const DfpSidePanelTimeline: React.FC<{
         setSelectedCourseEventCode('');
         setSelectedPackageEventCode('');
     };
+    const selectAirCombatTileTask = (row: {
+        id: string;
+        tasking: string;
+        date?: string;
+        takeoff?: number;
+        duration?: number;
+        flightType?: 'Solo' | 'Dual';
+        depPoint?: string;
+        arrivalPoint?: string;
+        aircraftCount?: number;
+        aircraftConfigId?: string;
+    }) => {
+        setSelectedAssistPrioritySource({ kind: 'task', id: row.id });
+        selectAssistTask(row.tasking);
+        setSelectedCurrencyName('');
+        setAssistTaskDate(row.date || date);
+        if (Number.isFinite(Number(row.takeoff))) setAssistTaskTakeoff(Number(row.takeoff));
+        if (Number.isFinite(Number(row.duration)) && Number(row.duration) > 0) setAssistTaskDuration(Number(row.duration));
+        if (row.flightType) setAssistTaskFlightType(row.flightType);
+        if (row.depPoint) setAssistTaskDepPoint(row.depPoint);
+        if (row.arrivalPoint) setAssistTaskArrivalPoint(row.arrivalPoint);
+        if (Number.isFinite(Number(row.aircraftCount))) setAssistTaskAircraftCount(Math.max(1, Number(row.aircraftCount) || 1));
+        if (row.aircraftConfigId) setAssistTaskConfigId(row.aircraftConfigId);
+    };
+    const selectAirCombatTileCurrency = (row: {
+        id: string;
+        currency: string;
+        date?: string;
+        takeoff?: number;
+        duration?: number;
+        flightType?: 'Solo' | 'Dual';
+        depPoint?: string;
+        arrivalPoint?: string;
+        aircraftConfigId?: string;
+    }) => {
+        setSelectedAssistPrioritySource({ kind: 'currency', id: row.id });
+        setSelectedCurrencyName(row.currency);
+        setSelectedTaskProfile('');
+        setSelectedCourseEventCode('');
+        setSelectedPackageEventCode('');
+        setAssistCurrencyDate(row.date || date);
+        if (Number.isFinite(Number(row.takeoff))) setAssistCurrencyTakeoff(Number(row.takeoff));
+        if (Number.isFinite(Number(row.duration)) && Number(row.duration) > 0) setAssistCurrencyDuration(Number(row.duration));
+        if (row.flightType) setAssistCurrencyFlightType(row.flightType);
+        if (row.depPoint) setAssistCurrencyDepPoint(row.depPoint);
+        if (row.arrivalPoint) setAssistCurrencyArrivalPoint(row.arrivalPoint);
+        if (row.aircraftConfigId) setAssistCurrencyConfigId(row.aircraftConfigId);
+    };
     const selectAssistTrainingEvent = (kind: 'course' | 'packages', eventCode: string) => {
         setSelectedEventCode(eventCode);
         setSelectedTaskProfile('');
@@ -1416,6 +1470,7 @@ const DfpSidePanelTimeline: React.FC<{
 
     const renderAssistSection = () => {
         if (activeAssistSection === 'details') {
+            const showFlightOnlyDetails = !isAirCombatTileMode || selectedResourceKind === 'flight';
             return (
                 <div className="grid grid-cols-2 gap-2">
                     <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -1429,60 +1484,104 @@ const DfpSidePanelTimeline: React.FC<{
                             className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
                         >
                             <option value="flight">Flight</option>
-                            <option value="ftd">FTD</option>
-                            <option value="cpt">CPT</option>
+                            <option value="ftd">{simulatorResourceLabel}</option>
+                            <option value="cpt">{proceduralTrainerResourceLabel}</option>
                         </select>
                     </label>
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                        Number
-                        <input
-                            type="number"
-                            min={1}
-                            max={resourceNumberLimit}
-                            value={selectedResourceNumber}
-                            onChange={event => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1)))}
-                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                        />
-                    </label>
-                    <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                        Aircraft Number
-                        <input
-                            value={selectedAircraftNumber}
-                            onChange={event => setSelectedAircraftNumber(event.target.value)}
-                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                            placeholder="TBA"
-                        />
-                    </label>
-                    <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                        Callsign
-                        <input
-                            list="neo-assist-callsign-options"
-                            value={assistCallsign}
-                            onChange={event => setAssistCallsign(event.target.value)}
-                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                            placeholder="CSIGN"
-                        />
-                        <datalist id="neo-assist-callsign-options">
-                            {callsignOptions.map(callsign => <option key={callsign} value={callsign} />)}
-                        </datalist>
-                    </label>
-                    <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                        Assigned Area
-                        <select
-                            value={selectedAssignedArea}
-                            onChange={event => setSelectedAssignedArea(event.target.value)}
-                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                        >
-                            <option value="TBA" disabled hidden>TBA</option>
-                            {assignedAreaOptions.map(area => (
-                                <option key={area || '__blank'} value={area}>{area || 'Blank'}</option>
-                            ))}
-                        </select>
-                    </label>
+                    {showFlightOnlyDetails && (
+                        <>
+                            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                {isAirCombatTileMode ? 'No of A/C' : 'Number'}
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={resourceNumberLimit}
+                                    value={selectedResourceNumber}
+                                    onChange={event => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1)))}
+                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                />
+                            </label>
+                            <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                Aircraft Number
+                                <input
+                                    value={selectedAircraftNumber}
+                                    onChange={event => setSelectedAircraftNumber(event.target.value)}
+                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                    placeholder="TBA"
+                                />
+                            </label>
+                            <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                Callsign
+                                <input
+                                    list="neo-assist-callsign-options"
+                                    value={assistCallsign}
+                                    onChange={event => setAssistCallsign(event.target.value)}
+                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                    placeholder="CSIGN"
+                                />
+                                <datalist id="neo-assist-callsign-options">
+                                    {callsignOptions.map(callsign => <option key={callsign} value={callsign} />)}
+                                </datalist>
+                            </label>
+                            <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                Assigned Area
+                                <select
+                                    value={selectedAssignedArea}
+                                    onChange={event => setSelectedAssignedArea(event.target.value)}
+                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                >
+                                    <option value="TBA" disabled hidden>TBA</option>
+                                    {assignedAreaOptions.map(area => (
+                                        <option key={area || '__blank'} value={area}>{area || 'Blank'}</option>
+                                    ))}
+                                </select>
+                            </label>
+                        </>
+                    )}
                 </div>
             );
         }
         if (activeAssistSection === 'flying') {
+            const renderReadOnlyWindow = (label: string, start: number, end: number) => (
+                <div className="rounded border border-cyan-400/35 bg-slate-950/65 p-2 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)]">
+                    <p className="mb-1 text-center text-[10px] font-semibold text-cyan-50">{label}</p>
+                    <div className="grid grid-cols-2 gap-2 font-mono text-[11px] text-slate-100">
+                        <span className="rounded border border-slate-600/80 bg-slate-900/80 px-2 py-1 text-center text-white">{formatCompactTime(start)}</span>
+                        <span className="rounded border border-slate-600/80 bg-slate-900/80 px-2 py-1 text-center text-white">{formatCompactTime(end)}</span>
+                    </div>
+                </div>
+            );
+            if (isAirCombatTileMode) {
+                return (
+                    <div className="space-y-2 text-[10px] text-slate-200">
+                        <div className="grid grid-cols-2 gap-2">
+                            {renderReadOnlyWindow('Day Flying', flyingStartTime, flyingEndTime)}
+                            {allowNightFlying
+                                ? renderReadOnlyWindow('Night Flying', commenceNightFlying, ceaseNightFlying)
+                                : (
+                                    <div className="rounded border border-cyan-400/35 bg-slate-950/65 p-2 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)]">
+                                        <p className="mb-1 text-center text-[10px] font-semibold text-cyan-50">Night Flying</p>
+                                        <p className="text-center text-[10px] text-slate-300">Not enabled</p>
+                                    </div>
+                                )}
+                        </div>
+                        {selectedResourceKind === 'flight' && (
+                            <div className="rounded border border-cyan-400/35 bg-slate-950/65 p-2 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)]">
+                                <p className="mb-2 text-[10px] font-semibold text-cyan-100">Exclusion periods</p>
+                                <div className="space-y-1">
+                                    {flyingWindowExclusions.length === 0 && <p className="text-[10px] text-slate-300">No exclusions configured.</p>}
+                                    {flyingWindowExclusions.map(period => (
+                                        <div key={period.id} className="flex items-center justify-between rounded border border-slate-600/80 bg-slate-900/80 px-2 py-1 font-mono text-[10px] text-slate-100">
+                                            <span>{formatCompactTime(period.startTime)} - {formatCompactTime(period.endTime)}</span>
+                                            <span className="uppercase text-cyan-100">{period.restriction || 'both'}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
             const renderWindowControl = (label: string, start: number, end: number, setStart: (time: number) => void, setEnd: (time: number) => void) => (
                 <div className="rounded border border-slate-700 bg-slate-950/55 p-2">
                     <p className="mb-1 text-[10px] font-semibold text-cyan-100">{label}</p>
@@ -1545,6 +1644,9 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (activeAssistSection === 'resources') {
+            if (isAirCombatTileMode) {
+                return <div className="min-h-[120px]" />;
+            }
             const updateConfigCapacity = (configId: string, value: string) => {
                 const nextValue = normaliseCapacityInput(value);
                 const nextCapacities = { ...aircraftConfigCapacities, [configId]: nextValue };
@@ -1595,6 +1697,9 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (activeAssistSection === 'training') {
+            if (isAirCombatTileMode) {
+                return <div className="min-h-[120px]" />;
+            }
             const scheduledTaskCount = highestPriorityTaskRows.length;
             const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
             return (
@@ -1691,6 +1796,12 @@ const DfpSidePanelTimeline: React.FC<{
                 tasking: request.tasking || 'Task',
                 date: request.date,
                 takeoff: request.takeoff,
+                duration: request.duration,
+                flightType: request.flightType,
+                depPoint: request.depPoint,
+                arrivalPoint: request.arrivalPoint,
+                aircraftCount: request.aircraftCount,
+                aircraftConfigId: request.aircraftConfigId,
                 saved: Boolean(request.saved),
                 scheduled: Boolean(request.submitted),
                 ignored: Boolean(request.ignored),
@@ -1717,6 +1828,22 @@ const DfpSidePanelTimeline: React.FC<{
                                         >
                                             Save
                                         </button>
+                                    ) : isAirCombatTileMode ? (
+                                        <label className="inline-flex items-center gap-1 text-cyan-100">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id}
+                                                onChange={event => {
+                                                    if (event.target.checked) {
+                                                        selectAirCombatTileTask(row);
+                                                    } else if (selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id) {
+                                                        setSelectedAssistPrioritySource(null);
+                                                        setSelectedTaskProfile('');
+                                                    }
+                                                }}
+                                            />
+                                            Select
+                                        </label>
                                     ) : (
                                         <>
                                             <label className="inline-flex items-center gap-1 text-emerald-200">
@@ -1837,6 +1964,11 @@ const DfpSidePanelTimeline: React.FC<{
                 currency: request.currency || 'Currency',
                 date: request.date,
                 takeoff: request.takeoff,
+                duration: request.duration,
+                flightType: request.flightType,
+                depPoint: request.depPoint,
+                arrivalPoint: request.arrivalPoint,
+                aircraftConfigId: request.aircraftConfigId,
                 saved: Boolean(request.saved),
                 scheduled: Boolean(request.submitted),
                 ignored: Boolean(request.ignored),
@@ -1855,7 +1987,33 @@ const DfpSidePanelTimeline: React.FC<{
                                     <span className="ml-2 text-slate-400">{row.date || date} {formatTime(row.takeoff)}</span>
                                 </span>
                                 <span className="flex items-center gap-1 text-[9px]">
-                                    {row.source === 'local' && (
+                                    {isAirCombatTileMode ? (
+                                        row.source === 'local' && !row.saved ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => saveAssistCurrencyRequest(row.id)}
+                                                className="rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700"
+                                            >
+                                                Save
+                                            </button>
+                                        ) : (
+                                            <label className="inline-flex items-center gap-1 text-cyan-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedAssistPrioritySource?.kind === 'currency' && selectedAssistPrioritySource.id === row.id}
+                                                    onChange={event => {
+                                                        if (event.target.checked) {
+                                                            selectAirCombatTileCurrency(row);
+                                                        } else if (selectedAssistPrioritySource?.kind === 'currency' && selectedAssistPrioritySource.id === row.id) {
+                                                            setSelectedAssistPrioritySource(null);
+                                                            setSelectedCurrencyName('');
+                                                        }
+                                                    }}
+                                                />
+                                                Select
+                                            </label>
+                                        )
+                                    ) : row.source === 'local' && (
                                         <button
                                             type="button"
                                             onClick={() => row.scheduled || row.saved ? submitAssistCurrencyRequest(row.id) : saveAssistCurrencyRequest(row.id)}
@@ -1864,19 +2022,21 @@ const DfpSidePanelTimeline: React.FC<{
                                             {row.scheduled ? 'Re-submit' : row.saved ? 'Schedule' : 'Save'}
                                         </button>
                                     )}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (row.source === 'local') ignoreAssistCurrencyRequest(row.id);
-                                            else {
-                                                const remote = highestPriorityCurrencyRows.find(item => item.id === row.id);
-                                                if (remote) ignorePriorityEvents([remote.event]);
-                                            }
-                                        }}
-                                        className="rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100"
-                                    >
-                                        Ignore
-                                    </button>
+                                    {!isAirCombatTileMode && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (row.source === 'local') ignoreAssistCurrencyRequest(row.id);
+                                                else {
+                                                    const remote = highestPriorityCurrencyRows.find(item => item.id === row.id);
+                                                    if (remote) ignorePriorityEvents([remote.event]);
+                                                }
+                                            }}
+                                            className="rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100"
+                                        >
+                                            Ignore
+                                        </button>
+                                    )}
                                 </span>
                             </div>
                         ))}
@@ -2107,7 +2267,8 @@ const DfpSidePanelTimeline: React.FC<{
                 <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                     <button
                         type="button"
-                        className="justify-self-start rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18"
+                        onClick={() => setAirCombatAssistMode('tile')}
+                        className={`justify-self-start rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === 'tile' ? 'border-orange-300 bg-orange-500/20 text-orange-50' : 'border-orange-400/55 bg-orange-500/10 text-orange-100/80'}`}
                     >
                         NEO - Tile
                     </button>
@@ -2119,7 +2280,8 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                     <button
                         type="button"
-                        className="justify-self-end rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18"
+                        onClick={() => setAirCombatAssistMode('wizard')}
+                        className={`justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === 'wizard' ? 'border-orange-300 bg-orange-500/20 text-orange-50' : 'border-orange-400/55 bg-orange-500/10 text-orange-100/80'}`}
                     >
                         NEO - Wizard
                     </button>

@@ -63036,6 +63036,8 @@ const DfpSidePanelTimeline = ({
   const [assistCurrencyRequests, setAssistCurrencyRequests] = reactExports.useState([]);
   const [showAssistTaskForm, setShowAssistTaskForm] = reactExports.useState(false);
   const [showAssistCurrencyForm, setShowAssistCurrencyForm] = reactExports.useState(false);
+  const [airCombatAssistMode, setAirCombatAssistMode] = reactExports.useState("tile");
+  const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = reactExports.useState(null);
   const courseEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType !== "Staff CAT"), [fullAssistEventOptions]);
   const packageEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType === "Staff CAT"), [fullAssistEventOptions]);
   const activeSyllabusOptions = activeAssistSection === "packages" ? packageEventOptions : activeAssistSection === "course" ? courseEventOptions : filteredEventOptions;
@@ -63172,6 +63174,8 @@ const DfpSidePanelTimeline = ({
     return `PC-21 ${number}`;
   }, [selectedResourceKind, selectedResourceNumber]);
   const assistFormationSize = selectedResourceKind === "flight" ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1)) : 1;
+  const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === "air_combat";
+  const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
   const getAssistFormationCallsignBase = () => {
     const raw = (assistCallsign.trim() || "CSIGN").toUpperCase();
     return raw.replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, "") || "CSIGN";
@@ -63180,13 +63184,14 @@ const DfpSidePanelTimeline = ({
   const assistEventLabel = reactExports.useMemo(() => {
     if (activeAssistSection === "taskings" && selectedTaskProfile) {
       const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || "";
+      if (isAirCombatTileMode) return abbreviation ? `Task - ${abbreviation}` : `Task - ${selectedTaskProfile}`;
       return abbreviation ? `Task - ${abbreviation}` : "Task";
     }
     if (activeAssistSection === "currency" && selectedCurrencyName) {
       return selectedCurrencyName;
     }
     return selectedSyllabusItem?.code || "Event";
-  }, [activeAssistSection, selectedCurrencyName, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
+  }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
   const assistDuration = Math.max(
     0.1,
     activeAssistSection === "taskings" ? Number(assistTaskDuration) || 1.2 : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || 1.2 : Number(selectedSyllabusItem?.flightOrSimHours || selectedSyllabusItem?.duration || 1.2) || 1.2
@@ -63559,12 +63564,13 @@ const DfpSidePanelTimeline = ({
   const previewCallsign = assistCallsign.trim() || "CSIGN";
   const previewAircraftNumber = selectedResourceKind === "flight" ? selectedAircraftNumber.trim() || "TBA" : "TBA";
   const previewAreaCallsign = `${selectedAssignedArea && selectedAssignedArea !== "TBA" ? `${selectedAssignedArea} ` : ""}${previewCallsign}`;
+  const simulatorResourceLabel = formatResourceLabel2("FTD 1").replace(/\s+1$/, "");
+  const proceduralTrainerResourceLabel = formatResourceLabel2("CPT 1").replace(/\s+1$/, "");
   const formatCrewOptionLabel = (name) => {
     const instructor = instructors.find((item) => item.name === name);
     const rank = String(instructor?.rank || "").trim();
     return rank ? `${rank} ${name}` : name;
   };
-  const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === "air_combat";
   const normaliseCapacityInput = (value) => {
     const digitsOnly = String(value || "").trim().replace(/[^\d]/g, "");
     if (!digitsOnly) return "";
@@ -63743,6 +63749,33 @@ const DfpSidePanelTimeline = ({
     setSelectedCourseEventCode("");
     setSelectedPackageEventCode("");
   };
+  const selectAirCombatTileTask = (row) => {
+    setSelectedAssistPrioritySource({ kind: "task", id: row.id });
+    selectAssistTask(row.tasking);
+    setSelectedCurrencyName("");
+    setAssistTaskDate(row.date || date);
+    if (Number.isFinite(Number(row.takeoff))) setAssistTaskTakeoff(Number(row.takeoff));
+    if (Number.isFinite(Number(row.duration)) && Number(row.duration) > 0) setAssistTaskDuration(Number(row.duration));
+    if (row.flightType) setAssistTaskFlightType(row.flightType);
+    if (row.depPoint) setAssistTaskDepPoint(row.depPoint);
+    if (row.arrivalPoint) setAssistTaskArrivalPoint(row.arrivalPoint);
+    if (Number.isFinite(Number(row.aircraftCount))) setAssistTaskAircraftCount(Math.max(1, Number(row.aircraftCount) || 1));
+    if (row.aircraftConfigId) setAssistTaskConfigId(row.aircraftConfigId);
+  };
+  const selectAirCombatTileCurrency = (row) => {
+    setSelectedAssistPrioritySource({ kind: "currency", id: row.id });
+    setSelectedCurrencyName(row.currency);
+    setSelectedTaskProfile("");
+    setSelectedCourseEventCode("");
+    setSelectedPackageEventCode("");
+    setAssistCurrencyDate(row.date || date);
+    if (Number.isFinite(Number(row.takeoff))) setAssistCurrencyTakeoff(Number(row.takeoff));
+    if (Number.isFinite(Number(row.duration)) && Number(row.duration) > 0) setAssistCurrencyDuration(Number(row.duration));
+    if (row.flightType) setAssistCurrencyFlightType(row.flightType);
+    if (row.depPoint) setAssistCurrencyDepPoint(row.depPoint);
+    if (row.arrivalPoint) setAssistCurrencyArrivalPoint(row.arrivalPoint);
+    if (row.aircraftConfigId) setAssistCurrencyConfigId(row.aircraftConfigId);
+  };
   const selectAssistTrainingEvent = (kind, eventCode) => {
     setSelectedEventCode(eventCode);
     setSelectedTaskProfile("");
@@ -63805,6 +63838,7 @@ const DfpSidePanelTimeline = ({
   };
   const renderAssistSection = () => {
     if (activeAssistSection === "details") {
+      const showFlightOnlyDetails = !isAirCombatTileMode || selectedResourceKind === "flight";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
           "Resource",
@@ -63819,70 +63853,104 @@ const DfpSidePanelTimeline = ({
               className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "flight", children: "Flight" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ftd", children: "FTD" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cpt", children: "CPT" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ftd", children: simulatorResourceLabel }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "cpt", children: proceduralTrainerResourceLabel })
               ]
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-          "Number",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "number",
-              min: 1,
-              max: resourceNumberLimit,
-              value: selectedResourceNumber,
-              onChange: (event) => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1))),
-              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-          "Aircraft Number",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              value: selectedAircraftNumber,
-              onChange: (event) => setSelectedAircraftNumber(event.target.value),
-              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-              placeholder: "TBA"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-          "Callsign",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              list: "neo-assist-callsign-options",
-              value: assistCallsign,
-              onChange: (event) => setAssistCallsign(event.target.value),
-              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-              placeholder: "CSIGN"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-          "Assigned Area",
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: selectedAssignedArea,
-              onChange: (event) => setSelectedAssignedArea(event.target.value),
-              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "TBA", disabled: true, hidden: true, children: "TBA" }),
-                assignedAreaOptions.map((area) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: area, children: area || "Blank" }, area || "__blank"))
-              ]
-            }
-          )
+        showFlightOnlyDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            isAirCombatTileMode ? "No of A/C" : "Number",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: 1,
+                max: resourceNumberLimit,
+                value: selectedResourceNumber,
+                onChange: (event) => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1))),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Aircraft Number",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                value: selectedAircraftNumber,
+                onChange: (event) => setSelectedAircraftNumber(event.target.value),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                placeholder: "TBA"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Callsign",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                list: "neo-assist-callsign-options",
+                value: assistCallsign,
+                onChange: (event) => setAssistCallsign(event.target.value),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                placeholder: "CSIGN"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Assigned Area",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: selectedAssignedArea,
+                onChange: (event) => setSelectedAssignedArea(event.target.value),
+                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "TBA", disabled: true, hidden: true, children: "TBA" }),
+                  assignedAreaOptions.map((area) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: area, children: area || "Blank" }, area || "__blank"))
+                ]
+              }
+            )
+          ] })
         ] })
       ] });
     }
     if (activeAssistSection === "flying") {
+      const renderReadOnlyWindow = (label, start, end) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/35 bg-slate-950/65 p-2 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 text-center text-[10px] font-semibold text-cyan-50", children: label }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 font-mono text-[11px] text-slate-100", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600/80 bg-slate-900/80 px-2 py-1 text-center text-white", children: formatCompactTime(start) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600/80 bg-slate-900/80 px-2 py-1 text-center text-white", children: formatCompactTime(end) })
+        ] })
+      ] });
+      if (isAirCombatTileMode) {
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+            renderReadOnlyWindow("Day Flying", flyingStartTime, flyingEndTime),
+            allowNightFlying ? renderReadOnlyWindow("Night Flying", commenceNightFlying, ceaseNightFlying) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/35 bg-slate-950/65 p-2 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 text-center text-[10px] font-semibold text-cyan-50", children: "Night Flying" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-center text-[10px] text-slate-300", children: "Not enabled" })
+            ] })
+          ] }),
+          selectedResourceKind === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/35 bg-slate-950/65 p-2 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 text-[10px] font-semibold text-cyan-100", children: "Exclusion periods" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+              flyingWindowExclusions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-slate-300", children: "No exclusions configured." }),
+              flyingWindowExclusions.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded border border-slate-600/80 bg-slate-900/80 px-2 py-1 font-mono text-[10px] text-slate-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  formatCompactTime(period.startTime),
+                  " - ",
+                  formatCompactTime(period.endTime)
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "uppercase text-cyan-100", children: period.restriction || "both" })
+              ] }, period.id))
+            ] })
+          ] })
+        ] });
+      }
       const renderWindowControl = (label, start, end, setStart, setEnd) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/55 p-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 text-[10px] font-semibold text-cyan-100", children: label }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2", children: [
@@ -63937,6 +64005,9 @@ const DfpSidePanelTimeline = ({
       ] });
     }
     if (activeAssistSection === "resources") {
+      if (isAirCombatTileMode) {
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[120px]" });
+      }
       const updateConfigCapacity = (configId, value) => {
         const nextValue = normaliseCapacityInput(value);
         const nextCapacities = { ...aircraftConfigCapacities, [configId]: nextValue };
@@ -63981,6 +64052,9 @@ const DfpSidePanelTimeline = ({
       ] });
     }
     if (activeAssistSection === "training") {
+      if (isAirCombatTileMode) {
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[120px]" });
+      }
       const scheduledTaskCount = highestPriorityTaskRows.length;
       const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
@@ -64090,6 +64164,12 @@ const DfpSidePanelTimeline = ({
         tasking: request.tasking || "Task",
         date: request.date,
         takeoff: request.takeoff,
+        duration: request.duration,
+        flightType: request.flightType,
+        depPoint: request.depPoint,
+        arrivalPoint: request.arrivalPoint,
+        aircraftCount: request.aircraftCount,
+        aircraftConfigId: request.aircraftConfigId,
         saved: Boolean(request.saved),
         scheduled: Boolean(request.submitted),
         ignored: Boolean(request.ignored),
@@ -64117,7 +64197,24 @@ const DfpSidePanelTimeline = ({
                 className: "rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700",
                 children: "Save"
               }
-            ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            ) : isAirCombatTileMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-cyan-100", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id,
+                  onChange: (event) => {
+                    if (event.target.checked) {
+                      selectAirCombatTileTask(row);
+                    } else if (selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id) {
+                      setSelectedAssistPrioritySource(null);
+                      setSelectedTaskProfile("");
+                    }
+                  }
+                }
+              ),
+              "Select"
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-emerald-200", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
@@ -64245,6 +64342,11 @@ const DfpSidePanelTimeline = ({
         currency: request.currency || "Currency",
         date: request.date,
         takeoff: request.takeoff,
+        duration: request.duration,
+        flightType: request.flightType,
+        depPoint: request.depPoint,
+        arrivalPoint: request.arrivalPoint,
+        aircraftConfigId: request.aircraftConfigId,
         saved: Boolean(request.saved),
         scheduled: Boolean(request.submitted),
         ignored: Boolean(request.ignored),
@@ -64265,7 +64367,32 @@ const DfpSidePanelTimeline = ({
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1 text-[9px]", children: [
-              row.source === "local" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              isAirCombatTileMode ? row.source === "local" && !row.saved ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => saveAssistCurrencyRequest(row.id),
+                  className: "rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700",
+                  children: "Save"
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-cyan-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: selectedAssistPrioritySource?.kind === "currency" && selectedAssistPrioritySource.id === row.id,
+                    onChange: (event) => {
+                      if (event.target.checked) {
+                        selectAirCombatTileCurrency(row);
+                      } else if (selectedAssistPrioritySource?.kind === "currency" && selectedAssistPrioritySource.id === row.id) {
+                        setSelectedAssistPrioritySource(null);
+                        setSelectedCurrencyName("");
+                      }
+                    }
+                  }
+                ),
+                "Select"
+              ] }) : row.source === "local" && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   type: "button",
@@ -64274,7 +64401,7 @@ const DfpSidePanelTimeline = ({
                   children: row.scheduled ? "Re-submit" : row.saved ? "Schedule" : "Save"
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
+              !isAirCombatTileMode && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   type: "button",
@@ -64521,7 +64648,8 @@ const DfpSidePanelTimeline = ({
         "button",
         {
           type: "button",
-          className: "justify-self-start rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+          onClick: () => setAirCombatAssistMode("tile"),
+          className: `justify-self-start rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === "tile" ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
           children: "NEO - Tile"
         }
       ),
@@ -64533,7 +64661,8 @@ const DfpSidePanelTimeline = ({
         "button",
         {
           type: "button",
-          className: "justify-self-end rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+          onClick: () => setAirCombatAssistMode("wizard"),
+          className: `justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === "wizard" ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
           children: "NEO - Wizard"
         }
       )
