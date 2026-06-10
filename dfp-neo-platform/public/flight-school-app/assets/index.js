@@ -49130,8 +49130,11 @@ const normaliseCrewPositionTerminology = (source) => {
   } else if (source && typeof source === "object") {
     sourcePositions = Object.entries(source).map(([genericName, label]) => ({ genericName, label }));
   }
+  const deletedDefaultIds = new Set(
+    Array.isArray(source?.deletedDefaultIds) ? source.deletedDefaultIds.map((id) => String(id || "").trim()).filter(Boolean) : []
+  );
   const positions = [
-    ...DEFAULT_CREW_POSITION_TERMINOLOGY.positions,
+    ...DEFAULT_CREW_POSITION_TERMINOLOGY.positions.filter((entry) => !deletedDefaultIds.has(entry.id)),
     ...sourcePositions
   ].map(normaliseEntry).filter((entry) => Boolean(entry));
   const byGenericName = /* @__PURE__ */ new Map();
@@ -49140,7 +49143,10 @@ const normaliseCrewPositionTerminology = (source) => {
     if (!key) return;
     byGenericName.set(key, entry);
   });
-  return { positions: Array.from(byGenericName.values()) };
+  return {
+    positions: Array.from(byGenericName.values()),
+    deletedDefaultIds: Array.from(deletedDefaultIds)
+  };
 };
 const getCrewPositionLabelMap = (terminology) => normaliseCrewPositionTerminology(terminology).positions.reduce((labels, entry) => ({
   ...labels,
@@ -50209,14 +50215,14 @@ const PlatformConfigurationSettings = ({
       })
     }));
   };
-  const updateCrewPositionTerminology = (positions, renamedPosition) => {
+  const updateCrewPositionTerminology = (positions, renamedPosition, deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || []) => {
     setRankTerminologyDirty(true);
     setConfig((prev) => {
       const organisations = prev.organisations.length > 0 ? [...prev.organisations] : [{ code: "RAAF", name: "RAAF", status: "ACTIVE", settings: {} }];
       const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];
-      const nextTerminology = normaliseCrewPositionTerminology({ positions });
+      const nextTerminology = normaliseCrewPositionTerminology({ positions, deletedDefaultIds });
       organisations[orgIndex] = {
         ...currentOrg,
         settings: {
@@ -50263,7 +50269,8 @@ const PlatformConfigurationSettings = ({
   const removeCrewPositionEntry = (entryId) => {
     const nextPositions = crewPositionTerminology.positions.filter((entry) => entry.id !== entryId);
     if (nextPositions.length === crewPositionTerminology.positions.length || nextPositions.length === 0) return;
-    updateCrewPositionTerminology(nextPositions);
+    const nextDeletedDefaultIds = defaultCrewPositionIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...crewPositionTerminology.deletedDefaultIds || [], entryId])) : crewPositionTerminology.deletedDefaultIds || [];
+    updateCrewPositionTerminology(nextPositions, void 0, nextDeletedDefaultIds);
   };
   const updateTrainingReportTemplate = (updater) => {
     if (activeTrainingReportUnitIndex < 0) return;
@@ -52973,9 +52980,9 @@ const PlatformConfigurationSettings = ({
                 {
                   type: "button",
                   onClick: () => removeCrewPositionEntry(entry.id),
-                  disabled: !canEditRankTerminology || isDefaultEntry,
+                  disabled: !canEditRankTerminology,
                   className: "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40",
-                  title: isDefaultEntry ? "Default crew positions cannot be removed." : "Remove crew position",
+                  title: "Remove crew position",
                   children: "Delete"
                 }
               ) })

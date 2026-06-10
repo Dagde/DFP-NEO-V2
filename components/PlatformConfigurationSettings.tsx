@@ -1381,6 +1381,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const updateCrewPositionTerminology = (
     positions: CrewPositionTerminologyEntry[],
     renamedPosition?: { from: string; to: string },
+    deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || [],
   ) => {
     setRankTerminologyDirty(true);
     setConfig((prev) => {
@@ -1390,7 +1391,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];
-      const nextTerminology = normaliseCrewPositionTerminology({ positions });
+      const nextTerminology = normaliseCrewPositionTerminology({ positions, deletedDefaultIds });
       organisations[orgIndex] = {
         ...currentOrg,
         settings: {
@@ -1458,7 +1459,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const removeCrewPositionEntry = (entryId: string) => {
     const nextPositions = crewPositionTerminology.positions.filter((entry) => entry.id !== entryId);
     if (nextPositions.length === crewPositionTerminology.positions.length || nextPositions.length === 0) return;
-    updateCrewPositionTerminology(nextPositions);
+    const nextDeletedDefaultIds = defaultCrewPositionIds.has(entryId)
+      ? Array.from(new Set([...(crewPositionTerminology.deletedDefaultIds || []), entryId]))
+      : crewPositionTerminology.deletedDefaultIds || [];
+    updateCrewPositionTerminology(nextPositions, undefined, nextDeletedDefaultIds);
   };
 
   const updateTrainingReportTemplate = (
@@ -4399,9 +4403,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <button
                         type="button"
                         onClick={() => removeCrewPositionEntry(entry.id)}
-                        disabled={!canEditRankTerminology || isDefaultEntry}
+                        disabled={!canEditRankTerminology}
                         className="w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
-                        title={isDefaultEntry ? 'Default crew positions cannot be removed.' : 'Remove crew position'}
+                        title="Remove crew position"
                       >
                         Delete
                       </button>

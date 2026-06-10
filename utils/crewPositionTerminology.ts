@@ -6,6 +6,7 @@ export interface CrewPositionTerminologyEntry {
 
 export interface CrewPositionTerminology {
   positions: CrewPositionTerminologyEntry[];
+  deletedDefaultIds?: string[];
 }
 
 export const DEFAULT_CREW_POSITION_TERMINOLOGY: CrewPositionTerminology = {
@@ -53,8 +54,13 @@ export const normaliseCrewPositionTerminology = (source?: any): CrewPositionTerm
     sourcePositions = Object.entries(source).map(([genericName, label]) => ({ genericName, label }));
   }
 
+  const deletedDefaultIds = new Set(
+    Array.isArray(source?.deletedDefaultIds)
+      ? source.deletedDefaultIds.map((id: unknown) => String(id || '').trim()).filter(Boolean)
+      : []
+  );
   const positions = [
-    ...DEFAULT_CREW_POSITION_TERMINOLOGY.positions,
+    ...DEFAULT_CREW_POSITION_TERMINOLOGY.positions.filter((entry) => !deletedDefaultIds.has(entry.id)),
     ...sourcePositions,
   ]
     .map(normaliseEntry)
@@ -67,7 +73,10 @@ export const normaliseCrewPositionTerminology = (source?: any): CrewPositionTerm
     byGenericName.set(key, entry);
   });
 
-  return { positions: Array.from(byGenericName.values()) };
+  return {
+    positions: Array.from(byGenericName.values()),
+    deletedDefaultIds: Array.from(deletedDefaultIds),
+  };
 };
 
 export const getCrewPositionLabelMap = (terminology?: CrewPositionTerminology): Record<string, string> => (
