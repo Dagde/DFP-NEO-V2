@@ -1372,6 +1372,7 @@ const DfpSidePanelTimeline: React.FC<{
     const advanceWizard = () => moveWizardTo(wizardStep + 1);
     const retreatWizard = () => moveWizardTo(wizardStep - 1);
     const wizardChoiceClass = 'rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
+    const wizardCenteredChoiceClass = wizardChoiceClass.replace('text-left', 'text-center');
     const wizardKeepButtonClass = 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-xs font-bold text-slate-800 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
     const wizardSmallButtonClass = 'rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-900';
     const renderWizardTimeBox = (
@@ -1396,7 +1397,7 @@ const DfpSidePanelTimeline: React.FC<{
         return (
         <div className="rounded-xl border border-slate-300 bg-white p-3 text-center shadow-sm">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-            <p className="mt-2 font-mono text-2xl font-black text-slate-950">{formatCompactTime(value)}</p>
+            <p className="mt-2 pl-2 text-left font-mono text-xl font-black text-slate-950">{formatCompactTime(value)}</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" {...bindRepeat(-1 / 12)}>-</button>
                 <button type="button" className="rounded-lg border border-slate-300 bg-slate-50 py-2 text-2xl font-black text-slate-800 hover:border-orange-300 hover:bg-orange-50" {...bindRepeat(1 / 12)}>+</button>
@@ -1465,8 +1466,8 @@ const DfpSidePanelTimeline: React.FC<{
                 'What sort of flying should NEO plan?',
                 <p>I will set up the Air Combat build one decision at a time. Start with the operating period you want the build to use.</p>,
                 <>
-                    <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateAllowNightFlying(false); advanceWizard(); }}>Day only</button>
-                    <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateAllowNightFlying(true); advanceWizard(); }}>Day and night</button>
+                    <button type="button" className={wizardCenteredChoiceClass} onClick={() => { onUpdateAllowNightFlying(false); advanceWizard(); }}>Day only</button>
+                    <button type="button" className={wizardCenteredChoiceClass} onClick={() => { onUpdateAllowNightFlying(true); advanceWizard(); }}>Day and night</button>
                 </>,
             );
         }
