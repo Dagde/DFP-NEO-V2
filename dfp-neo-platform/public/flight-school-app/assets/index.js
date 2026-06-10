@@ -62962,6 +62962,7 @@ const DfpSidePanelTimeline = ({
   callsignOptions,
   staffListNames,
   formatResourceLabel: formatResourceLabel2,
+  operationalModel,
   scheduleZoomLevel = 1
 }) => {
   const timelineStartHour = 6;
@@ -63563,6 +63564,7 @@ const DfpSidePanelTimeline = ({
     const rank = String(instructor?.rank || "").trim();
     return rank ? `${rank} ${name}` : name;
   };
+  const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === "air_combat";
   const normaliseCapacityInput = (value) => {
     const digitsOnly = String(value || "").trim().replace(/[^\d]/g, "");
     if (!digitsOnly) return "";
@@ -64514,7 +64516,25 @@ const DfpSidePanelTimeline = ({
     ] });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-400/15 bg-slate-950/72 p-4", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
+    isAirCombatNeoAssist ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          className: "justify-self-start rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+          children: "NEO - Tile"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "rounded-md border border-orange-400/70 bg-orange-500/10 px-4 py-1.5 text-center text-sm font-semibold text-orange-50 shadow-[0_0_18px_rgba(251,146,60,0.55)] animate-pulse", children: "NEO Assist" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          className: "justify-self-end rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18",
+          children: "NEO - Wizard"
+        }
+      )
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "NEO Assist" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
@@ -87023,6 +87043,7 @@ Do you want to replace the existing entry?`,
                     callsignOptions: neoAssistCallsignOptions,
                     staffListNames: neoAssistStaffListNames,
                     formatResourceLabel: formatResourceDisplayLabel,
+                    operationalModel: activeOperationalModel,
                     scheduleZoomLevel: zoomLevel,
                     onOpenPrioritiesExclusions: () => {
                       try {

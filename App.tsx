@@ -286,6 +286,7 @@ const DfpSidePanelTimeline: React.FC<{
     callsignOptions: string[];
     staffListNames: string[];
     formatResourceLabel: (resourceId: string) => string;
+    operationalModel?: string;
     scheduleZoomLevel?: number;
 }> = ({
     flyingStartTime,
@@ -337,6 +338,7 @@ const DfpSidePanelTimeline: React.FC<{
     callsignOptions,
     staffListNames,
     formatResourceLabel,
+    operationalModel,
     scheduleZoomLevel = 1,
 }) => {
     const timelineStartHour = 6;
@@ -1122,6 +1124,7 @@ const DfpSidePanelTimeline: React.FC<{
         const rank = String(instructor?.rank || '').trim();
         return rank ? `${rank} ${name}` : name;
     };
+    const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === 'air_combat';
     const normaliseCapacityInput = (value: string): string => {
         const digitsOnly = String(value || '').trim().replace(/[^\d]/g, '');
         if (!digitsOnly) return '';
@@ -2100,18 +2103,38 @@ const DfpSidePanelTimeline: React.FC<{
 
     return (
         <div className="border-b border-cyan-400/15 bg-slate-950/72 p-4">
-            <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                    <h3 className="text-sm font-semibold text-white">NEO Assist</h3>
+            {isAirCombatNeoAssist ? (
+                <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                    <button
+                        type="button"
+                        className="justify-self-start rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18"
+                    >
+                        NEO - Tile
+                    </button>
+                    <h3 className="rounded-md border border-orange-400/70 bg-orange-500/10 px-4 py-1.5 text-center text-sm font-semibold text-orange-50 shadow-[0_0_18px_rgba(251,146,60,0.55)] animate-pulse">
+                        NEO Assist
+                    </h3>
+                    <button
+                        type="button"
+                        className="justify-self-end rounded-md border border-orange-400/55 bg-orange-500/10 px-3 py-1.5 text-[11px] font-semibold text-orange-50 shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18"
+                    >
+                        NEO - Wizard
+                    </button>
                 </div>
-                <button
-                    type="button"
-                    onClick={onOpenPrioritiesExclusions}
-                    className="shrink-0 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200"
-                >
-                    Open Priorities
-                </button>
-            </div>
+            ) : (
+                <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 className="text-sm font-semibold text-white">NEO Assist</h3>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onOpenPrioritiesExclusions}
+                        className="shrink-0 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200"
+                    >
+                        Open Priorities
+                    </button>
+                </div>
+            )}
             <div
                 ref={scrollRef}
                 className="overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-3 shadow-inner [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -30135,6 +30158,7 @@ appliedUpdates.forEach(update => {
                                     callsignOptions={neoAssistCallsignOptions}
                                     staffListNames={neoAssistStaffListNames}
                                     formatResourceLabel={formatResourceDisplayLabel}
+                                    operationalModel={activeOperationalModel}
                                     scheduleZoomLevel={zoomLevel}
                                     onOpenPrioritiesExclusions={() => {
                                         try {
