@@ -61,9 +61,30 @@ function getAuthoritativeSyllabusDuration(item) {
   return Number.isFinite(duration) && duration > 0 ? duration : 0;
 }
 
+function normaliseRuntimeAircraftConfigs(value) {
+  const rawConfigs = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(/\r?\n|;|,/)
+      : [];
+  const configs = rawConfigs
+    .map(config => String(config || '').trim().toUpperCase())
+    .filter(Boolean)
+    .map(config => {
+      if (config === 'ANY') return 'ANY';
+      const configNumber = config
+        .replace(/^CONFIG\s+/, '')
+        .replace(/^CONFIG[-_]/, '')
+        .replace(/^C\s*/, '');
+      return /^\d+$/.test(configNumber) ? `CONFIG-${configNumber}` : config;
+    });
+  return configs.length > 0 ? Array.from(new Set(configs)) : ['ANY'];
+}
+
 function normaliseSyllabusItemForRuntime(item) {
   if (!item) return item;
   const courses = normaliseSyllabusCourses(item.courses);
+  const acceptableAircraftConfigs = normaliseRuntimeAircraftConfigs(item.acceptableAircraftConfigs);
   const flightOrSimHours = Number.isFinite(Number(item.flightOrSimHours)) && Number(item.flightOrSimHours) > 0
     ? Number(item.flightOrSimHours)
     : INTEGRATED_COMBAT_OPERATIONS_DEFAULT_FLIGHT_OR_SIM_HOURS;
@@ -75,6 +96,7 @@ function normaliseSyllabusItemForRuntime(item) {
     return {
       ...item,
       courses,
+      acceptableAircraftConfigs,
       flightOrSimHours,
       duration: flightOrSimHours,
       preFlightTime: INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS,
@@ -84,6 +106,7 @@ function normaliseSyllabusItemForRuntime(item) {
   return {
     ...item,
     courses,
+    acceptableAircraftConfigs,
     duration,
   };
 }
@@ -5636,7 +5659,7 @@ function normaliseUploadAircraftConfigs(value) {
     .split(/\r?\n|;|,/)
     .map(config => config.trim().toUpperCase())
     .filter(Boolean)
-    .map(config => config === 'ANY' ? 'ANY' : `CONFIG ${config.replace(/^CONFIG\s*/, '').replace(/^C\s*/, '')}`);
+    .map(config => config === 'ANY' ? 'ANY' : `CONFIG-${config.replace(/^CONFIG\s*/, '').replace(/^CONFIG[-_]/, '').replace(/^C\s*/, '')}`);
   return configs.length > 0 ? Array.from(new Set(configs)) : ['ANY'];
 }
 

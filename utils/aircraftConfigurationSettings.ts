@@ -23,8 +23,11 @@ const normaliseConfigValue = (value: unknown): string => (
     .trim()
     .toUpperCase()
     .replace(/^CONFIG\s+(\d+)$/, 'CONFIG-$1')
+    .replace(/^CONFIG[_-](\d+)$/, 'CONFIG-$1')
     .replace(/^C\s*(\d+)$/, 'CONFIG-$1')
 );
+
+const isConfigValue = (value: string): boolean => /^CONFIG[-_]\d+$/.test(value);
 
 const formatConfigLabel = (id: string, fallbackIndex: number): string => {
   const match = id.match(/^CONFIG-(\d+)$/);
@@ -76,7 +79,7 @@ export const normaliseSelectedAircraftConfigurations = (
 
   if (cleaned.includes(ANY_AIRCRAFT_CONFIG)) return [ANY_AIRCRAFT_CONFIG];
 
-  const filtered = cleaned.filter(value => validIds.has(value));
+  const filtered = cleaned.filter(value => validIds.size === 0 ? isConfigValue(value) : (validIds.has(value) || isConfigValue(value)));
   return filtered.length > 0 ? Array.from(new Set(filtered)) : [ANY_AIRCRAFT_CONFIG];
 };
 
@@ -88,5 +91,5 @@ export const formatAircraftConfigurationSummary = (
   if (normalised.includes(ANY_AIRCRAFT_CONFIG)) return 'ANY';
 
   const definitionMap = new Map(definitions.map(definition => [definition.id, definition.label]));
-  return normalised.map(id => definitionMap.get(id) || id).join(', ') || 'ANY';
+  return normalised.map(id => definitionMap.get(id) || formatConfigLabel(id, 0)).join(', ') || 'ANY';
 };

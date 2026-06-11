@@ -10444,6 +10444,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     courses: item.courses || [],
                     lmpType: item.lmpType || null,
                     isActive: item.isActive !== false,
+                    acceptableAircraftConfigsRaw: item.acceptableAircraftConfigs || null,
+                    aircraftConfigIdRaw: (item as any).aircraftConfigId || null,
+                    aircraftConfigRequirement: normaliseLmpAircraftConfigRequirement(item),
                 })),
             };
         });

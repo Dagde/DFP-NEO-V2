@@ -2608,7 +2608,8 @@ const normaliseConfigId = (value, fallback) => {
   const cleaned = String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
   return cleaned || fallback;
 };
-const normaliseConfigValue = (value) => String(value || "").trim().toUpperCase().replace(/^CONFIG\s+(\d+)$/, "CONFIG-$1").replace(/^C\s*(\d+)$/, "CONFIG-$1");
+const normaliseConfigValue = (value) => String(value || "").trim().toUpperCase().replace(/^CONFIG\s+(\d+)$/, "CONFIG-$1").replace(/^CONFIG[_-](\d+)$/, "CONFIG-$1").replace(/^C\s*(\d+)$/, "CONFIG-$1");
+const isConfigValue = (value) => /^CONFIG[-_]\d+$/.test(value);
 const formatConfigLabel = (id, fallbackIndex) => {
   const match = id.match(/^CONFIG-(\d+)$/);
   if (!match) return `CONFIG ${fallbackIndex + 1}`;
@@ -2635,14 +2636,14 @@ const normaliseSelectedAircraftConfigurations = (selected, definitions = []) => 
   const validIds = new Set(definitions.map((definition) => definition.id));
   const cleaned = selected.map(normaliseConfigValue).filter(Boolean);
   if (cleaned.includes(ANY_AIRCRAFT_CONFIG)) return [ANY_AIRCRAFT_CONFIG];
-  const filtered = cleaned.filter((value) => validIds.has(value));
+  const filtered = cleaned.filter((value) => validIds.size === 0 ? isConfigValue(value) : validIds.has(value) || isConfigValue(value));
   return filtered.length > 0 ? Array.from(new Set(filtered)) : [ANY_AIRCRAFT_CONFIG];
 };
 const formatAircraftConfigurationSummary = (selected, definitions = []) => {
   const normalised = normaliseSelectedAircraftConfigurations(selected, definitions);
   if (normalised.includes(ANY_AIRCRAFT_CONFIG)) return "ANY";
   const definitionMap = new Map(definitions.map((definition) => [definition.id, definition.label]));
-  return normalised.map((id) => definitionMap.get(id) || id).join(", ") || "ANY";
+  return normalised.map((id) => definitionMap.get(id) || formatConfigLabel(id, 0)).join(", ") || "ANY";
 };
 const DEFAULT_AIRCRAFT_CREW_COMPOSITION = {
   crewCount: 2,
@@ -37148,7 +37149,7 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "11";
+const CACHE_VERSION = "12";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
 function getCachedSyllabus() {
   try {
@@ -72077,7 +72078,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           orderKey: item.orderKey || null,
           courses: item.courses || [],
           lmpType: item.lmpType || null,
-          isActive: item.isActive !== false
+          isActive: item.isActive !== false,
+          acceptableAircraftConfigsRaw: item.acceptableAircraftConfigs || null,
+          aircraftConfigIdRaw: item.aircraftConfigId || null,
+          aircraftConfigRequirement: normaliseLmpAircraftConfigRequirement(item)
         }))
       };
     });
