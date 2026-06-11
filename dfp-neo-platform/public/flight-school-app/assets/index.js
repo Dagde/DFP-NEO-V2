@@ -67699,23 +67699,25 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     aircraftConfigDefinitionsForBuild.map((definition) => [definition.id, definition])
   );
   const aircraftConfigIdsByResource = config.aircraftConfigIdsByResource || {};
-  const normaliseAircraftConfigRequirement = (source) => {
-    const rawValues = Array.isArray(source?.acceptableAircraftConfigs) && source.acceptableAircraftConfigs.length > 0 ? source.acceptableAircraftConfigs : source?.aircraftConfigId ? [source.aircraftConfigId] : [ANY_AIRCRAFT_CONFIG];
+  const normaliseAircraftConfigRequirement = (source, options = {}) => {
+    const allowAircraftConfigIdFallback = options.allowAircraftConfigIdFallback !== false;
+    const rawValues = Array.isArray(source?.acceptableAircraftConfigs) && source.acceptableAircraftConfigs.length > 0 ? source.acceptableAircraftConfigs : allowAircraftConfigIdFallback && source?.aircraftConfigId ? [source.aircraftConfigId] : [ANY_AIRCRAFT_CONFIG];
     const cleaned = rawValues.map((value) => String(value || "").trim().toUpperCase().replace(/^CONFIG\s+(\d+)$/, "CONFIG-$1")).filter(Boolean);
     if (cleaned.length === 0 || cleaned.includes(ANY_AIRCRAFT_CONFIG)) return [ANY_AIRCRAFT_CONFIG];
     return Array.from(new Set(cleaned));
   };
+  const normaliseLmpAircraftConfigRequirement = (source) => normaliseAircraftConfigRequirement(source, { allowAircraftConfigIdFallback: false });
   const getAircraftConfigIdForResource = (resourceId) => {
     if (!resourceId) return BASE_AIRCRAFT_CONFIG.id;
     return aircraftConfigIdsByResource[resourceId] || BASE_AIRCRAFT_CONFIG.id;
   };
   const getAircraftConfigLabelForId = (configId) => aircraftConfigDefinitionById.get(configId || BASE_AIRCRAFT_CONFIG.id)?.label || BASE_AIRCRAFT_CONFIG.label;
-  const eventAcceptsResourceConfig = (source, resourceConfigId) => {
-    const acceptedConfigs = normaliseAircraftConfigRequirement(source);
+  const eventAcceptsResourceConfig = (source, resourceConfigId, options) => {
+    const acceptedConfigs = normaliseAircraftConfigRequirement(source, options);
     return acceptedConfigs.includes(ANY_AIRCRAFT_CONFIG) || acceptedConfigs.includes(resourceConfigId);
   };
-  const getAircraftConfigRequirementSummary = (source) => {
-    const acceptedConfigs = normaliseAircraftConfigRequirement(source);
+  const getAircraftConfigRequirementSummary = (source, options) => {
+    const acceptedConfigs = normaliseAircraftConfigRequirement(source, options);
     if (acceptedConfigs.includes(ANY_AIRCRAFT_CONFIG)) return "ANY";
     return acceptedConfigs.map(getAircraftConfigLabelForId).join(", ");
   };
@@ -70608,8 +70610,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     let resourceId = null;
     const resourcePrefix = type === "flight" ? "PC-21 " : type === "ftd" ? "FTD " : type === "cpt" ? "CPT " : "Ground ";
     const resourceCount = type === "flight" ? availableAircraftCount : type === "ftd" ? ftdCount : type === "cpt" ? cptCount : 6;
-    const acceptedAircraftConfigsForEvent = type === "flight" ? normaliseAircraftConfigRequirement(syllabusItem) : [ANY_AIRCRAFT_CONFIG];
-    const requiredAircraftConfigSummary = type === "flight" ? getAircraftConfigRequirementSummary(syllabusItem) : "ANY";
+    const acceptedAircraftConfigsForEvent = type === "flight" ? normaliseLmpAircraftConfigRequirement(syllabusItem) : [ANY_AIRCRAFT_CONFIG];
+    const requiredAircraftConfigSummary = type === "flight" ? getAircraftConfigRequirementSummary(syllabusItem, { allowAircraftConfigIdFallback: false }) : "ANY";
     const getPreferredNightAircraftResource = () => {
       if (!isNightPass || !isPlusOne || type !== "flight") return null;
       const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
@@ -70632,7 +70634,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     for (const id of orderedResourceCandidates) {
       if (type === "flight") {
         const resourceAircraftConfigId = getAircraftConfigIdForResource(id);
-        if (!eventAcceptsResourceConfig(syllabusItem, resourceAircraftConfigId)) {
+        if (!eventAcceptsResourceConfig(syllabusItem, resourceAircraftConfigId, { allowAircraftConfigIdFallback: false })) {
           aircraftConfigMismatchCount++;
           if (aircraftConfigMismatchSamples.length < 8) {
             aircraftConfigMismatchSamples.push({
@@ -71852,7 +71854,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             linkedEvent: getAirCombatLinkedEventCode(nextItem) || null,
             preFlightTime: nextItem.preFlightTime || 0,
             postFlightTime: nextItem.postFlightTime || 0,
-            aircraftConfigRequirement: normaliseAircraftConfigRequirement(nextItem)
+            aircraftConfigRequirement: normaliseLmpAircraftConfigRequirement(nextItem)
           } : null,
           eventCounts: counts,
           exclusionReason: nextItem ? null : "NO_NEXT_EVENT_ALL_MATCHING_EVENTS_COMPLETE_OR_MISSING"
@@ -71874,7 +71876,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           isActive: item.isActive !== false,
           orderKey: item.orderKey || null,
           sortOrder: item.sortOrder ?? null,
-          aircraftConfigRequirement: normaliseAircraftConfigRequirement(item)
+          aircraftConfigRequirement: normaliseLmpAircraftConfigRequirement(item)
         })),
         pilotStaff: pilotStaff.length,
         crewPositionStaff: crewPositionStaff.length,
@@ -72123,7 +72125,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       for (let index = 1; index <= count; index++) {
         const resourceId = `${prefix}${index}`;
         const aircraftConfigId = type === "flight" ? getAircraftConfigIdForResource(resourceId) : void 0;
-        if (type === "flight" && !eventAcceptsResourceConfig(item, aircraftConfigId)) {
+        if (type === "flight" && !eventAcceptsResourceConfig(item, aircraftConfigId, { allowAircraftConfigIdFallback: false })) {
           pushAirCombatDiag("resourceChecks", {
             event: item.code,
             type,
@@ -72131,7 +72133,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             resourceId,
             aircraftConfigId,
             reason: "AIRCRAFT_CONFIG_INCOMPATIBLE",
-            required: normaliseAircraftConfigRequirement(item)
+            required: normaliseLmpAircraftConfigRequirement(item)
           }, 800);
           countAirCombatRejection("AIRCRAFT_CONFIG_INCOMPATIBLE");
           continue;
@@ -72454,7 +72456,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       const evaluateFormationResource = (member, resourceId) => {
         const aircraftConfigId = getAircraftConfigIdForResource(resourceId);
-        if (!eventAcceptsResourceConfig(member.item, aircraftConfigId)) {
+        if (!eventAcceptsResourceConfig(member.item, aircraftConfigId, { allowAircraftConfigIdFallback: false })) {
           pushAirCombatDiag("resourceChecks", {
             event: member.item.code,
             type: "flight",
@@ -72462,7 +72464,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             resourceId,
             aircraftConfigId,
             reason: "AIRCRAFT_CONFIG_INCOMPATIBLE",
-            required: normaliseAircraftConfigRequirement(member.item),
+            required: normaliseLmpAircraftConfigRequirement(member.item),
             formationGroupId: groupId
           }, 800);
           countAirCombatRejection("AIRCRAFT_CONFIG_INCOMPATIBLE");
@@ -72477,7 +72479,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           resourceId,
           preStart: member.item.preFlightTime,
           postEnd: member.item.postFlightTime,
-          acceptableAircraftConfigs: normaliseAircraftConfigRequirement(member.item),
+          acceptableAircraftConfigs: normaliseLmpAircraftConfigRequirement(member.item),
           crewRequirement: member.item.crewRequirement || {}
         };
         const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
@@ -72762,7 +72764,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             postEnd: member.item.postFlightTime,
             dayNight: member.item.dayNight,
             aircraftConfigId: resource.aircraftConfigId,
-            acceptableAircraftConfigs: normaliseAircraftConfigRequirement(member.item),
+            acceptableAircraftConfigs: normaliseLmpAircraftConfigRequirement(member.item),
             crewRequirement: member.item.crewRequirement || { mode: "aircraft_default" },
             formationId: groupId,
             formationType: "Air Combat Linked Formation",
@@ -73124,7 +73126,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               postEnd: item.postFlightTime,
               dayNight: item.dayNight,
               aircraftConfigId: resource.aircraftConfigId,
-              acceptableAircraftConfigs: type === "flight" ? normaliseAircraftConfigRequirement(item) : void 0,
+              acceptableAircraftConfigs: type === "flight" ? normaliseLmpAircraftConfigRequirement(item) : void 0,
               crewRequirement: item.crewRequirement || { mode: "aircraft_default" },
               notes: `Air Combat ${kind === "training_package" ? "training package" : "course"} allocation: ${code}`
             };
