@@ -113,6 +113,7 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
                   updateRole(index, {
                     role: selected?.value || event.target.value,
                     crewPositionId: selected?.id,
+                    eligibleRoles: [selected?.value || event.target.value],
                   });
                 }}
                 className="min-w-0 rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500"

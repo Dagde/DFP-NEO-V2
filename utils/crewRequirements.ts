@@ -1,6 +1,6 @@
 import type { CrewRequirement, CrewRequirementRole } from '../types';
 import type { AircraftCrewComposition } from './aircraftCrewComposition';
-import { DEFAULT_AIRCRAFT_CREW_COMPOSITION } from './aircraftCrewComposition';
+import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, getAircraftSeatEligibleRoles } from './aircraftCrewComposition';
 import {
   findCrewPositionEntry,
   normaliseCrewPositionTerminology,
@@ -18,6 +18,27 @@ const getRoleDisplayLabel = (role: string, terminology?: CrewPositionTerminology
   return entry?.label || String(role || '').trim() || 'Crew';
 };
 
+const uniqueCrewRoles = (values: unknown[]): string[] => {
+  const seen = new Set<string>();
+  return values
+    .map((value) => String(value || '').trim())
+    .filter((value) => {
+      if (!value) return false;
+      const key = value.toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+};
+
+export const getCrewRequirementRoleOptions = (role: CrewRequirementRole | null | undefined): string[] => {
+  const roles = uniqueCrewRoles([
+    ...(Array.isArray(role?.eligibleRoles) ? role?.eligibleRoles || [] : []),
+    role?.role,
+  ]);
+  return roles.length > 0 ? roles : ['Crew'];
+};
+
 export const normaliseCrewRequirement = (
   source?: CrewRequirement | null,
 ): CrewRequirement => {
@@ -32,6 +53,7 @@ export const normaliseCrewRequirement = (
             crewPositionId: String(role?.crewPositionId || '').trim() || undefined,
             role: roleText,
             count,
+            eligibleRoles: getCrewRequirementRoleOptions({ ...role, role: roleText, count }),
           };
         })
         .filter((role): role is CrewRequirementRole => Boolean(role))
@@ -47,8 +69,21 @@ export const crewRequirementFromAircraftComposition = (
   composition?: AircraftCrewComposition | null,
 ): CrewRequirement => {
   const source = composition || DEFAULT_AIRCRAFT_CREW_COMPOSITION;
+  const seats = source.seats || [];
+  const hasSeatAlternatives = seats.some((seat) => getAircraftSeatEligibleRoles(seat).length > 1);
+  if (hasSeatAlternatives) {
+    return {
+      mode: 'custom',
+      roles: seats.map((seat) => ({
+        role: String(seat.role || '').trim() || getAircraftSeatEligibleRoles(seat)[0] || 'Crew',
+        count: 1,
+        eligibleRoles: getAircraftSeatEligibleRoles(seat),
+      })),
+    };
+  }
+
   const grouped = new Map<string, CrewRequirementRole>();
-  (source.seats || []).forEach((seat) => {
+  seats.forEach((seat) => {
     const role = String(seat.role || '').trim() || 'Crew';
     const key = role.toUpperCase();
     const existing = grouped.get(key);
@@ -58,6 +93,7 @@ export const crewRequirementFromAircraftComposition = (
       grouped.set(key, {
         role,
         count: 1,
+        eligibleRoles: [role],
       });
     }
   });
@@ -102,7 +138,13 @@ export const formatCrewRequirementSummary = (
   const roles = getCrewRequirementRoles(requirement, aircraftComposition);
   if (roles.length === 0) return 'No crew required';
   return roles
-    .map((role) => `${getRoleDisplayLabel(role.role, terminology)} ${clampCrewRoleCount(role.count)}`)
+    .map((role) => {
+      const options = getCrewRequirementRoleOptions(role);
+      const label = options.length > 1
+        ? options.map((option) => getRoleDisplayLabel(option, terminology)).join(' or ')
+        : getRoleDisplayLabel(role.role, terminology);
+      return `${label} ${clampCrewRoleCount(role.count)}`;
+    })
     .join(', ');
 };
 

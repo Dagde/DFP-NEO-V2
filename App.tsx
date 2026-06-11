@@ -38,8 +38,8 @@ import {
 } from './utils/resourceDisplayNames';
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from './utils/aircraftConfigurationSettings';
-import { getAircraftTypeCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
-import { getCrewRequirementCount, getCrewRequirementRoles } from './utils/crewRequirements';
+import { getAircraftSeatEligibleRoles, getAircraftTypeCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
+import { getCrewRequirementCount, getCrewRequirementRoleOptions, getCrewRequirementRoles } from './utils/crewRequirements';
 import {
     readTileStatusSettingsFromLocalStorage,
     normaliseTileStatusSettings,
@@ -681,11 +681,11 @@ const DfpSidePanelTimeline: React.FC<{
     const isSingleSeatFlightResource = selectedResourceKind === 'flight' && aircraftCrewComposition.crewCount === 1;
     const requiredAssistCrewRoles = useMemo(() => (
         isAirCombatTileMode && selectedResourceKind === 'flight'
-            ? aircraftCrewComposition.seats.map(seat => String(seat.role || '').trim()).filter(Boolean)
+            ? aircraftCrewComposition.seats.flatMap(seat => getAircraftSeatEligibleRoles(seat)).filter(Boolean)
             : []
     ), [aircraftCrewComposition.seats, isAirCombatTileMode, selectedResourceKind]);
     const assistCrewSelectionLimit = isAirCombatTileMode && selectedResourceKind === 'flight'
-        ? Math.max(1, assistFormationSize) * Math.max(1, requiredAssistCrewRoles.length || aircraftCrewComposition.crewCount || 1)
+        ? Math.max(1, assistFormationSize) * Math.max(1, aircraftCrewComposition.crewCount || 1)
         : 1;
     const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === 'flight' && assistCrewSelectionLimit > 1;
     const isStaffPilotCrewPosition = useCallback((staff: Instructor): boolean => {
@@ -9304,11 +9304,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const airCombatWeights = normaliseAirCombatSchedulingWeights(
         config.airCombatSchedulingWeights
     );
-    const airCombatFlightCrewRoles = activeAircraftCrewComposition.seats
-        .map(seat => String(seat.role || '').trim())
-        .filter(Boolean);
+    const airCombatFlightCrewRoleGroups = activeAircraftCrewComposition.seats
+        .map(seat => getAircraftSeatEligibleRoles(seat).filter(Boolean))
+        .filter(group => group.length > 0);
     const getPriorityEventCrewCount = (event: ScheduleEvent): number => (
-        Math.max(1, getCrewRequirementCount(event.crewRequirement, activeAircraftCrewComposition) || airCombatFlightCrewRoles.length || activeAircraftCrewComposition.crewCount || 1)
+        Math.max(1, getCrewRequirementCount(event.crewRequirement, activeAircraftCrewComposition) || airCombatFlightCrewRoleGroups.length || activeAircraftCrewComposition.crewCount || 1)
     );
     const isAirCombatPilotStaff = (staff: Instructor): boolean => {
         const roleText = String(staff.role || '').trim().toLowerCase();
@@ -9320,8 +9320,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if (isPilotCrewPosition(requiredRole, activeCrewPositionTerminology)) return isAirCombatPilotStaff(staff);
         return Boolean(staff.name) && !staff.isAdminStaff && crewPositionValuesMatch(requiredRole, staff.role, activeCrewPositionTerminology);
     };
-    const getAirCombatStaffForCrewRole = (requiredRole: string): Instructor[] => (
-        instructors.filter(staff => airCombatStaffMatchesCrewRole(staff, requiredRole))
+    const airCombatStaffMatchesCrewRoleGroup = (staff: Instructor, requiredRoles: string[]): boolean => (
+        requiredRoles.some(requiredRole => airCombatStaffMatchesCrewRole(staff, requiredRole))
+    );
+    const formatCrewRoleGroup = (requiredRoles: string[]): string => (
+        requiredRoles.filter(Boolean).join(' or ') || 'Crew'
+    );
+    const getAirCombatStaffForCrewRoleGroup = (requiredRoles: string[]): Instructor[] => (
+        instructors.filter(staff => airCombatStaffMatchesCrewRoleGroup(staff, requiredRoles))
     );
     const airCombatRandomTieBreaks = new Map<string, number>();
     const getAirCombatTieBreak = (name: string): number => {
@@ -9543,24 +9549,27 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             requiredStaffCount: number
         ): { pilot: string; crew?: string; instructor?: string; rejectedStaff: number } | null => {
             if (isAirCombatBuild) {
-                const candidateCrewRoles = getCrewRequirementRoles(candidate.crewRequirement, activeAircraftCrewComposition)
-                    .flatMap(role => Array.from({ length: Math.max(0, Math.round(Number(role.count) || 0)) }, () => String(role.role || '').trim()))
-                    .filter(Boolean);
-                const requiredRoles = (candidateCrewRoles.length > 0 ? candidateCrewRoles : airCombatFlightCrewRoles.length > 0 ? airCombatFlightCrewRoles : ['Pilot'])
+                const candidateCrewRoleGroups = getCrewRequirementRoles(candidate.crewRequirement, activeAircraftCrewComposition)
+                    .flatMap(role => Array.from(
+                        { length: Math.max(0, Math.round(Number(role.count) || 0)) },
+                        () => getCrewRequirementRoleOptions(role).filter(Boolean)
+                    ))
+                    .filter(group => group.length > 0);
+                const requiredRoleGroups = (candidateCrewRoleGroups.length > 0 ? candidateCrewRoleGroups : airCombatFlightCrewRoleGroups.length > 0 ? airCombatFlightCrewRoleGroups : [['Pilot']])
                     .slice(0, Math.max(1, Math.min(2, requiredStaffCount)));
-                const primaryRequiredRole = requiredRoles[0] || 'Pilot';
-                const secondaryRequiredRole = requiredRoles[1] || 'Crew';
-                const priorityList = getTaskStaffPriorityList().filter(entry => airCombatStaffMatchesCrewRole(entry.staff, primaryRequiredRole));
+                const primaryRequiredRoles = requiredRoleGroups[0] || ['Pilot'];
+                const secondaryRequiredRoles = requiredRoleGroups[1] || ['Crew'];
+                const priorityList = getTaskStaffPriorityList().filter(entry => airCombatStaffMatchesCrewRoleGroup(entry.staff, primaryRequiredRoles));
                 neoBuildDiag.airCombatPriority.taskStaffPriorityList = priorityList.map(entry => ({
                     name: entry.staff.name,
                     role: entry.staff.role,
-                    requiredRole: primaryRequiredRole,
+                    requiredRole: formatCrewRoleGroup(primaryRequiredRoles),
                     taskingCompleted: entry.taskingCompleted,
                     lastTaskingDateValue: entry.lastTaskingDateValue || null,
                 }));
                 let rejectedStaff = 0;
-                const isValidForTasking = (staff: Instructor, proposed: Omit<ScheduleEvent, 'date'>, requiredRole: string): string | null => {
-                    if (!airCombatStaffMatchesCrewRole(staff, requiredRole)) return `ROLE_NOT_${requiredRole.replace(/\s+/g, '_').toUpperCase()}`;
+                const isValidForTasking = (staff: Instructor, proposed: Omit<ScheduleEvent, 'date'>, requiredRoles: string[]): string | null => {
+                    if (!airCombatStaffMatchesCrewRoleGroup(staff, requiredRoles)) return `ROLE_NOT_${formatCrewRoleGroup(requiredRoles).replace(/\s+/g, '_').toUpperCase()}`;
                     if (staff.isAdminStaff) return 'ADMIN_STAFF';
                     if (isPersonStaticallyUnavailable(staff, proposed.startTime, proposed.startTime + proposed.duration, buildDate, 'flight')) return 'STATIC_UNAVAILABLE';
                     if (generatedEvents.some(existing => priorityPersonnelConflict({ ...proposed, pilot: staff.name, crew: '' }, existing))) return 'PERSONNEL_CONFLICT';
@@ -9571,7 +9580,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 };
 
                 for (const primaryEntry of priorityList) {
-                    const primaryReason = isValidForTasking(primaryEntry.staff, candidate, primaryRequiredRole);
+                    const primaryReason = isValidForTasking(primaryEntry.staff, candidate, primaryRequiredRoles);
                     if (primaryReason) {
                         rejectedStaff++;
                         recordAirCombatSkip({
@@ -9586,13 +9595,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     if (requiredStaffCount === 1) {
                         return { pilot: primaryEntry.staff.name, crew: '', instructor: '', rejectedStaff };
                     }
-                    const secondaryList = getAirCombatStaffForCrewRole(secondaryRequiredRole)
+                    const secondaryList = getAirCombatStaffForCrewRoleGroup(secondaryRequiredRoles)
                         .filter(staff => staff.name !== primaryEntry.staff.name)
                         .map(staff => ({
                             staff,
                             taskingCompleted: getAirCombatTaskingEvents(staff.name).length,
                             lastTaskingDateValue: getMostRecentEventDateValue(getAirCombatTaskingEvents(staff.name)),
-                            tieBreak: getAirCombatTieBreak(`${secondaryRequiredRole}:${staff.name}`),
+                            tieBreak: getAirCombatTieBreak(`${formatCrewRoleGroup(secondaryRequiredRoles)}:${staff.name}`),
                         }))
                         .sort((left, right) =>
                             left.taskingCompleted - right.taskingCompleted ||
@@ -9601,7 +9610,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         );
                     for (const secondaryEntry of secondaryList) {
                         const dualCandidate = { ...candidate, pilot: primaryEntry.staff.name, crew: secondaryEntry.staff.name, instructor: '' };
-                        const secondaryReason = isValidForTasking(secondaryEntry.staff, dualCandidate, secondaryRequiredRole) ||
+                        const secondaryReason = isValidForTasking(secondaryEntry.staff, dualCandidate, secondaryRequiredRoles) ||
                             (generatedEvents.some(existing => priorityPersonnelConflict(dualCandidate, existing)) ? 'PERSONNEL_CONFLICT' : null);
                         if (secondaryReason) {
                             rejectedStaff++;

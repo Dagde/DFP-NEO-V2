@@ -20,6 +20,7 @@ export interface CrewRequirementRole {
   crewPositionId?: string;
   role: string;
   count: number;
+  eligibleRoles?: string[];
 }
 
 export interface CrewRequirement {

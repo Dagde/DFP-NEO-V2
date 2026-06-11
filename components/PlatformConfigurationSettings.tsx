@@ -36,7 +36,7 @@ import {
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConfigurationSettings';
-import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, getAircraftSeatEligibleRoles, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import {
   DEFAULT_CREW_POSITION_TERMINOLOGY,
   getCrewPositionLabelMap,
@@ -1409,11 +1409,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         aircraftTypes: shouldRenameSeats
           ? prev.aircraftTypes.map((aircraft) => {
               const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
-              const seats = crewComposition.seats.map((seat) => (
-                String(seat.role || '').trim().toUpperCase() === from.toUpperCase()
-                  ? { ...seat, role: to }
-                  : seat
-              ));
+              const seats = crewComposition.seats.map((seat) => ({
+                ...seat,
+                role: String(seat.role || '').trim().toUpperCase() === from.toUpperCase() ? to : seat.role,
+                eligibleRoles: getAircraftSeatEligibleRoles(seat).map((role) => (
+                  role.toUpperCase() === from.toUpperCase() ? to : role
+                )),
+              }));
               return {
                 ...aircraft,
                 crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats }),
@@ -1759,8 +1761,31 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const updateAircraftSeatRole = (aircraftIndex: number, seatIndex: number, role: string) => {
     const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
     const seats = current.seats.map((seat, index) => (
-      index === seatIndex ? { ...seat, role } : seat
+      index === seatIndex
+        ? { ...seat, role, eligibleRoles: Array.from(new Set([role, ...getAircraftSeatEligibleRoles(seat)])) }
+        : seat
     ));
+    updateRow('aircraftTypes', aircraftIndex, {
+      crewComposition: normaliseAircraftCrewComposition({ ...current, seats }),
+    });
+  };
+
+  const updateAircraftSeatEligibleRole = (aircraftIndex: number, seatIndex: number, role: string, checked: boolean) => {
+    const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
+    const seats = current.seats.map((seat, index) => {
+      if (index !== seatIndex) return seat;
+      const currentRoles = getAircraftSeatEligibleRoles(seat);
+      const nextRoles = checked
+        ? Array.from(new Set([...currentRoles, role]))
+        : currentRoles.filter((candidate) => candidate.toUpperCase() !== role.toUpperCase());
+      const eligibleRoles = nextRoles.length > 0 ? nextRoles : currentRoles;
+      const primaryRoleStillEligible = eligibleRoles.some((candidate) => candidate.toUpperCase() === String(seat.role || '').trim().toUpperCase());
+      return {
+        ...seat,
+        role: primaryRoleStillEligible ? seat.role : eligibleRoles[0],
+        eligibleRoles,
+      };
+    });
     updateRow('aircraftTypes', aircraftIndex, {
       crewComposition: normaliseAircraftCrewComposition({ ...current, seats }),
     });
@@ -3055,7 +3080,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
               const crewPositionOptions = getCrewPositionOptions(
                 crewPositionTerminology,
-                crewComposition.seats.map((seat) => seat.role),
+                crewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)),
               );
               return (
                 <div key={aircraft.id || `platform-aircraft-type-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
@@ -3066,7 +3091,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className="md:col-span-3">
                       <div className="text-sm font-bold text-orange-100">Crew Composition</div>
                       <div className="mt-1 text-xs text-orange-100/75">
-                        Defines the number of crew seats and aircrew role for this aircraft type. Seat roles use the organisation labels from Rank, Terminology & Labels. Single-seat aircraft automatically use Solo in new flight entry flows.
+                        Defines the number of crew seats and which configured roles may occupy each seat. Example: a PC-21 seat can allow Pilot and Trainee Pilot, while an F/A-18F rear seat can allow WSO. Single-seat aircraft automatically use Solo in new flight entry flows.
                       </div>
                     </div>
                     <NumberField
@@ -3075,18 +3100,48 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       disabled={!canEdit}
                       onChange={(value) => updateAircraftCrewCount(index, value)}
                     />
-                    <div className="grid gap-2 md:col-span-2 md:grid-cols-2">
-                      {crewComposition.seats.map((seat, seatIndex) => (
-                        <SelectField
-                          key={seat.id || `aircraft-seat-${seatIndex}`}
-                          label={`Seat ${seatIndex + 1} Role`}
-                          value={seat.role}
-                          disabled={!canEdit}
-                          options={crewPositionOptions}
-                          optionLabels={crewPositionLabelMap}
-                          onChange={(value) => updateAircraftSeatRole(index, seatIndex, value)}
-                        />
-                      ))}
+                    <div className="grid gap-2 md:col-span-2">
+                      {crewComposition.seats.map((seat, seatIndex) => {
+                        const eligibleRoles = getAircraftSeatEligibleRoles(seat);
+                        const selectedLabel = eligibleRoles.map((role) => crewPositionLabelMap[role] || role).join(', ');
+                        return (
+                          <div key={seat.id || `aircraft-seat-${seatIndex}`} className="rounded border border-orange-300/20 bg-gray-950/60 p-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <div className="text-xs font-bold uppercase tracking-wide text-orange-100">Seat {seatIndex + 1}</div>
+                                <div className="mt-0.5 text-[11px] text-orange-100/70">
+                                  Eligible: {selectedLabel || 'Select at least one role'}
+                                </div>
+                              </div>
+                              <SelectField
+                                label="Default"
+                                value={seat.role}
+                                disabled={!canEdit}
+                                options={eligibleRoles}
+                                optionLabels={crewPositionLabelMap}
+                                onChange={(value) => updateAircraftSeatRole(index, seatIndex, value)}
+                              />
+                            </div>
+                            <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                              {crewPositionOptions.map((role) => {
+                                const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                                return (
+                                  <label key={role} className="flex items-center gap-2 rounded border border-gray-800 bg-gray-900/80 px-2 py-1.5 text-xs font-semibold text-gray-100">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-gray-500 accent-orange-400"
+                                      checked={checked}
+                                      disabled={!canEdit || (checked && eligibleRoles.length <= 1)}
+                                      onChange={(event) => updateAircraftSeatEligibleRole(index, seatIndex, role, event.target.checked)}
+                                    />
+                                    <span>{crewPositionLabelMap[role] || role}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

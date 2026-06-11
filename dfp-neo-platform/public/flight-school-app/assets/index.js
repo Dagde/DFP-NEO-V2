@@ -2659,15 +2659,39 @@ const defaultRoleForSeat = (index) => {
   if (index === 0) return "Pilot";
   return `Crew ${index + 1}`;
 };
+const uniqueRoles = (values) => {
+  const seen = /* @__PURE__ */ new Set();
+  return values.map((value) => String(value || "").trim()).filter((value) => {
+    if (!value) return false;
+    const key = value.toUpperCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+const getAircraftSeatEligibleRoles = (seat) => {
+  const roles = uniqueRoles([
+    ...Array.isArray(seat?.eligibleRoles) ? seat?.eligibleRoles || [] : [],
+    ...Array.isArray(seat?.roles) ? seat.roles : [],
+    ...Array.isArray(seat?.allowedRoles) ? seat.allowedRoles : [],
+    seat?.role
+  ]);
+  return roles.length > 0 ? roles : ["Crew"];
+};
 const normaliseAircraftCrewComposition = (source) => {
   const raw = source?.crewComposition && typeof source.crewComposition === "object" ? source.crewComposition : source;
   const rawSeats = Array.isArray(raw?.seats) ? raw.seats : [];
   const crewCount = clampCrewCount(raw?.crewCount ?? rawSeats.length);
   const seats = Array.from({ length: crewCount }, (_, index) => {
     const existing = rawSeats[index] || {};
+    const fallbackRole = defaultRoleForSeat(index);
+    const role = String(existing.role || fallbackRole).trim() || fallbackRole;
+    const eligibleRoles = getAircraftSeatEligibleRoles({ ...existing, role });
+    const primaryRole = eligibleRoles.find((candidate) => candidate.toUpperCase() === role.toUpperCase()) || eligibleRoles[0];
     return {
       id: String(existing.id || `seat-${index + 1}`),
-      role: String(existing.role || defaultRoleForSeat(index)).trim() || defaultRoleForSeat(index)
+      role: primaryRole,
+      eligibleRoles
     };
   });
   return { crewCount, seats };
@@ -2783,6 +2807,23 @@ const getRoleDisplayLabel = (role, terminology) => {
   const entry = findCrewPositionEntry(role, terminology);
   return entry?.label || String(role || "").trim() || "Crew";
 };
+const uniqueCrewRoles = (values) => {
+  const seen = /* @__PURE__ */ new Set();
+  return values.map((value) => String(value || "").trim()).filter((value) => {
+    if (!value) return false;
+    const key = value.toUpperCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+const getCrewRequirementRoleOptions = (role) => {
+  const roles = uniqueCrewRoles([
+    ...Array.isArray(role?.eligibleRoles) ? role?.eligibleRoles || [] : [],
+    role?.role
+  ]);
+  return roles.length > 0 ? roles : ["Crew"];
+};
 const normaliseCrewRequirement = (source) => {
   const mode = source?.mode === "custom" ? "custom" : "aircraft_default";
   const roles = Array.isArray(source?.roles) ? source.roles.map((role) => {
@@ -2792,7 +2833,8 @@ const normaliseCrewRequirement = (source) => {
     return {
       crewPositionId: String(role?.crewPositionId || "").trim() || void 0,
       role: roleText,
-      count
+      count,
+      eligibleRoles: getCrewRequirementRoleOptions({ ...role, role: roleText })
     };
   }).filter((role) => Boolean(role)) : [];
   return {
@@ -2802,8 +2844,20 @@ const normaliseCrewRequirement = (source) => {
 };
 const crewRequirementFromAircraftComposition = (composition) => {
   const source = composition || DEFAULT_AIRCRAFT_CREW_COMPOSITION;
+  const seats = source.seats || [];
+  const hasSeatAlternatives = seats.some((seat) => getAircraftSeatEligibleRoles(seat).length > 1);
+  if (hasSeatAlternatives) {
+    return {
+      mode: "custom",
+      roles: seats.map((seat) => ({
+        role: String(seat.role || "").trim() || getAircraftSeatEligibleRoles(seat)[0] || "Crew",
+        count: 1,
+        eligibleRoles: getAircraftSeatEligibleRoles(seat)
+      }))
+    };
+  }
   const grouped = /* @__PURE__ */ new Map();
-  (source.seats || []).forEach((seat) => {
+  seats.forEach((seat) => {
     const role = String(seat.role || "").trim() || "Crew";
     const key = role.toUpperCase();
     const existing = grouped.get(key);
@@ -2812,7 +2866,8 @@ const crewRequirementFromAircraftComposition = (composition) => {
     } else {
       grouped.set(key, {
         role,
-        count: 1
+        count: 1,
+        eligibleRoles: [role]
       });
     }
   });
@@ -2833,7 +2888,11 @@ const getCrewRequirementCount = (requirement, aircraftComposition) => getCrewReq
 const formatCrewRequirementSummary = (requirement, aircraftComposition, terminology) => {
   const roles = getCrewRequirementRoles(requirement, aircraftComposition);
   if (roles.length === 0) return "No crew required";
-  return roles.map((role) => `${getRoleDisplayLabel(role.role, terminology)} ${clampCrewRoleCount(role.count)}`).join(", ");
+  return roles.map((role) => {
+    const options = getCrewRequirementRoleOptions(role);
+    const label = options.length > 1 ? options.map((option) => getRoleDisplayLabel(option, terminology)).join(" or ") : getRoleDisplayLabel(role.role, terminology);
+    return `${label} ${clampCrewRoleCount(role.count)}`;
+  }).join(", ");
 };
 const getCrewRequirementOptions = (terminology) => normaliseCrewPositionTerminology(terminology).positions.map((entry) => ({
   id: entry.id,
@@ -4388,7 +4447,8 @@ const CrewRequirementEditor = ({
               const selected = roleOptions.find((option) => option.value === event.target.value);
               updateRole(index, {
                 role: selected?.value || event.target.value,
-                crewPositionId: selected?.id
+                crewPositionId: selected?.id,
+                eligibleRoles: [selected?.value || event.target.value]
               });
             },
             className: "min-w-0 rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500",
@@ -50574,7 +50634,11 @@ const PlatformConfigurationSettings = ({
         organisations,
         aircraftTypes: shouldRenameSeats ? prev.aircraftTypes.map((aircraft) => {
           const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
-          const seats = crewComposition.seats.map((seat) => String(seat.role || "").trim().toUpperCase() === from.toUpperCase() ? { ...seat, role: to } : seat);
+          const seats = crewComposition.seats.map((seat) => ({
+            ...seat,
+            role: String(seat.role || "").trim().toUpperCase() === from.toUpperCase() ? to : seat.role,
+            eligibleRoles: getAircraftSeatEligibleRoles(seat).map((role) => role.toUpperCase() === from.toUpperCase() ? to : role)
+          }));
           return {
             ...aircraft,
             crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats })
@@ -50848,7 +50912,25 @@ const PlatformConfigurationSettings = ({
   };
   const updateAircraftSeatRole = (aircraftIndex, seatIndex, role) => {
     const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
-    const seats = current.seats.map((seat, index) => index === seatIndex ? { ...seat, role } : seat);
+    const seats = current.seats.map((seat, index) => index === seatIndex ? { ...seat, role, eligibleRoles: Array.from(/* @__PURE__ */ new Set([role, ...getAircraftSeatEligibleRoles(seat)])) } : seat);
+    updateRow("aircraftTypes", aircraftIndex, {
+      crewComposition: normaliseAircraftCrewComposition({ ...current, seats })
+    });
+  };
+  const updateAircraftSeatEligibleRole = (aircraftIndex, seatIndex, role, checked) => {
+    const current = normaliseAircraftCrewComposition(config.aircraftTypes[aircraftIndex]?.crewComposition);
+    const seats = current.seats.map((seat, index) => {
+      if (index !== seatIndex) return seat;
+      const currentRoles = getAircraftSeatEligibleRoles(seat);
+      const nextRoles = checked ? Array.from(/* @__PURE__ */ new Set([...currentRoles, role])) : currentRoles.filter((candidate) => candidate.toUpperCase() !== role.toUpperCase());
+      const eligibleRoles = nextRoles.length > 0 ? nextRoles : currentRoles;
+      const primaryRoleStillEligible = eligibleRoles.some((candidate) => candidate.toUpperCase() === String(seat.role || "").trim().toUpperCase());
+      return {
+        ...seat,
+        role: primaryRoleStillEligible ? seat.role : eligibleRoles[0],
+        eligibleRoles
+      };
+    });
     updateRow("aircraftTypes", aircraftIndex, {
       crewComposition: normaliseAircraftCrewComposition({ ...current, seats })
     });
@@ -51948,7 +52030,7 @@ const PlatformConfigurationSettings = ({
           const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           const crewPositionOptions = getCrewPositionOptions(
             crewPositionTerminology,
-            crewComposition.seats.map((seat) => seat.role)
+            crewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat))
           );
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
@@ -51957,7 +52039,7 @@ const PlatformConfigurationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-orange-400/25 bg-orange-500/10 p-3 md:col-span-3 md:grid-cols-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-orange-100", children: "Crew Composition" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-orange-100/75", children: "Defines the number of crew seats and aircrew role for this aircraft type. Seat roles use the organisation labels from Rank, Terminology & Labels. Single-seat aircraft automatically use Solo in new flight entry flows." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-orange-100/75", children: "Defines the number of crew seats and which configured roles may occupy each seat. Example: a PC-21 seat can allow Pilot and Trainee Pilot, while an F/A-18F rear seat can allow WSO. Single-seat aircraft automatically use Solo in new flight entry flows." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 NumberField,
@@ -51968,18 +52050,51 @@ const PlatformConfigurationSettings = ({
                   onChange: (value) => updateAircraftCrewCount(index, value)
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:col-span-2 md:grid-cols-2", children: crewComposition.seats.map((seat, seatIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                SelectField,
-                {
-                  label: `Seat ${seatIndex + 1} Role`,
-                  value: seat.role,
-                  disabled: !canEdit,
-                  options: crewPositionOptions,
-                  optionLabels: crewPositionLabelMap,
-                  onChange: (value) => updateAircraftSeatRole(index, seatIndex, value)
-                },
-                seat.id || `aircraft-seat-${seatIndex}`
-              )) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:col-span-2", children: crewComposition.seats.map((seat, seatIndex) => {
+                const eligibleRoles = getAircraftSeatEligibleRoles(seat);
+                const selectedLabel = eligibleRoles.map((role) => crewPositionLabelMap[role] || role).join(", ");
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-orange-300/20 bg-gray-950/60 p-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-bold uppercase tracking-wide text-orange-100", children: [
+                        "Seat ",
+                        seatIndex + 1
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 text-[11px] text-orange-100/70", children: [
+                        "Eligible: ",
+                        selectedLabel || "Select at least one role"
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      SelectField,
+                      {
+                        label: "Default",
+                        value: seat.role,
+                        disabled: !canEdit,
+                        options: eligibleRoles,
+                        optionLabels: crewPositionLabelMap,
+                        onChange: (value) => updateAircraftSeatRole(index, seatIndex, value)
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-1 sm:grid-cols-2", children: crewPositionOptions.map((role) => {
+                    const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded border border-gray-800 bg-gray-900/80 px-2 py-1.5 text-xs font-semibold text-gray-100", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "checkbox",
+                          className: "h-4 w-4 rounded border-gray-500 accent-orange-400",
+                          checked,
+                          disabled: !canEdit || checked && eligibleRoles.length <= 1,
+                          onChange: (event) => updateAircraftSeatEligibleRole(index, seatIndex, role, event.target.checked)
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: crewPositionLabelMap[role] || role })
+                    ] }, role);
+                  }) })
+                ] }, seat.id || `aircraft-seat-${seatIndex}`);
+              }) })
             ] })
           ] }, aircraft.id || `platform-aircraft-type-${index}`);
         }) }),
@@ -63867,8 +63982,8 @@ const DfpSidePanelTimeline = ({
   const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
   const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === "wizard";
   const isSingleSeatFlightResource = selectedResourceKind === "flight" && aircraftCrewComposition.crewCount === 1;
-  const requiredAssistCrewRoles = reactExports.useMemo(() => isAirCombatTileMode && selectedResourceKind === "flight" ? aircraftCrewComposition.seats.map((seat) => String(seat.role || "").trim()).filter(Boolean) : [], [aircraftCrewComposition.seats, isAirCombatTileMode, selectedResourceKind]);
-  const assistCrewSelectionLimit = isAirCombatTileMode && selectedResourceKind === "flight" ? Math.max(1, assistFormationSize) * Math.max(1, requiredAssistCrewRoles.length || aircraftCrewComposition.crewCount || 1) : 1;
+  const requiredAssistCrewRoles = reactExports.useMemo(() => isAirCombatTileMode && selectedResourceKind === "flight" ? aircraftCrewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)).filter(Boolean) : [], [aircraftCrewComposition.seats, isAirCombatTileMode, selectedResourceKind]);
+  const assistCrewSelectionLimit = isAirCombatTileMode && selectedResourceKind === "flight" ? Math.max(1, assistFormationSize) * Math.max(1, aircraftCrewComposition.crewCount || 1) : 1;
   const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === "flight" && assistCrewSelectionLimit > 1;
   const isStaffPilotCrewPosition = reactExports.useCallback((staff) => {
     const roleText = String(staff.role || "").trim().toLowerCase();
@@ -70689,8 +70804,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const airCombatWeights = normaliseAirCombatSchedulingWeights(
     config.airCombatSchedulingWeights
   );
-  const airCombatFlightCrewRoles = activeAircraftCrewComposition.seats.map((seat) => String(seat.role || "").trim()).filter(Boolean);
-  const getPriorityEventCrewCount = (event) => Math.max(1, getCrewRequirementCount(event.crewRequirement, activeAircraftCrewComposition) || airCombatFlightCrewRoles.length || activeAircraftCrewComposition.crewCount || 1);
+  const airCombatFlightCrewRoleGroups = activeAircraftCrewComposition.seats.map((seat) => getAircraftSeatEligibleRoles(seat).filter(Boolean)).filter((group) => group.length > 0);
+  const getPriorityEventCrewCount = (event) => Math.max(1, getCrewRequirementCount(event.crewRequirement, activeAircraftCrewComposition) || airCombatFlightCrewRoleGroups.length || activeAircraftCrewComposition.crewCount || 1);
   const isAirCombatPilotStaff = (staff) => {
     const roleText = String(staff.role || "").trim().toLowerCase();
     return Boolean(staff.name) && !staff.isAdminStaff && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
@@ -70699,7 +70814,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (isPilotCrewPosition(requiredRole, activeCrewPositionTerminology)) return isAirCombatPilotStaff(staff);
     return Boolean(staff.name) && !staff.isAdminStaff && crewPositionValuesMatch(requiredRole, staff.role, activeCrewPositionTerminology);
   };
-  const getAirCombatStaffForCrewRole = (requiredRole) => instructors.filter((staff) => airCombatStaffMatchesCrewRole(staff, requiredRole));
+  const airCombatStaffMatchesCrewRoleGroup = (staff, requiredRoles) => requiredRoles.some((requiredRole) => airCombatStaffMatchesCrewRole(staff, requiredRole));
+  const formatCrewRoleGroup = (requiredRoles) => requiredRoles.filter(Boolean).join(" or ") || "Crew";
+  const getAirCombatStaffForCrewRoleGroup = (requiredRoles) => instructors.filter((staff) => airCombatStaffMatchesCrewRoleGroup(staff, requiredRoles));
   const airCombatRandomTieBreaks = /* @__PURE__ */ new Map();
   const getAirCombatTieBreak = (name) => {
     if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, Math.random());
@@ -70903,21 +71020,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const assignTaskingStaff = (candidate, requiredStaffCount) => {
       if (isAirCombatBuild) {
-        const candidateCrewRoles = getCrewRequirementRoles(candidate.crewRequirement, activeAircraftCrewComposition).flatMap((role) => Array.from({ length: Math.max(0, Math.round(Number(role.count) || 0)) }, () => String(role.role || "").trim())).filter(Boolean);
-        const requiredRoles = (candidateCrewRoles.length > 0 ? candidateCrewRoles : airCombatFlightCrewRoles.length > 0 ? airCombatFlightCrewRoles : ["Pilot"]).slice(0, Math.max(1, Math.min(2, requiredStaffCount)));
-        const primaryRequiredRole = requiredRoles[0] || "Pilot";
-        const secondaryRequiredRole = requiredRoles[1] || "Crew";
-        const priorityList = getTaskStaffPriorityList().filter((entry) => airCombatStaffMatchesCrewRole(entry.staff, primaryRequiredRole));
+        const candidateCrewRoleGroups = getCrewRequirementRoles(candidate.crewRequirement, activeAircraftCrewComposition).flatMap((role) => Array.from(
+          { length: Math.max(0, Math.round(Number(role.count) || 0)) },
+          () => getCrewRequirementRoleOptions(role).filter(Boolean)
+        )).filter((group) => group.length > 0);
+        const requiredRoleGroups = (candidateCrewRoleGroups.length > 0 ? candidateCrewRoleGroups : airCombatFlightCrewRoleGroups.length > 0 ? airCombatFlightCrewRoleGroups : [["Pilot"]]).slice(0, Math.max(1, Math.min(2, requiredStaffCount)));
+        const primaryRequiredRoles = requiredRoleGroups[0] || ["Pilot"];
+        const secondaryRequiredRoles = requiredRoleGroups[1] || ["Crew"];
+        const priorityList = getTaskStaffPriorityList().filter((entry) => airCombatStaffMatchesCrewRoleGroup(entry.staff, primaryRequiredRoles));
         neoBuildDiag.airCombatPriority.taskStaffPriorityList = priorityList.map((entry) => ({
           name: entry.staff.name,
           role: entry.staff.role,
-          requiredRole: primaryRequiredRole,
+          requiredRole: formatCrewRoleGroup(primaryRequiredRoles),
           taskingCompleted: entry.taskingCompleted,
           lastTaskingDateValue: entry.lastTaskingDateValue || null
         }));
         let rejectedStaff2 = 0;
-        const isValidForTasking = (staff, proposed, requiredRole) => {
-          if (!airCombatStaffMatchesCrewRole(staff, requiredRole)) return `ROLE_NOT_${requiredRole.replace(/\s+/g, "_").toUpperCase()}`;
+        const isValidForTasking = (staff, proposed, requiredRoles) => {
+          if (!airCombatStaffMatchesCrewRoleGroup(staff, requiredRoles)) return `ROLE_NOT_${formatCrewRoleGroup(requiredRoles).replace(/\s+/g, "_").toUpperCase()}`;
           if (staff.isAdminStaff) return "ADMIN_STAFF";
           if (isPersonStaticallyUnavailable(staff, proposed.startTime, proposed.startTime + proposed.duration, buildDate, "flight")) return "STATIC_UNAVAILABLE";
           if (generatedEvents.some((existing) => priorityPersonnelConflict({ ...proposed, pilot: staff.name, crew: "" }, existing))) return "PERSONNEL_CONFLICT";
@@ -70927,7 +71047,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           return null;
         };
         for (const primaryEntry of priorityList) {
-          const primaryReason = isValidForTasking(primaryEntry.staff, candidate, primaryRequiredRole);
+          const primaryReason = isValidForTasking(primaryEntry.staff, candidate, primaryRequiredRoles);
           if (primaryReason) {
             rejectedStaff2++;
             recordAirCombatSkip({
@@ -70942,17 +71062,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (requiredStaffCount === 1) {
             return { pilot: primaryEntry.staff.name, crew: "", instructor: "", rejectedStaff: rejectedStaff2 };
           }
-          const secondaryList = getAirCombatStaffForCrewRole(secondaryRequiredRole).filter((staff) => staff.name !== primaryEntry.staff.name).map((staff) => ({
+          const secondaryList = getAirCombatStaffForCrewRoleGroup(secondaryRequiredRoles).filter((staff) => staff.name !== primaryEntry.staff.name).map((staff) => ({
             staff,
             taskingCompleted: getAirCombatTaskingEvents(staff.name).length,
             lastTaskingDateValue: getMostRecentEventDateValue(getAirCombatTaskingEvents(staff.name)),
-            tieBreak: getAirCombatTieBreak(`${secondaryRequiredRole}:${staff.name}`)
+            tieBreak: getAirCombatTieBreak(`${formatCrewRoleGroup(secondaryRequiredRoles)}:${staff.name}`)
           })).sort(
             (left, right) => left.taskingCompleted - right.taskingCompleted || left.lastTaskingDateValue - right.lastTaskingDateValue || left.tieBreak - right.tieBreak
           );
           for (const secondaryEntry of secondaryList) {
             const dualCandidate = { ...candidate, pilot: primaryEntry.staff.name, crew: secondaryEntry.staff.name, instructor: "" };
-            const secondaryReason = isValidForTasking(secondaryEntry.staff, dualCandidate, secondaryRequiredRole) || (generatedEvents.some((existing) => priorityPersonnelConflict(dualCandidate, existing)) ? "PERSONNEL_CONFLICT" : null);
+            const secondaryReason = isValidForTasking(secondaryEntry.staff, dualCandidate, secondaryRequiredRoles) || (generatedEvents.some((existing) => priorityPersonnelConflict(dualCandidate, existing)) ? "PERSONNEL_CONFLICT" : null);
             if (secondaryReason) {
               rejectedStaff2++;
               recordAirCombatSkip({
