@@ -67478,6 +67478,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const timingReport = config.timingReport;
   const buildOperationalModel = normaliseOperationalModel(config.operationalModel || "flight_school");
   const buildActiveUnitCode = String(config.activeUnitCode || "").trim().toUpperCase();
+  const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
+  const buildAircraftCrewComposition = config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: "seat-1", role: "Pilot", eligibleRoles: ["Pilot"] }] };
   const markBuildTiming = (name, details) => markNeoBuildTiming(timingReport, name, details);
   const recordProgress = (progress) => {
     markBuildTiming(`progress:${progress.message}`, {
@@ -67941,8 +67943,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       },
       crewConfiguration: {
         operationalModel: buildOperationalModel,
-        crewPositionTerminology: normaliseCrewPositionTerminology(activeCrewPositionTerminology),
-        activeAircraftCrewComposition
+        crewPositionTerminology: normaliseCrewPositionTerminology(buildCrewPositionTerminology),
+        buildAircraftCrewComposition
       }
     },
     activeTrainees: {
@@ -68035,7 +68037,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         staffTotal: originalInstructors.length,
         pilotRoleStaff: originalInstructors.filter((staff) => {
           const roleText = String(staff.role || "").trim().toLowerCase();
-          return !staff.isAdminStaff && Boolean(staff.name) && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
+          return !staff.isAdminStaff && Boolean(staff.name) && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
         }).length,
         highestPriorityEvents: highestPriorityEvents.length,
         syllabusItems: syllabusDetails.length,
@@ -71088,15 +71090,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const airCombatWeights = normaliseAirCombatSchedulingWeights(
     config.airCombatSchedulingWeights
   );
-  const airCombatFlightCrewRoleGroups = activeAircraftCrewComposition.seats.map((seat) => getAircraftSeatEligibleRoles(seat).filter(Boolean)).filter((group) => group.length > 0);
-  const getPriorityEventCrewCount = (event) => Math.max(1, getCrewRequirementCount(event.crewRequirement, activeAircraftCrewComposition) || airCombatFlightCrewRoleGroups.length || activeAircraftCrewComposition.crewCount || 1);
+  const airCombatFlightCrewRoleGroups = buildAircraftCrewComposition.seats.map((seat) => getAircraftSeatEligibleRoles(seat).filter(Boolean)).filter((group) => group.length > 0);
+  const getPriorityEventCrewCount = (event) => Math.max(1, getCrewRequirementCount(event.crewRequirement, buildAircraftCrewComposition) || airCombatFlightCrewRoleGroups.length || buildAircraftCrewComposition.crewCount || 1);
   const isAirCombatPilotStaff = (staff) => {
     const roleText = String(staff.role || "").trim().toLowerCase();
-    return Boolean(staff.name) && !staff.isAdminStaff && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
+    return Boolean(staff.name) && !staff.isAdminStaff && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
   };
   const airCombatStaffMatchesCrewRole = (staff, requiredRole) => {
-    if (isPilotCrewPosition(requiredRole, activeCrewPositionTerminology)) return isAirCombatPilotStaff(staff);
-    return Boolean(staff.name) && !staff.isAdminStaff && crewPositionValuesMatch(requiredRole, staff.role, activeCrewPositionTerminology);
+    if (isPilotCrewPosition(requiredRole, buildCrewPositionTerminology)) return isAirCombatPilotStaff(staff);
+    return Boolean(staff.name) && !staff.isAdminStaff && crewPositionValuesMatch(requiredRole, staff.role, buildCrewPositionTerminology);
   };
   const airCombatStaffMatchesCrewRoleGroup = (staff, requiredRoles) => requiredRoles.some((requiredRole) => airCombatStaffMatchesCrewRole(staff, requiredRole));
   const formatCrewRoleGroup = (requiredRoles) => requiredRoles.filter(Boolean).join(" or ") || "Crew";
@@ -71210,7 +71212,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const summariseCrewRoleGroups = (roleGroups) => roleGroups.map((group) => formatCrewRoleGroup(group));
   const getResolvedCrewRoleGroupsForEvent = (event, requiredStaffCount) => {
-    const configuredGroups = getCrewRequirementRoles(event.crewRequirement, activeAircraftCrewComposition).flatMap((role) => Array.from(
+    const configuredGroups = getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition).flatMap((role) => Array.from(
       { length: Math.max(0, Math.round(Number(role.count) || 0)) },
       () => getCrewRequirementRoleOptions(role).filter(Boolean)
     )).filter((group) => group.length > 0);
@@ -71219,7 +71221,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return (configuredGroups.length > 0 ? configuredGroups : fallbackGroups).slice(0, crewLimit);
   };
   const getCrewRequirementDiagnostic = (event, requiredStaffCount) => {
-    const rawRoles = getCrewRequirementRoles(event.crewRequirement, activeAircraftCrewComposition).map((role) => ({
+    const rawRoles = getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition).map((role) => ({
       role: role.role,
       count: role.count,
       eligibleRoles: getCrewRequirementRoleOptions(role)
@@ -71238,18 +71240,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const refreshAirCombatStaffAndAssignmentAudit = () => {
     if (!isAirCombatBuild) return;
     const pilotStaff = instructors.filter(isAirCombatPilotStaff);
-    const terminology = normaliseCrewPositionTerminology(activeCrewPositionTerminology);
+    const terminology = normaliseCrewPositionTerminology(buildCrewPositionTerminology);
     const allCrewRoles = terminology.positions.map((position) => position.genericName);
     neoBuildDiag.airCombatPriority.crewConfigurationAudit = {
       operationalModel: buildOperationalModel,
       terminology,
-      activeAircraftCrewComposition,
+      buildAircraftCrewComposition,
       aircraftSeatRoleGroups: airCombatFlightCrewRoleGroups,
       aircraftSeatRoleGroupLabels: summariseCrewRoleGroups(airCombatFlightCrewRoleGroups)
     };
     neoBuildDiag.airCombatPriority.staffAudit = instructors.map((staff) => {
       const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
-      const matchedCrewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
+      const matchedCrewPosition = findCrewPositionEntry(staff.role, buildCrewPositionTerminology);
       return {
         name: staff.name,
         role: staff.role || null,
@@ -71272,7 +71274,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const matchingStaff = instructors.filter((staff) => airCombatStaffMatchesCrewRole(staff, role));
       return {
         role,
-        label: findCrewPositionEntry(role, activeCrewPositionTerminology)?.label || role,
+        label: findCrewPositionEntry(role, buildCrewPositionTerminology)?.label || role,
         matchingStaffCount: matchingStaff.length,
         matchingStaff: matchingStaff.slice(0, 80).map((staff) => ({
           name: staff.name,
@@ -76439,11 +76441,11 @@ const App = () => {
     () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
     [activeResourcePoolUnitCode, platformConfig, school]
   );
-  const activeAircraftCrewComposition2 = reactExports.useMemo(
+  const activeAircraftCrewComposition = reactExports.useMemo(
     () => getAircraftTypeCrewComposition(platformConfig, activePlatformResourcePool?.aircraftTypeCode),
     [activePlatformResourcePool?.aircraftTypeCode, platformConfig]
   );
-  const activeCrewPositionTerminology2 = reactExports.useMemo(() => {
+  const activeCrewPositionTerminology = reactExports.useMemo(() => {
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
     return normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
   }, [platformConfig]);
@@ -83425,6 +83427,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       resourceDisplayNames,
       aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
       aircraftConfigIdsByResource: buildAircraftConfigIdsByResource(currentAircraftConfigState),
+      aircraftCrewComposition: activeAircraftCrewComposition,
+      crewPositionTerminology: activeCrewPositionTerminology,
       remedialPrioritySyncTrace: window.__lastRemedialPrioritySyncTrace || [],
       remedialDataMovementTrace: window.__lastRemedialDataMovementTrace || [],
       taskProvenancePreBuild: window.__lastTaskingProvenancePreBuild || null,
@@ -83550,10 +83554,10 @@ ${conflictLines.join("\n")}${moreText}`,
             remedialRequests: config.remedialRequests.length,
             operationalModel: activeOperationalModel,
             activeUnitCode,
-            crewPositionTerminology: normaliseCrewPositionTerminology(activeCrewPositionTerminology2),
-            activeAircraftCrewComposition: activeAircraftCrewComposition2,
+            crewPositionTerminology: normaliseCrewPositionTerminology(activeCrewPositionTerminology),
+            activeAircraftCrewComposition,
             staffRoleSummary: instructorsData.slice(0, 200).map((staff) => {
-              const matchedCrewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology2);
+              const matchedCrewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
               return {
                 name: staff.name,
                 role: staff.role || null,
@@ -83607,7 +83611,7 @@ ${conflictLines.join("\n")}${moreText}`,
               staffTotal: instructorsData.length,
               pilotRoleStaff: instructorsData.filter((staff) => {
                 const roleText = String(staff.role || "").trim().toLowerCase();
-                return !staff.isAdminStaff && Boolean(staff.name) && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, activeCrewPositionTerminology2));
+                return !staff.isAdminStaff && Boolean(staff.name) && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
               }).length,
               highestPriorityEvents: config.highestPriorityEvents.length,
               syllabusItems: syllabusDetails.length
@@ -87385,9 +87389,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             buildDfpDate,
             highestPriorityEvents,
             activeScheduleEvents: Object.values(publishedSchedules).flat(),
-            isSingleSeatAircraft: activeAircraftCrewComposition2.crewCount === 1,
-            aircraftCrewComposition: activeAircraftCrewComposition2,
-            crewPositionTerminology: activeCrewPositionTerminology2,
+            isSingleSeatAircraft: activeAircraftCrewComposition.crewCount === 1,
+            aircraftCrewComposition: activeAircraftCrewComposition,
+            crewPositionTerminology: activeCrewPositionTerminology,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             onAddPriorityEvents: (eventsToAdd) => {
               setHighestPriorityEvents((prev) => {
@@ -87410,7 +87414,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 id: v4(),
                 name: "",
                 event: "SCT GF",
-                flightType: type === "flight" && activeAircraftCrewComposition2.crewCount === 1 ? "Solo" : "Dual",
+                flightType: type === "flight" && activeAircraftCrewComposition.crewCount === 1 ? "Solo" : "Dual",
                 currency: "",
                 currencyExpire: "",
                 priority: "Medium",
@@ -87462,7 +87466,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               }
             },
             onUpdateSctRequest: async (id, field, value, type) => {
-              const effectiveValue = type === "flight" && field === "flightType" && activeAircraftCrewComposition2.crewCount === 1 ? "Solo" : value;
+              const effectiveValue = type === "flight" && field === "flightType" && activeAircraftCrewComposition.crewCount === 1 ? "Solo" : value;
               const updater = (prev) => prev.map((r) => r.id === id ? { ...r, [field]: effectiveValue } : r);
               if (type === "flight") setSctFlights(updater);
               else setSctFtds(updater);
@@ -87909,7 +87913,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             personnelDisplaySettings,
             instructorLabel,
             operationalModel: activeOperationalModel,
-            crewPositionTerminology: activeCrewPositionTerminology2
+            crewPositionTerminology: activeCrewPositionTerminology
           }
         );
       case "Instructors":
@@ -88029,7 +88033,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             personnelDisplaySettings,
             instructorLabel,
             operationalModel: activeOperationalModel,
-            crewPositionTerminology: activeCrewPositionTerminology2
+            crewPositionTerminology: activeCrewPositionTerminology
           }
         );
       case "Trainees":
@@ -88237,8 +88241,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSave: handleSaveCurrencies,
             onDelete: handleDeleteCurrency,
             onImportFromUnit: importCurrencyDefinitionsFromUnit,
-            aircraftCrewComposition: activeAircraftCrewComposition2,
-            crewPositionTerminology: activeCrewPositionTerminology2,
+            aircraftCrewComposition: activeAircraftCrewComposition,
+            crewPositionTerminology: activeCrewPositionTerminology,
             operationalModel: activeOperationalModel
           }
         );
@@ -89114,8 +89118,8 @@ Do you want to replace the existing entry?`,
                     onUpdateAircraftCount: setNeoAvailableAircraftCount,
                     aircraftConfigCapacities: neoAircraftConfigCapacities,
                     aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
-                    aircraftCrewComposition: activeAircraftCrewComposition2,
-                    crewPositionTerminology: activeCrewPositionTerminology2,
+                    aircraftCrewComposition: activeAircraftCrewComposition,
+                    crewPositionTerminology: activeCrewPositionTerminology,
                     onUpdateAircraftConfigCapacities: setNeoAircraftConfigCapacities,
                     availableFtdCount,
                     onUpdateFtdCount: setAvailableFtdCount,
@@ -89263,7 +89267,7 @@ Do you want to replace the existing entry?`,
           userId: getCurrentUserId() ?? void 0,
           aircraftNumberSettings,
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
-          aircraftCrewComposition: activeAircraftCrewComposition2,
+          aircraftCrewComposition: activeAircraftCrewComposition,
           operationalModel: activeOperationalModel,
           personnelDisplaySettings
         }
@@ -89410,8 +89414,8 @@ Do you want to replace the existing entry?`,
           resourceDisplayNames,
           aircraftNumberSettings,
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
-          aircraftCrewComposition: activeAircraftCrewComposition2,
-          crewPositionTerminology: activeCrewPositionTerminology2,
+          aircraftCrewComposition: activeAircraftCrewComposition,
+          crewPositionTerminology: activeCrewPositionTerminology,
           operationalModel: activeOperationalModel
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`

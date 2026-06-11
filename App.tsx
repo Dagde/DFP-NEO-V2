@@ -3980,6 +3980,8 @@ interface DfpConfig {
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
   aircraftConfigIdsByResource?: Record<string, string>;
+  aircraftCrewComposition?: AircraftCrewComposition;
+  crewPositionTerminology?: CrewPositionTerminology;
   remedialPrioritySyncTrace?: any[];
   remedialDataMovementTrace?: any[];
   taskProvenancePreBuild?: any;
@@ -4832,6 +4834,8 @@ function generateDfpInternal(
     const timingReport = config.timingReport;
     const buildOperationalModel = normaliseOperationalModel(config.operationalModel || 'flight_school');
     const buildActiveUnitCode = String(config.activeUnitCode || '').trim().toUpperCase();
+    const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
+    const buildAircraftCrewComposition = config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: 'seat-1', role: 'Pilot', eligibleRoles: ['Pilot'] }] };
     const markBuildTiming = (name: string, details?: Record<string, any>) => markNeoBuildTiming(timingReport, name, details);
     const recordProgress = (progress: { message: string, percentage: number }) => {
         markBuildTiming(`progress:${progress.message}`, {
@@ -5459,8 +5463,8 @@ function generateDfpInternal(
             },
             crewConfiguration: {
                 operationalModel: buildOperationalModel,
-                crewPositionTerminology: normaliseCrewPositionTerminology(activeCrewPositionTerminology),
-                activeAircraftCrewComposition,
+                crewPositionTerminology: normaliseCrewPositionTerminology(buildCrewPositionTerminology),
+                buildAircraftCrewComposition,
             },
         },
         activeTrainees: {
@@ -5554,7 +5558,7 @@ function generateDfpInternal(
                 pilotRoleStaff: originalInstructors.filter(staff => {
                     const roleText = String(staff.role || '').trim().toLowerCase();
                     return !staff.isAdminStaff && Boolean(staff.name) &&
-                        (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
+                        (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
                 }).length,
                 highestPriorityEvents: highestPriorityEvents.length,
                 syllabusItems: syllabusDetails.length,
@@ -9313,21 +9317,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const airCombatWeights = normaliseAirCombatSchedulingWeights(
         config.airCombatSchedulingWeights
     );
-    const airCombatFlightCrewRoleGroups = activeAircraftCrewComposition.seats
+    const airCombatFlightCrewRoleGroups = buildAircraftCrewComposition.seats
         .map(seat => getAircraftSeatEligibleRoles(seat).filter(Boolean))
         .filter(group => group.length > 0);
     const getPriorityEventCrewCount = (event: ScheduleEvent): number => (
-        Math.max(1, getCrewRequirementCount(event.crewRequirement, activeAircraftCrewComposition) || airCombatFlightCrewRoleGroups.length || activeAircraftCrewComposition.crewCount || 1)
+        Math.max(1, getCrewRequirementCount(event.crewRequirement, buildAircraftCrewComposition) || airCombatFlightCrewRoleGroups.length || buildAircraftCrewComposition.crewCount || 1)
     );
     const isAirCombatPilotStaff = (staff: Instructor): boolean => {
         const roleText = String(staff.role || '').trim().toLowerCase();
         return Boolean(staff.name) &&
             !staff.isAdminStaff &&
-            (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
+            (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
     };
     const airCombatStaffMatchesCrewRole = (staff: Instructor, requiredRole: string): boolean => {
-        if (isPilotCrewPosition(requiredRole, activeCrewPositionTerminology)) return isAirCombatPilotStaff(staff);
-        return Boolean(staff.name) && !staff.isAdminStaff && crewPositionValuesMatch(requiredRole, staff.role, activeCrewPositionTerminology);
+        if (isPilotCrewPosition(requiredRole, buildCrewPositionTerminology)) return isAirCombatPilotStaff(staff);
+        return Boolean(staff.name) && !staff.isAdminStaff && crewPositionValuesMatch(requiredRole, staff.role, buildCrewPositionTerminology);
     };
     const airCombatStaffMatchesCrewRoleGroup = (staff: Instructor, requiredRoles: string[]): boolean => (
         requiredRoles.some(requiredRole => airCombatStaffMatchesCrewRole(staff, requiredRole))
@@ -9458,7 +9462,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         roleGroups.map(group => formatCrewRoleGroup(group))
     );
     const getResolvedCrewRoleGroupsForEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>, requiredStaffCount?: number): string[][] => {
-        const configuredGroups = getCrewRequirementRoles(event.crewRequirement, activeAircraftCrewComposition)
+        const configuredGroups = getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition)
             .flatMap(role => Array.from(
                 { length: Math.max(0, Math.round(Number(role.count) || 0)) },
                 () => getCrewRequirementRoleOptions(role).filter(Boolean)
@@ -9469,7 +9473,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return (configuredGroups.length > 0 ? configuredGroups : fallbackGroups).slice(0, crewLimit);
     };
     const getCrewRequirementDiagnostic = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>, requiredStaffCount?: number) => {
-        const rawRoles = getCrewRequirementRoles(event.crewRequirement, activeAircraftCrewComposition).map(role => ({
+        const rawRoles = getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition).map(role => ({
             role: role.role,
             count: role.count,
             eligibleRoles: getCrewRequirementRoleOptions(role),
@@ -9488,18 +9492,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const refreshAirCombatStaffAndAssignmentAudit = () => {
         if (!isAirCombatBuild) return;
         const pilotStaff = instructors.filter(isAirCombatPilotStaff);
-        const terminology = normaliseCrewPositionTerminology(activeCrewPositionTerminology);
+        const terminology = normaliseCrewPositionTerminology(buildCrewPositionTerminology);
         const allCrewRoles = terminology.positions.map(position => position.genericName);
         neoBuildDiag.airCombatPriority.crewConfigurationAudit = {
             operationalModel: buildOperationalModel,
             terminology,
-            activeAircraftCrewComposition,
+            buildAircraftCrewComposition,
             aircraftSeatRoleGroups: airCombatFlightCrewRoleGroups,
             aircraftSeatRoleGroupLabels: summariseCrewRoleGroups(airCombatFlightCrewRoleGroups),
         };
         neoBuildDiag.airCombatPriority.staffAudit = instructors.map(staff => {
             const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
-            const matchedCrewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
+            const matchedCrewPosition = findCrewPositionEntry(staff.role, buildCrewPositionTerminology);
             return {
                 name: staff.name,
                 role: staff.role || null,
@@ -9522,7 +9526,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const matchingStaff = instructors.filter(staff => airCombatStaffMatchesCrewRole(staff, role));
             return {
                 role,
-                label: findCrewPositionEntry(role, activeCrewPositionTerminology)?.label || role,
+                label: findCrewPositionEntry(role, buildCrewPositionTerminology)?.label || role,
                 matchingStaffCount: matchingStaff.length,
                 matchingStaff: matchingStaff.slice(0, 80).map(staff => ({
                     name: staff.name,
@@ -24516,6 +24520,8 @@ const App: React.FC = () => {
             resourceDisplayNames,
             aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
             aircraftConfigIdsByResource: buildAircraftConfigIdsByResource(currentAircraftConfigState),
+            aircraftCrewComposition: activeAircraftCrewComposition,
+            crewPositionTerminology: activeCrewPositionTerminology,
             remedialPrioritySyncTrace: (window as any).__lastRemedialPrioritySyncTrace || [],
             remedialDataMovementTrace: (window as any).__lastRemedialDataMovementTrace || [],
             taskProvenancePreBuild: (window as any).__lastTaskingProvenancePreBuild || null,
