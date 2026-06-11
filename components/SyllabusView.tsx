@@ -3,10 +3,14 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Instructor, PhraseBank, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
+import CrewRequirementEditor from './CrewRequirementEditor';
 import { logAudit } from '../utils/auditLogger';
 import { createSyllabusItem, updateSyllabusItem, retireSyllabusItem, clearSyllabusCache } from '../lib/syllabusService';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { formatCrewRequirementSummary } from '../utils/crewRequirements';
 import {
     ANY_AIRCRAFT_CONFIG,
     formatAircraftConfigurationSummary,
@@ -29,6 +33,8 @@ interface SyllabusViewProps {
   onAddItem?: (item: SyllabusItemDetail) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftConfigurations?: AircraftConfigurationDefinition[];
+  aircraftCrewComposition?: AircraftCrewComposition;
+  crewPositionTerminology?: CrewPositionTerminology;
   activeLocationCode?: string;
   activeUnitCode?: string;
   trainingPackageTemplates?: SyllabusItemDetail[];
@@ -395,13 +401,16 @@ const DetailView: React.FC<{
     onDeleteEvent?: (item: SyllabusItemDetail) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftConfigurations?: AircraftConfigurationDefinition[];
+    aircraftCrewComposition?: AircraftCrewComposition;
+    crewPositionTerminology?: CrewPositionTerminology;
     isAirCombatModel?: boolean;
+    operationalModel?: string;
     scoringMatrixElements?: string[];
     onAddScoringMatrixElement?: () => void;
     linkedEventOptions?: SyllabusItemDetail[];
     linkedEventOverrides?: Record<string, string>;
     onLinkedEventChange?: (item: SyllabusItemDetail, linkedEventCode: string) => void | Promise<void>;
-}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, isAirCombatModel = false, operationalModel = 'flight_school', scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -578,6 +587,15 @@ const DetailView: React.FC<{
                             definitions={aircraftConfigurations}
                             onChange={(value) => handleFieldChange('acceptableAircraftConfigs', value)}
                         />
+                        <div className="md:col-span-2 lg:col-span-3">
+                            <CrewRequirementEditor
+                                value={currentItem.crewRequirement}
+                                aircraftCrewComposition={aircraftCrewComposition}
+                                crewPositionTerminology={crewPositionTerminology}
+                                operationalModel={operationalModel}
+                                onChange={(value) => handleFieldChange('crewRequirement', value)}
+                            />
+                        </div>
                         <div className="bg-gray-700/50 p-1 rounded-lg">
                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Pre-Flight (min)</label>
                             <input
@@ -669,6 +687,11 @@ const DetailView: React.FC<{
                         <DetailCard
                             label={<span className="flex items-center">CONFIG<AircraftConfigInfoIcon definitions={aircraftConfigurations} /></span>}
                             value={formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)}
+                        />
+                        <DetailCard
+                            className="md:col-span-2 lg:col-span-3"
+                            label="Crew Required"
+                            value={formatCrewRequirementSummary(item.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}
                         />
                         <DetailCard label="Pre-Flight" value={<>{Math.round(item.preFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
                         <DetailCard label="Post-Flight" value={<>{Math.round(item.postFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
@@ -820,6 +843,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     onAddItem,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     aircraftConfigurations = [],
+    aircraftCrewComposition,
+    crewPositionTerminology,
     activeLocationCode = '',
     activeUnitCode = '',
     trainingPackageTemplates = [],
@@ -1757,7 +1782,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     onDeleteEvent={handleDeleteEventRequest}
                     resourceDisplayNames={resourceDisplayNames}
 	                    aircraftConfigurations={aircraftConfigurations}
+                        aircraftCrewComposition={aircraftCrewComposition}
+                        crewPositionTerminology={crewPositionTerminology}
 	                    isAirCombatModel={isAirCombatModel}
+                        operationalModel={operationalModel}
                         scoringMatrixElements={scoringMatrixElements}
                         onAddScoringMatrixElement={onAddScoringMatrixElement}
 	                    linkedEventOptions={filteredSyllabusDetails}

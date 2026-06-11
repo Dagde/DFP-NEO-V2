@@ -30167,6 +30167,8 @@ appliedUpdates.forEach(update => {
                            onUpdateItem={handleUpdateSyllabusItem}
                            onAddItem={handleAddSyllabusItem}
                            aircraftConfigurations={aircraftConfigurations}
+                           aircraftCrewComposition={activeAircraftCrewComposition}
+                           crewPositionTerminology={activeCrewPositionTerminology}
                            activeLocationCode={school}
                            activeUnitCode={activeUnitCode}
                            trainingPackageTemplates={syllabusDetails.filter(item => item.lmpType === 'Staff CAT' && item.isActive !== false)}

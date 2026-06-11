@@ -37568,7 +37568,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isAirCombatModel = false, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, isAirCombatModel = false, operationalModel: operationalModel2 = "flight_school", scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -37750,6 +37750,16 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             onChange: (value) => handleFieldChange("acceptableAircraftConfigs", value)
           }
         ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2 lg:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          CrewRequirementEditor,
+          {
+            value: currentItem.crewRequirement,
+            aircraftCrewComposition,
+            crewPositionTerminology,
+            operationalModel: operationalModel2,
+            onChange: (value) => handleFieldChange("crewRequirement", value)
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "Pre-Flight (min)" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37872,6 +37882,14 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             value: formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)
           }
         ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            className: "md:col-span-2 lg:col-span-3",
+            label: "Crew Required",
+            value: formatCrewRequirementSummary(item.crewRequirement, aircraftCrewComposition, crewPositionTerminology)
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Pre-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           Math.round(item.preFlightTime * 60),
           " ",
@@ -37984,6 +38002,8 @@ const SyllabusView = ({
   onAddItem,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   aircraftConfigurations = [],
+  aircraftCrewComposition,
+  crewPositionTerminology,
   activeLocationCode = "",
   activeUnitCode = "",
   trainingPackageTemplates = [],
@@ -38825,7 +38845,10 @@ const SyllabusView = ({
             onDeleteEvent: handleDeleteEventRequest,
             resourceDisplayNames,
             aircraftConfigurations,
+            aircraftCrewComposition,
+            crewPositionTerminology,
             isAirCombatModel,
+            operationalModel: operationalModel2,
             scoringMatrixElements,
             onAddScoringMatrixElement,
             linkedEventOptions: filteredSyllabusDetails,
@@ -88102,6 +88125,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateItem: handleUpdateSyllabusItem,
             onAddItem: handleAddSyllabusItem,
             aircraftConfigurations,
+            aircraftCrewComposition: activeAircraftCrewComposition,
+            crewPositionTerminology: activeCrewPositionTerminology,
             activeLocationCode: school,
             activeUnitCode,
             trainingPackageTemplates: syllabusDetails.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false),
