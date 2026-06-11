@@ -71132,15 +71132,53 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const activeAirCombatCrewRoles = normaliseCrewPositionTerminology(buildCrewPositionTerminology).positions.filter((position) => isCrewPositionAvailableForOperationalModel(position, buildOperationalModel)).map((position) => position.genericName).filter(Boolean);
   const isAirCombatCrewPositionStaff = (staff) => Boolean(staff.name) && !staff.isAdminStaff && activeAirCombatCrewRoles.some((role) => airCombatStaffMatchesCrewRole(staff, role));
   const formatCrewRoleGroup = (requiredRoles) => requiredRoles.filter(Boolean).join(" or ") || "Crew";
-  const getAirCombatStaffForCrewRoleGroup = (requiredRoles) => instructors.filter((staff) => airCombatStaffMatchesCrewRoleGroup(staff, requiredRoles));
+  const airCombatCrewRoleGroupStaffCache = /* @__PURE__ */ new Map();
+  const getAirCombatCrewRoleGroupCacheKey = (requiredRoles) => requiredRoles.map((role) => String(role || "").trim().toUpperCase()).filter(Boolean).sort().join("|");
+  const getAirCombatStaffForCrewRoleGroup = (requiredRoles) => {
+    const cacheKey = getAirCombatCrewRoleGroupCacheKey(requiredRoles);
+    if (!airCombatCrewRoleGroupStaffCache.has(cacheKey)) {
+      airCombatCrewRoleGroupStaffCache.set(
+        cacheKey,
+        instructors.filter((staff) => airCombatStaffMatchesCrewRoleGroup(staff, requiredRoles))
+      );
+    }
+    return airCombatCrewRoleGroupStaffCache.get(cacheKey) || [];
+  };
   const airCombatRandomTieBreaks = /* @__PURE__ */ new Map();
   const getAirCombatTieBreak = (name) => {
     if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, Math.random());
     return airCombatRandomTieBreaks.get(name);
   };
   const publishedHistoryEvents = Object.values(publishedSchedules || {}).flat();
-  const airCombatHistoryEvents = [...publishedHistoryEvents, ...generatedEvents];
-  const getAirCombatStaffEvents = (staffName, sourceEvents) => (sourceEvents || [...airCombatHistoryEvents, ...generatedEvents]).filter((event) => eventHasPerson(event, staffName));
+  const airCombatPublishedHistoryByStaff = /* @__PURE__ */ new Map();
+  publishedHistoryEvents.forEach((event) => {
+    getPersonnel(event).forEach((personName) => {
+      if (!personName) return;
+      if (!airCombatPublishedHistoryByStaff.has(personName)) airCombatPublishedHistoryByStaff.set(personName, []);
+      airCombatPublishedHistoryByStaff.get(personName).push(event);
+    });
+  });
+  let airCombatGeneratedEventCacheSize = -1;
+  const airCombatGeneratedEventsByStaff = /* @__PURE__ */ new Map();
+  const refreshAirCombatGeneratedEventCache = () => {
+    if (airCombatGeneratedEventCacheSize === generatedEvents.length) return;
+    airCombatGeneratedEventsByStaff.clear();
+    generatedEvents.forEach((event) => {
+      getPersonnel(event).forEach((personName) => {
+        if (!personName) return;
+        if (!airCombatGeneratedEventsByStaff.has(personName)) airCombatGeneratedEventsByStaff.set(personName, []);
+        airCombatGeneratedEventsByStaff.get(personName).push(event);
+      });
+    });
+    airCombatGeneratedEventCacheSize = generatedEvents.length;
+  };
+  const getAirCombatStaffEvents = (staffName, sourceEvents) => {
+    refreshAirCombatGeneratedEventCache();
+    return [
+      ...airCombatPublishedHistoryByStaff.get(staffName) || [],
+      ...airCombatGeneratedEventsByStaff.get(staffName) || []
+    ];
+  };
   const getAirCombatTaskingEvents = (staffName) => getAirCombatStaffEvents(staffName).filter((event) => isTaskingPriorityEvent(event));
   const getMostRecentEventDateValue = (items) => items.reduce((latest, event) => {
     const rawDate = event.date || event.eventDate || "";
@@ -71355,6 +71393,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   });
   const scheduleTaskingPriorityEvents = (eventsToSchedule) => {
     if (eventsToSchedule.length === 0) return;
+    markBuildTiming("air-combat-tasking:start", {
+      eventsToSchedule: eventsToSchedule.length,
+      generatedEvents: generatedEvents.length
+    });
     const timeIncrement = 5 / 60;
     const orderedTaskingEvents = eventsToSchedule.filter((event) => !scheduledTaskingPriorityEventIds.has(event.id)).sort(
       (left, right) => left.startTime - right.startTime || (left.taskingRequestId || "").localeCompare(right.taskingRequestId || "") || (left.taskingAircraftIndex || 0) - (right.taskingAircraftIndex || 0)
@@ -71786,13 +71828,42 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     });
     buildDebugLog(`DEBUG Tasking priority scheduling complete: ${scheduledCount}/${orderedTaskingEvents.length} scheduled`);
+    markBuildTiming("air-combat-tasking:complete", {
+      scheduledCount,
+      orderedTaskingEvents: orderedTaskingEvents.length,
+      generatedEvents: generatedEvents.length
+    });
   };
   const scheduleAirCombatTrainingPriorityEvents = () => {
     if (!isAirCombatBuild) return;
+    markBuildTiming("air-combat-training:start", {
+      generatedEvents: generatedEvents.length,
+      staff: instructors.length,
+      syllabus: syllabusDetails.length
+    });
     const slotIncrement = 5 / 60;
-    const sortedTrainingItems = (kind, code) => syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
-      (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
-    );
+    const sortedTrainingItemsCache = /* @__PURE__ */ new Map();
+    const sortedTrainingItems = (kind, code) => {
+      const cacheKey = `${kind}:${code}`;
+      if (!sortedTrainingItemsCache.has(cacheKey)) {
+        sortedTrainingItemsCache.set(
+          cacheKey,
+          syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
+            (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
+          )
+        );
+      }
+      return sortedTrainingItemsCache.get(cacheKey) || [];
+    };
+    const airCombatTrainingAssignmentCache = /* @__PURE__ */ new Map();
+    const getAirCombatTrainingAssignmentsForStaff = (staff) => {
+      const cacheKey = staff.idNumber || staff.name;
+      if (!airCombatTrainingAssignmentCache.has(cacheKey)) {
+        airCombatTrainingAssignmentCache.set(cacheKey, normaliseAirCombatTrainingAssignments(staff.preferences));
+      }
+      return airCombatTrainingAssignmentCache.get(cacheKey);
+    };
+    const staffHistoryLength = (staffName) => getAirCombatStaffEvents(staffName).length;
     const getCompletedTrainingEvents = (staffName, code, kind) => {
       const validCodes = new Set(sortedTrainingItems(kind, code).map((item) => item.code));
       return getAirCombatStaffEvents(staffName).filter((event) => validCodes.has(event.flightNumber));
@@ -71803,7 +71874,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return items.find((item) => !completed.has(item.code)) || null;
     };
     const getTrainingPriorityList = (kind, code) => instructors.filter(isAirCombatCrewPositionStaff).filter((staff) => {
-      const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      const assignments = getAirCombatTrainingAssignmentsForStaff(staff);
       const list = kind === "training_package" ? assignments.trainingPackages : assignments.courses;
       const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
       return list.some((item) => item.trainingKey === expectedKey || item.code === code);
@@ -71825,7 +71896,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const pilotStaff = instructors.filter(isAirCombatPilotStaff);
       const crewPositionStaff = instructors.filter(isAirCombatCrewPositionStaff);
       const assignedStaff = crewPositionStaff.map((staff) => {
-        const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+        const assignments = getAirCombatTrainingAssignmentsForStaff(staff);
         const list = kind === "training_package" ? assignments.trainingPackages : assignments.courses;
         const matchingAssignment = list.find((item) => item.trainingKey === expectedKey || item.code === code);
         if (!matchingAssignment) return null;
@@ -71896,7 +71967,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ) || null;
     };
     const staffHasAirCombatAssignment2 = (staff, kind, code) => {
-      const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      const assignments = getAirCombatTrainingAssignmentsForStaff(staff);
       const list = kind === "training_package" ? assignments.trainingPackages : assignments.courses;
       const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
       return list.some((item) => item.trainingKey === expectedKey || item.code === code);
@@ -72056,7 +72127,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const assignmentCodes = (kind) => Array.from(new Set(
       instructors.flatMap((staff) => {
-        const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+        const assignments = getAirCombatTrainingAssignmentsForStaff(staff);
         return (kind === "training_package" ? assignments.trainingPackages : assignments.courses).filter((item) => !buildActiveUnitCode || item.unitCode === buildActiveUnitCode).map((item) => item.code);
       })
     )).filter(Boolean).sort();
@@ -72650,7 +72721,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const candidatePool = getAirCombatStaffForCrewRoleGroup(secondaryRoles).filter((staff) => !selectedCrewNames.has(staff.name)).sort((left, right) => {
             const leftAssigned = staffHasAirCombatAssignment2(left, kind, code) ? 0 : 1;
             const rightAssigned = staffHasAirCombatAssignment2(right, kind, code) ? 0 : 1;
-            return leftAssigned - rightAssigned || getAirCombatStaffEvents(left.name).length - getAirCombatStaffEvents(right.name).length || getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
+            return leftAssigned - rightAssigned || staffHistoryLength(left.name) - staffHistoryLength(right.name) || getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
           });
           const stagedEventsForConflict = stagedCrewAssignments.map((assignment, index) => ({
             id: `air-combat-secondary-staged-${index}`,
@@ -72906,6 +72977,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return false;
     };
     const emittedTrainingListDiagnostics = /* @__PURE__ */ new Set();
+    const exhaustedTrainingCodes = /* @__PURE__ */ new Set();
     const placeTrainingForKind = (kind) => {
       const codes = kind === "training_package" ? packageCodes : courseCodes;
       if (codes.length === 0) {
@@ -72918,6 +72990,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return false;
       }
       for (const code of codes) {
+        const exhaustedKey = `${kind}:${code}`;
+        if (exhaustedTrainingCodes.has(exhaustedKey)) {
+          pushAirCombatDiag("trainingAttempts", {
+            kind,
+            code,
+            placed: false,
+            reason: "ASSIGNMENT_CODE_ALREADY_EXHAUSTED_THIS_BUILD"
+          }, 400);
+          continue;
+        }
         const priorityList = getTrainingPriorityList(kind, code);
         const matchingItems = sortedTrainingItems(kind, code);
         const diagKey = kind === "training_package" ? "trainingPackageStaffPriorityLists" : "courseStaffPriorityLists";
@@ -72945,6 +73027,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           emittedTrainingListDiagnostics.add(diagnosticKey);
         }
         if (matchingItems.length === 0) {
+          exhaustedTrainingCodes.add(exhaustedKey);
           pushAirCombatDiag("trainingAttempts", {
             kind,
             code,
@@ -72956,6 +73039,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           continue;
         }
         if (priorityList.length === 0) {
+          exhaustedTrainingCodes.add(exhaustedKey);
           recordAirCombatSkip({
             list: kind,
             staff: "Assigned staff",
@@ -72973,7 +73057,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           });
           continue;
         }
+        let codeHadCandidateWork = false;
         for (const entry of priorityList) {
+          codeHadCandidateWork = true;
           const item = entry.nextItem;
           const type = getTrainingEventType(item);
           const resourceNumber = getLmpResourceNumber(item);
@@ -73074,7 +73160,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               const secondaryPool = getAirCombatStaffForCrewRoleGroup(secondaryRoles).filter((staff) => staff.name !== entry.staff.name).sort((left, right) => {
                 const leftAssigned = staffHasAirCombatAssignment2(left, kind, code) ? 0 : 1;
                 const rightAssigned = staffHasAirCombatAssignment2(right, kind, code) ? 0 : 1;
-                return leftAssigned - rightAssigned || getAirCombatStaffEvents(left.name).length - getAirCombatStaffEvents(right.name).length || getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
+                return leftAssigned - rightAssigned || staffHistoryLength(left.name) - staffHistoryLength(right.name) || getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
               });
               secondaryCrew = secondaryPool.find((staff) => {
                 const reason = isAirCombatStaffSchedulable(staff, item, "flight", startTime, [], secondaryRoles);
@@ -73209,6 +73295,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }, 1200);
           countAirCombatRejection("NO_VALID_SLOT_IN_WINDOW");
         }
+        if (codeHadCandidateWork) {
+          exhaustedTrainingCodes.add(exhaustedKey);
+          pushAirCombatDiag("trainingAttempts", {
+            kind,
+            code,
+            placed: false,
+            reason: "ASSIGNMENT_CODE_EXHAUSTED_AFTER_FULL_SEARCH",
+            matchingSyllabusItems: matchingItems.length,
+            priorityListCount: priorityList.length
+          }, 700);
+        }
       }
       return false;
     };
@@ -73270,9 +73367,26 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       generatedEventsAfterTrainingLoop: generatedEvents.length,
       placementCount: neoBuildDiag.airCombatPriority.placements.length,
       rejectionReasons: neoBuildDiag.airCombatPriority.rejectionReasons,
-      lastCycle: (neoBuildDiag.airCombatPriority.placementCycles || []).slice(-1)[0] || null
+      lastCycle: (neoBuildDiag.airCombatPriority.placementCycles || []).slice(-1)[0] || null,
+      exhaustedTrainingCodes: Array.from(exhaustedTrainingCodes),
+      cacheStats: {
+        sortedTrainingItemLists: sortedTrainingItemsCache.size,
+        trainingAssignmentStaff: airCombatTrainingAssignmentCache.size,
+        crewRoleGroupStaffLists: airCombatCrewRoleGroupStaffCache.size,
+        publishedStaffHistoryLists: airCombatPublishedHistoryByStaff.size,
+        generatedStaffHistoryLists: airCombatGeneratedEventsByStaff.size
+      }
     };
     recordAirCombatStage("training-placement-loop-complete", neoBuildDiag.airCombatPriority.schedulerSummary);
+    markBuildTiming("air-combat-training:complete", {
+      coursePlaced,
+      packagePlaced,
+      placementCount: neoBuildDiag.airCombatPriority.placements.length,
+      generatedEvents: generatedEvents.length,
+      exhaustedTrainingCodes: exhaustedTrainingCodes.size,
+      sortedTrainingItemLists: sortedTrainingItemsCache.size,
+      trainingAssignmentStaff: airCombatTrainingAssignmentCache.size
+    });
   };
   const getCurrencyPriorityPerson = (event) => {
     const personName = event.student || event.pilot || event.instructor || "";

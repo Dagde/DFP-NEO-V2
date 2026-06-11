@@ -9351,18 +9351,56 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const formatCrewRoleGroup = (requiredRoles: string[]): string => (
         requiredRoles.filter(Boolean).join(' or ') || 'Crew'
     );
-    const getAirCombatStaffForCrewRoleGroup = (requiredRoles: string[]): Instructor[] => (
-        instructors.filter(staff => airCombatStaffMatchesCrewRoleGroup(staff, requiredRoles))
+    const airCombatCrewRoleGroupStaffCache = new Map<string, Instructor[]>();
+    const getAirCombatCrewRoleGroupCacheKey = (requiredRoles: string[]): string => (
+        requiredRoles.map(role => String(role || '').trim().toUpperCase()).filter(Boolean).sort().join('|')
     );
+    const getAirCombatStaffForCrewRoleGroup = (requiredRoles: string[]): Instructor[] => {
+        const cacheKey = getAirCombatCrewRoleGroupCacheKey(requiredRoles);
+        if (!airCombatCrewRoleGroupStaffCache.has(cacheKey)) {
+            airCombatCrewRoleGroupStaffCache.set(
+                cacheKey,
+                instructors.filter(staff => airCombatStaffMatchesCrewRoleGroup(staff, requiredRoles))
+            );
+        }
+        return airCombatCrewRoleGroupStaffCache.get(cacheKey) || [];
+    };
     const airCombatRandomTieBreaks = new Map<string, number>();
     const getAirCombatTieBreak = (name: string): number => {
         if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, Math.random());
         return airCombatRandomTieBreaks.get(name)!;
     };
     const publishedHistoryEvents = Object.values(publishedSchedules || {}).flat() as ScheduleEvent[];
-    const airCombatHistoryEvents = [...publishedHistoryEvents, ...generatedEvents];
-    const getAirCombatStaffEvents = (staffName: string, sourceEvents?: ScheduleEvent[]): ScheduleEvent[] =>
-        (sourceEvents || [...airCombatHistoryEvents, ...generatedEvents]).filter(event => eventHasPerson(event, staffName));
+    const airCombatPublishedHistoryByStaff = new Map<string, ScheduleEvent[]>();
+    publishedHistoryEvents.forEach(event => {
+        getPersonnel(event).forEach(personName => {
+            if (!personName) return;
+            if (!airCombatPublishedHistoryByStaff.has(personName)) airCombatPublishedHistoryByStaff.set(personName, []);
+            airCombatPublishedHistoryByStaff.get(personName)!.push(event);
+        });
+    });
+    let airCombatGeneratedEventCacheSize = -1;
+    const airCombatGeneratedEventsByStaff = new Map<string, ScheduleEvent[]>();
+    const refreshAirCombatGeneratedEventCache = () => {
+        if (airCombatGeneratedEventCacheSize === generatedEvents.length) return;
+        airCombatGeneratedEventsByStaff.clear();
+        generatedEvents.forEach(event => {
+            getPersonnel(event).forEach(personName => {
+                if (!personName) return;
+                if (!airCombatGeneratedEventsByStaff.has(personName)) airCombatGeneratedEventsByStaff.set(personName, []);
+                airCombatGeneratedEventsByStaff.get(personName)!.push(event as ScheduleEvent);
+            });
+        });
+        airCombatGeneratedEventCacheSize = generatedEvents.length;
+    };
+    const getAirCombatStaffEvents = (staffName: string, sourceEvents?: ScheduleEvent[]): ScheduleEvent[] => {
+        if (sourceEvents) return sourceEvents.filter(event => eventHasPerson(event, staffName));
+        refreshAirCombatGeneratedEventCache();
+        return [
+            ...(airCombatPublishedHistoryByStaff.get(staffName) || []),
+            ...(airCombatGeneratedEventsByStaff.get(staffName) || []),
+        ];
+    };
     const getAirCombatTaskingEvents = (staffName: string): ScheduleEvent[] =>
         getAirCombatStaffEvents(staffName).filter(event => isTaskingPriorityEvent(event as ScheduleEvent));
     const getMostRecentEventDateValue = (items: ScheduleEvent[]): number => (
@@ -9589,6 +9627,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     });
     const scheduleTaskingPriorityEvents = (eventsToSchedule: ScheduleEvent[]) => {
         if (eventsToSchedule.length === 0) return;
+        markBuildTiming('air-combat-tasking:start', {
+            eventsToSchedule: eventsToSchedule.length,
+            generatedEvents: generatedEvents.length,
+        });
         const timeIncrement = 5 / 60;
         const orderedTaskingEvents = eventsToSchedule.filter(event => !scheduledTaskingPriorityEventIds.has(event.id)).sort((left, right) =>
             left.startTime - right.startTime ||
@@ -10056,19 +10098,48 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         });
 
         buildDebugLog(`DEBUG Tasking priority scheduling complete: ${scheduledCount}/${orderedTaskingEvents.length} scheduled`);
+        markBuildTiming('air-combat-tasking:complete', {
+            scheduledCount,
+            orderedTaskingEvents: orderedTaskingEvents.length,
+            generatedEvents: generatedEvents.length,
+        });
     };
     const scheduleAirCombatTrainingPriorityEvents = () => {
         if (!isAirCombatBuild) return;
+        markBuildTiming('air-combat-training:start', {
+            generatedEvents: generatedEvents.length,
+            staff: instructors.length,
+            syllabus: syllabusDetails.length,
+        });
         const slotIncrement = 5 / 60;
-        const sortedTrainingItems = (kind: 'course' | 'training_package', code: string) => syllabusDetails
-            .filter(item => item.isActive !== false)
-            .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
-            .filter(item => (item.courses || []).includes(code))
-            .sort((left, right) =>
-                Number((left as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
-                (left.orderKey || '').localeCompare(right.orderKey || '') ||
-                left.code.localeCompare(right.code)
-            );
+        const sortedTrainingItemsCache = new Map<string, SyllabusItemDetail[]>();
+        const sortedTrainingItems = (kind: 'course' | 'training_package', code: string) => {
+            const cacheKey = `${kind}:${code}`;
+            if (!sortedTrainingItemsCache.has(cacheKey)) {
+                sortedTrainingItemsCache.set(
+                    cacheKey,
+                    syllabusDetails
+                        .filter(item => item.isActive !== false)
+                        .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
+                        .filter(item => (item.courses || []).includes(code))
+                        .sort((left, right) =>
+                            Number((left as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
+                            (left.orderKey || '').localeCompare(right.orderKey || '') ||
+                            left.code.localeCompare(right.code)
+                        )
+                );
+            }
+            return sortedTrainingItemsCache.get(cacheKey) || [];
+        };
+        const airCombatTrainingAssignmentCache = new Map<string, ReturnType<typeof normaliseAirCombatTrainingAssignments>>();
+        const getAirCombatTrainingAssignmentsForStaff = (staff: Instructor): ReturnType<typeof normaliseAirCombatTrainingAssignments> => {
+            const cacheKey = staff.idNumber || staff.name;
+            if (!airCombatTrainingAssignmentCache.has(cacheKey)) {
+                airCombatTrainingAssignmentCache.set(cacheKey, normaliseAirCombatTrainingAssignments(staff.preferences));
+            }
+            return airCombatTrainingAssignmentCache.get(cacheKey)!;
+        };
+        const staffHistoryLength = (staffName: string): number => getAirCombatStaffEvents(staffName).length;
         const getCompletedTrainingEvents = (staffName: string, code: string, kind: 'course' | 'training_package') => {
             const validCodes = new Set(sortedTrainingItems(kind, code).map(item => item.code));
             return getAirCombatStaffEvents(staffName).filter(event => validCodes.has(event.flightNumber));
@@ -10081,7 +10152,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const getTrainingPriorityList = (kind: 'course' | 'training_package', code: string) => instructors
             .filter(isAirCombatCrewPositionStaff)
             .filter(staff => {
-                const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+                const assignments = getAirCombatTrainingAssignmentsForStaff(staff);
                 const list = kind === 'training_package' ? assignments.trainingPackages : assignments.courses;
                 const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
                 return list.some(item => item.trainingKey === expectedKey || item.code === code);
@@ -10109,7 +10180,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const crewPositionStaff = instructors.filter(isAirCombatCrewPositionStaff);
             const assignedStaff = crewPositionStaff
                 .map(staff => {
-                    const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+                    const assignments = getAirCombatTrainingAssignmentsForStaff(staff);
                     const list = kind === 'training_package' ? assignments.trainingPackages : assignments.courses;
                     const matchingAssignment = list.find(item => item.trainingKey === expectedKey || item.code === code);
                     if (!matchingAssignment) return null;
@@ -10200,7 +10271,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             ) || null;
         };
         const staffHasAirCombatAssignment = (staff: Instructor, kind: 'course' | 'training_package', code: string): boolean => {
-            const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+            const assignments = getAirCombatTrainingAssignmentsForStaff(staff);
             const list = kind === 'training_package' ? assignments.trainingPackages : assignments.courses;
             const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
             return list.some(item => item.trainingKey === expectedKey || item.code === code);
@@ -10410,7 +10481,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         };
         const assignmentCodes = (kind: 'course' | 'training_package') => Array.from(new Set(
             instructors.flatMap(staff => {
-                const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+                const assignments = getAirCombatTrainingAssignmentsForStaff(staff);
                 return (kind === 'training_package' ? assignments.trainingPackages : assignments.courses)
                     .filter(item => !buildActiveUnitCode || item.unitCode === buildActiveUnitCode)
                     .map(item => item.code);
@@ -11069,7 +11140,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             const leftAssigned = staffHasAirCombatAssignment(left, kind, code) ? 0 : 1;
                             const rightAssigned = staffHasAirCombatAssignment(right, kind, code) ? 0 : 1;
                             return leftAssigned - rightAssigned ||
-                                getAirCombatStaffEvents(left.name).length - getAirCombatStaffEvents(right.name).length ||
+                                staffHistoryLength(left.name) - staffHistoryLength(right.name) ||
                                 getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
                         });
                     const stagedEventsForConflict = stagedCrewAssignments.map((assignment, index) => ({
@@ -11334,6 +11405,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return false;
         };
         const emittedTrainingListDiagnostics = new Set<string>();
+        const exhaustedTrainingCodes = new Set<string>();
         const placeTrainingForKind = (kind: 'course' | 'training_package'): boolean => {
             const codes = kind === 'training_package' ? packageCodes : courseCodes;
             if (codes.length === 0) {
@@ -11346,6 +11418,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return false;
             }
             for (const code of codes) {
+                const exhaustedKey = `${kind}:${code}`;
+                if (exhaustedTrainingCodes.has(exhaustedKey)) {
+                    pushAirCombatDiag('trainingAttempts', {
+                        kind,
+                        code,
+                        placed: false,
+                        reason: 'ASSIGNMENT_CODE_ALREADY_EXHAUSTED_THIS_BUILD',
+                    }, 400);
+                    continue;
+                }
                 const priorityList = getTrainingPriorityList(kind, code);
                 const matchingItems = sortedTrainingItems(kind, code);
                 const diagKey = kind === 'training_package' ? 'trainingPackageStaffPriorityLists' : 'courseStaffPriorityLists';
@@ -11353,26 +11435,27 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 let listDiagnostic: ReturnType<typeof getTrainingListDiagnostic> | null = null;
                 if (!emittedTrainingListDiagnostics.has(diagnosticKey)) {
                     listDiagnostic = getTrainingListDiagnostic(kind, code);
-	                neoBuildDiag.airCombatPriority[diagKey].push({
-	                    code,
-	                    matchingSyllabusItems: matchingItems.length,
+                    neoBuildDiag.airCombatPriority[diagKey].push({
+                        code,
+                        matchingSyllabusItems: matchingItems.length,
                         assignedStaffCount: listDiagnostic.assignedStaffCount,
                         assignedWithNextEvent: listDiagnostic.assignedWithNextEvent,
                         assignedWithoutNextEvent: listDiagnostic.assignedWithoutNextEvent,
                         matchingSyllabusSample: listDiagnostic.matchingSyllabusSample,
                         assignedStaff: listDiagnostic.assignedStaff,
-	                    list: priorityList.map(entry => ({
-	                        name: entry.staff.name,
-	                        completedCount: entry.completedCount,
-	                        lastEventDateValue: entry.lastEventDateValue || null,
-	                        nextEvent: entry.nextItem?.code || null,
-	                        nextEventResourceNumber: entry.nextItem ? getLmpResourceNumber(entry.nextItem) : null,
-	                        linkedEvent: entry.nextItem ? getAirCombatLinkedEventCode(entry.nextItem) || null : null,
-	                    })),
-	                });
+                        list: priorityList.map(entry => ({
+                            name: entry.staff.name,
+                            completedCount: entry.completedCount,
+                            lastEventDateValue: entry.lastEventDateValue || null,
+                            nextEvent: entry.nextItem?.code || null,
+                            nextEventResourceNumber: entry.nextItem ? getLmpResourceNumber(entry.nextItem) : null,
+                            linkedEvent: entry.nextItem ? getAirCombatLinkedEventCode(entry.nextItem) || null : null,
+                        })),
+                    });
                     emittedTrainingListDiagnostics.add(diagnosticKey);
                 }
                 if (matchingItems.length === 0) {
+                    exhaustedTrainingCodes.add(exhaustedKey);
                     pushAirCombatDiag('trainingAttempts', {
                         kind,
                         code,
@@ -11384,6 +11467,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     continue;
                 }
                 if (priorityList.length === 0) {
+                    exhaustedTrainingCodes.add(exhaustedKey);
                     recordAirCombatSkip({
                         list: kind,
                         staff: 'Assigned staff',
@@ -11401,21 +11485,23 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     });
                     continue;
                 }
-	                for (const entry of priorityList) {
-	                    const item = entry.nextItem!;
-	                    const type = getTrainingEventType(item);
-	                    const resourceNumber = getLmpResourceNumber(item);
-                        if (type === 'flight' && !airCombatStaffMatchesCrewRoleGroup(entry.staff, getAirCombatPrimaryRoleGroup(item))) {
-                            recordAirCombatSkip({ list: kind, staff: entry.staff.name, event: item.code, reason: 'ROLE_NOT_PRIMARY_AIRCRAFT_CREW', startTime: null });
-                            continue;
+                let codeHadCandidateWork = false;
+                for (const entry of priorityList) {
+                    codeHadCandidateWork = true;
+                    const item = entry.nextItem!;
+                    const type = getTrainingEventType(item);
+                    const resourceNumber = getLmpResourceNumber(item);
+                    if (type === 'flight' && !airCombatStaffMatchesCrewRoleGroup(entry.staff, getAirCombatPrimaryRoleGroup(item))) {
+                        recordAirCombatSkip({ list: kind, staff: entry.staff.name, event: item.code, reason: 'ROLE_NOT_PRIMARY_AIRCRAFT_CREW', startTime: null });
+                        continue;
+                    }
+                    if (type === 'flight' && resourceNumber > 1) {
+                        if (placeAirCombatFormationTraining(kind, code, entry, item, matchingItems, priorityList)) {
+                            return true;
                         }
-	                    if (type === 'flight' && resourceNumber > 1) {
-	                        if (placeAirCombatFormationTraining(kind, code, entry, item, matchingItems, priorityList)) {
-	                            return true;
-	                        }
-	                        continue;
-	                    }
-	                    const windowEnd = type === 'ftd' ? ftdEndTime : flyingEndTime;
+                        continue;
+                    }
+                    const windowEnd = type === 'ftd' ? ftdEndTime : flyingEndTime;
                     let candidateSlotsChecked = 0;
                     let candidateSlotsRejected = 0;
                     for (let time = flyingStartTime; time + item.duration <= windowEnd + 0.001; time += slotIncrement) {
@@ -11507,7 +11593,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                     const leftAssigned = staffHasAirCombatAssignment(left, kind, code) ? 0 : 1;
                                     const rightAssigned = staffHasAirCombatAssignment(right, kind, code) ? 0 : 1;
                                     return leftAssigned - rightAssigned ||
-                                        getAirCombatStaffEvents(left.name).length - getAirCombatStaffEvents(right.name).length ||
+                                        staffHistoryLength(left.name) - staffHistoryLength(right.name) ||
                                         getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
                                 });
                             secondaryCrew = secondaryPool.find(staff => {
@@ -11643,6 +11729,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     }, 1200);
                     countAirCombatRejection('NO_VALID_SLOT_IN_WINDOW');
                 }
+                if (codeHadCandidateWork) {
+                    exhaustedTrainingCodes.add(exhaustedKey);
+                    pushAirCombatDiag('trainingAttempts', {
+                        kind,
+                        code,
+                        placed: false,
+                        reason: 'ASSIGNMENT_CODE_EXHAUSTED_AFTER_FULL_SEARCH',
+                        matchingSyllabusItems: matchingItems.length,
+                        priorityListCount: priorityList.length,
+                    }, 700);
+                }
             }
             return false;
         };
@@ -11705,8 +11802,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             placementCount: neoBuildDiag.airCombatPriority.placements.length,
             rejectionReasons: neoBuildDiag.airCombatPriority.rejectionReasons,
             lastCycle: (neoBuildDiag.airCombatPriority.placementCycles || []).slice(-1)[0] || null,
+            exhaustedTrainingCodes: Array.from(exhaustedTrainingCodes),
+            cacheStats: {
+                sortedTrainingItemLists: sortedTrainingItemsCache.size,
+                trainingAssignmentStaff: airCombatTrainingAssignmentCache.size,
+                crewRoleGroupStaffLists: airCombatCrewRoleGroupStaffCache.size,
+                publishedStaffHistoryLists: airCombatPublishedHistoryByStaff.size,
+                generatedStaffHistoryLists: airCombatGeneratedEventsByStaff.size,
+            },
         };
         recordAirCombatStage('training-placement-loop-complete', neoBuildDiag.airCombatPriority.schedulerSummary);
+        markBuildTiming('air-combat-training:complete', {
+            coursePlaced,
+            packagePlaced,
+            placementCount: neoBuildDiag.airCombatPriority.placements.length,
+            generatedEvents: generatedEvents.length,
+            exhaustedTrainingCodes: exhaustedTrainingCodes.size,
+            sortedTrainingItemLists: sortedTrainingItemsCache.size,
+            trainingAssignmentStaff: airCombatTrainingAssignmentCache.size,
+        });
     };
     const getCurrencyPriorityPerson = (event: ScheduleEvent): { trainee: Trainee; excludeInstructorNames: string[] } | null => {
         const personName = event.student || event.pilot || event.instructor || '';
