@@ -50268,6 +50268,7 @@ const PlatformConfigurationSettings = ({
   const [airfieldCatalogueError, setAirfieldCatalogueError] = reactExports.useState("");
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
+  const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = reactExports.useState("");
   const locationRowRefs = reactExports.useRef({});
   const pendingLocationScrollIdRef = reactExports.useRef(null);
@@ -50278,6 +50279,7 @@ const PlatformConfigurationSettings = ({
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
+  const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
     const password = await showDarkPrompt({
@@ -51467,11 +51469,11 @@ const PlatformConfigurationSettings = ({
   };
   const save = async (configOverride, restoreSection) => {
     const configToSave = configOverride && Array.isArray(configOverride.locations) ? configOverride : config;
-    if (!canEdit) return;
+    if (!canEdit) return false;
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
       setError(solarValidationError);
-      return;
+      return false;
     }
     setSaving(true);
     setError("");
@@ -51528,11 +51530,17 @@ const PlatformConfigurationSettings = ({
       window.setTimeout(() => {
         window.location.reload();
       }, 900);
+      return true;
     } catch (err) {
       setError(err?.message || "Failed to save platform configuration");
+      return false;
     } finally {
       if (!shouldReload) setSaving(false);
     }
+  };
+  const saveResourcePoolsAndExitEdit = async () => {
+    const saved = await save(void 0, "platform-resource-pools");
+    if (saved) setResourcePoolsUnlocked(false);
   };
   const refreshLicenseStatus = async () => {
     const res = await fetch(`${getApiBase()}/platform-license/status`);
@@ -52018,13 +52026,32 @@ const PlatformConfigurationSettings = ({
         SectionHeader,
         {
           title: "Aircraft Types & Resource Pools",
-          subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
+          subtitle: resourcePoolsUnlocked ? "Editing is active. Click Save to write aircraft type and resource pool changes to the database, then return this section to read-only mode." : "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources. Click Edit before making changes.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-2", children: resourcePoolsUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addAircraftType, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Aircraft Type" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" })
-          ] }) : null
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: saveResourcePoolsAndExitEdit,
+                disabled: saving || applyingChanges,
+                className: `${platformActionButtonClass} disabled:cursor-not-allowed disabled:opacity-50`,
+                children: "Save"
+              }
+            )
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setResourcePoolsUnlocked(true),
+              className: "rounded border border-cyan-400 bg-cyan-500 px-4 py-2 text-sm font-bold text-cyan-950 hover:bg-cyan-300",
+              children: "Edit"
+            }
+          ) }) : null
         }
       ),
+      !resourcePoolsUnlocked && canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-4 mt-4 rounded border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-100", children: "Aircraft and resource pool settings are locked. Click Edit to change aircraft types, crew seats, eligible roles, resource names or live runtime pool counts." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 lg:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => {
           const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
@@ -52033,9 +52060,9 @@ const PlatformConfigurationSettings = ({
             crewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat))
           );
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEditResourcePools, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEditResourcePools, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEditResourcePools, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-orange-400/25 bg-orange-500/10 p-3 md:col-span-3 md:grid-cols-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-orange-100", children: "Crew Composition" }),
@@ -52046,7 +52073,7 @@ const PlatformConfigurationSettings = ({
                 {
                   label: "Crew Seats",
                   value: crewComposition.crewCount,
-                  disabled: !canEdit,
+                  disabled: !canEditResourcePools,
                   onChange: (value) => updateAircraftCrewCount(index, value)
                 }
               ),
@@ -52070,7 +52097,7 @@ const PlatformConfigurationSettings = ({
                       {
                         label: "Default",
                         value: seat.role,
-                        disabled: !canEdit,
+                        disabled: !canEditResourcePools,
                         options: eligibleRoles,
                         optionLabels: crewPositionLabelMap,
                         onChange: (value) => updateAircraftSeatRole(index, seatIndex, value)
@@ -52086,7 +52113,7 @@ const PlatformConfigurationSettings = ({
                           type: "checkbox",
                           className: "h-4 w-4 rounded border-gray-500 accent-orange-400",
                           checked,
-                          disabled: !canEdit || checked && eligibleRoles.length <= 1,
+                          disabled: !canEditResourcePools || checked && eligibleRoles.length <= 1,
                           onChange: (event) => updateAircraftSeatEligibleRole(index, seatIndex, role, event.target.checked)
                         }
                       ),
@@ -52102,17 +52129,17 @@ const PlatformConfigurationSettings = ({
           const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
           const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Code", value: pool.code, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { code: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Name", value: pool.name, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { name: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEdit, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Code", value: pool.code, disabled: !canEditResourcePools, onChange: (value) => updateRow("resourcePools", index, { code: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Name", value: pool.name, disabled: !canEditResourcePools, onChange: (value) => updateRow("resourcePools", index, { name: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEditResourcePools, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEditResourcePools, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEditResourcePools, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEditResourcePools, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2 md:grid-cols-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3 text-xs text-cyan-100/80", children: "Display terminology only. Existing schedule records keep stable internal resource keys." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Display Name", value: pool.settings?.aircraftLabel || "PC-21", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Simulator Display Name", value: pool.settings?.ftdLabel || "FTD", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Procedural Trainer Display Name", value: pool.settings?.cptLabel || "CPT", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Display Name", value: pool.settings?.aircraftLabel || "PC-21", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Simulator Display Name", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Procedural Trainer Display Name", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -52127,7 +52154,7 @@ const PlatformConfigurationSettings = ({
                 {
                   label: "Use prefix with aircraft number",
                   checked: aircraftNumberSettings.usePrefix,
-                  disabled: !canEdit,
+                  disabled: !canEditResourcePools,
                   onChange: (checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })
                 }
               ),
@@ -52137,7 +52164,7 @@ const PlatformConfigurationSettings = ({
                   {
                     label: "Default Prefix",
                     value: aircraftNumberSettings.defaultPrefix,
-                    disabled: !canEdit,
+                    disabled: !canEditResourcePools,
                     options: aircraftNumberSettings.prefixes,
                     onChange: (value) => updateResourcePoolSettings(index, { aircraftNumberDefaultPrefix: value })
                   }
@@ -52148,7 +52175,7 @@ const PlatformConfigurationSettings = ({
                     {
                       label: `Prefix ${prefixIndex + 1}`,
                       value: prefix,
-                      disabled: !canEdit,
+                      disabled: !canEditResourcePools,
                       onChange: (value) => updateAircraftNumberPrefix(index, prefixIndex, value)
                     }
                   ) }),
@@ -52156,7 +52183,7 @@ const PlatformConfigurationSettings = ({
                     "button",
                     {
                       type: "button",
-                      disabled: !canEdit || aircraftNumberSettings.prefixes.length <= 1,
+                      disabled: !canEditResourcePools || aircraftNumberSettings.prefixes.length <= 1,
                       onClick: () => removeAircraftNumberPrefix(index, prefixIndex),
                       className: "h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
                       children: "Delete"
@@ -52167,7 +52194,7 @@ const PlatformConfigurationSettings = ({
                   "button",
                   {
                     type: "button",
-                    disabled: !canEdit,
+                    disabled: !canEditResourcePools,
                     onClick: () => addAircraftNumberPrefix(index),
                     className: "w-fit rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
                     children: "Add Prefix"
@@ -52184,28 +52211,16 @@ const PlatformConfigurationSettings = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-cyan-100/75", children: "Define aircraft fit states that LMP events may require. LMP events default to ANY when configuration does not matter." })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      disabled: !canEdit || saving || applyingChanges,
-                      onClick: () => save(void 0, "platform-resource-pools"),
-                      className: "rounded border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50",
-                      children: "Save"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      disabled: !canEdit,
-                      onClick: () => addAircraftConfiguration(index),
-                      className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
-                      children: "Add Config"
-                    }
-                  )
-                ] })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex shrink-0 items-center gap-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    disabled: !canEditResourcePools,
+                    onClick: () => addAircraftConfiguration(index),
+                    className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                    children: "Add Config"
+                  }
+                ) })
               ] }),
               aircraftConfigurations.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/50 px-3 py-2 text-xs text-gray-400", children: "No configured aircraft states. LMP events will show ANY only." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: aircraftConfigurations.map((aircraftConfig, configIndex) => {
                 const isBaseConfig = aircraftConfig.id === "CONFIG-0";
@@ -52216,7 +52231,7 @@ const PlatformConfigurationSettings = ({
                     {
                       label: "Definition",
                       value: aircraftConfig.definition,
-                      disabled: !canEdit || isBaseConfig,
+                      disabled: !canEditResourcePools || isBaseConfig,
                       onChange: (value) => updateAircraftConfiguration(index, configIndex, value)
                     }
                   ) }),
@@ -52224,7 +52239,7 @@ const PlatformConfigurationSettings = ({
                     "button",
                     {
                       type: "button",
-                      disabled: !canEdit || isBaseConfig,
+                      disabled: !canEditResourcePools || isBaseConfig,
                       onClick: () => removeAircraftConfiguration(index, configIndex),
                       className: "h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
                       children: isBaseConfig ? "Base" : "Delete"
@@ -52239,16 +52254,16 @@ const PlatformConfigurationSettings = ({
                 label: "Apply to V2 runtime",
                 info: "Turn this on when you want the DFP to use this pool's aircraft, simulator, trainer, standby and ground row numbers. Leave it off if you are only setting up the pool and do not want it to affect the live schedule yet.",
                 checked: pool.settings?.applyToV2Runtime === true,
-                disabled: !canEdit,
+                disabled: !canEditResourcePools,
                 onChange: (checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft Rows", value: pool.settings?.aircraft ?? 24, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator Rows", value: pool.settings?.ftd ?? 5, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Procedural Trainer Rows", value: pool.settings?.cpt ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft Rows", value: pool.settings?.aircraft ?? 24, disabled: !canEditResourcePools || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator Rows", value: pool.settings?.ftd ?? 5, disabled: !canEditResourcePools || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Procedural Trainer Rows", value: pool.settings?.cpt ?? 4, disabled: !canEditResourcePools || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEditResourcePools || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEditResourcePools || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
             ] })
           ] }, pool.id || `platform-resource-pool-${index}`);
         }) })

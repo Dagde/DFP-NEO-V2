@@ -815,7 +815,10 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
       name: row.name || '',
       category: row.category || 'Training',
       status: row.status || 'ACTIVE',
-      settings: row.settings || {},
+      settings: {
+        ...(row.settings || {}),
+        ...(row.crewComposition ? { crewComposition: row.crewComposition } : {}),
+      },
     }),
     keys: (row) => [row.id, row.code].filter(Boolean),
     label: (row) => row.name || row.code,
@@ -1629,7 +1632,10 @@ app.get('/api/platform-config', async (req, res) => {
       organisations,
       locations,
       units,
-      aircraftTypes,
+      aircraftTypes: aircraftTypes.map((aircraftType) => ({
+        ...aircraftType,
+        crewComposition: aircraftType.crewComposition || aircraftType.settings?.crewComposition || null,
+      })),
       resourcePools,
       modules,
       unitModules,
@@ -2192,6 +2198,10 @@ app.post('/api/platform-config', async (req, res) => {
 
     for (const aircraftType of aircraftTypes) {
       if (!aircraftType.code || !aircraftType.name) continue;
+      const aircraftTypeSettings = {
+        ...(aircraftType.settings || {}),
+        ...(aircraftType.crewComposition ? { crewComposition: aircraftType.crewComposition } : {}),
+      };
       await db.$executeRawUnsafe(`
         INSERT INTO "CommercialAircraftType" ("id", "code", "name", "category", "status", "settings", "createdAt", "updatedAt")
         VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5::jsonb, $6::timestamp, $6::timestamp)
@@ -2201,7 +2211,7 @@ app.post('/api/platform-config', async (req, res) => {
           "status" = $4,
           "settings" = $5::jsonb,
           "updatedAt" = $6::timestamp
-      `, aircraftType.code, aircraftType.name, aircraftType.category || 'Training', aircraftType.status || 'ACTIVE', toJson(aircraftType.settings), now);
+      `, aircraftType.code, aircraftType.name, aircraftType.category || 'Training', aircraftType.status || 'ACTIVE', toJson(aircraftTypeSettings), now);
     }
 
     for (const pool of resourcePools) {

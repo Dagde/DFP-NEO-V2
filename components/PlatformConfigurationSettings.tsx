@@ -984,6 +984,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [airfieldCatalogueError, setAirfieldCatalogueError] = useState('');
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
+  const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = useState('');
   const locationRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingLocationScrollIdRef = useRef<string | null>(null);
@@ -995,6 +996,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
+  const canEditResourcePools = canEdit && resourcePoolsUnlocked;
 
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
@@ -2451,11 +2453,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const configToSave = configOverride && Array.isArray(configOverride.locations)
       ? configOverride
       : config;
-    if (!canEdit) return;
+    if (!canEdit) return false;
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
       setError(solarValidationError);
-      return;
+      return false;
     }
     setSaving(true);
     setError('');
@@ -2513,11 +2515,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       window.setTimeout(() => {
         window.location.reload();
       }, 900);
+      return true;
     } catch (err: any) {
       setError(err?.message || 'Failed to save platform configuration');
+      return false;
     } finally {
       if (!shouldReload) setSaving(false);
     }
+  };
+
+  const saveResourcePoolsAndExitEdit = async () => {
+    const saved = await save(undefined, 'platform-resource-pools');
+    if (saved) setResourcePoolsUnlocked(false);
   };
 
   const refreshLicenseStatus = async () => {
@@ -3066,14 +3075,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-resource-pools" className={getSectionClass('platform-resource-pools')}>
         <SectionHeader
           title="Aircraft Types & Resource Pools"
-          subtitle="Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources."
+          subtitle={resourcePoolsUnlocked
+            ? 'Editing is active. Click Save to write aircraft type and resource pool changes to the database, then return this section to read-only mode.'
+            : 'Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources. Click Edit before making changes.'}
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-2">
-              <button type="button" onClick={addAircraftType} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Aircraft Type</button>
-              <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button>
+              {resourcePoolsUnlocked ? (
+                <>
+                  <button type="button" onClick={addAircraftType} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Aircraft Type</button>
+                  <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button>
+                  <button
+                    type="button"
+                    onClick={saveResourcePoolsAndExitEdit}
+                    disabled={saving || applyingChanges}
+                    className={`${platformActionButtonClass} disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    Save
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setResourcePoolsUnlocked(true)}
+                  className="rounded border border-cyan-400 bg-cyan-500 px-4 py-2 text-sm font-bold text-cyan-950 hover:bg-cyan-300"
+                >
+                  Edit
+                </button>
+              )}
             </div>
           ) : null}
         />
+        {!resourcePoolsUnlocked && canEdit && (
+          <div className="mx-4 mt-4 rounded border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-100">
+            Aircraft and resource pool settings are locked. Click Edit to change aircraft types, crew seats, eligible roles, resource names or live runtime pool counts.
+          </div>
+        )}
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <div className="space-y-3">
             {config.aircraftTypes.map((aircraft, index) => {
@@ -3084,9 +3120,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               );
               return (
                 <div key={aircraft.id || `platform-aircraft-type-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3">
-                  <Field label="Code" value={aircraft.code} disabled={!canEdit} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
-                  <Field label="Name" value={aircraft.name} disabled={!canEdit} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
-                  <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEdit} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
+                  <Field label="Code" value={aircraft.code} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
+                  <Field label="Name" value={aircraft.name} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
+                  <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEditResourcePools} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
                   <div className="grid gap-3 rounded-lg border border-orange-400/25 bg-orange-500/10 p-3 md:col-span-3 md:grid-cols-3">
                     <div className="md:col-span-3">
                       <div className="text-sm font-bold text-orange-100">Crew Composition</div>
@@ -3097,7 +3133,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <NumberField
                       label="Crew Seats"
                       value={crewComposition.crewCount}
-                      disabled={!canEdit}
+                      disabled={!canEditResourcePools}
                       onChange={(value) => updateAircraftCrewCount(index, value)}
                     />
                     <div className="grid gap-2 md:col-span-2">
@@ -3116,7 +3152,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               <SelectField
                                 label="Default"
                                 value={seat.role}
-                                disabled={!canEdit}
+                                disabled={!canEditResourcePools}
                                 options={eligibleRoles}
                                 optionLabels={crewPositionLabelMap}
                                 onChange={(value) => updateAircraftSeatRole(index, seatIndex, value)}
@@ -3131,7 +3167,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                       type="checkbox"
                                       className="h-4 w-4 rounded border-gray-500 accent-orange-400"
                                       checked={checked}
-                                      disabled={!canEdit || (checked && eligibleRoles.length <= 1)}
+                                      disabled={!canEditResourcePools || (checked && eligibleRoles.length <= 1)}
                                       onChange={(event) => updateAircraftSeatEligibleRole(index, seatIndex, role, event.target.checked)}
                                     />
                                     <span>{crewPositionLabelMap[role] || role}</span>
@@ -3154,19 +3190,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
               return (
               <div key={pool.id || `platform-resource-pool-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2">
-                <Field label="Pool Code" value={pool.code} disabled={!canEdit} onChange={(value) => updateRow('resourcePools', index, { code: value })} />
-                <Field label="Pool Name" value={pool.name} disabled={!canEdit} onChange={(value) => updateRow('resourcePools', index, { name: value })} />
-                <SelectField label="Location" value={pool.locationCode || ''} disabled={!canEdit} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('resourcePools', index, { locationCode: value || null })} />
-                <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
-                <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEdit} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
-                <SelectField label="Pool Type" value={pool.poolType || 'Dedicated'} disabled={!canEdit} options={['Dedicated', 'Shared']} onChange={(value) => updateRow('resourcePools', index, { poolType: value })} />
+                <Field label="Pool Code" value={pool.code} disabled={!canEditResourcePools} onChange={(value) => updateRow('resourcePools', index, { code: value })} />
+                <Field label="Pool Name" value={pool.name} disabled={!canEditResourcePools} onChange={(value) => updateRow('resourcePools', index, { name: value })} />
+                <SelectField label="Location" value={pool.locationCode || ''} disabled={!canEditResourcePools} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('resourcePools', index, { locationCode: value || null })} />
+                <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEditResourcePools} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
+                <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEditResourcePools} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
+                <SelectField label="Pool Type" value={pool.poolType || 'Dedicated'} disabled={!canEditResourcePools} options={['Dedicated', 'Shared']} onChange={(value) => updateRow('resourcePools', index, { poolType: value })} />
                 <div className="grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2 md:grid-cols-3">
                   <div className="md:col-span-3 text-xs text-cyan-100/80">
                     Display terminology only. Existing schedule records keep stable internal resource keys.
                   </div>
-                  <Field label="Aircraft Display Name" value={pool.settings?.aircraftLabel || 'PC-21'} disabled={!canEdit} onChange={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
-                  <Field label="Simulator Display Name" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEdit} onChange={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
-                  <Field label="Procedural Trainer Display Name" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEdit} onChange={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
+                  <Field label="Aircraft Display Name" value={pool.settings?.aircraftLabel || 'PC-21'} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
+                  <Field label="Simulator Display Name" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
+                  <Field label="Procedural Trainer Display Name" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
                 </div>
                 <div className="grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2">
                   <div>
@@ -3178,7 +3214,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <ToggleField
                     label="Use prefix with aircraft number"
                     checked={aircraftNumberSettings.usePrefix}
-                    disabled={!canEdit}
+                    disabled={!canEditResourcePools}
                     onChange={(checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })}
                   />
                   {aircraftNumberSettings.usePrefix && (
@@ -3186,7 +3222,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <SelectField
                         label="Default Prefix"
                         value={aircraftNumberSettings.defaultPrefix}
-                        disabled={!canEdit}
+                        disabled={!canEditResourcePools}
                         options={aircraftNumberSettings.prefixes}
                         onChange={(value) => updateResourcePoolSettings(index, { aircraftNumberDefaultPrefix: value })}
                       />
@@ -3197,13 +3233,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               <Field
                                 label={`Prefix ${prefixIndex + 1}`}
                                 value={prefix}
-                                disabled={!canEdit}
+                                disabled={!canEditResourcePools}
                                 onChange={(value) => updateAircraftNumberPrefix(index, prefixIndex, value)}
                               />
                             </div>
                             <button
                               type="button"
-                              disabled={!canEdit || aircraftNumberSettings.prefixes.length <= 1}
+                              disabled={!canEditResourcePools || aircraftNumberSettings.prefixes.length <= 1}
                               onClick={() => removeAircraftNumberPrefix(index, prefixIndex)}
                               className="h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                             >
@@ -3214,7 +3250,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       </div>
                       <button
                         type="button"
-                        disabled={!canEdit}
+                        disabled={!canEditResourcePools}
                         onClick={() => addAircraftNumberPrefix(index)}
                         className="w-fit rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -3234,15 +3270,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className="flex shrink-0 items-center gap-2">
                       <button
                         type="button"
-                        disabled={!canEdit || saving || applyingChanges}
-                        onClick={() => save(undefined, 'platform-resource-pools')}
-                        className="rounded border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!canEdit}
+                        disabled={!canEditResourcePools}
                         onClick={() => addAircraftConfiguration(index)}
                         className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -3267,13 +3295,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               <Field
                                 label="Definition"
                                 value={aircraftConfig.definition}
-                                disabled={!canEdit || isBaseConfig}
+                                disabled={!canEditResourcePools || isBaseConfig}
                                 onChange={(value) => updateAircraftConfiguration(index, configIndex, value)}
                               />
                             </div>
                             <button
                               type="button"
-                              disabled={!canEdit || isBaseConfig}
+                              disabled={!canEditResourcePools || isBaseConfig}
                               onClick={() => removeAircraftConfiguration(index, configIndex)}
                               className="h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                             >
@@ -3289,15 +3317,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   label="Apply to V2 runtime"
                   info="Turn this on when you want the DFP to use this pool's aircraft, simulator, trainer, standby and ground row numbers. Leave it off if you are only setting up the pool and do not want it to affect the live schedule yet."
                   checked={pool.settings?.applyToV2Runtime === true}
-                  disabled={!canEdit}
+                  disabled={!canEditResourcePools}
                   onChange={(checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })}
                 />
                 <div className="grid grid-cols-2 gap-3">
-                  <NumberField label="Aircraft Rows" value={pool.settings?.aircraft ?? 24} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
-                  <NumberField label="Simulator Rows" value={pool.settings?.ftd ?? 5} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
-                  <NumberField label="Procedural Trainer Rows" value={pool.settings?.cpt ?? 4} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
-                  <NumberField label="STBY" value={pool.settings?.standby ?? 4} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
-                  <NumberField label="Ground" value={pool.settings?.ground ?? 6} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
+                  <NumberField label="Aircraft Rows" value={pool.settings?.aircraft ?? 24} disabled={!canEditResourcePools || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
+                  <NumberField label="Simulator Rows" value={pool.settings?.ftd ?? 5} disabled={!canEditResourcePools || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
+                  <NumberField label="Procedural Trainer Rows" value={pool.settings?.cpt ?? 4} disabled={!canEditResourcePools || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
+                  <NumberField label="STBY" value={pool.settings?.standby ?? 4} disabled={!canEditResourcePools || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
+                  <NumberField label="Ground" value={pool.settings?.ground ?? 6} disabled={!canEditResourcePools || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
                 </div>
               </div>
             )})}
