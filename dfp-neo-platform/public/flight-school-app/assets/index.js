@@ -4453,7 +4453,7 @@ const CrewRequirementEditor = ({
       roles: nextRows.length > 0 ? nextRows : [{ role: roleOptions[0]?.value || "Pilot", crewPositionId: roleOptions[0]?.id, count: 1 }]
     });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? "p-2" : "p-3"} text-xs text-slate-200`, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? "flex h-full min-h-[8rem] flex-col p-2" : "p-3"} text-xs text-slate-200`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${compact ? "grid" : "flex flex-wrap"} items-center justify-between gap-2`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-100", children: "Crew Required" }),
@@ -24739,8 +24739,8 @@ const TaskingRequestTable = ({
           }
         ) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1.05fr)_minmax(0,1.45fr)_minmax(0,0.82fr)]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Route", hint: `${request.depPoint || "Departure"} -> ${request.arrivalPoint || "Arrival"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 [&_input]:h-8 [&_input]:px-2 [&_input]:text-xs", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,0.7fr)_minmax(0,1.05fr)_minmax(0,1.16fr)_minmax(0,0.82fr)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Route", hint: `${request.depPoint || "Departure"} -> ${request.arrivalPoint || "Arrival"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600", children: "Dep" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24764,25 +24764,41 @@ const TaskingRequestTable = ({
             )
           ] })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Aircraft", hint: `${request.aircraftCount || 1} required`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TaskingFieldPanel,
           {
-            type: "number",
-            min: 1,
-            value: request.aircraftCount,
-            onChange: (event) => onUpdateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false, saved: false }),
-            className: taskingControlClass
+            label: "Aircraft",
+            hint: `${request.aircraftCount || 1} required`,
+            className: "[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col [&>div:first-child]:justify-center",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: 1,
+                value: request.aircraftCount,
+                onChange: (event) => onUpdateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false, saved: false }),
+                className: taskingControlClass
+              }
+            )
           }
-        ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Config", hint: selectedConfig?.definition || selectedConfig?.label || "Aircraft fit", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:h-10 [&_select]:min-w-0 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          AircraftConfigSelect,
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TaskingFieldPanel,
           {
-            value: request.aircraftConfigId,
-            definitions: aircraftConfigOptions,
-            onChange: (aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false, saved: false })
+            label: "Config",
+            hint: selectedConfig?.definition || selectedConfig?.label || "Aircraft fit",
+            className: "[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col [&>div:first-child]:justify-center",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:h-10 [&_select]:min-w-0 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              AircraftConfigSelect,
+              {
+                value: request.aircraftConfigId,
+                definitions: aircraftConfigOptions,
+                onChange: (aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false, saved: false })
+              }
+            ) })
           }
-        ) }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 [&>div]:min-h-[8rem]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 h-full [&>div]:h-full [&>div]:min-h-[8rem]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           CrewRequirementEditor,
           {
             value: request.crewRequirement,

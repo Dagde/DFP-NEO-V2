@@ -88,7 +88,7 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
   };
 
   return (
-    <div className={`min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? 'p-2' : 'p-3'} text-xs text-slate-200`}>
+    <div className={`min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? 'flex h-full min-h-[8rem] flex-col p-2' : 'p-3'} text-xs text-slate-200`}>
       <div className={`${compact ? 'grid' : 'flex flex-wrap'} items-center justify-between gap-2`}>
         <div className="min-w-0">
           <div className="font-semibold text-slate-100">Crew Required</div>

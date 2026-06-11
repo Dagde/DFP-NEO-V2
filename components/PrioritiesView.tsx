@@ -573,9 +573,9 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             </TaskingFieldPanel>
           </div>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1.05fr)_minmax(0,1.45fr)_minmax(0,0.82fr)]">
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,0.7fr)_minmax(0,1.05fr)_minmax(0,1.16fr)_minmax(0,0.82fr)]">
             <TaskingFieldPanel label="Route" hint={`${request.depPoint || 'Departure'} -> ${request.arrivalPoint || 'Arrival'}`}>
-              <div className="grid gap-2 [&_input]:h-8 [&_input]:px-2 [&_input]:text-xs">
+              <div className="grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]">
                 <div className="min-w-0">
                   <div className="mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600">Dep</div>
                   <TaskingAirfieldCodeInput
@@ -594,7 +594,11 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 </div>
               </div>
             </TaskingFieldPanel>
-            <TaskingFieldPanel label="Aircraft" hint={`${request.aircraftCount || 1} required`}>
+            <TaskingFieldPanel
+              label="Aircraft"
+              hint={`${request.aircraftCount || 1} required`}
+              className="[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col [&>div:first-child]:justify-center"
+            >
               <input
                 type="number"
                 min={1}
@@ -603,7 +607,11 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 className={taskingControlClass}
               />
             </TaskingFieldPanel>
-            <TaskingFieldPanel label="Config" hint={selectedConfig?.definition || selectedConfig?.label || 'Aircraft fit'}>
+            <TaskingFieldPanel
+              label="Config"
+              hint={selectedConfig?.definition || selectedConfig?.label || 'Aircraft fit'}
+              className="[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col [&>div:first-child]:justify-center"
+            >
               <div className="[&_select]:h-10 [&_select]:min-w-0 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold">
                 <AircraftConfigSelect
                   value={request.aircraftConfigId}
@@ -612,7 +620,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 />
               </div>
             </TaskingFieldPanel>
-            <div className="min-w-0 [&>div]:min-h-[8rem]">
+            <div className="min-w-0 h-full [&>div]:h-full [&>div]:min-h-[8rem]">
               <CrewRequirementEditor
                 value={request.crewRequirement}
                 aircraftCrewComposition={aircraftCrewComposition}
