@@ -58,6 +58,7 @@ import {
 import {
     crewPositionValuesMatch,
     findCrewPositionEntry,
+    isCrewPositionAvailableForOperationalModel,
     isPilotCrewPosition,
     normaliseCrewPositionTerminology,
     type CrewPositionTerminology,
@@ -9336,6 +9337,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const airCombatStaffMatchesCrewRoleGroup = (staff: Instructor, requiredRoles: string[]): boolean => (
         requiredRoles.some(requiredRole => airCombatStaffMatchesCrewRole(staff, requiredRole))
     );
+    const activeAirCombatCrewRoles = normaliseCrewPositionTerminology(buildCrewPositionTerminology).positions
+        .filter(position => isCrewPositionAvailableForOperationalModel(position, buildOperationalModel))
+        .map(position => position.genericName)
+        .filter(Boolean);
+    const isAirCombatCrewPositionStaff = (staff: Instructor): boolean => (
+        Boolean(staff.name) &&
+        !staff.isAdminStaff &&
+        activeAirCombatCrewRoles.some(role => airCombatStaffMatchesCrewRole(staff, role))
+    );
     const formatCrewRoleGroup = (requiredRoles: string[]): string => (
         requiredRoles.filter(Boolean).join(' or ') || 'Crew'
     );
@@ -9361,7 +9371,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         }, 0)
     );
     const getTaskStaffPriorityList = () => instructors
-        .filter(isAirCombatPilotStaff)
+        .filter(isAirCombatCrewPositionStaff)
         .map(staff => {
             const taskingEvents = getAirCombatTaskingEvents(staff.name);
             return {
@@ -9492,12 +9502,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const refreshAirCombatStaffAndAssignmentAudit = () => {
         if (!isAirCombatBuild) return;
         const pilotStaff = instructors.filter(isAirCombatPilotStaff);
+        const crewPositionStaff = instructors.filter(isAirCombatCrewPositionStaff);
         const terminology = normaliseCrewPositionTerminology(buildCrewPositionTerminology);
         const allCrewRoles = terminology.positions.map(position => position.genericName);
         neoBuildDiag.airCombatPriority.crewConfigurationAudit = {
             operationalModel: buildOperationalModel,
             terminology,
             buildAircraftCrewComposition,
+            activeAirCombatCrewRoles,
             aircraftSeatRoleGroups: airCombatFlightCrewRoleGroups,
             aircraftSeatRoleGroupLabels: summariseCrewRoleGroups(airCombatFlightCrewRoleGroups),
         };
@@ -9518,6 +9530,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 flight: staff.flight || null,
                 isAdminStaff: !!staff.isAdminStaff,
                 isPilotEligible: isAirCombatPilotStaff(staff),
+                isCrewPositionEligible: isAirCombatCrewPositionStaff(staff),
                 courseAssignments: assignments.courses.map(item => ({ code: item.code, trainingKey: item.trainingKey, unitCode: item.unitCode })),
                 trainingPackageAssignments: assignments.trainingPackages.map(item => ({ code: item.code, trainingKey: item.trainingKey, unitCode: item.unitCode })),
             };
@@ -9539,13 +9552,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         });
         neoBuildDiag.airCombatPriority.assignmentAudit = {
             pilotStaff: pilotStaff.length,
+            crewPositionStaff: crewPositionStaff.length,
             pilotsWithCourseAssignments: pilotStaff.filter(staff => normaliseAirCombatTrainingAssignments(staff.preferences).courses.length > 0).length,
             pilotsWithTrainingPackageAssignments: pilotStaff.filter(staff => normaliseAirCombatTrainingAssignments(staff.preferences).trainingPackages.length > 0).length,
-            allCourseCodes: Array.from(new Set(pilotStaff.flatMap(staff => normaliseAirCombatTrainingAssignments(staff.preferences).courses.map(item => item.code)))).sort(),
-            allTrainingPackageCodes: Array.from(new Set(pilotStaff.flatMap(staff => normaliseAirCombatTrainingAssignments(staff.preferences).trainingPackages.map(item => item.code)))).sort(),
+            crewPositionStaffWithCourseAssignments: crewPositionStaff.filter(staff => normaliseAirCombatTrainingAssignments(staff.preferences).courses.length > 0).length,
+            crewPositionStaffWithTrainingPackageAssignments: crewPositionStaff.filter(staff => normaliseAirCombatTrainingAssignments(staff.preferences).trainingPackages.length > 0).length,
+            pilotCourseCodes: Array.from(new Set(pilotStaff.flatMap(staff => normaliseAirCombatTrainingAssignments(staff.preferences).courses.map(item => item.code)))).sort(),
+            pilotTrainingPackageCodes: Array.from(new Set(pilotStaff.flatMap(staff => normaliseAirCombatTrainingAssignments(staff.preferences).trainingPackages.map(item => item.code)))).sort(),
+            allCourseCodes: Array.from(new Set(crewPositionStaff.flatMap(staff => normaliseAirCombatTrainingAssignments(staff.preferences).courses.map(item => item.code)))).sort(),
+            allTrainingPackageCodes: Array.from(new Set(crewPositionStaff.flatMap(staff => normaliseAirCombatTrainingAssignments(staff.preferences).trainingPackages.map(item => item.code)))).sort(),
         };
-        if (pilotStaff.length === 0) {
-            recordAirCombatSkip({ list: 'input', staff: 'All staff', event: 'Air Combat build', reason: 'NO_PILOT_ROLE_STAFF', startTime: null });
+        if (crewPositionStaff.length === 0) {
+            recordAirCombatSkip({ list: 'input', staff: 'All staff', event: 'Air Combat build', reason: 'NO_CONFIGURED_CREW_POSITION_STAFF', startTime: null });
         }
     };
     refreshAirCombatStaffAndAssignmentAudit();
@@ -10059,7 +10077,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return items.find(item => !completed.has(item.code)) || null;
         };
         const getTrainingPriorityList = (kind: 'course' | 'training_package', code: string) => instructors
-            .filter(isAirCombatPilotStaff)
+            .filter(isAirCombatCrewPositionStaff)
             .filter(staff => {
                 const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
                 const list = kind === 'training_package' ? assignments.trainingPackages : assignments.courses;
@@ -10086,7 +10104,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const matchingItems = sortedTrainingItems(kind, code);
             const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
             const pilotStaff = instructors.filter(isAirCombatPilotStaff);
-            const assignedStaff = pilotStaff
+            const crewPositionStaff = instructors.filter(isAirCombatCrewPositionStaff);
+            const assignedStaff = crewPositionStaff
                 .map(staff => {
                     const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
                     const list = kind === 'training_package' ? assignments.trainingPackages : assignments.courses;
@@ -10142,6 +10161,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     aircraftConfigRequirement: normaliseAircraftConfigRequirement(item),
                 })),
                 pilotStaff: pilotStaff.length,
+                crewPositionStaff: crewPositionStaff.length,
                 assignedStaffCount: assignedStaff.length,
                 assignedWithNextEvent: assignedStaff.filter((entry: any) => !!entry.nextEvent).length,
                 assignedWithoutNextEvent: assignedStaff.filter((entry: any) => !entry.nextEvent).length,
@@ -10190,8 +10210,24 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             startTime: number,
             stagedEvents: Omit<ScheduleEvent, 'date'>[] = []
         ): string | null => {
-            if (!isAirCombatPilotStaff(staff)) return 'ROLE_NOT_PILOT';
+            if (!isAirCombatCrewPositionStaff(staff)) return 'ROLE_NOT_CONFIGURED_CREW_POSITION';
             if (staff.isAdminStaff) return 'ADMIN_STAFF';
+            const requiredRoleGroups = getResolvedCrewRoleGroupsForEvent({
+                id: `air-combat-role-check-${staff.idNumber}-${item.code}-${startTime}`,
+                type,
+                instructor: '',
+                student: '',
+                pilot: staff.name,
+                crew: '',
+                flightNumber: item.code,
+                duration: item.duration,
+                startTime,
+                resourceId: '',
+                crewRequirement: item.crewRequirement || { mode: 'aircraft_default' },
+            } as Omit<ScheduleEvent, 'date'>);
+            if (!requiredRoleGroups.some(group => airCombatStaffMatchesCrewRoleGroup(staff, group))) {
+                return `ROLE_NOT_${summariseCrewRoleGroups(requiredRoleGroups).join('_OR_').replace(/\s+/g, '_').toUpperCase()}`;
+            }
             const bookingStart = startTime - (item.preFlightTime || 0);
             const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
             const counts = eventCounts.get(staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false };
@@ -10228,7 +10264,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             linkedItem: SyllabusItemDetail,
             excludedStaffNames: Set<string>
         ): AirCombatFormationMember[] => instructors
-            .filter(isAirCombatPilotStaff)
+            .filter(isAirCombatCrewPositionStaff)
             .filter(staff => staffHasAirCombatAssignment(staff, kind, code))
             .filter(staff => !excludedStaffNames.has(staff.name))
             .map(staff => {
