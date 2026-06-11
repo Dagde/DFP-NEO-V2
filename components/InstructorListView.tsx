@@ -14,7 +14,7 @@ import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '..
 import { normaliseOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
-import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 
 // Helper to generate a unique random ID for new instructors
@@ -26,6 +26,14 @@ const generateRandomIdNumber = (): number => {
 const UNIT_SORT_ORDER: Record<string, number> = { '1FTS': 1, 'CFS': 2, '2FTS': 3 };
 const isPilotRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toLowerCase() === 'pilot';
+const isQfiRole = (instructor: Instructor): boolean =>
+    String(instructor.role || '').trim().toUpperCase() === 'QFI' ||
+    instructor.isQFI === true ||
+    String(instructor.role || '').trim().toUpperCase() === 'INSTRUCTOR';
+const isConfiguredCrewPositionRole = (
+    instructor: Instructor,
+    terminology?: CrewPositionTerminology,
+): boolean => Boolean(findCrewPositionEntry(instructor.role, terminology));
 
 const generateNewInstructorTemplate = (): Instructor => ({
     idNumber: generateRandomIdNumber(),
@@ -220,11 +228,11 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const qfis = useMemo(() => {
       return instructorsData
           .filter(i => {
-              const isQFI = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
-              return isQFI || (isAirCombatModel && isPilotRole(i));
+              const isQFI = isQfiRole(i);
+              return isQFI || (isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology)));
           })
           .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
-  }, [instructorsData, isAirCombatModel, personnelDisplaySettings]);
+  }, [instructorsData, isAirCombatModel, personnelDisplaySettings, crewPositionTerminology]);
 
   const qfisByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
@@ -325,7 +333,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
         const otherStaffCandidates = instructorsData.filter(i => {
             // Exclude QFIs, INSTRUCTORs, SIM IPs, and OFIs
-            const isQfi = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR' || (isAirCombatModel && isPilotRole(i));
+            const isQfi = isQfiRole(i) || (isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology)));
             const isSimIp = i.role === 'SIM IP';
             const isOfi = i.role === 'OFI' || i.isOFI === true;
 
@@ -347,7 +355,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             }
             return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
-    }, [instructorsData, personnelDisplaySettings]);
+    }, [instructorsData, isAirCombatModel, personnelDisplaySettings, crewPositionTerminology]);
 
   // SIM IPs are shown as a single combined section (not split by unit)
   // simIps is already sorted by unit → rank → name from the simIps useMemo above

@@ -94,7 +94,7 @@ const normaliseImportedStaffRole = (
     if (['qfi', 'instructor', 'flight instructor'].includes(cleanLower)) return 'QFI';
 
     const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
-    if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? 'Pilot' : crewPosition.genericName;
+    if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? 'Pilot' : cleanValue;
     if (['pilot', 'aircrew pilot', 'captain'].includes(cleanLower)) return 'Pilot';
 
     return cleanValue;
