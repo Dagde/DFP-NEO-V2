@@ -35583,22 +35583,22 @@ const normaliseSeatConfig = (value) => {
   if (["fwd/long", "forward/long", "fwd long", "forward long", "long"].includes(cleanValue)) return "FWD/LONG";
   return value;
 };
-const normaliseImportedStaffRole = (value, crewPositionTerminology2) => {
+const normaliseImportedStaffRole = (value, crewPositionTerminology) => {
   const cleanValue = value.trim();
   const cleanLower = cleanValue.toLowerCase();
   if (!cleanValue) return void 0;
   if (["sim ip", "simulator ip", "sim instructor", "simulator instructor"].includes(cleanLower)) return "SIM IP";
   if (["qfi", "instructor", "flight instructor"].includes(cleanLower)) return "QFI";
-  const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology2);
-  if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology2) ? "Pilot" : crewPosition.genericName;
+  const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
+  if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? "Pilot" : crewPosition.genericName;
   if (["pilot", "aircrew pilot", "captain"].includes(cleanLower)) return "Pilot";
   return cleanValue;
 };
-const applyQualificationRoles = (parsedData, rolesValue, crewPositionTerminology2) => {
+const applyQualificationRoles = (parsedData, rolesValue, crewPositionTerminology) => {
   if (!rolesValue) return;
   const roleTokens = splitListValue(rolesValue);
   const rolesLower = roleTokens.join(" ").toLowerCase();
-  const importedCrewRole = roleTokens.map((role) => normaliseImportedStaffRole(role, crewPositionTerminology2)).find((role) => role && role !== "QFI");
+  const importedCrewRole = roleTokens.map((role) => normaliseImportedStaffRole(role, crewPositionTerminology)).find((role) => role && role !== "QFI");
   parsedData.isExecutive = rolesLower.includes("exec") || rolesLower.includes("executive");
   parsedData.isFlyingSupervisor = rolesLower.includes("fly sup") || rolesLower.includes("flying supervisor") || rolesLower.includes("supervisor");
   parsedData.isTestingOfficer = rolesLower.includes("testing") || rolesLower.includes("test officer");
@@ -35624,7 +35624,7 @@ const BulkUpdateFlyout = ({
   traineesData = [],
   isTraineeMode = false,
   onBulkUpdateTrainees,
-  crewPositionTerminology: crewPositionTerminology2
+  crewPositionTerminology
 }) => {
   const [repoFiles, setRepoFiles] = reactExports.useState([]);
   const [selectedFileId, setSelectedFileId] = reactExports.useState("");
@@ -35695,7 +35695,7 @@ const BulkUpdateFlyout = ({
         const rank = getStringFromRow(row, ["Rank"]);
         if (rank) parsedData.rank = rank;
         const role = getStringFromRow(row, ["Role", "Crew Position", "Crew Role", "Aircrew Role", "Seat Role"]);
-        const normalisedRole = normaliseImportedStaffRole(role, crewPositionTerminology2);
+        const normalisedRole = normaliseImportedStaffRole(role, crewPositionTerminology);
         if (normalisedRole) parsedData.role = normalisedRole;
         const callsign = getValueFromRow(row, ["callsign number", "callsignnumber", "Callsign No", "Callsign Number"]);
         if (callsign !== void 0) parsedData.callsignNumber = Number(callsign) || 0;
@@ -35721,7 +35721,7 @@ const BulkUpdateFlyout = ({
         const permissions = getStringFromRow(row, ["Permissions", "Permission"]);
         if (permissions) parsedData.permissions = splitListValue(permissions);
         const rolesStr = getStringFromRow(row, ["Roles", "Qualifications and Roles", "Qualifications & Roles", "Qualifications"]);
-        applyQualificationRoles(parsedData, rolesStr, crewPositionTerminology2);
+        applyQualificationRoles(parsedData, rolesStr, crewPositionTerminology);
         if (existingInstructor) {
           const updatedInstructor = { ...existingInstructor, ...parsedData, idNumber };
           instructorsToProcess.push(updatedInstructor);
@@ -35953,13 +35953,14 @@ const InstructorListView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
   instructorLabel = "QFI",
-  operationalModel = "flight_school"
+  operationalModel = "flight_school",
+  crewPositionTerminology
 }) => {
   const prevPropsRef = React.useRef({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -50129,10 +50130,10 @@ const PlatformConfigurationSettings = ({
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
-  const crewPositionTerminology2 = normaliseCrewPositionTerminology(
+  const crewPositionTerminology = normaliseCrewPositionTerminology(
     primaryOrganisationSettings.crewPositionTerminology || null
   );
-  const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology2);
+  const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0]?.trim() : String(activeUnitCode || "").trim();
   const activeTrainingReportUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()) || config.units.find(isActiveRecord) || config.units[0] || null;
@@ -50261,7 +50262,7 @@ const PlatformConfigurationSettings = ({
       })
     }));
   };
-  const updateCrewPositionTerminology = (positions, renamedPosition, deletedDefaultIds = crewPositionTerminology2.deletedDefaultIds || []) => {
+  const updateCrewPositionTerminology = (positions, renamedPosition, deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || []) => {
     setRankTerminologyDirty(true);
     setConfig((prev) => {
       const organisations = prev.organisations.length > 0 ? [...prev.organisations] : [{ code: "RAAF", name: "RAAF", status: "ACTIVE", settings: {} }];
@@ -50294,17 +50295,17 @@ const PlatformConfigurationSettings = ({
     });
   };
   const updateCrewPositionEntry = (entryId, changes) => {
-    const currentEntry = crewPositionTerminology2.positions.find((entry) => entry.id === entryId);
+    const currentEntry = crewPositionTerminology.positions.find((entry) => entry.id === entryId);
     if (!currentEntry) return;
     const nextGenericName = changes.genericName !== void 0 ? String(changes.genericName) : currentEntry.genericName;
     const nextLabel = changes.label !== void 0 ? String(changes.label) : currentEntry.label;
-    const nextPositions = crewPositionTerminology2.positions.map((entry) => entry.id === entryId ? { ...entry, genericName: nextGenericName, label: nextLabel } : entry);
+    const nextPositions = crewPositionTerminology.positions.map((entry) => entry.id === entryId ? { ...entry, genericName: nextGenericName, label: nextLabel } : entry);
     updateCrewPositionTerminology(nextPositions, { from: currentEntry.genericName, to: nextGenericName });
   };
   const addCrewPositionEntry = () => {
-    const genericName = `Crew Position ${crewPositionTerminology2.positions.length + 1}`;
+    const genericName = `Crew Position ${crewPositionTerminology.positions.length + 1}`;
     updateCrewPositionTerminology([
-      ...crewPositionTerminology2.positions,
+      ...crewPositionTerminology.positions,
       {
         id: createClientRecordId("crew-position"),
         genericName,
@@ -50313,9 +50314,9 @@ const PlatformConfigurationSettings = ({
     ]);
   };
   const removeCrewPositionEntry = (entryId) => {
-    const nextPositions = crewPositionTerminology2.positions.filter((entry) => entry.id !== entryId);
-    if (nextPositions.length === crewPositionTerminology2.positions.length || nextPositions.length === 0) return;
-    const nextDeletedDefaultIds = defaultCrewPositionIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...crewPositionTerminology2.deletedDefaultIds || [], entryId])) : crewPositionTerminology2.deletedDefaultIds || [];
+    const nextPositions = crewPositionTerminology.positions.filter((entry) => entry.id !== entryId);
+    if (nextPositions.length === crewPositionTerminology.positions.length || nextPositions.length === 0) return;
+    const nextDeletedDefaultIds = defaultCrewPositionIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...crewPositionTerminology.deletedDefaultIds || [], entryId])) : crewPositionTerminology.deletedDefaultIds || [];
     updateCrewPositionTerminology(nextPositions, void 0, nextDeletedDefaultIds);
   };
   const updateTrainingReportTemplate = (updater) => {
@@ -51657,7 +51658,7 @@ const PlatformConfigurationSettings = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => {
           const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           const crewPositionOptions = getCrewPositionOptions(
-            crewPositionTerminology2,
+            crewPositionTerminology,
             crewComposition.seats.map((seat) => seat.role)
           );
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
@@ -53000,7 +53001,7 @@ const PlatformConfigurationSettings = ({
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: crewPositionTerminology2.positions.map((entry) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: crewPositionTerminology.positions.map((entry) => {
             const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -63329,7 +63330,7 @@ const DfpSidePanelTimeline = ({
   aircraftConfigCapacities,
   aircraftConfigurationDefinitions,
   aircraftCrewComposition,
-  crewPositionTerminology: crewPositionTerminology2,
+  crewPositionTerminology,
   onUpdateAircraftConfigCapacities,
   availableFtdCount,
   onUpdateFtdCount,
@@ -63582,12 +63583,12 @@ const DfpSidePanelTimeline = ({
   const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === "flight" && assistCrewSelectionLimit > 1;
   const isStaffPilotCrewPosition = reactExports.useCallback((staff) => {
     const roleText = String(staff.role || "").trim().toLowerCase();
-    return roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, crewPositionTerminology2);
-  }, [crewPositionTerminology2]);
+    return roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, crewPositionTerminology);
+  }, [crewPositionTerminology]);
   const staffMatchesRequiredCrewRole = reactExports.useCallback((staff, requiredRole) => {
-    if (isPilotCrewPosition(requiredRole, crewPositionTerminology2)) return isStaffPilotCrewPosition(staff);
-    return crewPositionValuesMatch(requiredRole, staff.role, crewPositionTerminology2);
-  }, [crewPositionTerminology2, isStaffPilotCrewPosition]);
+    if (isPilotCrewPosition(requiredRole, crewPositionTerminology)) return isStaffPilotCrewPosition(staff);
+    return crewPositionValuesMatch(requiredRole, staff.role, crewPositionTerminology);
+  }, [crewPositionTerminology, isStaffPilotCrewPosition]);
   const isStaffEligibleForAssistCrew = reactExports.useCallback((staff) => {
     if (!isAirCombatTileMode || selectedResourceKind !== "flight" || requiredAssistCrewRoles.length === 0) return true;
     if (!staff.name || staff.isAdminStaff) return false;
@@ -64077,7 +64078,7 @@ const DfpSidePanelTimeline = ({
   const formatCrewOptionLabel = (name) => {
     const instructor = instructors.find((item) => item.name === name);
     const rank = String(instructor?.rank || "").trim();
-    const crewPosition = findCrewPositionEntry(instructor?.role, crewPositionTerminology2);
+    const crewPosition = findCrewPositionEntry(instructor?.role, crewPositionTerminology);
     const roleLabel = crewPosition?.label || String(instructor?.role || "").trim();
     const personLabel = rank ? `${rank} ${name}` : name;
     return roleLabel ? `${personLabel} (${roleLabel})` : personLabel;
