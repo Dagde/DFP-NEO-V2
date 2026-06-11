@@ -88,16 +88,16 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
   };
 
   return (
-    <div className={`rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? 'p-2' : 'p-3'} text-xs text-slate-200`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
+    <div className={`min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? 'p-2' : 'p-3'} text-xs text-slate-200`}>
+      <div className={`${compact ? 'grid grid-cols-[minmax(0,1fr)_minmax(7.5rem,auto)]' : 'flex flex-wrap'} items-center justify-between gap-2`}>
+        <div className="min-w-0">
           <div className="font-semibold text-slate-100">Crew Required</div>
-          <div className="mt-0.5 text-slate-400">{effectiveSummary}</div>
+          <div className="mt-0.5 break-words text-slate-400">{effectiveSummary}</div>
         </div>
         <select
           value={normalised.mode}
           onChange={(event) => setMode(event.target.value as CrewRequirement['mode'])}
-          className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500"
+          className={`${compact ? 'w-full max-w-[11rem]' : ''} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`}
         >
           <option value="aircraft_default">Use aircraft default</option>
           <option value="custom">Custom crew</option>

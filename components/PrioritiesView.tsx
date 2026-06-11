@@ -457,7 +457,7 @@ interface TaskingRequestTableProps {
   onIgnoreTaskingRequest: (id: string) => void;
 }
 
-const taskingPanelClass = 'flex min-h-[8rem] flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20';
+const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20';
 const taskingPanelLabelClass = 'text-[10px] font-black uppercase tracking-[0.18em] text-slate-500';
 const taskingPanelHintClass = 'mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500';
 const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500';
@@ -573,20 +573,26 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             </TaskingFieldPanel>
           </div>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(8rem,1fr)_minmax(8rem,1fr)_minmax(7rem,0.8fr)_minmax(11rem,1.15fr)_minmax(18rem,2fr)_minmax(14rem,1.4fr)]">
-            <TaskingFieldPanel label="Departure" hint={request.depPoint || 'Required'}>
-              <TaskingAirfieldCodeInput
-                value={request.depPoint}
-                suggestions={depPointSuggestions}
-                onChange={(depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false, saved: false })}
-              />
-            </TaskingFieldPanel>
-            <TaskingFieldPanel label="Arrival" hint={request.arrivalPoint || 'Required'}>
-              <TaskingAirfieldCodeInput
-                value={request.arrivalPoint}
-                suggestions={arrivalPointSuggestions}
-                onChange={(arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false, saved: false })}
-              />
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,0.7fr)_minmax(0,0.95fr)_minmax(0,1.85fr)_minmax(0,1fr)]">
+            <TaskingFieldPanel label="Route" hint={`${request.depPoint || 'Departure'} -> ${request.arrivalPoint || 'Arrival'}`}>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="min-w-0">
+                  <div className="mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-600">Dep</div>
+                  <TaskingAirfieldCodeInput
+                    value={request.depPoint}
+                    suggestions={depPointSuggestions}
+                    onChange={(depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false, saved: false })}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <div className="mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-600">Arr</div>
+                  <TaskingAirfieldCodeInput
+                    value={request.arrivalPoint}
+                    suggestions={arrivalPointSuggestions}
+                    onChange={(arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false, saved: false })}
+                  />
+                </div>
+              </div>
             </TaskingFieldPanel>
             <TaskingFieldPanel label="Aircraft" hint={`${request.aircraftCount || 1} required`}>
               <input
@@ -598,7 +604,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
               />
             </TaskingFieldPanel>
             <TaskingFieldPanel label="Config" hint={selectedConfig?.definition || selectedConfig?.label || 'Aircraft fit'}>
-              <div className="[&_select]:h-10 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold">
+              <div className="[&_select]:h-10 [&_select]:min-w-0 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold">
                 <AircraftConfigSelect
                   value={request.aircraftConfigId}
                   definitions={aircraftConfigOptions}
@@ -606,7 +612,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 />
               </div>
             </TaskingFieldPanel>
-            <div className="[&>div]:min-h-[8rem]">
+            <div className="min-w-0 [&>div]:min-h-[8rem]">
               <CrewRequirementEditor
                 value={request.crewRequirement}
                 aircraftCrewComposition={aircraftCrewComposition}
@@ -621,7 +627,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
               hint={`${request.isMandatory !== false ? 'Mandatory' : 'Optional'}, ${request.saved ? (request.submitted && !request.ignored ? 'scheduled' : 'ignored') : 'save or remove'}`}
             >
               <div className="grid gap-2">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_2.5rem] gap-2">
                   <label className="flex h-10 items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-800 px-3 text-sm font-semibold text-white">
                     <input
                       type="checkbox"

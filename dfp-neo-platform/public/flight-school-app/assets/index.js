@@ -4453,18 +4453,18 @@ const CrewRequirementEditor = ({
       roles: nextRows.length > 0 ? nextRows : [{ role: roleOptions[0]?.value || "Pilot", crewPositionId: roleOptions[0]?.id, count: 1 }]
     });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? "p-2" : "p-3"} text-xs text-slate-200`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? "p-2" : "p-3"} text-xs text-slate-200`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${compact ? "grid grid-cols-[minmax(0,1fr)_minmax(7.5rem,auto)]" : "flex flex-wrap"} items-center justify-between gap-2`, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-100", children: "Crew Required" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-slate-400", children: effectiveSummary })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 break-words text-slate-400", children: effectiveSummary })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "select",
         {
           value: normalised.mode,
           onChange: (event) => setMode(event.target.value),
-          className: "rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500",
+          className: `${compact ? "w-full max-w-[11rem]" : ""} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`,
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aircraft_default", children: "Use aircraft default" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "custom", children: "Custom crew" })
@@ -24641,7 +24641,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
     ] }) })
   ] });
 };
-const taskingPanelClass = "flex min-h-[8rem] flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20";
+const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20";
 const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
@@ -24738,23 +24738,31 @@ const TaskingRequestTable = ({
           }
         ) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(8rem,1fr)_minmax(8rem,1fr)_minmax(7rem,0.8fr)_minmax(11rem,1.15fr)_minmax(18rem,2fr)_minmax(14rem,1.4fr)]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Departure", hint: request.depPoint || "Required", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          TaskingAirfieldCodeInput,
-          {
-            value: request.depPoint,
-            suggestions: depPointSuggestions,
-            onChange: (depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false, saved: false })
-          }
-        ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Arrival", hint: request.arrivalPoint || "Required", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          TaskingAirfieldCodeInput,
-          {
-            value: request.arrivalPoint,
-            suggestions: arrivalPointSuggestions,
-            onChange: (arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false, saved: false })
-          }
-        ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,0.7fr)_minmax(0,0.95fr)_minmax(0,1.85fr)_minmax(0,1fr)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Route", hint: `${request.depPoint || "Departure"} -> ${request.arrivalPoint || "Arrival"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-600", children: "Dep" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TaskingAirfieldCodeInput,
+              {
+                value: request.depPoint,
+                suggestions: depPointSuggestions,
+                onChange: (depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false, saved: false })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-600", children: "Arr" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TaskingAirfieldCodeInput,
+              {
+                value: request.arrivalPoint,
+                suggestions: arrivalPointSuggestions,
+                onChange: (arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false, saved: false })
+              }
+            )
+          ] })
+        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Aircraft", hint: `${request.aircraftCount || 1} required`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
@@ -24765,7 +24773,7 @@ const TaskingRequestTable = ({
             className: taskingControlClass
           }
         ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Config", hint: selectedConfig?.definition || selectedConfig?.label || "Aircraft fit", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:h-10 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Config", hint: selectedConfig?.definition || selectedConfig?.label || "Aircraft fit", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:h-10 [&_select]:min-w-0 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           AircraftConfigSelect,
           {
             value: request.aircraftConfigId,
@@ -24773,7 +24781,7 @@ const TaskingRequestTable = ({
             onChange: (aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false, saved: false })
           }
         ) }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&>div]:min-h-[8rem]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 [&>div]:min-h-[8rem]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           CrewRequirementEditor,
           {
             value: request.crewRequirement,
@@ -24790,7 +24798,7 @@ const TaskingRequestTable = ({
             label: "Controls",
             hint: `${request.isMandatory !== false ? "Mandatory" : "Optional"}, ${request.saved ? request.submitted && !request.ignored ? "scheduled" : "ignored" : "save or remove"}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_auto] gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_2.5rem] gap-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex h-10 items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-800 px-3 text-sm font-semibold text-white", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
