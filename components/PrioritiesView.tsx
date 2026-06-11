@@ -466,12 +466,13 @@ const TaskingFieldPanel: React.FC<{
   label: string;
   hint?: string;
   className?: string;
+  contentClassName?: string;
   children: React.ReactNode;
-}> = ({ label, hint, className = '', children }) => (
+}> = ({ label, hint, className = '', contentClassName = '', children }) => (
   <div className={`${taskingPanelClass} ${className}`}>
     <div>
       <div className={taskingPanelLabelClass}>{label}</div>
-      <div className="mt-3">{children}</div>
+      <div className={`mt-3 ${contentClassName}`}>{children}</div>
     </div>
     {hint ? <div className={taskingPanelHintClass}>{hint}</div> : <div className={taskingPanelHintClass} aria-hidden="true">&nbsp;</div>}
   </div>
@@ -573,7 +574,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             </TaskingFieldPanel>
           </div>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,0.7fr)_minmax(0,1.05fr)_minmax(0,1.16fr)_minmax(0,0.82fr)]">
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,0.56fr)_minmax(0,0.84fr)_minmax(0,1.16fr)_minmax(0,0.82fr)]">
             <TaskingFieldPanel label="Route" hint={`${request.depPoint || 'Departure'} -> ${request.arrivalPoint || 'Arrival'}`}>
               <div className="grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]">
                 <div className="min-w-0">
@@ -597,7 +598,8 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <TaskingFieldPanel
               label="Aircraft"
               hint={`${request.aircraftCount || 1} required`}
-              className="[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col [&>div:first-child]:justify-center"
+              className="[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col"
+              contentClassName="flex flex-1 items-center"
             >
               <input
                 type="number"
@@ -610,7 +612,8 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <TaskingFieldPanel
               label="Config"
               hint={selectedConfig?.definition || selectedConfig?.label || 'Aircraft fit'}
-              className="[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col [&>div:first-child]:justify-center"
+              className="[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col"
+              contentClassName="flex flex-1 items-center"
             >
               <div className="[&_select]:h-10 [&_select]:min-w-0 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold">
                 <AircraftConfigSelect

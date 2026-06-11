@@ -24646,10 +24646,10 @@ const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
-const TaskingFieldPanel = ({ label, hint, className = "", children }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingPanelClass} ${className}`, children: [
+const TaskingFieldPanel = ({ label, hint, className = "", contentClassName = "", children }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingPanelClass} ${className}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: taskingPanelLabelClass, children: label }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-3 ${contentClassName}`, children })
   ] }),
   hint ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: taskingPanelHintClass, children: hint }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: taskingPanelHintClass, "aria-hidden": "true", children: " " })
 ] });
@@ -24739,7 +24739,7 @@ const TaskingRequestTable = ({
           }
         ) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,0.7fr)_minmax(0,1.05fr)_minmax(0,1.16fr)_minmax(0,0.82fr)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,0.56fr)_minmax(0,0.84fr)_minmax(0,1.16fr)_minmax(0,0.82fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Route", hint: `${request.depPoint || "Departure"} -> ${request.arrivalPoint || "Arrival"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600", children: "Dep" }),
@@ -24769,7 +24769,8 @@ const TaskingRequestTable = ({
           {
             label: "Aircraft",
             hint: `${request.aircraftCount || 1} required`,
-            className: "[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col [&>div:first-child]:justify-center",
+            className: "[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col",
+            contentClassName: "flex flex-1 items-center",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -24787,7 +24788,8 @@ const TaskingRequestTable = ({
           {
             label: "Config",
             hint: selectedConfig?.definition || selectedConfig?.label || "Aircraft fit",
-            className: "[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col [&>div:first-child]:justify-center",
+            className: "[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col",
+            contentClassName: "flex flex-1 items-center",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:h-10 [&_select]:min-w-0 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               AircraftConfigSelect,
               {
