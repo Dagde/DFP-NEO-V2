@@ -5457,6 +5457,11 @@ function generateDfpInternal(
                 aircraftConfigIdsByResource,
                 aircraftConfigurationDefinitions: aircraftConfigDefinitionsForBuild,
             },
+            crewConfiguration: {
+                operationalModel: buildOperationalModel,
+                crewPositionTerminology: normaliseCrewPositionTerminology(activeCrewPositionTerminology),
+                activeAircraftCrewComposition,
+            },
         },
         activeTrainees: {
             total: 0,
@@ -5638,8 +5643,12 @@ function generateDfpInternal(
                 airCombatPriority: neoBuildDiag.airCombatPriority ? {
                     ...neoBuildDiag.airCombatPriority,
                     staffAudit: (neoBuildDiag.airCombatPriority.staffAudit || []).slice(0, 120),
+                    crewConfigurationAudit: neoBuildDiag.airCombatPriority.crewConfigurationAudit || null,
+                    crewRequirementAudit: (neoBuildDiag.airCombatPriority.crewRequirementAudit || []).slice(-240),
+                    staffRoleCoverage: (neoBuildDiag.airCombatPriority.staffRoleCoverage || []).slice(0, 160),
                     taskingQueue: (neoBuildDiag.airCombatPriority.taskingQueue || []).slice(-120),
                     taskingAttempts: (neoBuildDiag.airCombatPriority.taskingAttempts || []).slice(-240),
+                    taskingCrewAssignments: (neoBuildDiag.airCombatPriority.taskingCrewAssignments || []).slice(-400),
                     taskStaffPriorityList: (neoBuildDiag.airCombatPriority.taskStaffPriorityList || []).slice(0, 120),
                     courseStaffPriorityLists: (neoBuildDiag.airCombatPriority.courseStaffPriorityLists || []).slice(-120),
                     trainingPackageStaffPriorityLists: (neoBuildDiag.airCombatPriority.trainingPackageStaffPriorityLists || []).slice(-120),
@@ -9401,8 +9410,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         },
         staffAudit: [],
         assignmentAudit: [],
+        crewConfigurationAudit: null,
+        crewRequirementAudit: [],
+        staffRoleCoverage: [],
         taskingQueue: [],
         taskingAttempts: [],
+        taskingCrewAssignments: [],
         taskStaffPriorityList: [],
         courseStaffPriorityLists: [],
         trainingPackageStaffPriorityLists: [],
@@ -9441,20 +9454,83 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             ...details,
         }, 120);
     };
+    const summariseCrewRoleGroups = (roleGroups: string[][]): string[] => (
+        roleGroups.map(group => formatCrewRoleGroup(group))
+    );
+    const getResolvedCrewRoleGroupsForEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>, requiredStaffCount?: number): string[][] => {
+        const configuredGroups = getCrewRequirementRoles(event.crewRequirement, activeAircraftCrewComposition)
+            .flatMap(role => Array.from(
+                { length: Math.max(0, Math.round(Number(role.count) || 0)) },
+                () => getCrewRequirementRoleOptions(role).filter(Boolean)
+            ))
+            .filter(group => group.length > 0);
+        const fallbackGroups = airCombatFlightCrewRoleGroups.length > 0 ? airCombatFlightCrewRoleGroups : [['Pilot']];
+        const crewLimit = Math.max(1, Math.min(2, requiredStaffCount || configuredGroups.length || fallbackGroups.length || 1));
+        return (configuredGroups.length > 0 ? configuredGroups : fallbackGroups).slice(0, crewLimit);
+    };
+    const getCrewRequirementDiagnostic = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>, requiredStaffCount?: number) => {
+        const rawRoles = getCrewRequirementRoles(event.crewRequirement, activeAircraftCrewComposition).map(role => ({
+            role: role.role,
+            count: role.count,
+            eligibleRoles: getCrewRequirementRoleOptions(role),
+        }));
+        const resolvedRoleGroups = getResolvedCrewRoleGroupsForEvent(event, requiredStaffCount);
+        return {
+            mode: event.crewRequirement?.mode || 'aircraft_default',
+            rawCrewRequirement: event.crewRequirement || null,
+            rawRoles,
+            requiredStaffCount: requiredStaffCount || null,
+            schedulerCrewLimit: Math.max(1, Math.min(2, requiredStaffCount || resolvedRoleGroups.length || 1)),
+            resolvedRoleGroups,
+            resolvedRoleGroupLabels: summariseCrewRoleGroups(resolvedRoleGroups),
+        };
+    };
     const refreshAirCombatStaffAndAssignmentAudit = () => {
         if (!isAirCombatBuild) return;
         const pilotStaff = instructors.filter(isAirCombatPilotStaff);
+        const terminology = normaliseCrewPositionTerminology(activeCrewPositionTerminology);
+        const allCrewRoles = terminology.positions.map(position => position.genericName);
+        neoBuildDiag.airCombatPriority.crewConfigurationAudit = {
+            operationalModel: buildOperationalModel,
+            terminology,
+            activeAircraftCrewComposition,
+            aircraftSeatRoleGroups: airCombatFlightCrewRoleGroups,
+            aircraftSeatRoleGroupLabels: summariseCrewRoleGroups(airCombatFlightCrewRoleGroups),
+        };
         neoBuildDiag.airCombatPriority.staffAudit = instructors.map(staff => {
             const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+            const matchedCrewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
             return {
                 name: staff.name,
                 role: staff.role || null,
+                matchedCrewPosition: matchedCrewPosition ? {
+                    id: matchedCrewPosition.id,
+                    genericName: matchedCrewPosition.genericName,
+                    label: matchedCrewPosition.label,
+                    operationalModels: matchedCrewPosition.operationalModels || [],
+                } : null,
+                crewRoleMatches: allCrewRoles.filter(role => airCombatStaffMatchesCrewRole(staff, role)),
                 unit: staff.unit || null,
                 flight: staff.flight || null,
                 isAdminStaff: !!staff.isAdminStaff,
                 isPilotEligible: isAirCombatPilotStaff(staff),
                 courseAssignments: assignments.courses.map(item => ({ code: item.code, trainingKey: item.trainingKey, unitCode: item.unitCode })),
                 trainingPackageAssignments: assignments.trainingPackages.map(item => ({ code: item.code, trainingKey: item.trainingKey, unitCode: item.unitCode })),
+            };
+        });
+        neoBuildDiag.airCombatPriority.staffRoleCoverage = allCrewRoles.map(role => {
+            const matchingStaff = instructors.filter(staff => airCombatStaffMatchesCrewRole(staff, role));
+            return {
+                role,
+                label: findCrewPositionEntry(role, activeCrewPositionTerminology)?.label || role,
+                matchingStaffCount: matchingStaff.length,
+                matchingStaff: matchingStaff.slice(0, 80).map(staff => ({
+                    name: staff.name,
+                    role: staff.role || null,
+                    unit: staff.unit || null,
+                    isAdminStaff: !!staff.isAdminStaff,
+                    isPilotEligible: isAirCombatPilotStaff(staff),
+                })),
             };
         });
         neoBuildDiag.airCombatPriority.assignmentAudit = {
@@ -9506,6 +9582,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 soloOrDual: event.soloOrDual,
                 aircraftConfigId: event.aircraftConfigId || null,
                 acceptableAircraftConfigs: normaliseAircraftConfigRequirement(event),
+                crewRequirementDiagnostic: getCrewRequirementDiagnostic(event, getPriorityEventCrewCount(event)),
+            }));
+            neoBuildDiag.airCombatPriority.crewRequirementAudit = orderedTaskingEvents.map(event => ({
+                priorityEvent: getTaskingEventIdentity(event),
+                type: event.type,
+                flightType: event.flightType,
+                soloOrDual: event.soloOrDual,
+                aircraftConfigId: event.aircraftConfigId || null,
+                crewRequirementDiagnostic: getCrewRequirementDiagnostic(event, getPriorityEventCrewCount(event)),
             }));
             recordAirCombatStage('tasking-queue-built', {
                 queueSize: orderedTaskingEvents.length,
@@ -9549,17 +9634,28 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             requiredStaffCount: number
         ): { pilot: string; crew?: string; instructor?: string; rejectedStaff: number } | null => {
             if (isAirCombatBuild) {
-                const candidateCrewRoleGroups = getCrewRequirementRoles(candidate.crewRequirement, activeAircraftCrewComposition)
-                    .flatMap(role => Array.from(
-                        { length: Math.max(0, Math.round(Number(role.count) || 0)) },
-                        () => getCrewRequirementRoleOptions(role).filter(Boolean)
-                    ))
-                    .filter(group => group.length > 0);
-                const requiredRoleGroups = (candidateCrewRoleGroups.length > 0 ? candidateCrewRoleGroups : airCombatFlightCrewRoleGroups.length > 0 ? airCombatFlightCrewRoleGroups : [['Pilot']])
-                    .slice(0, Math.max(1, Math.min(2, requiredStaffCount)));
+                const crewRequirementDiagnostic = getCrewRequirementDiagnostic(candidate, requiredStaffCount);
+                const requiredRoleGroups = getResolvedCrewRoleGroupsForEvent(candidate, requiredStaffCount);
                 const primaryRequiredRoles = requiredRoleGroups[0] || ['Pilot'];
                 const secondaryRequiredRoles = requiredRoleGroups[1] || ['Crew'];
                 const priorityList = getTaskStaffPriorityList().filter(entry => airCombatStaffMatchesCrewRoleGroup(entry.staff, primaryRequiredRoles));
+                const secondaryPool = requiredStaffCount > 1
+                    ? getAirCombatStaffForCrewRoleGroup(secondaryRequiredRoles).filter(staff => !staff.isAdminStaff)
+                    : [];
+                const assignmentAttemptBase = {
+                    event: getTaskingEventIdentity(candidate),
+                    requiredStaffCount,
+                    crewRequirementDiagnostic,
+                    primaryRequiredRoles,
+                    primaryRequiredRoleLabel: formatCrewRoleGroup(primaryRequiredRoles),
+                    secondaryRequiredRoles: requiredStaffCount > 1 ? secondaryRequiredRoles : [],
+                    secondaryRequiredRoleLabel: requiredStaffCount > 1 ? formatCrewRoleGroup(secondaryRequiredRoles) : null,
+                    primaryCandidateCount: priorityList.length,
+                    secondaryCandidateCount: secondaryPool.length,
+                    primaryCandidates: priorityList.slice(0, 40).map(entry => ({ name: entry.staff.name, role: entry.staff.role, unit: entry.staff.unit || null })),
+                    secondaryCandidates: secondaryPool.slice(0, 40).map(staff => ({ name: staff.name, role: staff.role, unit: staff.unit || null })),
+                    rejections: [] as any[],
+                };
                 neoBuildDiag.airCombatPriority.taskStaffPriorityList = priorityList.map(entry => ({
                     name: entry.staff.name,
                     role: entry.staff.role,
@@ -9590,12 +9686,30 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             reason: primaryReason,
                             startTime: candidate.startTime,
                         });
+                        if (assignmentAttemptBase.rejections.length < 80) {
+                            assignmentAttemptBase.rejections.push({
+                                phase: 'primary',
+                                staff: primaryEntry.staff.name,
+                                role: primaryEntry.staff.role || null,
+                                requiredRoles: primaryRequiredRoles,
+                                reason: primaryReason,
+                            });
+                        }
                         continue;
                     }
                     if (requiredStaffCount === 1) {
+                        pushAirCombatDiag('taskingCrewAssignments', {
+                            ...assignmentAttemptBase,
+                            assigned: true,
+                            selected: {
+                                pilot: primaryEntry.staff.name,
+                                crew: '',
+                                instructor: '',
+                            },
+                        }, 500);
                         return { pilot: primaryEntry.staff.name, crew: '', instructor: '', rejectedStaff };
                     }
-                    const secondaryList = getAirCombatStaffForCrewRoleGroup(secondaryRequiredRoles)
+                    const secondaryList = secondaryPool
                         .filter(staff => staff.name !== primaryEntry.staff.name)
                         .map(staff => ({
                             staff,
@@ -9621,12 +9735,41 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                 reason: secondaryReason,
                                 startTime: candidate.startTime,
                             });
+                            if (assignmentAttemptBase.rejections.length < 80) {
+                                assignmentAttemptBase.rejections.push({
+                                    phase: 'secondary',
+                                    primaryStaff: primaryEntry.staff.name,
+                                    staff: secondaryEntry.staff.name,
+                                    role: secondaryEntry.staff.role || null,
+                                    requiredRoles: secondaryRequiredRoles,
+                                    reason: secondaryReason,
+                                });
+                            }
                             continue;
                         }
+                        pushAirCombatDiag('taskingCrewAssignments', {
+                            ...assignmentAttemptBase,
+                            assigned: true,
+                            selected: {
+                                pilot: primaryEntry.staff.name,
+                                crew: secondaryEntry.staff.name,
+                                instructor: '',
+                            },
+                        }, 500);
                         return { pilot: primaryEntry.staff.name, crew: secondaryEntry.staff.name, instructor: '', rejectedStaff };
                     }
                     rejectedStaff++;
                 }
+                pushAirCombatDiag('taskingCrewAssignments', {
+                    ...assignmentAttemptBase,
+                    assigned: false,
+                    selected: null,
+                    reason: priorityList.length === 0
+                        ? 'NO_PRIMARY_STAFF_MATCHING_REQUIRED_ROLE'
+                        : requiredStaffCount > 1 && secondaryPool.length === 0
+                            ? 'NO_SECONDARY_STAFF_MATCHING_REQUIRED_ROLE'
+                            : 'NO_VALID_CREW_COMBINATION',
+                }, 500);
                 return null;
             }
             const availableStaff = shuffleRandom(staffPool).filter(staff => (
@@ -24183,7 +24326,7 @@ const App: React.FC = () => {
             publishedEventsForBuildDate: (buildPublishedSchedules[buildDfpDate] || []).length,
         });
         markNeoBuildTiming(timingReport, 'runBuildAlgorithm:start');
-        const shouldDownloadAirCombatDiagnostic = false;
+        const shouldDownloadAirCombatDiagnostic = activeOperationalModel === 'air_combat';
         let airCombatDiagnosticDownloaded = false;
         const downloadAirCombatDiagnosticReport = (source: string) => {
             if (!shouldDownloadAirCombatDiagnostic || airCombatDiagnosticDownloaded) return;
@@ -24513,6 +24656,33 @@ const App: React.FC = () => {
                     configSummary: {
                         highestPriorityEvents: config.highestPriorityEvents.length,
                         remedialRequests: config.remedialRequests.length,
+                        operationalModel: activeOperationalModel,
+                        activeUnitCode,
+                        crewPositionTerminology: normaliseCrewPositionTerminology(activeCrewPositionTerminology),
+                        activeAircraftCrewComposition,
+                        staffRoleSummary: instructorsData.slice(0, 200).map(staff => {
+                            const matchedCrewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
+                            return {
+                                name: staff.name,
+                                role: staff.role || null,
+                                unit: staff.unit || null,
+                                isAdminStaff: !!staff.isAdminStaff,
+                                matchedCrewPosition: matchedCrewPosition ? {
+                                    id: matchedCrewPosition.id,
+                                    genericName: matchedCrewPosition.genericName,
+                                    label: matchedCrewPosition.label,
+                                } : null,
+                            };
+                        }),
+                        highestPriorityCrewRequirements: config.highestPriorityEvents.slice(0, 200).map(event => ({
+                            id: event.id,
+                            flightNumber: event.flightNumber,
+                            type: event.type,
+                            date: event.date,
+                            startTime: event.startTime,
+                            crewRequirement: event.crewRequirement || null,
+                            aircraftConfigId: event.aircraftConfigId || null,
+                        })),
                         remedialHighestPriorityEvents: config.highestPriorityEvents.filter(event => event.isRemedial || event.id?.startsWith('remedial-')).map(event => ({
                             id: event.id,
                             flightNumber: event.flightNumber,
