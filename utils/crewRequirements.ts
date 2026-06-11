@@ -3,6 +3,7 @@ import type { AircraftCrewComposition } from './aircraftCrewComposition';
 import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, getAircraftSeatEligibleRoles } from './aircraftCrewComposition';
 import {
   findCrewPositionEntry,
+  isCrewPositionAvailableForOperationalModel,
   normaliseCrewPositionTerminology,
   type CrewPositionTerminology,
 } from './crewPositionTerminology';
@@ -150,10 +151,28 @@ export const formatCrewRequirementSummary = (
 
 export const getCrewRequirementOptions = (
   terminology?: CrewPositionTerminology,
-): { id: string; value: string; label: string }[] => (
-  normaliseCrewPositionTerminology(terminology).positions.map((entry) => ({
+  operationalModel?: unknown,
+  extraValues: string[] = [],
+): { id: string; value: string; label: string }[] => {
+  const allPositions = normaliseCrewPositionTerminology(terminology).positions;
+  const modelPositions = allPositions.filter((entry) => isCrewPositionAvailableForOperationalModel(entry, operationalModel));
+  const baseOptions = (modelPositions.length > 0 ? modelPositions : allPositions).map((entry) => ({
     id: entry.id,
     value: entry.genericName,
     label: entry.label,
-  }))
-);
+  }));
+  return baseOptions
+    .concat(extraValues
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+      .filter((value, index, values) => values.findIndex((candidate) => candidate.toUpperCase() === value.toUpperCase()) === index)
+      .filter((value) => !baseOptions.some((entry) => entry.value.toUpperCase() === value.toUpperCase()))
+      .map((value) => {
+        const existing = allPositions.find((entry) => entry.genericName.toUpperCase() === value.toUpperCase());
+        return {
+          id: existing?.id || value,
+          value: existing?.genericName || value,
+          label: existing?.label || value,
+        };
+      }));
+};

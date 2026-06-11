@@ -5,6 +5,7 @@ import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import {
   formatCrewRequirementSummary,
   getCrewRequirementOptions,
+  getCrewRequirementRoleOptions,
   normaliseCrewRequirement,
   resolveCrewRequirement,
 } from '../utils/crewRequirements';
@@ -13,6 +14,7 @@ interface CrewRequirementEditorProps {
   value?: CrewRequirement | null;
   aircraftCrewComposition?: AircraftCrewComposition;
   crewPositionTerminology?: CrewPositionTerminology;
+  operationalModel?: string;
   onChange: (value: CrewRequirement) => void;
   compact?: boolean;
 }
@@ -34,14 +36,18 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
   value,
   aircraftCrewComposition,
   crewPositionTerminology,
+  operationalModel,
   onChange,
   compact = false,
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
   const aircraftDefaultSummary = formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology);
-  const roleOptions = getCrewRequirementOptions(crewPositionTerminology);
+  const roleOptions = getCrewRequirementOptions(crewPositionTerminology, operationalModel);
   const customRows = normaliseRoleRows(value, aircraftCrewComposition);
+  const getRoleOptionsForRow = (row: CrewRequirementRole) => (
+    getCrewRequirementOptions(crewPositionTerminology, operationalModel, getCrewRequirementRoleOptions(row))
+  );
 
   const setMode = (mode: CrewRequirement['mode']) => {
     if (mode === 'aircraft_default') {
@@ -109,7 +115,8 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
               <select
                 value={row.role}
                 onChange={(event) => {
-                  const selected = roleOptions.find(option => option.value === event.target.value);
+                  const rowRoleOptions = getRoleOptionsForRow(row);
+                  const selected = rowRoleOptions.find(option => option.value === event.target.value);
                   updateRole(index, {
                     role: selected?.value || event.target.value,
                     crewPositionId: selected?.id,
@@ -118,7 +125,7 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
                 }}
                 className="min-w-0 rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500"
               >
-                {roleOptions.map(option => (
+                {getRoleOptionsForRow(row).map(option => (
                   <option key={option.id} value={option.value}>{option.label}</option>
                 ))}
               </select>

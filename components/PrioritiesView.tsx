@@ -603,6 +603,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                   value={request.crewRequirement}
                   aircraftCrewComposition={aircraftCrewComposition}
                   crewPositionTerminology={crewPositionTerminology}
+                  operationalModel={operationalModel}
                   compact
                   onChange={(crewRequirement) => onUpdateTaskingRequest(request.id, { crewRequirement, submitted: false, saved: false })}
                 />
@@ -2936,6 +2937,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         value={draft.crewRequirement}
                                         aircraftCrewComposition={aircraftCrewComposition}
                                         crewPositionTerminology={crewPositionTerminology}
+                                        operationalModel={operationalModel}
                                         compact
                                         onChange={(crewRequirement) => setCurrencyDraftEvents(prev => prev.map(event =>
                                             event.id === draft.id ? { ...event, crewRequirement } : event

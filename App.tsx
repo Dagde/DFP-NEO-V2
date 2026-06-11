@@ -30116,6 +30116,7 @@ appliedUpdates.forEach(update => {
                             onImportFromUnit={importCurrencyDefinitionsFromUnit}
                             aircraftCrewComposition={activeAircraftCrewComposition}
                             crewPositionTerminology={activeCrewPositionTerminology}
+                            operationalModel={activeOperationalModel}
                         />;
             case 'PT051':
                 console.log('eventForPt051:', eventForPt051);
@@ -31254,6 +31255,7 @@ appliedUpdates.forEach(update => {
                     aircraftNumberSettings={aircraftNumberSettings}
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                     aircraftCrewComposition={activeAircraftCrewComposition}
+                    operationalModel={activeOperationalModel}
                     personnelDisplaySettings={personnelDisplaySettings}
                 />
             )}
@@ -31421,6 +31423,7 @@ appliedUpdates.forEach(update => {
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                     aircraftCrewComposition={activeAircraftCrewComposition}
                     crewPositionTerminology={activeCrewPositionTerminology}
+                    operationalModel={activeOperationalModel}
                 />
             )}
 

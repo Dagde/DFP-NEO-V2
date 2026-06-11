@@ -23,6 +23,7 @@ interface CurrencyBuilderViewProps {
     onImportFromUnit?: (unitCode: string) => void;
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
+    operationalModel?: string;
 }
 
 const getNewPrimitive = (): CurrencyRequirement => ({
@@ -66,6 +67,7 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     onImportFromUnit,
     aircraftCrewComposition,
     crewPositionTerminology,
+    operationalModel,
 }) => {
     const [allCurrencies, setAllCurrencies] = useState<CurrencyDefinition[]>([]);
     const [selectedCurrencyId, setSelectedCurrencyId] = useState<string | null>(null);
@@ -324,6 +326,7 @@ const PrimitiveEditor: React.FC<{
                 value={currency.crewRequirement}
                 aircraftCrewComposition={aircraftCrewComposition}
                 crewPositionTerminology={crewPositionTerminology}
+                operationalModel={operationalModel}
                 onChange={v => handleChange('crewRequirement', v)}
             />
 
@@ -420,6 +423,7 @@ const CompositeEditor: React.FC<{
                 value={currency.crewRequirement}
                 aircraftCrewComposition={aircraftCrewComposition}
                 crewPositionTerminology={crewPositionTerminology}
+                operationalModel={operationalModel}
                 onChange={v => handleChange('crewRequirement', v)}
             />
 

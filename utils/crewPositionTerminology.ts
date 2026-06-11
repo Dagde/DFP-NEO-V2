@@ -1,7 +1,15 @@
+import {
+  DEFAULT_OPERATIONAL_MODEL,
+  OPERATIONAL_MODEL_OPTIONS,
+  normaliseOperationalModel,
+  type OperationalModelCode,
+} from './platformConfigService';
+
 export interface CrewPositionTerminologyEntry {
   id: string;
   genericName: string;
   label: string;
+  operationalModels?: OperationalModelCode[];
 }
 
 export interface CrewPositionTerminology {
@@ -11,14 +19,16 @@ export interface CrewPositionTerminology {
 
 export const DEFAULT_CREW_POSITION_TERMINOLOGY: CrewPositionTerminology = {
   positions: [
-    { id: 'pilot', genericName: 'Pilot', label: 'Pilot' },
-    { id: 'combat-systems-operator', genericName: 'Combat Systems Operator', label: 'Combat Systems Operator' },
-    { id: 'airborne-mission-commander', genericName: 'Airborne Mission Commander', label: 'Airborne Mission Commander' },
-    { id: 'flight-engineer', genericName: 'Flight Engineer', label: 'Flight Engineer' },
-    { id: 'loadmaster', genericName: 'Loadmaster', label: 'Loadmaster' },
-    { id: 'crew', genericName: 'Crew', label: 'Crew' },
+    { id: 'pilot', genericName: 'Pilot', label: 'Pilot', operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'air_mobility'] },
+    { id: 'combat-systems-operator', genericName: 'Combat Systems Operator', label: 'Combat Systems Operator', operationalModels: ['air_combat'] },
+    { id: 'airborne-mission-commander', genericName: 'Airborne Mission Commander', label: 'Airborne Mission Commander', operationalModels: ['fixed_crew', 'air_mobility'] },
+    { id: 'flight-engineer', genericName: 'Flight Engineer', label: 'Flight Engineer', operationalModels: ['fixed_crew', 'air_mobility'] },
+    { id: 'loadmaster', genericName: 'Loadmaster', label: 'Loadmaster', operationalModels: ['air_mobility'] },
+    { id: 'crew', genericName: 'Crew', label: 'Crew', operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'air_mobility'] },
   ],
 };
+
+const ALL_OPERATIONAL_MODEL_CODES = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
 
 const makeCrewPositionId = (genericName: string, index: number): string => {
   const slug = String(genericName || '')
@@ -29,18 +39,40 @@ const makeCrewPositionId = (genericName: string, index: number): string => {
   return slug || `crew-position-${index + 1}`;
 };
 
+const normaliseOperationalModelList = (source: unknown, fallback: OperationalModelCode[] = ALL_OPERATIONAL_MODEL_CODES): OperationalModelCode[] => {
+  const rawValues = Array.isArray(source) ? source : [];
+  const models = rawValues
+    .map((value) => normaliseOperationalModel(value))
+    .filter((model, index, list) => list.indexOf(model) === index);
+  return models.length > 0 ? models : [...fallback];
+};
+
+const getFallbackEntry = (entry: any, index: number): CrewPositionTerminologyEntry | undefined => {
+  const id = String(entry?.id || '').trim();
+  const genericName = String(entry?.genericName || entry?.generic || entry?.name || '').trim();
+  return DEFAULT_CREW_POSITION_TERMINOLOGY.positions.find((position) => (
+    (!!id && position.id === id)
+    || (!!genericName && position.genericName.trim().toUpperCase() === genericName.toUpperCase())
+  )) || DEFAULT_CREW_POSITION_TERMINOLOGY.positions[index];
+};
+
 const normaliseEntry = (entry: any, index: number): CrewPositionTerminologyEntry | null => {
   if (!entry || typeof entry !== 'object') return null;
-  const fallback = DEFAULT_CREW_POSITION_TERMINOLOGY.positions[index];
+  const fallback = getFallbackEntry(entry, index);
   const rawGenericName = String(entry.genericName || entry.generic || entry.name || fallback?.genericName || '');
   const genericName = rawGenericName.trim() ? rawGenericName : String(fallback?.genericName || '').trim();
   if (!genericName.trim()) return null;
   const rawLabel = String(entry.label || entry.displayName || '');
   const label = rawLabel.trim() ? rawLabel : genericName;
+  const operationalModels = normaliseOperationalModelList(
+    entry.operationalModels || entry.models || entry.modelCodes,
+    fallback?.operationalModels || ALL_OPERATIONAL_MODEL_CODES,
+  );
   return {
     id: String(entry.id || makeCrewPositionId(genericName, index)).trim() || makeCrewPositionId(genericName, index),
     genericName,
     label,
+    operationalModels,
   };
 };
 
@@ -89,8 +121,14 @@ export const getCrewPositionLabelMap = (terminology?: CrewPositionTerminology): 
 export const getCrewPositionOptions = (
   terminology?: CrewPositionTerminology,
   extraValues: string[] = [],
+  operationalModel?: unknown,
 ): string[] => {
-  const options = normaliseCrewPositionTerminology(terminology).positions.map((entry) => entry.genericName);
+  const model = operationalModel ? normaliseOperationalModel(operationalModel) : null;
+  const positions = normaliseCrewPositionTerminology(terminology).positions;
+  const modelPositions = model
+    ? positions.filter((entry) => isCrewPositionAvailableForOperationalModel(entry, model))
+    : positions;
+  const options = (modelPositions.length > 0 ? modelPositions : positions).map((entry) => entry.genericName);
   extraValues.forEach((value) => {
     const trimmed = String(value || '').trim();
     if (trimmed && !options.some((option) => option.toUpperCase() === trimmed.toUpperCase())) {
@@ -98,6 +136,16 @@ export const getCrewPositionOptions = (
     }
   });
   return options;
+};
+
+export const isCrewPositionAvailableForOperationalModel = (
+  entry: CrewPositionTerminologyEntry,
+  operationalModel?: unknown,
+): boolean => {
+  if (!operationalModel) return true;
+  const model = normaliseOperationalModel(operationalModel || DEFAULT_OPERATIONAL_MODEL);
+  const models = normaliseOperationalModelList(entry.operationalModels, ALL_OPERATIONAL_MODEL_CODES);
+  return models.includes(model);
 };
 
 const normaliseCrewPositionToken = (value: unknown): string => (

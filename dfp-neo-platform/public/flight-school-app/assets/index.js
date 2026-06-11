@@ -2703,30 +2703,46 @@ const getAircraftTypeCrewComposition = (platformConfig, aircraftTypeCode) => {
 };
 const DEFAULT_CREW_POSITION_TERMINOLOGY = {
   positions: [
-    { id: "pilot", genericName: "Pilot", label: "Pilot" },
-    { id: "combat-systems-operator", genericName: "Combat Systems Operator", label: "Combat Systems Operator" },
-    { id: "airborne-mission-commander", genericName: "Airborne Mission Commander", label: "Airborne Mission Commander" },
-    { id: "flight-engineer", genericName: "Flight Engineer", label: "Flight Engineer" },
-    { id: "loadmaster", genericName: "Loadmaster", label: "Loadmaster" },
-    { id: "crew", genericName: "Crew", label: "Crew" }
+    { id: "pilot", genericName: "Pilot", label: "Pilot", operationalModels: ["flight_school", "air_combat", "fixed_crew", "air_mobility"] },
+    { id: "combat-systems-operator", genericName: "Combat Systems Operator", label: "Combat Systems Operator", operationalModels: ["air_combat"] },
+    { id: "airborne-mission-commander", genericName: "Airborne Mission Commander", label: "Airborne Mission Commander", operationalModels: ["fixed_crew", "air_mobility"] },
+    { id: "flight-engineer", genericName: "Flight Engineer", label: "Flight Engineer", operationalModels: ["fixed_crew", "air_mobility"] },
+    { id: "loadmaster", genericName: "Loadmaster", label: "Loadmaster", operationalModels: ["air_mobility"] },
+    { id: "crew", genericName: "Crew", label: "Crew", operationalModels: ["flight_school", "air_combat", "fixed_crew", "air_mobility"] }
   ]
 };
+const ALL_OPERATIONAL_MODEL_CODES = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
 const makeCrewPositionId = (genericName, index) => {
   const slug = String(genericName || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || `crew-position-${index + 1}`;
 };
+const normaliseOperationalModelList = (source, fallback = ALL_OPERATIONAL_MODEL_CODES) => {
+  const rawValues = Array.isArray(source) ? source : [];
+  const models = rawValues.map((value) => normaliseOperationalModel(value)).filter((model, index, list) => list.indexOf(model) === index);
+  return models.length > 0 ? models : [...fallback];
+};
+const getFallbackEntry = (entry, index) => {
+  const id = String(entry?.id || "").trim();
+  const genericName = String(entry?.genericName || entry?.generic || entry?.name || "").trim();
+  return DEFAULT_CREW_POSITION_TERMINOLOGY.positions.find((position) => !!id && position.id === id || !!genericName && position.genericName.trim().toUpperCase() === genericName.toUpperCase()) || DEFAULT_CREW_POSITION_TERMINOLOGY.positions[index];
+};
 const normaliseEntry = (entry, index) => {
   if (!entry || typeof entry !== "object") return null;
-  const fallback = DEFAULT_CREW_POSITION_TERMINOLOGY.positions[index];
+  const fallback = getFallbackEntry(entry, index);
   const rawGenericName = String(entry.genericName || entry.generic || entry.name || fallback?.genericName || "");
   const genericName = rawGenericName.trim() ? rawGenericName : String(fallback?.genericName || "").trim();
   if (!genericName.trim()) return null;
   const rawLabel = String(entry.label || entry.displayName || "");
   const label = rawLabel.trim() ? rawLabel : genericName;
+  const operationalModels = normaliseOperationalModelList(
+    entry.operationalModels || entry.models || entry.modelCodes,
+    fallback?.operationalModels || ALL_OPERATIONAL_MODEL_CODES
+  );
   return {
     id: String(entry.id || makeCrewPositionId(genericName, index)).trim() || makeCrewPositionId(genericName, index),
     genericName,
-    label
+    label,
+    operationalModels
   };
 };
 const normaliseCrewPositionTerminology = (source) => {
@@ -2760,8 +2776,10 @@ const getCrewPositionLabelMap = (terminology) => normaliseCrewPositionTerminolog
   ...labels,
   [entry.genericName]: entry.label
 }), {});
-const getCrewPositionOptions = (terminology, extraValues = []) => {
-  const options = normaliseCrewPositionTerminology(terminology).positions.map((entry) => entry.genericName);
+const getCrewPositionOptions = (terminology, extraValues = [], operationalModel2) => {
+  const positions = normaliseCrewPositionTerminology(terminology).positions;
+  const modelPositions = positions;
+  const options = (modelPositions.length > 0 ? modelPositions : positions).map((entry) => entry.genericName);
   extraValues.forEach((value) => {
     const trimmed = String(value || "").trim();
     if (trimmed && !options.some((option) => option.toUpperCase() === trimmed.toUpperCase())) {
@@ -2769,6 +2787,12 @@ const getCrewPositionOptions = (terminology, extraValues = []) => {
     }
   });
   return options;
+};
+const isCrewPositionAvailableForOperationalModel = (entry, operationalModel2) => {
+  if (!operationalModel2) return true;
+  const model = normaliseOperationalModel(operationalModel2 || DEFAULT_OPERATIONAL_MODEL);
+  const models = normaliseOperationalModelList(entry.operationalModels, ALL_OPERATIONAL_MODEL_CODES);
+  return models.includes(model);
 };
 const normaliseCrewPositionToken = (value) => String(value || "").trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "");
 const getAcronymToken = (value) => String(value || "").trim().split(/[^a-zA-Z0-9]+/).filter(Boolean).map((part) => part[0]).join("").toLowerCase();
@@ -2894,11 +2918,23 @@ const formatCrewRequirementSummary = (requirement, aircraftComposition, terminol
     return `${label} ${clampCrewRoleCount(role.count)}`;
   }).join(", ");
 };
-const getCrewRequirementOptions = (terminology) => normaliseCrewPositionTerminology(terminology).positions.map((entry) => ({
-  id: entry.id,
-  value: entry.genericName,
-  label: entry.label
-}));
+const getCrewRequirementOptions = (terminology, operationalModel2, extraValues = []) => {
+  const allPositions = normaliseCrewPositionTerminology(terminology).positions;
+  const modelPositions = allPositions.filter((entry) => isCrewPositionAvailableForOperationalModel(entry, operationalModel2));
+  const baseOptions = (modelPositions.length > 0 ? modelPositions : allPositions).map((entry) => ({
+    id: entry.id,
+    value: entry.genericName,
+    label: entry.label
+  }));
+  return baseOptions.concat(extraValues.map((value) => String(value || "").trim()).filter(Boolean).filter((value, index, values) => values.findIndex((candidate) => candidate.toUpperCase() === value.toUpperCase()) === index).filter((value) => !baseOptions.some((entry) => entry.value.toUpperCase() === value.toUpperCase())).map((value) => {
+    const existing = allPositions.find((entry) => entry.genericName.toUpperCase() === value.toUpperCase());
+    return {
+      id: existing?.id || value,
+      value: existing?.genericName || value,
+      label: existing?.label || value
+    };
+  }));
+};
 const DEFAULT_STAFF_RANK_ORDER = [
   "AIRMSHL",
   "AVM",
@@ -4377,14 +4413,16 @@ const CrewRequirementEditor = ({
   value,
   aircraftCrewComposition,
   crewPositionTerminology,
+  operationalModel: operationalModel2,
   onChange,
   compact = false
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
   const aircraftDefaultSummary = formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology);
-  const roleOptions = getCrewRequirementOptions(crewPositionTerminology);
+  const roleOptions = getCrewRequirementOptions(crewPositionTerminology, operationalModel2);
   const customRows = normaliseRoleRows(value, aircraftCrewComposition);
+  const getRoleOptionsForRow = (row) => getCrewRequirementOptions(crewPositionTerminology, operationalModel2, getCrewRequirementRoleOptions(row));
   const setMode = (mode) => {
     if (mode === "aircraft_default") {
       onChange({ mode: "aircraft_default" });
@@ -4444,7 +4482,8 @@ const CrewRequirementEditor = ({
           {
             value: row.role,
             onChange: (event) => {
-              const selected = roleOptions.find((option) => option.value === event.target.value);
+              const rowRoleOptions = getRoleOptionsForRow(row);
+              const selected = rowRoleOptions.find((option) => option.value === event.target.value);
               updateRole(index, {
                 role: selected?.value || event.target.value,
                 crewPositionId: selected?.id,
@@ -4452,7 +4491,7 @@ const CrewRequirementEditor = ({
               });
             },
             className: "min-w-0 rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500",
-            children: roleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.id))
+            children: getRoleOptionsForRow(row).map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.id))
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -4527,7 +4566,8 @@ const CurrencyBuilderView = ({
   onDelete,
   onImportFromUnit,
   aircraftCrewComposition,
-  crewPositionTerminology
+  crewPositionTerminology,
+  operationalModel: operationalModel2
 }) => {
   const [allCurrencies, setAllCurrencies] = reactExports.useState([]);
   const [selectedCurrencyId, setSelectedCurrencyId] = reactExports.useState(null);
@@ -4748,6 +4788,7 @@ const PrimitiveEditor = ({ currency, onUpdate, aircraftCrewComposition, crewPosi
         value: currency.crewRequirement,
         aircraftCrewComposition,
         crewPositionTerminology,
+        operationalModel,
         onChange: (v) => handleChange("crewRequirement", v)
       }
     ),
@@ -4838,6 +4879,7 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies, aircraftCrewCompos
         value: currency.crewRequirement,
         aircraftCrewComposition,
         crewPositionTerminology,
+        operationalModel,
         onChange: (v) => handleChange("crewRequirement", v)
       }
     ),
@@ -17087,7 +17129,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, personnelDisplaySettings, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel: operationalModel2, personnelDisplaySettings, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -18593,6 +18635,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 value: crewRequirement,
                 aircraftCrewComposition,
                 crewPositionTerminology,
+                operationalModel: operationalModel2,
                 onChange: setCrewRequirement
               }
             ) }),
@@ -24737,6 +24780,7 @@ const TaskingRequestTable = ({
               value: request.crewRequirement,
               aircraftCrewComposition,
               crewPositionTerminology,
+              operationalModel,
               compact: true,
               onChange: (crewRequirement) => onUpdateTaskingRequest(request.id, { crewRequirement, submitted: false, saved: false })
             }
@@ -24856,7 +24900,7 @@ const PrioritiesView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   taskProfiles = [],
   taskProfileAbbreviations = {},
-  operationalModel = "flight_school",
+  operationalModel: operationalModel2 = "flight_school",
   operationalModelLabel = "Flight School Model",
   airCombatSchedulingWeights,
   onUpdateAirCombatSchedulingWeights,
@@ -24883,7 +24927,7 @@ const PrioritiesView = ({
   const [flyingWindowTimestamp, setFlyingWindowTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const [dutyPeriodTimestamp, setDutyPeriodTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
   const [turnaroundTimestamp, setTurnaroundTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
-  const isAirCombatModel = String(operationalModel || "").trim().toLowerCase() === "air_combat";
+  const isAirCombatModel = String(operationalModel2 || "").trim().toLowerCase() === "air_combat";
   const normalisedAirCombatWeights = reactExports.useMemo(
     () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
     [airCombatSchedulingWeights]
@@ -26810,6 +26854,7 @@ const PrioritiesView = ({
                     value: draft.crewRequirement,
                     aircraftCrewComposition,
                     crewPositionTerminology,
+                    operationalModel: operationalModel2,
                     compact: true,
                     onChange: (crewRequirement) => setCurrencyDraftEvents((prev) => prev.map(
                       (event) => event.id === draft.id ? { ...event, crewRequirement } : event
@@ -34148,7 +34193,7 @@ const InstructorProfileFlyout = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel = "QFI",
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
-  operationalModel = "flight_school"
+  operationalModel: operationalModel2 = "flight_school"
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -34238,7 +34283,7 @@ const InstructorProfileFlyout = ({
     }).sort((a, b) => a.name.localeCompare(b.name));
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
-  const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
+  const isAirCombatModel = normaliseOperationalModel(operationalModel2) === "air_combat";
   const assignedTraining = reactExports.useMemo(
     () => normaliseAirCombatTrainingAssignments(instructor.preferences),
     [instructor.preferences]
@@ -36287,14 +36332,14 @@ const InstructorListView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
   instructorLabel = "QFI",
-  operationalModel = "flight_school",
+  operationalModel: operationalModel2 = "flight_school",
   crewPositionTerminology
 }) => {
   const prevPropsRef = React.useRef({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel: operationalModel2, crewPositionTerminology };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -36347,7 +36392,7 @@ const InstructorListView = ({
       }
     }
   }, [instructorsData]);
-  const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
+  const isAirCombatModel = normaliseOperationalModel(operationalModel2) === "air_combat";
   const qfis = reactExports.useMemo(() => {
     return instructorsData.filter((i) => {
       const isQFI = isQfiRole(i);
@@ -36718,7 +36763,7 @@ const InstructorListView = ({
         resourceDisplayNames,
         personnelDisplaySettings,
         instructorLabel,
-        operationalModel
+        operationalModel: operationalModel2
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37899,7 +37944,7 @@ const SyllabusView = ({
   trainingPackageTemplates = [],
   instructorsData = [],
   onUpdateInstructor,
-  operationalModel = "flight_school",
+  operationalModel: operationalModel2 = "flight_school",
   currentUserName,
   scoringMatrixPhraseBank,
   onAddScoringMatrixElement
@@ -37923,7 +37968,7 @@ const SyllabusView = ({
   const activeCollectionNoun = isTrainingPackagesTab ? "package" : "course";
   const activeCollectionTitle = isTrainingPackagesTab ? "Training Packages" : "Master LMP";
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
-  const isAirCombatModel = normaliseOperationalModel(operationalModel) === "air_combat";
+  const isAirCombatModel = normaliseOperationalModel(operationalModel2) === "air_combat";
   const availableTabs = reactExports.useMemo(() => {
     const tabs = [
       { id: "master", label: "Master LMP" }
@@ -50665,7 +50710,8 @@ const PlatformConfigurationSettings = ({
       {
         id: createClientRecordId("crew-position"),
         genericName,
-        label: genericName
+        label: genericName,
+        operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)
       }
     ]);
   };
@@ -53546,7 +53592,7 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-orange-100", children: "Crew Position Labels" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-orange-100/75", children: "Generic positions are the stable aircraft seat roles. Organisation labels are the words this organisation uses for those positions." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-orange-100/75", children: "Generic positions are the stable aircraft seat roles. Organisation labels are the words this organisation uses for those positions. Operational models control where each role appears in crew requirement dropdowns." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -53561,7 +53607,7 @@ const PlatformConfigurationSettings = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: crewPositionTerminology.positions.map((entry) => {
             const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_auto]", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Field,
                 {
@@ -53582,6 +53628,36 @@ const PlatformConfigurationSettings = ({
                   info: "The label users see when selecting crew positions. Example: Combat Systems Operator can be labelled Weapon System Operator."
                 }
               ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Operational Models" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1 rounded border border-gray-700 bg-gray-900/70 p-2 sm:grid-cols-2", children: OPERATIONAL_MODEL_OPTIONS.map((option) => {
+                  const selectedModels = entry.operationalModels?.length ? entry.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
+                  const isSelected = selectedModels.includes(option.value);
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "label",
+                    {
+                      className: `flex items-center gap-2 rounded px-2 py-1 text-[11px] font-semibold ${isSelected ? "bg-cyan-500/10 text-cyan-100" : "text-gray-400"}`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "checkbox",
+                            checked: isSelected,
+                            disabled: !canEditRankTerminology || isSelected && selectedModels.length <= 1,
+                            onChange: (event) => {
+                              event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedModels, option.value])) : selectedModels.filter((model) => model !== option.value);
+                              updateCrewPositionEntry(entry.id, {});
+                            },
+                            className: "h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label.replace(" Model", "") })
+                      ]
+                    },
+                    option.value
+                  );
+                }) })
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -63899,7 +63975,7 @@ const DfpSidePanelTimeline = ({
   callsignOptions,
   staffListNames,
   formatResourceLabel: formatResourceLabel2,
-  operationalModel,
+  operationalModel: operationalModel2,
   scheduleZoomLevel = 1,
   onRunNeoBuild
 }) => {
@@ -64132,7 +64208,7 @@ const DfpSidePanelTimeline = ({
     return `PC-21 ${number}`;
   }, [selectedResourceKind, selectedResourceNumber]);
   const assistFormationSize = selectedResourceKind === "flight" ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1)) : 1;
-  const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === "air_combat";
+  const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel2) === "air_combat";
   const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
   const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === "wizard";
   const isSingleSeatFlightResource = selectedResourceKind === "flight" && aircraftCrewComposition.crewCount === 1;
@@ -87942,7 +88018,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onDelete: handleDeleteCurrency,
             onImportFromUnit: importCurrencyDefinitionsFromUnit,
             aircraftCrewComposition: activeAircraftCrewComposition2,
-            crewPositionTerminology: activeCrewPositionTerminology2
+            crewPositionTerminology: activeCrewPositionTerminology2,
+            operationalModel: activeOperationalModel
           }
         );
       case "PT051":
@@ -88967,6 +89044,7 @@ Do you want to replace the existing entry?`,
           aircraftNumberSettings,
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
           aircraftCrewComposition: activeAircraftCrewComposition2,
+          operationalModel: activeOperationalModel,
           personnelDisplaySettings
         }
       ),
@@ -89113,7 +89191,8 @@ Do you want to replace the existing entry?`,
           aircraftNumberSettings,
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
           aircraftCrewComposition: activeAircraftCrewComposition2,
-          crewPositionTerminology: activeCrewPositionTerminology2
+          crewPositionTerminology: activeCrewPositionTerminology2,
+          operationalModel: activeOperationalModel
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),

@@ -1431,7 +1431,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const updateCrewPositionEntry = (
     entryId: string,
-    changes: Partial<Pick<CrewPositionTerminologyEntry, 'genericName' | 'label'>>,
+    changes: Partial<Pick<CrewPositionTerminologyEntry, 'genericName' | 'label' | 'operationalModels'>>,
   ) => {
     const currentEntry = crewPositionTerminology.positions.find((entry) => entry.id === entryId);
     if (!currentEntry) return;
@@ -1457,6 +1457,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         id: createClientRecordId('crew-position'),
         genericName,
         label: genericName,
+        operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
       },
     ]);
   };
@@ -4604,7 +4605,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <h5 className="text-sm font-bold text-orange-100">Crew Position Labels</h5>
                 <p className="mt-1 text-xs leading-relaxed text-orange-100/75">
-                  Generic positions are the stable aircraft seat roles. Organisation labels are the words this organisation uses for those positions.
+                  Generic positions are the stable aircraft seat roles. Organisation labels are the words this organisation uses for those positions. Operational models control where each role appears in crew requirement dropdowns.
                 </p>
               </div>
               <button
@@ -4620,7 +4621,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               {crewPositionTerminology.positions.map((entry) => {
                 const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
                 return (
-                  <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_auto]">
+                  <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_auto]">
                     <Field
                       label="Generic Position"
                       value={entry.genericName}
@@ -4635,6 +4636,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })}
                       info="The label users see when selecting crew positions. Example: Combat Systems Operator can be labelled Weapon System Operator."
                     />
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Operational Models</label>
+                      <div className="grid gap-1 rounded border border-gray-700 bg-gray-900/70 p-2 sm:grid-cols-2">
+                        {OPERATIONAL_MODEL_OPTIONS.map((option) => {
+                          const selectedModels = entry.operationalModels?.length
+                            ? entry.operationalModels
+                            : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
+                          const isSelected = selectedModels.includes(option.value);
+                          return (
+                            <label
+                              key={option.value}
+                              className={`flex items-center gap-2 rounded px-2 py-1 text-[11px] font-semibold ${
+                                isSelected
+                                  ? 'bg-cyan-500/10 text-cyan-100'
+                                  : 'text-gray-400'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canEditRankTerminology || (isSelected && selectedModels.length <= 1)}
+                                onChange={(event) => {
+                                  const nextModels = event.target.checked
+                                    ? Array.from(new Set([...selectedModels, option.value]))
+                                    : selectedModels.filter((model) => model !== option.value);
+                                  updateCrewPositionEntry(entry.id, { operationalModels: nextModels });
+                                }}
+                                className="h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
+                              />
+                              <span>{option.label.replace(' Model', '')}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                     <div className="flex items-end">
                       <button
                         type="button"
