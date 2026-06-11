@@ -72907,6 +72907,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       countAirCombatRejection("NO_VALID_FORMATION_SLOT_IN_WINDOW");
       return false;
     };
+    const emittedTrainingListDiagnostics = /* @__PURE__ */ new Set();
     const placeTrainingForKind = (kind) => {
       const codes = kind === "training_package" ? packageCodes : courseCodes;
       if (codes.length === 0) {
@@ -72921,32 +72922,37 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       for (const code of codes) {
         const priorityList = getTrainingPriorityList(kind, code);
         const matchingItems = sortedTrainingItems(kind, code);
-        const listDiagnostic = getTrainingListDiagnostic(kind, code);
         const diagKey = kind === "training_package" ? "trainingPackageStaffPriorityLists" : "courseStaffPriorityLists";
-        neoBuildDiag.airCombatPriority[diagKey].push({
-          code,
-          matchingSyllabusItems: matchingItems.length,
-          assignedStaffCount: listDiagnostic.assignedStaffCount,
-          assignedWithNextEvent: listDiagnostic.assignedWithNextEvent,
-          assignedWithoutNextEvent: listDiagnostic.assignedWithoutNextEvent,
-          matchingSyllabusSample: listDiagnostic.matchingSyllabusSample,
-          assignedStaff: listDiagnostic.assignedStaff,
-          list: priorityList.map((entry) => ({
-            name: entry.staff.name,
-            completedCount: entry.completedCount,
-            lastEventDateValue: entry.lastEventDateValue || null,
-            nextEvent: entry.nextItem?.code || null,
-            nextEventResourceNumber: entry.nextItem ? getLmpResourceNumber(entry.nextItem) : null,
-            linkedEvent: entry.nextItem ? getAirCombatLinkedEventCode(entry.nextItem) || null : null
-          }))
-        });
+        const diagnosticKey = `${kind}:${code}`;
+        let listDiagnostic = null;
+        if (!emittedTrainingListDiagnostics.has(diagnosticKey)) {
+          listDiagnostic = getTrainingListDiagnostic(kind, code);
+          neoBuildDiag.airCombatPriority[diagKey].push({
+            code,
+            matchingSyllabusItems: matchingItems.length,
+            assignedStaffCount: listDiagnostic.assignedStaffCount,
+            assignedWithNextEvent: listDiagnostic.assignedWithNextEvent,
+            assignedWithoutNextEvent: listDiagnostic.assignedWithoutNextEvent,
+            matchingSyllabusSample: listDiagnostic.matchingSyllabusSample,
+            assignedStaff: listDiagnostic.assignedStaff,
+            list: priorityList.map((entry) => ({
+              name: entry.staff.name,
+              completedCount: entry.completedCount,
+              lastEventDateValue: entry.lastEventDateValue || null,
+              nextEvent: entry.nextItem?.code || null,
+              nextEventResourceNumber: entry.nextItem ? getLmpResourceNumber(entry.nextItem) : null,
+              linkedEvent: entry.nextItem ? getAirCombatLinkedEventCode(entry.nextItem) || null : null
+            }))
+          });
+          emittedTrainingListDiagnostics.add(diagnosticKey);
+        }
         if (matchingItems.length === 0) {
           pushAirCombatDiag("trainingAttempts", {
             kind,
             code,
             placed: false,
             reason: "NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE",
-            listDiagnostic
+            matchingSyllabusItems: 0
           });
           countAirCombatRejection("NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE");
           continue;
@@ -72965,7 +72971,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             placed: false,
             reason: "NO_PRIORITY_STAFF_WITH_NEXT_EVENT",
             matchingSyllabusItems: matchingItems.length,
-            listDiagnostic
+            priorityListCount: 0
           });
           continue;
         }

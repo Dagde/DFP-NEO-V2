@@ -11344,6 +11344,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             countAirCombatRejection('NO_VALID_FORMATION_SLOT_IN_WINDOW');
             return false;
         };
+        const emittedTrainingListDiagnostics = new Set<string>();
         const placeTrainingForKind = (kind: 'course' | 'training_package'): boolean => {
             const codes = kind === 'training_package' ? packageCodes : courseCodes;
             if (codes.length === 0) {
@@ -11358,8 +11359,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             for (const code of codes) {
                 const priorityList = getTrainingPriorityList(kind, code);
                 const matchingItems = sortedTrainingItems(kind, code);
-                const listDiagnostic = getTrainingListDiagnostic(kind, code);
                 const diagKey = kind === 'training_package' ? 'trainingPackageStaffPriorityLists' : 'courseStaffPriorityLists';
+                const diagnosticKey = `${kind}:${code}`;
+                let listDiagnostic: ReturnType<typeof getTrainingListDiagnostic> | null = null;
+                if (!emittedTrainingListDiagnostics.has(diagnosticKey)) {
+                    listDiagnostic = getTrainingListDiagnostic(kind, code);
 	                neoBuildDiag.airCombatPriority[diagKey].push({
 	                    code,
 	                    matchingSyllabusItems: matchingItems.length,
@@ -11377,13 +11381,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 	                        linkedEvent: entry.nextItem ? getAirCombatLinkedEventCode(entry.nextItem) || null : null,
 	                    })),
 	                });
+                    emittedTrainingListDiagnostics.add(diagnosticKey);
+                }
                 if (matchingItems.length === 0) {
                     pushAirCombatDiag('trainingAttempts', {
                         kind,
                         code,
                         placed: false,
                         reason: 'NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE',
-                        listDiagnostic,
+                        matchingSyllabusItems: 0,
                     });
                     countAirCombatRejection('NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE');
                     continue;
@@ -11402,7 +11408,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         placed: false,
                         reason: 'NO_PRIORITY_STAFF_WITH_NEXT_EVENT',
                         matchingSyllabusItems: matchingItems.length,
-                        listDiagnostic,
+                        priorityListCount: 0,
                     });
                     continue;
                 }
