@@ -188,64 +188,115 @@ app.use((req, res, next) => {
 
 // Lazy-load Prisma to avoid issues at startup
 let prisma = null;
-async function getPrisma() {
-  if (!prisma) {
-    const { PrismaClient } = await import('@prisma/client');
-    prisma = new PrismaClient();
-    await prisma.$connect();
-    console.log('✅ Prisma connected to database');
+let prismaMaintenanceStarted = false;
+let prismaMaintenancePromise = null;
+
+async function runPrismaRuntimeMaintenance(db) {
+  const startedAt = Date.now();
+  console.log('🛠️ Starting Prisma runtime maintenance checks in background...');
+  try {
     // Ensure AircraftAvailabilityHistory table exists (create if missing)
-    await ensureAircraftAvailabilityTable(prisma);
+    await ensureAircraftAvailabilityTable(db);
     // Ensure AircraftAvailabilityEvent table exists (create if missing)
-    await ensureAircraftAvailabilityEventTable(prisma);
+    await ensureAircraftAvailabilityEventTable(db);
     // Ensure CancellationCode table exists and seed defaults
-    await ensureCancellationCodesTable(prisma);
-    await seedCancellationCodesIfEmpty(prisma);
+    await ensureCancellationCodesTable(db);
+    await seedCancellationCodesIfEmpty(db);
     // Ensure IndividualLMP table exists (create if missing)
-    await ensureIndividualLMPTable(prisma);
-    await ensureTraineeLmpOverlayTable(prisma);
-    await migrateIndividualLmpOverlays(prisma);
+    await ensureIndividualLMPTable(db);
+    await ensureTraineeLmpOverlayTable(db);
+    await migrateIndividualLmpOverlays(db);
     // Ensure DailySnapshot table exists (create if missing)
-    await ensureDailySnapshotTable(prisma);
+    await ensureDailySnapshotTable(db);
     // Ensure instructor fields are TEXT[] arrays (migrate from String if needed)
     try {
-      await ensureInstructorArrayColumns(prisma);
+      await ensureInstructorArrayColumns(db);
     } catch (migrationErr) {
       console.error('Instructor column migration failed (non-fatal):', migrationErr.message);
     }
     // Ensure Training Intelligence Engine tables exist and defaults are seeded
     try {
-      await ensureTIETables(prisma);
-      await seedTIEDefaults(prisma);
+      await ensureTIETables(db);
+      await seedTIEDefaults(db);
     } catch (tieErr) {
       console.error('TIE startup failed (non-fatal):', tieErr.message);
     }
     // Ensure TraineePerformance table exists (single source of truth for PT-051 assessments)
-    await ensureTraineePerformanceTable(prisma);
-    await migrateLegacyPerformanceIntoTraineePerformance(prisma);
+    await ensureTraineePerformanceTable(db);
+    await migrateLegacyPerformanceIntoTraineePerformance(db);
     // Ensure AppSettings table exists (stores all org-level settings including currencies)
-    await ensureAppSettingsTable(prisma);
+    await ensureAppSettingsTable(db);
     // Ensure commercial platform configuration tables exist and are seeded from current V2 settings
-    await ensureCommercialConfigTables(prisma);
+    await ensureCommercialConfigTables(db);
     // Ensure CourseSettings and CourseAcademicProgress tables exist
-    await ensureCourseSettingsTables(prisma);
+    await ensureCourseSettingsTables(db);
     // Ensure Course.lmpType column exists (migration for existing DBs)
-    await ensureCourseLmpTypeColumn(prisma);
-    await ensureAcademicLmpTypeColumns(prisma);
+    await ensureCourseLmpTypeColumn(db);
+    await ensureAcademicLmpTypeColumns(db);
     // Ensure SyllabusItem and SyllabusHistory tables exist
-    await ensureSyllabusTablesExist(prisma);
+    await ensureSyllabusTablesExist(db);
     // Migrate CPT event durations to 1.0 hour
-    await migrateCptDurations(prisma);
+    await migrateCptDurations(db);
     // Ensure scheduling duration follows the visible syllabus timing fields.
-    await migrateSyllabusDurationsFromVisibleHours(prisma);
+    await migrateSyllabusDurationsFromVisibleHours(db);
     // Ensure Integrated Combat Operations training package timing is authoritative.
-    await migrateIntegratedCombatOperationsTiming(prisma);
+    await migrateIntegratedCombatOperationsTiming(db);
     // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
-    await migrateAcademicsCoursesField(prisma);
+    await migrateAcademicsCoursesField(db);
     // Ensure existing Air Combat personnel profile roles endure as Pilot.
-    await repairAirCombatPersonnelRoles(prisma);
+    await repairAirCombatPersonnelRoles(db);
+    console.log(`✅ Prisma runtime maintenance checks complete in ${Date.now() - startedAt}ms`);
+  } catch (error) {
+    console.error('❌ Prisma runtime maintenance failed:', error);
+  }
+}
+
+function schedulePrismaRuntimeMaintenance(db) {
+  if (prismaMaintenanceStarted) return prismaMaintenancePromise;
+  prismaMaintenanceStarted = true;
+  const delayMs = Math.max(0, Number(process.env.DFP_NEO_DB_MAINTENANCE_DELAY_MS ?? 30000) || 0);
+  prismaMaintenancePromise = new Promise((resolve) => {
+    setTimeout(() => {
+      runPrismaRuntimeMaintenance(db).finally(resolve);
+    }, delayMs);
+  });
+  console.log(`🛠️ Prisma runtime maintenance scheduled in ${delayMs}ms`);
+  return prismaMaintenancePromise;
+}
+
+function logApiTiming(label, startedAt, details = {}) {
+  const elapsedMs = Date.now() - startedAt;
+  const log = elapsedMs > 1000 ? console.warn : console.log;
+  log(`⏱️ ${label} completed in ${elapsedMs}ms`, details);
+}
+
+async function getPrisma() {
+  if (!prisma) {
+    const startedAt = Date.now();
+    const { PrismaClient } = await import('@prisma/client');
+    prisma = new PrismaClient();
+    await prisma.$connect();
+    console.log(`✅ Prisma connected to database in ${Date.now() - startedAt}ms`);
+    if (process.env.DFP_NEO_BLOCKING_DB_MAINTENANCE === 'true') {
+      prismaMaintenanceStarted = true;
+      prismaMaintenancePromise = runPrismaRuntimeMaintenance(prisma);
+      await prismaMaintenancePromise;
+    } else {
+      schedulePrismaRuntimeMaintenance(prisma);
+    }
   }
   return prisma;
+}
+
+function schedulePrismaPrewarm() {
+  if (process.env.DFP_NEO_PREWARM_DB === 'false') return;
+  const delayMs = Math.max(0, Number(process.env.DFP_NEO_PREWARM_DB_DELAY_MS ?? 1000) || 0);
+  setTimeout(() => {
+    getPrisma()
+      .then(() => console.log('✅ Prisma connection prewarmed'))
+      .catch((error) => console.error('❌ Prisma prewarm failed:', error));
+  }, delayMs);
+  console.log(`🔥 Prisma connection prewarm scheduled in ${delayMs}ms`);
 }
 
 async function repairAirCombatPersonnelRoles(db) {
@@ -1544,6 +1595,7 @@ async function writePlatformConfigAuditEntries(db, req, entries) {
 }
 
 app.get('/api/platform-config', async (req, res) => {
+  const requestStartedAt = Date.now();
   try {
     const db = await getPrisma();
 
@@ -1573,7 +1625,7 @@ app.get('/api/platform-config', async (req, res) => {
       db.$queryRawUnsafe(`SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive" FROM "User" ORDER BY "lastName", "firstName", username`),
     ]);
 
-    res.json({
+    const payload = {
       organisations,
       locations,
       units,
@@ -1585,7 +1637,15 @@ app.get('/api/platform-config', async (req, res) => {
       schedulingRuleSets,
       userAccess,
       platformUsers,
+    };
+    logApiTiming('GET /api/platform-config', requestStartedAt, {
+      organisations: organisations.length,
+      locations: locations.length,
+      units: units.length,
+      resourcePools: resourcePools.length,
+      userAccess: userAccess.length,
     });
+    res.json(payload);
   } catch (error) {
     console.error('❌ GET /api/platform-config error:', error);
     res.status(500).json({ error: 'Failed to load platform configuration', details: error.message });
@@ -2649,6 +2709,7 @@ app.delete('/api/courses/:name', async (req, res) => {
 
 // GET /api/personnel
 app.get('/api/personnel', async (req, res) => {
+  const requestStartedAt = Date.now();
   try {
     const db = await getPrisma();
     const { role, available, search } = req.query;
@@ -2663,15 +2724,19 @@ app.get('/api/personnel', async (req, res) => {
         { rank: { contains: search, mode: 'insensitive' } },
       ];
     }
+    const scopeStartedAt = Date.now();
     const scopedWhere = await buildScopedEntityWhere(req, db);
+    const scopeMs = Date.now() - scopeStartedAt;
     const finalWhere = mergeScopedWhere(where, scopedWhere);
 
+    const queryStartedAt = Date.now();
     const personnel = await db.personnel.findMany({
       where: finalWhere,
       orderBy: { name: 'asc' },
     });
+    const queryMs = Date.now() - queryStartedAt;
 
-    console.log(`✅ GET /api/personnel - returning ${personnel.length} records`);
+    logApiTiming('GET /api/personnel', requestStartedAt, { count: personnel.length, scopeMs, queryMs });
     res.json({ personnel });
   } catch (error) {
     console.error('❌ GET /api/personnel error:', error);
@@ -3517,6 +3582,7 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
 
 // GET /api/trainees
 app.get('/api/trainees', async (req, res) => {
+  const requestStartedAt = Date.now();
   try {
     const db = await getPrisma();
     const { course, isActive, search } = req.query;
@@ -3532,15 +3598,19 @@ app.get('/api/trainees', async (req, res) => {
         { rank: { contains: search, mode: 'insensitive' } },
       ];
     }
+    const scopeStartedAt = Date.now();
     const scopedWhere = await buildScopedEntityWhere(req, db);
+    const scopeMs = Date.now() - scopeStartedAt;
     const finalWhere = mergeScopedWhere(where, scopedWhere);
 
+    const queryStartedAt = Date.now();
     const trainees = await db.trainee.findMany({
       where: finalWhere,
       orderBy: { name: 'asc' },
     });
+    const queryMs = Date.now() - queryStartedAt;
 
-    console.log(`✅ GET /api/trainees - returning ${trainees.length} records`);
+    logApiTiming('GET /api/trainees', requestStartedAt, { count: trainees.length, scopeMs, queryMs });
     res.json({ trainees });
   } catch (error) {
     console.error('❌ GET /api/trainees error:', error);
@@ -7511,19 +7581,21 @@ app.get('/api/admin/seed-syllabus', async (req, res) => {
 // regardless of which URL the app is accessed from.
 const staticPath = path.join(__dirname, 'dfp-neo-platform/public/flight-school-app');
 if (fs.existsSync(staticPath)) {
-  // Force no-cache for ALL assets and HTML so browsers always fetch the latest build
-  // This prevents stale JS/CSS being served after a deployment
-  const noCacheMiddleware = (req, res, next) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    next();
+  const setStaticCacheHeaders = (res, filePath) => {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.html') {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      return;
+    }
+    if (['.js', '.css', '.mjs', '.json', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.woff', '.woff2'].includes(ext)) {
+      res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+    }
   };
-  app.use(noCacheMiddleware);
-  app.use(express.static(staticPath));
-  app.use('/flight-school-app', noCacheMiddleware);
-  app.use('/flight-school-app', express.static(staticPath));
-  console.log(`✅ Serving static files from: ${staticPath} (at / and /flight-school-app/) with no-cache headers for all assets`);
+  app.use(express.static(staticPath, { etag: true, lastModified: true, setHeaders: setStaticCacheHeaders }));
+  app.use('/flight-school-app', express.static(staticPath, { etag: true, lastModified: true, setHeaders: setStaticCacheHeaders }));
+  console.log(`✅ Serving static files from: ${staticPath} (at / and /flight-school-app/) with cacheable assets and fresh HTML`);
 }
 
 // ============================================================
@@ -13298,6 +13370,9 @@ app.post('/api/flight-log', async (req, res) => {
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');
   if (fs.existsSync(indexPath)) {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(indexPath);
   } else {
     res.status(404).send('Not found');
@@ -13310,4 +13385,5 @@ app.get('*', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 DFP-NEO V2 Server running on port ${PORT} [theme-system-v1 build:${new Date().toISOString()}]`);
   console.log(`📊 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
+  schedulePrismaPrewarm();
 });
