@@ -24545,7 +24545,7 @@ const TaskingAirfieldCodeInput = ({ value, suggestions, onChange }) => {
           onChange(event.target.value.toUpperCase());
           setIsOpen(true);
         },
-        className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+        className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       }
     ),
     showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-50 mt-1 max-h-56 w-[156px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -24614,7 +24614,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           setIsOpen(true);
         },
         placeholder: "Tasking",
-        className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+        className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       }
     ),
     showSuggestions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-[80] mt-1 max-h-64 w-[280px] overflow-y-auto rounded-md border border-cyan-500/40 bg-slate-950 shadow-xl shadow-black/40", children: suggestions.length > 0 ? suggestions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -24641,6 +24641,17 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
     ] }) })
   ] });
 };
+const taskingPanelClass = "flex min-h-[8.75rem] flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20";
+const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
+const taskingPanelHintClass = "mt-2 h-8 overflow-hidden text-[11px] leading-snug text-slate-500";
+const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
+const TaskingFieldPanel = ({ label, hint, className = "", children }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingPanelClass} ${className}`, children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: taskingPanelLabelClass, children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children })
+  ] }),
+  hint ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: taskingPanelHintClass, children: hint }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: taskingPanelHintClass, "aria-hidden": "true", children: " " })
+] });
 const TaskingRequestTable = ({
   taskingRequests,
   timeOptions,
@@ -24659,8 +24670,8 @@ const TaskingRequestTable = ({
   onSubmitTaskingRequest,
   onIgnoreTaskingRequest
 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-x-auto pb-24", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full border-separate border-spacing-x-2 border-spacing-y-3 text-sm", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sr-only", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Tasking" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Takeoff" }),
@@ -24681,8 +24692,8 @@ const TaskingRequestTable = ({
         const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
         const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
         const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-1 px-2 min-w-[180px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "align-top", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative min-w-[210px] align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Tasking", hint: request.tasking || "Select or type task", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             TaskingProfileInput,
             {
               value: request.tasking,
@@ -24690,27 +24701,27 @@ const TaskingRequestTable = ({
               operationalModelLabel,
               onChange: (tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false, saved: false })
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "w-40 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Date", hint: request.date || "Required", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
               type: "date",
               value: request.date,
               onChange: (event) => onUpdateTaskingRequest(request.id, { date: event.target.value, submitted: false, saved: false }),
               style: { colorScheme: "dark" },
-              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              className: taskingControlClass
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "w-32 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Takeoff", hint: timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "select",
             {
               value: request.takeoff,
               onChange: (event) => onUpdateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false, saved: false }),
-              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500",
+              className: taskingControlClass,
               children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `tasking-takeoff-${opt.value}`))
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "w-28 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Duration", hint: `${request.duration || 0} hr`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
               type: "number",
@@ -24718,10 +24729,10 @@ const TaskingRequestTable = ({
               step: 0.1,
               value: request.duration,
               onChange: (event) => onUpdateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false, saved: false }),
-              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              className: taskingControlClass
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100", children: "Solo" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "w-32 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Crew Mode", hint: isSingleSeatAircraft ? "Single seat" : request.flightType || "Dual", children: isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-10 items-center rounded-md border border-amber-400/40 bg-amber-500/10 px-3 text-sm font-semibold text-amber-100", children: "Solo" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
               value: request.flightType || "Dual",
@@ -24734,48 +24745,48 @@ const TaskingRequestTable = ({
                   saved: false
                 });
               },
-              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500",
+              className: taskingControlClass,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
               ]
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative w-32 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Departure", hint: request.depPoint || "Required", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             TaskingAirfieldCodeInput,
             {
               value: request.depPoint,
               suggestions: depPointSuggestions,
               onChange: (depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false, saved: false })
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-1 px-2 w-[78px] min-w-[78px] max-w-[78px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative w-32 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Arrival", hint: request.arrivalPoint || "Required", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             TaskingAirfieldCodeInput,
             {
               value: request.arrivalPoint,
               suggestions: arrivalPointSuggestions,
               onChange: (arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false, saved: false })
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-28", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "w-32 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Aircraft", hint: `${request.aircraftCount || 1} required`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {
               type: "number",
               min: 1,
               value: request.aircraftCount,
               onChange: (event) => onUpdateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false, saved: false }),
-              className: "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500"
+              className: taskingControlClass
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "w-40 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Config", hint: aircraftConfigOptions.find((definition) => definition.id === request.aircraftConfigId)?.definition || "Aircraft fit", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:h-10 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             AircraftConfigSelect,
             {
               value: request.aircraftConfigId,
               definitions: aircraftConfigOptions,
               onChange: (aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false, saved: false })
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 min-w-[260px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ) }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "min-w-[300px] align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&>div]:min-h-[8.75rem]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             CrewRequirementEditor,
             {
               value: request.crewRequirement,
@@ -24785,29 +24796,29 @@ const TaskingRequestTable = ({
               compact: true,
               onChange: (crewRequirement) => onUpdateTaskingRequest(request.id, { crewRequirement, submitted: false, saved: false })
             }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center justify-center gap-2 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white", children: [
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "w-32 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Mandatory", hint: request.isMandatory !== false ? "Must schedule" : "Optional", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex h-10 items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-800 px-3 text-sm font-semibold text-white", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
                 type: "checkbox",
                 checked: request.isMandatory !== false,
                 onChange: (event) => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false, saved: false }),
-                className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
               }
             ),
             "Yes"
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: !request.saved ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ] }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "w-36 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Status", hint: request.saved ? request.submitted && !request.ignored ? "Scheduled" : "Ignored" : "Save first", children: !request.saved ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => onSaveTaskingRequest(request.id),
               disabled: !canSubmit,
-              className: `px-2 py-1 text-xs rounded font-semibold ${canSubmit ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
+              className: `h-10 w-full rounded-md px-3 text-sm font-bold ${canSubmit ? "bg-green-600 text-white hover:bg-green-700" : "cursor-not-allowed bg-slate-700 text-slate-400"}`,
               children: "Save"
             }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col gap-1 text-[11px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-emerald-300", children: [
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col gap-2 text-[11px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex h-8 items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-emerald-200", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -24819,7 +24830,7 @@ const TaskingRequestTable = ({
               ),
               "Schedule"
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-rose-300", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex h-8 items-center gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 text-rose-200", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -24831,8 +24842,8 @@ const TaskingRequestTable = ({
               ),
               "Ignore"
             ] })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-1 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveTaskingRequest(request.id), className: "p-1 text-gray-400 hover:text-red-400", "aria-label": "Remove tasking request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) }) })
+          ] }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "w-14 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-h-[8.75rem] items-start justify-center pt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveTaskingRequest(request.id), className: "rounded-full p-1 text-gray-400 hover:bg-red-500/10 hover:text-red-300", "aria-label": "Remove tasking request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) }) }) })
         ] }, request.id);
       })
     ] })
