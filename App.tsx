@@ -54,6 +54,13 @@ import {
     getUnitTrainingReportTemplate,
     getUnitTrainingReportTerminology,
 } from './utils/trainingReportTerminology';
+import {
+    crewPositionValuesMatch,
+    findCrewPositionEntry,
+    isPilotCrewPosition,
+    normaliseCrewPositionTerminology,
+    type CrewPositionTerminology,
+} from './utils/crewPositionTerminology';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
 import {
@@ -280,6 +287,7 @@ const DfpSidePanelTimeline: React.FC<{
     aircraftConfigCapacities: Record<string, string>;
     aircraftConfigurationDefinitions: AircraftConfigurationDefinition[];
     aircraftCrewComposition: AircraftCrewComposition;
+    crewPositionTerminology: CrewPositionTerminology;
     onUpdateAircraftConfigCapacities: (capacities: Record<string, string>) => void;
     availableFtdCount: number;
     onUpdateFtdCount: (count: number) => void;
@@ -335,6 +343,7 @@ const DfpSidePanelTimeline: React.FC<{
     aircraftConfigCapacities,
     aircraftConfigurationDefinitions,
     aircraftCrewComposition,
+    crewPositionTerminology,
     onUpdateAircraftConfigCapacities,
     availableFtdCount,
     onUpdateFtdCount,
@@ -621,20 +630,6 @@ const DfpSidePanelTimeline: React.FC<{
         }
     }, [instructors]);
 
-    const crewOptions = useMemo(() => {
-        const seen = new Set<string>();
-        return [...diagnosticCrewPriority, ...instructors.map(instructor => instructor.name)]
-            .map(name => String(name || '').trim())
-            .filter(name => {
-                if (!name || seen.has(name)) return false;
-                seen.add(name);
-                return true;
-            });
-    }, [diagnosticCrewPriority, instructors]);
-    const displayedCrewOptions = crewSourceMode === 'priority' && diagnosticCrewPriority.length > 0
-        ? crewOptions
-        : staffListNames;
-
     const assignedAreaOptions = useMemo(() => {
         const seen = new Set<string>();
         return ['', ...trainingAreas]
@@ -683,7 +678,51 @@ const DfpSidePanelTimeline: React.FC<{
     const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
     const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === 'wizard';
     const isSingleSeatFlightResource = selectedResourceKind === 'flight' && aircraftCrewComposition.crewCount === 1;
-    const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === 'flight' && assistFormationSize > 1;
+    const requiredAssistCrewRoles = useMemo(() => (
+        isAirCombatTileMode && selectedResourceKind === 'flight'
+            ? aircraftCrewComposition.seats.map(seat => String(seat.role || '').trim()).filter(Boolean)
+            : []
+    ), [aircraftCrewComposition.seats, isAirCombatTileMode, selectedResourceKind]);
+    const assistCrewSelectionLimit = isAirCombatTileMode && selectedResourceKind === 'flight'
+        ? Math.max(1, assistFormationSize) * Math.max(1, requiredAssistCrewRoles.length || aircraftCrewComposition.crewCount || 1)
+        : 1;
+    const canSelectFormationCrew = isAirCombatTileMode && selectedResourceKind === 'flight' && assistCrewSelectionLimit > 1;
+    const isStaffPilotCrewPosition = useCallback((staff: Instructor): boolean => {
+        const roleText = String(staff.role || '').trim().toLowerCase();
+        return roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, crewPositionTerminology);
+    }, [crewPositionTerminology]);
+    const staffMatchesRequiredCrewRole = useCallback((staff: Instructor, requiredRole: string): boolean => {
+        if (isPilotCrewPosition(requiredRole, crewPositionTerminology)) return isStaffPilotCrewPosition(staff);
+        return crewPositionValuesMatch(requiredRole, staff.role, crewPositionTerminology);
+    }, [crewPositionTerminology, isStaffPilotCrewPosition]);
+    const isStaffEligibleForAssistCrew = useCallback((staff: Instructor): boolean => {
+        if (!isAirCombatTileMode || selectedResourceKind !== 'flight' || requiredAssistCrewRoles.length === 0) return true;
+        if (!staff.name || staff.isAdminStaff) return false;
+        return requiredAssistCrewRoles.some(requiredRole => staffMatchesRequiredCrewRole(staff, requiredRole));
+    }, [isAirCombatTileMode, requiredAssistCrewRoles, selectedResourceKind, staffMatchesRequiredCrewRole]);
+    const crewOptions = useMemo(() => {
+        const seen = new Set<string>();
+        const eligibleNames = new Set(
+            instructors
+                .filter(isStaffEligibleForAssistCrew)
+                .map(instructor => String(instructor.name || '').trim())
+                .filter(Boolean)
+        );
+        return [...diagnosticCrewPriority, ...Array.from(eligibleNames)]
+            .map(name => String(name || '').trim())
+            .filter(name => {
+                if (!name || seen.has(name)) return false;
+                if (eligibleNames.size > 0 && !eligibleNames.has(name)) return false;
+                seen.add(name);
+                return true;
+            });
+    }, [diagnosticCrewPriority, instructors, isStaffEligibleForAssistCrew]);
+    const displayedCrewOptions = crewSourceMode === 'priority' && diagnosticCrewPriority.length > 0
+        ? crewOptions
+        : staffListNames.filter(name => {
+            const staff = instructors.find(instructor => instructor.name === name);
+            return staff ? isStaffEligibleForAssistCrew(staff) : true;
+        });
     const setCrewSelection = (name: string, checked: boolean) => {
         if (!canSelectFormationCrew) {
             const nextName = checked ? name : '';
@@ -695,7 +734,7 @@ const DfpSidePanelTimeline: React.FC<{
             let next = checked
                 ? (prev.includes(name) ? prev : [...prev, name])
                 : prev.filter(item => item !== name);
-            next = next.slice(0, assistFormationSize);
+            next = next.slice(0, assistCrewSelectionLimit);
             setSelectedCrewName(next[0] || '');
             return next;
         });
@@ -775,6 +814,13 @@ const DfpSidePanelTimeline: React.FC<{
         : activeAssistSection === 'currency'
             ? assistCurrencyConfigId
             : selectedSyllabusItem?.acceptableAircraftConfigs?.[0];
+    const selectedCrewRecords = useMemo(() => (
+        selectedCrewNames
+            .map(name => instructors.find(instructor => instructor.name === name))
+            .filter((staff): staff is Instructor => Boolean(staff))
+    ), [instructors, selectedCrewNames]);
+    const selectedPilotCrewName = selectedCrewRecords.find(isStaffPilotCrewPosition)?.name || selectedCrewName || '';
+    const selectedSupportCrewName = selectedCrewRecords.find(staff => staff.name !== selectedPilotCrewName)?.name || '';
     const getAssistTileDisplayColor = (color?: string) => {
         if (!color) return '#047857';
         if (color === 'bg-emerald-500/70') return 'rgba(16,185,129,0.42)';
@@ -790,8 +836,9 @@ const DfpSidePanelTimeline: React.FC<{
                 ? assistCurrencyDate
                 : date,
         type: selectedResourceKind === 'ftd' ? 'ftd' : selectedResourceKind === 'cpt' ? 'cpt' : 'flight',
-        pilot: selectedCrewName || 'Bloggs, Joe',
-        instructor: selectedCrewName || 'Bloggs, Joe',
+        pilot: selectedPilotCrewName || 'Bloggs, Joe',
+        instructor: selectedPilotCrewName || 'Bloggs, Joe',
+        crew: selectedSupportCrewName,
         flightNumber: assistEventLabel,
         eventCode: selectedSyllabusItem?.code,
         taskingName: activeAssistSection === 'taskings' ? selectedTaskProfile : undefined,
@@ -835,6 +882,8 @@ const DfpSidePanelTimeline: React.FC<{
         date,
         selectedCurrencyName,
         selectedCrewName,
+        selectedPilotCrewName,
+        selectedSupportCrewName,
         selectedCrewNames,
         selectedAircraftNumber,
         selectedResourceKind,
@@ -1261,7 +1310,10 @@ const DfpSidePanelTimeline: React.FC<{
     const formatCrewOptionLabel = (name: string): string => {
         const instructor = instructors.find(item => item.name === name);
         const rank = String(instructor?.rank || '').trim();
-        return rank ? `${rank} ${name}` : name;
+        const crewPosition = findCrewPositionEntry(instructor?.role, crewPositionTerminology);
+        const roleLabel = crewPosition?.label || String(instructor?.role || '').trim();
+        const personLabel = rank ? `${rank} ${name}` : name;
+        return roleLabel ? `${personLabel} (${roleLabel})` : personLabel;
     };
     const hoursOverlap = (firstStart: number, firstEnd: number, secondStart: number, secondEnd: number): boolean =>
         firstStart < secondEnd && secondStart < firstEnd;
@@ -5490,7 +5542,11 @@ function generateDfpInternal(
             },
             inputs: {
                 staffTotal: originalInstructors.length,
-                pilotRoleStaff: originalInstructors.filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name)).length,
+                pilotRoleStaff: originalInstructors.filter(staff => {
+                    const roleText = String(staff.role || '').trim().toLowerCase();
+                    return !staff.isAdminStaff && Boolean(staff.name) &&
+                        (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
+                }).length,
                 highestPriorityEvents: highestPriorityEvents.length,
                 syllabusItems: syllabusDetails.length,
                 generatedEventsAtBuildStart: generatedEvents.length,
@@ -9243,6 +9299,22 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const airCombatWeights = normaliseAirCombatSchedulingWeights(
         config.airCombatSchedulingWeights
     );
+    const airCombatFlightCrewRoles = activeAircraftCrewComposition.seats
+        .map(seat => String(seat.role || '').trim())
+        .filter(Boolean);
+    const isAirCombatPilotStaff = (staff: Instructor): boolean => {
+        const roleText = String(staff.role || '').trim().toLowerCase();
+        return Boolean(staff.name) &&
+            !staff.isAdminStaff &&
+            (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
+    };
+    const airCombatStaffMatchesCrewRole = (staff: Instructor, requiredRole: string): boolean => {
+        if (isPilotCrewPosition(requiredRole, activeCrewPositionTerminology)) return isAirCombatPilotStaff(staff);
+        return Boolean(staff.name) && !staff.isAdminStaff && crewPositionValuesMatch(requiredRole, staff.role, activeCrewPositionTerminology);
+    };
+    const getAirCombatStaffForCrewRole = (requiredRole: string): Instructor[] => (
+        instructors.filter(staff => airCombatStaffMatchesCrewRole(staff, requiredRole))
+    );
     const airCombatRandomTieBreaks = new Map<string, number>();
     const getAirCombatTieBreak = (name: string): number => {
         if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, Math.random());
@@ -9262,7 +9334,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         }, 0)
     );
     const getTaskStaffPriorityList = () => instructors
-        .filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name))
+        .filter(isAirCombatPilotStaff)
         .map(staff => {
             const taskingEvents = getAirCombatTaskingEvents(staff.name);
             return {
@@ -9288,7 +9360,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         weights: airCombatWeights,
         inputs: {
             staffTotal: instructors.length,
-            pilotRoleStaff: instructors.filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name)).length,
+            pilotRoleStaff: instructors.filter(isAirCombatPilotStaff).length,
             adminStaff: instructors.filter(staff => staff.isAdminStaff).length,
             taskingPriorityEvents: taskingPriorityEvents.length,
             mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length,
@@ -9357,7 +9429,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     };
     const refreshAirCombatStaffAndAssignmentAudit = () => {
         if (!isAirCombatBuild) return;
-        const pilotStaff = instructors.filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name));
+        const pilotStaff = instructors.filter(isAirCombatPilotStaff);
         neoBuildDiag.airCombatPriority.staffAudit = instructors.map(staff => {
             const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
             return {
@@ -9366,7 +9438,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 unit: staff.unit || null,
                 flight: staff.flight || null,
                 isAdminStaff: !!staff.isAdminStaff,
-                isPilotEligible: staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name),
+                isPilotEligible: isAirCombatPilotStaff(staff),
                 courseAssignments: assignments.courses.map(item => ({ code: item.code, trainingKey: item.trainingKey, unitCode: item.unitCode })),
                 trainingPackageAssignments: assignments.trainingPackages.map(item => ({ code: item.code, trainingKey: item.trainingKey, unitCode: item.unitCode })),
             };
@@ -9463,16 +9535,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             requiredStaffCount: number
         ): { pilot: string; crew?: string; instructor?: string; rejectedStaff: number } | null => {
             if (isAirCombatBuild) {
-                const priorityList = getTaskStaffPriorityList();
+                const requiredRoles = (airCombatFlightCrewRoles.length > 0 ? airCombatFlightCrewRoles : ['Pilot'])
+                    .slice(0, Math.max(1, Math.min(2, requiredStaffCount)));
+                const primaryRequiredRole = requiredRoles[0] || 'Pilot';
+                const secondaryRequiredRole = requiredRoles[1] || 'Crew';
+                const priorityList = getTaskStaffPriorityList().filter(entry => airCombatStaffMatchesCrewRole(entry.staff, primaryRequiredRole));
                 neoBuildDiag.airCombatPriority.taskStaffPriorityList = priorityList.map(entry => ({
                     name: entry.staff.name,
                     role: entry.staff.role,
+                    requiredRole: primaryRequiredRole,
                     taskingCompleted: entry.taskingCompleted,
                     lastTaskingDateValue: entry.lastTaskingDateValue || null,
                 }));
                 let rejectedStaff = 0;
-                const isValidForTasking = (staff: Instructor, proposed: Omit<ScheduleEvent, 'date'>): string | null => {
-                    if (staff.role !== 'Pilot') return 'ROLE_NOT_PILOT';
+                const isValidForTasking = (staff: Instructor, proposed: Omit<ScheduleEvent, 'date'>, requiredRole: string): string | null => {
+                    if (!airCombatStaffMatchesCrewRole(staff, requiredRole)) return `ROLE_NOT_${requiredRole.replace(/\s+/g, '_').toUpperCase()}`;
                     if (staff.isAdminStaff) return 'ADMIN_STAFF';
                     if (isPersonStaticallyUnavailable(staff, proposed.startTime, proposed.startTime + proposed.duration, buildDate, 'flight')) return 'STATIC_UNAVAILABLE';
                     if (generatedEvents.some(existing => priorityPersonnelConflict({ ...proposed, pilot: staff.name, crew: '' }, existing))) return 'PERSONNEL_CONFLICT';
@@ -9483,7 +9560,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 };
 
                 for (const primaryEntry of priorityList) {
-                    const primaryReason = isValidForTasking(primaryEntry.staff, candidate);
+                    const primaryReason = isValidForTasking(primaryEntry.staff, candidate, primaryRequiredRole);
                     if (primaryReason) {
                         rejectedStaff++;
                         recordAirCombatSkip({
@@ -9498,10 +9575,22 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     if (requiredStaffCount === 1) {
                         return { pilot: primaryEntry.staff.name, crew: '', instructor: '', rejectedStaff };
                     }
-                    const secondaryList = getTaskStaffPriorityList().filter(entry => entry.staff.name !== primaryEntry.staff.name);
+                    const secondaryList = getAirCombatStaffForCrewRole(secondaryRequiredRole)
+                        .filter(staff => staff.name !== primaryEntry.staff.name)
+                        .map(staff => ({
+                            staff,
+                            taskingCompleted: getAirCombatTaskingEvents(staff.name).length,
+                            lastTaskingDateValue: getMostRecentEventDateValue(getAirCombatTaskingEvents(staff.name)),
+                            tieBreak: getAirCombatTieBreak(`${secondaryRequiredRole}:${staff.name}`),
+                        }))
+                        .sort((left, right) =>
+                            left.taskingCompleted - right.taskingCompleted ||
+                            left.lastTaskingDateValue - right.lastTaskingDateValue ||
+                            left.tieBreak - right.tieBreak
+                        );
                     for (const secondaryEntry of secondaryList) {
                         const dualCandidate = { ...candidate, pilot: primaryEntry.staff.name, crew: secondaryEntry.staff.name, instructor: '' };
-                        const secondaryReason = isValidForTasking(secondaryEntry.staff, dualCandidate) ||
+                        const secondaryReason = isValidForTasking(secondaryEntry.staff, dualCandidate, secondaryRequiredRole) ||
                             (generatedEvents.some(existing => priorityPersonnelConflict(dualCandidate, existing)) ? 'PERSONNEL_CONFLICT' : null);
                         if (secondaryReason) {
                             rejectedStaff++;
@@ -9585,7 +9674,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 : activeWindowEnd;
             let placedEvent: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string }) | null = null;
             const attemptSummary: Array<Record<string, any>> = [];
-            const requiredStaffCount = priorityEvent.flightType === 'Solo' || priorityEvent.soloOrDual === 'Solo' ? 1 : 2;
+            const requiredStaffCount = isAirCombatBuild && priorityEvent.type === 'flight'
+                ? Math.max(1, Math.min(2, airCombatFlightCrewRoles.length || activeAircraftCrewComposition.crewCount || 1))
+                : priorityEvent.flightType === 'Solo' || priorityEvent.soloOrDual === 'Solo' ? 1 : 2;
 
             for (let time = searchStart; time + priorityEvent.duration <= searchEnd + 0.001 && !placedEvent; time += timeIncrement) {
                 const roundedTime = Math.round(time * 12) / 12;
@@ -9801,7 +9892,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return items.find(item => !completed.has(item.code)) || null;
         };
         const getTrainingPriorityList = (kind: 'course' | 'training_package', code: string) => instructors
-            .filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name))
+            .filter(isAirCombatPilotStaff)
             .filter(staff => {
                 const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
                 const list = kind === 'training_package' ? assignments.trainingPackages : assignments.courses;
@@ -9827,7 +9918,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const getTrainingListDiagnostic = (kind: 'course' | 'training_package', code: string) => {
             const matchingItems = sortedTrainingItems(kind, code);
             const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
-            const pilotStaff = instructors.filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name));
+            const pilotStaff = instructors.filter(isAirCombatPilotStaff);
             const assignedStaff = pilotStaff
                 .map(staff => {
                     const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
@@ -9932,7 +10023,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             startTime: number,
             stagedEvents: Omit<ScheduleEvent, 'date'>[] = []
         ): string | null => {
-            if (staff.role !== 'Pilot') return 'ROLE_NOT_PILOT';
+            if (!isAirCombatPilotStaff(staff)) return 'ROLE_NOT_PILOT';
             if (staff.isAdminStaff) return 'ADMIN_STAFF';
             const bookingStart = startTime - (item.preFlightTime || 0);
             const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
@@ -9969,7 +10060,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             linkedItem: SyllabusItemDetail,
             excludedStaffNames: Set<string>
         ): AirCombatFormationMember[] => instructors
-            .filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name))
+            .filter(isAirCombatPilotStaff)
             .filter(staff => staffHasAirCombatAssignment(staff, kind, code))
             .filter(staff => !excludedStaffNames.has(staff.name))
             .map(staff => {
@@ -14188,7 +14279,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const airCombatPlacements = neoBuildDiag.airCombatPriority.placements || [];
         const conclusions: string[] = [];
         if (buildOperationalModel !== 'air_combat') conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`);
-        if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin staff with Role = Pilot were available in the active Air Combat staff pool.');
+        if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin Pilot/QFI staff were available in the active Air Combat staff pool.');
         if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat tasking events matched the build date.');
         const trainingInputs = neoBuildDiag.airCombatPriority.trainingInputs;
         if (trainingInputs && trainingInputs.courseCodes.length === 0 && trainingInputs.packageCodes.length === 0) conclusions.push('No Air Combat course or training-package assignments were found on Pilot staff preferences.');
@@ -15517,6 +15608,13 @@ const App: React.FC = () => {
         () => getAircraftTypeCrewComposition(platformConfig, activePlatformResourcePool?.aircraftTypeCode),
         [activePlatformResourcePool?.aircraftTypeCode, platformConfig],
     );
+
+    const activeCrewPositionTerminology = useMemo(() => {
+        const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
+            String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+        )) || platformConfig?.organisations?.[0];
+        return normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
+    }, [platformConfig]);
 
     const activeLocationSolarProfile = useMemo(() => {
         const normalisedSchool = String(school || '').trim().toUpperCase();
@@ -24421,7 +24519,11 @@ const App: React.FC = () => {
                         },
                         inputs: {
                             staffTotal: instructorsData.length,
-                            pilotRoleStaff: instructorsData.filter(staff => staff.role === 'Pilot' && !staff.isAdminStaff && Boolean(staff.name)).length,
+                            pilotRoleStaff: instructorsData.filter(staff => {
+                                const roleText = String(staff.role || '').trim().toLowerCase();
+                                return !staff.isAdminStaff && Boolean(staff.name) &&
+                                    (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
+                            }).length,
                             highestPriorityEvents: config.highestPriorityEvents.length,
                             syllabusItems: syllabusDetails.length,
                         },
@@ -26077,11 +26179,12 @@ appliedUpdates.forEach(update => {
     const handleBulkUpdateInstructors = useCallback(async (updatedInstructors: Instructor[]) => {
         const normaliseImportedInstructor = (instructor: Instructor): Instructor => {
             const roleText = String(instructor.role || '').trim().toLowerCase();
-            const inferredQfi = roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor';
-            const normalisedRole: Instructor['role'] =
+            const inferredQfi = roleText === 'qfi' || roleText === 'instructor';
+            const normalisedRole =
                 roleText === 'sim ip' ? 'SIM IP' :
                 roleText === 'pilot' ? 'Pilot' :
-                'QFI';
+                roleText === 'qfi' || roleText === 'instructor' ? 'QFI' :
+                String(instructor.role || '').trim() || 'QFI';
             const nextInstructor: Instructor = {
                 ...instructor,
                 role: normalisedRole,
@@ -29658,6 +29761,7 @@ appliedUpdates.forEach(update => {
                             personnelDisplaySettings={personnelDisplaySettings}
                             instructorLabel={instructorLabel}
                             operationalModel={activeOperationalModel}
+                            crewPositionTerminology={activeCrewPositionTerminology}
                         />;
             case 'Instructors':
                 return <InstructorListView
@@ -29784,6 +29888,7 @@ appliedUpdates.forEach(update => {
                             personnelDisplaySettings={personnelDisplaySettings}
                             instructorLabel={instructorLabel}
                             operationalModel={activeOperationalModel}
+                            crewPositionTerminology={activeCrewPositionTerminology}
                         />;
                 case 'Trainees':
                     return <TraineeListView
@@ -30979,6 +31084,7 @@ appliedUpdates.forEach(update => {
                                     aircraftConfigCapacities={neoAircraftConfigCapacities}
                                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                                     aircraftCrewComposition={activeAircraftCrewComposition}
+                                    crewPositionTerminology={activeCrewPositionTerminology}
                                     onUpdateAircraftConfigCapacities={setNeoAircraftConfigCapacities}
                                     availableFtdCount={availableFtdCount}
                                     onUpdateFtdCount={setAvailableFtdCount}

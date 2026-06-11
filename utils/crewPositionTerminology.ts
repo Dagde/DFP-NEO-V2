@@ -99,3 +99,62 @@ export const getCrewPositionOptions = (
   });
   return options;
 };
+
+const normaliseCrewPositionToken = (value: unknown): string => (
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '')
+);
+
+const getAcronymToken = (value: unknown): string => (
+  String(value || '')
+    .trim()
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map(part => part[0])
+    .join('')
+    .toLowerCase()
+);
+
+const getCrewPositionMatchTokens = (entry: CrewPositionTerminologyEntry): string[] => ([
+  normaliseCrewPositionToken(entry.id),
+  normaliseCrewPositionToken(entry.genericName),
+  normaliseCrewPositionToken(entry.label),
+  getAcronymToken(entry.genericName),
+  getAcronymToken(entry.label),
+].filter(Boolean));
+
+export const findCrewPositionEntry = (
+  value: unknown,
+  terminology?: CrewPositionTerminology,
+): CrewPositionTerminologyEntry | null => {
+  const token = normaliseCrewPositionToken(value);
+  const acronym = getAcronymToken(value);
+  if (!token && !acronym) return null;
+
+  return normaliseCrewPositionTerminology(terminology).positions.find(entry => {
+    const tokens = getCrewPositionMatchTokens(entry);
+    return tokens.includes(token) || (!!acronym && tokens.includes(acronym));
+  }) || null;
+};
+
+export const crewPositionValuesMatch = (
+  requiredPosition: unknown,
+  staffPosition: unknown,
+  terminology?: CrewPositionTerminology,
+): boolean => {
+  const requiredEntry = findCrewPositionEntry(requiredPosition, terminology);
+  const staffEntry = findCrewPositionEntry(staffPosition, terminology);
+  if (requiredEntry && staffEntry) return requiredEntry.genericName.trim().toUpperCase() === staffEntry.genericName.trim().toUpperCase();
+  return normaliseCrewPositionToken(requiredPosition) === normaliseCrewPositionToken(staffPosition);
+};
+
+export const isPilotCrewPosition = (
+  value: unknown,
+  terminology?: CrewPositionTerminology,
+): boolean => {
+  const entry = findCrewPositionEntry(value, terminology);
+  return normaliseCrewPositionToken(entry?.genericName || value) === normaliseCrewPositionToken('Pilot');
+};

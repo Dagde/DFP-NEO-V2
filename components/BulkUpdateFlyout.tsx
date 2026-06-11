@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getAllFiles, getFile } from '../utils/db';
 import { Instructor, InstructorRank, InstructorCategory, SeatConfig } from '../types';
+import {
+    CrewPositionTerminology,
+    findCrewPositionEntry,
+    isPilotCrewPosition,
+} from '../utils/crewPositionTerminology';
 
 declare var XLSX: any;
 
@@ -11,6 +16,7 @@ interface BulkUpdateFlyoutProps {
   traineesData?: Trainee[]; // For trainee bulk updates
   isTraineeMode?: boolean; // Toggle between instructor and trainee mode
   onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
+  crewPositionTerminology?: CrewPositionTerminology;
 }
 
 interface RepoFile {
@@ -77,10 +83,35 @@ const normaliseSeatConfig = (value: string): SeatConfig | undefined => {
     return value as SeatConfig;
 };
 
-const applyQualificationRoles = (parsedData: Partial<Instructor>, rolesValue: string): void => {
+const normaliseImportedStaffRole = (
+    value: string,
+    crewPositionTerminology?: CrewPositionTerminology,
+): string | undefined => {
+    const cleanValue = value.trim();
+    const cleanLower = cleanValue.toLowerCase();
+    if (!cleanValue) return undefined;
+    if (['sim ip', 'simulator ip', 'sim instructor', 'simulator instructor'].includes(cleanLower)) return 'SIM IP';
+    if (['qfi', 'instructor', 'flight instructor'].includes(cleanLower)) return 'QFI';
+
+    const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
+    if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? 'Pilot' : crewPosition.genericName;
+    if (['pilot', 'aircrew pilot', 'captain'].includes(cleanLower)) return 'Pilot';
+
+    return cleanValue;
+};
+
+const applyQualificationRoles = (
+    parsedData: Partial<Instructor>,
+    rolesValue: string,
+    crewPositionTerminology?: CrewPositionTerminology,
+): void => {
     if (!rolesValue) return;
     const roleTokens = splitListValue(rolesValue);
     const rolesLower = roleTokens.join(' ').toLowerCase();
+    const importedCrewRole = roleTokens
+        .map(role => normaliseImportedStaffRole(role, crewPositionTerminology))
+        .find(role => role && role !== 'QFI');
+
     parsedData.isExecutive = rolesLower.includes('exec') || rolesLower.includes('executive');
     parsedData.isFlyingSupervisor = rolesLower.includes('fly sup') || rolesLower.includes('flying supervisor') || rolesLower.includes('supervisor');
     parsedData.isTestingOfficer = rolesLower.includes('testing') || rolesLower.includes('test officer');
@@ -89,7 +120,9 @@ const applyQualificationRoles = (parsedData: Partial<Instructor>, rolesValue: st
     parsedData.isOFI = rolesLower.includes('ofi');
     parsedData.isQFI = rolesLower.includes('qfi') || rolesLower.includes('instructor');
     parsedData.isAdminStaff = rolesLower.includes('admin');
-    if (rolesLower.includes('sim ip')) {
+    if (importedCrewRole) {
+        parsedData.role = importedCrewRole;
+    } else if (rolesLower.includes('sim ip')) {
         parsedData.role = 'SIM IP';
     } else if (rolesLower.includes('pilot')) {
         parsedData.role = 'Pilot';
@@ -105,7 +138,8 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
   instructorsData = [],
   traineesData = [],
   isTraineeMode = false,
-  onBulkUpdateTrainees 
+  onBulkUpdateTrainees,
+  crewPositionTerminology,
 }) => {
     const [repoFiles, setRepoFiles] = useState<RepoFile[]>([]);
     const [selectedFileId, setSelectedFileId] = useState<string>('');
@@ -190,8 +224,9 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 const rank = getStringFromRow(row, ['Rank']);
                 if (rank) parsedData.rank = rank as InstructorRank;
                 
-                const role = getStringFromRow(row, ['Role']);
-                if (role) parsedData.role = role as Instructor['role'];
+                const role = getStringFromRow(row, ['Role', 'Crew Position', 'Crew Role', 'Aircrew Role', 'Seat Role']);
+                const normalisedRole = normaliseImportedStaffRole(role, crewPositionTerminology);
+                if (normalisedRole) parsedData.role = normalisedRole;
                 
                 const callsign = getValueFromRow(row, ['callsign number', 'callsignnumber', 'Callsign No', 'Callsign Number']);
                 if (callsign !== undefined) parsedData.callsignNumber = Number(callsign) || 0;
@@ -227,7 +262,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 if (permissions) parsedData.permissions = splitListValue(permissions);
 
                 const rolesStr = getStringFromRow(row, ['Roles', 'Qualifications and Roles', 'Qualifications & Roles', 'Qualifications']);
-                applyQualificationRoles(parsedData, rolesStr);
+                applyQualificationRoles(parsedData, rolesStr, crewPositionTerminology);
 
                 if (existingInstructor) {
                     const updatedInstructor = { ...existingInstructor, ...parsedData, idNumber };

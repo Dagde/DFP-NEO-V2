@@ -14,6 +14,7 @@ import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '..
 import { normaliseOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 
 // Helper to generate a unique random ID for new instructors
@@ -96,6 +97,7 @@ interface InstructorListViewProps {
   personnelDisplaySettings?: PersonnelDisplaySettings;
   instructorLabel?: string;
   operationalModel?: string;
+  crewPositionTerminology?: CrewPositionTerminology;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -687,6 +689,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             onClose={() => setShowBulkUpdate(false)}
             onBulkUpdateInstructors={onBulkUpdateInstructors}
             instructorsData={instructorsData}
+            crewPositionTerminology={crewPositionTerminology}
         />
       )}
       {instructorToArchive && (
