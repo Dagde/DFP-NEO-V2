@@ -508,7 +508,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const selectedConfig = aircraftConfigOptions.find(definition => definition.id === request.aircraftConfigId);
       return (
         <div key={request.id} className="rounded-xl border border-slate-700/80 bg-slate-900/45 p-3 shadow-lg shadow-black/10">
-          <div className="grid gap-3 lg:grid-cols-[minmax(16rem,2fr)_minmax(9rem,1fr)_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
             <TaskingFieldPanel label="Tasking" hint={request.tasking || 'Select or type task'}>
               <TaskingProfileInput
                 value={request.tasking}
@@ -573,11 +573,11 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             </TaskingFieldPanel>
           </div>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,0.7fr)_minmax(0,0.95fr)_minmax(0,1.85fr)_minmax(0,1fr)]">
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1.05fr)_minmax(0,1.45fr)_minmax(0,0.82fr)]">
             <TaskingFieldPanel label="Route" hint={`${request.depPoint || 'Departure'} -> ${request.arrivalPoint || 'Arrival'}`}>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2 [&_input]:h-8 [&_input]:px-2 [&_input]:text-xs">
                 <div className="min-w-0">
-                  <div className="mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-600">Dep</div>
+                  <div className="mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600">Dep</div>
                   <TaskingAirfieldCodeInput
                     value={request.depPoint}
                     suggestions={depPointSuggestions}
@@ -585,7 +585,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                   />
                 </div>
                 <div className="min-w-0">
-                  <div className="mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-600">Arr</div>
+                  <div className="mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600">Arr</div>
                   <TaskingAirfieldCodeInput
                     value={request.arrivalPoint}
                     suggestions={arrivalPointSuggestions}
@@ -623,58 +623,62 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
               />
             </div>
             <TaskingFieldPanel
-              label="Controls"
-              hint={`${request.isMandatory !== false ? 'Mandatory' : 'Optional'}, ${request.saved ? (request.submitted && !request.ignored ? 'scheduled' : 'ignored') : 'save or remove'}`}
+              label="Actions"
+              hint={request.saved ? (request.submitted && !request.ignored ? 'Will be scheduled' : 'Will be ignored') : 'Save before scheduling'}
             >
               <div className="grid gap-2">
-                <div className="grid grid-cols-[minmax(0,1fr)_2.5rem] gap-2">
-                  <label className="flex h-10 items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-800 px-3 text-sm font-semibold text-white">
+                <label className="flex h-8 items-center justify-between gap-2 rounded-md border border-slate-600 bg-slate-800 px-2 text-xs font-semibold text-white">
+                  <span>Mandatory</span>
+                  <span className="inline-flex items-center gap-1.5">
                     <input
                       type="checkbox"
                       checked={request.isMandatory !== false}
                       onChange={event => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false, saved: false })}
                       className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
                     />
-                    Yes
-                  </label>
-                  <button onClick={() => onRemoveTaskingRequest(request.id)} className="flex h-10 w-10 items-center justify-center rounded-md border border-slate-600 bg-slate-800 text-gray-400 hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300" aria-label="Remove tasking request">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
-                  </button>
-                </div>
+                    {request.isMandatory !== false ? 'Yes' : 'No'}
+                  </span>
+                </label>
                 {!request.saved ? (
                   <button
                     onClick={() => onSaveTaskingRequest(request.id)}
                     disabled={!canSubmit}
-                    className={`h-10 w-full rounded-md px-3 text-sm font-bold ${
+                    className={`h-9 w-full rounded-md px-2 text-xs font-bold ${
                       canSubmit
                         ? 'bg-green-600 text-white hover:bg-green-700'
                         : 'cursor-not-allowed bg-slate-700 text-slate-400'
                     }`}
                   >
-                    Save
+                    Save request
                   </button>
                 ) : (
-                  <span className="grid grid-cols-2 gap-2 text-[11px]">
-                    <label className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-emerald-200">
+                  <span className="grid gap-1.5 text-[11px]">
+                    <label className="inline-flex h-8 items-center justify-between gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-emerald-200">
+                      <span>Schedule</span>
                       <input
                         type="radio"
                         name={`tasking-schedule-${request.id}`}
                         checked={request.submitted && !request.ignored}
                         onChange={() => onSubmitTaskingRequest(request.id)}
                       />
-                      Schedule
                     </label>
-                    <label className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 text-rose-200">
+                    <label className="inline-flex h-8 items-center justify-between gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 text-rose-200">
+                      <span>Ignore</span>
                       <input
                         type="radio"
                         name={`tasking-schedule-${request.id}`}
                         checked={request.ignored || !request.submitted}
                         onChange={() => onIgnoreTaskingRequest(request.id)}
                       />
-                      Ignore
                     </label>
                   </span>
                 )}
+                <button
+                  onClick={() => onRemoveTaskingRequest(request.id)}
+                  className="h-8 rounded-md border border-red-500/30 bg-red-500/10 px-2 text-xs font-semibold text-red-200 hover:border-red-400/60 hover:bg-red-500/20"
+                >
+                  Remove
+                </button>
               </div>
             </TaskingFieldPanel>
           </div>

@@ -4454,23 +4454,24 @@ const CrewRequirementEditor = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? "p-2" : "p-3"} text-xs text-slate-200`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${compact ? "grid grid-cols-[minmax(0,1fr)_minmax(7.5rem,auto)]" : "flex flex-wrap"} items-center justify-between gap-2`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${compact ? "grid" : "flex flex-wrap"} items-center justify-between gap-2`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-100", children: "Crew Required" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 break-words text-slate-400", children: effectiveSummary })
+        !compact && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 break-words text-slate-400", children: effectiveSummary })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "select",
         {
           value: normalised.mode,
           onChange: (event) => setMode(event.target.value),
-          className: `${compact ? "w-full max-w-[11rem]" : ""} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`,
+          className: `${compact ? "w-full max-w-[10.5rem]" : ""} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`,
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "aircraft_default", children: "Use aircraft default" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "custom", children: "Custom crew" })
           ]
         }
-      )
+      ),
+      compact && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 break-words text-slate-400", children: effectiveSummary })
     ] }),
     normalised.mode === "aircraft_default" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 text-[11px] leading-5 text-slate-500", children: [
       "Aircraft default: ",
@@ -24677,7 +24678,7 @@ const TaskingRequestTable = ({
     const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
     const selectedConfig = aircraftConfigOptions.find((definition) => definition.id === request.aircraftConfigId);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-700/80 bg-slate-900/45 p-3 shadow-lg shadow-black/10", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(16rem,2fr)_minmax(9rem,1fr)_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Tasking", hint: request.tasking || "Select or type task", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           TaskingProfileInput,
           {
@@ -24738,10 +24739,10 @@ const TaskingRequestTable = ({
           }
         ) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,0.7fr)_minmax(0,0.95fr)_minmax(0,1.85fr)_minmax(0,1fr)]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Route", hint: `${request.depPoint || "Departure"} -> ${request.arrivalPoint || "Arrival"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1.05fr)_minmax(0,1.45fr)_minmax(0,0.82fr)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Route", hint: `${request.depPoint || "Departure"} -> ${request.arrivalPoint || "Arrival"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 [&_input]:h-8 [&_input]:px-2 [&_input]:text-xs", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-600", children: "Dep" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600", children: "Dep" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingAirfieldCodeInput,
               {
@@ -24752,7 +24753,7 @@ const TaskingRequestTable = ({
             )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-600", children: "Arr" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600", children: "Arr" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingAirfieldCodeInput,
               {
@@ -24795,11 +24796,12 @@ const TaskingRequestTable = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           TaskingFieldPanel,
           {
-            label: "Controls",
-            hint: `${request.isMandatory !== false ? "Mandatory" : "Optional"}, ${request.saved ? request.submitted && !request.ignored ? "scheduled" : "ignored" : "save or remove"}`,
+            label: "Actions",
+            hint: request.saved ? request.submitted && !request.ignored ? "Will be scheduled" : "Will be ignored" : "Save before scheduling",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_2.5rem] gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex h-10 items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-800 px-3 text-sm font-semibold text-white", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex h-8 items-center justify-between gap-2 rounded-md border border-slate-600 bg-slate-800 px-2 text-xs font-semibold text-white", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Mandatory" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1.5", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
@@ -24809,20 +24811,20 @@ const TaskingRequestTable = ({
                       className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
                     }
                   ),
-                  "Yes"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveTaskingRequest(request.id), className: "flex h-10 w-10 items-center justify-center rounded-md border border-slate-600 bg-slate-800 text-gray-400 hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300", "aria-label": "Remove tasking request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) })
+                  request.isMandatory !== false ? "Yes" : "No"
+                ] })
               ] }),
               !request.saved ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   onClick: () => onSaveTaskingRequest(request.id),
                   disabled: !canSubmit,
-                  className: `h-10 w-full rounded-md px-3 text-sm font-bold ${canSubmit ? "bg-green-600 text-white hover:bg-green-700" : "cursor-not-allowed bg-slate-700 text-slate-400"}`,
-                  children: "Save"
+                  className: `h-9 w-full rounded-md px-2 text-xs font-bold ${canSubmit ? "bg-green-600 text-white hover:bg-green-700" : "cursor-not-allowed bg-slate-700 text-slate-400"}`,
+                  children: "Save request"
                 }
-              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "grid grid-cols-2 gap-2 text-[11px]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex h-8 items-center justify-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-emerald-200", children: [
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "grid gap-1.5 text-[11px]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex h-8 items-center justify-between gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-emerald-200", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Schedule" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
@@ -24831,10 +24833,10 @@ const TaskingRequestTable = ({
                       checked: request.submitted && !request.ignored,
                       onChange: () => onSubmitTaskingRequest(request.id)
                     }
-                  ),
-                  "Schedule"
+                  )
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex h-8 items-center justify-center gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 text-rose-200", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex h-8 items-center justify-between gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 text-rose-200", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Ignore" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
@@ -24843,10 +24845,17 @@ const TaskingRequestTable = ({
                       checked: request.ignored || !request.submitted,
                       onChange: () => onIgnoreTaskingRequest(request.id)
                     }
-                  ),
-                  "Ignore"
+                  )
                 ] })
-              ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => onRemoveTaskingRequest(request.id),
+                  className: "h-8 rounded-md border border-red-500/30 bg-red-500/10 px-2 text-xs font-semibold text-red-200 hover:border-red-400/60 hover:bg-red-500/20",
+                  children: "Remove"
+                }
+              )
             ] })
           }
         )
