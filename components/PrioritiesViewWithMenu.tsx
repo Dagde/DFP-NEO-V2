@@ -6,6 +6,8 @@ import { InstructorPriorityConfig } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import type { AirCombatSchedulingWeights } from '../utils/airCombatTraining';
+import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface PrioritiesViewWithMenuProps {
@@ -71,6 +73,8 @@ interface PrioritiesViewWithMenuProps {
   airCombatSchedulingWeights?: AirCombatSchedulingWeights;
   onUpdateAirCombatSchedulingWeights?: (weights: AirCombatSchedulingWeights) => void;
   isSingleSeatAircraft?: boolean;
+  aircraftCrewComposition?: AircraftCrewComposition;
+  crewPositionTerminology?: CrewPositionTerminology;
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';

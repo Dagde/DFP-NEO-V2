@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { CurrencyDefinition, MasterCurrency, CurrencyRequirement, LogicNode } from '../types';
 import AuditButton from './AuditButton';
+import CrewRequirementEditor from './CrewRequirementEditor';
+import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 
 interface CurrencyBuilderViewProps {
     onBack: () => void;
@@ -18,6 +21,8 @@ interface CurrencyBuilderViewProps {
     onSave: (allCurrencies: CurrencyDefinition[]) => void;
     onDelete: (id: string) => void;
     onImportFromUnit?: (unitCode: string) => void;
+    aircraftCrewComposition?: AircraftCrewComposition;
+    crewPositionTerminology?: CrewPositionTerminology;
 }
 
 const getNewPrimitive = (): CurrencyRequirement => ({
@@ -33,6 +38,7 @@ const getNewPrimitive = (): CurrencyRequirement => ({
     showInPostFlight: false,
     showInPostFlightRecency: false,
     postFlightInputTypes: ['date'],
+    crewRequirement: { mode: 'aircraft_default' },
 });
 
 const getNewComposite = (): MasterCurrency => ({
@@ -46,6 +52,7 @@ const getNewComposite = (): MasterCurrency => ({
     showInPostFlight: false,
     showInPostFlightRecency: false,
     postFlightInputTypes: ['checkbox'],
+    crewRequirement: { mode: 'aircraft_default' },
 });
 
 const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
@@ -57,6 +64,8 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     onSave,
     onDelete,
     onImportFromUnit,
+    aircraftCrewComposition,
+    crewPositionTerminology,
 }) => {
     const [allCurrencies, setAllCurrencies] = useState<CurrencyDefinition[]>([]);
     const [selectedCurrencyId, setSelectedCurrencyId] = useState<string | null>(null);
@@ -248,8 +257,8 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                     {selectedCurrency ? (
                         <div className="space-y-6">
                             {selectedCurrency.type === 'primitive' 
-                                ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} />
-                                : <CompositeEditor currency={selectedCurrency as MasterCurrency} onUpdate={handleUpdateCurrency} allCurrencies={allCurrencies} />
+                                ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} />
+                                : <CompositeEditor currency={selectedCurrency as MasterCurrency} onUpdate={handleUpdateCurrency} allCurrencies={allCurrencies} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} />
                             }
 
                              {/* Used In Section */}
@@ -274,7 +283,12 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
 
 // --- EDITOR SUB-COMPONENTS ---
 
-const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: CurrencyRequirement) => void; }> = ({ currency, onUpdate }) => {
+const PrimitiveEditor: React.FC<{
+    currency: CurrencyRequirement;
+    onUpdate: (c: CurrencyRequirement) => void;
+    aircraftCrewComposition?: AircraftCrewComposition;
+    crewPositionTerminology?: CrewPositionTerminology;
+}> = ({ currency, onUpdate, aircraftCrewComposition, crewPositionTerminology }) => {
     const handleChange = (field: keyof CurrencyRequirement, value: any) => {
         onUpdate({ ...currency, [field]: value });
     };
@@ -306,6 +320,12 @@ const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: C
                 <option value="ROLLING_WINDOW">Rolling Window</option>
             </DropdownField>
             <InputField label="Event Codes (comma-separated)" value={currency.eventCodes.join(', ')} onChange={v => handleChange('eventCodes', v.split(',').map((s: string) => s.trim()).filter(Boolean))} />
+            <CrewRequirementEditor
+                value={currency.crewRequirement}
+                aircraftCrewComposition={aircraftCrewComposition}
+                crewPositionTerminology={crewPositionTerminology}
+                onChange={v => handleChange('crewRequirement', v)}
+            />
 
             {/* Post-Flight Integration */}
             <div className="p-4 border border-amber-600/40 rounded-lg bg-amber-900/10 space-y-3">
@@ -357,7 +377,13 @@ const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: C
     );
 };
 
-const CompositeEditor: React.FC<{ currency: MasterCurrency; onUpdate: (c: MasterCurrency) => void; allCurrencies: CurrencyDefinition[]; }> = ({ currency, onUpdate, allCurrencies }) => {
+const CompositeEditor: React.FC<{
+    currency: MasterCurrency;
+    onUpdate: (c: MasterCurrency) => void;
+    allCurrencies: CurrencyDefinition[];
+    aircraftCrewComposition?: AircraftCrewComposition;
+    crewPositionTerminology?: CrewPositionTerminology;
+}> = ({ currency, onUpdate, allCurrencies, aircraftCrewComposition, crewPositionTerminology }) => {
     const handleChange = (field: keyof MasterCurrency, value: any) => {
         onUpdate({ ...currency, [field]: value });
     };
@@ -390,6 +416,12 @@ const CompositeEditor: React.FC<{ currency: MasterCurrency; onUpdate: (c: Master
                 <option value="LATEST_CHILD">Use Latest Expiry</option>
             </DropdownField>
             <LogicNodeEditor node={currency.logicTree} path={[]} onUpdate={handleLogicTreeChange} allCurrencies={allCurrencies} />
+            <CrewRequirementEditor
+                value={currency.crewRequirement}
+                aircraftCrewComposition={aircraftCrewComposition}
+                crewPositionTerminology={crewPositionTerminology}
+                onChange={v => handleChange('crewRequirement', v)}
+            />
 
             {/* Post-Flight Integration */}
             <div className="p-4 border border-purple-600/40 rounded-lg bg-purple-900/10 space-y-3">

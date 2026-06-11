@@ -15,7 +15,7 @@ import ScoringMatrixFlyout from './ScoringMatrixFlyout';
 import CourseSelectionFlyout from './CourseSelectionFlyout';
 import { CourseSelectionDialog } from './CourseSelectionDialog';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
-import { Instructor, Trainee, SyllabusItemDetail, InstructorRank, InstructorCategory, SeatConfig, TraineeRank, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
+import { Instructor, Trainee, SyllabusItemDetail, InstructorRank, InstructorCategory, SeatConfig, TraineeRank, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode, CrewRequirement } from '../types';
 import ACHistoryPage from './ACHistoryPage';
 import FormationCallsignsSection from './FormationCallsignsSection';
 import PermissionsManagerWindow from './PermissionsManagerWindow';
@@ -1543,6 +1543,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (!code) return null;
         
         const parsed: Partial<SyllabusItemDetail> = { code };
+        const parseCrewRequirement = (value: string): CrewRequirement | undefined => {
+            const text = String(value || '').trim();
+            if (!text) return undefined;
+            if (/^(aircraft\s*)?default$/i.test(text)) return { mode: 'aircraft_default' };
+            const roles = text
+                .split(/\r?\n|;|,/)
+                .map(part => part.trim())
+                .filter(Boolean)
+                .map(part => {
+                    const match = part.match(/^(.+?)(?:\s*[:=x]\s*|\s+)(\d+)$/i);
+                    const role = (match ? match[1] : part).trim();
+                    const count = match ? Math.max(0, Math.round(Number(match[2]) || 0)) : 1;
+                    return role && count > 0 ? { role, count } : null;
+                })
+                .filter((item): item is { role: string; count: number } => Boolean(item));
+            return roles.length > 0 ? { mode: 'custom', roles } : undefined;
+        };
 
         const phase = getStr(row, ['Phase']); if (phase) parsed.phase = phase;
         const module = getStr(row, ['Module']); if (module) parsed.module = module;
@@ -1564,6 +1581,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         const resourceNumber = getNum(row, ['Resource Number', 'resourceNumber', 'Resources Required Number']);
         if (resourceNumber !== undefined) parsed.resourceNumber = Math.max(0, Math.round(resourceNumber));
         const resourcesHum = getStrArray(row, ['Resources Required (Human)', 'resourcesHuman']); if (resourcesHum) parsed.resourcesHuman = resourcesHum;
+        const crewRequirementText = getStr(row, ['Crew Required', 'Crew Requirement', 'Crew Composition', 'crewRequirement']);
+        const crewRequirement = parseCrewRequirement(crewRequirementText);
+        if (crewRequirement) parsed.crewRequirement = crewRequirement;
         
         return parsed;
     };

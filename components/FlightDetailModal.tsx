@@ -2,6 +2,7 @@ import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import AuditButton from './AuditButton';
+import CrewRequirementEditor from './CrewRequirementEditor';
 import { logAudit } from '../utils/auditLogger';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign, CancellationCode } from '../types';
@@ -19,6 +20,8 @@ import {
     type AircraftNumberSettings,
 } from '../utils/aircraftNumberFormat';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -391,6 +394,8 @@ interface EventDetailModalProps {
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftNumberSettings?: AircraftNumberSettings;
     aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
+    aircraftCrewComposition?: AircraftCrewComposition;
+    crewPositionTerminology?: CrewPositionTerminology;
     personnelDisplaySettings?: PersonnelDisplaySettings;
     isReadOnly?: boolean;
 }
@@ -438,7 +443,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], personnelDisplaySettings, isReadOnly = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, personnelDisplaySettings, isReadOnly = false }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -473,6 +478,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [aircraftNumber, setAircraftNumber] = useState(initialAircraftNumber.number || '001');
     const [aircraftNumberPrefix, setAircraftNumberPrefix] = useState(initialAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     const [aircraftConfigId, setAircraftConfigId] = useState(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
+    const [crewRequirement, setCrewRequirement] = useState(event.crewRequirement || { mode: 'aircraft_default' as const });
     const [aircraftCount, setAircraftCount] = useState(1);
     const aircraftConfigOptions = useMemo(() => {
         const definitions = aircraftConfigurationDefinitions.length > 0
@@ -1099,6 +1105,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setAircraftNumber(parsedAircraftNumber.number || '001');
         setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
         setAircraftConfigId(event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id);
+        setCrewRequirement(event.crewRequirement || { mode: 'aircraft_default' });
         setAircraftCount(1);
         setCrew([{ 
             flightType: event.flightType, 
@@ -1530,6 +1537,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 aircraftNumber: eventType === 'flight' ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : undefined,
                 aircraftConfigId: eventType === 'flight' ? aircraftConfigId : undefined,
                 acceptableAircraftConfigs: eventType === 'flight' ? [aircraftConfigId] : event.acceptableAircraftConfigs,
+                crewRequirement: eventType === 'flight' ? crewRequirement : event.crewRequirement,
                 color: eventColor,
                 flightType: c.flightType,
                 instructor: c.instructor,
@@ -2360,6 +2368,14 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     <option value="Local">Local</option>
                                                     <option value="Land Away">Land Away</option>
                                                 </select>
+                                            </div>
+                                            <div className="md:col-span-3">
+                                                <CrewRequirementEditor
+                                                    value={crewRequirement}
+                                                    aircraftCrewComposition={aircraftCrewComposition}
+                                                    crewPositionTerminology={crewPositionTerminology}
+                                                    onChange={setCrewRequirement}
+                                                />
                                             </div>
                                             {flightNumber !== 'SCT FORM' && (
                                                 <div>

@@ -14,6 +14,19 @@ export type LogicOperator = 'AND' | 'OR';
  */
 export type PostFlightInputType = 'date' | 'count' | 'checkbox';
 
+export type CrewRequirementMode = 'aircraft_default' | 'custom';
+
+export interface CrewRequirementRole {
+  crewPositionId?: string;
+  role: string;
+  count: number;
+}
+
+export interface CrewRequirement {
+  mode: CrewRequirementMode;
+  roles?: CrewRequirementRole[];
+}
+
 export interface LogicNode {
   operator: LogicOperator;
   children: (string | LogicNode)[]; // Array of currency IDs or nested LogicNodes
@@ -33,6 +46,7 @@ export interface CurrencyRequirement {
   showInPostFlight?: boolean;          // Whether this currency appears on the post-flight page
   showInPostFlightRecency?: boolean;   // Whether this currency appears in the post-flight recency checklist
   postFlightInputTypes?: PostFlightInputType[]; // Which input types to show (multiple allowed)
+  crewRequirement?: CrewRequirement;
 }
 
 export interface MasterCurrency {
@@ -47,6 +61,7 @@ export interface MasterCurrency {
   showInPostFlight?: boolean;          // Whether this currency appears on the post-flight page
   showInPostFlightRecency?: boolean;   // Whether this currency appears in the post-flight recency checklist
   postFlightInputTypes?: PostFlightInputType[]; // Which input types to show (multiple allowed)
+  crewRequirement?: CrewRequirement;
 }
 
 export type CurrencyDefinition = MasterCurrency | CurrencyRequirement;
@@ -301,7 +316,8 @@ export interface ScheduleEvent {
       traineeId?: number;
       eventCode?: string;
       aircraftConfigId?: string;
-      acceptableAircraftConfigs?: string[];
+  acceptableAircraftConfigs?: string[];
+  crewRequirement?: CrewRequirement;
       
       // Cancellation fields
       isCancelled?: boolean;
@@ -359,6 +375,7 @@ export interface SyllabusItemDetail {
   assessedElements?: string[];
   notes?: string;
   resourcesHuman: string[];
+  crewRequirement?: CrewRequirement;
   isRemedial?: boolean;
   completedAt?: string | null;
   masterEventId?: string;
@@ -548,6 +565,7 @@ export interface SctRequest {
     includeInBuild?: boolean; // For MEDIUM/LOW priority - user can manually include in build
     aircraftConfigId?: string;
     crewMember?: string;
+    crewRequirement?: CrewRequirement;
 }
 
 export type PermissionRole = 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';

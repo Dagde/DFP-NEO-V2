@@ -39,6 +39,7 @@ import {
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from './utils/aircraftConfigurationSettings';
 import { getAircraftTypeCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
+import { getCrewRequirementCount, getCrewRequirementRoles } from './utils/crewRequirements';
 import {
     readTileStatusSettingsFromLocalStorage,
     normaliseTileStatusSettings,
@@ -863,6 +864,7 @@ const DfpSidePanelTimeline: React.FC<{
         crewSelectionOrder: selectedCrewNames,
         aircraftConfigId: assistConfigId,
         acceptableAircraftConfigs: assistConfigId ? [assistConfigId] : undefined,
+        crewRequirement: selectedSyllabusItem?.crewRequirement || { mode: 'aircraft_default' },
         preStart: selectedSyllabusItem ? Math.max(0, assistStartTime - ((selectedSyllabusItem.preFlightTime || 0) / 60)) : undefined,
         postEnd: selectedSyllabusItem ? assistStartTime + assistDuration + ((selectedSyllabusItem.postFlightTime || 0) / 60) : undefined,
     }), [
@@ -1472,6 +1474,7 @@ const DfpSidePanelTimeline: React.FC<{
             priority: 'High',
             aircraftConfigId: request.aircraftConfigId,
             acceptableAircraftConfigs: [request.aircraftConfigId],
+            crewRequirement: { mode: 'aircraft_default' },
         }));
     };
     const buildCurrencyRequestEvent = (request: typeof assistCurrencyRequests[number]): ScheduleEvent => {
@@ -1503,6 +1506,7 @@ const DfpSidePanelTimeline: React.FC<{
             priority: 'High',
             aircraftConfigId: request.aircraftConfigId,
             acceptableAircraftConfigs: [request.aircraftConfigId],
+            crewRequirement: { mode: 'aircraft_default' },
         };
     };
     const isAssistTaskRequestInHighestPriority = (id: string) => (
@@ -8922,6 +8926,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             dayNight: syllabusItem.dayNight,
             aircraftConfigId: type === 'flight' ? getAircraftConfigIdForResource(resourceId) : undefined,
             acceptableAircraftConfigs: type === 'flight' ? acceptedAircraftConfigsForEvent : undefined,
+            crewRequirement: syllabusItem.crewRequirement || { mode: 'aircraft_default' },
             currencyDraftId: options.currencyDraftId,
             currency: options.currency,
             priority: options.priority,
@@ -9302,6 +9307,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const airCombatFlightCrewRoles = activeAircraftCrewComposition.seats
         .map(seat => String(seat.role || '').trim())
         .filter(Boolean);
+    const getPriorityEventCrewCount = (event: ScheduleEvent): number => (
+        Math.max(1, getCrewRequirementCount(event.crewRequirement, activeAircraftCrewComposition) || airCombatFlightCrewRoles.length || activeAircraftCrewComposition.crewCount || 1)
+    );
     const isAirCombatPilotStaff = (staff: Instructor): boolean => {
         const roleText = String(staff.role || '').trim().toLowerCase();
         return Boolean(staff.name) &&
@@ -9535,7 +9543,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             requiredStaffCount: number
         ): { pilot: string; crew?: string; instructor?: string; rejectedStaff: number } | null => {
             if (isAirCombatBuild) {
-                const requiredRoles = (airCombatFlightCrewRoles.length > 0 ? airCombatFlightCrewRoles : ['Pilot'])
+                const candidateCrewRoles = getCrewRequirementRoles(candidate.crewRequirement, activeAircraftCrewComposition)
+                    .flatMap(role => Array.from({ length: Math.max(0, Math.round(Number(role.count) || 0)) }, () => String(role.role || '').trim()))
+                    .filter(Boolean);
+                const requiredRoles = (candidateCrewRoles.length > 0 ? candidateCrewRoles : airCombatFlightCrewRoles.length > 0 ? airCombatFlightCrewRoles : ['Pilot'])
                     .slice(0, Math.max(1, Math.min(2, requiredStaffCount)));
                 const primaryRequiredRole = requiredRoles[0] || 'Pilot';
                 const secondaryRequiredRole = requiredRoles[1] || 'Crew';
@@ -9674,8 +9685,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 : activeWindowEnd;
             let placedEvent: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string }) | null = null;
             const attemptSummary: Array<Record<string, any>> = [];
-            const requiredStaffCount = isAirCombatBuild && priorityEvent.type === 'flight'
-                ? Math.max(1, Math.min(2, airCombatFlightCrewRoles.length || activeAircraftCrewComposition.crewCount || 1))
+            const requiredStaffCount = priorityEvent.type === 'flight'
+                ? Math.max(1, Math.min(2, getPriorityEventCrewCount(priorityEvent)))
                 : priorityEvent.flightType === 'Solo' || priorityEvent.soloOrDual === 'Solo' ? 1 : 2;
 
             for (let time = searchStart; time + priorityEvent.duration <= searchEnd + 0.001 && !placedEvent; time += timeIncrement) {
@@ -10050,6 +10061,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 destination: school,
                 preStart: item.preFlightTime,
                 postEnd: item.postFlightTime,
+                crewRequirement: item.crewRequirement || { mode: 'aircraft_default' },
             };
             if ([...generatedEvents, ...stagedEvents].some(existing => priorityPersonnelConflict(candidate, existing))) return 'PERSONNEL_CONFLICT';
             return null;
@@ -10670,6 +10682,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         postEnd: member.item.postFlightTime,
                         aircraftConfigId,
                         acceptableAircraftConfigs: normaliseAircraftConfigRequirement(member.item),
+                        crewRequirement: member.item.crewRequirement || { mode: 'aircraft_default' },
                         formationId: groupId,
                     };
                     const resourceConflict = generatedEvents.find(existing => priorityResourceConflict(candidate, existing));
@@ -10861,6 +10874,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         dayNight: member.item.dayNight,
                         aircraftConfigId: resource.aircraftConfigId,
                         acceptableAircraftConfigs: normaliseAircraftConfigRequirement(member.item),
+                        crewRequirement: member.item.crewRequirement || { mode: 'aircraft_default' },
                         formationId: groupId,
                         formationType: 'Air Combat Linked Formation',
                         formationPosition: index + 1,
@@ -11162,6 +11176,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             dayNight: item.dayNight,
                             aircraftConfigId: resource.aircraftConfigId,
                             acceptableAircraftConfigs: type === 'flight' ? normaliseAircraftConfigRequirement(item) : undefined,
+                            crewRequirement: item.crewRequirement || { mode: 'aircraft_default' },
                             notes: `Air Combat ${kind === 'training_package' ? 'training package' : 'course'} allocation: ${code}`,
                         };
                         if (generatedEvents.some(existing => priorityPersonnelConflict(candidate, existing))) {
@@ -29213,6 +29228,8 @@ appliedUpdates.forEach(update => {
                     highestPriorityEvents={highestPriorityEvents}
                     activeScheduleEvents={Object.values(publishedSchedules).flat()}
                     isSingleSeatAircraft={activeAircraftCrewComposition.crewCount === 1}
+                    aircraftCrewComposition={activeAircraftCrewComposition}
+                    crewPositionTerminology={activeCrewPositionTerminology}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     onAddPriorityEvents={(eventsToAdd) => {
                         setHighestPriorityEvents(prev => {
@@ -30088,6 +30105,8 @@ appliedUpdates.forEach(update => {
                             onSave={handleSaveCurrencies}
                             onDelete={handleDeleteCurrency}
                             onImportFromUnit={importCurrencyDefinitionsFromUnit}
+                            aircraftCrewComposition={activeAircraftCrewComposition}
+                            crewPositionTerminology={activeCrewPositionTerminology}
                         />;
             case 'PT051':
                 console.log('eventForPt051:', eventForPt051);
@@ -31391,6 +31410,8 @@ appliedUpdates.forEach(update => {
                     resourceDisplayNames={resourceDisplayNames}
                     aircraftNumberSettings={aircraftNumberSettings}
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
+                    aircraftCrewComposition={activeAircraftCrewComposition}
+                    crewPositionTerminology={activeCrewPositionTerminology}
                 />
             )}
 
