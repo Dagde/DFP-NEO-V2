@@ -2825,7 +2825,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-units" className={getSectionClass('platform-units')}>
         <SectionHeader
           title="Units"
-          subtitle="Unit is the centre of configuration: model, type, location, enabled modules and future UI behaviour."
+          subtitle="Unit is the centre of configuration: model, type, location, enabled modules and future UI behaviour. Select and highlight a unit row first, then press EDIT to change that unit."
           action={canEdit ? (
             <div className="flex items-center gap-[1px]">
               <button type="button" onClick={editSelectedUnit} disabled={config.units.length === 0} className={platformActionButtonClass}>EDIT</button>
@@ -2847,10 +2847,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 key={rowKey}
                 ref={(node) => { unitRowRefs.current[rowKey] = node; }}
                 onClick={() => setSelectedUnitIndex(index)}
-                className={`grid cursor-pointer gap-3 rounded border bg-gray-900 p-3 transition-colors md:grid-cols-12 ${
-                  isSelectedUnit ? 'border-cyan-400/70 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]' : 'border-gray-700 hover:border-gray-500'
+                className={`relative grid cursor-pointer gap-3 rounded border-2 p-3 transition-colors md:grid-cols-12 ${
+                  isSelectedUnit
+                    ? 'border-cyan-300 bg-cyan-500/10 pr-24 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40'
+                    : 'border-gray-700 bg-gray-900 hover:border-gray-500'
                 }`}
               >
+                {isSelectedUnit && (
+                  <span className="absolute right-2 top-2 rounded border border-cyan-300/70 bg-cyan-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-50">
+                    Selected
+                  </span>
+                )}
                 <div className="md:col-span-1">
                   <Field label="Unit" value={unit.code} disabled={!isUnitEditing} onChange={(value) => updateUnitCode(index, value)} />
                 </div>
