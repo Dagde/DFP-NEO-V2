@@ -457,9 +457,9 @@ interface TaskingRequestTableProps {
   onIgnoreTaskingRequest: (id: string) => void;
 }
 
-const taskingPanelClass = 'flex min-h-[8.75rem] flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20';
+const taskingPanelClass = 'flex min-h-[8rem] flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20';
 const taskingPanelLabelClass = 'text-[10px] font-black uppercase tracking-[0.18em] text-slate-500';
-const taskingPanelHintClass = 'mt-2 h-8 overflow-hidden text-[11px] leading-snug text-slate-500';
+const taskingPanelHintClass = 'mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500';
 const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500';
 
 const TaskingFieldPanel: React.FC<{
@@ -495,227 +495,187 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   onSubmitTaskingRequest,
   onIgnoreTaskingRequest,
 }) => (
-  <div className="overflow-x-auto pb-24">
-    <table className="min-w-full border-separate border-spacing-x-2 border-spacing-y-3 text-sm">
-      <thead className="sr-only">
-        <tr>
-          <th className="py-2 px-2 text-left">Tasking</th>
-          <th className="py-2 px-2 text-left">Date</th>
-          <th className="py-2 px-2 text-left">Takeoff</th>
-          <th className="py-2 px-2 text-left">Duration</th>
-          <th className="py-2 px-2 text-left">Solo/Dual</th>
-          <th className="py-2 px-2 text-left w-[78px] max-w-[78px] whitespace-normal leading-tight">Dep Point</th>
-          <th className="py-2 px-2 text-left w-[78px] max-w-[78px] whitespace-normal leading-tight">Arrival Point</th>
-          <th className="py-2 px-2 text-left">No. of Aircraft</th>
-          <th className="py-2 px-2 text-left">Config</th>
-          <th className="py-2 px-2 text-left">Crew</th>
-          <th className="py-2 px-2 text-left">Mandatory</th>
-          <th className="py-2 px-2 text-left">Status</th>
-          <th className="py-2 px-1 text-right"></th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-700/50">
-        {taskingRequests.length === 0 && (
-          <tr>
-            <td colSpan={13} className="py-4 px-2 text-sm italic text-gray-500">
-              No tasking requests configured.
-            </td>
-          </tr>
-        )}
-        {taskingRequests.map(request => {
-          const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
-          const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
-          const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
-          return (
-	            <tr key={request.id} className="align-top">
-	              <td className="relative min-w-[210px] align-top">
-	                <TaskingFieldPanel label="Tasking" hint={request.tasking || 'Select or type task'}>
-	                  <TaskingProfileInput
-	                    value={request.tasking}
-	                    taskProfiles={taskProfiles}
-	                    operationalModelLabel={operationalModelLabel}
-	                    onChange={(tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false, saved: false })}
-	                  />
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="w-40 align-top">
-	                <TaskingFieldPanel label="Date" hint={request.date || 'Required'}>
-	                  <input
-	                    type="date"
-	                    value={request.date}
-	                    onChange={event => onUpdateTaskingRequest(request.id, { date: event.target.value, submitted: false, saved: false })}
-	                    style={{ colorScheme: 'dark' }}
-	                    className={taskingControlClass}
-	                  />
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="w-32 align-top">
-	                <TaskingFieldPanel label="Takeoff" hint={timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time'}>
-	                  <select
-	                    value={request.takeoff}
-	                    onChange={event => onUpdateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false, saved: false })}
-	                    className={taskingControlClass}
-	                  >
-	                    {timeOptions.map(opt => <option key={`tasking-takeoff-${opt.value}`} value={opt.value}>{opt.label}</option>)}
-	                  </select>
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="w-28 align-top">
-	                <TaskingFieldPanel label="Duration" hint={`${request.duration || 0} hr`}>
-	                  <input
-	                    type="number"
-	                    min={0.1}
-	                    step={0.1}
-	                    value={request.duration}
-	                    onChange={event => onUpdateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false, saved: false })}
-	                    className={taskingControlClass}
-	                  />
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="w-32 align-top">
-	                <TaskingFieldPanel label="Crew Mode" hint={isSingleSeatAircraft ? 'Single seat' : request.flightType || 'Dual'}>
-	                  {isSingleSeatAircraft ? (
-	                    <div className="flex h-10 items-center rounded-md border border-amber-400/40 bg-amber-500/10 px-3 text-sm font-semibold text-amber-100">
-	                      Solo
-	                    </div>
-	                  ) : (
-	                    <select
-	                      value={request.flightType || 'Dual'}
-	                      onChange={event => {
-	                        const flightType = event.target.value as 'Solo' | 'Dual';
-	                        onUpdateTaskingRequest(request.id, {
-	                          flightType,
-	                          crewRequirement: flightType === 'Solo'
-	                            ? { mode: 'custom', roles: [{ role: 'Pilot', count: 1 }] }
-	                            : { mode: 'aircraft_default' },
-	                          submitted: false,
-	                          saved: false,
-	                        });
-	                      }}
-	                      className={taskingControlClass}
-	                    >
-	                      <option value="Solo">Solo</option>
-	                      <option value="Dual">Dual</option>
-	                    </select>
-	                  )}
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="relative w-32 align-top">
-	                <TaskingFieldPanel label="Departure" hint={request.depPoint || 'Required'}>
-	                  <TaskingAirfieldCodeInput
-	                    value={request.depPoint}
-	                    suggestions={depPointSuggestions}
-	                    onChange={(depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false, saved: false })}
-	                  />
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="relative w-32 align-top">
-	                <TaskingFieldPanel label="Arrival" hint={request.arrivalPoint || 'Required'}>
-	                  <TaskingAirfieldCodeInput
-	                    value={request.arrivalPoint}
-	                    suggestions={arrivalPointSuggestions}
-	                    onChange={(arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false, saved: false })}
-	                  />
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="w-32 align-top">
-	                <TaskingFieldPanel label="Aircraft" hint={`${request.aircraftCount || 1} required`}>
-	                  <input
-	                    type="number"
-	                    min={1}
-	                    value={request.aircraftCount}
-	                    onChange={event => onUpdateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false, saved: false })}
-	                    className={taskingControlClass}
-	                  />
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="w-40 align-top">
-	                <TaskingFieldPanel label="Config" hint={aircraftConfigOptions.find(definition => definition.id === request.aircraftConfigId)?.definition || 'Aircraft fit'}>
-	                  <div className="[&_select]:h-10 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold">
-	                    <AircraftConfigSelect
-	                      value={request.aircraftConfigId}
-	                      definitions={aircraftConfigOptions}
-	                      onChange={(aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false, saved: false })}
-	                    />
-	                  </div>
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="min-w-[300px] align-top">
-	                <div className="[&>div]:min-h-[8.75rem]">
-	                  <CrewRequirementEditor
-	                    value={request.crewRequirement}
-	                    aircraftCrewComposition={aircraftCrewComposition}
-	                    crewPositionTerminology={crewPositionTerminology}
-	                    operationalModel={operationalModel}
-	                    compact
-	                    onChange={(crewRequirement) => onUpdateTaskingRequest(request.id, { crewRequirement, submitted: false, saved: false })}
-	                  />
-	                </div>
-	              </td>
-	              <td className="w-32 align-top">
-	                <TaskingFieldPanel label="Mandatory" hint={request.isMandatory !== false ? 'Must schedule' : 'Optional'}>
-	                  <label className="flex h-10 items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-800 px-3 text-sm font-semibold text-white">
-	                    <input
-	                      type="checkbox"
-	                      checked={request.isMandatory !== false}
-	                      onChange={event => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false, saved: false })}
-	                      className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-	                    />
-	                    Yes
-	                  </label>
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="w-36 align-top">
-	                <TaskingFieldPanel label="Status" hint={request.saved ? (request.submitted && !request.ignored ? 'Scheduled' : 'Ignored') : 'Save first'}>
-	                  {!request.saved ? (
-	                    <button
-	                      onClick={() => onSaveTaskingRequest(request.id)}
-	                      disabled={!canSubmit}
-	                      className={`h-10 w-full rounded-md px-3 text-sm font-bold ${
-	                        canSubmit
-	                          ? 'bg-green-600 text-white hover:bg-green-700'
-	                          : 'cursor-not-allowed bg-slate-700 text-slate-400'
-	                      }`}
-	                    >
-	                      Save
-	                    </button>
-	                  ) : (
-	                    <span className="flex flex-col gap-2 text-[11px]">
-	                      <label className="inline-flex h-8 items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-emerald-200">
-	                        <input
-	                          type="radio"
-	                          name={`tasking-schedule-${request.id}`}
-	                          checked={request.submitted && !request.ignored}
-	                          onChange={() => onSubmitTaskingRequest(request.id)}
-	                        />
-	                        Schedule
-	                      </label>
-	                      <label className="inline-flex h-8 items-center gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 text-rose-200">
-	                        <input
-	                          type="radio"
-	                          name={`tasking-schedule-${request.id}`}
-	                          checked={request.ignored || !request.submitted}
-	                          onChange={() => onIgnoreTaskingRequest(request.id)}
-	                        />
-	                        Ignore
-	                      </label>
-	                    </span>
-	                  )}
-	                </TaskingFieldPanel>
-	              </td>
-	              <td className="w-14 align-top">
-	                <div className="flex min-h-[8.75rem] items-start justify-center pt-2">
-	                  <button onClick={() => onRemoveTaskingRequest(request.id)} className="rounded-full p-1 text-gray-400 hover:bg-red-500/10 hover:text-red-300" aria-label="Remove tasking request">
-	                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
-	                  </button>
-	                </div>
-	              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-    <button onClick={onAddTaskingRequest} className="mt-2 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold">+ Add Request</button>
+  <div className="space-y-4 pb-24">
+    {taskingRequests.length === 0 && (
+      <div className="rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500">
+        No tasking requests configured.
+      </div>
+    )}
+    {taskingRequests.map(request => {
+      const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
+      const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
+      const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
+      const selectedConfig = aircraftConfigOptions.find(definition => definition.id === request.aircraftConfigId);
+      return (
+        <div key={request.id} className="rounded-xl border border-slate-700/80 bg-slate-900/45 p-3 shadow-lg shadow-black/10">
+          <div className="grid gap-3 lg:grid-cols-[minmax(16rem,2fr)_minmax(9rem,1fr)_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)]">
+            <TaskingFieldPanel label="Tasking" hint={request.tasking || 'Select or type task'}>
+              <TaskingProfileInput
+                value={request.tasking}
+                taskProfiles={taskProfiles}
+                operationalModelLabel={operationalModelLabel}
+                onChange={(tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false, saved: false })}
+              />
+            </TaskingFieldPanel>
+            <TaskingFieldPanel label="Date" hint={request.date || 'Required'}>
+              <input
+                type="date"
+                value={request.date}
+                onChange={event => onUpdateTaskingRequest(request.id, { date: event.target.value, submitted: false, saved: false })}
+                style={{ colorScheme: 'dark' }}
+                className={taskingControlClass}
+              />
+            </TaskingFieldPanel>
+            <TaskingFieldPanel label="Takeoff" hint={timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time'}>
+              <select
+                value={request.takeoff}
+                onChange={event => onUpdateTaskingRequest(request.id, { takeoff: parseFloat(event.target.value), submitted: false, saved: false })}
+                className={taskingControlClass}
+              >
+                {timeOptions.map(opt => <option key={`tasking-takeoff-${opt.value}`} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </TaskingFieldPanel>
+            <TaskingFieldPanel label="Duration" hint={`${request.duration || 0} hr`}>
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={request.duration}
+                onChange={event => onUpdateTaskingRequest(request.id, { duration: Math.max(0.1, parseFloat(event.target.value) || 0.1), submitted: false, saved: false })}
+                className={taskingControlClass}
+              />
+            </TaskingFieldPanel>
+            <TaskingFieldPanel label="Crew Mode" hint={isSingleSeatAircraft ? 'Single seat' : request.flightType || 'Dual'}>
+              {isSingleSeatAircraft ? (
+                <div className="flex h-10 items-center rounded-md border border-amber-400/40 bg-amber-500/10 px-3 text-sm font-semibold text-amber-100">
+                  Solo
+                </div>
+              ) : (
+                <select
+                  value={request.flightType || 'Dual'}
+                  onChange={event => {
+                    const flightType = event.target.value as 'Solo' | 'Dual';
+                    onUpdateTaskingRequest(request.id, {
+                      flightType,
+                      crewRequirement: flightType === 'Solo'
+                        ? { mode: 'custom', roles: [{ role: 'Pilot', count: 1 }] }
+                        : { mode: 'aircraft_default' },
+                      submitted: false,
+                      saved: false,
+                    });
+                  }}
+                  className={taskingControlClass}
+                >
+                  <option value="Solo">Solo</option>
+                  <option value="Dual">Dual</option>
+                </select>
+              )}
+            </TaskingFieldPanel>
+          </div>
+
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(8rem,1fr)_minmax(8rem,1fr)_minmax(7rem,0.8fr)_minmax(11rem,1.15fr)_minmax(18rem,2fr)_minmax(14rem,1.4fr)]">
+            <TaskingFieldPanel label="Departure" hint={request.depPoint || 'Required'}>
+              <TaskingAirfieldCodeInput
+                value={request.depPoint}
+                suggestions={depPointSuggestions}
+                onChange={(depPoint) => onUpdateTaskingRequest(request.id, { depPoint, submitted: false, saved: false })}
+              />
+            </TaskingFieldPanel>
+            <TaskingFieldPanel label="Arrival" hint={request.arrivalPoint || 'Required'}>
+              <TaskingAirfieldCodeInput
+                value={request.arrivalPoint}
+                suggestions={arrivalPointSuggestions}
+                onChange={(arrivalPoint) => onUpdateTaskingRequest(request.id, { arrivalPoint, submitted: false, saved: false })}
+              />
+            </TaskingFieldPanel>
+            <TaskingFieldPanel label="Aircraft" hint={`${request.aircraftCount || 1} required`}>
+              <input
+                type="number"
+                min={1}
+                value={request.aircraftCount}
+                onChange={event => onUpdateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false, saved: false })}
+                className={taskingControlClass}
+              />
+            </TaskingFieldPanel>
+            <TaskingFieldPanel label="Config" hint={selectedConfig?.definition || selectedConfig?.label || 'Aircraft fit'}>
+              <div className="[&_select]:h-10 [&_select]:rounded-md [&_select]:border-slate-600 [&_select]:bg-slate-800 [&_select]:text-sm [&_select]:font-semibold">
+                <AircraftConfigSelect
+                  value={request.aircraftConfigId}
+                  definitions={aircraftConfigOptions}
+                  onChange={(aircraftConfigId) => onUpdateTaskingRequest(request.id, { aircraftConfigId, submitted: false, saved: false })}
+                />
+              </div>
+            </TaskingFieldPanel>
+            <div className="[&>div]:min-h-[8rem]">
+              <CrewRequirementEditor
+                value={request.crewRequirement}
+                aircraftCrewComposition={aircraftCrewComposition}
+                crewPositionTerminology={crewPositionTerminology}
+                operationalModel={operationalModel}
+                compact
+                onChange={(crewRequirement) => onUpdateTaskingRequest(request.id, { crewRequirement, submitted: false, saved: false })}
+              />
+            </div>
+            <TaskingFieldPanel
+              label="Controls"
+              hint={`${request.isMandatory !== false ? 'Mandatory' : 'Optional'}, ${request.saved ? (request.submitted && !request.ignored ? 'scheduled' : 'ignored') : 'save or remove'}`}
+            >
+              <div className="grid gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                  <label className="flex h-10 items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-800 px-3 text-sm font-semibold text-white">
+                    <input
+                      type="checkbox"
+                      checked={request.isMandatory !== false}
+                      onChange={event => onUpdateTaskingRequest(request.id, { isMandatory: event.target.checked, submitted: false, saved: false })}
+                      className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                    />
+                    Yes
+                  </label>
+                  <button onClick={() => onRemoveTaskingRequest(request.id)} className="flex h-10 w-10 items-center justify-center rounded-md border border-slate-600 bg-slate-800 text-gray-400 hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-300" aria-label="Remove tasking request">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                  </button>
+                </div>
+                {!request.saved ? (
+                  <button
+                    onClick={() => onSaveTaskingRequest(request.id)}
+                    disabled={!canSubmit}
+                    className={`h-10 w-full rounded-md px-3 text-sm font-bold ${
+                      canSubmit
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'cursor-not-allowed bg-slate-700 text-slate-400'
+                    }`}
+                  >
+                    Save
+                  </button>
+                ) : (
+                  <span className="grid grid-cols-2 gap-2 text-[11px]">
+                    <label className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 text-emerald-200">
+                      <input
+                        type="radio"
+                        name={`tasking-schedule-${request.id}`}
+                        checked={request.submitted && !request.ignored}
+                        onChange={() => onSubmitTaskingRequest(request.id)}
+                      />
+                      Schedule
+                    </label>
+                    <label className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 text-rose-200">
+                      <input
+                        type="radio"
+                        name={`tasking-schedule-${request.id}`}
+                        checked={request.ignored || !request.submitted}
+                        onChange={() => onIgnoreTaskingRequest(request.id)}
+                      />
+                      Ignore
+                    </label>
+                  </span>
+                )}
+              </div>
+            </TaskingFieldPanel>
+          </div>
+        </div>
+      );
+    })}
+    <button onClick={onAddTaskingRequest} className="px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold">+ Add Request</button>
   </div>
 );
 
