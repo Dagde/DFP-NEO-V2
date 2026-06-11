@@ -24647,6 +24647,7 @@ const TaskingRequestTable = ({
   aircraftConfigOptions,
   airfieldLookup,
   taskProfiles,
+  operationalModel: operationalModel2,
   operationalModelLabel,
   isSingleSeatAircraft,
   aircraftCrewComposition,
@@ -24780,7 +24781,7 @@ const TaskingRequestTable = ({
               value: request.crewRequirement,
               aircraftCrewComposition,
               crewPositionTerminology,
-              operationalModel,
+              operationalModel: operationalModel2,
               compact: true,
               onChange: (crewRequirement) => onUpdateTaskingRequest(request.id, { crewRequirement, submitted: false, saved: false })
             }
@@ -26499,6 +26500,7 @@ const PrioritiesView = ({
             aircraftConfigOptions,
             airfieldLookup: taskingAirfieldLookup,
             taskProfiles,
+            operationalModel: operationalModel2,
             operationalModelLabel,
             isSingleSeatAircraft,
             aircraftCrewComposition,

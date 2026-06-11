@@ -444,6 +444,7 @@ interface TaskingRequestTableProps {
   aircraftConfigOptions: AircraftConfigurationDefinition[];
   airfieldLookup: TaskingAirfieldLookup;
   taskProfiles: string[];
+  operationalModel: string;
   operationalModelLabel: string;
   isSingleSeatAircraft: boolean;
   aircraftCrewComposition?: AircraftCrewComposition;
@@ -462,6 +463,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   aircraftConfigOptions,
   airfieldLookup,
   taskProfiles,
+  operationalModel,
   operationalModelLabel,
   isSingleSeatAircraft,
   aircraftCrewComposition,
@@ -2584,6 +2586,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               aircraftConfigOptions={aircraftConfigOptions}
               airfieldLookup={taskingAirfieldLookup}
               taskProfiles={taskProfiles}
+              operationalModel={operationalModel}
               operationalModelLabel={operationalModelLabel}
               isSingleSeatAircraft={isSingleSeatAircraft}
               aircraftCrewComposition={aircraftCrewComposition}
