@@ -50269,6 +50269,7 @@ const PlatformConfigurationSettings = ({
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
+  const [resourcePoolActiveTab, setResourcePoolActiveTab] = reactExports.useState("aircraftTypes");
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = reactExports.useState("");
   const locationRowRefs = reactExports.useRef({});
   const pendingLocationScrollIdRef = reactExports.useRef(null);
@@ -52072,8 +52073,44 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Dedicated or shared live runtime resources." })
         ] })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 px-4 pb-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 pb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid grid-cols-2 gap-1 rounded-lg border border-gray-700 bg-gray-950 p-1 shadow-inner shadow-black/20", role: "tablist", "aria-label": "Aircraft and resource pool sections", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              role: "tab",
+              "aria-selected": resourcePoolActiveTab === "aircraftTypes",
+              onClick: () => setResourcePoolActiveTab("aircraftTypes"),
+              className: `min-h-[52px] rounded-md border px-3 py-2 text-left transition-colors ${resourcePoolActiveTab === "aircraftTypes" ? "border-orange-300/60 bg-orange-500/15 text-orange-50 shadow-[inset_0_3px_0_rgba(251,146,60,0.85)]" : "border-transparent bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Aircraft Types" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-100", children: config.aircraftTypes.length })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Capability and crew-seat rules" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              role: "tab",
+              "aria-selected": resourcePoolActiveTab === "resourcePools",
+              onClick: () => setResourcePoolActiveTab("resourcePools"),
+              className: `min-h-[52px] rounded-md border px-3 py-2 text-left transition-colors ${resourcePoolActiveTab === "resourcePools" ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-transparent bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Resource Pools" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100", children: config.resourcePools.length })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Resources, labels and live rows" })
+              ]
+            }
+          )
+        ] }),
+        resourcePoolActiveTab === "aircraftTypes" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", role: "tabpanel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Aircraft Types" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define aircraft capability and normal seat eligibility." })
@@ -52176,8 +52213,7 @@ const PlatformConfigurationSettings = ({
               ] })
             ] }, aircraft.id || `platform-aircraft-type-${index}`);
           })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", role: "tabpanel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Resource Pools" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Map resources to units, labels, aircraft numbering and live DFP rows." })

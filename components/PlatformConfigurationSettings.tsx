@@ -985,6 +985,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
+  const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = useState('');
   const locationRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingLocationScrollIdRef = useRef<string | null>(null);
@@ -3132,8 +3133,45 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           </div>
         </div>
-        <div className="grid gap-4 px-4 pb-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)]">
-          <div className="space-y-3">
+        <div className="px-4 pb-4">
+          <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-gray-700 bg-gray-950 p-1 shadow-inner shadow-black/20" role="tablist" aria-label="Aircraft and resource pool sections">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={resourcePoolActiveTab === 'aircraftTypes'}
+              onClick={() => setResourcePoolActiveTab('aircraftTypes')}
+              className={`min-h-[52px] rounded-md border px-3 py-2 text-left transition-colors ${
+                resourcePoolActiveTab === 'aircraftTypes'
+                  ? 'border-orange-300/60 bg-orange-500/15 text-orange-50 shadow-[inset_0_3px_0_rgba(251,146,60,0.85)]'
+                  : 'border-transparent bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide">
+                <span>Aircraft Types</span>
+                <span className="rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-100">{config.aircraftTypes.length}</span>
+              </span>
+              <span className="mt-1 block text-[11px] leading-relaxed">Capability and crew-seat rules</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={resourcePoolActiveTab === 'resourcePools'}
+              onClick={() => setResourcePoolActiveTab('resourcePools')}
+              className={`min-h-[52px] rounded-md border px-3 py-2 text-left transition-colors ${
+                resourcePoolActiveTab === 'resourcePools'
+                  ? 'border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]'
+                  : 'border-transparent bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide">
+                <span>Resource Pools</span>
+                <span className="rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100">{config.resourcePools.length}</span>
+              </span>
+              <span className="mt-1 block text-[11px] leading-relaxed">Resources, labels and live rows</span>
+            </button>
+          </div>
+          {resourcePoolActiveTab === 'aircraftTypes' ? (
+          <div className="space-y-3" role="tabpanel">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Aircraft Types</h4>
               <p className="mt-1 text-xs text-gray-500">Define aircraft capability and normal seat eligibility.</p>
@@ -3242,7 +3280,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               );
             })}
           </div>
-          <div className="space-y-3">
+          ) : (
+          <div className="space-y-3" role="tabpanel">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Resource Pools</h4>
               <p className="mt-1 text-xs text-gray-500">Map resources to units, labels, aircraft numbering and live DFP rows.</p>
@@ -3435,6 +3474,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               );
             })}
           </div>
+          )}
         </div>
       </section>
 
