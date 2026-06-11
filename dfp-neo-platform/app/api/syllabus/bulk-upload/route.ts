@@ -76,8 +76,11 @@ const normaliseAircraftConfigs = (value: string): string[] => {
     .split(/\r?\n|;|,/)
     .map(config => config.trim().toUpperCase())
     .filter(Boolean)
-    .map(config => (config.startsWith('CONFIG ') ? config.replace('CONFIG ', '') : config))
-    .map(config => (config === 'ANY' ? 'ANY' : `CONFIG ${config.replace(/^C\s*/, '').replace(/^CONFIG\s*/, '')}`));
+    .map(config => {
+      if (config === 'ANY') return 'ANY';
+      const numeric = config.match(/^(?:CONFIG[\s-]*|C\s*)?(\d+)$/);
+      return numeric ? `CONFIG-${numeric[1]}` : config.replace(/^CONFIG\s+/, 'CONFIG-');
+    });
   return configs.length > 0 ? Array.from(new Set(configs)) : ['ANY'];
 };
 

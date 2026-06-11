@@ -2608,6 +2608,7 @@ const normaliseConfigId = (value, fallback) => {
   const cleaned = String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
   return cleaned || fallback;
 };
+const normaliseConfigValue = (value) => String(value || "").trim().toUpperCase().replace(/^CONFIG\s+(\d+)$/, "CONFIG-$1").replace(/^C\s*(\d+)$/, "CONFIG-$1");
 const formatConfigLabel = (id, fallbackIndex) => {
   const match = id.match(/^CONFIG-(\d+)$/);
   if (!match) return `CONFIG ${fallbackIndex + 1}`;
@@ -2632,7 +2633,7 @@ const getAircraftConfigurationDefinitions = (resourcePool) => normaliseAircraftC
 const normaliseSelectedAircraftConfigurations = (selected, definitions = []) => {
   if (!Array.isArray(selected) || selected.length === 0) return [ANY_AIRCRAFT_CONFIG];
   const validIds = new Set(definitions.map((definition) => definition.id));
-  const cleaned = selected.map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+  const cleaned = selected.map(normaliseConfigValue).filter(Boolean);
   if (cleaned.includes(ANY_AIRCRAFT_CONFIG)) return [ANY_AIRCRAFT_CONFIG];
   const filtered = cleaned.filter((value) => validIds.has(value));
   return filtered.length > 0 ? Array.from(new Set(filtered)) : [ANY_AIRCRAFT_CONFIG];

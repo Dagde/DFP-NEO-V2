@@ -18,6 +18,14 @@ const normaliseConfigId = (value: unknown, fallback: string): string => {
   return cleaned || fallback;
 };
 
+const normaliseConfigValue = (value: unknown): string => (
+  String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/^CONFIG\s+(\d+)$/, 'CONFIG-$1')
+    .replace(/^C\s*(\d+)$/, 'CONFIG-$1')
+);
+
 const formatConfigLabel = (id: string, fallbackIndex: number): string => {
   const match = id.match(/^CONFIG-(\d+)$/);
   if (!match) return `CONFIG ${fallbackIndex + 1}`;
@@ -63,7 +71,7 @@ export const normaliseSelectedAircraftConfigurations = (
 
   const validIds = new Set(definitions.map(definition => definition.id));
   const cleaned = selected
-    .map(value => String(value || '').trim().toUpperCase())
+    .map(normaliseConfigValue)
     .filter(Boolean);
 
   if (cleaned.includes(ANY_AIRCRAFT_CONFIG)) return [ANY_AIRCRAFT_CONFIG];
