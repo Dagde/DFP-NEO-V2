@@ -50700,7 +50700,7 @@ const PlatformConfigurationSettings = ({
     if (!currentEntry) return;
     const nextGenericName = changes.genericName !== void 0 ? String(changes.genericName) : currentEntry.genericName;
     const nextLabel = changes.label !== void 0 ? String(changes.label) : currentEntry.label;
-    const nextPositions = crewPositionTerminology.positions.map((entry) => entry.id === entryId ? { ...entry, genericName: nextGenericName, label: nextLabel } : entry);
+    const nextPositions = crewPositionTerminology.positions.map((entry) => entry.id === entryId ? { ...entry, ...changes, genericName: nextGenericName, label: nextLabel } : entry);
     updateCrewPositionTerminology(nextPositions, { from: currentEntry.genericName, to: nextGenericName });
   };
   const addCrewPositionEntry = () => {
@@ -53645,8 +53645,8 @@ const PlatformConfigurationSettings = ({
                             checked: isSelected,
                             disabled: !canEditRankTerminology || isSelected && selectedModels.length <= 1,
                             onChange: (event) => {
-                              event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedModels, option.value])) : selectedModels.filter((model) => model !== option.value);
-                              updateCrewPositionEntry(entry.id, {});
+                              const nextModels = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedModels, option.value])) : selectedModels.filter((model) => model !== option.value);
+                              updateCrewPositionEntry(entry.id, { operationalModels: nextModels });
                             },
                             className: "h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
                           }

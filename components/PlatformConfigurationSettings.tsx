@@ -1443,7 +1443,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       : currentEntry.label;
     const nextPositions = crewPositionTerminology.positions.map((entry) => (
       entry.id === entryId
-        ? { ...entry, genericName: nextGenericName, label: nextLabel }
+        ? { ...entry, ...changes, genericName: nextGenericName, label: nextLabel }
         : entry
     ));
     updateCrewPositionTerminology(nextPositions, { from: currentEntry.genericName, to: nextGenericName });
