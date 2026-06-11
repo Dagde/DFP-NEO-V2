@@ -51786,6 +51786,7 @@ const PlatformConfigurationSettings = ({
               ToggleField,
               {
                 label: "Apply to V2 runtime",
+                info: "Turn this on when you want the DFP to use this pool's aircraft, simulator, trainer, standby and ground row numbers. Leave it off if you are only setting up the pool and do not want it to affect the live schedule yet.",
                 checked: pool.settings?.applyToV2Runtime === true,
                 disabled: !canEdit,
                 onChange: (checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })
