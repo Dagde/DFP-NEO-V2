@@ -6664,11 +6664,12 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, scaledFontSize));
   const isSctEvent = event.eventCategory === "sct";
   const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+  const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
-  const picName = isTaskingEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
-  const studentName = isTaskingEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
+  const picName = isTaskingEvent || isAirCombatCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
+  const studentName = isTaskingEvent || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
   let displayPicNameForRender = picName;
   let displayStudentNameForRender = studentName;
   if (isStbyEvent) {
@@ -6721,7 +6722,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if (isSctEvent && event.flightType === "Dual" && event.student) {
       return event.student.split(" – ")[0];
     }
-    if (isTaskingEvent && event.flightType === "Dual" && event.crew) {
+    if ((isTaskingEvent || isAirCombatCrewEvent) && event.flightType === "Dual" && event.crew) {
       return event.crew.split(" – ")[0];
     }
     if (event.pilot && event.student && event.pilot === event.student) {
@@ -76015,6 +76016,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       instructor: event.instructor,
       student: event.student,
       pilot: event.pilot,
+      crew: event.crew,
+      flightType: event.flightType,
+      soloOrDual: event.soloOrDual,
+      aircraftConfigId: event.aircraftConfigId,
+      acceptableAircraftConfigs: event.acceptableAircraftConfigs,
+      callsign: event.callsign,
       source: event._source,
       isNext: event._isNext,
       traineeName: event._traineeName
