@@ -9478,6 +9478,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         crewConfigurationAudit: null,
         crewRequirementAudit: [],
         staffRoleCoverage: [],
+        crewRoleShortfalls: [],
         taskingQueue: [],
         taskingAttempts: [],
         taskingCrewAssignments: [],
@@ -9838,6 +9839,35 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     isPilotEligible: isAirCombatPilotStaff(staff),
                 })),
             };
+        });
+        const crewRoleShortfalls = airCombatFlightCrewRoleGroups.map((requiredRoles, seatIndex) => {
+            const matchingStaff = instructors.filter(staff => airCombatStaffMatchesCrewRoleGroup(staff, requiredRoles));
+            return {
+                seat: seatIndex + 1,
+                requiredRoles,
+                requiredRoleLabel: formatCrewRoleGroup(requiredRoles),
+                matchingStaffCount: matchingStaff.length,
+                activeLocation: school,
+                activeUnit: activeUnitCode,
+                explanation: matchingStaff.length === 0
+                    ? `No active staff in ${school} - ${activeUnitCode || 'selected unit'} match required crew seat ${seatIndex + 1} (${formatCrewRoleGroup(requiredRoles)}). Flights needing this seat cannot be scheduled.`
+                    : `${matchingStaff.length} active staff match required crew seat ${seatIndex + 1} (${formatCrewRoleGroup(requiredRoles)}).`,
+            };
+        }).filter(shortfall => shortfall.matchingStaffCount === 0);
+        neoBuildDiag.airCombatPriority.crewRoleShortfalls = crewRoleShortfalls;
+        crewRoleShortfalls.forEach(shortfall => {
+            recordAirCombatSkip({
+                list: 'input',
+                staff: 'All staff',
+                event: 'Air Combat build',
+                reason: `NO_ACTIVE_STAFF_FOR_CREW_SEAT_${shortfall.seat}_${shortfall.requiredRoleLabel.replace(/\s+/g, '_').toUpperCase()}`,
+                startTime: null,
+                requiredRoles: shortfall.requiredRoles,
+                requiredRoleLabel: shortfall.requiredRoleLabel,
+                activeLocation: shortfall.activeLocation,
+                activeUnit: shortfall.activeUnit,
+                explanation: shortfall.explanation,
+            });
         });
         neoBuildDiag.airCombatPriority.assignmentAudit = {
             pilotStaff: pilotStaff.length,
@@ -15320,6 +15350,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if (buildOperationalModel !== 'air_combat') conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`);
         if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin Pilot/QFI staff were available in the active Air Combat staff pool.');
         if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat tasking events matched the build date.');
+        const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
+        if (crewRoleShortfalls.length > 0) {
+            conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${activeUnitCode || 'selected unit'}: ${crewRoleShortfalls.map((shortfall: any) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(', ')}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);
+        }
         const trainingInputs = neoBuildDiag.airCombatPriority.trainingInputs;
         if (trainingInputs && trainingInputs.courseCodes.length === 0 && trainingInputs.packageCodes.length === 0) conclusions.push('No Air Combat course or training-package assignments were found on Pilot staff preferences.');
         const schedulerSummary = neoBuildDiag.airCombatPriority.schedulerSummary;
