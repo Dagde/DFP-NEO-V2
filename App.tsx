@@ -38,7 +38,7 @@ import {
 } from './utils/resourceDisplayNames';
 import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, getAircraftConfigurationDefinitions, normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from './utils/aircraftConfigurationSettings';
-import { getAircraftSeatEligibleRoles, getAircraftTypeCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
+import { getAircraftSeatEligibleRoles, getAircraftTypeCrewComposition, normaliseAircraftCrewComposition, type AircraftCrewComposition } from './utils/aircraftCrewComposition';
 import { getCrewRequirementCount, getCrewRequirementRoleOptions, getCrewRequirementRoles } from './utils/crewRequirements';
 import {
     readTileStatusSettingsFromLocalStorage,
@@ -16660,9 +16660,14 @@ const App: React.FC = () => {
         if (activeOperationalModel === 'air_combat') {
             const poolCategory = String(poolAircraftType?.category || '').trim().toLowerCase();
             if (poolCategory !== 'fighter') {
-                const fighterAircraftType = aircraftTypes.find((aircraft: any) => (
-                    String(aircraft?.category || '').trim().toLowerCase() === 'fighter'
-                ));
+                const fighterAircraftType = aircraftTypes
+                    .filter((aircraft: any) => String(aircraft?.category || '').trim().toLowerCase() === 'fighter')
+                    .sort((left: any, right: any) => {
+                        const leftCrew = normaliseAircraftCrewComposition(left?.crewComposition);
+                        const rightCrew = normaliseAircraftCrewComposition(right?.crewComposition);
+                        return rightCrew.crewCount - leftCrew.crewCount ||
+                            String(left?.code || '').localeCompare(String(right?.code || ''));
+                    })[0];
                 if (fighterAircraftType) return fighterAircraftType;
             }
         }

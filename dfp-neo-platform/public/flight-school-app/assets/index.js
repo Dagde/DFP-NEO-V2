@@ -77254,7 +77254,11 @@ const App = () => {
     if (activeOperationalModel === "air_combat") {
       const poolCategory = String(poolAircraftType?.category || "").trim().toLowerCase();
       if (poolCategory !== "fighter") {
-        const fighterAircraftType = aircraftTypes.find((aircraft) => String(aircraft?.category || "").trim().toLowerCase() === "fighter");
+        const fighterAircraftType = aircraftTypes.filter((aircraft) => String(aircraft?.category || "").trim().toLowerCase() === "fighter").sort((left, right) => {
+          const leftCrew = normaliseAircraftCrewComposition(left?.crewComposition);
+          const rightCrew = normaliseAircraftCrewComposition(right?.crewComposition);
+          return rightCrew.crewCount - leftCrew.crewCount || String(left?.code || "").localeCompare(String(right?.code || ""));
+        })[0];
         if (fighterAircraftType) return fighterAircraftType;
       }
     }
