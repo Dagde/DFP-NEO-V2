@@ -2780,8 +2780,9 @@ const getCrewPositionLabelMap = (terminology) => normaliseCrewPositionTerminolog
   [entry.genericName]: entry.label
 }), {});
 const getCrewPositionOptions = (terminology, extraValues = [], operationalModel2) => {
+  const model = operationalModel2 ? normaliseOperationalModel(operationalModel2) : null;
   const positions = normaliseCrewPositionTerminology(terminology).positions;
-  const modelPositions = positions;
+  const modelPositions = model ? positions.filter((entry) => isCrewPositionAvailableForOperationalModel(entry, model)) : positions;
   const options = (modelPositions.length > 0 ? modelPositions : positions).map((entry) => entry.genericName);
   extraValues.forEach((value) => {
     const trimmed = String(value || "").trim();
@@ -34242,7 +34243,8 @@ const InstructorProfileFlyout = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel = "QFI",
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
-  operationalModel: operationalModel2 = "flight_school"
+  operationalModel: operationalModel2 = "flight_school",
+  crewPositionTerminology
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -34257,6 +34259,29 @@ const InstructorProfileFlyout = ({
     return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
   }, [personnelDisplaySettings, rank]);
   const [role, setRole] = reactExports.useState(instructor.role);
+  const staffRoleOptions = reactExports.useMemo(() => {
+    const legacyOptions = [
+      { value: "QFI", label: instructorLabel },
+      { value: "SIM IP", label: "SIM IP" }
+    ];
+    const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
+    const crewOptions = getCrewPositionOptions(
+      crewPositionTerminology,
+      role ? [String(role)] : [],
+      operationalModel2
+    ).map((value) => ({
+      value,
+      label: crewLabelMap[value] || value
+    }));
+    const options = [...legacyOptions, ...crewOptions];
+    const byValue = /* @__PURE__ */ new Map();
+    options.forEach((option) => {
+      const key = option.value.trim().toUpperCase();
+      if (!key || byValue.has(key)) return;
+      byValue.set(key, option);
+    });
+    return Array.from(byValue.values());
+  }, [crewPositionTerminology, instructorLabel, operationalModel2, role]);
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
   const [service, setService] = reactExports.useState(instructor.service);
   const [category, setCategory] = reactExports.useState(instructor.category);
@@ -35446,11 +35471,7 @@ const InstructorProfileFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => setName(e.target.value) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: staffRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "QFI", children: instructorLabel }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SIM IP", children: "SIM IP" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Pilot", children: "Pilot" })
-              ] })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: staffRoleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-5 gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Callsign", value: displayCallsign || "Auto assigned", onChange: () => {

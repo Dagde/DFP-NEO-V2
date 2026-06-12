@@ -20,6 +20,11 @@ import { normaliseOperationalModel } from '../utils/platformConfigService';
 import { normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports } from '../utils/airCombatTraining';
 import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import {
+  getCrewPositionLabelMap,
+  getCrewPositionOptions,
+  type CrewPositionTerminology,
+} from '../utils/crewPositionTerminology';
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -69,6 +74,7 @@ interface InstructorProfileFlyoutProps {
   instructorLabel?: string;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
   operationalModel?: string;
+  crewPositionTerminology?: CrewPositionTerminology;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -268,6 +274,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   instructorLabel = 'QFI',
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = 'flight_school',
+  crewPositionTerminology,
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -283,6 +290,29 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
   }, [personnelDisplaySettings, rank]);
   const [role, setRole] = useState<StaffRole>(instructor.role);
+  const staffRoleOptions = useMemo(() => {
+    const legacyOptions = [
+      { value: 'QFI', label: instructorLabel },
+      { value: 'SIM IP', label: 'SIM IP' },
+    ];
+    const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
+    const crewOptions = getCrewPositionOptions(
+      crewPositionTerminology,
+      role ? [String(role)] : [],
+      operationalModel,
+    ).map((value) => ({
+      value,
+      label: crewLabelMap[value] || value,
+    }));
+    const options = [...legacyOptions, ...crewOptions];
+    const byValue = new Map<string, { value: string; label: string }>();
+    options.forEach((option) => {
+      const key = option.value.trim().toUpperCase();
+      if (!key || byValue.has(key)) return;
+      byValue.set(key, option);
+    });
+    return Array.from(byValue.values());
+  }, [crewPositionTerminology, instructorLabel, operationalModel, role]);
   const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
   const [service, setService] = useState<'RAAF' | 'RAN' | 'ARA' | undefined>(instructor.service);
   const [category, setCategory] = useState<InstructorCategory>(instructor.category);
@@ -1539,9 +1569,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         ))}
                       </Dropdown>
                       <Dropdown label="Role" value={role} onChange={e => setRole(e.target.value as StaffRole)}>
-                        <option value="QFI">{instructorLabel}</option>
-                        <option value="SIM IP">SIM IP</option>
-                        <option value="Pilot">Pilot</option>
+                        {staffRoleOptions.map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                       </Dropdown>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
