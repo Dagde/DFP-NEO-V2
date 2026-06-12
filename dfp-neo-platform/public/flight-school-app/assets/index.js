@@ -72443,11 +72443,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const fallbackPreservesTrainingMix = (fallbackKind, coursePlaced2, packagePlaced2) => {
       if (fallbackKind === "course" && courseCodes.length === 0) return false;
       if (fallbackKind === "training_package" && packageCodes.length === 0) return false;
-      const nextTotal = coursePlaced2 + packagePlaced2 + 1;
-      const projectedPlaced = fallbackKind === "course" ? coursePlaced2 + 1 : packagePlaced2 + 1;
-      const targetWeight = fallbackKind === "course" ? airCombatWeights.courses : airCombatWeights.trainingPackages;
-      const targetPlaced = targetWeight / 100 * nextTotal;
-      return projectedPlaced <= targetPlaced + 1e-3;
+      return true;
     };
     const findResourceForTraining = (item, type, startTime) => {
       const prefix = type === "flight" ? "PC-21 " : type === "ftd" ? "FTD " : type === "cpt" ? "CPT " : "Ground ";
@@ -73579,12 +73575,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           countAirCombatRejection("NO_VALID_SLOT_IN_WINDOW");
         }
         if (codeHadCandidateWork) {
-          exhaustedTrainingCodes.add(exhaustedKey);
+          if (exactStartTime == null) exhaustedTrainingCodes.add(exhaustedKey);
           pushAirCombatDiag("trainingAttempts", {
             kind,
             code,
             placed: false,
-            reason: "ASSIGNMENT_CODE_EXHAUSTED_AFTER_FULL_SEARCH",
+            reason: exactStartTime == null ? "ASSIGNMENT_CODE_EXHAUSTED_AFTER_FULL_SEARCH" : "ASSIGNMENT_CODE_BLOCKED_AT_TILE",
+            startTime: exactStartTime ?? null,
             matchingSyllabusItems: matchingItems.length,
             priorityListCount: priorityList.length
           }, 700);
@@ -73631,7 +73628,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       } else {
         const fallbackKind = preferredKind === "course" ? "training_package" : "course";
         cycleTrace.fallbackKind = fallbackKind;
-        const fallbackAllowed = fallbackPreservesTrainingMix(fallbackKind, coursePlaced, packagePlaced);
+        const fallbackAllowed = fallbackPreservesTrainingMix(fallbackKind);
         cycleTrace.fallbackAllowed = fallbackAllowed;
         if (fallbackAllowed) {
           if (placeTrainingForKind(fallbackKind, roundedTileTime)) placedKind = fallbackKind;
