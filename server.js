@@ -266,7 +266,8 @@ async function runPrismaRuntimeMaintenance(db) {
     await migrateIntegratedCombatOperationsTiming(db);
     // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
     await migrateAcademicsCoursesField(db);
-    // Ensure existing Air Combat personnel profile roles endure as Pilot.
+    // Preserve configured Air Combat crew-position labels. Legacy repairs may
+    // normalise old instructor labels to Pilot, but must not rewrite WSO/ABM/etc.
     await repairAirCombatPersonnelRoles(db);
     console.log(`✅ Prisma runtime maintenance checks complete in ${Date.now() - startedAt}ms`);
   } catch (error) {
@@ -332,12 +333,12 @@ async function repairAirCombatPersonnelRoles(db) {
       WHERE UPPER(COALESCE("unit", '')) = '77SQN'
         AND COALESCE("isActive", true) = true
         AND (
-          COALESCE("role", '') <> 'Pilot'
-          OR COALESCE("isQFI", false) = true
+          UPPER(TRIM(COALESCE("role", ''))) IN ('QFI', 'INSTRUCTOR', 'INSTRUCTORS')
+          OR (TRIM(COALESCE("role", '')) = '' AND COALESCE("isQFI", false) = true)
         )
     `);
     if (updated > 0) {
-      console.log(`[AirCombatRoleRepair] Updated ${updated} active 77SQN personnel record(s) to role=Pilot, isQFI=false.`);
+      console.log(`[AirCombatRoleRepair] Normalised ${updated} legacy active 77SQN instructor role(s) to Pilot without changing configured crew positions.`);
     }
   } catch (error) {
     console.warn('[AirCombatRoleRepair] Could not repair 77SQN personnel roles:', error.message);
