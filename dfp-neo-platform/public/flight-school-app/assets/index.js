@@ -71297,6 +71297,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return `No event scheduled because the aircraft/resource was already booked${entry.conflict?.flightNumber ? ` by ${entry.conflict.flightNumber}` : ""}.`;
       case "PERSONNEL_CONFLICT":
         return "No event scheduled because one or more selected staff were already committed during the required booking window.";
+      case "ROLE_NOT_PILOT":
+      case "ROLE_NOT_PRIMARY_AIRCRAFT_CREW":
+        return "No event scheduled because the staff member was not eligible for the required primary aircraft crew role.";
+      case "INSUFFICIENT_LINKED_EVENT_STAFF": {
+        const required = entry.resourceNumber || entry.requestedFormationSize || "the required number of";
+        const selected = Array.isArray(entry.selectedMembers) ? entry.selectedMembers.length : "fewer";
+        return `No event scheduled because the linked formation pairing could not be built. A ${required}-ship was required, but only ${selected} eligible linked-event staff were available.`;
+      }
       case "FLIGHT_FTD_LIMIT":
         return "No event scheduled because a staff member had already reached the configured flight/FTD duty limit.";
       case "DUTY_LIMIT":
@@ -71337,6 +71345,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           scheduled: "No one scheduled",
           reason: "",
           nextTop3Priorities: [],
+          scheduledEntries: [],
           eventAttempted: null,
           eventScheduled: null,
           staffSelected: [],
@@ -71350,7 +71359,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           personnelConflictResult: null,
           formationRequirementResult: null,
           dutyLimitResult: null,
-          turnaroundSpacingResult: null
+          turnaroundSpacingResult: null,
+          failedCandidateCount: 0,
+          failureSummary: []
         });
       }
       return decisionsByTime.get(key);
@@ -71385,13 +71396,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const primaryStaffNames = members.map((name) => String(name).split(" + ")[0]);
         primaryStaffNames.forEach((name) => scheduledPrimaryStaff.add(name));
         const eventCode = entry.event || entry.flightNumber || "event";
-        decision.scheduled = `${members.join(", ") || "Selected staff"} - ${eventCode}`;
-        decision.eventScheduled = eventCode;
-        decision.eventAttempted = eventCode;
-        decision.staffSelected = members;
-        decision._scheduledPrimaryStaff = primaryStaffNames;
+        const scheduledText = `${members.join(", ") || "Selected staff"} - ${eventCode}`;
+        decision.scheduledEntries.push(scheduledText);
+        decision.scheduled = decision.scheduledEntries.join("; ");
+        decision.eventScheduled = decision.scheduledEntries.map((item) => item.split(" - ").pop()).join(", ");
+        decision.eventAttempted = decision.eventAttempted || eventCode;
+        decision.staffSelected = Array.from(/* @__PURE__ */ new Set([...decision.staffSelected || [], ...members]));
+        decision._scheduledPrimaryStaff = Array.from(/* @__PURE__ */ new Set([...decision._scheduledPrimaryStaff || [], ...primaryStaffNames]));
         decision.staffPriorityRank = priorityRows.find((row) => members.some((name) => name.startsWith(row.staffName)))?.priorityRank || null;
-        decision.reason = `Scheduled because ${members.join(", ") || "the selected staff"} was the highest valid priority candidate for ${eventCode}. Aircraft, crew, formation, duty, personnel, and spacing checks passed.`;
+        const scheduledReason = `${scheduledText} was scheduled because the selected staff were valid priority candidates and aircraft, crew, formation, duty, personnel, and spacing checks passed.`;
+        decision.reason = decision.scheduledEntries.length === 1 ? scheduledReason : `${decision.scheduledEntries.length} events were scheduled at this time. ${scheduledReason}`;
         decision.aircraftAvailabilityResult = "Passed";
         decision.instructorAvailabilityResult = "Passed";
         decision.personnelConflictResult = "Passed";
@@ -71406,12 +71420,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const eventCode = entry.event || entry.flightNumber || entry.code || "event";
         decision.eventAttempted = decision.eventAttempted || eventCode;
         const readable = humaniseNeoAuditReason(entry.reason, entry);
-        decision.failedCandidates.push({
-          staffName: entry.staff || entry.pilot || "Unknown staff",
-          event: eventCode,
-          reason: readable,
-          rawReason: entry.reason || null
-        });
+        decision.failedCandidateCount = (decision.failedCandidateCount || 0) + 1;
+        const rawReason = entry.reason || "NO_RECORDED_REASON";
+        const existingSummary = decision.failureSummary.find((item) => item.rawReason === rawReason);
+        if (existingSummary) existingSummary.count++;
+        else decision.failureSummary.push({ rawReason, reason: readable, count: 1 });
+        if (decision.failedCandidates.length < 20) {
+          decision.failedCandidates.push({
+            staffName: entry.staff || entry.pilot || "Unknown staff",
+            event: eventCode,
+            reason: readable,
+            rawReason: entry.reason || null
+          });
+        }
         if (!decision.reason || decision.scheduled === "No one scheduled") decision.reason = readable;
         if (String(entry.reason || "").includes("RESOURCE") || String(entry.reason || "").includes("AIRCRAFT")) decision.resourceBlocker = readable;
         if (String(entry.reason || "").includes("PERSONNEL") || String(entry.reason || "").includes("SECONDARY_CREW")) decision.personnelConflictResult = readable;
@@ -71434,8 +71455,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const sequentialTop3 = () => priorityRows.filter((row) => !sequentialScheduledStaff.has(row.staffName)).slice(0, 3).map(priorityLabel);
         const scheduleDecisionTable = Array.from(decisionsByTime.values()).sort((left, right) => left.timeValue - right.timeValue).map(({ timeValue, _scheduledPrimaryStaff, ...row }) => {
           (_scheduledPrimaryStaff || []).forEach((name) => sequentialScheduledStaff.add(name));
+          const { scheduledEntries, ...publicRow } = row;
           return {
-            ...row,
+            ...publicRow,
+            failureSummary: (row.failureSummary || []).sort((left, right) => right.count - left.count).slice(0, 8),
             nextTop3Priorities: sequentialTop3()
           };
         });
