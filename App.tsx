@@ -9494,6 +9494,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         conclusion: [],
     };
     const formatNeoAuditTime = (value: number | null | undefined): string => {
+        if (value === null || value === undefined) return '----';
         if (!Number.isFinite(Number(value))) return '----';
         const totalMinutes = Math.round(Number(value) * 60);
         const hours = Math.floor(totalMinutes / 60);
@@ -9501,6 +9502,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;
     };
     const normaliseNeoAuditTimeKey = (value: number | null | undefined): string | null => {
+        if (value === null || value === undefined) return null;
         if (!Number.isFinite(Number(value))) return null;
         return String(Math.round(Number(value) * 12) / 12);
     };
@@ -9642,7 +9644,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const scheduledReason = `${scheduledText} was scheduled because the selected staff were valid priority candidates and aircraft, crew, formation, duty, personnel, and spacing checks passed.`;
                 decision.reason = decision.scheduledEntries.length === 1
                     ? scheduledReason
-                    : `${decision.scheduledEntries.length} events were scheduled at this time. ${scheduledReason}`;
+                    : `${decision.scheduledEntries.length} events were scheduled at this time: ${decision.scheduledEntries.join('; ')}. Each listed event passed aircraft, crew, formation, duty, personnel, and spacing checks.`;
                 decision.aircraftAvailabilityResult = 'Passed';
                 decision.instructorAvailabilityResult = 'Passed';
                 decision.personnelConflictResult = 'Passed';
@@ -9698,9 +9700,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     .map(({ timeValue, _scheduledPrimaryStaff, ...row }) => {
                         (_scheduledPrimaryStaff || []).forEach((name: string) => sequentialScheduledStaff.add(name));
                         const { scheduledEntries, ...publicRow } = row;
+                        const failureSummary = (row.failureSummary || []).sort((left: any, right: any) => right.count - left.count).slice(0, 8);
+                        const reason = row.scheduled === 'No one scheduled' && failureSummary.length
+                            ? failureSummary[0].reason
+                            : row.reason;
                         return {
                             ...publicRow,
-                            failureSummary: (row.failureSummary || []).sort((left: any, right: any) => right.count - left.count).slice(0, 8),
+                            reason,
+                            failureSummary,
                             nextTop3Priorities: sequentialTop3(),
                         };
                     });

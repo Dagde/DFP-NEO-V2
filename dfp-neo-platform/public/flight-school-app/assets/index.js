@@ -71264,6 +71264,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     conclusion: []
   };
   const formatNeoAuditTime = (value) => {
+    if (value === null || value === void 0) return "----";
     if (!Number.isFinite(Number(value))) return "----";
     const totalMinutes = Math.round(Number(value) * 60);
     const hours = Math.floor(totalMinutes / 60);
@@ -71271,6 +71272,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
   };
   const normaliseNeoAuditTimeKey = (value) => {
+    if (value === null || value === void 0) return null;
     if (!Number.isFinite(Number(value))) return null;
     return String(Math.round(Number(value) * 12) / 12);
   };
@@ -71405,7 +71407,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         decision._scheduledPrimaryStaff = Array.from(/* @__PURE__ */ new Set([...decision._scheduledPrimaryStaff || [], ...primaryStaffNames]));
         decision.staffPriorityRank = priorityRows.find((row) => members.some((name) => name.startsWith(row.staffName)))?.priorityRank || null;
         const scheduledReason = `${scheduledText} was scheduled because the selected staff were valid priority candidates and aircraft, crew, formation, duty, personnel, and spacing checks passed.`;
-        decision.reason = decision.scheduledEntries.length === 1 ? scheduledReason : `${decision.scheduledEntries.length} events were scheduled at this time. ${scheduledReason}`;
+        decision.reason = decision.scheduledEntries.length === 1 ? scheduledReason : `${decision.scheduledEntries.length} events were scheduled at this time: ${decision.scheduledEntries.join("; ")}. Each listed event passed aircraft, crew, formation, duty, personnel, and spacing checks.`;
         decision.aircraftAvailabilityResult = "Passed";
         decision.instructorAvailabilityResult = "Passed";
         decision.personnelConflictResult = "Passed";
@@ -71456,9 +71458,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const scheduleDecisionTable = Array.from(decisionsByTime.values()).sort((left, right) => left.timeValue - right.timeValue).map(({ timeValue, _scheduledPrimaryStaff, ...row }) => {
           (_scheduledPrimaryStaff || []).forEach((name) => sequentialScheduledStaff.add(name));
           const { scheduledEntries, ...publicRow } = row;
+          const failureSummary = (row.failureSummary || []).sort((left, right) => right.count - left.count).slice(0, 8);
+          const reason = row.scheduled === "No one scheduled" && failureSummary.length ? failureSummary[0].reason : row.reason;
           return {
             ...publicRow,
-            failureSummary: (row.failureSummary || []).sort((left, right) => right.count - left.count).slice(0, 8),
+            reason,
+            failureSummary,
             nextTop3Priorities: sequentialTop3()
           };
         });
