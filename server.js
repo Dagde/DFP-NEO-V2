@@ -3372,7 +3372,7 @@ app.delete('/api/personnel/:id', async (req, res) => {
   }
 });
 
-// POST /api/personnel/bulk - Bulk insert personnel (for mock data migration)
+// POST /api/personnel/bulk - Bulk upsert personnel
 app.post('/api/personnel/bulk', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -3382,30 +3382,20 @@ app.post('/api/personnel/bulk', async (req, res) => {
       return res.status(400).json({ error: 'personnel array is required' });
     }
 
-    console.log(`📦 POST /api/personnel/bulk - attempting to insert ${personnelList.length} records`);
+    console.log(`📦 POST /api/personnel/bulk - attempting to upsert ${personnelList.length} records`);
 
-    // Fetch existing idNumbers to avoid duplicates
+    // Fetch existing records so bulk uploads can repair/update staff roles.
     const existingRecords = await db.personnel.findMany({
-      select: { idNumber: true, name: true },
+      select: { id: true, idNumber: true, name: true },
     });
-    const existingIdNumbers = new Set(existingRecords.map(r => r.idNumber).filter(Boolean));
-    const existingNames = new Set(existingRecords.map(r => r.name));
+    const existingByIdNumber = new Map(existingRecords.filter(r => r.idNumber).map(r => [String(r.idNumber), r]));
+    const existingByName = new Map(existingRecords.filter(r => r.name).map(r => [String(r.name).trim().toUpperCase(), r]));
 
     let inserted = 0;
-    let skipped = 0;
+    let updated = 0;
     const errors = [];
 
     for (const body of personnelList) {
-      // Skip if already exists by idNumber or name
-      if (body.idNumber && existingIdNumbers.has(body.idNumber)) {
-        skipped++;
-        continue;
-      }
-      if (!body.idNumber && existingNames.has(body.name)) {
-        skipped++;
-        continue;
-      }
-
       try {
         // Auto-link to existing User by PMKEYS
         let linkedUserId = null;
@@ -3418,54 +3408,65 @@ app.post('/api/personnel/bulk', async (req, res) => {
           }
         }
 
-        await db.personnel.create({
-          data: {
-            name: body.name || '',
-            rank: body.rank || null,
-            role: body.role || null,
-            category: body.category || null,
-            unit: body.unit || null,
-            flight: body.flight || null,
-            location: body.location || null,
-            idNumber: body.idNumber || null,
-            callsignNumber: body.callsignNumber || null,
-            email: body.email || null,
-            phoneNumber: body.phoneNumber || null,
-            seatConfig: body.seatConfig || null,
-            service: body.service || null,
-            isQFI: body.isQFI || false,
-            isOFI: body.isOFI || false,
-            isCFI: body.isCFI || false,
-            isExecutive: body.isExecutive || false,
-            isFlyingSupervisor: body.isFlyingSupervisor || false,
-            isIRE: body.isIRE || false,
-            isCommandingOfficer: body.isCommandingOfficer || false,
-            isDeputyFlightCommander: body.isDeputyFlightCommander || false,
-            isTestingOfficer: body.isTestingOfficer || false,
-            isContractor: body.isContractor || false,
-            isAdminStaff: body.isAdminStaff || false,
-            permissions: body.permissions || [],
-            unavailability: body.unavailability || [],
-            priorExperience: body.priorExperience || null,
-            isActive: true,
-            userId: linkedUserId,
-          }
-        });
+        const personnelData = {
+          name: body.name || '',
+          rank: body.rank || null,
+          role: body.role || null,
+          category: body.category || null,
+          unit: body.unit || null,
+          flight: body.flight || null,
+          location: body.location || null,
+          idNumber: body.idNumber || null,
+          callsignNumber: body.callsignNumber || null,
+          email: body.email || null,
+          phoneNumber: body.phoneNumber || null,
+          seatConfig: body.seatConfig || null,
+          service: body.service || null,
+          isQFI: body.isQFI || false,
+          isOFI: body.isOFI || false,
+          isCFI: body.isCFI || false,
+          isExecutive: body.isExecutive || false,
+          isFlyingSupervisor: body.isFlyingSupervisor || false,
+          isIRE: body.isIRE || false,
+          isCommandingOfficer: body.isCommandingOfficer || false,
+          isDeputyFlightCommander: body.isDeputyFlightCommander || false,
+          isTestingOfficer: body.isTestingOfficer || false,
+          isContractor: body.isContractor || false,
+          isAdminStaff: body.isAdminStaff || false,
+          permissions: body.permissions || [],
+          unavailability: body.unavailability || [],
+          priorExperience: body.priorExperience || null,
+          isActive: body.isActive !== false,
+          ...(linkedUserId ? { userId: linkedUserId } : {}),
+        };
+        const existingRecord = body.idNumber
+          ? existingByIdNumber.get(String(body.idNumber))
+          : existingByName.get(String(body.name || '').trim().toUpperCase());
 
-        existingIdNumbers.add(body.idNumber);
-        existingNames.add(body.name);
-        inserted++;
+        if (existingRecord) {
+          await db.personnel.update({
+            where: { id: existingRecord.id },
+            data: personnelData,
+          });
+          updated++;
+        } else {
+          const created = await db.personnel.create({ data: personnelData });
+          existingByIdNumber.set(String(created.idNumber), created);
+          existingByName.set(String(created.name || '').trim().toUpperCase(), created);
+          inserted++;
+        }
       } catch (err) {
-        console.error(`❌ Failed to insert ${body.name}:`, err.message);
+        console.error(`❌ Failed to upsert ${body.name}:`, err.message);
         errors.push({ name: body.name, error: err.message });
       }
     }
 
-    console.log(`✅ POST /api/personnel/bulk - inserted: ${inserted}, skipped: ${skipped}, errors: ${errors.length}`);
+    console.log(`✅ POST /api/personnel/bulk - inserted: ${inserted}, updated: ${updated}, errors: ${errors.length}`);
     res.json({
       success: true,
       inserted,
-      skipped,
+      updated,
+      skipped: 0,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {

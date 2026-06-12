@@ -68070,6 +68070,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const roleText = String(staff.role || "").trim().toLowerCase();
           return !staff.isAdminStaff && Boolean(staff.name) && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
         }).length,
+        staffRoleInventory: originalInstructors.reduce((counts, staff) => {
+          const role = String(staff.role || "Unspecified").trim() || "Unspecified";
+          counts[role] = (counts[role] || 0) + 1;
+          return counts;
+        }, {}),
+        staffUnitInventory: originalInstructors.reduce((counts, staff) => {
+          const unit = String(staff.unit || "Unassigned").trim() || "Unassigned";
+          counts[unit] = (counts[unit] || 0) + 1;
+          return counts;
+        }, {}),
         highestPriorityEvents: highestPriorityEvents.length,
         syllabusItems: syllabusDetails.length,
         generatedEventsAtBuildStart: generatedEvents.length
@@ -71213,6 +71223,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       staffTotal: instructors.length,
       pilotRoleStaff: instructors.filter(isAirCombatPilotStaff).length,
       adminStaff: instructors.filter((staff) => staff.isAdminStaff).length,
+      staffRoleInventory: instructors.reduce((counts, staff) => {
+        const role = String(staff.role || "Unspecified").trim() || "Unspecified";
+        counts[role] = (counts[role] || 0) + 1;
+        return counts;
+      }, {}),
+      staffUnitInventory: instructors.reduce((counts, staff) => {
+        const unit = String(staff.unit || "Unassigned").trim() || "Unassigned";
+        counts[unit] = (counts[unit] || 0) + 1;
+        return counts;
+      }, {}),
       taskingPriorityEvents: taskingPriorityEvents.length,
       mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length,
       nonMandatoryTaskingEvents: taskingPriorityEvents.length - airCombatMandatoryTaskingEvents.length,

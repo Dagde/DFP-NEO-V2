@@ -5566,6 +5566,16 @@ function generateDfpInternal(
                     return !staff.isAdminStaff && Boolean(staff.name) &&
                         (roleText === 'pilot' || roleText === 'qfi' || roleText === 'instructor' || isPilotCrewPosition(staff.role, buildCrewPositionTerminology));
                 }).length,
+                staffRoleInventory: originalInstructors.reduce((counts: Record<string, number>, staff: any) => {
+                    const role = String(staff.role || 'Unspecified').trim() || 'Unspecified';
+                    counts[role] = (counts[role] || 0) + 1;
+                    return counts;
+                }, {}),
+                staffUnitInventory: originalInstructors.reduce((counts: Record<string, number>, staff: any) => {
+                    const unit = String(staff.unit || 'Unassigned').trim() || 'Unassigned';
+                    counts[unit] = (counts[unit] || 0) + 1;
+                    return counts;
+                }, {}),
                 highestPriorityEvents: highestPriorityEvents.length,
                 syllabusItems: syllabusDetails.length,
                 generatedEventsAtBuildStart: generatedEvents.length,
@@ -9450,6 +9460,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             staffTotal: instructors.length,
             pilotRoleStaff: instructors.filter(isAirCombatPilotStaff).length,
             adminStaff: instructors.filter(staff => staff.isAdminStaff).length,
+            staffRoleInventory: instructors.reduce((counts: Record<string, number>, staff: any) => {
+                const role = String(staff.role || 'Unspecified').trim() || 'Unspecified';
+                counts[role] = (counts[role] || 0) + 1;
+                return counts;
+            }, {}),
+            staffUnitInventory: instructors.reduce((counts: Record<string, number>, staff: any) => {
+                const unit = String(staff.unit || 'Unassigned').trim() || 'Unassigned';
+                counts[unit] = (counts[unit] || 0) + 1;
+                return counts;
+            }, {}),
             taskingPriorityEvents: taskingPriorityEvents.length,
             mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length,
             nonMandatoryTaskingEvents: taskingPriorityEvents.length - airCombatMandatoryTaskingEvents.length,
