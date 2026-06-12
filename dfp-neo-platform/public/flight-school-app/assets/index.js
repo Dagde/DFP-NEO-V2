@@ -68167,7 +68167,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           stageTrace: (neoBuildDiag.airCombatPriority.stageTrace || []).slice(-120),
           placements: (neoBuildDiag.airCombatPriority.placements || []).slice(-240),
           placementCycles: (neoBuildDiag.airCombatPriority.placementCycles || []).slice(-240),
-          schedulerSummary: neoBuildDiag.airCombatPriority.schedulerSummary || null
+          schedulerSummary: neoBuildDiag.airCombatPriority.schedulerSummary || null,
+          auditReportData: neoBuildDiag.airCombatPriority.auditReportData || {
+            staffPriorityTable: [],
+            scheduleDecisionTable: []
+          }
         } : void 0
       };
       try {
@@ -71252,14 +71256,210 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     placements: [],
     placementCycles: [],
     schedulerSummary: null,
+    auditReportData: {
+      staffPriorityTable: [],
+      scheduleDecisionTable: []
+    },
     stageTrace: [],
     conclusion: []
   };
+  const formatNeoAuditTime = (value) => {
+    if (!Number.isFinite(Number(value))) return "----";
+    const totalMinutes = Math.round(Number(value) * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
+  };
+  const normaliseNeoAuditTimeKey = (value) => {
+    if (!Number.isFinite(Number(value))) return null;
+    return String(Math.round(Number(value) * 12) / 12);
+  };
+  const humaniseNeoAuditReason = (reason, entry = {}) => {
+    const raw = String(reason || "").trim();
+    if (!raw) return "No detailed reason was recorded for this decision.";
+    const label = raw.replace(/_/g, " ").toLowerCase();
+    switch (raw) {
+      case "INSUFFICIENT_SAME_EVENT_STAFF":
+      case "INSUFFICIENT_FORMATION_STAFF": {
+        const required = entry.resourceNumber || entry.requestedFormationSize || "the required number of";
+        const selected = Array.isArray(entry.selectedMembers) ? entry.selectedMembers.length : "fewer";
+        return `No event scheduled because the required formation could not be built. A ${required}-ship was required, but only ${selected} eligible staff were available.`;
+      }
+      case "NO_SECONDARY_CREW_AVAILABLE":
+        return `No event scheduled because the required secondary crew could not be found. ${entry.secondaryRoles?.length ? `Required role: ${entry.secondaryRoles.join(" or ")}.` : "A required crew role was unavailable."}`;
+      case "NO_SECONDARY_CREW_COMBAT_SYSTEMS_OPERATOR":
+        return "No event scheduled because no available Combat Systems Operator/WSO could be assigned without creating a conflict.";
+      case "NO_FORMATION_RESOURCES_AVAILABLE":
+        return "No event scheduled because the formation could not obtain an available aircraft/resource block after crew candidates were selected.";
+      case "NO_ADJACENT_RESOURCE_BLOCK_FOR_FORMATION":
+        return "No event scheduled because the required formation aircraft could not be placed in an adjacent resource block.";
+      case "RESOURCE_CONFLICT":
+        return `No event scheduled because the aircraft/resource was already booked${entry.conflict?.flightNumber ? ` by ${entry.conflict.flightNumber}` : ""}.`;
+      case "PERSONNEL_CONFLICT":
+        return "No event scheduled because one or more selected staff were already committed during the required booking window.";
+      case "FLIGHT_FTD_LIMIT":
+        return "No event scheduled because a staff member had already reached the configured flight/FTD duty limit.";
+      case "DUTY_LIMIT":
+      case "TOTAL_EVENT_LIMIT":
+        return "No event scheduled because a staff member had already reached the configured total duty/event limit.";
+      case "STATIC_UNAVAILABLE":
+        return "No event scheduled because a required staff member was marked unavailable for that booking window.";
+      case "HOURLY_DISPATCH_LIMIT":
+        return "No event scheduled because the hourly aircraft dispatch limit would be exceeded.";
+      case "TAKEOFF_SEPARATION_VIOLATION":
+        return "No event scheduled because takeoff spacing/turnaround rules would be violated.";
+      case "AIRCRAFT_CONFIG_INCOMPATIBLE":
+        return `No event scheduled because the aircraft configuration did not match the event requirement${entry.required ? ` (${entry.required.join(", ")})` : ""}.`;
+      case "FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX":
+        return "No fallback event was scheduled because doing so would exceed the directed course/training-package priority mix.";
+      case "NO_VALID_FORMATION_SLOT_IN_WINDOW":
+        return "No event scheduled because every 5-minute formation start time in the flying window was blocked by crew, aircraft, duty, formation, or spacing constraints.";
+      case "NO_VALID_SLOT_IN_WINDOW":
+        return "No event scheduled because every 5-minute start time in the valid window was blocked by aircraft, personnel, duty, or spacing constraints.";
+      case "NO_RESOURCE_AVAILABLE":
+        return "No event scheduled because no suitable aircraft, simulator, CPT, or ground resource was available at that time.";
+      default:
+        return `No event scheduled because ${label}.`;
+    }
+  };
+  const createNeoAuditLogger = () => {
+    const priorityRows = [];
+    const decisionsByTime = /* @__PURE__ */ new Map();
+    const scheduledPrimaryStaff = /* @__PURE__ */ new Set();
+    const getDecision = (time) => {
+      const key = normaliseNeoAuditTimeKey(time);
+      if (!key) return null;
+      if (!decisionsByTime.has(key)) {
+        decisionsByTime.set(key, {
+          time: formatNeoAuditTime(Number(key)),
+          timeValue: Number(key),
+          flyingWindowStartTime: formatNeoAuditTime(flyingStartTime),
+          scheduled: "No one scheduled",
+          reason: "",
+          nextTop3Priorities: [],
+          eventAttempted: null,
+          eventScheduled: null,
+          staffSelected: [],
+          staffPriorityRank: null,
+          priorityScore: null,
+          humanReadablePriorityReason: null,
+          failedCandidates: [],
+          resourceBlocker: null,
+          aircraftAvailabilityResult: null,
+          instructorAvailabilityResult: null,
+          personnelConflictResult: null,
+          formationRequirementResult: null,
+          dutyLimitResult: null,
+          turnaroundSpacingResult: null
+        });
+      }
+      return decisionsByTime.get(key);
+    };
+    const priorityLabel = (row) => `${row.staffName} - ${row.nextEvent || "No next event"}`;
+    const nextTop3 = () => priorityRows.filter((row) => !scheduledPrimaryStaff.has(row.staffName)).slice(0, 3).map(priorityLabel);
+    const describePriority = (entry, rank) => {
+      const eventText = entry.nextItem?.code || entry.nextEvent || "the next required event";
+      const completed = entry.completedCount ?? 0;
+      const operational = entry.nextItem?.type ? `${entry.nextItem.type} event` : "required event";
+      return `Ranked ${rank} because ${eventText} is the next ${operational}, completed count is ${completed}, last event recency is ${entry.lastEventDateValue || "not recorded"}, and tie-break order placed this staff member here.`;
+    };
+    return {
+      recordPrioritySnapshot(kind, code, priorityList) {
+        if (priorityRows.some((row) => row.kind === kind && row.assignmentCode === code)) return;
+        priorityList.forEach((entry, index) => {
+          priorityRows.push({
+            priorityRank: priorityRows.length + 1,
+            kind,
+            assignmentCode: code,
+            staffName: entry.staff?.name || entry.name || "Unknown staff",
+            nextEvent: entry.nextItem?.code || entry.nextEvent || null,
+            priorityScore: entry.completedCount ?? null,
+            reason: describePriority(entry, index + 1)
+          });
+        });
+      },
+      recordScheduledDecision(entry) {
+        const decision = getDecision(entry.startTime);
+        if (!decision) return;
+        const members = Array.isArray(entry.members) ? entry.members.map((member) => `${member.staff}${member.crew ? ` + ${member.crew}` : ""}`) : [entry.staff || entry.pilot].filter(Boolean);
+        const primaryStaffNames = members.map((name) => String(name).split(" + ")[0]);
+        primaryStaffNames.forEach((name) => scheduledPrimaryStaff.add(name));
+        const eventCode = entry.event || entry.flightNumber || "event";
+        decision.scheduled = `${members.join(", ") || "Selected staff"} - ${eventCode}`;
+        decision.eventScheduled = eventCode;
+        decision.eventAttempted = eventCode;
+        decision.staffSelected = members;
+        decision._scheduledPrimaryStaff = primaryStaffNames;
+        decision.staffPriorityRank = priorityRows.find((row) => members.some((name) => name.startsWith(row.staffName)))?.priorityRank || null;
+        decision.reason = `Scheduled because ${members.join(", ") || "the selected staff"} was the highest valid priority candidate for ${eventCode}. Aircraft, crew, formation, duty, personnel, and spacing checks passed.`;
+        decision.aircraftAvailabilityResult = "Passed";
+        decision.instructorAvailabilityResult = "Passed";
+        decision.personnelConflictResult = "Passed";
+        decision.formationRequirementResult = entry.formation ? "Passed" : "Not required";
+        decision.dutyLimitResult = "Passed";
+        decision.turnaroundSpacingResult = "Passed";
+        decision.nextTop3Priorities = nextTop3();
+      },
+      recordFailedDecision(entry) {
+        const decision = getDecision(entry.startTime);
+        if (!decision) return;
+        const eventCode = entry.event || entry.flightNumber || entry.code || "event";
+        decision.eventAttempted = decision.eventAttempted || eventCode;
+        const readable = humaniseNeoAuditReason(entry.reason, entry);
+        decision.failedCandidates.push({
+          staffName: entry.staff || entry.pilot || "Unknown staff",
+          event: eventCode,
+          reason: readable,
+          rawReason: entry.reason || null
+        });
+        if (!decision.reason || decision.scheduled === "No one scheduled") decision.reason = readable;
+        if (String(entry.reason || "").includes("RESOURCE") || String(entry.reason || "").includes("AIRCRAFT")) decision.resourceBlocker = readable;
+        if (String(entry.reason || "").includes("PERSONNEL") || String(entry.reason || "").includes("SECONDARY_CREW")) decision.personnelConflictResult = readable;
+        if (String(entry.reason || "").includes("FORMATION") || entry.formation) decision.formationRequirementResult = readable;
+        if (String(entry.reason || "").includes("DUTY") || String(entry.reason || "").includes("LIMIT")) decision.dutyLimitResult = readable;
+        if (String(entry.reason || "").includes("SPACING") || String(entry.reason || "").includes("SEPARATION") || String(entry.reason || "").includes("TURNAROUND")) decision.turnaroundSpacingResult = readable;
+        decision.nextTop3Priorities = nextTop3();
+      },
+      recordNoActivityDecision(time, reason) {
+        const decision = getDecision(time);
+        if (!decision || decision.reason) return;
+        decision.reason = reason || "No scheduling activity occurred because no eligible event was available to start at this time, or all higher-priority candidates were blocked by aircraft, instructor, personnel, formation, duty, or spacing constraints.";
+        decision.nextTop3Priorities = nextTop3();
+      },
+      getAuditReportData() {
+        for (let time = flyingStartTime; time <= flyingEndTime + 1e-3; time += 5 / 60) {
+          this.recordNoActivityDecision(Math.round(time * 12) / 12);
+        }
+        const sequentialScheduledStaff = /* @__PURE__ */ new Set();
+        const sequentialTop3 = () => priorityRows.filter((row) => !sequentialScheduledStaff.has(row.staffName)).slice(0, 3).map(priorityLabel);
+        const scheduleDecisionTable = Array.from(decisionsByTime.values()).sort((left, right) => left.timeValue - right.timeValue).map(({ timeValue, _scheduledPrimaryStaff, ...row }) => {
+          (_scheduledPrimaryStaff || []).forEach((name) => sequentialScheduledStaff.add(name));
+          return {
+            ...row,
+            nextTop3Priorities: sequentialTop3()
+          };
+        });
+        return {
+          staffPriorityTable: priorityRows.map(({ kind, assignmentCode, ...row }) => row),
+          scheduleDecisionTable
+        };
+      }
+    };
+  };
+  const neoAuditLogger = createNeoAuditLogger();
   const pushAirCombatDiag = (bucket, entry, limit = 500) => {
     const diag = neoBuildDiag.airCombatPriority;
     if (!diag || !Array.isArray(diag[bucket])) return;
     diag[bucket].push(entry);
     if (diag[bucket].length > limit) diag[bucket] = diag[bucket].slice(-limit);
+    if (bucket === "trainingAttempts") {
+      if (entry?.placed) neoAuditLogger.recordScheduledDecision(entry);
+      else neoAuditLogger.recordFailedDecision(entry);
+    } else if (bucket === "resourceChecks" && entry?.reason && entry.reason !== "FORMATION_ADJACENT_RESOURCE_BLOCK_SELECTED") {
+      neoAuditLogger.recordFailedDecision(entry);
+    } else if (bucket === "skipReasons") {
+      neoAuditLogger.recordFailedDecision(entry);
+    }
   };
   const countAirCombatRejection = (reason) => {
     const reasons = neoBuildDiag.airCombatPriority.rejectionReasons || {};
@@ -73017,6 +73217,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const priorityList = getTrainingPriorityList(kind, code);
         const matchingItems = sortedTrainingItems(kind, code);
+        neoAuditLogger.recordPrioritySnapshot(kind, code, priorityList);
         const diagKey = kind === "training_package" ? "trainingPackageStaffPriorityLists" : "courseStaffPriorityLists";
         const diagnosticKey = `${kind}:${code}`;
         let listDiagnostic = null;
@@ -73409,6 +73610,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         generatedStaffHistoryLists: airCombatGeneratedEventsByStaff.size
       }
     };
+    neoBuildDiag.airCombatPriority.auditReportData = neoAuditLogger.getAuditReportData();
     recordAirCombatStage("training-placement-loop-complete", neoBuildDiag.airCombatPriority.schedulerSummary);
     markBuildTiming("air-combat-training:complete", {
       coursePlaced,
