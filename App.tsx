@@ -10453,8 +10453,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             })
             .sort((left, right) =>
                 getTrainingItemOperationalPriority(left.nextItem) - getTrainingItemOperationalPriority(right.nextItem) ||
-                left.completedCount - right.completedCount ||
                 left.lastEventDateValue - right.lastEventDateValue ||
+                left.completedCount - right.completedCount ||
                 left.tieBreak - right.tieBreak
             );
         const getTrainingListDiagnostic = (kind: 'course' | 'training_package', code: string) => {
@@ -10560,6 +10560,34 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
             return list.some(item => item.trainingKey === expectedKey || item.code === code);
         };
+        const getAirCombatSecondaryCrewPriorityPool = (
+            kind: 'course' | 'training_package',
+            code: string,
+            item: SyllabusItemDetail,
+            requiredRoles: string[],
+            excludedStaffNames: Set<string>,
+            tieBreakPrefix: string,
+        ) => getAirCombatStaffForCrewRoleGroup(requiredRoles)
+            .filter(staff => !excludedStaffNames.has(staff.name))
+            .map(staff => {
+                const completedEvents = getCompletedTrainingEvents(staff.name, code, kind);
+                const nextItem = getNextTrainingItem(staff.name, code, kind);
+                return {
+                    staff,
+                    assigned: staffHasAirCombatAssignment(staff, kind, code),
+                    nextEventMatches: !!nextItem && airCombatTrainingCodesMatch(nextItem.code, item.code),
+                    completedCount: completedEvents.length,
+                    lastEventDateValue: getMostRecentEventDateValue(completedEvents),
+                    tieBreak: getAirCombatTieBreak(`${tieBreakPrefix}:${formatCrewRoleGroup(requiredRoles)}:${staff.name}`),
+                };
+            })
+            .sort((left, right) =>
+                (left.assigned ? 0 : 1) - (right.assigned ? 0 : 1) ||
+                (left.nextEventMatches ? 0 : 1) - (right.nextEventMatches ? 0 : 1) ||
+                left.lastEventDateValue - right.lastEventDateValue ||
+                left.completedCount - right.completedCount ||
+                left.tieBreak - right.tieBreak
+            );
         const getAirCombatTrainingRoleGroups = (item: SyllabusItemDetail): string[][] => getResolvedCrewRoleGroupsForEvent({
             id: `air-combat-role-groups-${item.id || item.code}`,
             type: getTrainingEventType(item),
@@ -11434,15 +11462,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         stagedCrewAssignments.push({ member, crew: null, secondaryRoles, rejectionReasons });
                         continue;
                     }
-                    const candidatePool = getAirCombatStaffForCrewRoleGroup(secondaryRoles)
-                        .filter(staff => !selectedCrewNames.has(staff.name))
-                        .sort((left, right) => {
-                            const leftAssigned = staffHasAirCombatAssignment(left, kind, code) ? 0 : 1;
-                            const rightAssigned = staffHasAirCombatAssignment(right, kind, code) ? 0 : 1;
-                            return leftAssigned - rightAssigned ||
-                                staffHistoryLength(left.name) - staffHistoryLength(right.name) ||
-                                getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
-                        });
+                    const candidatePool = getAirCombatSecondaryCrewPriorityPool(kind, code, member.item, secondaryRoles, selectedCrewNames, 'secondary-crew');
                     const stagedEventsForConflict = stagedCrewAssignments.map((assignment, index) => ({
                         id: `air-combat-secondary-staged-${index}`,
                         type: 'flight',
@@ -11464,19 +11484,19 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         postEnd: assignment.member.item.postFlightTime,
                         crewRequirement: assignment.member.item.crewRequirement || { mode: 'aircraft_default' },
                     } as Omit<ScheduleEvent, 'date'>));
-                    const selectedCrew = candidatePool.find(staff => {
-                        const reason = isAirCombatStaffSchedulable(staff, member.item, 'flight', startTime, stagedEventsForConflict, secondaryRoles);
+                    const selectedCrewEntry = candidatePool.find(entry => {
+                        const reason = isAirCombatStaffSchedulable(entry.staff, member.item, 'flight', startTime, stagedEventsForConflict, secondaryRoles);
                         if (reason) {
-                            if (rejectionReasons.length < 20) rejectionReasons.push({ staff: staff.name, role: staff.role || null, reason });
+                            if (rejectionReasons.length < 20) rejectionReasons.push({ staff: entry.staff.name, role: entry.staff.role || null, reason });
                             return false;
                         }
                         const proposed = {
-                            id: `air-combat-secondary-check-${staff.idNumber}-${member.item.code}-${startTime}`,
+                            id: `air-combat-secondary-check-${entry.staff.idNumber}-${member.item.code}-${startTime}`,
                             type: 'flight',
                             instructor: '',
                             student: '',
                             pilot: member.staff.name,
-                            crew: staff.name,
+                            crew: entry.staff.name,
                             flightNumber: member.item.code,
                             duration: member.item.duration,
                             startTime,
@@ -11492,9 +11512,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             crewRequirement: member.item.crewRequirement || { mode: 'aircraft_default' },
                         } as Omit<ScheduleEvent, 'date'>;
                         const conflict = [...generatedEvents, ...stagedEventsForConflict].some(existing => priorityPersonnelConflict(proposed, existing));
-                        if (conflict && rejectionReasons.length < 20) rejectionReasons.push({ staff: staff.name, role: staff.role || null, reason: 'PERSONNEL_CONFLICT' });
+                        if (conflict && rejectionReasons.length < 20) rejectionReasons.push({ staff: entry.staff.name, role: entry.staff.role || null, reason: 'PERSONNEL_CONFLICT' });
                         return !conflict;
                     }) || null;
+                    const selectedCrew = selectedCrewEntry?.staff || null;
                     if (!selectedCrew) {
                         crewSelectionFailed = true;
                         stagedCrewAssignments.push({ member, crew: null, secondaryRoles, rejectionReasons });
@@ -11511,7 +11532,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         break;
                     }
                     selectedCrewNames.add(selectedCrew.name);
-                    stagedCrewAssignments.push({ member, crew: selectedCrew, secondaryRoles, rejectionReasons });
+                    stagedCrewAssignments.push({
+                        member,
+                        crew: selectedCrew,
+                        secondaryRoles,
+                        rejectionReasons: [
+                            ...rejectionReasons,
+                            {
+                                staff: selectedCrew.name,
+                                reason: 'SELECTED_BY_SECONDARY_CREW_PRIORITY',
+                                nextEventMatches: selectedCrewEntry?.nextEventMatches ?? false,
+                                completedCount: selectedCrewEntry?.completedCount ?? null,
+                                lastEventDateValue: selectedCrewEntry?.lastEventDateValue || null,
+                            },
+                        ],
+                    });
                 }
                 if (crewSelectionFailed) {
                     candidateSlotsRejected++;
@@ -11908,23 +11943,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         let secondaryCrew: Instructor | null = null;
                         if (secondaryRoles.length > 0) {
                             const secondaryRejections: any[] = [];
-                            const secondaryPool = getAirCombatStaffForCrewRoleGroup(secondaryRoles)
-                                .filter(staff => staff.name !== entry.staff.name)
-                                .sort((left, right) => {
-                                    const leftAssigned = staffHasAirCombatAssignment(left, kind, code) ? 0 : 1;
-                                    const rightAssigned = staffHasAirCombatAssignment(right, kind, code) ? 0 : 1;
-                                    return leftAssigned - rightAssigned ||
-                                        staffHistoryLength(left.name) - staffHistoryLength(right.name) ||
-                                        getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
-                                });
-                            secondaryCrew = secondaryPool.find(staff => {
-                                const reason = isAirCombatStaffSchedulable(staff, item, 'flight', startTime, [], secondaryRoles);
+                            const secondaryExcludedNames = new Set<string>([entry.staff.name]);
+                            const secondaryPool = getAirCombatSecondaryCrewPriorityPool(kind, code, item, secondaryRoles, secondaryExcludedNames, 'single-secondary-crew');
+                            const secondaryCrewEntry = secondaryPool.find(candidate => {
+                                const reason = isAirCombatStaffSchedulable(candidate.staff, item, 'flight', startTime, [], secondaryRoles);
                                 if (reason) {
-                                    if (secondaryRejections.length < 20) secondaryRejections.push({ staff: staff.name, role: staff.role || null, reason });
+                                    if (secondaryRejections.length < 20) secondaryRejections.push({ staff: candidate.staff.name, role: candidate.staff.role || null, reason });
                                     return false;
                                 }
                                 return true;
                             }) || null;
+                            secondaryCrew = secondaryCrewEntry?.staff || null;
                             if (!secondaryCrew) {
                                 recordAirCombatSkip({
                                     list: kind,

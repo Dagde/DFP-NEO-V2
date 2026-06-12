@@ -72092,7 +72092,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return airCombatTrainingAssignmentCache.get(cacheKey);
     };
-    const staffHistoryLength = (staffName) => getAirCombatStaffEvents(staffName).length;
     const getCompletedTrainingEvents = (staffName, code, kind) => {
       const validCodes = new Set(sortedTrainingItems(kind, code).map((item) => item.code));
       return getAirCombatStaffEvents(staffName).filter((event) => validCodes.has(event.flightNumber));
@@ -72135,7 +72134,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (getTrainingEventTypeForPriority(entry.nextItem) !== "flight") return true;
       return airCombatStaffMatchesCrewRoleGroup(entry.staff, getPrimaryRoleGroupForPriorityItem(entry.nextItem));
     }).sort(
-      (left, right) => getTrainingItemOperationalPriority(left.nextItem) - getTrainingItemOperationalPriority(right.nextItem) || left.completedCount - right.completedCount || left.lastEventDateValue - right.lastEventDateValue || left.tieBreak - right.tieBreak
+      (left, right) => getTrainingItemOperationalPriority(left.nextItem) - getTrainingItemOperationalPriority(right.nextItem) || left.lastEventDateValue - right.lastEventDateValue || left.completedCount - right.completedCount || left.tieBreak - right.tieBreak
     );
     const getTrainingListDiagnostic = (kind, code) => {
       const matchingItems = sortedTrainingItems(kind, code);
@@ -72219,6 +72218,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const expectedKey = getAirCombatTrainingKey(kind, code, school, buildActiveUnitCode);
       return list.some((item) => item.trainingKey === expectedKey || item.code === code);
     };
+    const getAirCombatSecondaryCrewPriorityPool = (kind, code, item, requiredRoles, excludedStaffNames, tieBreakPrefix) => getAirCombatStaffForCrewRoleGroup(requiredRoles).filter((staff) => !excludedStaffNames.has(staff.name)).map((staff) => {
+      const completedEvents = getCompletedTrainingEvents(staff.name, code, kind);
+      const nextItem = getNextTrainingItem(staff.name, code, kind);
+      return {
+        staff,
+        assigned: staffHasAirCombatAssignment2(staff, kind, code),
+        nextEventMatches: !!nextItem && airCombatTrainingCodesMatch(nextItem.code, item.code),
+        completedCount: completedEvents.length,
+        lastEventDateValue: getMostRecentEventDateValue(completedEvents),
+        tieBreak: getAirCombatTieBreak(`${tieBreakPrefix}:${formatCrewRoleGroup(requiredRoles)}:${staff.name}`)
+      };
+    }).sort(
+      (left, right) => (left.assigned ? 0 : 1) - (right.assigned ? 0 : 1) || (left.nextEventMatches ? 0 : 1) - (right.nextEventMatches ? 0 : 1) || left.lastEventDateValue - right.lastEventDateValue || left.completedCount - right.completedCount || left.tieBreak - right.tieBreak
+    );
     const getAirCombatTrainingRoleGroups = (item) => getResolvedCrewRoleGroupsForEvent({
       id: `air-combat-role-groups-${item.id || item.code}`,
       type: getTrainingEventType(item),
@@ -72978,11 +72991,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             stagedCrewAssignments.push({ member, crew: null, secondaryRoles, rejectionReasons });
             continue;
           }
-          const candidatePool = getAirCombatStaffForCrewRoleGroup(secondaryRoles).filter((staff) => !selectedCrewNames.has(staff.name)).sort((left, right) => {
-            const leftAssigned = staffHasAirCombatAssignment2(left, kind, code) ? 0 : 1;
-            const rightAssigned = staffHasAirCombatAssignment2(right, kind, code) ? 0 : 1;
-            return leftAssigned - rightAssigned || staffHistoryLength(left.name) - staffHistoryLength(right.name) || getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
-          });
+          const candidatePool = getAirCombatSecondaryCrewPriorityPool(kind, code, member.item, secondaryRoles, selectedCrewNames, "secondary-crew");
           const stagedEventsForConflict = stagedCrewAssignments.map((assignment, index) => ({
             id: `air-combat-secondary-staged-${index}`,
             type: "flight",
@@ -73004,18 +73013,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             postEnd: assignment.member.item.postFlightTime,
             crewRequirement: assignment.member.item.crewRequirement || { mode: "aircraft_default" }
           }));
-          const selectedCrew = candidatePool.find((staff) => {
-            const reason = isAirCombatStaffSchedulable(staff, member.item, "flight", startTime, stagedEventsForConflict, secondaryRoles);
+          const selectedCrewEntry = candidatePool.find((entry) => {
+            const reason = isAirCombatStaffSchedulable(entry.staff, member.item, "flight", startTime, stagedEventsForConflict, secondaryRoles);
             if (reason) {
-              if (rejectionReasons.length < 20) rejectionReasons.push({ staff: staff.name, role: staff.role || null, reason });
+              if (rejectionReasons.length < 20) rejectionReasons.push({ staff: entry.staff.name, role: entry.staff.role || null, reason });
               return false;
             }
             const proposed = {
-              id: `air-combat-secondary-check-${staff.idNumber}-${member.item.code}-${startTime}`,
+              id: `air-combat-secondary-check-${entry.staff.idNumber}-${member.item.code}-${startTime}`,
               instructor: "",
               student: "",
               pilot: member.staff.name,
-              crew: staff.name,
+              crew: entry.staff.name,
               flightNumber: member.item.code,
               duration: member.item.duration,
               startTime,
@@ -73025,9 +73034,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               crewRequirement: member.item.crewRequirement || {}
             };
             const conflict = [...generatedEvents, ...stagedEventsForConflict].some((existing) => priorityPersonnelConflict(proposed, existing));
-            if (conflict && rejectionReasons.length < 20) rejectionReasons.push({ staff: staff.name, role: staff.role || null, reason: "PERSONNEL_CONFLICT" });
+            if (conflict && rejectionReasons.length < 20) rejectionReasons.push({ staff: entry.staff.name, role: entry.staff.role || null, reason: "PERSONNEL_CONFLICT" });
             return !conflict;
           }) || null;
+          const selectedCrew = selectedCrewEntry?.staff || null;
           if (!selectedCrew) {
             crewSelectionFailed = true;
             stagedCrewAssignments.push({ member, crew: null, secondaryRoles, rejectionReasons });
@@ -73044,7 +73054,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             break;
           }
           selectedCrewNames.add(selectedCrew.name);
-          stagedCrewAssignments.push({ member, crew: selectedCrew, secondaryRoles, rejectionReasons });
+          stagedCrewAssignments.push({
+            member,
+            crew: selectedCrew,
+            secondaryRoles,
+            rejectionReasons: [
+              ...rejectionReasons,
+              {
+                staff: selectedCrew.name,
+                reason: "SELECTED_BY_SECONDARY_CREW_PRIORITY",
+                nextEventMatches: selectedCrewEntry?.nextEventMatches ?? false,
+                completedCount: selectedCrewEntry?.completedCount ?? null,
+                lastEventDateValue: selectedCrewEntry?.lastEventDateValue || null
+              }
+            ]
+          });
         }
         if (crewSelectionFailed) {
           candidateSlotsRejected++;
@@ -73436,19 +73460,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             let secondaryCrew = null;
             if (secondaryRoles.length > 0) {
               const secondaryRejections = [];
-              const secondaryPool = getAirCombatStaffForCrewRoleGroup(secondaryRoles).filter((staff) => staff.name !== entry.staff.name).sort((left, right) => {
-                const leftAssigned = staffHasAirCombatAssignment2(left, kind, code) ? 0 : 1;
-                const rightAssigned = staffHasAirCombatAssignment2(right, kind, code) ? 0 : 1;
-                return leftAssigned - rightAssigned || staffHistoryLength(left.name) - staffHistoryLength(right.name) || getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${left.name}`) - getAirCombatTieBreak(`single-secondary-crew:${formatCrewRoleGroup(secondaryRoles)}:${right.name}`);
-              });
-              secondaryCrew = secondaryPool.find((staff) => {
-                const reason = isAirCombatStaffSchedulable(staff, item, "flight", startTime, [], secondaryRoles);
+              const secondaryExcludedNames = /* @__PURE__ */ new Set([entry.staff.name]);
+              const secondaryPool = getAirCombatSecondaryCrewPriorityPool(kind, code, item, secondaryRoles, secondaryExcludedNames, "single-secondary-crew");
+              const secondaryCrewEntry = secondaryPool.find((candidate2) => {
+                const reason = isAirCombatStaffSchedulable(candidate2.staff, item, "flight", startTime, [], secondaryRoles);
                 if (reason) {
-                  if (secondaryRejections.length < 20) secondaryRejections.push({ staff: staff.name, role: staff.role || null, reason });
+                  if (secondaryRejections.length < 20) secondaryRejections.push({ staff: candidate2.staff.name, role: candidate2.staff.role || null, reason });
                   return false;
                 }
                 return true;
               }) || null;
+              secondaryCrew = secondaryCrewEntry?.staff || null;
               if (!secondaryCrew) {
                 recordAirCombatSkip({
                   list: kind,
