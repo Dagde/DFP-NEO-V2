@@ -72187,6 +72187,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const packageDeficit = airCombatWeights.trainingPackages / 100 * total - packagePlaced2;
       return courseDeficit >= packageDeficit ? "course" : "training_package";
     };
+    const fallbackPreservesTrainingMix = (fallbackKind, coursePlaced2, packagePlaced2) => {
+      if (fallbackKind === "course" && courseCodes.length === 0) return false;
+      if (fallbackKind === "training_package" && packageCodes.length === 0) return false;
+      const nextTotal = coursePlaced2 + packagePlaced2 + 1;
+      const projectedPlaced = fallbackKind === "course" ? coursePlaced2 + 1 : packagePlaced2 + 1;
+      const targetWeight = fallbackKind === "course" ? airCombatWeights.courses : airCombatWeights.trainingPackages;
+      const targetPlaced = targetWeight / 100 * nextTotal;
+      return projectedPlaced <= targetPlaced + 1e-3;
+    };
     const findResourceForTraining = (item, type, startTime) => {
       const prefix = type === "flight" ? "PC-21 " : type === "ftd" ? "FTD " : type === "cpt" ? "CPT " : "Ground ";
       const count = type === "flight" ? availableAircraftCount : type === "ftd" ? ftdCount : type === "cpt" ? cptCount : 6;
@@ -73327,7 +73336,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         packagePlacedBefore: packagePlaced,
         generatedEventsBefore: generatedEvents.length,
         courseCodes,
-        packageCodes
+        packageCodes,
+        weights: airCombatWeights
       };
       if (!preferredKind) {
         cycleTrace.placedKind = null;
@@ -73341,7 +73351,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       } else {
         const fallbackKind = preferredKind === "course" ? "training_package" : "course";
         cycleTrace.fallbackKind = fallbackKind;
-        if (placeTrainingForKind(fallbackKind)) placedKind = fallbackKind;
+        const fallbackAllowed = fallbackPreservesTrainingMix(fallbackKind, coursePlaced, packagePlaced);
+        cycleTrace.fallbackAllowed = fallbackAllowed;
+        if (fallbackAllowed) {
+          if (placeTrainingForKind(fallbackKind)) placedKind = fallbackKind;
+        } else {
+          cycleTrace.fallbackSkipReason = "FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX";
+          pushAirCombatDiag("trainingAttempts", {
+            kind: fallbackKind,
+            placed: false,
+            reason: "FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX",
+            coursePlaced,
+            packagePlaced,
+            weights: airCombatWeights
+          }, 700);
+          countAirCombatRejection("FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX");
+        }
       }
       cycleTrace.placedKind = placedKind;
       cycleTrace.generatedEventsAfter = generatedEvents.length;
@@ -73368,6 +73393,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       placementCount: neoBuildDiag.airCombatPriority.placements.length,
       rejectionReasons: neoBuildDiag.airCombatPriority.rejectionReasons,
       lastCycle: (neoBuildDiag.airCombatPriority.placementCycles || []).slice(-1)[0] || null,
+      weights: airCombatWeights,
       exhaustedTrainingCodes: Array.from(exhaustedTrainingCodes),
       cacheStats: {
         sortedTrainingItemLists: sortedTrainingItemsCache.size,
