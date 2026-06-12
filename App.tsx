@@ -10391,6 +10391,26 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const completed = new Set(getCompletedTrainingEvents(staffName, code, kind).map(event => event.flightNumber));
             return items.find(item => !completed.has(item.code)) || null;
         };
+        const getTrainingEventTypeForPriority = (item: SyllabusItemDetail): 'flight' | 'ftd' | 'ground' | 'cpt' =>
+            item.type === 'Flight' ? 'flight' :
+            item.type === 'FTD' ? 'ftd' :
+            item.code.toUpperCase().includes('CPT') ? 'cpt' :
+            'ground';
+        const getPrimaryRoleGroupForPriorityItem = (item: SyllabusItemDetail): string[] => (
+            getResolvedCrewRoleGroupsForEvent({
+                id: `air-combat-priority-role-groups-${item.id || item.code}`,
+                type: getTrainingEventTypeForPriority(item),
+                instructor: '',
+                student: '',
+                pilot: '',
+                crew: '',
+                flightNumber: item.code,
+                duration: item.duration,
+                startTime: 0,
+                resourceId: '',
+                crewRequirement: item.crewRequirement || { mode: 'aircraft_default' },
+            } as Omit<ScheduleEvent, 'date'>)[0] || ['Pilot']
+        );
         const getTrainingItemOperationalPriority = (item: SyllabusItemDetail | null): number => {
             if (!item) return 99;
             if (item.type === 'Flight') return 0;
@@ -10416,6 +10436,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 };
             })
             .filter(entry => !!entry.nextItem)
+            .filter(entry => {
+                if (!entry.nextItem) return false;
+                if (getTrainingEventTypeForPriority(entry.nextItem) !== 'flight') return true;
+                return airCombatStaffMatchesCrewRoleGroup(entry.staff, getPrimaryRoleGroupForPriorityItem(entry.nextItem));
+            })
             .sort((left, right) =>
                 getTrainingItemOperationalPriority(left.nextItem) - getTrainingItemOperationalPriority(right.nextItem) ||
                 left.completedCount - right.completedCount ||

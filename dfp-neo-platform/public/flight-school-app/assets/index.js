@@ -72101,6 +72101,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const completed = new Set(getCompletedTrainingEvents(staffName, code, kind).map((event) => event.flightNumber));
       return items.find((item) => !completed.has(item.code)) || null;
     };
+    const getTrainingEventTypeForPriority = (item) => item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.toUpperCase().includes("CPT") ? "cpt" : "ground";
+    const getPrimaryRoleGroupForPriorityItem = (item) => getResolvedCrewRoleGroupsForEvent({
+      id: `air-combat-priority-role-groups-${item.id || item.code}`,
+      type: getTrainingEventTypeForPriority(item),
+      flightNumber: item.code,
+      duration: item.duration,
+      crewRequirement: item.crewRequirement || { mode: "aircraft_default" }
+    })[0] || ["Pilot"];
     const getTrainingItemOperationalPriority = (item) => {
       if (!item) return 99;
       if (item.type === "Flight") return 0;
@@ -72121,7 +72129,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         nextItem: getNextTrainingItem(staff.name, code, kind),
         tieBreak: getAirCombatTieBreak(`${kind}:${code}:${staff.name}`)
       };
-    }).filter((entry) => !!entry.nextItem).sort(
+    }).filter((entry) => !!entry.nextItem).filter((entry) => {
+      if (!entry.nextItem) return false;
+      if (getTrainingEventTypeForPriority(entry.nextItem) !== "flight") return true;
+      return airCombatStaffMatchesCrewRoleGroup(entry.staff, getPrimaryRoleGroupForPriorityItem(entry.nextItem));
+    }).sort(
       (left, right) => getTrainingItemOperationalPriority(left.nextItem) - getTrainingItemOperationalPriority(right.nextItem) || left.completedCount - right.completedCount || left.lastEventDateValue - right.lastEventDateValue || left.tieBreak - right.tieBreak
     );
     const getTrainingListDiagnostic = (kind, code) => {
