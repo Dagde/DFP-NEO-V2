@@ -2044,6 +2044,7 @@ const emptyPlatformConfig = {
 };
 const getApiBase$2 = () => getAppApiBase();
 const normaliseLocationIdentifier = (value) => String(value || "").trim().toLowerCase();
+const normaliseUnitIdentifier = (value) => String(value || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
 const defaultLocationProfiles = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {});
 const getKnownLocationProfile = (identifier) => {
   const token = normaliseLocationIdentifier(identifier);
@@ -2388,9 +2389,9 @@ const getLocationResourcePool = (config, locationCode, unitCode) => {
     (matchingLocation ? getConfiguredLocationAliases(matchingLocation) : getKnownLocationAliases(locationCode)).map(normaliseLocationIdentifier)
   );
   const pools = (config?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE" && locationAliases.has(normaliseLocationIdentifier(pool.locationCode)));
-  const targetUnit = normaliseLocationIdentifier(unitCode);
+  const targetUnit = normaliseUnitIdentifier(unitCode);
   if (targetUnit) {
-    const unitPools = pools.filter((pool) => normaliseLocationIdentifier(pool.unitCode) === targetUnit);
+    const unitPools = pools.filter((pool) => normaliseUnitIdentifier(pool.unitCode) === targetUnit);
     const runtimeUnitPool = unitPools.find(isResourcePoolRuntimeEnabled);
     if (runtimeUnitPool) return runtimeUnitPool;
     if (unitPools.length > 0) return unitPools[0];
@@ -67967,12 +67968,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ground: 6,
         aircraftConfigCapacities: config.aircraftConfigCapacities || null,
         aircraftConfigIdsByResource,
-        aircraftConfigurationDefinitions: aircraftConfigDefinitionsForBuild
+        aircraftConfigurationDefinitions: aircraftConfigDefinitionsForBuild,
+        runtimeResourceContext: config.runtimeResourceContext || null
       },
       crewConfiguration: {
         operationalModel: buildOperationalModel,
         crewPositionTerminology: normaliseCrewPositionTerminology(buildCrewPositionTerminology),
-        buildAircraftCrewComposition
+        buildAircraftCrewComposition,
+        runtimeResourceContext: config.runtimeResourceContext || null
       }
     },
     activeTrainees: {
@@ -77244,9 +77247,23 @@ const App = () => {
     () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
     [activeResourcePoolUnitCode, platformConfig, school]
   );
+  const activeRuntimeAircraftType = reactExports.useMemo(() => {
+    const aircraftTypes = (platformConfig?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+    const poolTypeCode = String(activePlatformResourcePool?.aircraftTypeCode || "").trim().toUpperCase();
+    const poolAircraftType = aircraftTypes.find((aircraft) => String(aircraft?.code || "").trim().toUpperCase() === poolTypeCode) || null;
+    if (activeOperationalModel === "air_combat") {
+      const poolCategory = String(poolAircraftType?.category || "").trim().toLowerCase();
+      if (poolCategory !== "fighter") {
+        const fighterAircraftType = aircraftTypes.find((aircraft) => String(aircraft?.category || "").trim().toLowerCase() === "fighter");
+        if (fighterAircraftType) return fighterAircraftType;
+      }
+    }
+    return poolAircraftType;
+  }, [activeOperationalModel, activePlatformResourcePool?.aircraftTypeCode, platformConfig]);
+  const activeRuntimeAircraftTypeCode = activeRuntimeAircraftType?.code || activePlatformResourcePool?.aircraftTypeCode || null;
   const activeAircraftCrewComposition = reactExports.useMemo(
-    () => getAircraftTypeCrewComposition(platformConfig, activePlatformResourcePool?.aircraftTypeCode),
-    [activePlatformResourcePool?.aircraftTypeCode, platformConfig]
+    () => getAircraftTypeCrewComposition(platformConfig, activeRuntimeAircraftTypeCode),
+    [activeRuntimeAircraftTypeCode, platformConfig]
   );
   const activeCrewPositionTerminology = reactExports.useMemo(() => {
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
@@ -77325,13 +77342,14 @@ const App = () => {
         pool: activePlatformResourcePool.code,
         poolType: activePlatformResourcePool.poolType,
         aircraftType: activePlatformResourcePool.aircraftTypeCode,
+        runtimeAircraftType: activeRuntimeAircraftTypeCode,
         appliesToV2Runtime: activePlatformResourcePool.settings?.applyToV2Runtime === true,
         settings: activePlatformResourcePool.settings
       });
     } else {
       console.log("[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.", { school, unit: activeUnitCode, operationalModel: activeOperationalModel });
     }
-  }, [activePlatformResourcePool, activeOperationalModel, activeUnitCode, platformConfigLoaded, school]);
+  }, [activePlatformResourcePool, activeOperationalModel, activeRuntimeAircraftTypeCode, activeUnitCode, platformConfigLoaded, school]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     const locationFiltered = allInstructorsData.filter(personMatchesActiveLocation);
@@ -84248,6 +84266,18 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
       aircraftConfigIdsByResource: buildAircraftConfigIdsByResource(currentAircraftConfigState),
       aircraftCrewComposition: activeAircraftCrewComposition,
+      runtimeResourceContext: {
+        location: school,
+        unit: activeUnitCode,
+        operationalModel: activeOperationalModel,
+        resourcePoolCode: activePlatformResourcePool?.code || null,
+        resourcePoolName: activePlatformResourcePool?.name || null,
+        resourcePoolAircraftTypeCode: activePlatformResourcePool?.aircraftTypeCode || null,
+        runtimeAircraftTypeCode: activeRuntimeAircraftTypeCode,
+        runtimeAircraftTypeName: activeRuntimeAircraftType?.name || null,
+        runtimeAircraftTypeCategory: activeRuntimeAircraftType?.category || null,
+        runtimeAircraftCrewComposition: activeAircraftCrewComposition
+      },
       crewPositionTerminology: activeCrewPositionTerminology,
       remedialPrioritySyncTrace: window.__lastRemedialPrioritySyncTrace || [],
       remedialDataMovementTrace: window.__lastRemedialDataMovementTrace || [],

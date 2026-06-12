@@ -3984,6 +3984,7 @@ interface DfpConfig {
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
   aircraftConfigIdsByResource?: Record<string, string>;
   aircraftCrewComposition?: AircraftCrewComposition;
+  runtimeResourceContext?: Record<string, any>;
   crewPositionTerminology?: CrewPositionTerminology;
   remedialPrioritySyncTrace?: any[];
   remedialDataMovementTrace?: any[];
@@ -5463,11 +5464,13 @@ function generateDfpInternal(
                 aircraftConfigCapacities: config.aircraftConfigCapacities || null,
                 aircraftConfigIdsByResource,
                 aircraftConfigurationDefinitions: aircraftConfigDefinitionsForBuild,
+                runtimeResourceContext: config.runtimeResourceContext || null,
             },
             crewConfiguration: {
                 operationalModel: buildOperationalModel,
                 crewPositionTerminology: normaliseCrewPositionTerminology(buildCrewPositionTerminology),
                 buildAircraftCrewComposition,
+                runtimeResourceContext: config.runtimeResourceContext || null,
             },
         },
         activeTrainees: {
@@ -16646,9 +16649,32 @@ const App: React.FC = () => {
         [activeResourcePoolUnitCode, platformConfig, school],
     );
 
+    const activeRuntimeAircraftType = useMemo(() => {
+        const aircraftTypes = (platformConfig?.aircraftTypes || [])
+            .filter((aircraft: any) => String(aircraft?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
+        const poolTypeCode = String(activePlatformResourcePool?.aircraftTypeCode || '').trim().toUpperCase();
+        const poolAircraftType = aircraftTypes.find((aircraft: any) => (
+            String(aircraft?.code || '').trim().toUpperCase() === poolTypeCode
+        )) || null;
+
+        if (activeOperationalModel === 'air_combat') {
+            const poolCategory = String(poolAircraftType?.category || '').trim().toLowerCase();
+            if (poolCategory !== 'fighter') {
+                const fighterAircraftType = aircraftTypes.find((aircraft: any) => (
+                    String(aircraft?.category || '').trim().toLowerCase() === 'fighter'
+                ));
+                if (fighterAircraftType) return fighterAircraftType;
+            }
+        }
+
+        return poolAircraftType;
+    }, [activeOperationalModel, activePlatformResourcePool?.aircraftTypeCode, platformConfig]);
+
+    const activeRuntimeAircraftTypeCode = activeRuntimeAircraftType?.code || activePlatformResourcePool?.aircraftTypeCode || null;
+
     const activeAircraftCrewComposition = useMemo(
-        () => getAircraftTypeCrewComposition(platformConfig, activePlatformResourcePool?.aircraftTypeCode),
-        [activePlatformResourcePool?.aircraftTypeCode, platformConfig],
+        () => getAircraftTypeCrewComposition(platformConfig, activeRuntimeAircraftTypeCode),
+        [activeRuntimeAircraftTypeCode, platformConfig],
     );
 
     const activeCrewPositionTerminology = useMemo(() => {
@@ -16759,13 +16785,14 @@ const App: React.FC = () => {
                 pool: activePlatformResourcePool.code,
                 poolType: activePlatformResourcePool.poolType,
                 aircraftType: activePlatformResourcePool.aircraftTypeCode,
+                runtimeAircraftType: activeRuntimeAircraftTypeCode,
                 appliesToV2Runtime: activePlatformResourcePool.settings?.applyToV2Runtime === true,
                 settings: activePlatformResourcePool.settings,
             });
         } else {
             console.log('[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.', { school, unit: activeUnitCode, operationalModel: activeOperationalModel });
         }
-    }, [activePlatformResourcePool, activeOperationalModel, activeUnitCode, platformConfigLoaded, school]);
+    }, [activePlatformResourcePool, activeOperationalModel, activeRuntimeAircraftTypeCode, activeUnitCode, platformConfigLoaded, school]);
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled.
     // Location matching is alias-aware so YMES/ESL/East Sale and YPEA/PEA/Pearce remain equivalent.
@@ -25410,6 +25437,18 @@ const App: React.FC = () => {
             aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
             aircraftConfigIdsByResource: buildAircraftConfigIdsByResource(currentAircraftConfigState),
             aircraftCrewComposition: activeAircraftCrewComposition,
+            runtimeResourceContext: {
+                location: school,
+                unit: activeUnitCode,
+                operationalModel: activeOperationalModel,
+                resourcePoolCode: activePlatformResourcePool?.code || null,
+                resourcePoolName: activePlatformResourcePool?.name || null,
+                resourcePoolAircraftTypeCode: activePlatformResourcePool?.aircraftTypeCode || null,
+                runtimeAircraftTypeCode: activeRuntimeAircraftTypeCode,
+                runtimeAircraftTypeName: activeRuntimeAircraftType?.name || null,
+                runtimeAircraftTypeCategory: activeRuntimeAircraftType?.category || null,
+                runtimeAircraftCrewComposition: activeAircraftCrewComposition,
+            },
             crewPositionTerminology: activeCrewPositionTerminology,
             remedialPrioritySyncTrace: (window as any).__lastRemedialPrioritySyncTrace || [],
             remedialDataMovementTrace: (window as any).__lastRemedialDataMovementTrace || [],

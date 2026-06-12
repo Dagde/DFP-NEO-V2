@@ -295,6 +295,9 @@ const emptyPlatformConfig: PlatformConfig = {
 const getApiBase = (): string => getAppApiBase();
 
 const normaliseLocationIdentifier = (value: unknown): string => String(value || '').trim().toLowerCase();
+const normaliseUnitIdentifier = (value: unknown): string => (
+  String(value || '').trim().toLowerCase().replace(/[\s_-]+/g, '')
+);
 
 const defaultLocationProfiles = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {});
 
@@ -819,9 +822,9 @@ export const getLocationResourcePool = (
     locationAliases.has(normaliseLocationIdentifier(pool.locationCode))
   ));
 
-  const targetUnit = normaliseLocationIdentifier(unitCode);
+  const targetUnit = normaliseUnitIdentifier(unitCode);
   if (targetUnit) {
-    const unitPools = pools.filter((pool) => normaliseLocationIdentifier(pool.unitCode) === targetUnit);
+    const unitPools = pools.filter((pool) => normaliseUnitIdentifier(pool.unitCode) === targetUnit);
     const runtimeUnitPool = unitPools.find(isResourcePoolRuntimeEnabled);
     if (runtimeUnitPool) return runtimeUnitPool;
     if (unitPools.length > 0) return unitPools[0];
