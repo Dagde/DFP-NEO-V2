@@ -2688,10 +2688,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         ) : <span className="text-white font-mono">1</span>}
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max Duty Sup:</span>
+                                        <span className="text-sm text-gray-400">Max Duty Sup session (hrs):</span>
                                         {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.exec.maxDutySup} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxDutySup: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">2</span>}
+                                            <input type="number" min="0.25" step="0.25" value={tempLimits.exec.maxDutySup} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                        ) : <span className="text-white font-mono">{eventLimits.exec.maxDutySup}</span>}
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm text-gray-400">Max total all events:</span>
@@ -2712,10 +2712,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         ) : <span className="text-white font-mono">2</span>}
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Sup:</span>
+                                        <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Sup session (hrs):</span>
                                         {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.instructor.maxDutySup} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxDutySup: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">2</span>}
+                                            <input type="number" min="0.25" step="0.25" value={tempLimits.instructor.maxDutySup} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                        ) : <span className="text-white font-mono">{eventLimits.instructor.maxDutySup}</span>}
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm text-gray-400">Max total all events:</span>

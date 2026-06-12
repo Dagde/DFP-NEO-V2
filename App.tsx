@@ -8057,8 +8057,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                      if (ipCounts.flightFtd >= flightFtdLimit) return null;
                      // Check total event limit including Duty Supervisor (Flight + FTD + CPT + Ground + Duty Sup = max 3)
                      if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= totalEventLimit) return null;
-                     // Check Flying Supervisor duty limit (included in total events)
-                     if (instructor.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) return null;
                 }
 
                 // ── BUILD-TIME OVERLAP CHECK (BNF night pass) ────────────────────────
@@ -8430,7 +8428,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     } else {
                         if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.exec.maxFlightFtd) { _dRej.eventLimit++; continue; }
                     }
-                    if (ipCounts.flightFtd + ipCounts.dutySup >= eventLimits.exec.maxDutySup) { _dRej.eventLimit++; continue; }
                     if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.exec.maxTotal) { _dRej.eventLimit++; continue; }
                 } else if (!remedialInstructorOverride && ip.role === 'SIM IP') {
                     if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) { _dRej.eventLimit++; continue; }
@@ -8438,8 +8435,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 } else if (!remedialInstructorOverride) {
                     if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.instructor.maxFlightFtd) { _dRej.eventLimit++; continue; }
                     if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.instructor.maxTotal) { _dRej.eventLimit++; continue; }
-                    // Check duty supervisor limit for Flying Supervisors (included in total events)
-                    if (ip.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) { _dRej.eventLimit++; continue; }
                 }
 
                 // ── BUILD-TIME OVERLAP CHECK (main candidate loop) ───────────────────
@@ -9166,12 +9161,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         for (const sup of prioritizedSupervisors) {
             const ipCounts = eventCounts.get(sup.name)!;
-            const eventLimit = sup.isExecutive ? eventLimits.exec.maxFlightFtd + eventLimits.exec.maxDutySup : eventLimits.instructor.maxTotal;
-            const dutySupEventCount = sup.isExecutive ? eventLimits.exec.maxDutySup : eventLimits.instructor.maxDutySup;
             const totalEventCount = sup.isExecutive ? eventLimits.exec.maxTotal : eventLimits.instructor.maxTotal;
+            const dutySupSessionLimit = Math.max(
+                0.25,
+                Number(sup.isExecutive ? eventLimits.exec.maxDutySup : eventLimits.instructor.maxDutySup) || 2
+            );
 
             // NEW ALGORITHM: Duty Supervisor counts toward total event limits (max 3)
-            if (ipCounts.dutySup >= dutySupEventCount) continue;
             if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= totalEventCount) continue;
 
             if (isPersonStaticallyUnavailable(sup, currentSupTime, currentSupTime + 0.1, buildDate, 'duty_sup')) continue;
@@ -9180,7 +9176,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             // Check soft duty limit before assigning any duty supervisor time
             const proposedDutySupEvent = {
                 startTime: currentSupTime,
-                duration: 2.0, // Standard 2-hour duty supervisor assignment
+                duration: dutySupSessionLimit,
                 flightNumber: 'Duty Sup',
                 type: 'ground' as const
             };
@@ -9203,7 +9199,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (hasOverlapAtStart) continue;
 
             let potentialDuration = 0;
-            const targetDuration = 2.0;
+            const targetDuration = dutySupSessionLimit;
 
             // CRITICAL FIX: Don't extend duty supervisor beyond day window end or soft duty limit
             for (let t = currentSupTime; t < dutySupEndTime; t += 0.25) {
@@ -18167,9 +18163,27 @@ const App: React.FC = () => {
     }, [visibleSyllabusDetails]);
 
     // Event Limits State (Lifted from SettingsView)
+    const normaliseDutySupSessionLimit = (value: unknown, fallback = 2): number => {
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue) || numericValue <= 0) return fallback;
+        // Legacy staff maxDutySup was a count and defaulted to 31. Treat large values as old settings.
+        if (numericValue > 12) return fallback;
+        return numericValue;
+    };
+    const normaliseEventLimitsForDutySupSessions = (limits: EventLimits): EventLimits => ({
+        ...limits,
+        exec: {
+            ...limits.exec,
+            maxDutySup: normaliseDutySupSessionLimit(limits.exec?.maxDutySup, 2),
+        },
+        instructor: {
+            ...limits.instructor,
+            maxDutySup: normaliseDutySupSessionLimit(limits.instructor?.maxDutySup, 2),
+        },
+    });
     const [eventLimits, setEventLimits] = useState<EventLimits>({
         exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
-        instructor: { maxFlightFtd: 2, maxDutySup: 31, maxTotal: 3 },
+        instructor: { maxFlightFtd: 2, maxDutySup: 2, maxTotal: 3 },
         trainee: { maxFlightFtd: 1, maxTotal: 2 },
         simIp: { maxFtd: 2, maxTotal: 2 }
     });
@@ -19388,7 +19402,7 @@ const App: React.FC = () => {
                         ],
                     };
                 });
-                if (saved.eventLimits) setEventLimits(saved.eventLimits);
+                if (saved.eventLimits) setEventLimits(normaliseEventLimitsForDutySupSessions(saved.eventLimits));
                 if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
                 if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
                 if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);

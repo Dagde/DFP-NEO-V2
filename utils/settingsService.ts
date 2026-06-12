@@ -293,7 +293,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     locationOpAreas: state.locationOpAreas || {},
     eventLimits: state.eventLimits || {
       exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
-      instructor: { maxFlightFtd: 2, maxDutySup: 31, maxTotal: 3 },
+      instructor: { maxFlightFtd: 2, maxDutySup: 2, maxTotal: 3 },
       trainee: { maxFlightFtd: 1, maxTotal: 2 },
       simIp: { maxFtd: 2, maxTotal: 2 },
     },

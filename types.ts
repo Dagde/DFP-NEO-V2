@@ -538,7 +538,7 @@ export interface EventLimits {
   };
   instructor: {
     maxFlightFtd: number;
-    maxDutySup: number; // For Flying Supervisor role
+    maxDutySup: number; // Maximum Duty Sup session length in hours
     maxTotal: number;
   };
   trainee: {

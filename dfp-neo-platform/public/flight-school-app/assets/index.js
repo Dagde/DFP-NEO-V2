@@ -1580,7 +1580,7 @@ const buildSettingsSnapshot = (state) => {
     locationOpAreas: state.locationOpAreas || {},
     eventLimits: state.eventLimits || {
       exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
-      instructor: { maxFlightFtd: 2, maxDutySup: 31, maxTotal: 3 },
+      instructor: { maxFlightFtd: 2, maxDutySup: 2, maxTotal: 3 },
       trainee: { maxFlightFtd: 1, maxTotal: 2 },
       simIp: { maxFtd: 2, maxTotal: 2 }
     },
@@ -45036,8 +45036,8 @@ const SettingsView = ({
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxFlightFtd, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "1" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max Duty Sup:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxDutySup: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max Duty Sup session (hrs):" }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.exec.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxDutySup })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total all events:" }),
@@ -45057,8 +45057,8 @@ const SettingsView = ({
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor role assigned) - Max Duty Sup:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxDutySup: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor role assigned) - Max Duty Sup session (hrs):" }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.instructor.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxDutySup })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total all events:" }),
@@ -70095,7 +70095,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         } else {
           if (ipCounts.flightFtd >= flightFtdLimit) return null;
           if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= totalEventLimit) return null;
-          if (instructor2.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) return null;
         }
         const hasOverlap = generatedEvents.some((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
@@ -70370,10 +70369,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               continue;
             }
           }
-          if (ipCounts.flightFtd + ipCounts.dutySup >= eventLimits.exec.maxDutySup) {
-            _dRej.eventLimit++;
-            continue;
-          }
           if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= eventLimits.exec.maxTotal) {
             _dRej.eventLimit++;
             continue;
@@ -70393,10 +70388,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             continue;
           }
           if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= eventLimits.instructor.maxTotal) {
-            _dRej.eventLimit++;
-            continue;
-          }
-          if (ip.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) {
             _dRej.eventLimit++;
             continue;
           }
@@ -70981,16 +70972,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const prioritizedSupervisors = [...supervisorsWithNoDutySup, ...supervisorsWithDutySup];
     for (const sup of prioritizedSupervisors) {
       const ipCounts = eventCounts.get(sup.name);
-      sup.isExecutive ? eventLimits.exec.maxFlightFtd + eventLimits.exec.maxDutySup : eventLimits.instructor.maxTotal;
-      const dutySupEventCount = sup.isExecutive ? eventLimits.exec.maxDutySup : eventLimits.instructor.maxDutySup;
       const totalEventCount = sup.isExecutive ? eventLimits.exec.maxTotal : eventLimits.instructor.maxTotal;
-      if (ipCounts.dutySup >= dutySupEventCount) continue;
+      const dutySupSessionLimit = Math.max(
+        0.25,
+        Number(sup.isExecutive ? eventLimits.exec.maxDutySup : eventLimits.instructor.maxDutySup) || 2
+      );
       if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= totalEventCount) continue;
       if (isPersonStaticallyUnavailable(sup, currentSupTime, currentSupTime + 0.1, buildDate, "duty_sup")) continue;
       const proposedDutySupEvent = {
         startTime: currentSupTime,
-        duration: 2,
-        // Standard 2-hour duty supervisor assignment
+        duration: dutySupSessionLimit,
         flightNumber: "Duty Sup",
         type: "ground"
       };
@@ -71008,7 +70999,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       if (hasOverlapAtStart) continue;
       let potentialDuration = 0;
-      const targetDuration = 2;
+      const targetDuration = dutySupSessionLimit;
       for (let t = currentSupTime; t < dutySupEndTime; t += 0.25) {
         if (potentialDuration >= targetDuration) break;
         const proposedEnd = t + 0.25;
@@ -78413,9 +78404,26 @@ const App = () => {
       return [...filtered, ...additions];
     });
   }, [visibleSyllabusDetails]);
+  const normaliseDutySupSessionLimit = (value, fallback = 2) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return fallback;
+    if (numericValue > 12) return fallback;
+    return numericValue;
+  };
+  const normaliseEventLimitsForDutySupSessions = (limits) => ({
+    ...limits,
+    exec: {
+      ...limits.exec,
+      maxDutySup: normaliseDutySupSessionLimit(limits.exec?.maxDutySup, 2)
+    },
+    instructor: {
+      ...limits.instructor,
+      maxDutySup: normaliseDutySupSessionLimit(limits.instructor?.maxDutySup, 2)
+    }
+  });
   const [eventLimits, setEventLimits] = reactExports.useState({
     exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
-    instructor: { maxFlightFtd: 2, maxDutySup: 31, maxTotal: 3 },
+    instructor: { maxFlightFtd: 2, maxDutySup: 2, maxTotal: 3 },
     trainee: { maxFlightFtd: 1, maxTotal: 2 },
     simIp: { maxFtd: 2, maxTotal: 2 }
   });
@@ -79425,7 +79433,7 @@ ${"=".repeat(60)}`);
             ]
           };
         });
-        if (saved.eventLimits) setEventLimits(saved.eventLimits);
+        if (saved.eventLimits) setEventLimits(normaliseEventLimitsForDutySupSessions(saved.eventLimits));
         if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
         if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
         if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
