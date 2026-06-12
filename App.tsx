@@ -25422,12 +25422,53 @@ const App: React.FC = () => {
 
         console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
 
-        const instructorsInBuild = instructorsData;
+        const normaliseBuildUnitCode = (value: unknown): string => String(value || '').split('/')[0].trim().toUpperCase();
+        const staffDataSourceAllowedForBuild = (staff: Instructor): boolean => {
+            const isDatabase = (staff as any)._dataSource === 'database';
+            const isMock = !isDatabase;
+            return (dataSourceSettings.staffDb && isDatabase) || (dataSourceSettings.staff && isMock);
+        };
+        const airCombatSharedStaffUnitCodes = new Set<string>(activeContextUnitCodes);
+        if (activeOperationalModel === 'air_combat' && organisationSettings.staffSharingEnabled) {
+            const configuredStaffSharingGroups = Array.isArray(organisationSettings.staffSharingGroups) && organisationSettings.staffSharingGroups.length > 0
+                ? organisationSettings.staffSharingGroups
+                    .filter((group: any) => group?.enabled !== false)
+                    .map((group: any) => Array.from(new Set((group?.selectedUnits || []).map(normaliseBuildUnitCode).filter(Boolean))))
+                    .filter((groupUnits: string[]) => groupUnits.length > 1)
+                : (organisationSettings.staffSharingUnits || []).length > 1
+                    ? [Array.from(new Set((organisationSettings.staffSharingUnits || []).map(normaliseBuildUnitCode).filter(Boolean)))]
+                    : [];
+            configuredStaffSharingGroups
+                .filter((groupUnits: string[]) => activeContextUnitCodes.some(unitCode => groupUnits.includes(normaliseBuildUnitCode(unitCode))))
+                .forEach((groupUnits: string[]) => groupUnits.forEach(unitCode => airCombatSharedStaffUnitCodes.add(unitCode)));
+        }
+        const instructorsInBuild = activeOperationalModel === 'air_combat'
+            ? allInstructorsData
+                .filter(staffDataSourceAllowedForBuild)
+                .filter((staff: any) => {
+                    const staffUnitCode = normaliseBuildUnitCode(staff.unit);
+                    if (!staffUnitCode) return true;
+                    if (activeContextUnitCodeSet.has(staffUnitCode)) return personMatchesActiveLocation(staff);
+                    return organisationSettings.staffSharingEnabled && airCombatSharedStaffUnitCodes.has(staffUnitCode);
+                })
+            : instructorsData;
         const traineesInBuild = traineesData;
         const storedRemedialRequestsForBuild = loadStoredRemedialRequests();
         const remedialRequestsForBuild = remedialRequests.length > 0 ? remedialRequests : storedRemedialRequestsForBuild;
         console.log('🔍 [NEO BUILD CONFIG DEBUG] Data source settings:', dataSourceSettings);
         console.log('🔍 [NEO BUILD CONFIG DEBUG] instructorsData (filtered):', instructorsInBuild.length, '| mockData count:', instructorsInBuild.filter((i: any) => (i as any)._dataSource !== 'database').length, '| DB count:', instructorsInBuild.filter((i: any) => (i as any)._dataSource === 'database').length);
+        if (activeOperationalModel === 'air_combat') {
+            console.log('🔍 [NEO BUILD CONFIG DEBUG] Air Combat build staff scope:', {
+                activeContextUnitCodes,
+                staffSharingEnabled: organisationSettings.staffSharingEnabled,
+                includedStaffUnits: Array.from(new Set(instructorsInBuild.map((staff: any) => normaliseBuildUnitCode(staff.unit)).filter(Boolean))).sort(),
+                roleCounts: instructorsInBuild.reduce((counts: Record<string, number>, staff: any) => {
+                    const role = String(staff.role || 'Unspecified').trim() || 'Unspecified';
+                    counts[role] = (counts[role] || 0) + 1;
+                    return counts;
+                }, {}),
+            });
+        }
         console.log('🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):', traineesInBuild.length, '| mockData count:', traineesInBuild.filter((t: any) => (t as any)._dataSource !== 'database').length, '| DB count:', traineesInBuild.filter((t: any) => (t as any)._dataSource === 'database').length);
         console.log('🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:', instructorsInBuild.slice(0, 5).map((i: any) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: (i as any)._dataSource })));
 
