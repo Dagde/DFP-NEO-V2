@@ -11295,7 +11295,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             leadEntry: AirCombatTrainingPriorityEntry,
             leadItem: SyllabusItemDetail,
             matchingItems: SyllabusItemDetail[],
-            priorityList: AirCombatTrainingPriorityEntry[]
+            priorityList: AirCombatTrainingPriorityEntry[],
+            exactStartTime?: number
         ): boolean => {
             const resourceNumber = getLmpResourceNumber(leadItem);
             const linkedCode = getAirCombatLinkedEventCode(leadItem);
@@ -11304,7 +11305,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const windowEnd = flyingEndTime;
             let candidateSlotsChecked = 0;
             let candidateSlotsRejected = 0;
-            for (let time = flyingStartTime; time + formationWindowDuration <= windowEnd + 0.001; time += slotIncrement) {
+            const searchStart = exactStartTime ?? flyingStartTime;
+            const searchEnd = exactStartTime ?? windowEnd;
+            for (let time = searchStart; time + formationWindowDuration <= windowEnd + 0.001 && time <= searchEnd + 0.001; time += slotIncrement) {
                 const startTime = Math.round(time * 12) / 12;
                 candidateSlotsChecked++;
                 const exclusion = getFlightWindowExclusionViolation(startTime, formationWindowDuration);
@@ -11685,11 +11688,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         };
         const emittedTrainingListDiagnostics = new Set<string>();
         const exhaustedTrainingCodes = new Set<string>();
-        const placeTrainingForKind = (kind: 'course' | 'training_package'): boolean => {
+        const placeTrainingForKind = (kind: 'course' | 'training_package', exactStartTime?: number): boolean => {
             const codes = kind === 'training_package' ? packageCodes : courseCodes;
             if (codes.length === 0) {
                 pushAirCombatDiag('trainingAttempts', {
                     kind,
+                    startTime: exactStartTime ?? null,
                     placed: false,
                     reason: 'NO_ASSIGNMENT_CODES_FOR_KIND',
                 }, 1200);
@@ -11776,7 +11780,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         continue;
                     }
                     if (type === 'flight' && resourceNumber > 1) {
-                        if (placeAirCombatFormationTraining(kind, code, entry, item, matchingItems, priorityList)) {
+                        if (placeAirCombatFormationTraining(kind, code, entry, item, matchingItems, priorityList, exactStartTime)) {
                             return true;
                         }
                         continue;
@@ -11784,7 +11788,24 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     const windowEnd = type === 'ftd' ? ftdEndTime : flyingEndTime;
                     let candidateSlotsChecked = 0;
                     let candidateSlotsRejected = 0;
-                    for (let time = flyingStartTime; time + item.duration <= windowEnd + 0.001; time += slotIncrement) {
+                    const searchStart = exactStartTime ?? flyingStartTime;
+                    const searchEnd = exactStartTime ?? windowEnd;
+                    if (searchStart + item.duration > windowEnd + 0.001) {
+                        candidateSlotsRejected++;
+                        pushAirCombatDiag('trainingAttempts', {
+                            kind,
+                            code,
+                            staff: entry.staff.name,
+                            event: item.code,
+                            type,
+                            startTime: searchStart,
+                            placed: false,
+                            reason: 'OUTSIDE_TYPE_WINDOW',
+                            windowEnd,
+                        }, 1200);
+                        continue;
+                    }
+                    for (let time = searchStart; time + item.duration <= windowEnd + 0.001 && time <= searchEnd + 0.001; time += slotIncrement) {
                         const startTime = Math.round(time * 12) / 12;
                         candidateSlotsChecked++;
                         if (type === 'flight') {
@@ -12031,11 +12052,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             packageCodes,
             generatedEventsAtLoopStart: generatedEvents.length,
         });
-        for (let attempt = 0; attempt < placementLimit; attempt++) {
+        let attempt = 0;
+        for (let tileTime = flyingStartTime; tileTime <= flyingEndTime + 0.001 && attempt < placementLimit; tileTime += slotIncrement) {
+            const roundedTileTime = Math.round(tileTime * 12) / 12;
             const preferredKind = pickNextKind(coursePlaced, packagePlaced);
             const cycleTrace: any = {
                 attempt: attempt + 1,
                 placementLimit,
+                tileTime: roundedTileTime,
+                displayTime: _fmtT(roundedTileTime),
                 preferredKind,
                 coursePlacedBefore: coursePlaced,
                 packagePlacedBefore: packagePlaced,
@@ -12051,7 +12076,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 break;
             }
             let placedKind: 'course' | 'training_package' | null = null;
-            if (placeTrainingForKind(preferredKind)) {
+            if (placeTrainingForKind(preferredKind, roundedTileTime)) {
                 placedKind = preferredKind;
             } else {
                 const fallbackKind = preferredKind === 'course' ? 'training_package' : 'course';
@@ -12059,7 +12084,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const fallbackAllowed = fallbackPreservesTrainingMix(fallbackKind, coursePlaced, packagePlaced);
                 cycleTrace.fallbackAllowed = fallbackAllowed;
                 if (fallbackAllowed) {
-                    if (placeTrainingForKind(fallbackKind)) placedKind = fallbackKind;
+                    if (placeTrainingForKind(fallbackKind, roundedTileTime)) placedKind = fallbackKind;
                 } else {
                     cycleTrace.fallbackSkipReason = 'FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX';
                     pushAirCombatDiag('trainingAttempts', {
@@ -12077,15 +12102,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             cycleTrace.generatedEventsAfter = generatedEvents.length;
             cycleTrace.placementsAfter = neoBuildDiag.airCombatPriority.placements.length;
             if (!placedKind) {
-                cycleTrace.breakReason = 'NO_PLACEMENT_FROM_PREFERRED_OR_FALLBACK';
+                cycleTrace.noPlacementReason = 'NO_PLACEMENT_FROM_PREFERRED_OR_FALLBACK_AT_TILE';
                 pushAirCombatDiag('placementCycles', cycleTrace, 300);
-                break;
+                continue;
             }
             if (placedKind === 'course') coursePlaced++;
             else packagePlaced++;
             cycleTrace.coursePlacedAfter = coursePlaced;
             cycleTrace.packagePlacedAfter = packagePlaced;
             pushAirCombatDiag('placementCycles', cycleTrace, 300);
+            attempt++;
         }
         neoBuildDiag.airCombatPriority.schedulerSummary = {
             placementLimit,
@@ -12588,7 +12614,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         event.type === 'flight' &&
         currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ''))
     );
-    if (earlyCurrencyPriorityEvents.length > 0) {
+    if (!isAirCombatBuild && earlyCurrencyPriorityEvents.length > 0) {
         recordProgress({ message: 'Scheduling Currency FTD Priority Events...', percentage: 44 });
         scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
     }
@@ -13311,10 +13337,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             recordProgress({ message: 'Scheduling Air Combat mandatory tasking...', percentage: 45 });
             scheduleTaskingPriorityEvents(activeTaskingPriorityEvents);
         }
+        if (currencyPriorityEvents.length > 0) {
+            recordProgress({ message: 'Scheduling Air Combat currency events...', percentage: 50 });
+            scheduleCurrencyPriorityEvents(currencyPriorityEvents);
+        }
         recordProgress({ message: 'Scheduling Air Combat priority lists...', percentage: 55 });
         scheduleAirCombatTrainingPriorityEvents();
     }
 
+    if (!isAirCombatBuild) {
     // Step 3a: Schedule day flights. Multi-resource formation groups run through
     // a dedicated grouped pass so matching trainees are pulled together by event code.
     if (_mandatoryDayFlightList.length > 0) {
@@ -14206,6 +14237,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const ftdStbyEvents = generatedEvents.filter(e => e.type === 'ftd' && e.resourceId.startsWith('STBY'));
         buildDebugLog(`FTD STBY complete: Placed ${ftdStbyEvents.length} events across ${currentStbyLine - 1} STBY lines`);
     }
+    }
 
     const compressCurrencyFlightPlacements = () => {
         const currencyFlights = generatedEvents
@@ -14666,7 +14698,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         saveCurrencyPriorityDiagnostics('currency-priority-compression-complete');
     };
 
-    compressCurrencyFlightPlacements();
+    if (!isAirCombatBuild) {
+        compressCurrencyFlightPlacements();
+    }
 
     recordProgress({ message: 'Shuffling events for distribution...', percentage: 95 });
 

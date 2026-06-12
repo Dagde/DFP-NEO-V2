@@ -72849,7 +72849,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       countAirCombatRejection("NO_ADJACENT_RESOURCE_BLOCK_FOR_FORMATION");
       return null;
     };
-    const placeAirCombatFormationTraining = (kind, code, leadEntry, leadItem, matchingItems, priorityList) => {
+    const placeAirCombatFormationTraining = (kind, code, leadEntry, leadItem, matchingItems, priorityList, exactStartTime) => {
       const resourceNumber = getLmpResourceNumber(leadItem);
       const linkedCode = getAirCombatLinkedEventCode(leadItem);
       const linkedItemForWindow = findLinkedTrainingItem(leadItem, matchingItems);
@@ -72857,7 +72857,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const windowEnd = flyingEndTime;
       let candidateSlotsChecked = 0;
       let candidateSlotsRejected = 0;
-      for (let time = flyingStartTime; time + formationWindowDuration <= windowEnd + 1e-3; time += slotIncrement) {
+      const searchStart = exactStartTime ?? flyingStartTime;
+      const searchEnd = exactStartTime ?? windowEnd;
+      for (let time = searchStart; time + formationWindowDuration <= windowEnd + 1e-3 && time <= searchEnd + 1e-3; time += slotIncrement) {
         const startTime = Math.round(time * 12) / 12;
         candidateSlotsChecked++;
         const exclusion = getFlightWindowExclusionViolation(startTime, formationWindowDuration);
@@ -73224,11 +73226,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const emittedTrainingListDiagnostics = /* @__PURE__ */ new Set();
     const exhaustedTrainingCodes = /* @__PURE__ */ new Set();
-    const placeTrainingForKind = (kind) => {
+    const placeTrainingForKind = (kind, exactStartTime) => {
       const codes = kind === "training_package" ? packageCodes : courseCodes;
       if (codes.length === 0) {
         pushAirCombatDiag("trainingAttempts", {
           kind,
+          startTime: exactStartTime ?? null,
           placed: false,
           reason: "NO_ASSIGNMENT_CODES_FOR_KIND"
         }, 1200);
@@ -73315,7 +73318,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             continue;
           }
           if (type === "flight" && resourceNumber > 1) {
-            if (placeAirCombatFormationTraining(kind, code, entry, item, matchingItems, priorityList)) {
+            if (placeAirCombatFormationTraining(kind, code, entry, item, matchingItems, priorityList, exactStartTime)) {
               return true;
             }
             continue;
@@ -73323,7 +73326,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const windowEnd = type === "ftd" ? ftdEndTime : flyingEndTime;
           let candidateSlotsChecked = 0;
           let candidateSlotsRejected = 0;
-          for (let time = flyingStartTime; time + item.duration <= windowEnd + 1e-3; time += slotIncrement) {
+          const searchStart = exactStartTime ?? flyingStartTime;
+          const searchEnd = exactStartTime ?? windowEnd;
+          if (searchStart + item.duration > windowEnd + 1e-3) {
+            candidateSlotsRejected++;
+            pushAirCombatDiag("trainingAttempts", {
+              kind,
+              code,
+              staff: entry.staff.name,
+              event: item.code,
+              type,
+              startTime: searchStart,
+              placed: false,
+              reason: "OUTSIDE_TYPE_WINDOW",
+              windowEnd
+            }, 1200);
+            continue;
+          }
+          for (let time = searchStart; time + item.duration <= windowEnd + 1e-3 && time <= searchEnd + 1e-3; time += slotIncrement) {
             const startTime = Math.round(time * 12) / 12;
             candidateSlotsChecked++;
             if (type === "flight") {
@@ -73564,11 +73584,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       packageCodes,
       generatedEventsAtLoopStart: generatedEvents.length
     });
-    for (let attempt = 0; attempt < placementLimit; attempt++) {
+    let attempt = 0;
+    for (let tileTime = flyingStartTime; tileTime <= flyingEndTime + 1e-3 && attempt < placementLimit; tileTime += slotIncrement) {
+      const roundedTileTime = Math.round(tileTime * 12) / 12;
       const preferredKind = pickNextKind(coursePlaced, packagePlaced);
       const cycleTrace = {
         attempt: attempt + 1,
         placementLimit,
+        tileTime: roundedTileTime,
+        displayTime: _fmtT(roundedTileTime),
         preferredKind,
         coursePlacedBefore: coursePlaced,
         packagePlacedBefore: packagePlaced,
@@ -73584,7 +73608,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         break;
       }
       let placedKind = null;
-      if (placeTrainingForKind(preferredKind)) {
+      if (placeTrainingForKind(preferredKind, roundedTileTime)) {
         placedKind = preferredKind;
       } else {
         const fallbackKind = preferredKind === "course" ? "training_package" : "course";
@@ -73592,7 +73616,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const fallbackAllowed = fallbackPreservesTrainingMix(fallbackKind, coursePlaced, packagePlaced);
         cycleTrace.fallbackAllowed = fallbackAllowed;
         if (fallbackAllowed) {
-          if (placeTrainingForKind(fallbackKind)) placedKind = fallbackKind;
+          if (placeTrainingForKind(fallbackKind, roundedTileTime)) placedKind = fallbackKind;
         } else {
           cycleTrace.fallbackSkipReason = "FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX";
           pushAirCombatDiag("trainingAttempts", {
@@ -73610,15 +73634,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       cycleTrace.generatedEventsAfter = generatedEvents.length;
       cycleTrace.placementsAfter = neoBuildDiag.airCombatPriority.placements.length;
       if (!placedKind) {
-        cycleTrace.breakReason = "NO_PLACEMENT_FROM_PREFERRED_OR_FALLBACK";
+        cycleTrace.noPlacementReason = "NO_PLACEMENT_FROM_PREFERRED_OR_FALLBACK_AT_TILE";
         pushAirCombatDiag("placementCycles", cycleTrace, 300);
-        break;
+        continue;
       }
       if (placedKind === "course") coursePlaced++;
       else packagePlaced++;
       cycleTrace.coursePlacedAfter = coursePlaced;
       cycleTrace.packagePlacedAfter = packagePlaced;
       pushAirCombatDiag("placementCycles", cycleTrace, 300);
+      attempt++;
     }
     neoBuildDiag.airCombatPriority.schedulerSummary = {
       placementLimit,
@@ -74102,7 +74127,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const deferredCurrencyFlightPriorityEvents = currencyPriorityEvents.filter(
     (event) => event.type === "flight" && currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ""))
   );
-  if (earlyCurrencyPriorityEvents.length > 0) {
+  if (!isAirCombatBuild && earlyCurrencyPriorityEvents.length > 0) {
     recordProgress({ message: "Scheduling Currency FTD Priority Events...", percentage: 44 });
     scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
   }
@@ -74715,603 +74740,609 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       recordProgress({ message: "Scheduling Air Combat mandatory tasking...", percentage: 45 });
       scheduleTaskingPriorityEvents(activeTaskingPriorityEvents);
     }
+    if (currencyPriorityEvents.length > 0) {
+      recordProgress({ message: "Scheduling Air Combat currency events...", percentage: 50 });
+      scheduleCurrencyPriorityEvents(currencyPriorityEvents);
+    }
     recordProgress({ message: "Scheduling Air Combat priority lists...", percentage: 55 });
     scheduleAirCombatTrainingPriorityEvents();
   }
-  if (_mandatoryDayFlightList.length > 0) {
-    const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
-    if (flyingStartTime < REMEDIAL_EARLIEST_START) {
-      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
-        _allFlightList,
-        flyingStartTime,
-        flyingEndTime,
-        "FLIGHT Next Pre-1000 Normal Dual",
-        "FLIGHT Formation Groups Pre-1000",
-        REMEDIAL_EARLIEST_START
+  if (!isAirCombatBuild) {
+    if (_mandatoryDayFlightList.length > 0) {
+      const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
+      if (flyingStartTime < REMEDIAL_EARLIEST_START) {
+        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+          _allFlightList,
+          flyingStartTime,
+          flyingEndTime,
+          "FLIGHT Next Pre-1000 Normal Dual",
+          "FLIGHT Formation Groups Pre-1000",
+          REMEDIAL_EARLIEST_START
+        );
+      }
+      const leadAircraftReadyTime = generatedEvents.filter((event) => event.resourceId === "PC-21 1").reduce((latestReady, event) => {
+        const turnaround = event.type === "flight" ? flightTurnaround : 0;
+        return Math.max(latestReady, event.startTime + event.duration + turnaround);
+      }, firstRemedialFlightStart);
+      const alignedPostMandatoryStart = Math.max(
+        firstRemedialFlightStart,
+        roundUpToFlightSlot(leadAircraftReadyTime)
       );
-    }
-    const leadAircraftReadyTime = generatedEvents.filter((event) => event.resourceId === "PC-21 1").reduce((latestReady, event) => {
-      const turnaround = event.type === "flight" ? flightTurnaround : 0;
-      return Math.max(latestReady, event.startTime + event.duration + turnaround);
-    }, firstRemedialFlightStart);
-    const alignedPostMandatoryStart = Math.max(
-      firstRemedialFlightStart,
-      roundUpToFlightSlot(leadAircraftReadyTime)
-    );
-    buildDebugLog(`[FLIGHT-WAVE] Mandatory/post-1000 wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so remedials start the clean PC-21 wave.`);
-    scheduleList(
-      _mandatoryDayFlightList,
-      "flight",
-      false,
-      alignedPostMandatoryStart,
-      flyingEndTime,
-      null,
-      false,
-      "FLIGHT Mandatory Remedial",
-      mandatoryRemedialFlightItems
-    );
-    const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
-    if (currencyInsertionStart !== null && currencyInsertionStart > alignedPostMandatoryStart + 1e-3) {
-      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
-        _allFlightList,
+      buildDebugLog(`[FLIGHT-WAVE] Mandatory/post-1000 wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so remedials start the clean PC-21 wave.`);
+      scheduleList(
+        _mandatoryDayFlightList,
+        "flight",
+        false,
         alignedPostMandatoryStart,
         flyingEndTime,
-        "FLIGHT Next Pre-Currency Normal Dual",
-        "FLIGHT Formation Groups Pre-Currency",
-        currencyInsertionStart
+        null,
+        false,
+        "FLIGHT Mandatory Remedial",
+        mandatoryRemedialFlightItems
       );
-    }
-    scheduleDeferredCurrencyFlights();
-    schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
-      _allFlightList,
-      Math.max(alignedPostMandatoryStart, currencyInsertionStart ?? alignedPostMandatoryStart),
-      flyingEndTime,
-      "FLIGHT Next Post-1000 Normal Dual",
-      "FLIGHT Formation Groups Post-1000"
-    );
-  } else {
-    const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
-    if (currencyInsertionStart !== null && currencyInsertionStart > flyingStartTime + 1e-3) {
-      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
-        _allFlightList,
-        flyingStartTime,
-        flyingEndTime,
-        "FLIGHT Next Pre-Currency Normal Dual",
-        "FLIGHT Formation Groups Pre-Currency",
-        currencyInsertionStart
-      );
+      const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
+      if (currencyInsertionStart !== null && currencyInsertionStart > alignedPostMandatoryStart + 1e-3) {
+        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+          _allFlightList,
+          alignedPostMandatoryStart,
+          flyingEndTime,
+          "FLIGHT Next Pre-Currency Normal Dual",
+          "FLIGHT Formation Groups Pre-Currency",
+          currencyInsertionStart
+        );
+      }
       scheduleDeferredCurrencyFlights();
       schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
         _allFlightList,
-        currencyInsertionStart,
+        Math.max(alignedPostMandatoryStart, currencyInsertionStart ?? alignedPostMandatoryStart),
         flyingEndTime,
-        "FLIGHT Next Normal Dual",
-        "FLIGHT Formation Groups"
+        "FLIGHT Next Post-1000 Normal Dual",
+        "FLIGHT Formation Groups Post-1000"
       );
     } else {
-      scheduleDeferredCurrencyFlights();
-      schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
-        _allFlightList,
-        flyingStartTime,
-        flyingEndTime,
-        "FLIGHT Next Normal Dual",
-        "FLIGHT Formation Groups"
-      );
+      const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
+      if (currencyInsertionStart !== null && currencyInsertionStart > flyingStartTime + 1e-3) {
+        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+          _allFlightList,
+          flyingStartTime,
+          flyingEndTime,
+          "FLIGHT Next Pre-Currency Normal Dual",
+          "FLIGHT Formation Groups Pre-Currency",
+          currencyInsertionStart
+        );
+        scheduleDeferredCurrencyFlights();
+        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+          _allFlightList,
+          currencyInsertionStart,
+          flyingEndTime,
+          "FLIGHT Next Normal Dual",
+          "FLIGHT Formation Groups"
+        );
+      } else {
+        scheduleDeferredCurrencyFlights();
+        schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
+          _allFlightList,
+          flyingStartTime,
+          flyingEndTime,
+          "FLIGHT Next Normal Dual",
+          "FLIGHT Formation Groups"
+        );
+      }
     }
-  }
-  if (_soloFlightList.length > 0) {
-    const MAX_SOLO_GROUP_SIZE = 4;
-    const SOLO_WINDOW_START = 9;
-    const SOLO_WINDOW_END = 15;
-    const soloGroups = [];
-    for (let gi = 0; gi < _soloFlightList.length; gi += MAX_SOLO_GROUP_SIZE) {
-      soloGroups.push(_soloFlightList.slice(gi, gi + MAX_SOLO_GROUP_SIZE));
-    }
-    buildDebugLog(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} group(s) of up to ${MAX_SOLO_GROUP_SIZE}`);
-    let groupSearchStart = Math.max(flyingStartTime, SOLO_WINDOW_START);
-    for (let gi = 0; gi < soloGroups.length; gi++) {
-      const group = soloGroups[gi];
-      buildDebugLog(`[SOLO] Scheduling group ${gi + 1}/${soloGroups.length} (${group.length} trainees), searching from ${_fmtT(groupSearchStart)}`);
-      const TIME_INCREMENT = 5 / 60;
-      let lastPlacedTime = groupSearchStart;
-      for (const trainee of group) {
-        const { next } = traineeNextEventMap.get(trainee.fullName);
-        const syllabusItem = next;
-        if (!syllabusItem) continue;
-        let placed = false;
-        const soloSearchStart = isRemedialSyllabusItem(syllabusItem) ? Math.max(groupSearchStart, REMEDIAL_EARLIEST_START) : groupSearchStart;
-        const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) ? [true, false] : [false];
-        for (const primaryOnly of passModes) {
-          if (placed) break;
-          for (let time = soloSearchStart; time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - syllabusItem.duration + 1e-3; time += TIME_INCREMENT) {
-            const result = scheduleEvent(trainee, syllabusItem, time, "flight", false, false, primaryOnly);
-            if (result && typeof result === "object" && "id" in result) {
-              generatedEvents.push({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
-              const tCounts = eventCounts.get(trainee.fullName);
-              tCounts.flightFtd++;
-              lastPlacedTime = Math.max(lastPlacedTime, time);
-              placed = true;
-              buildDebugLog(`[SOLO]   ✅ Placed ${trainee.fullName} at ${_fmtT(time)} on ${result.resourceId}`);
-              break;
+    if (_soloFlightList.length > 0) {
+      const MAX_SOLO_GROUP_SIZE = 4;
+      const SOLO_WINDOW_START = 9;
+      const SOLO_WINDOW_END = 15;
+      const soloGroups = [];
+      for (let gi = 0; gi < _soloFlightList.length; gi += MAX_SOLO_GROUP_SIZE) {
+        soloGroups.push(_soloFlightList.slice(gi, gi + MAX_SOLO_GROUP_SIZE));
+      }
+      buildDebugLog(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} group(s) of up to ${MAX_SOLO_GROUP_SIZE}`);
+      let groupSearchStart = Math.max(flyingStartTime, SOLO_WINDOW_START);
+      for (let gi = 0; gi < soloGroups.length; gi++) {
+        const group = soloGroups[gi];
+        buildDebugLog(`[SOLO] Scheduling group ${gi + 1}/${soloGroups.length} (${group.length} trainees), searching from ${_fmtT(groupSearchStart)}`);
+        const TIME_INCREMENT = 5 / 60;
+        let lastPlacedTime = groupSearchStart;
+        for (const trainee of group) {
+          const { next } = traineeNextEventMap.get(trainee.fullName);
+          const syllabusItem = next;
+          if (!syllabusItem) continue;
+          let placed = false;
+          const soloSearchStart = isRemedialSyllabusItem(syllabusItem) ? Math.max(groupSearchStart, REMEDIAL_EARLIEST_START) : groupSearchStart;
+          const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) ? [true, false] : [false];
+          for (const primaryOnly of passModes) {
+            if (placed) break;
+            for (let time = soloSearchStart; time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - syllabusItem.duration + 1e-3; time += TIME_INCREMENT) {
+              const result = scheduleEvent(trainee, syllabusItem, time, "flight", false, false, primaryOnly);
+              if (result && typeof result === "object" && "id" in result) {
+                generatedEvents.push({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
+                const tCounts = eventCounts.get(trainee.fullName);
+                tCounts.flightFtd++;
+                lastPlacedTime = Math.max(lastPlacedTime, time);
+                placed = true;
+                buildDebugLog(`[SOLO]   ✅ Placed ${trainee.fullName} at ${_fmtT(time)} on ${result.resourceId}`);
+                break;
+              }
             }
           }
+          if (!placed) {
+            buildDebugLog(`[SOLO]   ⚠️  ${trainee.fullName} unplaced → STBY`);
+          }
         }
-        if (!placed) {
-          buildDebugLog(`[SOLO]   ⚠️  ${trainee.fullName} unplaced → STBY`);
-        }
+        groupSearchStart = lastPlacedTime + TIME_INCREMENT;
       }
-      groupSearchStart = lastPlacedTime + TIME_INCREMENT;
+      scheduleList(
+        _soloFlightList.filter((t) => !generatedEvents.some((e) => {
+          const personnel = getPersonnel(e);
+          return personnel.includes(t.fullName) && e.type === "flight" && !e.resourceId.startsWith("STBY");
+        })),
+        "flight",
+        false,
+        flyingStartTime,
+        flyingEndTime,
+        "STBY",
+        false
+      );
     }
+    _fbPrintSummary();
+    recordProgress({ message: "Scheduling Night Flying...", percentage: 55 });
+    if (nextEventLists.bnf.length >= 2) {
+      const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf.filter((t) => !_isMandatoryRemedialFlightTrainee(t)));
+      scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
+    }
+    if (_mandatoryNightFlightList.length > 0) {
+      scheduleList(
+        _mandatoryNightFlightList,
+        "flight",
+        false,
+        commenceNightFlying,
+        ceaseNightFlying,
+        null,
+        true,
+        "FLIGHT Mandatory Night Remedial",
+        mandatoryRemedialFlightItems
+      );
+    }
+    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
+    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
     scheduleList(
-      _soloFlightList.filter((t) => !generatedEvents.some((e) => {
-        const personnel = getPersonnel(e);
-        return personnel.includes(t.fullName) && e.type === "flight" && !e.resourceId.startsWith("STBY");
-      })),
-      "flight",
+      applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
+      "ftd",
       false,
+      ftdStartTime,
+      ftdEndTime,
+      null,
+      false
+    );
+    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
+    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
+    scheduleList(
+      applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
+      "cpt",
+      false,
+      flyingStartTime,
+      flyingEndTime,
+      null,
+      false
+    );
+    recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
+    recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
+    scheduleList(
+      applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground)),
+      "ground",
+      false,
+      flyingStartTime,
+      flyingEndTime,
+      null,
+      false
+    );
+    recordProgress({ message: "Scheduling Day Flight Events (Plus-One)...", percentage: 78 });
+    scheduleList(
+      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight)),
+      "flight",
+      true,
       flyingStartTime,
       flyingEndTime,
       "STBY",
       false
     );
-  }
-  _fbPrintSummary();
-  recordProgress({ message: "Scheduling Night Flying...", percentage: 55 });
-  if (nextEventLists.bnf.length >= 2) {
-    const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf.filter((t) => !_isMandatoryRemedialFlightTrainee(t)));
-    scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
-  }
-  if (_mandatoryNightFlightList.length > 0) {
+    if (nextEventLists.bnf.length >= 2) {
+      recordProgress({ message: "Scheduling Night Flight Events (Plus-One)...", percentage: 80 });
+      const bnfWaveTwoList = nextEventLists.bnf.filter((trainee) => {
+        const { plusOne } = traineeNextEventMap.get(trainee.fullName) || { plusOne: null };
+        return plusOne && plusOne.code.startsWith("BNF") && plusOne.type === "Flight";
+      });
+      scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
+    }
+    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
     scheduleList(
-      _mandatoryNightFlightList,
-      "flight",
-      false,
-      commenceNightFlying,
-      ceaseNightFlying,
-      null,
+      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
+      "ftd",
       true,
-      "FLIGHT Mandatory Night Remedial",
-      mandatoryRemedialFlightItems
+      ftdStartTime,
+      ftdEndTime,
+      "STBY",
+      false
     );
-  }
-  recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
-  recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
-  scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
-    "ftd",
-    false,
-    ftdStartTime,
-    ftdEndTime,
-    null,
-    false
-  );
-  recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
-  recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
-  scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
-    "cpt",
-    false,
-    flyingStartTime,
-    flyingEndTime,
-    null,
-    false
-  );
-  recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
-  recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
-  scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground)),
-    "ground",
-    false,
-    flyingStartTime,
-    flyingEndTime,
-    null,
-    false
-  );
-  recordProgress({ message: "Scheduling Day Flight Events (Plus-One)...", percentage: 78 });
-  scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight)),
-    "flight",
-    true,
-    flyingStartTime,
-    flyingEndTime,
-    "STBY",
-    false
-  );
-  if (nextEventLists.bnf.length >= 2) {
-    recordProgress({ message: "Scheduling Night Flight Events (Plus-One)...", percentage: 80 });
-    const bnfWaveTwoList = nextEventLists.bnf.filter((trainee) => {
-      const { plusOne } = traineeNextEventMap.get(trainee.fullName) || { plusOne: null };
-      return plusOne && plusOne.code.startsWith("BNF") && plusOne.type === "Flight";
-    });
-    scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
-  }
-  recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
-  scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
-    "ftd",
-    true,
-    ftdStartTime,
-    ftdEndTime,
-    "STBY",
-    false
-  );
-  recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
-  scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
-    "cpt",
-    true,
-    flyingStartTime,
-    flyingEndTime,
-    null,
-    false
-  );
-  recordProgress({ message: "Scheduling Ground Events (Plus-One)...", percentage: 86 });
-  scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground)),
-    "ground",
-    true,
-    flyingStartTime,
-    flyingEndTime,
-    null,
-    false
-  );
-  recordProgress({ message: "Scheduling STBY flights...", percentage: 88 });
-  const hasFlightStartTime = (time, events) => {
-    return events.some(
-      (e) => e.type === "flight" && Math.abs(e.startTime - time) < 0.01
-      // Within 0.6 minutes
+    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
+    scheduleList(
+      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
+      "cpt",
+      true,
+      flyingStartTime,
+      flyingEndTime,
+      null,
+      false
     );
-  };
-  const countFlightStartsInWindow = (windowStart, windowEnd, events) => {
-    return events.filter(
-      (e) => e.type === "flight" && e.startTime > windowStart && e.startTime <= windowEnd
-    ).length;
-  };
-  const wouldViolateHourlyDispatchRule = (time, events) => {
-    const oneHourBefore = time - 1;
-    const flightsInPreviousHour = countFlightStartsInWindow(oneHourBefore, time, events);
-    if (flightsInPreviousHour >= hourlyDispatchLimit) return true;
-    const oneHourAfter = time + 1;
-    const futureDfpFlights = events.filter(
-      (e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && e.startTime > time && e.startTime <= oneHourAfter
+    recordProgress({ message: "Scheduling Ground Events (Plus-One)...", percentage: 86 });
+    scheduleList(
+      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground)),
+      "ground",
+      true,
+      flyingStartTime,
+      flyingEndTime,
+      null,
+      false
     );
-    for (const dfpFlight of futureDfpFlights) {
-      const windowStart = dfpFlight.startTime - 1;
-      const windowEnd = dfpFlight.startTime;
-      const flightsInWindow = countFlightStartsInWindow(windowStart, windowEnd, events);
-      if (time > windowStart && time <= windowEnd) {
-        if (flightsInWindow >= hourlyDispatchLimit) return true;
-      }
-    }
-    return false;
-  };
-  const isInstructorAvailableForStby = (instructorName, startTime, duration, syllabusItem, events) => {
-    const preTime = syllabusItem.preFlightTime || 0;
-    const postTime = syllabusItem.postFlightTime || 0;
-    const stbyStart = startTime - preTime;
-    const stbyEnd = startTime + duration + postTime;
-    return !events.some((e) => {
-      if (!getPersonnel(e).includes(instructorName)) return false;
-      const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-      return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
-    });
-  };
-  const findBestInstructorForStby = (trainee, syllabusItem, startTime, duration, type, events) => {
-    let candidates = [];
-    const locationFullName = config.school === "ESL" ? "East Sale" : "Pearce";
-    const locationShortCode1 = config.school === "ESL" ? "ESL" : "PEA";
-    const locationFilteredInstructors = instructors.filter((i) => {
-      if (i.location) return i.location === locationFullName || i.location === locationShortCode1 || i.location === config.school;
-      if (i.unit) {
-        if (i.unit.startsWith("2FTS")) return locationFullName === "Pearce";
-        if (i.unit.startsWith("1FTS") || i.unit.startsWith("CFS")) return locationFullName === "East Sale";
-      }
-      return true;
-    });
-    if (type === "ftd") {
-      const simIps = locationFilteredInstructors.filter((i) => i.role === "SIM IP");
-      const qfis = locationFilteredInstructors.filter((i) => i.role === "QFI" || i.isQFI === true);
-      candidates = [...simIps, ...qfis];
-    } else {
-      candidates = locationFilteredInstructors.filter((i) => i.role === "QFI" || i.isQFI === true);
-    }
-    const afterUnitFilter = candidates.filter((ip) => isInstructorEligibleByUnit(ip, trainee));
-    candidates = afterUnitFilter;
-    const available = candidates.filter(
-      (ip) => canAssignPersonForScheduledWindow(ip.name, startTime) && isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events)
-    );
-    if (available.length === 0) return null;
-    const instructorEventCounts = available.map((ip) => ({
-      instructor: ip,
-      count: events.filter((e) => e.instructor === ip.name).length
-    }));
-    const minCount = Math.min(...instructorEventCounts.map((ic) => ic.count));
-    const withMinCount = instructorEventCounts.filter((ic) => ic.count === minCount);
-    const selected = withMinCount[Math.floor(Math.random() * withMinCount.length)];
-    return selected.instructor.name;
-  };
-  const findAvailableStbyLine = (startTime, duration, stbyEvents, prefix) => {
-    const eventEnd = startTime + duration;
-    const lineEvents = /* @__PURE__ */ new Map();
-    stbyEvents.forEach((e) => {
-      if (!e.resourceId.startsWith(prefix)) return;
-      const match = e.resourceId.match(/(\d+)$/);
-      if (!match) return;
-      const lineNum = parseInt(match[1]);
-      if (!lineEvents.has(lineNum)) {
-        lineEvents.set(lineNum, []);
-      }
-      lineEvents.get(lineNum).push({
-        start: e.startTime,
-        end: e.startTime + e.duration
-      });
-    });
-    for (let lineNum = 1; lineNum <= Math.max(4, lineEvents.size); lineNum++) {
-      const events = lineEvents.get(lineNum) || [];
-      const hasConflict = events.some(
-        (e) => startTime < e.end && eventEnd > e.start
+    recordProgress({ message: "Scheduling STBY flights...", percentage: 88 });
+    const hasFlightStartTime = (time, events) => {
+      return events.some(
+        (e) => e.type === "flight" && Math.abs(e.startTime - time) < 0.01
+        // Within 0.6 minutes
       );
-      if (!hasConflict) return lineNum;
-    }
-    return Math.max(4, lineEvents.size) + 1;
-  };
-  const unassignedStbyFlights = generatedEvents.filter(
-    (e) => e.type === "flight" && e.resourceId.startsWith("STBY") && (!e.instructor || e.instructor === "" || e.instructor === "TBA")
-  );
-  for (const stbyEvent of unassignedStbyFlights) {
-    const trainee = config.trainees.find((t) => t.fullName === stbyEvent.student);
-    if (!trainee) {
-      stbyEvent.instructor = "TBA";
-      continue;
-    }
-    const syllabusItem = syllabusDetails.find((s) => s.id === stbyEvent.flightNumber);
-    if (!syllabusItem) {
-      stbyEvent.instructor = "TBA";
-      continue;
-    }
-    const eventIdx = generatedEvents.indexOf(stbyEvent);
-    if (eventIdx !== -1) generatedEvents.splice(eventIdx, 1);
-    const instructor = findBestInstructorForStby(
-      trainee,
-      syllabusItem,
-      stbyEvent.startTime,
-      stbyEvent.duration,
-      "flight",
-      generatedEvents
-    );
-    const reinsertIdx = eventIdx !== -1 ? eventIdx : generatedEvents.length;
-    generatedEvents.splice(reinsertIdx, 0, stbyEvent);
-    if (instructor) {
-      stbyEvent.instructor = instructor;
-    } else {
-      stbyEvent.instructor = "TBA";
-    }
-  }
-  const hasTraineeFlightOrFtdCommitment = (traineeName) => generatedEvents.some(
-    (e) => (e.type === "flight" || e.type === "ftd") && (e.student === traineeName || e.pilot === traineeName)
-  );
-  const traineesNeedingStby = nextEventLists.flight.filter((trainee) => {
-    const { next } = traineeNextEventMap.get(trainee.fullName);
-    if (!next) return false;
-    if (isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
-      traceFormation("standbyExclusions", {
-        trainee: trainee.fullName,
-        event: next.code || next.id || null,
-        eventKey: getFormationEventKey(next),
-        resourceNumber: getLmpResourceNumber(next),
-        reason: "Multi-resource formation event excluded from ordinary single-aircraft STBY fallback."
-      });
+    };
+    const countFlightStartsInWindow = (windowStart, windowEnd, events) => {
+      return events.filter(
+        (e) => e.type === "flight" && e.startTime > windowStart && e.startTime <= windowEnd
+      ).length;
+    };
+    const wouldViolateHourlyDispatchRule = (time, events) => {
+      const oneHourBefore = time - 1;
+      const flightsInPreviousHour = countFlightStartsInWindow(oneHourBefore, time, events);
+      if (flightsInPreviousHour >= hourlyDispatchLimit) return true;
+      const oneHourAfter = time + 1;
+      const futureDfpFlights = events.filter(
+        (e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && e.startTime > time && e.startTime <= oneHourAfter
+      );
+      for (const dfpFlight of futureDfpFlights) {
+        const windowStart = dfpFlight.startTime - 1;
+        const windowEnd = dfpFlight.startTime;
+        const flightsInWindow = countFlightStartsInWindow(windowStart, windowEnd, events);
+        if (time > windowStart && time <= windowEnd) {
+          if (flightsInWindow >= hourlyDispatchLimit) return true;
+        }
+      }
       return false;
+    };
+    const isInstructorAvailableForStby = (instructorName, startTime, duration, syllabusItem, events) => {
+      const preTime = syllabusItem.preFlightTime || 0;
+      const postTime = syllabusItem.postFlightTime || 0;
+      const stbyStart = startTime - preTime;
+      const stbyEnd = startTime + duration + postTime;
+      return !events.some((e) => {
+        if (!getPersonnel(e).includes(instructorName)) return false;
+        const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+        return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
+      });
+    };
+    const findBestInstructorForStby = (trainee, syllabusItem, startTime, duration, type, events) => {
+      let candidates = [];
+      const locationFullName = config.school === "ESL" ? "East Sale" : "Pearce";
+      const locationShortCode1 = config.school === "ESL" ? "ESL" : "PEA";
+      const locationFilteredInstructors = instructors.filter((i) => {
+        if (i.location) return i.location === locationFullName || i.location === locationShortCode1 || i.location === config.school;
+        if (i.unit) {
+          if (i.unit.startsWith("2FTS")) return locationFullName === "Pearce";
+          if (i.unit.startsWith("1FTS") || i.unit.startsWith("CFS")) return locationFullName === "East Sale";
+        }
+        return true;
+      });
+      if (type === "ftd") {
+        const simIps = locationFilteredInstructors.filter((i) => i.role === "SIM IP");
+        const qfis = locationFilteredInstructors.filter((i) => i.role === "QFI" || i.isQFI === true);
+        candidates = [...simIps, ...qfis];
+      } else {
+        candidates = locationFilteredInstructors.filter((i) => i.role === "QFI" || i.isQFI === true);
+      }
+      const afterUnitFilter = candidates.filter((ip) => isInstructorEligibleByUnit(ip, trainee));
+      candidates = afterUnitFilter;
+      const available = candidates.filter(
+        (ip) => canAssignPersonForScheduledWindow(ip.name, startTime) && isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events)
+      );
+      if (available.length === 0) return null;
+      const instructorEventCounts = available.map((ip) => ({
+        instructor: ip,
+        count: events.filter((e) => e.instructor === ip.name).length
+      }));
+      const minCount = Math.min(...instructorEventCounts.map((ic) => ic.count));
+      const withMinCount = instructorEventCounts.filter((ic) => ic.count === minCount);
+      const selected = withMinCount[Math.floor(Math.random() * withMinCount.length)];
+      return selected.instructor.name;
+    };
+    const findAvailableStbyLine = (startTime, duration, stbyEvents, prefix) => {
+      const eventEnd = startTime + duration;
+      const lineEvents = /* @__PURE__ */ new Map();
+      stbyEvents.forEach((e) => {
+        if (!e.resourceId.startsWith(prefix)) return;
+        const match = e.resourceId.match(/(\d+)$/);
+        if (!match) return;
+        const lineNum = parseInt(match[1]);
+        if (!lineEvents.has(lineNum)) {
+          lineEvents.set(lineNum, []);
+        }
+        lineEvents.get(lineNum).push({
+          start: e.startTime,
+          end: e.startTime + e.duration
+        });
+      });
+      for (let lineNum = 1; lineNum <= Math.max(4, lineEvents.size); lineNum++) {
+        const events = lineEvents.get(lineNum) || [];
+        const hasConflict = events.some(
+          (e) => startTime < e.end && eventEnd > e.start
+        );
+        if (!hasConflict) return lineNum;
+      }
+      return Math.max(4, lineEvents.size) + 1;
+    };
+    const unassignedStbyFlights = generatedEvents.filter(
+      (e) => e.type === "flight" && e.resourceId.startsWith("STBY") && (!e.instructor || e.instructor === "" || e.instructor === "TBA")
+    );
+    for (const stbyEvent of unassignedStbyFlights) {
+      const trainee = config.trainees.find((t) => t.fullName === stbyEvent.student);
+      if (!trainee) {
+        stbyEvent.instructor = "TBA";
+        continue;
+      }
+      const syllabusItem = syllabusDetails.find((s) => s.id === stbyEvent.flightNumber);
+      if (!syllabusItem) {
+        stbyEvent.instructor = "TBA";
+        continue;
+      }
+      const eventIdx = generatedEvents.indexOf(stbyEvent);
+      if (eventIdx !== -1) generatedEvents.splice(eventIdx, 1);
+      const instructor = findBestInstructorForStby(
+        trainee,
+        syllabusItem,
+        stbyEvent.startTime,
+        stbyEvent.duration,
+        "flight",
+        generatedEvents
+      );
+      const reinsertIdx = eventIdx !== -1 ? eventIdx : generatedEvents.length;
+      generatedEvents.splice(reinsertIdx, 0, stbyEvent);
+      if (instructor) {
+        stbyEvent.instructor = instructor;
+      } else {
+        stbyEvent.instructor = "TBA";
+      }
     }
-    return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
-  });
-  if (traineesNeedingStby.length > 0) {
-    const timeIncrement = 5 / 60;
-    for (const trainee of traineesNeedingStby) {
+    const hasTraineeFlightOrFtdCommitment = (traineeName) => generatedEvents.some(
+      (e) => (e.type === "flight" || e.type === "ftd") && (e.student === traineeName || e.pilot === traineeName)
+    );
+    const traineesNeedingStby = nextEventLists.flight.filter((trainee) => {
+      const { next } = traineeNextEventMap.get(trainee.fullName);
+      if (!next) return false;
+      if (isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
+        traceFormation("standbyExclusions", {
+          trainee: trainee.fullName,
+          event: next.code || next.id || null,
+          eventKey: getFormationEventKey(next),
+          resourceNumber: getLmpResourceNumber(next),
+          reason: "Multi-resource formation event excluded from ordinary single-aircraft STBY fallback."
+        });
+        return false;
+      }
+      return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+    });
+    if (traineesNeedingStby.length > 0) {
+      const timeIncrement = 5 / 60;
+      for (const trainee of traineesNeedingStby) {
+        const { next } = traineeNextEventMap.get(trainee.fullName);
+        if (!next) continue;
+        const stbySearchStart = isRemedialSyllabusItem(next) ? Math.max(flyingStartTime, REMEDIAL_EARLIEST_START) : flyingStartTime;
+        for (let time = stbySearchStart; time < flyingEndTime; time += timeIncrement) {
+          if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
+          if (hasFlightStartTime(time, generatedEvents)) continue;
+          const flightEndTime = time + next.duration;
+          if (flightEndTime > flyingEndTime) continue;
+          if (wouldViolateHourlyDispatchRule(time, generatedEvents)) continue;
+          const isSoloStby = next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id);
+          const stbyInstructor = isSoloStby ? "" : findBestInstructorForStby(trainee, next, time, next.duration, "flight", generatedEvents) || "TBA";
+          const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, "STBY");
+          generatedEvents.push({
+            id: v4(),
+            type: "flight",
+            instructor: stbyInstructor,
+            student: trainee.fullName,
+            pilot: isSoloStby ? trainee.fullName : stbyInstructor || "TBA",
+            flightNumber: next.code,
+            duration: next.duration,
+            startTime: time,
+            resourceId: `STBY ${stbyLine}`,
+            color: courseColors[trainee.course] || "bg-gray-500",
+            flightType: isSoloStby ? "Solo" : "Dual",
+            locationType: "Local",
+            origin: school,
+            destination: school,
+            preStart: next.preFlightTime,
+            postEnd: next.postFlightTime
+          });
+          break;
+        }
+      }
+    }
+    recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
+    const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
+      const { next } = traineeNextEventMap.get(trainee.fullName);
+      if (!next || next.type !== "FTD") return false;
+      return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+    });
+    buildDebugLog("Trainees needing FTD recovery pass:", traineesNeedingStbyFtd.length);
+    if (traineesNeedingStbyFtd.length > 0) {
+      const ftdRecoveryIncrement = 15 / 60;
+      let recoveredToFtd = 0;
+      for (const trainee of traineesNeedingStbyFtd) {
+        const { next } = traineeNextEventMap.get(trainee.fullName);
+        if (!next) continue;
+        let placedOnFtd = false;
+        const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) ? [true, false] : [false];
+        for (const primaryOnly of passModes) {
+          if (placedOnFtd) break;
+          const recoveryStart = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
+          for (let time = recoveryStart; time <= ftdEndTime - next.duration + 1e-3; time += ftdRecoveryIncrement) {
+            if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
+            const result = scheduleEvent(trainee, next, time, "ftd", false, false, primaryOnly);
+            if (result && result.resourceId?.startsWith("FTD ")) {
+              generatedEvents.push({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
+              const tCounts = eventCounts.get(trainee.fullName);
+              const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
+              if (tCounts) tCounts.flightFtd++;
+              if (ipCounts) ipCounts.flightFtd++;
+              recoveredToFtd++;
+              placedOnFtd = true;
+              buildDebugLog(`FTD recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${result.resourceId}`);
+              break;
+            }
+          }
+        }
+      }
+      buildDebugLog(`FTD recovery complete: ${recoveredToFtd} events recovered onto real FTD resources`);
+    }
+    const findAvailableFtdResourceForStbyCandidate = (startTime, duration) => {
+      for (let i = 1; i <= ftdCount; i++) {
+        const resourceId = `FTD ${i}`;
+        const occupied = generatedEvents.some((e) => {
+          if (e.resourceId !== resourceId) return false;
+          const existingEnd = e.startTime + e.duration + ftdTurnaround;
+          return startTime < existingEnd && startTime + duration > e.startTime;
+        });
+        if (!occupied) return resourceId;
+      }
+      return null;
+    };
+    let recoveredToRealFtdBeforeStby = 0;
+    const traineesNeedingFinalFtdRecovery = traineesNeedingStbyFtd.filter((trainee) => {
+      const { next } = traineeNextEventMap.get(trainee.fullName);
+      if (!next || next.type !== "FTD") return false;
+      return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+    });
+    for (const trainee of traineesNeedingFinalFtdRecovery) {
       const { next } = traineeNextEventMap.get(trainee.fullName);
       if (!next) continue;
-      const stbySearchStart = isRemedialSyllabusItem(next) ? Math.max(flyingStartTime, REMEDIAL_EARLIEST_START) : flyingStartTime;
-      for (let time = stbySearchStart; time < flyingEndTime; time += timeIncrement) {
+      const recoveryIncrement = 15 / 60;
+      let placedOnRealFtd = false;
+      const recoveryStart = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
+      for (let time = recoveryStart; time <= ftdEndTime - next.duration + 1e-3; time += recoveryIncrement) {
         if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
-        if (hasFlightStartTime(time, generatedEvents)) continue;
-        const flightEndTime = time + next.duration;
-        if (flightEndTime > flyingEndTime) continue;
-        if (wouldViolateHourlyDispatchRule(time, generatedEvents)) continue;
-        const isSoloStby = next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id);
-        const stbyInstructor = isSoloStby ? "" : findBestInstructorForStby(trainee, next, time, next.duration, "flight", generatedEvents) || "TBA";
-        const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, "STBY");
+        const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails);
+        if (isPersonStaticallyUnavailable(trainee, bookingWindow.start, bookingWindow.end, buildDate, "ftd")) continue;
+        const resourceId = findAvailableFtdResourceForStbyCandidate(time, next.duration);
+        if (!resourceId) continue;
+        const instructor = findBestInstructorForStby(trainee, next, time, next.duration, "ftd", generatedEvents);
+        if (!instructor) continue;
         generatedEvents.push({
           id: v4(),
-          type: "flight",
-          instructor: stbyInstructor,
+          type: "ftd",
+          instructor,
           student: trainee.fullName,
-          pilot: isSoloStby ? trainee.fullName : stbyInstructor || "TBA",
+          pilot: instructor,
           flightNumber: next.code,
           duration: next.duration,
           startTime: time,
-          resourceId: `STBY ${stbyLine}`,
+          resourceId,
           color: courseColors[trainee.course] || "bg-gray-500",
-          flightType: isSoloStby ? "Solo" : "Dual",
+          flightType: "Dual",
           locationType: "Local",
           origin: school,
           destination: school,
           preStart: next.preFlightTime,
           postEnd: next.postFlightTime
         });
+        const tCounts = eventCounts.get(trainee.fullName);
+        const ipCounts = eventCounts.get(instructor);
+        if (tCounts) tCounts.flightFtd++;
+        if (ipCounts) ipCounts.flightFtd++;
+        recoveredToRealFtdBeforeStby++;
+        placedOnRealFtd = true;
+        buildDebugLog(`FTD final recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${resourceId} before STBY fallback`);
         break;
       }
+      if (!placedOnRealFtd) {
+        buildDebugLog(`FTD final recovery: ${trainee.fullName} still requires STBY consideration`);
+      }
     }
-  }
-  recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
-  const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
-    const { next } = traineeNextEventMap.get(trainee.fullName);
-    if (!next || next.type !== "FTD") return false;
-    return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
-  });
-  buildDebugLog("Trainees needing FTD recovery pass:", traineesNeedingStbyFtd.length);
-  if (traineesNeedingStbyFtd.length > 0) {
-    const ftdRecoveryIncrement = 15 / 60;
-    let recoveredToFtd = 0;
-    for (const trainee of traineesNeedingStbyFtd) {
+    if (recoveredToRealFtdBeforeStby > 0) {
+      buildDebugLog(`FTD final recovery complete: ${recoveredToRealFtdBeforeStby} additional events recovered onto real FTD resources`);
+    }
+    const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter((trainee) => {
       const { next } = traineeNextEventMap.get(trainee.fullName);
-      if (!next) continue;
-      let placedOnFtd = false;
-      const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) ? [true, false] : [false];
-      for (const primaryOnly of passModes) {
-        if (placedOnFtd) break;
-        const recoveryStart = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
-        for (let time = recoveryStart; time <= ftdEndTime - next.duration + 1e-3; time += ftdRecoveryIncrement) {
-          if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
-          const result = scheduleEvent(trainee, next, time, "ftd", false, false, primaryOnly);
-          if (result && result.resourceId?.startsWith("FTD ")) {
-            generatedEvents.push({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
-            const tCounts = eventCounts.get(trainee.fullName);
-            const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
-            if (tCounts) tCounts.flightFtd++;
-            if (ipCounts) ipCounts.flightFtd++;
-            recoveredToFtd++;
-            placedOnFtd = true;
-            buildDebugLog(`FTD recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${result.resourceId}`);
-            break;
-          }
+      if (!next || next.type !== "FTD") return false;
+      return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+    });
+    buildDebugLog("Trainees still needing STBY FTD events:", traineesStillNeedingStbyFtd.length);
+    if (traineesStillNeedingStbyFtd.length > 0) {
+      let currentStbyLine = 1;
+      let currentTime = ftdStartTime;
+      const minSpacing = ftdTurnaround;
+      buildDebugLog(`FTD STBY: Scheduling ${traineesStillNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
+      for (const trainee of traineesStillNeedingStbyFtd) {
+        const { next } = traineeNextEventMap.get(trainee.fullName);
+        if (!next) continue;
+        if (isRemedialSyllabusItem(next) && currentTime < REMEDIAL_EARLIEST_START) {
+          currentTime = REMEDIAL_EARLIEST_START;
         }
-      }
-    }
-    buildDebugLog(`FTD recovery complete: ${recoveredToFtd} events recovered onto real FTD resources`);
-  }
-  const findAvailableFtdResourceForStbyCandidate = (startTime, duration) => {
-    for (let i = 1; i <= ftdCount; i++) {
-      const resourceId = `FTD ${i}`;
-      const occupied = generatedEvents.some((e) => {
-        if (e.resourceId !== resourceId) return false;
-        const existingEnd = e.startTime + e.duration + ftdTurnaround;
-        return startTime < existingEnd && startTime + duration > e.startTime;
-      });
-      if (!occupied) return resourceId;
-    }
-    return null;
-  };
-  let recoveredToRealFtdBeforeStby = 0;
-  const traineesNeedingFinalFtdRecovery = traineesNeedingStbyFtd.filter((trainee) => {
-    const { next } = traineeNextEventMap.get(trainee.fullName);
-    if (!next || next.type !== "FTD") return false;
-    return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
-  });
-  for (const trainee of traineesNeedingFinalFtdRecovery) {
-    const { next } = traineeNextEventMap.get(trainee.fullName);
-    if (!next) continue;
-    const recoveryIncrement = 15 / 60;
-    let placedOnRealFtd = false;
-    const recoveryStart = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
-    for (let time = recoveryStart; time <= ftdEndTime - next.duration + 1e-3; time += recoveryIncrement) {
-      if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
-      const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails);
-      if (isPersonStaticallyUnavailable(trainee, bookingWindow.start, bookingWindow.end, buildDate, "ftd")) continue;
-      const resourceId = findAvailableFtdResourceForStbyCandidate(time, next.duration);
-      if (!resourceId) continue;
-      const instructor = findBestInstructorForStby(trainee, next, time, next.duration, "ftd", generatedEvents);
-      if (!instructor) continue;
-      generatedEvents.push({
-        id: v4(),
-        type: "ftd",
-        instructor,
-        student: trainee.fullName,
-        pilot: instructor,
-        flightNumber: next.code,
-        duration: next.duration,
-        startTime: time,
-        resourceId,
-        color: courseColors[trainee.course] || "bg-gray-500",
-        flightType: "Dual",
-        locationType: "Local",
-        origin: school,
-        destination: school,
-        preStart: next.preFlightTime,
-        postEnd: next.postFlightTime
-      });
-      const tCounts = eventCounts.get(trainee.fullName);
-      const ipCounts = eventCounts.get(instructor);
-      if (tCounts) tCounts.flightFtd++;
-      if (ipCounts) ipCounts.flightFtd++;
-      recoveredToRealFtdBeforeStby++;
-      placedOnRealFtd = true;
-      buildDebugLog(`FTD final recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${resourceId} before STBY fallback`);
-      break;
-    }
-    if (!placedOnRealFtd) {
-      buildDebugLog(`FTD final recovery: ${trainee.fullName} still requires STBY consideration`);
-    }
-  }
-  if (recoveredToRealFtdBeforeStby > 0) {
-    buildDebugLog(`FTD final recovery complete: ${recoveredToRealFtdBeforeStby} additional events recovered onto real FTD resources`);
-  }
-  const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter((trainee) => {
-    const { next } = traineeNextEventMap.get(trainee.fullName);
-    if (!next || next.type !== "FTD") return false;
-    return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
-  });
-  buildDebugLog("Trainees still needing STBY FTD events:", traineesStillNeedingStbyFtd.length);
-  if (traineesStillNeedingStbyFtd.length > 0) {
-    let currentStbyLine = 1;
-    let currentTime = ftdStartTime;
-    const minSpacing = ftdTurnaround;
-    buildDebugLog(`FTD STBY: Scheduling ${traineesStillNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
-    for (const trainee of traineesStillNeedingStbyFtd) {
-      const { next } = traineeNextEventMap.get(trainee.fullName);
-      if (!next) continue;
-      if (isRemedialSyllabusItem(next) && currentTime < REMEDIAL_EARLIEST_START) {
-        currentTime = REMEDIAL_EARLIEST_START;
-      }
-      let placed = false;
-      while (!placed && currentStbyLine <= 20) {
-        if (currentTime + next.duration <= ftdEndTime) {
-          if (!canAssignPersonForScheduledWindow(trainee.fullName, currentTime)) {
-            currentTime += minSpacing;
-            continue;
-          }
-          const hasConflict = generatedEvents.some((e) => {
-            if (e.resourceId !== `STBY ${currentStbyLine}`) return false;
-            const eventEnd = e.startTime + e.duration + minSpacing;
-            return currentTime < eventEnd;
-          });
-          if (!hasConflict) {
-            const instructor = findBestInstructorForStby(trainee, next, currentTime, next.duration, "ftd", generatedEvents);
-            generatedEvents.push({
-              id: v4(),
-              type: "ftd",
-              instructor: instructor || "TBA",
-              student: trainee.fullName,
-              pilot: instructor || "TBA",
-              flightNumber: next.code,
-              duration: next.duration,
-              startTime: currentTime,
-              resourceId: `STBY ${currentStbyLine}`,
-              color: courseColors[trainee.course] || "bg-gray-500",
-              flightType: "Dual",
-              locationType: "Local",
-              origin: school,
-              destination: school,
-              preStart: next.preFlightTime,
-              postEnd: next.postFlightTime
+        let placed = false;
+        while (!placed && currentStbyLine <= 20) {
+          if (currentTime + next.duration <= ftdEndTime) {
+            if (!canAssignPersonForScheduledWindow(trainee.fullName, currentTime)) {
+              currentTime += minSpacing;
+              continue;
+            }
+            const hasConflict = generatedEvents.some((e) => {
+              if (e.resourceId !== `STBY ${currentStbyLine}`) return false;
+              const eventEnd = e.startTime + e.duration + minSpacing;
+              return currentTime < eventEnd;
             });
-            buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructor || "TBA"}`);
-            currentTime += next.duration + minSpacing;
-            placed = true;
+            if (!hasConflict) {
+              const instructor = findBestInstructorForStby(trainee, next, currentTime, next.duration, "ftd", generatedEvents);
+              generatedEvents.push({
+                id: v4(),
+                type: "ftd",
+                instructor: instructor || "TBA",
+                student: trainee.fullName,
+                pilot: instructor || "TBA",
+                flightNumber: next.code,
+                duration: next.duration,
+                startTime: currentTime,
+                resourceId: `STBY ${currentStbyLine}`,
+                color: courseColors[trainee.course] || "bg-gray-500",
+                flightType: "Dual",
+                locationType: "Local",
+                origin: school,
+                destination: school,
+                preStart: next.preFlightTime,
+                postEnd: next.postFlightTime
+              });
+              buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructor || "TBA"}`);
+              currentTime += next.duration + minSpacing;
+              placed = true;
+            } else {
+              currentStbyLine++;
+              currentTime = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
+            }
           } else {
             currentStbyLine++;
             currentTime = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
           }
-        } else {
-          currentStbyLine++;
-          currentTime = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
+        }
+        if (!placed) {
+          buildDebugLog(`FTD STBY: Could not place ${trainee.fullName} - all STBY lines full`);
         }
       }
-      if (!placed) {
-        buildDebugLog(`FTD STBY: Could not place ${trainee.fullName} - all STBY lines full`);
-      }
+      const ftdStbyEvents = generatedEvents.filter((e) => e.type === "ftd" && e.resourceId.startsWith("STBY"));
+      buildDebugLog(`FTD STBY complete: Placed ${ftdStbyEvents.length} events across ${currentStbyLine - 1} STBY lines`);
     }
-    const ftdStbyEvents = generatedEvents.filter((e) => e.type === "ftd" && e.resourceId.startsWith("STBY"));
-    buildDebugLog(`FTD STBY complete: Placed ${ftdStbyEvents.length} events across ${currentStbyLine - 1} STBY lines`);
   }
   const compressCurrencyFlightPlacements = () => {
     const currencyFlights = generatedEvents.filter((event) => event.type === "flight" && event._source === "highest-priority-currency" && isCurrencyPriorityEvent(event)).sort((a, b) => a.startTime - b.startTime);
@@ -75719,7 +75750,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     saveCurrencyPriorityDiagnostics("currency-priority-compression-complete");
   };
-  compressCurrencyFlightPlacements();
+  if (!isAirCombatBuild) {
+    compressCurrencyFlightPlacements();
+  }
   recordProgress({ message: "Shuffling events for distribution...", percentage: 95 });
   recordProgress({ message: "Sorting events by resource order...", percentage: 98 });
   const resourceOrder = [
