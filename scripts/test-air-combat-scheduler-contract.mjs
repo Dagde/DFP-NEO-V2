@@ -26,13 +26,45 @@ assert(
   'Flight School scheduling passes must be guarded away from Air Combat builds.'
 );
 
-const airCombatTaskingCall = findIndex('scheduleTaskingPriorityEvents(activeTaskingPriorityEvents);');
-const airCombatCurrencyCall = findIndex('scheduleCurrencyPriorityEvents(currencyPriorityEvents);');
-const airCombatTrainingCall = findIndex('scheduleAirCombatTrainingPriorityEvents();');
+const airCombatNightTaskingCall = findIndex('scheduleTaskingPriorityEvents(airCombatNightTaskingEvents);');
+const airCombatNightCurrencyCall = findIndex("scheduleCurrencyPriorityEvents(airCombatNightCurrencyEvents, 'night');");
+const airCombatNightTrainingCall = findIndex("scheduleAirCombatTrainingPriorityEvents('night');");
+const airCombatDayTaskingCall = findIndex('scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);');
+const airCombatDayCurrencyCall = findIndex("scheduleCurrencyPriorityEvents(airCombatDayCurrencyEvents, 'day');");
+const airCombatDayTrainingCall = findIndex("scheduleAirCombatTrainingPriorityEvents('day');");
 
 assert(
-  airCombatTaskingCall < airCombatCurrencyCall && airCombatCurrencyCall < airCombatTrainingCall,
-  'Air Combat scheduling order must be taskings, then currency, then course/package training.'
+  airCombatNightTaskingCall < airCombatNightCurrencyCall &&
+    airCombatNightCurrencyCall < airCombatNightTrainingCall &&
+    airCombatNightTrainingCall < airCombatDayTaskingCall &&
+    airCombatDayTaskingCall < airCombatDayCurrencyCall &&
+    airCombatDayCurrencyCall < airCombatDayTrainingCall,
+  'Air Combat scheduling order must be night taskings/currency/training, then day taskings/currency/training.'
+);
+
+assert(
+  appSource.includes('const airCombatNightTaskingEvents = activeTaskingPriorityEvents.filter(isAirCombatNightEvent);') &&
+    appSource.includes('const airCombatDayTaskingEvents = activeTaskingPriorityEvents.filter(isAirCombatDayEvent);') &&
+    appSource.includes('const airCombatNightCurrencyEvents = currencyPriorityEvents.filter(isAirCombatNightEvent);') &&
+    appSource.includes('const airCombatDayCurrencyEvents = currencyPriorityEvents.filter(isAirCombatDayEvent);'),
+  'Air Combat tasking and currency inputs must be split into day and night tables.'
+);
+
+assert(
+  appSource.includes("scheduleAirCombatTrainingPriorityEvents('night')") &&
+    appSource.includes("scheduleCurrencyPriorityEvents(airCombatNightCurrencyEvents, 'night')") &&
+    appSource.includes('scheduleTaskingPriorityEvents(airCombatNightTaskingEvents)'),
+  'Air Combat night scheduler must run tasking, currency, and course/package passes against night-only inputs.'
+);
+
+assert(
+  appSource.includes("scheduleMode === 'night' ? item.dayNight === 'Night' : item.dayNight !== 'Night'"),
+  'Air Combat training source tables must exclude night events from the day pass and day events from the night pass.'
+);
+
+assert(
+  appSource.includes("if (!canAssignPersonForScheduledWindow(staff.name, startTime)) return 'DAY_NIGHT_SEPARATION';"),
+  'Air Combat staff scheduling must enforce day/night separation.'
 );
 
 assert(
@@ -41,8 +73,8 @@ assert(
 );
 
 assert(
-  appSource.includes('for (let tileTime = flyingStartTime; tileTime <= flyingEndTime + 0.001 && attempt < placementLimit; tileTime += slotIncrement)'),
-  'Air Combat course/package training must iterate across the day window in 5-minute tiles.'
+  appSource.includes('for (let tileTime = scheduleWindowStart; tileTime <= scheduleWindowEnd + 0.001 && attempt < placementLimit; tileTime += slotIncrement)'),
+  'Air Combat course/package training must iterate across the active day or night window in 5-minute tiles.'
 );
 
 assert(

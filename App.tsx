@@ -9316,7 +9316,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const scheduledTaskingPriorityEventIds = new Set<string>();
     const isAirCombatBuild = buildOperationalModel === 'air_combat';
     const airCombatMandatoryTaskingEvents = taskingPriorityEvents.filter(event => event.isMandatoryTasking !== false);
+    const isAirCombatNightEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean =>
+        getGeneratedEventDayNightClassification(event) === 'Night';
+    const isAirCombatDayEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean =>
+        getGeneratedEventDayNightClassification(event) !== 'Night';
     const activeTaskingPriorityEvents = isAirCombatBuild ? airCombatMandatoryTaskingEvents : taskingPriorityEvents;
+    const airCombatNightTaskingEvents = activeTaskingPriorityEvents.filter(isAirCombatNightEvent);
+    const airCombatDayTaskingEvents = activeTaskingPriorityEvents.filter(isAirCombatDayEvent);
+    const airCombatNightCurrencyEvents = currencyPriorityEvents.filter(isAirCombatNightEvent);
+    const airCombatDayCurrencyEvents = currencyPriorityEvents.filter(isAirCombatDayEvent);
     const airCombatWeights = normaliseAirCombatSchedulingWeights(
         config.airCombatSchedulingWeights
     );
@@ -10342,22 +10350,28 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             generatedEvents: generatedEvents.length,
         });
     };
-    const scheduleAirCombatTrainingPriorityEvents = () => {
+    const scheduleAirCombatTrainingPriorityEvents = (scheduleMode: 'day' | 'night' = 'day') => {
         if (!isAirCombatBuild) return;
         markBuildTiming('air-combat-training:start', {
+            scheduleMode,
             generatedEvents: generatedEvents.length,
             staff: instructors.length,
             syllabus: syllabusDetails.length,
         });
         const slotIncrement = 5 / 60;
+        const scheduleWindowStart = scheduleMode === 'night' ? commenceNightFlying : flyingStartTime;
+        const scheduleWindowEnd = scheduleMode === 'night' ? ceaseNightFlying : flyingEndTime;
+        const trainingItemMatchesScheduleMode = (item: SyllabusItemDetail): boolean =>
+            scheduleMode === 'night' ? item.dayNight === 'Night' : item.dayNight !== 'Night';
         const sortedTrainingItemsCache = new Map<string, SyllabusItemDetail[]>();
         const sortedTrainingItems = (kind: 'course' | 'training_package', code: string) => {
-            const cacheKey = `${kind}:${code}`;
+            const cacheKey = `${scheduleMode}:${kind}:${code}`;
             if (!sortedTrainingItemsCache.has(cacheKey)) {
                 sortedTrainingItemsCache.set(
                     cacheKey,
                     syllabusDetails
                         .filter(item => item.isActive !== false)
+                        .filter(trainingItemMatchesScheduleMode)
                         .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
                         .filter(item => (item.courses || []).includes(code))
                         .sort((left, right) =>
@@ -10579,6 +10593,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (!requiredRoleGroups.some(group => airCombatStaffMatchesCrewRoleGroup(staff, group))) {
                 return `ROLE_NOT_${summariseCrewRoleGroups(requiredRoleGroups).join('_OR_').replace(/\s+/g, '_').toUpperCase()}`;
             }
+            const proposedWindow = getScheduledDayNightForStart(startTime);
+            if (item.dayNight === 'Night' && proposedWindow !== 'Night') return 'DAY_NIGHT_MISMATCH';
+            if (item.dayNight === 'Day' && proposedWindow !== 'Day') return 'DAY_NIGHT_MISMATCH';
+            if (!canAssignPersonForScheduledWindow(staff.name, startTime)) return 'DAY_NIGHT_SEPARATION';
             const bookingStart = startTime - (item.preFlightTime || 0);
             const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
             const counts = eventCounts.get(staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false };
@@ -10781,6 +10799,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             };
         });
         neoBuildDiag.airCombatPriority.trainingInputs = {
+            scheduleMode,
             courseCodes,
             packageCodes,
             placementLimit,
@@ -10788,6 +10807,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             trainingPackageSyllabusMatches: syllabusMatchAudit('training_package', packageCodes),
         };
         recordAirCombatStage('training-inputs-built', {
+            scheduleMode,
             courseCodes,
             packageCodes,
             placementLimit,
@@ -11302,10 +11322,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const linkedCode = getAirCombatLinkedEventCode(leadItem);
             const linkedItemForWindow = findLinkedTrainingItem(leadItem, matchingItems);
             const formationWindowDuration = Math.max(Number(leadItem.duration) || 0, Number(linkedItemForWindow?.duration) || 0);
-            const windowEnd = flyingEndTime;
+            const windowEnd = scheduleWindowEnd;
             let candidateSlotsChecked = 0;
             let candidateSlotsRejected = 0;
-            const searchStart = exactStartTime ?? flyingStartTime;
+            const searchStart = exactStartTime ?? scheduleWindowStart;
             const searchEnd = exactStartTime ?? windowEnd;
             for (let time = searchStart; time + formationWindowDuration <= windowEnd + 0.001 && time <= searchEnd + 0.001; time += slotIncrement) {
                 const startTime = Math.round(time * 12) / 12;
@@ -11680,9 +11700,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 linkedEvent: linkedCode || null,
                 candidateSlotsChecked,
                 candidateSlotsRejected,
-                windowStart: flyingStartTime,
-                windowEnd,
-            }, 1200);
+                    windowStart: scheduleWindowStart,
+                    windowEnd,
+                }, 1200);
             countAirCombatRejection('NO_VALID_FORMATION_SLOT_IN_WINDOW');
             return false;
         };
@@ -11785,10 +11805,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         }
                         continue;
                     }
-                    const windowEnd = type === 'ftd' ? ftdEndTime : flyingEndTime;
+                    const windowEnd = scheduleMode === 'night'
+                        ? scheduleWindowEnd
+                        : type === 'ftd' ? ftdEndTime : flyingEndTime;
                     let candidateSlotsChecked = 0;
                     let candidateSlotsRejected = 0;
-                    const searchStart = exactStartTime ?? flyingStartTime;
+                    const searchStart = exactStartTime ?? scheduleWindowStart;
                     const searchEnd = exactStartTime ?? windowEnd;
                     if (searchStart + item.duration > windowEnd + 0.001) {
                         candidateSlotsRejected++;
@@ -12025,7 +12047,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         reason: 'NO_VALID_SLOT_IN_WINDOW',
                         candidateSlotsChecked,
                         candidateSlotsRejected,
-                        windowStart: flyingStartTime,
+                        windowStart: scheduleWindowStart,
                         windowEnd,
                     }, 1200);
                     countAirCombatRejection('NO_VALID_SLOT_IN_WINDOW');
@@ -12047,16 +12069,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         let coursePlaced = 0;
         let packagePlaced = 0;
         recordAirCombatStage('training-placement-loop-start', {
+            scheduleMode,
             placementLimit,
             courseCodes,
             packageCodes,
             generatedEventsAtLoopStart: generatedEvents.length,
         });
         let attempt = 0;
-        for (let tileTime = flyingStartTime; tileTime <= flyingEndTime + 0.001 && attempt < placementLimit; tileTime += slotIncrement) {
+        for (let tileTime = scheduleWindowStart; tileTime <= scheduleWindowEnd + 0.001 && attempt < placementLimit; tileTime += slotIncrement) {
             const roundedTileTime = Math.round(tileTime * 12) / 12;
             const preferredKind = pickNextKind(coursePlaced, packagePlaced);
             const cycleTrace: any = {
+                scheduleMode,
                 attempt: attempt + 1,
                 placementLimit,
                 tileTime: roundedTileTime,
@@ -12115,6 +12139,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         }
         neoBuildDiag.airCombatPriority.schedulerSummary = {
             placementLimit,
+            scheduleMode,
             courseCodes,
             packageCodes,
             coursePlaced,
@@ -12145,6 +12170,51 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             sortedTrainingItemLists: sortedTrainingItemsCache.size,
             trainingAssignmentStaff: airCombatTrainingAssignmentCache.size,
         });
+    };
+    const getAirCombatRequiredNightTrainingEvents = () => {
+        if (!isAirCombatBuild) return [];
+        const sortItems = (items: SyllabusItemDetail[]) => [...items].sort((left, right) =>
+            Number((left as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
+            (left.orderKey || '').localeCompare(right.orderKey || '') ||
+            left.code.localeCompare(right.code)
+        );
+        const getItemsForAssignment = (kind: 'course' | 'training_package', code: string): SyllabusItemDetail[] => sortItems(
+            syllabusDetails
+                .filter(item => item.isActive !== false)
+                .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
+                .filter(item => (item.courses || []).includes(code))
+        );
+        const rows: Array<{ staff: string; kind: 'course' | 'training_package'; code: string; event: string }> = [];
+        instructors
+            .filter(isAirCombatCrewPositionStaff)
+            .forEach(staff => {
+                const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+                ([
+                    ['course', assignments.courses],
+                    ['training_package', assignments.trainingPackages],
+                ] as const).forEach(([kind, list]) => {
+                    list
+                        .filter(assignment => !buildActiveUnitCode || assignment.unitCode === buildActiveUnitCode)
+                        .forEach(assignment => {
+                            const items = getItemsForAssignment(kind, assignment.code);
+                            const completedCodes = new Set(
+                                getAirCombatStaffEvents(staff.name)
+                                    .filter(event => items.some(item => item.code === event.flightNumber))
+                                    .map(event => event.flightNumber)
+                            );
+                            const nextItem = items.find(item => !completedCodes.has(item.code));
+                            if (nextItem?.dayNight === 'Night') {
+                                rows.push({
+                                    staff: staff.name,
+                                    kind,
+                                    code: assignment.code,
+                                    event: nextItem.code,
+                                });
+                            }
+                        });
+                });
+            });
+        return rows;
     };
     const getCurrencyPriorityPerson = (event: ScheduleEvent): { trainee: Trainee; excludeInstructorNames: string[] } | null => {
         const personName = event.student || event.pilot || event.instructor || '';
@@ -12193,7 +12263,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             code: 'CURR',
             phase: 'Currency',
             module: 'Currency',
-            dayNight: 'Day',
+            dayNight: isAirCombatNightEvent(event) ? 'Night' : 'Day',
             eventDescription: 'Currency',
             prerequisites: [],
             prerequisitesGround: [],
@@ -12217,7 +12287,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             courses: [],
         };
     };
-    const scheduleCurrencyPriorityEvents = (eventsToSchedule: ScheduleEvent[]) => {
+    const scheduleCurrencyPriorityEvents = (eventsToSchedule: ScheduleEvent[], scheduleMode: 'day' | 'night' = 'day') => {
         const scheduledCurrencyDraftIds = new Set(generatedEvents.map(event => event.currencyDraftId).filter(Boolean));
         const getCurrencyEventPersonName = (event: ScheduleEvent): string => event.student || event.pilot || event.instructor || '';
         const getCurrencyEventPersonKey = (event: ScheduleEvent): string => normalizeBuildPersonnelName(getCurrencyEventPersonName(event));
@@ -12253,6 +12323,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         traceCurrencyPriority('queueAudit', {
             phase: 'input-queue',
+            scheduleMode,
             total: eventsToSchedule.length,
             generatedEventsBeforeCurrencyPriority: generatedEvents.length,
             scheduledCurrencyDraftIdsAtStart: Array.from(scheduledCurrencyDraftIds),
@@ -12265,11 +12336,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         const scheduleType = (eventType: 'flight' | 'ftd') => {
             const remaining = eventsToSchedule.filter(event => event.type === eventType);
-            const startBoundary = eventType === 'flight' ? flyingStartTime : ftdStartTime;
-            const endBoundary = eventType === 'flight' ? flyingEndTime : ftdEndTime;
+            const startBoundary = scheduleMode === 'night'
+                ? commenceNightFlying
+                : eventType === 'flight' ? flyingStartTime : ftdStartTime;
+            const endBoundary = scheduleMode === 'night'
+                ? ceaseNightFlying
+                : eventType === 'flight' ? flyingEndTime : ftdEndTime;
             const timeIncrement = eventType === 'flight' ? 5 / 60 : 15 / 60;
             traceCurrencyPriority('typePassTrace', {
                 phase: 'type-pass-start',
+                scheduleMode,
                 eventType,
                 inputCount: remaining.length,
                 startBoundary,
@@ -12283,6 +12359,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const generatedEventsBeforeSlot = generatedEvents.length;
                 traceCurrencyPriority('slotTrace', {
                     phase: 'slot-start',
+                    scheduleMode,
                     eventType,
                     time,
                     displayTime: _fmtT(time),
@@ -13333,16 +13410,77 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     (window as any).__fbFlightListSize = _allFlightList.length;
 
     if (isAirCombatBuild) {
-        if (activeTaskingPriorityEvents.length > 0) {
-            recordProgress({ message: 'Scheduling Air Combat mandatory tasking...', percentage: 45 });
-            scheduleTaskingPriorityEvents(activeTaskingPriorityEvents);
+        const airCombatNightTrainingEvents = getAirCombatRequiredNightTrainingEvents();
+        const airCombatNightRequirementCount =
+            airCombatNightTaskingEvents.length +
+            airCombatNightCurrencyEvents.length +
+            airCombatNightTrainingEvents.length;
+        const airCombatNightSchedulingActive = allowNightFlying && airCombatNightRequirementCount >= 2;
+        neoBuildDiag.airCombatPriority.nightScheduling = {
+            active: airCombatNightSchedulingActive,
+            requirementCount: airCombatNightRequirementCount,
+            taskings: airCombatNightTaskingEvents.map(getTaskingEventIdentity),
+            currency: airCombatNightCurrencyEvents.map(event => ({
+                id: event.id,
+                type: event.type,
+                person: event.student || event.pilot || event.instructor || '',
+                flightNumber: event.flightNumber,
+                startTime: event.startTime,
+            })),
+            training: airCombatNightTrainingEvents,
+            nightWindow: { start: commenceNightFlying, end: ceaseNightFlying },
+        };
+        if (airCombatNightSchedulingActive) {
+            recordProgress({ message: 'Scheduling Air Combat night events...', percentage: 43 });
+            if (!nightDutySup) {
+                nightDutySup = dutySupEligible.find(sup =>
+                    !isPersonStaticallyUnavailable(sup, commenceNightFlying, ceaseNightFlying, buildDate, 'duty_sup') &&
+                    !isPersonScheduledForDayEvents(sup.name) &&
+                    !isPersonScheduledForNightEvents(sup.name)
+                ) || null;
+                if (nightDutySup) markIntendedNightPerson(nightDutySup.name);
+            }
+            const existingNightDutySup = generatedEvents.find(event =>
+                event.resourceId === 'Duty Sup' &&
+                event.flightNumber === 'Night Duty Sup' &&
+                event.startTime < ceaseNightFlying &&
+                event.startTime + event.duration > commenceNightFlying
+            );
+            if (!existingNightDutySup && nightDutySup) {
+                generatedEvents.push({
+                    id: uuidv4(), type: 'ground', instructor: nightDutySup.name,
+                    flightNumber: 'Night Duty Sup', duration: ceaseNightFlying - commenceNightFlying, startTime: commenceNightFlying, resourceId: 'Duty Sup',
+                    color: 'bg-amber-700/50', flightType: 'Dual', locationType: 'Local', origin: school, destination: school, pilot: undefined, student: ''
+                });
+                eventCounts.get(nightDutySup.name)!.dutySup++;
+            } else if (!existingNightDutySup && !nightDutySup) {
+                buildDebugLog('WARNING: Air Combat night flying required but no eligible night duty supervisor found.');
+            }
+            airCombatNightTaskingEvents.forEach(event => {
+                getPersonnel(event).forEach(markIntendedNightPerson);
+            });
+            airCombatNightCurrencyEvents.forEach(event => {
+                getPersonnel(event).forEach(markIntendedNightPerson);
+            });
+            airCombatNightTrainingEvents.forEach(event => markIntendedNightPerson(event.staff));
+            if (airCombatNightTaskingEvents.length > 0) {
+                scheduleTaskingPriorityEvents(airCombatNightTaskingEvents);
+            }
+            if (airCombatNightCurrencyEvents.length > 0) {
+                scheduleCurrencyPriorityEvents(airCombatNightCurrencyEvents, 'night');
+            }
+            scheduleAirCombatTrainingPriorityEvents('night');
         }
-        if (currencyPriorityEvents.length > 0) {
+        if (airCombatDayTaskingEvents.length > 0) {
+            recordProgress({ message: 'Scheduling Air Combat mandatory tasking...', percentage: 45 });
+            scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
+        }
+        if (airCombatDayCurrencyEvents.length > 0) {
             recordProgress({ message: 'Scheduling Air Combat currency events...', percentage: 50 });
-            scheduleCurrencyPriorityEvents(currencyPriorityEvents);
+            scheduleCurrencyPriorityEvents(airCombatDayCurrencyEvents, 'day');
         }
         recordProgress({ message: 'Scheduling Air Combat priority lists...', percentage: 55 });
-        scheduleAirCombatTrainingPriorityEvents();
+        scheduleAirCombatTrainingPriorityEvents('day');
     }
 
     if (!isAirCombatBuild) {

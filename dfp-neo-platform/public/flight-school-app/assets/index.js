@@ -71109,7 +71109,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const scheduledTaskingPriorityEventIds = /* @__PURE__ */ new Set();
   const isAirCombatBuild = buildOperationalModel === "air_combat";
   const airCombatMandatoryTaskingEvents = taskingPriorityEvents.filter((event) => event.isMandatoryTasking !== false);
+  const isAirCombatNightEvent = (event) => getGeneratedEventDayNightClassification(event) === "Night";
+  const isAirCombatDayEvent = (event) => getGeneratedEventDayNightClassification(event) !== "Night";
   const activeTaskingPriorityEvents = isAirCombatBuild ? airCombatMandatoryTaskingEvents : taskingPriorityEvents;
+  const airCombatNightTaskingEvents = activeTaskingPriorityEvents.filter(isAirCombatNightEvent);
+  const airCombatDayTaskingEvents = activeTaskingPriorityEvents.filter(isAirCombatDayEvent);
+  const airCombatNightCurrencyEvents = currencyPriorityEvents.filter(isAirCombatNightEvent);
+  const airCombatDayCurrencyEvents = currencyPriorityEvents.filter(isAirCombatDayEvent);
   const airCombatWeights = normaliseAirCombatSchedulingWeights(
     config.airCombatSchedulingWeights
   );
@@ -72053,21 +72059,25 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       generatedEvents: generatedEvents.length
     });
   };
-  const scheduleAirCombatTrainingPriorityEvents = () => {
+  const scheduleAirCombatTrainingPriorityEvents = (scheduleMode = "day") => {
     if (!isAirCombatBuild) return;
     markBuildTiming("air-combat-training:start", {
+      scheduleMode,
       generatedEvents: generatedEvents.length,
       staff: instructors.length,
       syllabus: syllabusDetails.length
     });
     const slotIncrement = 5 / 60;
+    const scheduleWindowStart = scheduleMode === "night" ? commenceNightFlying : flyingStartTime;
+    const scheduleWindowEnd = scheduleMode === "night" ? ceaseNightFlying : flyingEndTime;
+    const trainingItemMatchesScheduleMode = (item) => scheduleMode === "night" ? item.dayNight === "Night" : item.dayNight !== "Night";
     const sortedTrainingItemsCache = /* @__PURE__ */ new Map();
     const sortedTrainingItems = (kind, code) => {
-      const cacheKey = `${kind}:${code}`;
+      const cacheKey = `${scheduleMode}:${kind}:${code}`;
       if (!sortedTrainingItemsCache.has(cacheKey)) {
         sortedTrainingItemsCache.set(
           cacheKey,
-          syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
+          syllabusDetails.filter((item) => item.isActive !== false).filter(trainingItemMatchesScheduleMode).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
             (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
           )
         );
@@ -72225,6 +72235,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (!requiredRoleGroups.some((group) => airCombatStaffMatchesCrewRoleGroup(staff, group))) {
         return `ROLE_NOT_${summariseCrewRoleGroups(requiredRoleGroups).join("_OR_").replace(/\s+/g, "_").toUpperCase()}`;
       }
+      const proposedWindow = getScheduledDayNightForStart(startTime);
+      if (item.dayNight === "Night" && proposedWindow !== "Night") return "DAY_NIGHT_MISMATCH";
+      if (item.dayNight === "Day" && proposedWindow !== "Day") return "DAY_NIGHT_MISMATCH";
+      if (!canAssignPersonForScheduledWindow(staff.name, startTime)) return "DAY_NIGHT_SEPARATION";
       const bookingStart = startTime - (item.preFlightTime || 0);
       const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
       const counts = eventCounts.get(staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0 };
@@ -72392,6 +72406,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     });
     neoBuildDiag.airCombatPriority.trainingInputs = {
+      scheduleMode,
       courseCodes,
       packageCodes,
       placementLimit,
@@ -72399,6 +72414,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       trainingPackageSyllabusMatches: syllabusMatchAudit("training_package", packageCodes)
     };
     recordAirCombatStage("training-inputs-built", {
+      scheduleMode,
       courseCodes,
       packageCodes,
       placementLimit,
@@ -72854,10 +72870,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const linkedCode = getAirCombatLinkedEventCode(leadItem);
       const linkedItemForWindow = findLinkedTrainingItem(leadItem, matchingItems);
       const formationWindowDuration = Math.max(Number(leadItem.duration) || 0, Number(linkedItemForWindow?.duration) || 0);
-      const windowEnd = flyingEndTime;
+      const windowEnd = scheduleWindowEnd;
       let candidateSlotsChecked = 0;
       let candidateSlotsRejected = 0;
-      const searchStart = exactStartTime ?? flyingStartTime;
+      const searchStart = exactStartTime ?? scheduleWindowStart;
       const searchEnd = exactStartTime ?? windowEnd;
       for (let time = searchStart; time + formationWindowDuration <= windowEnd + 1e-3 && time <= searchEnd + 1e-3; time += slotIncrement) {
         const startTime = Math.round(time * 12) / 12;
@@ -73218,7 +73234,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         linkedEvent: linkedCode || null,
         candidateSlotsChecked,
         candidateSlotsRejected,
-        windowStart: flyingStartTime,
+        windowStart: scheduleWindowStart,
         windowEnd
       }, 1200);
       countAirCombatRejection("NO_VALID_FORMATION_SLOT_IN_WINDOW");
@@ -73323,10 +73339,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             }
             continue;
           }
-          const windowEnd = type === "ftd" ? ftdEndTime : flyingEndTime;
+          const windowEnd = scheduleMode === "night" ? scheduleWindowEnd : type === "ftd" ? ftdEndTime : flyingEndTime;
           let candidateSlotsChecked = 0;
           let candidateSlotsRejected = 0;
-          const searchStart = exactStartTime ?? flyingStartTime;
+          const searchStart = exactStartTime ?? scheduleWindowStart;
           const searchEnd = exactStartTime ?? windowEnd;
           if (searchStart + item.duration > windowEnd + 1e-3) {
             candidateSlotsRejected++;
@@ -73557,7 +73573,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             reason: "NO_VALID_SLOT_IN_WINDOW",
             candidateSlotsChecked,
             candidateSlotsRejected,
-            windowStart: flyingStartTime,
+            windowStart: scheduleWindowStart,
             windowEnd
           }, 1200);
           countAirCombatRejection("NO_VALID_SLOT_IN_WINDOW");
@@ -73579,16 +73595,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     let coursePlaced = 0;
     let packagePlaced = 0;
     recordAirCombatStage("training-placement-loop-start", {
+      scheduleMode,
       placementLimit,
       courseCodes,
       packageCodes,
       generatedEventsAtLoopStart: generatedEvents.length
     });
     let attempt = 0;
-    for (let tileTime = flyingStartTime; tileTime <= flyingEndTime + 1e-3 && attempt < placementLimit; tileTime += slotIncrement) {
+    for (let tileTime = scheduleWindowStart; tileTime <= scheduleWindowEnd + 1e-3 && attempt < placementLimit; tileTime += slotIncrement) {
       const roundedTileTime = Math.round(tileTime * 12) / 12;
       const preferredKind = pickNextKind(coursePlaced, packagePlaced);
       const cycleTrace = {
+        scheduleMode,
         attempt: attempt + 1,
         placementLimit,
         tileTime: roundedTileTime,
@@ -73647,6 +73665,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     neoBuildDiag.airCombatPriority.schedulerSummary = {
       placementLimit,
+      scheduleMode,
       courseCodes,
       packageCodes,
       coursePlaced,
@@ -73677,6 +73696,40 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       sortedTrainingItemLists: sortedTrainingItemsCache.size,
       trainingAssignmentStaff: airCombatTrainingAssignmentCache.size
     });
+  };
+  const getAirCombatRequiredNightTrainingEvents = () => {
+    if (!isAirCombatBuild) return [];
+    const sortItems = (items) => [...items].sort(
+      (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
+    );
+    const getItemsForAssignment = (kind, code) => sortItems(
+      syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code))
+    );
+    const rows = [];
+    instructors.filter(isAirCombatCrewPositionStaff).forEach((staff) => {
+      const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      [
+        ["course", assignments.courses],
+        ["training_package", assignments.trainingPackages]
+      ].forEach(([kind, list]) => {
+        list.filter((assignment) => !buildActiveUnitCode || assignment.unitCode === buildActiveUnitCode).forEach((assignment) => {
+          const items = getItemsForAssignment(kind, assignment.code);
+          const completedCodes = new Set(
+            getAirCombatStaffEvents(staff.name).filter((event) => items.some((item) => item.code === event.flightNumber)).map((event) => event.flightNumber)
+          );
+          const nextItem = items.find((item) => !completedCodes.has(item.code));
+          if (nextItem?.dayNight === "Night") {
+            rows.push({
+              staff: staff.name,
+              kind,
+              code: assignment.code,
+              event: nextItem.code
+            });
+          }
+        });
+      });
+    });
+    return rows;
   };
   const getCurrencyPriorityPerson = (event) => {
     const personName = event.student || event.pilot || event.instructor || "";
@@ -73725,7 +73778,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       code: "CURR",
       phase: "Currency",
       module: "Currency",
-      dayNight: "Day",
+      dayNight: isAirCombatNightEvent(event) ? "Night" : "Day",
       eventDescription: "Currency",
       prerequisites: [],
       prerequisitesGround: [],
@@ -73749,7 +73802,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       courses: []
     };
   };
-  const scheduleCurrencyPriorityEvents = (eventsToSchedule) => {
+  const scheduleCurrencyPriorityEvents = (eventsToSchedule, scheduleMode = "day") => {
     const scheduledCurrencyDraftIds = new Set(generatedEvents.map((event) => event.currencyDraftId).filter(Boolean));
     const getCurrencyEventPersonName = (event) => event.student || event.pilot || event.instructor || "";
     const getCurrencyEventPersonKey = (event) => normalizeBuildPersonnelName(getCurrencyEventPersonName(event));
@@ -73778,6 +73831,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     ) || null;
     traceCurrencyPriority("queueAudit", {
       phase: "input-queue",
+      scheduleMode,
       total: eventsToSchedule.length,
       generatedEventsBeforeCurrencyPriority: generatedEvents.length,
       scheduledCurrencyDraftIdsAtStart: Array.from(scheduledCurrencyDraftIds),
@@ -73789,11 +73843,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }, 20);
     const scheduleType = (eventType) => {
       const remaining = eventsToSchedule.filter((event) => event.type === eventType);
-      const startBoundary = eventType === "flight" ? flyingStartTime : ftdStartTime;
-      const endBoundary = eventType === "flight" ? flyingEndTime : ftdEndTime;
+      const startBoundary = scheduleMode === "night" ? commenceNightFlying : eventType === "flight" ? flyingStartTime : ftdStartTime;
+      const endBoundary = scheduleMode === "night" ? ceaseNightFlying : eventType === "flight" ? flyingEndTime : ftdEndTime;
       const timeIncrement = eventType === "flight" ? 5 / 60 : 15 / 60;
       traceCurrencyPriority("typePassTrace", {
         phase: "type-pass-start",
+        scheduleMode,
         eventType,
         inputCount: remaining.length,
         startBoundary,
@@ -73807,6 +73862,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const generatedEventsBeforeSlot = generatedEvents.length;
         traceCurrencyPriority("slotTrace", {
           phase: "slot-start",
+          scheduleMode,
           eventType,
           time,
           displayTime: _fmtT(time),
@@ -74736,16 +74792,80 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog("[MANDATORY-REMEDIAL-DIAG] Match audit:", neoBuildDiag.mandatoryRemedialFlights.matchAudit);
   window.__fbFlightListSize = _allFlightList.length;
   if (isAirCombatBuild) {
-    if (activeTaskingPriorityEvents.length > 0) {
-      recordProgress({ message: "Scheduling Air Combat mandatory tasking...", percentage: 45 });
-      scheduleTaskingPriorityEvents(activeTaskingPriorityEvents);
+    const airCombatNightTrainingEvents = getAirCombatRequiredNightTrainingEvents();
+    const airCombatNightRequirementCount = airCombatNightTaskingEvents.length + airCombatNightCurrencyEvents.length + airCombatNightTrainingEvents.length;
+    const airCombatNightSchedulingActive = allowNightFlying && airCombatNightRequirementCount >= 2;
+    neoBuildDiag.airCombatPriority.nightScheduling = {
+      active: airCombatNightSchedulingActive,
+      requirementCount: airCombatNightRequirementCount,
+      taskings: airCombatNightTaskingEvents.map(getTaskingEventIdentity),
+      currency: airCombatNightCurrencyEvents.map((event) => ({
+        id: event.id,
+        type: event.type,
+        person: event.student || event.pilot || event.instructor || "",
+        flightNumber: event.flightNumber,
+        startTime: event.startTime
+      })),
+      training: airCombatNightTrainingEvents,
+      nightWindow: { start: commenceNightFlying, end: ceaseNightFlying }
+    };
+    if (airCombatNightSchedulingActive) {
+      recordProgress({ message: "Scheduling Air Combat night events...", percentage: 43 });
+      if (!nightDutySup) {
+        nightDutySup = dutySupEligible.find(
+          (sup) => !isPersonStaticallyUnavailable(sup, commenceNightFlying, ceaseNightFlying, buildDate, "duty_sup") && !isPersonScheduledForDayEvents(sup.name) && !isPersonScheduledForNightEvents(sup.name)
+        ) || null;
+        if (nightDutySup) markIntendedNightPerson(nightDutySup.name);
+      }
+      const existingNightDutySup = generatedEvents.find(
+        (event) => event.resourceId === "Duty Sup" && event.flightNumber === "Night Duty Sup" && event.startTime < ceaseNightFlying && event.startTime + event.duration > commenceNightFlying
+      );
+      if (!existingNightDutySup && nightDutySup) {
+        generatedEvents.push({
+          id: v4(),
+          type: "ground",
+          instructor: nightDutySup.name,
+          flightNumber: "Night Duty Sup",
+          duration: ceaseNightFlying - commenceNightFlying,
+          startTime: commenceNightFlying,
+          resourceId: "Duty Sup",
+          color: "bg-amber-700/50",
+          flightType: "Dual",
+          locationType: "Local",
+          origin: school,
+          destination: school,
+          pilot: void 0,
+          student: ""
+        });
+        eventCounts.get(nightDutySup.name).dutySup++;
+      } else if (!existingNightDutySup && !nightDutySup) {
+        buildDebugLog("WARNING: Air Combat night flying required but no eligible night duty supervisor found.");
+      }
+      airCombatNightTaskingEvents.forEach((event) => {
+        getPersonnel(event).forEach(markIntendedNightPerson);
+      });
+      airCombatNightCurrencyEvents.forEach((event) => {
+        getPersonnel(event).forEach(markIntendedNightPerson);
+      });
+      airCombatNightTrainingEvents.forEach((event) => markIntendedNightPerson(event.staff));
+      if (airCombatNightTaskingEvents.length > 0) {
+        scheduleTaskingPriorityEvents(airCombatNightTaskingEvents);
+      }
+      if (airCombatNightCurrencyEvents.length > 0) {
+        scheduleCurrencyPriorityEvents(airCombatNightCurrencyEvents, "night");
+      }
+      scheduleAirCombatTrainingPriorityEvents("night");
     }
-    if (currencyPriorityEvents.length > 0) {
+    if (airCombatDayTaskingEvents.length > 0) {
+      recordProgress({ message: "Scheduling Air Combat mandatory tasking...", percentage: 45 });
+      scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
+    }
+    if (airCombatDayCurrencyEvents.length > 0) {
       recordProgress({ message: "Scheduling Air Combat currency events...", percentage: 50 });
-      scheduleCurrencyPriorityEvents(currencyPriorityEvents);
+      scheduleCurrencyPriorityEvents(airCombatDayCurrencyEvents, "day");
     }
     recordProgress({ message: "Scheduling Air Combat priority lists...", percentage: 55 });
-    scheduleAirCombatTrainingPriorityEvents();
+    scheduleAirCombatTrainingPriorityEvents("day");
   }
   if (!isAirCombatBuild) {
     if (_mandatoryDayFlightList.length > 0) {
