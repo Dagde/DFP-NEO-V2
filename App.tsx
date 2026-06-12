@@ -9848,9 +9848,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 requiredRoleLabel: formatCrewRoleGroup(requiredRoles),
                 matchingStaffCount: matchingStaff.length,
                 activeLocation: school,
-                activeUnit: activeUnitCode,
+                activeUnit: buildActiveUnitCode,
                 explanation: matchingStaff.length === 0
-                    ? `No active staff in ${school} - ${activeUnitCode || 'selected unit'} match required crew seat ${seatIndex + 1} (${formatCrewRoleGroup(requiredRoles)}). Flights needing this seat cannot be scheduled.`
+                    ? `No active staff in ${school} - ${buildActiveUnitCode || 'selected unit'} match required crew seat ${seatIndex + 1} (${formatCrewRoleGroup(requiredRoles)}). Flights needing this seat cannot be scheduled.`
                     : `${matchingStaff.length} active staff match required crew seat ${seatIndex + 1} (${formatCrewRoleGroup(requiredRoles)}).`,
             };
         }).filter(shortfall => shortfall.matchingStaffCount === 0);
@@ -15352,7 +15352,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat tasking events matched the build date.');
         const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
         if (crewRoleShortfalls.length > 0) {
-            conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${activeUnitCode || 'selected unit'}: ${crewRoleShortfalls.map((shortfall: any) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(', ')}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);
+            conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${buildActiveUnitCode || 'selected unit'}: ${crewRoleShortfalls.map((shortfall: any) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(', ')}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);
         }
         const trainingInputs = neoBuildDiag.airCombatPriority.trainingInputs;
         if (trainingInputs && trainingInputs.courseCodes.length === 0 && trainingInputs.packageCodes.length === 0) conclusions.push('No Air Combat course or training-package assignments were found on Pilot staff preferences.');
