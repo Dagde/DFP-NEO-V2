@@ -10149,6 +10149,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const completed = new Set(getCompletedTrainingEvents(staffName, code, kind).map(event => event.flightNumber));
             return items.find(item => !completed.has(item.code)) || null;
         };
+        const getTrainingItemOperationalPriority = (item: SyllabusItemDetail | null): number => {
+            if (!item) return 99;
+            if (item.type === 'Flight') return 0;
+            if (item.type === 'FTD' || item.code.toUpperCase().includes('CPT')) return 1;
+            return 2;
+        };
         const getTrainingPriorityList = (kind: 'course' | 'training_package', code: string) => instructors
             .filter(isAirCombatCrewPositionStaff)
             .filter(staff => {
@@ -10169,6 +10175,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             })
             .filter(entry => !!entry.nextItem)
             .sort((left, right) =>
+                getTrainingItemOperationalPriority(left.nextItem) - getTrainingItemOperationalPriority(right.nextItem) ||
                 left.completedCount - right.completedCount ||
                 left.lastEventDateValue - right.lastEventDateValue ||
                 left.tieBreak - right.tieBreak
