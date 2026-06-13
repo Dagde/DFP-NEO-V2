@@ -80263,6 +80263,19 @@ ${"=".repeat(60)}`);
   const normaliseDiagnosticPersonName = reactExports.useCallback((value) => {
     return String(value || "").split(" – ")[0].split(" - ")[0].replace(/\s*\([^)]*\)\s*$/g, "").replace(/\s+/g, " ").trim().toLowerCase();
   }, []);
+  const getDiagnosticPersonKeys = reactExports.useCallback((value) => {
+    const normalised = normaliseDiagnosticPersonName(value);
+    if (!normalised) return [];
+    const keys = /* @__PURE__ */ new Set([normalised]);
+    const commaParts = normalised.split(",").map((part) => part.trim()).filter(Boolean);
+    if (commaParts.length >= 2) {
+      const firstGivenName = commaParts[1].split(/\s+/)[0];
+      if (commaParts[0] && firstGivenName) {
+        keys.add(`${commaParts[0]}, ${firstGivenName}`);
+      }
+    }
+    return Array.from(keys);
+  }, [normaliseDiagnosticPersonName]);
   const getDiagnosticEventPersonnel = reactExports.useCallback((event) => {
     return new Set([
       event.instructor,
@@ -80271,8 +80284,8 @@ ${"=".repeat(60)}`);
       event.student,
       ...event.attendees || [],
       ...event.crewSelectionOrder || []
-    ].map((value) => normaliseDiagnosticPersonName(value)).filter(Boolean));
-  }, [normaliseDiagnosticPersonName]);
+    ].flatMap((value) => getDiagnosticPersonKeys(value)).filter(Boolean));
+  }, [getDiagnosticPersonKeys]);
   const getDiagnosticEventBookingWindow = reactExports.useCallback((event) => {
     const eventStart = Number(event.startTime);
     const eventEnd = eventStart + Number(event.duration || 0);
@@ -80304,11 +80317,11 @@ ${"=".repeat(60)}`);
       return time >= periodStart && time < periodEnd;
     });
     if (unavailabilityBlocks) return true;
-    const staffName = normaliseDiagnosticPersonName(staff.name);
-    if (!staffName) return false;
+    const staffNameKeys = getDiagnosticPersonKeys(staff.name);
+    if (staffNameKeys.length === 0) return false;
     return eventsForDate.some((event) => {
       const assignedPeople = getDiagnosticEventPersonnel(event);
-      if (!assignedPeople.has(staffName)) return false;
+      if (!staffNameKeys.some((staffKey) => assignedPeople.has(staffKey))) return false;
       const bookingWindow = getDiagnosticEventBookingWindow(event);
       return time >= bookingWindow.start && time < bookingWindow.end;
     });
@@ -80424,7 +80437,7 @@ ${"=".repeat(60)}`);
       instructorsData.filter((staff) => {
         const staffUnit = String(staff.unit || "").trim().toUpperCase();
         return !staff.isAdminStaff && (activeUnits.size === 0 || activeUnits.has(staffUnit));
-      }).map((staff) => normaliseDiagnosticPersonName(staff.name)).filter(Boolean)
+      }).flatMap((staff) => getDiagnosticPersonKeys(staff.name)).filter(Boolean)
     );
     const highlightedIds = /* @__PURE__ */ new Set();
     eventSegmentsForDate.forEach((event) => {
@@ -80447,7 +80460,7 @@ ${"=".repeat(60)}`);
     getDiagnosticEventPersonnel,
     instructorsData,
     isStaffAvailabilityDiagnoseActive,
-    normaliseDiagnosticPersonName,
+    getDiagnosticPersonKeys,
     staffAvailabilityPointer.time
   ]);
   const nextDayEventSegments = reactExports.useMemo(() => {

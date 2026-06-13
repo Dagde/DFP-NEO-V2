@@ -20305,6 +20305,20 @@ const App: React.FC = () => {
             .toLowerCase();
     }, []);
 
+    const getDiagnosticPersonKeys = useCallback((value?: string): string[] => {
+        const normalised = normaliseDiagnosticPersonName(value);
+        if (!normalised) return [];
+        const keys = new Set([normalised]);
+        const commaParts = normalised.split(',').map(part => part.trim()).filter(Boolean);
+        if (commaParts.length >= 2) {
+            const firstGivenName = commaParts[1].split(/\s+/)[0];
+            if (commaParts[0] && firstGivenName) {
+                keys.add(`${commaParts[0]}, ${firstGivenName}`);
+            }
+        }
+        return Array.from(keys);
+    }, [normaliseDiagnosticPersonName]);
+
     const getDiagnosticEventPersonnel = useCallback((event: ScheduleEvent | EventSegment): Set<string> => {
         return new Set([
             event.instructor,
@@ -20313,8 +20327,8 @@ const App: React.FC = () => {
             event.student,
             ...(event.attendees || []),
             ...(event.crewSelectionOrder || []),
-        ].map(value => normaliseDiagnosticPersonName(value)).filter(Boolean));
-    }, [normaliseDiagnosticPersonName]);
+        ].flatMap(value => getDiagnosticPersonKeys(value)).filter(Boolean));
+    }, [getDiagnosticPersonKeys]);
 
     const getDiagnosticEventBookingWindow = useCallback((event: ScheduleEvent | EventSegment): { start: number; end: number } => {
         const eventStart = Number(event.startTime);
@@ -20359,13 +20373,13 @@ const App: React.FC = () => {
         });
         if (unavailabilityBlocks) return true;
 
-        const staffName = normaliseDiagnosticPersonName(staff.name);
-        if (!staffName) return false;
+        const staffNameKeys = getDiagnosticPersonKeys(staff.name);
+        if (staffNameKeys.length === 0) return false;
 
         return eventsForDate.some(event => {
             const assignedPeople = getDiagnosticEventPersonnel(event);
 
-            if (!assignedPeople.has(staffName)) return false;
+            if (!staffNameKeys.some(staffKey => assignedPeople.has(staffKey))) return false;
 
             const bookingWindow = getDiagnosticEventBookingWindow(event);
             return time >= bookingWindow.start && time < bookingWindow.end;
@@ -20512,7 +20526,7 @@ const App: React.FC = () => {
                     const staffUnit = String(staff.unit || '').trim().toUpperCase();
                     return !staff.isAdminStaff && (activeUnits.size === 0 || activeUnits.has(staffUnit));
                 })
-                .map(staff => normaliseDiagnosticPersonName(staff.name))
+                .flatMap(staff => getDiagnosticPersonKeys(staff.name))
                 .filter(Boolean)
         );
 
@@ -20539,7 +20553,7 @@ const App: React.FC = () => {
         getDiagnosticEventPersonnel,
         instructorsData,
         isStaffAvailabilityDiagnoseActive,
-        normaliseDiagnosticPersonName,
+        getDiagnosticPersonKeys,
         staffAvailabilityPointer.time,
     ]);
 
