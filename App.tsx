@@ -29409,8 +29409,17 @@ appliedUpdates.forEach(update => {
 
         // ADDITIONAL CHECKS not covered by detectConflictsForEvent
 
-        // Check for missing instructor on Dual events
-        if (event.flightType === 'Dual' && (!event.instructor || event.instructor.trim() === '' || event.instructor === 'TBD')) {
+        // Flight School dual flights require an instructor. Air Combat dual-crew
+        // flights use pilot + crew positions instead, so no instructor is expected.
+        const hasAirCombatCrewPair =
+            normaliseOperationalModel(activeOperationalModel) === 'air_combat' &&
+            String(event.pilot || '').trim().length > 0 &&
+            String(event.crew || '').trim().length > 0;
+        if (
+            event.flightType === 'Dual' &&
+            !hasAirCombatCrewPair &&
+            (!event.instructor || event.instructor.trim() === '' || event.instructor === 'TBD')
+        ) {
             errors.push('❌ No instructor assigned - Dual flights require an instructor.');
         }
 

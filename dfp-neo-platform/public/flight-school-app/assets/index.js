@@ -87561,7 +87561,8 @@ ${error instanceof Error ? error.message : String(error)}`,
           break;
       }
     }
-    if (event.flightType === "Dual" && (!event.instructor || event.instructor.trim() === "" || event.instructor === "TBD")) {
+    const hasAirCombatCrewPair = normaliseOperationalModel(activeOperationalModel) === "air_combat" && String(event.pilot || "").trim().length > 0 && String(event.crew || "").trim().length > 0;
+    if (event.flightType === "Dual" && !hasAirCombatCrewPair && (!event.instructor || event.instructor.trim() === "" || event.instructor === "TBD")) {
       errors.push("❌ No instructor assigned - Dual flights require an instructor.");
     }
     if (shouldRequireTwrDiCoverage(event, options) && !hasTwrDiCoverageForSolo(event, allEventsForDate)) {
