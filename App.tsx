@@ -20646,14 +20646,18 @@ const App: React.FC = () => {
         staffAvailabilityPointer.time,
     ]);
 
-    const getDiagnosticTrainingEventKind = useCallback((event: ScheduleEvent | EventSegment): 'course' | 'training_package' | null => {
-        const source = String((event as any)._source || '').trim().toLowerCase();
-        const notes = String(event.notes || '').trim().toLowerCase();
-        if (source === 'air-combat-priority-formation' || notes.includes('air combat training package') || notes.includes('air combat course')) {
-            if (notes.includes('training package')) return 'training_package';
-            if (notes.includes('course')) return 'course';
+    const normaliseDiagnosticPriorityText = useCallback((value: unknown): string =>
+        String(value || '').trim().toLowerCase(), []);
+
+    const getNeoBuildDiagnosticReportFromStorage = useCallback((): any | null => {
+        if (typeof window === 'undefined') return null;
+        try {
+            const raw = window.localStorage?.getItem('neo_build_diag_report');
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            console.warn('[Staff Diagnose] Failed to read NEO Build diagnostic report:', error);
+            return null;
         }
-        return null;
     }, []);
 
     const staffAvailabilityTrainingRemaining = useMemo(() => {
@@ -20661,32 +20665,64 @@ const App: React.FC = () => {
         if (!showTrainingRemaining) return null;
 
         const diagnosticTime = staffAvailabilityPointer.time;
+        const diagnosticReport = getNeoBuildDiagnosticReportFromStorage();
+        const airCombatPriority = diagnosticReport?.airCombatPriority;
+        const coursePriorityLists = Array.isArray(airCombatPriority?.courseStaffPriorityLists) ? airCombatPriority.courseStaffPriorityLists : [];
+        const packagePriorityLists = Array.isArray(airCombatPriority?.trainingPackageStaffPriorityLists) ? airCombatPriority.trainingPackageStaffPriorityLists : [];
+        const placements = Array.isArray(airCombatPriority?.placements) ? airCombatPriority.placements : [];
+
+        if (coursePriorityLists.length === 0 && packagePriorityLists.length === 0) return null;
+
+        const priorityEntries = new Map<string, { kind: 'course' | 'training_package' }>();
+        const addPriorityList = (kind: 'course' | 'training_package', listReport: any) => {
+            const code = normaliseDiagnosticPriorityText(listReport?.code);
+            const list = Array.isArray(listReport?.list) ? listReport.list : [];
+            list.forEach((entry: any) => {
+                const staff = normaliseDiagnosticPriorityText(entry?.name || entry?.staffName || entry?.staff);
+                const nextEvent = normaliseDiagnosticPriorityText(entry?.nextEvent || entry?.event);
+                if (!staff || !nextEvent) return;
+                priorityEntries.set(`${kind}|${code}|${staff}|${nextEvent}`, { kind });
+            });
+        };
+        coursePriorityLists.forEach((listReport: any) => addPriorityList('course', listReport));
+        packagePriorityLists.forEach((listReport: any) => addPriorityList('training_package', listReport));
+
+        const placedKeys = new Set<string>();
+        placements.forEach((placement: any) => {
+            const kind = placement?.kind === 'training_package' ? 'training_package' : placement?.kind === 'course' ? 'course' : null;
+            if (!kind) return;
+            const placementStartTime = Number(placement?.startTime);
+            if (diagnosticTime !== null && Number.isFinite(placementStartTime) && placementStartTime > diagnosticTime + 0.001) return;
+            const code = normaliseDiagnosticPriorityText(placement?.code);
+            const addPlacedKey = (staffValue: unknown, eventValue: unknown) => {
+                const staff = normaliseDiagnosticPriorityText(staffValue);
+                const event = normaliseDiagnosticPriorityText(eventValue);
+                if (staff && event) placedKeys.add(`${kind}|${code}|${staff}|${event}`);
+            };
+            if (Array.isArray(placement?.members)) {
+                placement.members.forEach((member: any) => addPlacedKey(member?.staff, member?.event || member?.eventCode));
+            } else {
+                addPlacedKey(placement?.staff, placement?.event || placement?.eventCode);
+            }
+        });
+
         const counts = {
             course: 0,
             trainingPackage: 0,
             total: 0,
         };
-        const seenEventIds = new Set<string>();
-
-        staffAvailabilityDiagnosticEvents.forEach(event => {
-            if (seenEventIds.has(event.id)) return;
-            const kind = getDiagnosticTrainingEventKind(event);
-            if (!kind) return;
-            seenEventIds.add(event.id);
-
-            if (diagnosticTime !== null && event.startTime <= diagnosticTime + 0.001) return;
-
-            if (kind === 'training_package') counts.trainingPackage += 1;
+        priorityEntries.forEach((entry, key) => {
+            if (placedKeys.has(key)) return;
+            if (entry.kind === 'training_package') counts.trainingPackage += 1;
             else counts.course += 1;
             counts.total += 1;
         });
-
         return counts;
     }, [
-        getDiagnosticTrainingEventKind,
+        getNeoBuildDiagnosticReportFromStorage,
         activeView,
         isStaffAvailabilityDiagnoseBuildContext,
-        staffAvailabilityDiagnosticEvents,
+        normaliseDiagnosticPriorityText,
         staffAvailabilityPointer.time,
     ]);
 
@@ -32792,7 +32828,7 @@ appliedUpdates.forEach(update => {
                             {staffAvailabilityTrainingRemaining && (
                                 <div className="mt-2 rounded border border-violet-400/35 bg-violet-950/30 px-2 py-2">
                                     <div className="mb-1 flex items-center justify-between gap-2">
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-200">Training Remaining</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-200">Priority Remaining</span>
                                         <span className="font-mono text-sm font-bold text-white">{staffAvailabilityTrainingRemaining.total}</span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-1 text-[11px]">

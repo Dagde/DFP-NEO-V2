@@ -80527,41 +80527,75 @@ ${"=".repeat(60)}`);
     staffAvailabilityDiagnosticEvents,
     staffAvailabilityPointer.time
   ]);
-  const getDiagnosticTrainingEventKind = reactExports.useCallback((event) => {
-    const source = String(event._source || "").trim().toLowerCase();
-    const notes = String(event.notes || "").trim().toLowerCase();
-    if (source === "air-combat-priority-formation" || notes.includes("air combat training package") || notes.includes("air combat course")) {
-      if (notes.includes("training package")) return "training_package";
-      if (notes.includes("course")) return "course";
+  const normaliseDiagnosticPriorityText = reactExports.useCallback((value) => String(value || "").trim().toLowerCase(), []);
+  const getNeoBuildDiagnosticReportFromStorage = reactExports.useCallback(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage?.getItem("neo_build_diag_report");
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      console.warn("[Staff Diagnose] Failed to read NEO Build diagnostic report:", error);
+      return null;
     }
-    return null;
   }, []);
   const staffAvailabilityTrainingRemaining = reactExports.useMemo(() => {
     const showTrainingRemaining = isStaffAvailabilityDiagnoseBuildContext || activeView === "Program Schedule";
     if (!showTrainingRemaining) return null;
     const diagnosticTime = staffAvailabilityPointer.time;
+    const diagnosticReport = getNeoBuildDiagnosticReportFromStorage();
+    const airCombatPriority = diagnosticReport?.airCombatPriority;
+    const coursePriorityLists = Array.isArray(airCombatPriority?.courseStaffPriorityLists) ? airCombatPriority.courseStaffPriorityLists : [];
+    const packagePriorityLists = Array.isArray(airCombatPriority?.trainingPackageStaffPriorityLists) ? airCombatPriority.trainingPackageStaffPriorityLists : [];
+    const placements = Array.isArray(airCombatPriority?.placements) ? airCombatPriority.placements : [];
+    if (coursePriorityLists.length === 0 && packagePriorityLists.length === 0) return null;
+    const priorityEntries = /* @__PURE__ */ new Map();
+    const addPriorityList = (kind, listReport) => {
+      const code = normaliseDiagnosticPriorityText(listReport?.code);
+      const list = Array.isArray(listReport?.list) ? listReport.list : [];
+      list.forEach((entry) => {
+        const staff = normaliseDiagnosticPriorityText(entry?.name || entry?.staffName || entry?.staff);
+        const nextEvent = normaliseDiagnosticPriorityText(entry?.nextEvent || entry?.event);
+        if (!staff || !nextEvent) return;
+        priorityEntries.set(`${kind}|${code}|${staff}|${nextEvent}`, { kind });
+      });
+    };
+    coursePriorityLists.forEach((listReport) => addPriorityList("course", listReport));
+    packagePriorityLists.forEach((listReport) => addPriorityList("training_package", listReport));
+    const placedKeys = /* @__PURE__ */ new Set();
+    placements.forEach((placement) => {
+      const kind = placement?.kind === "training_package" ? "training_package" : placement?.kind === "course" ? "course" : null;
+      if (!kind) return;
+      const placementStartTime = Number(placement?.startTime);
+      if (diagnosticTime !== null && Number.isFinite(placementStartTime) && placementStartTime > diagnosticTime + 1e-3) return;
+      const code = normaliseDiagnosticPriorityText(placement?.code);
+      const addPlacedKey = (staffValue, eventValue) => {
+        const staff = normaliseDiagnosticPriorityText(staffValue);
+        const event = normaliseDiagnosticPriorityText(eventValue);
+        if (staff && event) placedKeys.add(`${kind}|${code}|${staff}|${event}`);
+      };
+      if (Array.isArray(placement?.members)) {
+        placement.members.forEach((member) => addPlacedKey(member?.staff, member?.event || member?.eventCode));
+      } else {
+        addPlacedKey(placement?.staff, placement?.event || placement?.eventCode);
+      }
+    });
     const counts = {
       course: 0,
       trainingPackage: 0,
       total: 0
     };
-    const seenEventIds = /* @__PURE__ */ new Set();
-    staffAvailabilityDiagnosticEvents.forEach((event) => {
-      if (seenEventIds.has(event.id)) return;
-      const kind = getDiagnosticTrainingEventKind(event);
-      if (!kind) return;
-      seenEventIds.add(event.id);
-      if (diagnosticTime !== null && event.startTime <= diagnosticTime + 1e-3) return;
-      if (kind === "training_package") counts.trainingPackage += 1;
+    priorityEntries.forEach((entry, key) => {
+      if (placedKeys.has(key)) return;
+      if (entry.kind === "training_package") counts.trainingPackage += 1;
       else counts.course += 1;
       counts.total += 1;
     });
     return counts;
   }, [
-    getDiagnosticTrainingEventKind,
+    getNeoBuildDiagnosticReportFromStorage,
     activeView,
     isStaffAvailabilityDiagnoseBuildContext,
-    staffAvailabilityDiagnosticEvents,
+    normaliseDiagnosticPriorityText,
     staffAvailabilityPointer.time
   ]);
   const staffAvailabilityPanelPosition = reactExports.useMemo(() => {
@@ -90486,7 +90520,7 @@ Do you want to replace the existing entry?`,
                 ] }, row.label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-slate-400", children: "No staff roles found for this unit." }),
                 staffAvailabilityTrainingRemaining && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 rounded border border-violet-400/35 bg-violet-950/30 px-2 py-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 flex items-center justify-between gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-violet-200", children: "Training Remaining" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-violet-200", children: "Priority Remaining" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-sm font-bold text-white", children: staffAvailabilityTrainingRemaining.total })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-1 text-[11px]", children: [
