@@ -56,6 +56,7 @@ interface NextDayBuildViewProps {
   aircraftConfigLabelsByResource?: Record<string, string>;
   aircraftNumberSettings?: AircraftNumberSettings;
   onExternalEventDrop?: (event: ScheduleEvent, placement: { startTime: number; resourceId: string }) => void;
+  diagnosticHighlightedEventIds?: Set<string>;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -123,6 +124,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     aircraftConfigLabelsByResource,
     aircraftNumberSettings,
     onExternalEventDrop,
+    diagnosticHighlightedEventIds = new Set<string>(),
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
@@ -885,6 +887,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         isSelected={isSelected}
                         isChanged={isChanged}
                         isPauseCompleted={isPauseCompleted}
+                        isDiagnosticHighlighted={diagnosticHighlightedEventIds.has(event.id)}
                         aircraftNumberSettings={aircraftNumberSettings}
                         
                     />
@@ -923,7 +926,12 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     };
 
     return (
-        <div ref={scrollContainerRef} className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
+        <div
+            ref={scrollContainerRef}
+            data-schedule-surface="true"
+            className="flex-1 overflow-auto relative bg-gray-900 select-none"
+            style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}
+        >
             <div 
                 style={{
                     width: `${AIRFRAME_COLUMN_WIDTH + (TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel)}px`,
@@ -980,6 +988,9 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                 {/* Main Grid */}
                 <div 
                     ref={scheduleGridRef}
+                    data-schedule-grid="true"
+                    data-schedule-start-hour={START_HOUR}
+                    data-schedule-pixels-per-hour={PIXELS_PER_HOUR * zoomLevel}
                     className="relative bg-gray-900"
                     onMouseDown={(e) => handleMouseDown(e)}
                     onMouseMove={handleMouseMove}

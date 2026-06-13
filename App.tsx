@@ -20288,6 +20288,13 @@ const App: React.FC = () => {
         return nextDayBuildEvents;
     }, [nextDayBuildEvents]);
 
+    const isStaffAvailabilityDiagnoseBuildContext = activeView === 'NextDayBuild';
+    const staffAvailabilityDiagnosticDate = isStaffAvailabilityDiagnoseBuildContext ? buildDfpDate : date;
+    const staffAvailabilityDiagnosticEvents = useMemo<ScheduleEvent[]>(() => {
+        if (!isStaffAvailabilityDiagnoseBuildContext) return eventsForDate;
+        return nextDayBuildEvents.map(event => ({ ...event, date: buildDfpDate } as ScheduleEvent));
+    }, [buildDfpDate, eventsForDate, isStaffAvailabilityDiagnoseBuildContext, nextDayBuildEvents]);
+
     const [isStaffAvailabilityDiagnoseActive, setIsStaffAvailabilityDiagnoseActive] = useState(false);
     const [staffAvailabilityPointer, setStaffAvailabilityPointer] = useState<{
         x: number;
@@ -20552,13 +20559,13 @@ const App: React.FC = () => {
     const isDiagnosticUnavailableAtTime = useCallback((staff: Instructor, time: number): boolean => {
         const unavailabilityBlocks = (staff.unavailability || []).some(period => {
             if (!period?.startDate || !period?.endDate) return false;
-            const startsBeforeOrOnDate = String(period.startDate) <= date;
-            const endsAfterOrOnDate = String(period.endDate) >= date;
+            const startsBeforeOrOnDate = String(period.startDate) <= staffAvailabilityDiagnosticDate;
+            const endsAfterOrOnDate = String(period.endDate) >= staffAvailabilityDiagnosticDate;
             if (!startsBeforeOrOnDate || !endsAfterOrOnDate) return false;
             if (period.allDay) return true;
 
-            const periodStart = period.startDate === date ? parseDiagnosticTime(period.startTime) ?? 0 : 0;
-            const periodEnd = period.endDate === date ? parseDiagnosticTime(period.endTime) ?? 24 : 24;
+            const periodStart = period.startDate === staffAvailabilityDiagnosticDate ? parseDiagnosticTime(period.startTime) ?? 0 : 0;
+            const periodEnd = period.endDate === staffAvailabilityDiagnosticDate ? parseDiagnosticTime(period.endTime) ?? 24 : 24;
             return time >= periodStart && time < periodEnd;
         });
         if (unavailabilityBlocks) return true;
@@ -20566,7 +20573,7 @@ const App: React.FC = () => {
         const staffNameKeys = getDiagnosticPersonKeys(staff.name);
         if (staffNameKeys.length === 0) return false;
 
-        return eventsForDate.some(event => {
+        return staffAvailabilityDiagnosticEvents.some(event => {
             const assignedPeople = getDiagnosticEventPersonnel(event);
 
             if (!staffNameKeys.some(staffKey => assignedPeople.has(staffKey))) return false;
@@ -20574,7 +20581,7 @@ const App: React.FC = () => {
             const bookingWindow = getDiagnosticEventBookingWindow(event);
             return time >= bookingWindow.start && time < bookingWindow.end;
         });
-    }, [date, eventsForDate, getDiagnosticEventBookingWindow, getDiagnosticEventPersonnel, normaliseDiagnosticPersonName, parseDiagnosticTime]);
+    }, [getDiagnosticEventBookingWindow, getDiagnosticEventPersonnel, normaliseDiagnosticPersonName, parseDiagnosticTime, staffAvailabilityDiagnosticDate, staffAvailabilityDiagnosticEvents]);
 
     const staffAvailabilityRoleRows = useMemo(() => {
         const diagnosticTime = staffAvailabilityPointer.time;
@@ -20606,7 +20613,7 @@ const App: React.FC = () => {
         });
 
         if (diagnosticTime !== null) {
-            eventsForDate.forEach(event => {
+            staffAvailabilityDiagnosticEvents.forEach(event => {
                 const bookingWindow = getDiagnosticEventBookingWindow(event);
                 if (diagnosticTime < bookingWindow.start || diagnosticTime >= bookingWindow.end) return;
 
@@ -20630,12 +20637,12 @@ const App: React.FC = () => {
         activeContextUnitCodeSet,
         activeCrewPositionTerminology,
         activeUnitCode,
-        eventsForDate,
         getDiagnosticEventBookingWindow,
         getDiagnosticEventSeatAssignments,
         getDiagnosticPersonKeys,
         instructorsData,
         isDiagnosticUnavailableAtTime,
+        staffAvailabilityDiagnosticEvents,
         staffAvailabilityPointer.time,
     ]);
 
@@ -20747,7 +20754,7 @@ const App: React.FC = () => {
         );
 
         const highlightedIds = new Set<string>();
-        eventSegmentsForDate.forEach(event => {
+        staffAvailabilityDiagnosticEvents.forEach(event => {
             const bookingWindow = getDiagnosticEventBookingWindow(event);
             if (staffAvailabilityPointer.time === null || staffAvailabilityPointer.time < bookingWindow.start || staffAvailabilityPointer.time >= bookingWindow.end) {
                 return;
@@ -20768,13 +20775,13 @@ const App: React.FC = () => {
     }, [
         activeContextUnitCodeSet,
         activeUnitCode,
-        eventSegmentsForDate,
         getDiagnosticEventBookingWindow,
         getDiagnosticEventPersonnel,
         getDiagnosticEventSeatAssignments,
         getDiagnosticPersonKeys,
         instructorsData,
         isStaffAvailabilityDiagnoseActive,
+        staffAvailabilityDiagnosticEvents,
         staffAvailabilityPointer.time,
     ]);
 
@@ -30865,6 +30872,7 @@ appliedUpdates.forEach(update => {
                             aircraftConfigLabelsByResource={nextDayBuildAircraftConfigLabelsByResource}
                             aircraftNumberSettings={aircraftNumberSettings}
                             onExternalEventDrop={handleNextDayExternalEventDrop}
+                            diagnosticHighlightedEventIds={staffAvailabilityDiagnosticEventIds}
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu

@@ -23614,7 +23614,8 @@ const NextDayBuildView = ({
   formatResourceLabel: formatResourceLabel2,
   aircraftConfigLabelsByResource,
   aircraftNumberSettings,
-  onExternalEventDrop
+  onExternalEventDrop,
+  diagnosticHighlightedEventIds = /* @__PURE__ */ new Set()
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const scheduleGridRef = reactExports.useRef(null);
@@ -24273,6 +24274,7 @@ const NextDayBuildView = ({
             isSelected,
             isChanged,
             isPauseCompleted,
+            isDiagnosticHighlighted: diagnosticHighlightedEventIds.has(event.id),
             aircraftNumberSettings
           },
           event.id
@@ -24303,153 +24305,165 @@ const NextDayBuildView = ({
       return "-";
     }
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: scrollContainerRef, className: "flex-1 overflow-auto relative bg-gray-900 select-none", style: isPauseSelectMode ? { cursor: "crosshair" } : void 0, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "div",
     {
-      style: {
-        width: `${AIRFRAME_COLUMN_WIDTH + TOTAL_HOURS$2 * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-        height: `${TIME_HEADER_HEIGHT$2 + resources.length * ROW_HEIGHT$2}px`,
-        display: "grid",
-        gridTemplateColumns: `${AIRFRAME_COLUMN_WIDTH}px 1fr`,
-        gridTemplateRows: `${TIME_HEADER_HEIGHT$2}px 1fr`
-      },
-      children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 rounded-md flex items-center justify-center gap-1 px-1 neo-build-date-indicator", style: { height: "100%" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => handleDateNavigation("prev"),
-                className: "text-gray-400 hover:text-white transition-colors p-0.5",
-                title: "Previous day",
-                children: "←"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formatDate2(date) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => handleDateNavigation("next"),
-                className: "text-gray-400 hover:text-white transition-colors p-0.5",
-                title: "Next day",
-                children: "→"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          AirframeColumn,
-          {
-            resources,
-            onReorder: onReorderResources,
-            rowHeight: ROW_HEIGHT$2,
-            airframeCount,
-            standbyCount,
-            ftdCount,
-            cptCount,
-            events,
-            formatResourceLabel: formatResourceLabel2,
-            aircraftConfigLabelsByResource
-          }
-        ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            ref: scheduleGridRef,
-            className: "relative bg-gray-900",
-            onMouseDown: (e) => handleMouseDown(e),
-            onMouseMove: handleMouseMove,
-            onMouseUp: handleMouseUp,
-            onMouseLeave: handleMouseUp,
-            onDragOver: handleExternalDragOver,
-            onDrop: handleExternalDrop,
-            children: [
-              renderGridLines(),
-              renderNightShade(),
-              renderDaylightLines(),
-              renderPauseWindow(),
-              renderValidateOverlay(),
-              renderCategorySeparators(),
-              renderEvents(),
-              isVisualAdjustMode && visualAdjustEvent && onVisualAdjustTimeChange && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                VisualAdjustGuide,
-                {
-                  event: visualAdjustEvent,
-                  onTimeChange: onVisualAdjustTimeChange,
-                  scheduleStartHour: START_HOUR$2,
-                  scheduleEndHour: END_HOUR$2,
-                  pixelsPerHour: PIXELS_PER_HOUR$2 * zoomLevel
-                }
-              ),
-              isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      ref: scrollContainerRef,
+      "data-schedule-surface": "true",
+      className: "flex-1 overflow-auto relative bg-gray-900 select-none",
+      style: isPauseSelectMode ? { cursor: "crosshair" } : void 0,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          style: {
+            width: `${AIRFRAME_COLUMN_WIDTH + TOTAL_HOURS$2 * PIXELS_PER_HOUR$2 * zoomLevel}px`,
+            height: `${TIME_HEADER_HEIGHT$2 + resources.length * ROW_HEIGHT$2}px`,
+            display: "grid",
+            gridTemplateColumns: `${AIRFRAME_COLUMN_WIDTH}px 1fr`,
+            gridTemplateRows: `${TIME_HEADER_HEIGHT$2}px 1fr`
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 rounded-md flex items-center justify-center gap-1 px-1 neo-build-date-indicator", style: { height: "100%" }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  FlightTile$1,
+                  "button",
                   {
-                    isPreview: true,
-                    event: oraclePreviewEvent,
-                    onSelectEvent: () => {
-                    },
-                    onMouseDown: () => {
-                    },
-                    onMouseEnter: () => {
-                    },
-                    onMouseLeave: () => {
-                    },
-                    pixelsPerHour: PIXELS_PER_HOUR$2 * zoomLevel,
-                    rowHeight: ROW_HEIGHT$2,
-                    startHour: START_HOUR$2,
-                    row: resources.indexOf(oraclePreviewEvent.resourceId),
-                    isDragging: false,
-                    traineesData,
-                    personnelData,
-                    seatConfigs: /* @__PURE__ */ new Map(),
-                    currentTime: /* @__PURE__ */ new Date(),
-                    aircraftNumberSettings
+                    onClick: () => handleDateNavigation("prev"),
+                    className: "text-gray-400 hover:text-white transition-colors p-0.5",
+                    title: "Previous day",
+                    children: "←"
                   }
                 ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formatDate2(date) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
+                  "button",
                   {
-                    className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
-                    style: {
-                      left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-                      width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-                      top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$2 + ROW_HEIGHT$2 / 2}px`
-                    }
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
-                    style: {
-                      left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-                      width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-                      top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$2 + ROW_HEIGHT$2 / 2}px`
-                    }
+                    onClick: () => handleDateNavigation("next"),
+                    className: "text-gray-400 hover:text-white transition-colors p-0.5",
+                    title: "Next day",
+                    children: "→"
                   }
                 )
               ] }),
-              selectionRect && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "div",
-                {
-                  className: "absolute bg-sky-500/20 border border-sky-400 z-50 pointer-events-none",
-                  style: {
-                    left: selectionRect.x,
-                    top: selectionRect.y,
-                    width: selectionRect.width,
-                    height: selectionRect.height
-                  }
-                }
-              )
-            ]
-          }
-        )
-      ]
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              AirframeColumn,
+              {
+                resources,
+                onReorder: onReorderResources,
+                rowHeight: ROW_HEIGHT$2,
+                airframeCount,
+                standbyCount,
+                ftdCount,
+                cptCount,
+                events,
+                formatResourceLabel: formatResourceLabel2,
+                aircraftConfigLabelsByResource
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                ref: scheduleGridRef,
+                "data-schedule-grid": "true",
+                "data-schedule-start-hour": START_HOUR$2,
+                "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$2 * zoomLevel,
+                className: "relative bg-gray-900",
+                onMouseDown: (e) => handleMouseDown(e),
+                onMouseMove: handleMouseMove,
+                onMouseUp: handleMouseUp,
+                onMouseLeave: handleMouseUp,
+                onDragOver: handleExternalDragOver,
+                onDrop: handleExternalDrop,
+                children: [
+                  renderGridLines(),
+                  renderNightShade(),
+                  renderDaylightLines(),
+                  renderPauseWindow(),
+                  renderValidateOverlay(),
+                  renderCategorySeparators(),
+                  renderEvents(),
+                  isVisualAdjustMode && visualAdjustEvent && onVisualAdjustTimeChange && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    VisualAdjustGuide,
+                    {
+                      event: visualAdjustEvent,
+                      onTimeChange: onVisualAdjustTimeChange,
+                      scheduleStartHour: START_HOUR$2,
+                      scheduleEndHour: END_HOUR$2,
+                      pixelsPerHour: PIXELS_PER_HOUR$2 * zoomLevel
+                    }
+                  ),
+                  isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      FlightTile$1,
+                      {
+                        isPreview: true,
+                        event: oraclePreviewEvent,
+                        onSelectEvent: () => {
+                        },
+                        onMouseDown: () => {
+                        },
+                        onMouseEnter: () => {
+                        },
+                        onMouseLeave: () => {
+                        },
+                        pixelsPerHour: PIXELS_PER_HOUR$2 * zoomLevel,
+                        rowHeight: ROW_HEIGHT$2,
+                        startHour: START_HOUR$2,
+                        row: resources.indexOf(oraclePreviewEvent.resourceId),
+                        isDragging: false,
+                        traineesData,
+                        personnelData,
+                        seatConfigs: /* @__PURE__ */ new Map(),
+                        currentTime: /* @__PURE__ */ new Date(),
+                        aircraftNumberSettings
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "div",
+                      {
+                        className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
+                        style: {
+                          left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
+                          width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
+                          top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$2 + ROW_HEIGHT$2 / 2}px`
+                        }
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "div",
+                      {
+                        className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
+                        style: {
+                          left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
+                          width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
+                          top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$2 + ROW_HEIGHT$2 / 2}px`
+                        }
+                      }
+                    )
+                  ] }),
+                  selectionRect && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      className: "absolute bg-sky-500/20 border border-sky-400 z-50 pointer-events-none",
+                      style: {
+                        left: selectionRect.x,
+                        top: selectionRect.y,
+                        width: selectionRect.width,
+                        height: selectionRect.height
+                      }
+                    }
+                  )
+                ]
+              }
+            )
+          ]
+        }
+      )
     }
-  ) });
+  );
 };
 const ConfigCapacityInfoHint = ({ definition }) => {
   const description = definition.definition?.trim() || "No definition has been entered for this aircraft configuration.";
@@ -80254,6 +80268,12 @@ ${"=".repeat(60)}`);
   const nextDayEventsForStaffTraineeSchedule = reactExports.useMemo(() => {
     return nextDayBuildEvents;
   }, [nextDayBuildEvents]);
+  const isStaffAvailabilityDiagnoseBuildContext = activeView === "NextDayBuild";
+  const staffAvailabilityDiagnosticDate = isStaffAvailabilityDiagnoseBuildContext ? buildDfpDate : date;
+  const staffAvailabilityDiagnosticEvents = reactExports.useMemo(() => {
+    if (!isStaffAvailabilityDiagnoseBuildContext) return eventsForDate;
+    return nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate }));
+  }, [buildDfpDate, eventsForDate, isStaffAvailabilityDiagnoseBuildContext, nextDayBuildEvents]);
   const [isStaffAvailabilityDiagnoseActive, setIsStaffAvailabilityDiagnoseActive] = reactExports.useState(false);
   const [staffAvailabilityPointer, setStaffAvailabilityPointer] = reactExports.useState({ x: 0, y: 0, time: null, inScheduleGrid: false });
   reactExports.useEffect(() => {
@@ -80437,24 +80457,24 @@ ${"=".repeat(60)}`);
   const isDiagnosticUnavailableAtTime = reactExports.useCallback((staff, time) => {
     const unavailabilityBlocks = (staff.unavailability || []).some((period) => {
       if (!period?.startDate || !period?.endDate) return false;
-      const startsBeforeOrOnDate = String(period.startDate) <= date;
-      const endsAfterOrOnDate = String(period.endDate) >= date;
+      const startsBeforeOrOnDate = String(period.startDate) <= staffAvailabilityDiagnosticDate;
+      const endsAfterOrOnDate = String(period.endDate) >= staffAvailabilityDiagnosticDate;
       if (!startsBeforeOrOnDate || !endsAfterOrOnDate) return false;
       if (period.allDay) return true;
-      const periodStart = period.startDate === date ? parseDiagnosticTime(period.startTime) ?? 0 : 0;
-      const periodEnd = period.endDate === date ? parseDiagnosticTime(period.endTime) ?? 24 : 24;
+      const periodStart = period.startDate === staffAvailabilityDiagnosticDate ? parseDiagnosticTime(period.startTime) ?? 0 : 0;
+      const periodEnd = period.endDate === staffAvailabilityDiagnosticDate ? parseDiagnosticTime(period.endTime) ?? 24 : 24;
       return time >= periodStart && time < periodEnd;
     });
     if (unavailabilityBlocks) return true;
     const staffNameKeys = getDiagnosticPersonKeys(staff.name);
     if (staffNameKeys.length === 0) return false;
-    return eventsForDate.some((event) => {
+    return staffAvailabilityDiagnosticEvents.some((event) => {
       const assignedPeople = getDiagnosticEventPersonnel(event);
       if (!staffNameKeys.some((staffKey) => assignedPeople.has(staffKey))) return false;
       const bookingWindow = getDiagnosticEventBookingWindow(event);
       return time >= bookingWindow.start && time < bookingWindow.end;
     });
-  }, [date, eventsForDate, getDiagnosticEventBookingWindow, getDiagnosticEventPersonnel, normaliseDiagnosticPersonName, parseDiagnosticTime]);
+  }, [getDiagnosticEventBookingWindow, getDiagnosticEventPersonnel, normaliseDiagnosticPersonName, parseDiagnosticTime, staffAvailabilityDiagnosticDate, staffAvailabilityDiagnosticEvents]);
   const staffAvailabilityRoleRows = reactExports.useMemo(() => {
     const diagnosticTime = staffAvailabilityPointer.time;
     const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
@@ -80478,7 +80498,7 @@ ${"=".repeat(60)}`);
       rows.set(key, row);
     });
     if (diagnosticTime !== null) {
-      eventsForDate.forEach((event) => {
+      staffAvailabilityDiagnosticEvents.forEach((event) => {
         const bookingWindow = getDiagnosticEventBookingWindow(event);
         if (diagnosticTime < bookingWindow.start || diagnosticTime >= bookingWindow.end) return;
         getDiagnosticEventSeatAssignments(event).forEach((assignment) => {
@@ -80499,12 +80519,12 @@ ${"=".repeat(60)}`);
     activeContextUnitCodeSet,
     activeCrewPositionTerminology,
     activeUnitCode,
-    eventsForDate,
     getDiagnosticEventBookingWindow,
     getDiagnosticEventSeatAssignments,
     getDiagnosticPersonKeys,
     instructorsData,
     isDiagnosticUnavailableAtTime,
+    staffAvailabilityDiagnosticEvents,
     staffAvailabilityPointer.time
   ]);
   const staffAvailabilityPanelPosition = reactExports.useMemo(() => {
@@ -80592,7 +80612,7 @@ ${"=".repeat(60)}`);
       }).flatMap((staff) => getDiagnosticPersonKeys(staff.name)).filter(Boolean)
     );
     const highlightedIds = /* @__PURE__ */ new Set();
-    eventSegmentsForDate.forEach((event) => {
+    staffAvailabilityDiagnosticEvents.forEach((event) => {
       const bookingWindow = getDiagnosticEventBookingWindow(event);
       if (staffAvailabilityPointer.time === null || staffAvailabilityPointer.time < bookingWindow.start || staffAvailabilityPointer.time >= bookingWindow.end) {
         return;
@@ -80611,13 +80631,13 @@ ${"=".repeat(60)}`);
   }, [
     activeContextUnitCodeSet,
     activeUnitCode,
-    eventSegmentsForDate,
     getDiagnosticEventBookingWindow,
     getDiagnosticEventPersonnel,
     getDiagnosticEventSeatAssignments,
     getDiagnosticPersonKeys,
     instructorsData,
     isStaffAvailabilityDiagnoseActive,
+    staffAvailabilityDiagnosticEvents,
     staffAvailabilityPointer.time
   ]);
   const nextDayEventSegments = reactExports.useMemo(() => {
@@ -88714,7 +88734,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             formatResourceLabel: formatResourceDisplayLabel,
             aircraftConfigLabelsByResource: nextDayBuildAircraftConfigLabelsByResource,
             aircraftNumberSettings,
-            onExternalEventDrop: handleNextDayExternalEventDrop
+            onExternalEventDrop: handleNextDayExternalEventDrop,
+            diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds
           }
         );
       case "Priorities":
