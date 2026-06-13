@@ -20334,11 +20334,28 @@ const App: React.FC = () => {
 
             if (!assignedPeople.has(staffName)) return false;
 
-            const eventStart = Number.isFinite(Number(event.preStart)) ? Number(event.preStart) : Number(event.startTime);
-            const eventEnd = Number.isFinite(Number(event.postEnd))
-                ? Number(event.postEnd)
-                : Number(event.startTime) + Number(event.duration || 0);
-            return time >= eventStart && time < eventEnd;
+            const eventStart = Number(event.startTime);
+            const eventEnd = eventStart + Number(event.duration || 0);
+            const rawPreStart = Number(event.preStart);
+            const rawPostEnd = Number(event.postEnd);
+            const hasPreStart = Number.isFinite(rawPreStart);
+            const hasPostEnd = Number.isFinite(rawPostEnd);
+            const rawPreLooksLikeDuration = hasPreStart
+                && rawPreStart >= 0
+                && rawPreStart <= 6
+                && rawPreStart < eventStart
+                && (!hasPostEnd || rawPostEnd <= 6 || rawPostEnd <= eventEnd);
+            const rawPostLooksLikeDuration = hasPostEnd
+                && rawPostEnd >= 0
+                && rawPostEnd <= 6
+                && rawPostEnd < eventEnd;
+            const bookingStart = hasPreStart
+                ? (rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart)
+                : eventStart;
+            const bookingEnd = hasPostEnd
+                ? (rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd)
+                : eventEnd;
+            return time >= bookingStart && time < bookingEnd;
         });
     }, [date, eventsForDate, normaliseDiagnosticPersonName, parseDiagnosticTime]);
 
