@@ -20237,6 +20237,148 @@ const App: React.FC = () => {
         return nextDayBuildEvents;
     }, [nextDayBuildEvents]);
 
+    const [isStaffAvailabilityDiagnoseActive, setIsStaffAvailabilityDiagnoseActive] = useState(false);
+    const [staffAvailabilityPointer, setStaffAvailabilityPointer] = useState<{
+        x: number;
+        y: number;
+        time: number | null;
+        inScheduleGrid: boolean;
+    }>({ x: 0, y: 0, time: null, inScheduleGrid: false });
+
+    useEffect(() => {
+        if (!isStaffAvailabilityDiagnoseActive) return;
+
+        const handleMouseMove = (event: MouseEvent) => {
+            const grid = document.querySelector('[data-schedule-grid="true"]') as HTMLElement | null;
+            let pointerTime: number | null = null;
+            let inScheduleGrid = false;
+
+            if (grid) {
+                const rect = grid.getBoundingClientRect();
+                inScheduleGrid = event.clientX >= rect.left
+                    && event.clientX <= rect.right
+                    && event.clientY >= rect.top
+                    && event.clientY <= rect.bottom;
+
+                if (inScheduleGrid) {
+                    const pixelsPerHour = 200;
+                    const rawTime = (event.clientX - rect.left) / pixelsPerHour;
+                    pointerTime = Math.max(0, Math.min(24, Math.round(rawTime * 12) / 12));
+                }
+            }
+
+            setStaffAvailabilityPointer({
+                x: event.clientX,
+                y: event.clientY,
+                time: pointerTime,
+                inScheduleGrid,
+            });
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsStaffAvailabilityDiagnoseActive(false);
+            }
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isStaffAvailabilityDiagnoseActive]);
+
+    const parseDiagnosticTime = useCallback((timeValue?: string): number | null => {
+        const match = String(timeValue || '').trim().match(/^(\d{1,2}):(\d{2})/);
+        if (!match) return null;
+        return Number(match[1]) + Number(match[2]) / 60;
+    }, []);
+
+    const isDiagnosticUnavailableAtTime = useCallback((staff: Instructor, time: number): boolean => {
+        const unavailabilityBlocks = (staff.unavailability || []).some(period => {
+            if (!period?.startDate || !period?.endDate) return false;
+            const startsBeforeOrOnDate = String(period.startDate) <= date;
+            const endsAfterOrOnDate = String(period.endDate) >= date;
+            if (!startsBeforeOrOnDate || !endsAfterOrOnDate) return false;
+            if (period.allDay) return true;
+
+            const periodStart = period.startDate === date ? parseDiagnosticTime(period.startTime) ?? 0 : 0;
+            const periodEnd = period.endDate === date ? parseDiagnosticTime(period.endTime) ?? 24 : 24;
+            return time >= periodStart && time < periodEnd;
+        });
+        if (unavailabilityBlocks) return true;
+
+        const staffName = String(staff.name || '').trim();
+        if (!staffName) return false;
+
+        return eventsForDate.some(event => {
+            const assignedPeople = [
+                event.instructor,
+                event.pilot,
+                event.crew,
+                event.student,
+                ...(event.attendees || []),
+                ...(event.crewSelectionOrder || []),
+            ].map(value => String(value || '').trim()).filter(Boolean);
+
+            if (!assignedPeople.includes(staffName)) return false;
+
+            const eventStart = Number.isFinite(Number(event.preStart)) ? Number(event.preStart) : Number(event.startTime);
+            const eventEnd = Number.isFinite(Number(event.postEnd))
+                ? Number(event.postEnd)
+                : Number(event.startTime) + Number(event.duration || 0);
+            return time >= eventStart && time < eventEnd;
+        });
+    }, [date, eventsForDate, parseDiagnosticTime]);
+
+    const staffAvailabilityRoleRows = useMemo(() => {
+        const diagnosticTime = staffAvailabilityPointer.time;
+        const activeUnits = activeContextUnitCodeSet.size > 0
+            ? activeContextUnitCodeSet
+            : new Set([String(activeUnitCode || '').trim().toUpperCase()].filter(Boolean));
+        const rows = new Map<string, { label: string; available: number; unavailable: number }>();
+
+        instructorsData.forEach(staff => {
+            const staffUnit = String(staff.unit || '').trim().toUpperCase();
+            if (activeUnits.size > 0 && !activeUnits.has(staffUnit)) return;
+            if (staff.isAdminStaff) return;
+
+            const crewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
+            const label = crewPosition?.label || String(staff.role || '').trim() || 'Unassigned';
+            const key = crewPosition?.genericName
+                ? `crew:${crewPosition.genericName.trim().toLowerCase()}`
+                : `role:${label.trim().toLowerCase()}`;
+            const row = rows.get(key) || { label, available: 0, unavailable: 0 };
+            const isUnavailable = diagnosticTime !== null && isDiagnosticUnavailableAtTime(staff, diagnosticTime);
+            if (isUnavailable) {
+                row.unavailable += 1;
+            } else {
+                row.available += 1;
+            }
+            rows.set(key, row);
+        });
+
+        return Array.from(rows.values()).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+    }, [
+        activeContextUnitCodeSet,
+        activeCrewPositionTerminology,
+        activeUnitCode,
+        instructorsData,
+        isDiagnosticUnavailableAtTime,
+        staffAvailabilityPointer.time,
+    ]);
+
+    const staffAvailabilityPanelPosition = useMemo(() => {
+        if (typeof window === 'undefined') return { left: 24, top: 96 };
+        const width = 250;
+        const height = 280;
+        return {
+            left: Math.min(Math.max(8, staffAvailabilityPointer.x + 18), Math.max(8, window.innerWidth - width - 12)),
+            top: Math.min(Math.max(8, staffAvailabilityPointer.y + 18), Math.max(8, window.innerHeight - height - 12)),
+        };
+    }, [staffAvailabilityPointer.x, staffAvailabilityPointer.y]);
+
     const eventSegmentsForDate = useMemo(() => {
         const segments: EventSegment[] = [];
         const todayStart = new Date(`${date}T00:00:00Z`).getTime();
@@ -32237,7 +32379,37 @@ appliedUpdates.forEach(update => {
                        onLogout={handleLogout}
                        onShowAdminPanel={() => setShowAdminPanel(true)}
                        onShowChangePassword={() => setShowChangePassword(true)}
+                       onStartStaffAvailabilityDiagnose={() => setIsStaffAvailabilityDiagnoseActive(true)}
                 />}
+                {isStaffAvailabilityDiagnoseActive && (
+                    <div
+                        className="fixed z-[250] w-[250px] rounded-lg border border-cyan-400/45 bg-slate-950/95 p-3 text-xs text-slate-200 shadow-2xl backdrop-blur-md pointer-events-none"
+                        style={{ left: staffAvailabilityPanelPosition.left, top: staffAvailabilityPanelPosition.top }}
+                    >
+                        <div className="mb-2 flex items-start justify-between gap-3 border-b border-slate-700/80 pb-2">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-300">Staff Diagnose</p>
+                                <p className="mt-0.5 font-mono text-sm font-bold text-white">
+                                    {staffAvailabilityPointer.inScheduleGrid && staffAvailabilityPointer.time !== null
+                                        ? formatDecimalHourToString(staffAvailabilityPointer.time)
+                                        : 'Move over DFP'}
+                                </p>
+                            </div>
+                            <span className="rounded border border-slate-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400">Esc</span>
+                        </div>
+                        <div className="space-y-1.5">
+                            {staffAvailabilityRoleRows.length > 0 ? staffAvailabilityRoleRows.map(row => (
+                                <div key={row.label} className="grid grid-cols-[1fr_auto_auto] items-baseline gap-2 rounded border border-slate-800/80 bg-slate-900/65 px-2 py-1.5">
+                                    <span className="truncate font-semibold text-slate-100" title={row.label}>{row.label}</span>
+                                    <span className="font-mono font-bold text-emerald-300" title="Available">{row.available}</span>
+                                    <span className="font-mono font-bold text-red-300" title="Unavailable">{row.unavailable}</span>
+                                </div>
+                            )) : (
+                                <p className="rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-slate-400">No staff roles found for this unit.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
                 <div className="relative flex-1 overflow-hidden flex flex-row min-h-0">
                     <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                         {renderActiveView()}

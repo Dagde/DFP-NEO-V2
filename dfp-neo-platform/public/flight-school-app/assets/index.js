@@ -6107,7 +6107,8 @@ const Header = ({
   authUser,
   onLogout,
   onShowAdminPanel,
-  onShowChangePassword
+  onShowChangePassword,
+  onStartStaffAvailabilityDiagnose
 }) => {
   const [showAuditFlyout, setShowAuditFlyout] = reactExports.useState(false);
   const [showUserMenu, setShowUserMenu] = reactExports.useState(false);
@@ -6390,6 +6391,20 @@ const Header = ({
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" }) }),
                   "Change Password"
+                ]
+              }
+            ),
+            onStartStaffAvailabilityDiagnose && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: () => {
+                  setShowUserMenu(false);
+                  onStartStaffAvailabilityDiagnose();
+                },
+                className: "w-full px-3 py-2 text-left text-xs text-cyan-200 hover:bg-cyan-900/20 flex items-center gap-2",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 17v-6m4 6V7m4 10v-4M5 19h14M5 5h14" }) }),
+                  "Diagnose"
                 ]
               }
             ),
@@ -80200,6 +80215,114 @@ ${"=".repeat(60)}`);
   const nextDayEventsForStaffTraineeSchedule = reactExports.useMemo(() => {
     return nextDayBuildEvents;
   }, [nextDayBuildEvents]);
+  const [isStaffAvailabilityDiagnoseActive, setIsStaffAvailabilityDiagnoseActive] = reactExports.useState(false);
+  const [staffAvailabilityPointer, setStaffAvailabilityPointer] = reactExports.useState({ x: 0, y: 0, time: null, inScheduleGrid: false });
+  reactExports.useEffect(() => {
+    if (!isStaffAvailabilityDiagnoseActive) return;
+    const handleMouseMove = (event) => {
+      const grid = document.querySelector('[data-schedule-grid="true"]');
+      let pointerTime = null;
+      let inScheduleGrid = false;
+      if (grid) {
+        const rect = grid.getBoundingClientRect();
+        inScheduleGrid = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+        if (inScheduleGrid) {
+          const pixelsPerHour = 200;
+          const rawTime = (event.clientX - rect.left) / pixelsPerHour;
+          pointerTime = Math.max(0, Math.min(24, Math.round(rawTime * 12) / 12));
+        }
+      }
+      setStaffAvailabilityPointer({
+        x: event.clientX,
+        y: event.clientY,
+        time: pointerTime,
+        inScheduleGrid
+      });
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsStaffAvailabilityDiagnoseActive(false);
+      }
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isStaffAvailabilityDiagnoseActive]);
+  const parseDiagnosticTime = reactExports.useCallback((timeValue) => {
+    const match = String(timeValue || "").trim().match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return null;
+    return Number(match[1]) + Number(match[2]) / 60;
+  }, []);
+  const isDiagnosticUnavailableAtTime = reactExports.useCallback((staff, time) => {
+    const unavailabilityBlocks = (staff.unavailability || []).some((period) => {
+      if (!period?.startDate || !period?.endDate) return false;
+      const startsBeforeOrOnDate = String(period.startDate) <= date;
+      const endsAfterOrOnDate = String(period.endDate) >= date;
+      if (!startsBeforeOrOnDate || !endsAfterOrOnDate) return false;
+      if (period.allDay) return true;
+      const periodStart = period.startDate === date ? parseDiagnosticTime(period.startTime) ?? 0 : 0;
+      const periodEnd = period.endDate === date ? parseDiagnosticTime(period.endTime) ?? 24 : 24;
+      return time >= periodStart && time < periodEnd;
+    });
+    if (unavailabilityBlocks) return true;
+    const staffName = String(staff.name || "").trim();
+    if (!staffName) return false;
+    return eventsForDate.some((event) => {
+      const assignedPeople = [
+        event.instructor,
+        event.pilot,
+        event.crew,
+        event.student,
+        ...event.attendees || [],
+        ...event.crewSelectionOrder || []
+      ].map((value) => String(value || "").trim()).filter(Boolean);
+      if (!assignedPeople.includes(staffName)) return false;
+      const eventStart = Number.isFinite(Number(event.preStart)) ? Number(event.preStart) : Number(event.startTime);
+      const eventEnd = Number.isFinite(Number(event.postEnd)) ? Number(event.postEnd) : Number(event.startTime) + Number(event.duration || 0);
+      return time >= eventStart && time < eventEnd;
+    });
+  }, [date, eventsForDate, parseDiagnosticTime]);
+  const staffAvailabilityRoleRows = reactExports.useMemo(() => {
+    const diagnosticTime = staffAvailabilityPointer.time;
+    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
+    const rows = /* @__PURE__ */ new Map();
+    instructorsData.forEach((staff) => {
+      const staffUnit = String(staff.unit || "").trim().toUpperCase();
+      if (activeUnits.size > 0 && !activeUnits.has(staffUnit)) return;
+      if (staff.isAdminStaff) return;
+      const crewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
+      const label = crewPosition?.label || String(staff.role || "").trim() || "Unassigned";
+      const key = crewPosition?.genericName ? `crew:${crewPosition.genericName.trim().toLowerCase()}` : `role:${label.trim().toLowerCase()}`;
+      const row = rows.get(key) || { label, available: 0, unavailable: 0 };
+      const isUnavailable = diagnosticTime !== null && isDiagnosticUnavailableAtTime(staff, diagnosticTime);
+      if (isUnavailable) {
+        row.unavailable += 1;
+      } else {
+        row.available += 1;
+      }
+      rows.set(key, row);
+    });
+    return Array.from(rows.values()).sort((a, b) => a.label.localeCompare(b.label, void 0, { sensitivity: "base" }));
+  }, [
+    activeContextUnitCodeSet,
+    activeCrewPositionTerminology,
+    activeUnitCode,
+    instructorsData,
+    isDiagnosticUnavailableAtTime,
+    staffAvailabilityPointer.time
+  ]);
+  const staffAvailabilityPanelPosition = reactExports.useMemo(() => {
+    if (typeof window === "undefined") return { left: 24, top: 96 };
+    const width = 250;
+    const height = 280;
+    return {
+      left: Math.min(Math.max(8, staffAvailabilityPointer.x + 18), Math.max(8, window.innerWidth - width - 12)),
+      top: Math.min(Math.max(8, staffAvailabilityPointer.y + 18), Math.max(8, window.innerHeight - height - 12))
+    };
+  }, [staffAvailabilityPointer.x, staffAvailabilityPointer.y]);
   const eventSegmentsForDate = reactExports.useMemo(() => {
     const segments = [];
     const todayStart = (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime();
@@ -90037,7 +90160,29 @@ Do you want to replace the existing entry?`,
             authUser,
             onLogout: handleLogout,
             onShowAdminPanel: () => setShowAdminPanel(true),
-            onShowChangePassword: () => setShowChangePassword(true)
+            onShowChangePassword: () => setShowChangePassword(true),
+            onStartStaffAvailabilityDiagnose: () => setIsStaffAvailabilityDiagnoseActive(true)
+          }
+        ),
+        isStaffAvailabilityDiagnoseActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "fixed z-[250] w-[250px] rounded-lg border border-cyan-400/45 bg-slate-950/95 p-3 text-xs text-slate-200 shadow-2xl backdrop-blur-md pointer-events-none",
+            style: { left: staffAvailabilityPanelPosition.left, top: staffAvailabilityPanelPosition.top },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-3 border-b border-slate-700/80 pb-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-300", children: "Staff Diagnose" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 font-mono text-sm font-bold text-white", children: staffAvailabilityPointer.inScheduleGrid && staffAvailabilityPointer.time !== null ? formatDecimalHourToString(staffAvailabilityPointer.time) : "Move over DFP" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400", children: "Esc" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: staffAvailabilityRoleRows.length > 0 ? staffAvailabilityRoleRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto_auto] items-baseline gap-2 rounded border border-slate-800/80 bg-slate-900/65 px-2 py-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", title: row.label, children: row.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-emerald-300", title: "Available", children: row.available }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-red-300", title: "Unavailable", children: row.unavailable })
+              ] }, row.label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-slate-400", children: "No staff roles found for this unit." }) })
+            ]
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 overflow-hidden flex flex-row min-h-0", children: [
