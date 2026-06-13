@@ -36744,14 +36744,14 @@ const InstructorListView = ({
       {
         value: selectedStaffRoleFilter,
         onChange: (event) => setSelectedStaffRoleFilter(event.target.value),
-        className: "w-full max-w-[9rem] bg-gray-900/90 border border-gray-600 text-gray-100 text-xs font-semibold rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400",
+        className: "w-full max-w-[6.75rem] bg-gray-900/45 border border-gray-700/70 text-gray-300 text-[10px] font-semibold rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-sky-500/70 focus:border-sky-500/70",
         title: "Filter staff by role",
         children: staffRoleFilterOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
       }
     )
   ] });
   const renderInstructorUnitCard = (unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${isAirCombatModel ? "border-emerald-400/80 shadow-emerald-500/20" : "border-gray-700"}`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-3 border-b bg-gray-800/80 grid grid-cols-[minmax(0,9rem)_1fr_minmax(0,5rem)] gap-3 items-center rounded-t-lg backdrop-blur-sm ${isAirCombatModel ? "border-emerald-400/40" : "border-gray-700"}`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-3 border-b bg-gray-800/80 grid grid-cols-[minmax(0,6.75rem)_1fr_minmax(0,5rem)] gap-2 items-center rounded-t-lg backdrop-blur-sm ${isAirCombatModel ? "border-emerald-400/40" : "border-gray-700"}`, children: [
       renderStaffRoleFilterSelect(),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400 text-center truncate", children: unit }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "justify-self-end text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full whitespace-nowrap", children: [
