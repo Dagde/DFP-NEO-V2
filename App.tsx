@@ -20319,6 +20319,13 @@ const App: React.FC = () => {
     const getDiagnosticEventBookingWindow = useCallback((event: ScheduleEvent | EventSegment): { start: number; end: number } => {
         const eventStart = Number(event.startTime);
         const eventEnd = eventStart + Number(event.duration || 0);
+        const eventCodeMatch = String(event.eventCode || event.flightNumber || '').trim().toUpperCase().match(/[A-Z]{1,5}\d{1,3}/);
+        const eventCode = eventCodeMatch?.[0] || '';
+        const lmpItem = eventCode
+            ? syllabusDetails.find(item => String(item.code || '').trim().toUpperCase() === eventCode)
+            : undefined;
+        const fallbackPreFlightTime = Number.isFinite(Number(lmpItem?.preFlightTime)) ? Number(lmpItem?.preFlightTime) : 0;
+        const fallbackPostFlightTime = Number.isFinite(Number(lmpItem?.postFlightTime)) ? Number(lmpItem?.postFlightTime) : 0;
         const rawPreStart = Number(event.preStart);
         const rawPostEnd = Number(event.postEnd);
         const hasPreStart = Number.isFinite(rawPreStart);
@@ -20333,10 +20340,10 @@ const App: React.FC = () => {
             && rawPostEnd <= 6
             && rawPostEnd < eventEnd;
         return {
-            start: hasPreStart ? (rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart) : eventStart,
-            end: hasPostEnd ? (rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd) : eventEnd,
+            start: hasPreStart ? (rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart) : eventStart - fallbackPreFlightTime,
+            end: hasPostEnd ? (rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd) : eventEnd + fallbackPostFlightTime,
         };
-    }, []);
+    }, [syllabusDetails]);
 
     const isDiagnosticUnavailableAtTime = useCallback((staff: Instructor, time: number): boolean => {
         const unavailabilityBlocks = (staff.unavailability || []).some(period => {

@@ -80276,6 +80276,11 @@ ${"=".repeat(60)}`);
   const getDiagnosticEventBookingWindow = reactExports.useCallback((event) => {
     const eventStart = Number(event.startTime);
     const eventEnd = eventStart + Number(event.duration || 0);
+    const eventCodeMatch = String(event.eventCode || event.flightNumber || "").trim().toUpperCase().match(/[A-Z]{1,5}\d{1,3}/);
+    const eventCode = eventCodeMatch?.[0] || "";
+    const lmpItem = eventCode ? syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === eventCode) : void 0;
+    const fallbackPreFlightTime = Number.isFinite(Number(lmpItem?.preFlightTime)) ? Number(lmpItem?.preFlightTime) : 0;
+    const fallbackPostFlightTime = Number.isFinite(Number(lmpItem?.postFlightTime)) ? Number(lmpItem?.postFlightTime) : 0;
     const rawPreStart = Number(event.preStart);
     const rawPostEnd = Number(event.postEnd);
     const hasPreStart = Number.isFinite(rawPreStart);
@@ -80283,10 +80288,10 @@ ${"=".repeat(60)}`);
     const rawPreLooksLikeDuration = hasPreStart && rawPreStart >= 0 && rawPreStart <= 6 && rawPreStart < eventStart && (!hasPostEnd || rawPostEnd <= 6 || rawPostEnd <= eventEnd);
     const rawPostLooksLikeDuration = hasPostEnd && rawPostEnd >= 0 && rawPostEnd <= 6 && rawPostEnd < eventEnd;
     return {
-      start: hasPreStart ? rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart : eventStart,
-      end: hasPostEnd ? rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd : eventEnd
+      start: hasPreStart ? rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart : eventStart - fallbackPreFlightTime,
+      end: hasPostEnd ? rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd : eventEnd + fallbackPostFlightTime
     };
-  }, []);
+  }, [syllabusDetails]);
   const isDiagnosticUnavailableAtTime = reactExports.useCallback((staff, time) => {
     const unavailabilityBlocks = (staff.unavailability || []).some((period) => {
       if (!period?.startDate || !period?.endDate) return false;
