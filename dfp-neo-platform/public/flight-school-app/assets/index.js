@@ -1612,6 +1612,7 @@ const buildSettingsSnapshot = (state) => {
     coursePercentages: state.coursePercentages || {},
     neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
     neoAircraftConfigCapacities: state.neoAircraftConfigCapacities || {},
+    neoAircraftCapacityByUnit: state.neoAircraftCapacityByUnit || {},
     phraseBank: state.phraseBank || {},
     cancellationCodes: state.cancellationCodes || [],
     masterCurrencies: state.masterCurrencies || [],
@@ -6681,13 +6682,13 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   }
   scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, scaledFontSize));
   const isSctEvent = event.eventCategory === "sct";
-  const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+  const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
-  const picName = isTaskingEvent || isAirCombatCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
-  const studentName = isTaskingEvent || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
+  const picName = isTaskingEvent2 || isAirCombatCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
+  const studentName = isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
   let displayPicNameForRender = picName;
   let displayStudentNameForRender = studentName;
   if (isStbyEvent) {
@@ -6740,7 +6741,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if (isSctEvent && event.flightType === "Dual" && event.student) {
       return event.student.split(" – ")[0];
     }
-    if ((isTaskingEvent || isAirCombatCrewEvent) && event.flightType === "Dual" && event.crew) {
+    if ((isTaskingEvent2 || isAirCombatCrewEvent) && event.flightType === "Dual" && event.crew) {
       return event.crew.split(" – ")[0];
     }
     if (event.pilot && event.student && event.pilot === event.student) {
@@ -9229,9 +9230,9 @@ const addPersonnelName$1 = (personnel, value) => {
 const getPersonnel$5 = (event) => {
   const personnel = /* @__PURE__ */ new Set();
   const eventRecord = event;
-  const isTaskingEvent = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || "").startsWith("tasking-");
+  const isTaskingEvent2 = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = event.flightNumber?.startsWith("SCT");
-  if (isTaskingEvent || isSctEvent) {
+  if (isTaskingEvent2 || isSctEvent) {
     addPersonnelName$1(personnel, event.pilot);
     addPersonnelName$1(personnel, event.crew);
     addPersonnelName$1(personnel, event.instructor);
@@ -11592,8 +11593,8 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       if (key && !lmpOrder.has(key)) lmpOrder.set(key, index);
     });
     const getLmpOrder = (item) => {
-      const eventCode = item.type === "LMP Score" ? item.event : item.flightNumber;
-      return lmpOrder.get(normaliseEventCode(eventCode));
+      const eventCode2 = item.type === "LMP Score" ? item.event : item.flightNumber;
+      return lmpOrder.get(normaliseEventCode(eventCode2));
     };
     const combined = [...lmpItems, ...pt051Items].sort((a, b) => {
       const aOrder = getLmpOrder(a);
@@ -28205,7 +28206,7 @@ const CourseMetricsTab = ({
     ] })
   ] });
 };
-const StatCard$1 = ({ title, value, description }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+const StatCard$2 = ({ title, value, description }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400", children: title }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 whitespace-nowrap text-2xl font-bold text-white", children: value }),
   description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: description })
@@ -28404,10 +28405,10 @@ const BuildAnalyticsTab = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: sectionClass2, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Tiles" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total Flight Tiles", value: tilesStats.flightTiles }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `Total ${ftdLabel} Tiles`, value: tilesStats.ftdTiles }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `Combined Flight/${ftdLabel}`, value: tilesStats.combinedTiles }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Standby Events", value: tilesStats.standbyEvents, description: "Reason not specified." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: "Total Flight Tiles", value: tilesStats.flightTiles }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: `Total ${ftdLabel} Tiles`, value: tilesStats.ftdTiles }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: `Combined Flight/${ftdLabel}`, value: tilesStats.combinedTiles }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: "Standby Events", value: tilesStats.standbyEvents, description: "Reason not specified." })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-12 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
@@ -28432,20 +28433,20 @@ const BuildAnalyticsTab = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: sectionClass2, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Tiles" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total Flight Tiles", value: tilesStats.flightTiles }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `Total ${ftdLabel} Tiles`, value: tilesStats.ftdTiles }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `Combined Flight/${ftdLabel}`, value: tilesStats.combinedTiles }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Standby Events", value: tilesStats.standbyEvents, description: "Reason not specified." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: "Total Flight Tiles", value: tilesStats.flightTiles }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: `Total ${ftdLabel} Tiles`, value: tilesStats.ftdTiles }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: `Combined Flight/${ftdLabel}`, value: tilesStats.combinedTiles }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: "Standby Events", value: tilesStats.standbyEvents, description: "Reason not specified." })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: sectionClass2, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Build Summary" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Build Date", value: formattedBuildDate }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total Events", value: analysis.totalEvents }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `${aircraftLabel} Available`, value: analysis.availableAircraft }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: "Build Date", value: formattedBuildDate }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: "Total Events", value: analysis.totalEvents }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$2, { title: `${aircraftLabel} Available`, value: analysis.availableAircraft }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          StatCard$1,
+          StatCard$2,
           {
             title: `${aircraftLabel} Utilization`,
             value: `${analysis.resourceUtilization.aircraftUtilization.toFixed(0)}%`
@@ -28926,7 +28927,7 @@ const ColChart = ({
     })
   ] });
 };
-const StatCard = ({
+const StatCard$1 = ({
   label,
   value,
   sub,
@@ -29553,9 +29554,9 @@ const CourseTab = ({ summary, trainees, events }) => {
   const allSkills = Array.from(new Set(events.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Avg Score", value: safe(avgGrade, 2), color: gradeColor(avgGrade), sub: "course average" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { label: "Avg Score", value: safe(avgGrade, 2), color: gradeColor(avgGrade), sub: "course average" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        StatCard,
+        StatCard$1,
         {
           label: "Pass Rate",
           value: `${passRate.toFixed(0)}%`,
@@ -29564,7 +29565,7 @@ const CourseTab = ({ summary, trainees, events }) => {
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        StatCard,
+        StatCard$1,
         {
           label: "At-Risk",
           value: atRisk,
@@ -29572,9 +29573,9 @@ const CourseTab = ({ summary, trainees, events }) => {
           sub: `of ${trainees.length} trainees`
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "PT-051 Records", value: summary.totalPt051s, sub: `${trainees.length} trainees` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { label: "PT-051 Records", value: summary.totalPt051s, sub: `${trainees.length} trainees` }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        StatCard,
+        StatCard$1,
         {
           label: "Events",
           value: events.length,
@@ -30083,7 +30084,7 @@ const EventsTab = ({ events }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        StatCard,
+        StatCard$1,
         {
           label: "Hardest Event",
           value: hardest.eventCode,
@@ -30092,7 +30093,7 @@ const EventsTab = ({ events }) => {
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        StatCard,
+        StatCard$1,
         {
           label: "Easiest Event",
           value: easiest.eventCode,
@@ -30101,7 +30102,7 @@ const EventsTab = ({ events }) => {
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        StatCard,
+        StatCard$1,
         {
           label: "Most Attempted",
           value: mostAttempts.eventCode,
@@ -30110,7 +30111,7 @@ const EventsTab = ({ events }) => {
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        StatCard,
+        StatCard$1,
         {
           label: "Most Variable",
           value: mostVariable.eventCode,
@@ -31130,7 +31131,7 @@ const verifyCurrentUserPassword = async (password) => {
   return response.ok && data.valid === true;
 };
 const isStaffMetricKey = (key) => key === "staffFlight" || key === "staffSimulator" || key === "staffTotal";
-const isUnitScopedMetricKey = (key) => key === "flight" || key === "flightHours" || key === "simulator" || key === "simulatorHours" || key === "total";
+const isUnitScopedMetricKey = (key) => key === "availability" || key === "flight" || key === "flightHours" || key === "simulator" || key === "simulatorHours" || key === "total";
 const metricStrokeColor = (color) => {
   if (color.includes("cyan")) return "#22d3ee";
   if (color.includes("blue")) return "#60a5fa";
@@ -31310,9 +31311,11 @@ const mergeAvailabilityHistory = (metrics, records) => {
     })
   };
 };
-const fetchBliMetrics = async (startDate, endDate, signal, unitCode) => {
+const fetchBliMetrics = async (startDate, endDate, signal, requestContext) => {
   const params = new URLSearchParams({ startDate, endDate });
-  if (unitCode) params.set("unit", unitCode);
+  if (requestContext?.eventUnitCode) params.set("unit", requestContext.eventUnitCode);
+  if (requestContext?.availabilityUnitCode) params.set("unitCode", requestContext.availabilityUnitCode);
+  if (requestContext?.locationCode) params.set("locationCode", requestContext.locationCode);
   const query = params.toString();
   const [bliResponse, availabilityResponse] = await Promise.all([
     fetch(`/api/bli/metrics?${query}`, { credentials: "include", signal }),
@@ -31361,7 +31364,7 @@ const eventMetricHours = (event) => {
   const duration = Number(event.duration ?? 0);
   return Number.isFinite(duration) && duration > 0 ? duration : 0;
 };
-const eventStaffNames = (event) => {
+const eventStaffNames$1 = (event) => {
   const names = [
     event.instructor,
     event.pilot,
@@ -31377,7 +31380,7 @@ const buildFallbackMetrics = (date, events, currentAircraftAvailable, totalAircr
   const simulatorHours = events.reduce((sum, event) => sum + (event.type === "ftd" ? eventMetricHours(event) : 0), 0);
   const staffSeries = {};
   events.forEach((event) => {
-    eventStaffNames(event).forEach((staffName) => {
+    eventStaffNames$1(event).forEach((staffName) => {
       if (!staffSeries[staffName]) {
         staffSeries[staffName] = [{ date, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }];
       }
@@ -31436,14 +31439,26 @@ const buildUnitScopeOptions = (context) => {
     (Array.isArray(context?.unitCodes) && context?.unitCodes.length > 0 ? context.unitCodes : String(context?.unitCode || "").split("+")).map(normalizeUnitCode).filter(Boolean)
   ));
   if (!context?.isSharedFleetContext || memberUnits.length <= 1) return [];
+  const combinedUnitCode = normalizeUnitCode(context?.unitCode);
   return [
-    { key: "combined", label: `${memberUnits.join("+")} combined` },
+    { key: "combined", label: `${memberUnits.join("+")} combined`, unitCode: combinedUnitCode || void 0 },
     ...memberUnits.map((unitCode) => ({
       key: `unit:${unitCode}`,
       label: unitCode,
       unitCode
     }))
   ];
+};
+const buildBliRequestContext = (context, unitScopeOptions, selectedUnitScopeKey) => {
+  const selectedOption = unitScopeOptions.find((option) => option.key === selectedUnitScopeKey);
+  const selectedIndividualUnitCode = selectedOption?.key.startsWith("unit:") ? normalizeUnitCode(selectedOption.unitCode) : "";
+  const contextUnitCode = normalizeUnitCode(context?.unitCode);
+  const locationCode = normalizeUnitCode(context?.locationCode);
+  return {
+    eventUnitCode: selectedIndividualUnitCode || (!context?.isSharedFleetContext ? contextUnitCode : void 0),
+    availabilityUnitCode: selectedIndividualUnitCode || contextUnitCode || void 0,
+    locationCode: locationCode || void 0
+  };
 };
 const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff) => {
   const dates = metrics.dates.length > 0 ? metrics.dates : [date];
@@ -31928,7 +31943,7 @@ const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraft
     ] })
   ] })
 ] });
-const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange }) => {
+const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange, operationalContext }) => {
   const [timeline, setTimeline] = reactExports.useState("7d");
   const [modalMetrics, setModalMetrics] = reactExports.useState(initialMetrics);
   const [selectedStaff, setSelectedStaff] = reactExports.useState(initialStaff);
@@ -31938,7 +31953,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
   const dateRangeLabel = reactExports.useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
   const showStaffSelector = isStaffMetricKey(metric.key);
   const showUnitSelector = isUnitScopedMetricKey(metric.key) && unitScopeOptions.length > 1;
-  const selectedUnitCode = showUnitSelector ? unitScopeOptions.find((option) => option.key === selectedUnitScopeKey)?.unitCode : void 0;
+  const requestContext = showUnitSelector ? buildBliRequestContext(operationalContext, unitScopeOptions, selectedUnitScopeKey) : buildBliRequestContext(operationalContext, [], "combined");
   reactExports.useEffect(() => {
     setSelectedStaff(initialStaff);
   }, [initialStaff, metric.key]);
@@ -31946,7 +31961,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchBliMetrics(range.startDate, range.endDate, controller.signal, selectedUnitCode).then((data) => {
+    fetchBliMetrics(range.startDate, range.endDate, controller.signal, requestContext).then((data) => {
       setModalMetrics(data);
     }).catch((fetchError) => {
       if (fetchError.name === "AbortError") return;
@@ -31957,7 +31972,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [date, range.endDate, range.startDate, selectedUnitCode]);
+  }, [date, range.endDate, range.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
   const activeMetric = reactExports.useMemo(() => {
     return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff).find((candidate) => candidate.key === metric.key) || metric;
   }, [currentAircraftAvailable, date, events, metric, modalMetrics, selectedStaff, totalAircraft]);
@@ -32067,8 +32082,10 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
   const [periodDraft, setPeriodDraft] = reactExports.useState(() => loadBliPeriodSettings());
   const unitScopeOptions = reactExports.useMemo(() => buildUnitScopeOptions(operationalContext), [operationalContext]);
   const [selectedUnitScopeKey, setSelectedUnitScopeKey] = reactExports.useState("combined");
-  const selectedUnitScope = unitScopeOptions.find((option) => option.key === selectedUnitScopeKey);
-  const selectedUnitCode = selectedUnitScope?.unitCode || (!operationalContext?.isSharedFleetContext ? normalizeUnitCode(operationalContext?.unitCode) : void 0);
+  const requestContext = reactExports.useMemo(
+    () => buildBliRequestContext(operationalContext, unitScopeOptions, selectedUnitScopeKey),
+    [operationalContext, selectedUnitScopeKey, unitScopeOptions]
+  );
   const previewRange = reactExports.useMemo(() => getTimelineRange(date, "7d", periodSettings), [date, periodSettings]);
   const previewDateRangeLabel = reactExports.useMemo(
     () => formatDateRange(previewRange.startDate, previewRange.endDate),
@@ -32147,7 +32164,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal, selectedUnitCode).then((data) => {
+    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal, requestContext).then((data) => {
       setMetrics(data);
     }).catch((fetchError) => {
       if (fetchError.name === "AbortError") return;
@@ -32158,7 +32175,7 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [date, previewRange.endDate, previewRange.startDate, selectedUnitCode]);
+  }, [date, previewRange.endDate, previewRange.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
   const staffGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     sortedStaff2.forEach((staff) => {
@@ -32189,7 +32206,8 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
         periodSettings,
         unitScopeOptions,
         selectedUnitScopeKey,
-        onUnitScopeChange: setSelectedUnitScopeKey
+        onUnitScopeChange: setSelectedUnitScopeKey,
+        operationalContext
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
@@ -32258,6 +32276,197 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
       },
       metric.key
     )) })
+  ] });
+};
+const numberLabel = (value, digits = 0) => value.toLocaleString("en-GB", { maximumFractionDigits: digits, minimumFractionDigits: digits });
+const timeLabel = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "N/A";
+  const hours = Math.floor(numeric);
+  const minutes = Math.round((numeric - hours) * 60);
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+const normaliseRole = (value) => String(value || "Unassigned").trim() || "Unassigned";
+const eventStaffNames = (event) => {
+  const names = [
+    event.instructor,
+    event.pilot,
+    event.crew,
+    ...event.attendees || []
+  ].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name));
+  return [...new Set(names)];
+};
+const eventCode = (event) => String(event.eventCode || event.flightNumber || event.taskingDisplayLabel || event.taskingName || "").trim().toUpperCase();
+const isTaskingEvent = (event) => Boolean(event.isTaskingRequest || event.taskingRequestId || event.taskingName);
+const isCurrencyEvent = (event) => Boolean(event.currency || event.currencyDraftId || event.eventCategory === "currency" || event.eventCategory === "lmp_currency");
+const trainingFamily = (event) => {
+  const code = eventCode(event);
+  if (/^(AA|ATA|ATC|BFM|ACM|AWI|TAC|FTR)/.test(code)) return "course";
+  if (/^(IC|ICO|FORM|PKG|TP)/.test(code)) return "package";
+  if (event.eventCategory === "lmp_event") return "course";
+  return "other";
+};
+const StatCard = ({ label, value, subtext, accent = "text-white" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-2 text-2xl font-bold ${accent}`, children: value }),
+  subtext && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-slate-400", children: subtext })
+] });
+const AirCombatIntelligenceTab = ({
+  date,
+  events,
+  instructorsData,
+  currentAircraftAvailable,
+  totalAircraft,
+  resourceDisplayNames,
+  operationalContext
+}) => {
+  const analysis = reactExports.useMemo(() => {
+    const roleCounts = /* @__PURE__ */ new Map();
+    instructorsData.forEach((person) => {
+      const role = normaliseRole(person.role);
+      roleCounts.set(role, Number(roleCounts.get(role) || 0) + 1);
+    });
+    const crewRoles = [...roleCounts.entries()].map(([role, count]) => ({ role, count })).sort((a, b) => b.count - a.count || a.role.localeCompare(b.role));
+    const activeEvents = events.filter((event) => !event.isCancelled);
+    const flightEvents = activeEvents.filter((event) => event.type === "flight");
+    const simulatorEvents = activeEvents.filter((event) => event.type === "ftd" || event.type === "cpt");
+    const groundEvents = activeEvents.filter((event) => event.type === "ground");
+    const nightEvents = activeEvents.filter((event) => event.dayNight === "Night");
+    const formationEvents = activeEvents.filter((event) => Number(event.formationSize || 0) > 1 || Boolean(event.formationId));
+    const taskingEvents = activeEvents.filter(isTaskingEvent);
+    const currencyEvents = activeEvents.filter(isCurrencyEvent);
+    const courseEvents = activeEvents.filter((event) => trainingFamily(event) === "course");
+    const packageEvents = activeEvents.filter((event) => trainingFamily(event) === "package");
+    const flightHours = flightEvents.reduce((sum, event) => sum + (Number(event.duration) || 0), 0);
+    const simulatorHours = simulatorEvents.reduce((sum, event) => sum + (Number(event.duration) || 0), 0);
+    const crewedFlights = flightEvents.filter((event) => event.flightType === "Dual" || Boolean(event.crewRequirement));
+    const missingPilot = flightEvents.filter((event) => !String(event.pilot || event.instructor || "").trim());
+    const missingCrew = crewedFlights.filter((event) => !String(event.crew || "").trim());
+    const uniqueCrew = new Set(activeEvents.flatMap(eventStaffNames));
+    const aircraftUsed = new Set(flightEvents.map((event) => event.resourceId).filter(Boolean));
+    const firstFlight = flightEvents.reduce((first, event) => !first || Number(event.startTime) < Number(first.startTime) ? event : first, null);
+    const lastFlight = flightEvents.reduce((last, event) => {
+      const end = Number(event.startTime || 0) + Number(event.duration || 0);
+      const lastEnd = last ? Number(last.startTime || 0) + Number(last.duration || 0) : -1;
+      return end > lastEnd ? event : last;
+    }, null);
+    return {
+      crewRoles,
+      activeEvents,
+      flightEvents,
+      simulatorEvents,
+      groundEvents,
+      nightEvents,
+      formationEvents,
+      taskingEvents,
+      currencyEvents,
+      courseEvents,
+      packageEvents,
+      flightHours,
+      simulatorHours,
+      missingPilot,
+      missingCrew,
+      uniqueCrew,
+      aircraftUsed,
+      firstFlight,
+      lastFlight
+    };
+  }, [events, instructorsData]);
+  const unitLabel = [
+    operationalContext?.locationCode,
+    operationalContext?.unitCode || operationalContext?.unitName
+  ].filter(Boolean).join(" - ") || "Current unit";
+  const lastFlightEnd = analysis.lastFlight ? Number(analysis.lastFlight.startTime || 0) + Number(analysis.lastFlight.duration || 0) : void 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900/80 p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "Air Combat Model" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Operational Build Intelligence" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
+          "Current DFP signal for ",
+          unitLabel,
+          " on ",
+          date,
+          ". Aircraft availability is read for this unit or combined-unit context only."
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700 bg-slate-950/60 px-4 py-3 text-right", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: "Aircraft context" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-lg font-bold text-cyan-100", children: [
+          numberLabel(Number(currentAircraftAvailable ?? 0)),
+          " / ",
+          numberLabel(Number(totalAircraft ?? 0))
+        ] })
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Flight events", value: numberLabel(analysis.flightEvents.length), subtext: `${numberLabel(analysis.flightHours, 1)} scheduled flight hours`, accent: "text-sky-200" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Simulator / CPT", value: numberLabel(analysis.simulatorEvents.length), subtext: `${numberLabel(analysis.simulatorHours, 1)} scheduled simulator hours`, accent: "text-teal-200" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Crew scheduled", value: numberLabel(analysis.uniqueCrew.size), subtext: `${numberLabel(analysis.aircraftUsed.size)} aircraft rows used`, accent: "text-emerald-200" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Training mix", value: `${numberLabel(analysis.courseEvents.length)} / ${numberLabel(analysis.packageEvents.length)}`, subtext: "Course / package coded events", accent: "text-amber-200" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-slate-700/80 bg-slate-900/80 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex items-center justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Crew And Resource Health" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Shows whether the current DFP is allocating people and aircraft in an Air Combat-shaped way." })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            StatCard,
+            {
+              label: "Missing captain / pilot",
+              value: numberLabel(analysis.missingPilot.length),
+              subtext: "Flight tiles without a primary crew member",
+              accent: analysis.missingPilot.length > 0 ? "text-rose-200" : "text-emerald-200"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            StatCard,
+            {
+              label: "Missing second crew",
+              value: numberLabel(analysis.missingCrew.length),
+              subtext: "Crewed flight tiles without a second seat",
+              accent: analysis.missingCrew.length > 0 ? "text-rose-200" : "text-emerald-200"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            StatCard,
+            {
+              label: "Formation events",
+              value: numberLabel(analysis.formationEvents.length),
+              subtext: "Events with formation id or size above one",
+              accent: "text-violet-200"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Taskings", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked tasking requests", accent: "text-orange-200" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Currency", value: numberLabel(analysis.currencyEvents.length), subtext: "Currency marked events", accent: "text-fuchsia-200" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Night", value: numberLabel(analysis.nightEvents.length), subtext: "Night-coded events on this DFP", accent: "text-indigo-200" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-slate-700/80 bg-slate-900/80 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Staff Role Mix" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Roles loaded for this unit context. These roles should drive crew selection and seat eligibility." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-2", children: [
+          analysis.crewRoles.map((role) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-md border border-slate-700/70 bg-slate-950/50 px-3 py-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-slate-200", children: role.role }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-cyan-200", children: role.count })
+          ] }, role.role)),
+          analysis.crewRoles.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-slate-700/70 bg-slate-950/50 px-3 py-4 text-sm text-slate-400", children: "No staff roles are loaded for this context." })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-slate-700/80 bg-slate-900/80 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Flying Window Use" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "First flight", value: timeLabel(analysis.firstFlight?.startTime), subtext: analysis.firstFlight ? eventCode(analysis.firstFlight) || "Flight event" : "No flight events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Last landing", value: timeLabel(lastFlightEnd), subtext: analysis.lastFlight ? eventCode(analysis.lastFlight) || "Flight event" : "No flight events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: resourceDisplayNames.aircraft || "Aircraft", value: numberLabel(analysis.aircraftUsed.size), subtext: "Distinct aircraft/resource rows used" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Ground events", value: numberLabel(analysis.groundEvents.length), subtext: "Non-flying scheduled events" })
+      ] })
+    ] })
   ] });
 };
 const ACHistoryAnalytics = ({
@@ -33881,7 +34090,8 @@ const ACHistoryIntelligencePanel = ({
   ] });
 };
 const BuildIntelligenceView = (props) => {
-  const [activeTab, setActiveTab] = reactExports.useState("people");
+  const isAirCombatModel = String(props.operationalModel || "").trim().toLowerCase() === "air_combat";
+  const [activeTab, setActiveTab] = reactExports.useState(isAirCombatModel ? "air-combat" : "people");
   const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
   const formattedDate = reactExports.useMemo(() => {
     const [year, month, day] = props.date.split("-").map(Number);
@@ -33893,7 +34103,11 @@ const BuildIntelligenceView = (props) => {
       timeZone: "UTC"
     });
   }, [props.date]);
+  reactExports.useEffect(() => {
+    if (!isAirCombatModel && activeTab === "air-combat") setActiveTab("people");
+  }, [activeTab, isAirCombatModel]);
   const tabs = [
+    ...isAirCombatModel ? [{ id: "air-combat", label: "Air Combat" }] : [],
     { id: "people", label: "People" },
     { id: "course-metrics", label: "Course Metrics" },
     { id: "build-analytics", label: "Build Analytics" },
@@ -33940,6 +34154,18 @@ const BuildIntelligenceView = (props) => {
           traineeLMPs: props.traineeLMPs,
           courseColors: props.courseColors,
           resourceDisplayNames
+        }
+      ),
+      activeTab === "air-combat" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AirCombatIntelligenceTab,
+        {
+          date: props.date,
+          events: props.events,
+          instructorsData: props.instructorsData,
+          currentAircraftAvailable: props.currentAircraftAvailable,
+          totalAircraft: props.totalAircraft,
+          resourceDisplayNames,
+          operationalContext: props.operationalContext
         }
       ),
       activeTab === "course-metrics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -40190,7 +40416,7 @@ const AirCombatTrainingReportModal = ({
     const label = gradeLabelMap.get(value) || `Grade ${value}`;
     return reportTemplate.grades.showNumbers ? `${value} - ${label}` : label;
   };
-  const eventCode = item?.code || sourceEvent?.flightNumber || "";
+  const eventCode2 = item?.code || sourceEvent?.flightNumber || "";
   const eventDescription = item?.eventDescription || sourceEvent?.notes || item?.module || "";
   const eventType = item?.type || sourceEvent?.type || "";
   const defaultDate = sourceEvent?.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
@@ -40204,7 +40430,7 @@ const AirCombatTrainingReportModal = ({
   const [notes, setNotes] = reactExports.useState("");
   const [isSaving2, setIsSaving] = reactExports.useState(false);
   const [saveError, setSaveError] = reactExports.useState("");
-  const reportId = reactExports.useMemo(() => `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode}-${Date.now()}`, [eventCode, item?.id, sourceEvent?.id, staff.idNumber]);
+  const reportId = reactExports.useMemo(() => `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode2}-${Date.now()}`, [eventCode2, item?.id, sourceEvent?.id, staff.idNumber]);
   const detailCell = (label, value) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-white", children: value || "-" })
@@ -40229,14 +40455,14 @@ const AirCombatTrainingReportModal = ({
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 space-y-5 overflow-y-auto p-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 md:grid-cols-4", children: [
-        detailCell(overviewFields.event, eventCode),
+        detailCell(overviewFields.event, eventCode2),
         detailCell(overviewFields.training, assignment?.code || item?.phase || "-"),
         detailCell(overviewFields.type, eventType),
         detailCell(overviewFields.timing, `${formatDecimalTime(defaultStart)} / ${defaultDuration}h`)
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/55 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: reportTemplate.modules.overview.title }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-white", children: eventCode }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-white", children: eventCode2 }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm text-gray-300", children: eventDescription || "No event description recorded." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-3", children: [
           detailCell(overviewFields.resource, sourceEvent?.resourceId || "-"),
@@ -40316,7 +40542,7 @@ const AirCombatTrainingReportModal = ({
         "button",
         {
           type: "button",
-          disabled: isSaving2 || !eventCode,
+          disabled: isSaving2 || !eventCode2,
           onClick: async () => {
             setIsSaving(true);
             setSaveError("");
@@ -40334,7 +40560,7 @@ const AirCombatTrainingReportModal = ({
                 trainingCode: assignment?.code || item?.phase,
                 trainingTitle: assignment?.title || item?.module,
                 eventId: sourceEvent?.id || item?.id,
-                eventCode,
+                eventCode: eventCode2,
                 eventDescription,
                 eventType,
                 date,
@@ -57528,9 +57754,9 @@ const AddRemedialPackageFlyout = ({
     const usedSequences = existingEvents.filter((event) => event.type === type && event.code?.startsWith(prefix)).map((event) => Number(event.code.slice(prefix.length))).filter(Number.isFinite);
     return usedSequences.length ? Math.max(...usedSequences) + 1 : 1;
   };
-  const eventMatchesLmpItem = (eventCode, item) => {
-    if (!eventCode) return false;
-    return eventCode === item.id || eventCode === item.code || eventCode === item.masterEventId;
+  const eventMatchesLmpItem = (eventCode2, item) => {
+    if (!eventCode2) return false;
+    return eventCode2 === item.id || eventCode2 === item.code || eventCode2 === item.masterEventId;
   };
   const getScoreForEvent = (item) => scores.find((s) => eventMatchesLmpItem(s.event, item));
   const getAssessmentGrade = (assessment) => {
@@ -57833,13 +58059,13 @@ const getCompletedEventDates = (trainee, validEventCodes, eventIdToCode, pt051As
     if (!isCompletedPt051(assessment)) return;
     if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName(assessment.traineeFullName))) return;
     const rawEventCode = getAssessmentEventCode(assessment);
-    const eventCode = eventIdToCode.get(rawEventCode) || rawEventCode;
-    if (!validEventCodes.has(eventCode)) return;
+    const eventCode2 = eventIdToCode.get(rawEventCode) || rawEventCode;
+    if (!validEventCodes.has(eventCode2)) return;
     const date = getAssessmentDate(assessment);
     if (!date) return;
-    const existingDate = completed.get(eventCode);
+    const existingDate = completed.get(eventCode2);
     if (!existingDate || date > existingDate) {
-      completed.set(eventCode, date);
+      completed.set(eventCode2, date);
     }
   });
   return completed;
@@ -57867,10 +58093,10 @@ const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051As
   new Set(progressEvents.map(getEventCode).filter(Boolean));
   const eventIdToCode = /* @__PURE__ */ new Map();
   progressEvents.forEach((item) => {
-    const eventCode = getEventCode(item);
-    if (!eventCode) return;
-    eventIdToCode.set(item.id, eventCode);
-    eventIdToCode.set(item.code, eventCode);
+    const eventCode2 = getEventCode(item);
+    if (!eventCode2) return;
+    eventIdToCode.set(item.id, eventCode2);
+    eventIdToCode.set(item.code, eventCode2);
   });
   const totalEvents = progressEvents.length;
   const trainees = courseTrainees.map((trainee) => {
@@ -57879,10 +58105,10 @@ const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051As
     const traineeValidCodes = new Set(traineeProgressEvents.map(getEventCode).filter(Boolean));
     const traineeEventIdToCode = new Map(eventIdToCode);
     traineeProgressEvents.forEach((item) => {
-      const eventCode = getEventCode(item);
-      if (!eventCode) return;
-      traineeEventIdToCode.set(item.id, eventCode);
-      traineeEventIdToCode.set(item.code, eventCode);
+      const eventCode2 = getEventCode(item);
+      if (!eventCode2) return;
+      traineeEventIdToCode.set(item.id, eventCode2);
+      traineeEventIdToCode.set(item.code, eventCode2);
     });
     const completedEventDates = getCompletedEventDates(trainee, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
     const completedCount = completedEventDates.size;
@@ -57890,14 +58116,14 @@ const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051As
     if (completedCount < traineeProgressEvents.length) {
       nextEvent = "N/A";
       for (const item of traineeProgressEvents) {
-        const eventCode = getEventCode(item);
-        if (!eventCode || completedEventDates.has(eventCode)) continue;
+        const eventCode2 = getEventCode(item);
+        if (!eventCode2 || completedEventDates.has(eventCode2)) continue;
         const prerequisitesMet = item.prerequisites.every((prereq) => {
           const prereqCode = traineeEventIdToCode.get(prereq) || prereq;
           return !traineeValidCodes.has(prereqCode) || completedEventDates.has(prereqCode);
         });
         if (prerequisitesMet) {
-          nextEvent = item.code || eventCode;
+          nextEvent = item.code || eventCode2;
           break;
         }
       }
@@ -57937,10 +58163,10 @@ const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051As
       const traineeValidCodes = new Set(traineeProgressEvents.map(getEventCode).filter(Boolean));
       const traineeEventIdToCode = new Map(eventIdToCode);
       traineeProgressEvents.forEach((item) => {
-        const eventCode = getEventCode(item);
-        if (!eventCode) return;
-        traineeEventIdToCode.set(item.id, eventCode);
-        traineeEventIdToCode.set(item.code, eventCode);
+        const eventCode2 = getEventCode(item);
+        if (!eventCode2) return;
+        traineeEventIdToCode.set(item.id, eventCode2);
+        traineeEventIdToCode.set(item.code, eventCode2);
       });
       const completedEventDates = getCompletedEventDates(metric.trainee, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
       const count = Array.from(completedEventDates.values()).filter((date) => date <= weekEnd).length;
@@ -58511,9 +58737,9 @@ const CourseProgressView = ({
       return a.localeCompare(b);
     });
   }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder]);
-  const getLatestScoreForEvent = (trainee, eventCode) => {
+  const getLatestScoreForEvent = (trainee, eventCode2) => {
     const traineeName = trainee.fullName || trainee.name;
-    return pt051ScoreRecords.filter((record) => record.traineeName === traineeName && record.event === eventCode).sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
+    return pt051ScoreRecords.filter((record) => record.traineeName === traineeName && record.event === eventCode2).sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
   };
   const awardRankings = reactExports.useMemo(() => {
     if (!activeAward) return [];
@@ -58553,11 +58779,11 @@ const CourseProgressView = ({
       includeAllScoredEvents: true
     });
   };
-  const getCriterionForEvent = (eventCode) => {
-    return activeAward.criteria.find((criterion) => criterion.event.toUpperCase() === eventCode.toUpperCase());
+  const getCriterionForEvent = (eventCode2) => {
+    return activeAward.criteria.find((criterion) => criterion.event.toUpperCase() === eventCode2.toUpperCase());
   };
-  const isAwardEventSelected = (eventCode) => {
-    return activeAward.includeAllScoredEvents || !!getCriterionForEvent(eventCode)?.enabled;
+  const isAwardEventSelected = (eventCode2) => {
+    return activeAward.includeAllScoredEvents || !!getCriterionForEvent(eventCode2)?.enabled;
   };
   const selectedAwardEventRows = reactExports.useMemo(() => {
     const selectedRows = activeAward.includeAllScoredEvents ? awardEventOptions : awardEventOptions.filter((option) => !!getCriterionForEvent(option.value)?.enabled);
@@ -58566,21 +58792,21 @@ const CourseProgressView = ({
       weight: getCriterionForEvent(option.value)?.weight ?? 1
     }));
   }, [activeAward, awardEventOptions]);
-  const toggleAwardEvent = (eventCode, selected) => {
+  const toggleAwardEvent = (eventCode2, selected) => {
     setAwards((prev) => prev.map((award) => {
       if (award.id !== activeAward.id) return award;
-      const currentCriteria = award.includeAllScoredEvents ? awardEventOptions.filter((option) => option.value.toUpperCase() !== eventCode.toUpperCase()).map((option) => {
+      const currentCriteria = award.includeAllScoredEvents ? awardEventOptions.filter((option) => option.value.toUpperCase() !== eventCode2.toUpperCase()).map((option) => {
         const existingCriterion = award.criteria.find((criterion) => criterion.event.toUpperCase() === option.value.toUpperCase());
         return existingCriterion ? { ...existingCriterion, event: option.value, enabled: true } : { id: `criterion-${option.value}`, event: option.value, weight: 1, enabled: true };
-      }) : award.criteria.filter((criterion) => criterion.event.toUpperCase() !== eventCode.toUpperCase());
+      }) : award.criteria.filter((criterion) => criterion.event.toUpperCase() !== eventCode2.toUpperCase());
       if (selected) {
-        const existingCriterion = award.criteria.find((criterion) => criterion.event.toUpperCase() === eventCode.toUpperCase());
+        const existingCriterion = award.criteria.find((criterion) => criterion.event.toUpperCase() === eventCode2.toUpperCase());
         return {
           ...award,
           includeAllScoredEvents: false,
           criteria: [
             ...currentCriteria,
-            existingCriterion ? { ...existingCriterion, enabled: true } : { id: `criterion-${eventCode}-${Date.now()}`, event: eventCode, weight: 1, enabled: true }
+            existingCriterion ? { ...existingCriterion, enabled: true } : { id: `criterion-${eventCode2}-${Date.now()}`, event: eventCode2, weight: 1, enabled: true }
           ]
         };
       }
@@ -58591,10 +58817,10 @@ const CourseProgressView = ({
       };
     }));
   };
-  const setAwardEventWeight = (eventCode, weight) => {
+  const setAwardEventWeight = (eventCode2, weight) => {
     setAwards((prev) => prev.map((award) => {
       if (award.id !== activeAward.id) return award;
-      const existingCriterion = award.criteria.find((criterion) => criterion.event.toUpperCase() === eventCode.toUpperCase());
+      const existingCriterion = award.criteria.find((criterion) => criterion.event.toUpperCase() === eventCode2.toUpperCase());
       if (existingCriterion) {
         return {
           ...award,
@@ -58603,7 +58829,7 @@ const CourseProgressView = ({
       }
       return {
         ...award,
-        criteria: [...award.criteria, { id: `criterion-${eventCode}-${Date.now()}`, event: eventCode, weight, enabled: true }]
+        criteria: [...award.criteria, { id: `criterion-${eventCode2}-${Date.now()}`, event: eventCode2, weight, enabled: true }]
       };
     }));
   };
@@ -58670,7 +58896,7 @@ const CourseProgressView = ({
   const scoreMatrixRows = reactExports.useMemo(() => {
     return scoreCourseTrainees.map((trainee) => ({
       traineeName: getDisplayName(trainee.fullName || trainee.name),
-      scores: scoredEvents.map((eventCode) => getLatestScoreForEvent(trainee, eventCode)?.score ?? "")
+      scores: scoredEvents.map((eventCode2) => getLatestScoreForEvent(trainee, eventCode2)?.score ?? "")
     }));
   }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses]);
   const escapeCsvValue = (value) => {
@@ -58698,7 +58924,7 @@ const CourseProgressView = ({
   const printCourseScores = () => {
     const printWindow = window.open("", "_blank", "width=1200,height=800");
     if (!printWindow) return;
-    const headerCells = scoredEvents.map((eventCode) => `<th>${escapeHtmlValue(eventCode)}</th>`).join("");
+    const headerCells = scoredEvents.map((eventCode2) => `<th>${escapeHtmlValue(eventCode2)}</th>`).join("");
     const bodyRows = scoreMatrixRows.map((row) => `
             <tr>
                 <td class="name">${escapeHtmlValue(row.traineeName)}</td>
@@ -58858,14 +59084,14 @@ const CourseProgressView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "sticky left-0 z-10 bg-gray-900/95 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-300 min-w-56", children: "Trainee" }),
-                    scoredEvents.map((eventCode) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-3 text-center text-xs font-semibold uppercase text-gray-300 min-w-24 whitespace-nowrap", children: eventCode }, eventCode))
+                    scoredEvents.map((eventCode2) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-3 text-center text-xs font-semibold uppercase text-gray-300 min-w-24 whitespace-nowrap", children: eventCode2 }, eventCode2))
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700", children: [
                     scoreCourseTrainees.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium", children: getDisplayName(trainee.fullName || trainee.name) }) }),
-                      scoredEvents.map((eventCode) => {
-                        const score = getLatestScoreForEvent(trainee, eventCode);
-                        return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score ? score.score : "" }, `${trainee.idNumber}-${eventCode}`);
+                      scoredEvents.map((eventCode2) => {
+                        const score = getLatestScoreForEvent(trainee, eventCode2);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score ? score.score : "" }, `${trainee.idNumber}-${eventCode2}`);
                       })
                     ] }, trainee.idNumber || trainee.fullName)),
                     scoreCourseTrainees.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-8 text-center text-gray-400", colSpan: Math.max(1, scoredEvents.length + 1), children: "No active trainees available for this course." }) })
@@ -62135,9 +62361,9 @@ const addPersonnelName = (personnel, value) => {
 const getPersonnel$2 = (event) => {
   const personnel = /* @__PURE__ */ new Set();
   const eventRecord = event;
-  const isTaskingEvent = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || "").startsWith("tasking-");
+  const isTaskingEvent2 = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = event.flightNumber?.startsWith("SCT");
-  if (isTaskingEvent || isSctEvent) {
+  if (isTaskingEvent2 || isSctEvent) {
     addPersonnelName(personnel, event.pilot);
     addPersonnelName(personnel, event.crew);
     addPersonnelName(personnel, event.instructor);
@@ -65659,14 +65885,14 @@ const DfpSidePanelTimeline = ({
     if (row.arrivalPoint) setAssistCurrencyArrivalPoint(row.arrivalPoint);
     if (row.aircraftConfigId) setAssistCurrencyConfigId(row.aircraftConfigId);
   };
-  const selectAssistTrainingEvent = (kind, eventCode) => {
-    setSelectedEventCode(eventCode);
+  const selectAssistTrainingEvent = (kind, eventCode2) => {
+    setSelectedEventCode(eventCode2);
     setSelectedTaskProfile("");
     if (kind === "course") {
-      setSelectedCourseEventCode(eventCode);
+      setSelectedCourseEventCode(eventCode2);
       setSelectedPackageEventCode("");
     } else {
-      setSelectedPackageEventCode(eventCode);
+      setSelectedPackageEventCode(eventCode2);
       setSelectedCourseEventCode("");
     }
   };
@@ -66809,9 +67035,9 @@ const isOverlapping = (f1, f2) => {
 };
 const getPersonnel = (event) => {
   const personnel = /* @__PURE__ */ new Set();
-  const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+  const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = event.flightNumber?.startsWith("SCT");
-  if (isTaskingEvent) {
+  if (isTaskingEvent2) {
     if (event.pilot) personnel.add(event.pilot);
     if (event.crew) personnel.add(event.crew);
     if (event.instructor) personnel.add(event.instructor);
@@ -66886,9 +67112,9 @@ const getPersonnelIdentityRefs = (event) => {
     const ref = makePersonnelIdentityRef(label, role);
     if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
   };
-  const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+  const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = event.flightNumber?.startsWith("SCT");
-  if (isTaskingEvent) {
+  if (isTaskingEvent2) {
     addRef(event.pilot, "staff");
     addRef(event.crew, "staff");
   } else if (isSctEvent) {
@@ -67054,8 +67280,8 @@ const getLmpResourceNumber = (item) => {
   if (Number.isFinite(parsed) && parsed > 1) return Math.max(1, Math.round(parsed));
   const physicalResourceCount = Array.isArray(item?.resourcesPhysical) ? item.resourcesPhysical.filter((resource) => String(resource || "").trim().length > 0).length : 0;
   if (physicalResourceCount > 1) return physicalResourceCount;
-  const eventCode = String(item?.code || item?.id || item?.masterEventId || "").trim().toUpperCase();
-  if (item?.type === "Flight" && /^FORM/.test(eventCode)) return 2;
+  const eventCode2 = String(item?.code || item?.id || item?.masterEventId || "").trim().toUpperCase();
+  if (item?.type === "Flight" && /^FORM/.test(eventCode2)) return 2;
   return Number.isFinite(parsed) ? Math.max(1, Math.round(parsed)) : 1;
 };
 const isMultiResourceFlightItem = (item) => !!item && item.type === "Flight" && getLmpResourceNumber(item) > 1;
@@ -68607,27 +68833,27 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return null;
   };
-  const remedialInstructorOverrideKey = (traineeName, eventCode) => `${normalizeBuildPersonnelName(traineeName)}::${normalizeLmpEventId(eventCode || "")}`;
+  const remedialInstructorOverrideKey = (traineeName, eventCode2) => `${normalizeBuildPersonnelName(traineeName)}::${normalizeLmpEventId(eventCode2 || "")}`;
   const remedialInstructorOverrides = /* @__PURE__ */ new Map();
   highestPriorityEvents.forEach((event) => {
     if (!priorityEventMatchesBuildDate(event, buildDate) || !event.isTimeFixed || !event.isRemedial) return;
     const traineeName = event.student || event.pilot || "";
-    const eventCode = event.flightNumber || "";
+    const eventCode2 = event.flightNumber || "";
     const instructorName = (event.instructor || "").trim();
-    if (!traineeName || !eventCode || !instructorName) return;
+    if (!traineeName || !eventCode2 || !instructorName) return;
     const dayNight = event.dayNight || "";
     if (dayNight === "Night") {
       markIntendedNightPerson(instructorName);
     }
-    remedialInstructorOverrides.set(remedialInstructorOverrideKey(traineeName, eventCode), {
+    remedialInstructorOverrides.set(remedialInstructorOverrideKey(traineeName, eventCode2), {
       trainee: traineeName,
-      eventCode,
+      eventCode: eventCode2,
       instructor: instructorName,
       priorityEventId: event.id,
       dayNight
     });
   });
-  const getRemedialInstructorOverride = (traineeName, eventCode) => remedialInstructorOverrides.get(remedialInstructorOverrideKey(traineeName, eventCode))?.instructor || "";
+  const getRemedialInstructorOverride = (traineeName, eventCode2) => remedialInstructorOverrides.get(remedialInstructorOverrideKey(traineeName, eventCode2))?.instructor || "";
   const forcedRemedialInstructorConflicts = [];
   const traceMandatoryRemedial = (bucket, entry, limit = 1200) => {
     const list = neoBuildDiag.mandatoryRemedialFlights[bucket];
@@ -71645,12 +71871,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const members = Array.isArray(entry.members) ? entry.members.map((member) => `${member.staff}${member.crew ? ` + ${member.crew}` : ""}`) : [entry.staff || entry.pilot].filter(Boolean);
         const primaryStaffNames = members.map((name) => String(name).split(" + ")[0]);
         primaryStaffNames.forEach((name) => scheduledPrimaryStaff.add(name));
-        const eventCode = entry.event || entry.flightNumber || "event";
-        const scheduledText = `${members.join(", ") || "Selected staff"} - ${eventCode}`;
+        const eventCode2 = entry.event || entry.flightNumber || "event";
+        const scheduledText = `${members.join(", ") || "Selected staff"} - ${eventCode2}`;
         decision.scheduledEntries.push(scheduledText);
         decision.scheduled = decision.scheduledEntries.join("; ");
         decision.eventScheduled = decision.scheduledEntries.map((item) => item.split(" - ").pop()).join(", ");
-        decision.eventAttempted = decision.eventAttempted || eventCode;
+        decision.eventAttempted = decision.eventAttempted || eventCode2;
         decision.staffSelected = Array.from(/* @__PURE__ */ new Set([...decision.staffSelected || [], ...members]));
         decision._scheduledPrimaryStaff = Array.from(/* @__PURE__ */ new Set([...decision._scheduledPrimaryStaff || [], ...primaryStaffNames]));
         decision.staffPriorityRank = priorityRows.find((row) => members.some((name) => name.startsWith(row.staffName)))?.priorityRank || null;
@@ -71667,8 +71893,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       recordFailedDecision(entry) {
         const decision = getDecision(entry.startTime);
         if (!decision) return;
-        const eventCode = entry.event || entry.flightNumber || entry.code || "event";
-        decision.eventAttempted = decision.eventAttempted || eventCode;
+        const eventCode2 = entry.event || entry.flightNumber || entry.code || "event";
+        decision.eventAttempted = decision.eventAttempted || eventCode2;
         const readable = humaniseNeoAuditReason(entry.reason, entry);
         decision.failedCandidateCount = (decision.failedCandidateCount || 0) + 1;
         const rawReason = entry.reason || "NO_RECORDED_REASON";
@@ -71678,7 +71904,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (decision.failedCandidates.length < 20) {
           decision.failedCandidates.push({
             staffName: entry.staff || entry.pilot || "Unknown staff",
-            event: eventCode,
+            event: eventCode2,
             reason: readable,
             rawReason: entry.reason || null
           });
@@ -79020,6 +79246,7 @@ const App = () => {
   const [availableAircraftCount, setAvailableAircraftCount] = reactExports.useState(15);
   const [neoAvailableAircraftCount, setNeoAvailableAircraftCount] = reactExports.useState(15);
   const [neoAircraftConfigCapacities, setNeoAircraftConfigCapacities] = reactExports.useState({});
+  const [neoAircraftCapacityByUnit, setNeoAircraftCapacityByUnit] = reactExports.useState({});
   const [aircraftConfigStateByDate, setAircraftConfigStateByDate] = reactExports.useState({});
   const [availableFtdCount, setAvailableFtdCount] = reactExports.useState(school === "ESL" ? 5 : 4);
   const [availableCptCount, setAvailableCptCount] = reactExports.useState(4);
@@ -79027,6 +79254,11 @@ const App = () => {
     () => getResourceDisplayNames(activePlatformResourcePool),
     [activePlatformResourcePool]
   );
+  const activeNeoAircraftCapacityUnitKey = reactExports.useMemo(() => {
+    const locationKey = String(school || "DEFAULT").trim().toUpperCase() || "DEFAULT";
+    const unitKey = String(activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT";
+    return `${locationKey}__${unitKey}`;
+  }, [activeUnitCode, school]);
   const aircraftNumberSettings = reactExports.useMemo(
     () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
     [activePlatformResourcePool]
@@ -79184,6 +79416,34 @@ const App = () => {
     if (solarClassification === "Day" || solarClassification === "Night") return solarClassification;
     return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
   }, [ceaseNightFlying, commenceNightFlying, date, getSunTimesForDate, selectedDfpSunTimes]);
+  const handleUpdateNeoAvailableAircraftCount = reactExports.useCallback((value) => {
+    setNeoAvailableAircraftCount((previous) => {
+      const next = typeof value === "function" ? value(previous) : value;
+      setNeoAircraftCapacityByUnit((current) => ({
+        ...current,
+        [activeNeoAircraftCapacityUnitKey]: {
+          ...current[activeNeoAircraftCapacityUnitKey] || {},
+          availableAircraftCount: next,
+          aircraftConfigCapacities: current[activeNeoAircraftCapacityUnitKey]?.aircraftConfigCapacities || neoAircraftConfigCapacities
+        }
+      }));
+      return next;
+    });
+  }, [activeNeoAircraftCapacityUnitKey, neoAircraftConfigCapacities]);
+  const handleUpdateNeoAircraftConfigCapacities = reactExports.useCallback((value) => {
+    setNeoAircraftConfigCapacities((previous) => {
+      const next = typeof value === "function" ? value(previous) : value;
+      setNeoAircraftCapacityByUnit((current) => ({
+        ...current,
+        [activeNeoAircraftCapacityUnitKey]: {
+          ...current[activeNeoAircraftCapacityUnitKey] || {},
+          availableAircraftCount: current[activeNeoAircraftCapacityUnitKey]?.availableAircraftCount ?? neoAvailableAircraftCount,
+          aircraftConfigCapacities: next
+        }
+      }));
+      return next;
+    });
+  }, [activeNeoAircraftCapacityUnitKey, neoAvailableAircraftCount]);
   const [preferredDutyPeriod, setPreferredDutyPeriod] = reactExports.useState(8);
   const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = reactExports.useState(10);
   const [maxDispatchPerHour, setMaxDispatchPerHour] = reactExports.useState(8);
@@ -79946,13 +80206,22 @@ ${"=".repeat(60)}`);
         if (saved.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
           setAvailableAircraftCount(saved.availableAircraftCount);
         }
-        if (saved.neoAvailableAircraftCount != null) {
-          setNeoAvailableAircraftCount(saved.neoAvailableAircraftCount);
-        } else if (saved.availableAircraftCount != null) {
-          setNeoAvailableAircraftCount(saved.availableAircraftCount);
-        }
-        if (saved.neoAircraftConfigCapacities) {
-          setNeoAircraftConfigCapacities(saved.neoAircraftConfigCapacities);
+        {
+          const savedNeoCapacityByUnit = saved.neoAircraftCapacityByUnit && typeof saved.neoAircraftCapacityByUnit === "object" ? saved.neoAircraftCapacityByUnit : {};
+          setNeoAircraftCapacityByUnit(savedNeoCapacityByUnit);
+          const activeNeoCapacity = savedNeoCapacityByUnit[activeNeoAircraftCapacityUnitKey];
+          if (activeNeoCapacity?.availableAircraftCount != null) {
+            setNeoAvailableAircraftCount(activeNeoCapacity.availableAircraftCount);
+          } else if (saved.neoAvailableAircraftCount != null) {
+            setNeoAvailableAircraftCount(saved.neoAvailableAircraftCount);
+          } else if (saved.availableAircraftCount != null) {
+            setNeoAvailableAircraftCount(saved.availableAircraftCount);
+          }
+          if (activeNeoCapacity?.aircraftConfigCapacities) {
+            setNeoAircraftConfigCapacities(activeNeoCapacity.aircraftConfigCapacities);
+          } else if (saved.neoAircraftConfigCapacities) {
+            setNeoAircraftConfigCapacities(saved.neoAircraftConfigCapacities);
+          }
         }
         if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
         if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
@@ -80035,6 +80304,18 @@ ${"=".repeat(60)}`);
     loadSettings();
   }, []);
   reactExports.useEffect(() => {
+    const scopedNeoCapacity = neoAircraftCapacityByUnit[activeNeoAircraftCapacityUnitKey];
+    if (scopedNeoCapacity) {
+      if (scopedNeoCapacity.availableAircraftCount != null) {
+        setNeoAvailableAircraftCount(scopedNeoCapacity.availableAircraftCount);
+      }
+      setNeoAircraftConfigCapacities(scopedNeoCapacity.aircraftConfigCapacities || {});
+      return;
+    }
+    setNeoAvailableAircraftCount(availableAircraftCount);
+    setNeoAircraftConfigCapacities({});
+  }, [activeNeoAircraftCapacityUnitKey, neoAircraftCapacityByUnit]);
+  reactExports.useEffect(() => {
     if (!settingsLoaded) {
       console.log("[App] ⏭️ Auto-save skipped — settingsLoaded is false");
       return;
@@ -80043,6 +80324,14 @@ ${"=".repeat(60)}`);
     const flyingWindowExclusionsByUnitForSave = {
       ...flyingWindowExclusionsByUnit,
       [activeFlyingWindowExclusionUnitKey]: flyingWindowExclusions
+    };
+    const neoAircraftCapacityByUnitForSave = {
+      ...neoAircraftCapacityByUnit,
+      [activeNeoAircraftCapacityUnitKey]: {
+        ...neoAircraftCapacityByUnit[activeNeoAircraftCapacityUnitKey] || {},
+        availableAircraftCount: neoAvailableAircraftCount,
+        aircraftConfigCapacities: neoAircraftConfigCapacities
+      }
     };
     const snapshot = buildSettingsSnapshot({
       locations,
@@ -80070,6 +80359,7 @@ ${"=".repeat(60)}`);
       availableAircraftCount,
       neoAvailableAircraftCount,
       neoAircraftConfigCapacities,
+      neoAircraftCapacityByUnit: neoAircraftCapacityByUnitForSave,
       availableFtdCount,
       availableCptCount,
       timezoneOffset,
@@ -80119,6 +80409,8 @@ ${"=".repeat(60)}`);
     availableAircraftCount,
     neoAvailableAircraftCount,
     neoAircraftConfigCapacities,
+    neoAircraftCapacityByUnit,
+    activeNeoAircraftCapacityUnitKey,
     availableFtdCount,
     availableCptCount,
     timezoneOffset,
@@ -80502,8 +80794,8 @@ ${"=".repeat(60)}`);
     const eventStart = Number(event.startTime);
     const eventEnd = eventStart + Number(event.duration || 0);
     const eventCodeMatch = String(event.eventCode || event.flightNumber || "").trim().toUpperCase().match(/[A-Z]{1,5}\d{1,3}/);
-    const eventCode = eventCodeMatch?.[0] || "";
-    const lmpItem = eventCode ? syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === eventCode) : void 0;
+    const eventCode2 = eventCodeMatch?.[0] || "";
+    const lmpItem = eventCode2 ? syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === eventCode2) : void 0;
     const fallbackPreFlightTime = Number.isFinite(Number(lmpItem?.preFlightTime)) ? Number(lmpItem?.preFlightTime) : 0;
     const fallbackPostFlightTime = Number.isFinite(Number(lmpItem?.postFlightTime)) ? Number(lmpItem?.postFlightTime) : 0;
     const rawPreStart = Number(event.preStart);
@@ -80526,11 +80818,11 @@ ${"=".repeat(60)}`);
     return { key, label };
   }, [activeCrewPositionTerminology]);
   const getDiagnosticEventSeatAssignments = reactExports.useCallback((event) => {
-    const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+    const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
     const isSctEvent = event.eventCategory === "sct" || String(event.flightNumber || "").startsWith("SCT");
     const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
-    const primaryName = isTaskingEvent || isAirCombatCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor || event.pilot;
-    const secondaryName = isTaskingEvent || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student || event.crew || "" : event.student || event.crew || "";
+    const primaryName = isTaskingEvent2 || isAirCombatCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor || event.pilot;
+    const secondaryName = isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student || event.crew || "" : event.student || event.crew || "";
     const fallbackNames = getDiagnosticEventNameCandidates(event);
     const resolvedPrimaryName = String(primaryName || fallbackNames[0] || "").trim();
     const primaryKeys = new Set(getDiagnosticPersonKeys(resolvedPrimaryName));
@@ -81928,16 +82220,16 @@ ${error instanceof Error ? error.message : String(error)}`,
   const generateAirCombatPostFlightDraftTrainingReport = async (sourceEvent, dcoResult) => {
     if (normaliseOperationalModel(activeOperationalModel) !== "air_combat") return;
     const staffName = sourceEvent.pilot || sourceEvent.crew || "";
-    const eventCode = String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim();
-    if (!staffName || !eventCode) return;
+    const eventCode2 = String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim();
+    if (!staffName || !eventCode2) return;
     const staff = allInstructorsData.find((person) => person.name === staffName);
     if (!staff) {
       console.warn(`[PostFlight] Air Combat draft report skipped: staff not found for ${staffName}`);
       return;
     }
-    const matchingItem = syllabusDetails.find((item) => item.isActive !== false && String(item.code || "").trim().toUpperCase() === eventCode.toUpperCase() && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType));
+    const matchingItem = syllabusDetails.find((item) => item.isActive !== false && String(item.code || "").trim().toUpperCase() === eventCode2.toUpperCase() && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType));
     if (!matchingItem) {
-      console.log(`[PostFlight] Air Combat draft report skipped: ${eventCode} is not a course/training package syllabus event`);
+      console.log(`[PostFlight] Air Combat draft report skipped: ${eventCode2} is not a course/training package syllabus event`);
       return;
     }
     const preferences = { ...staff.preferences || {} };
@@ -81952,9 +82244,9 @@ ${error instanceof Error ? error.message : String(error)}`,
     const assignment = allAssignments.find((candidate) => candidate.trainingKey === fallbackAssignment.trainingKey || trainingCodes.has(candidate.code)) || fallbackAssignment;
     const reportTemplate = getUnitTrainingReportTemplate(platformConfig, staff.unit || activeUnitCode);
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const reportId = `air-combat-postflight-${staff.idNumber}-${sourceEvent.id || eventCode}`;
+    const reportId = `air-combat-postflight-${staff.idNumber}-${sourceEvent.id || eventCode2}`;
     const existingReports = normaliseAirCombatTrainingReports(preferences);
-    const existingReport = existingReports.find((report2) => report2.id === reportId || report2.staffIdNumber === staff.idNumber && (report2.eventId === sourceEvent.id || report2.eventCode === eventCode) && report2.date === sourceEvent.date);
+    const existingReport = existingReports.find((report2) => report2.id === reportId || report2.staffIdNumber === staff.idNumber && (report2.eventId === sourceEvent.id || report2.eventCode === eventCode2) && report2.date === sourceEvent.date);
     const report = {
       ...existingReport || {},
       id: existingReport?.id || reportId,
@@ -81968,7 +82260,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       trainingCode: assignment.code || matchingItem.phase,
       trainingTitle: assignment.title || matchingItem.module,
       eventId: sourceEvent.id || matchingItem.id,
-      eventCode,
+      eventCode: eventCode2,
       eventDescription: matchingItem.eventDescription || sourceEvent.notes,
       eventType: matchingItem.type || sourceEvent.type,
       date: sourceEvent.date || getLocalDateString(),
@@ -82021,7 +82313,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       existingReport ? "Edit" : "Create",
       `${existingReport ? "Updated" : "Generated"} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
     );
-    console.log(`[PostFlight] ✅ Air Combat draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode} (${dcoResult})`);
+    console.log(`[PostFlight] ✅ Air Combat draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${dcoResult})`);
   };
   const handleViewLogbook = reactExports.useCallback((person) => {
     setSelectedPersonForLogbook(person);
@@ -82494,22 +82786,22 @@ ${error instanceof Error ? error.message : String(error)}`,
     const cleanedLabel = request.label.trim().slice(0, 8);
     const existingCodes = new Set(originalTraineeLMP.map((item) => String(item.code || item.id || "").toUpperCase()));
     let sequence = 1;
-    let eventCode = cleanedLabel;
-    while (existingCodes.has(eventCode.toUpperCase())) {
+    let eventCode2 = cleanedLabel;
+    while (existingCodes.has(eventCode2.toUpperCase())) {
       const suffix = String(sequence);
-      eventCode = `${cleanedLabel.slice(0, Math.max(1, 8 - suffix.length))}${suffix}`;
+      eventCode2 = `${cleanedLabel.slice(0, Math.max(1, 8 - suffix.length))}${suffix}`;
       sequence++;
     }
     const followsItem = originalTraineeLMP[insertionIndex];
     const nextMasterItem = originalTraineeLMP.slice(insertionIndex + 1).find((item) => !isLmpOverlayItem(item));
     const physicalResources = Array.from({ length: request.resourceCount }, (_, index) => request.resourceCount === 1 ? "Aircraft" : `Aircraft ${index + 1}`);
     const newItem = {
-      id: `custom-${Date.now()}-${eventCode}`,
-      code: eventCode,
+      id: `custom-${Date.now()}-${eventCode2}`,
+      code: eventCode2,
       phase: followsItem.phase || "",
       module: "Inserted Event",
       dayNight: request.dayNight,
-      eventDescription: eventCode,
+      eventDescription: eventCode2,
       prerequisites: [followsItem.id || followsItem.code].filter(Boolean),
       prerequisitesGround: [],
       prerequisitesFlying: [],
@@ -82557,9 +82849,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       logAudit(
         "Individual LMP",
         "Insert",
-        `Inserted event ${eventCode} into ${trainee.fullName}'s Individual LMP`,
+        `Inserted event ${eventCode2} into ${trainee.fullName}'s Individual LMP`,
         [
-          `Event: ${eventCode}`,
+          `Event: ${eventCode2}`,
           `Type: ${request.eventType.label}`,
           `Day/Night: ${request.dayNight}`,
           `Resources: ${request.resourceCount}`,
@@ -82567,7 +82859,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           `Trainee: ${trainee.rank ? `${trainee.rank} ` : ""}${trainee.name}`
         ].join("; ")
       );
-      setSuccessMessage(`Inserted event ${eventCode} into Individual LMP.`);
+      setSuccessMessage(`Inserted event ${eventCode2} into Individual LMP.`);
       return true;
     } catch (error) {
       console.error("[Individual LMP] Failed to insert custom event:", error);
@@ -84588,7 +84880,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
     const highestPriorityEventsBeforeSync = highestPriorityEvents;
     const rawSyncedPriorityEvents = syncPriorityEventsWithSctAndRemedial();
-    const isTaskingEvent = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+    const isTaskingEvent2 = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
     const submittedTaskingRequestIds = (() => {
       try {
         const parsed = JSON.parse(localStorage.getItem("neoTaskingRequests") || "[]");
@@ -84601,7 +84893,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       }
     })();
     const syncedPriorityEvents = rawSyncedPriorityEvents.filter((event) => {
-      if (!isTaskingEvent(event)) return true;
+      if (!isTaskingEvent2(event)) return true;
       const requestId = String(event.taskingRequestId || "").trim();
       const stillRequested = !!requestId && submittedTaskingRequestIds.has(requestId);
       if (!stillRequested) {
@@ -84609,7 +84901,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       }
       return stillRequested;
     });
-    const removedStaleTaskingPriorities = rawSyncedPriorityEvents.filter((event) => isTaskingEvent(event)).filter((event) => !syncedPriorityEvents.some((kept) => kept.id === event.id));
+    const removedStaleTaskingPriorities = rawSyncedPriorityEvents.filter((event) => isTaskingEvent2(event)).filter((event) => !syncedPriorityEvents.some((kept) => kept.id === event.id));
     window.__lastTaskingProvenancePreBuild = {
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       buildDate: buildDfpDate,
@@ -84631,24 +84923,24 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log(`Pre-Build Step 2: Checking Active DFP for ${buildDfpDate}...`);
     const existingEventsForDate = publishedSchedules[buildDfpDate] || [];
     const currentTaskingPriorityIds = new Set(
-      syncedPriorityEvents.filter(isTaskingEvent).map((event) => event.id)
+      syncedPriorityEvents.filter(isTaskingEvent2).map((event) => event.id)
     );
     const currentTaskingRequestIds = new Set(
-      syncedPriorityEvents.filter(isTaskingEvent).map((event) => event.taskingRequestId).filter(Boolean)
+      syncedPriorityEvents.filter(isTaskingEvent2).map((event) => event.taskingRequestId).filter(Boolean)
     );
     const isCurrentTaskingEvent = (event) => currentTaskingPriorityIds.has(event.id) || !!event.taskingRequestId && currentTaskingRequestIds.has(event.taskingRequestId);
     const staleExistingTaskingEventsForDate = existingEventsForDate.filter(
-      (event) => isTaskingEvent(event) && !isCurrentTaskingEvent(event)
+      (event) => isTaskingEvent2(event) && !isCurrentTaskingEvent(event)
     );
     const buildPublishedSchedulesForRun = staleExistingTaskingEventsForDate.length > 0 ? {
       ...publishedSchedules,
       [buildDfpDate]: existingEventsForDate.filter(
-        (event) => !isTaskingEvent(event) || isCurrentTaskingEvent(event)
+        (event) => !isTaskingEvent2(event) || isCurrentTaskingEvent(event)
       )
     } : publishedSchedules;
     const fixedExistingEventsForDate = existingEventsForDate.filter((event) => {
       if (!event.isTimeFixed) return false;
-      if (!isTaskingEvent(event)) return true;
+      if (!isTaskingEvent2(event)) return true;
       const stillRequestedTasking = isCurrentTaskingEvent(event);
       if (!stillRequestedTasking) {
         console.log(`DEBUG Skipping stale fixed tasking event from Active DFP preservation: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${event.taskingRequestId || "none"})`);
@@ -86861,10 +87153,10 @@ ${conflictLines.join("\n")}${moreText}`,
     const cleanedLabel = request.label.trim().slice(0, 8).toUpperCase();
     const existingCodes = new Set(syllabusDetails.map((item) => String(item.code || item.id || "").trim().toUpperCase()));
     let sequence = 1;
-    let eventCode = cleanedLabel;
-    while (existingCodes.has(eventCode.toUpperCase())) {
+    let eventCode2 = cleanedLabel;
+    while (existingCodes.has(eventCode2.toUpperCase())) {
       const suffix = String(sequence);
-      eventCode = `${cleanedLabel.slice(0, Math.max(1, 8 - suffix.length))}${suffix}`;
+      eventCode2 = `${cleanedLabel.slice(0, Math.max(1, 8 - suffix.length))}${suffix}`;
       sequence++;
     }
     const followsItem = sequenceItems[insertionIndex];
@@ -86874,11 +87166,11 @@ ${conflictLines.join("\n")}${moreText}`,
     const sortOrder = Number.isFinite(nextSort) && nextSort > followsSort + 1 ? Math.floor((followsSort + nextSort) / 2) : followsSort + 1;
     const physicalResources = Array.from({ length: request.resourceCount }, (_, index) => request.resourceCount === 1 ? "Aircraft" : `Aircraft ${index + 1}`);
     const newItem = {
-      code: eventCode,
+      code: eventCode2,
       phase: followsItem.phase || assignment.code,
       module: assignment.title || followsItem.module || assignment.code,
       dayNight: request.dayNight,
-      eventDescription: eventCode,
+      eventDescription: eventCode2,
       prerequisites: [followsItem.code || followsItem.id].filter(Boolean),
       prerequisitesGround: [],
       prerequisitesFlying: [followsItem.code || followsItem.id].filter(Boolean),
@@ -86904,7 +87196,7 @@ ${conflictLines.join("\n")}${moreText}`,
       sortOrder
     };
     try {
-      const savedItem = await createSyllabusItem$1(newItem, `Inserted Air Combat training event ${eventCode} for ${assignment.code}`);
+      const savedItem = await createSyllabusItem$1(newItem, `Inserted Air Combat training event ${eventCode2} for ${assignment.code}`);
       setSyllabusDetails((prev) => [...prev, savedItem]);
       logAudit(
         "Air Combat Training Progress",
@@ -88920,10 +89212,10 @@ ${error instanceof Error ? error.message : String(error)}`,
             coursePercentages,
             onUpdatePercentages: setCoursePercentages,
             availableAircraftCount: neoAvailableAircraftCount,
-            onUpdateAircraftCount: setNeoAvailableAircraftCount,
+            onUpdateAircraftCount: handleUpdateNeoAvailableAircraftCount,
             aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
             aircraftConfigCapacities: neoAircraftConfigCapacities,
-            onUpdateAircraftConfigCapacities: setNeoAircraftConfigCapacities,
+            onUpdateAircraftConfigCapacities: handleUpdateNeoAircraftConfigCapacities,
             availableFtdCount,
             onUpdateFtdCount: setAvailableFtdCount,
             availableCptCount,
@@ -89090,31 +89382,31 @@ ${error instanceof Error ? error.message : String(error)}`,
             scores,
             traineeLMPs,
             remedialRequests,
-            onToggleRemedialRequest: (traineeId, eventCode) => {
+            onToggleRemedialRequest: (traineeId, eventCode2) => {
               setRemedialRequests((prev) => {
-                const existing = prev.find((r) => r.traineeId === traineeId && r.eventCode === eventCode);
+                const existing = prev.find((r) => r.traineeId === traineeId && r.eventCode === eventCode2);
                 let newRequests;
                 if (existing) {
                   const newForceScheduleValue = !existing.forceSchedule;
-                  console.log(`🔄 Toggling Force Schedule for trainee ${traineeId}, event ${eventCode}: ${existing.forceSchedule} → ${newForceScheduleValue}`);
+                  console.log(`🔄 Toggling Force Schedule for trainee ${traineeId}, event ${eventCode2}: ${existing.forceSchedule} → ${newForceScheduleValue}`);
                   newRequests = prev.map(
-                    (r) => r.traineeId === traineeId && r.eventCode === eventCode ? { ...r, forceSchedule: newForceScheduleValue, aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id } : r
+                    (r) => r.traineeId === traineeId && r.eventCode === eventCode2 ? { ...r, forceSchedule: newForceScheduleValue, aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id } : r
                   );
                 } else {
-                  console.log(`✅ Creating new Force Schedule request for trainee ${traineeId}, event ${eventCode}`);
-                  newRequests = [...prev, { traineeId, eventCode, forceSchedule: true, aircraftConfigId: BASE_AIRCRAFT_CONFIG.id }];
+                  console.log(`✅ Creating new Force Schedule request for trainee ${traineeId}, event ${eventCode2}`);
+                  newRequests = [...prev, { traineeId, eventCode: eventCode2, forceSchedule: true, aircraftConfigId: BASE_AIRCRAFT_CONFIG.id }];
                 }
                 console.log(`📋 Updated remedialRequests:`, newRequests.filter((r) => r.forceSchedule));
                 storeRemedialRequests(newRequests);
                 return newRequests;
               });
             },
-            onUpdateRemedialAircraftConfig: (traineeId, eventCode, aircraftConfigId) => {
+            onUpdateRemedialAircraftConfig: (traineeId, eventCode2, aircraftConfigId) => {
               setRemedialRequests((prev) => {
-                const existing = prev.find((r) => r.traineeId === traineeId && r.eventCode === eventCode);
+                const existing = prev.find((r) => r.traineeId === traineeId && r.eventCode === eventCode2);
                 const newRequests = existing ? prev.map(
-                  (r) => r.traineeId === traineeId && r.eventCode === eventCode ? { ...r, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id } : r
-                ) : [...prev, { traineeId, eventCode, forceSchedule: false, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }];
+                  (r) => r.traineeId === traineeId && r.eventCode === eventCode2 ? { ...r, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id } : r
+                ) : [...prev, { traineeId, eventCode: eventCode2, forceSchedule: false, aircraftConfigId: aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }];
                 storeRemedialRequests(newRequests);
                 setTimeout(() => {
                   syncPriorityEventsWithSctAndRemedial();
@@ -89217,6 +89509,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             buildDate: buildDfpDate,
             analysis: buildIntelligenceAnalysis,
             resourceDisplayNames,
+            operationalModel: activeOperationalModel,
             operationalContext: activeOperationalContext
           }
         );
@@ -90726,12 +91019,12 @@ Do you want to replace the existing entry?`,
                     },
                     onDeletePriorityEvent: handleDeletePriorityEvent,
                     availableAircraftCount: neoAvailableAircraftCount,
-                    onUpdateAircraftCount: setNeoAvailableAircraftCount,
+                    onUpdateAircraftCount: handleUpdateNeoAvailableAircraftCount,
                     aircraftConfigCapacities: neoAircraftConfigCapacities,
                     aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
                     aircraftCrewComposition: activeAircraftCrewComposition,
                     crewPositionTerminology: activeCrewPositionTerminology,
-                    onUpdateAircraftConfigCapacities: setNeoAircraftConfigCapacities,
+                    onUpdateAircraftConfigCapacities: handleUpdateNeoAircraftConfigCapacities,
                     availableFtdCount,
                     onUpdateFtdCount: setAvailableFtdCount,
                     availableCptCount,

@@ -33,6 +33,12 @@ interface BliUnitScopeOption {
   unitCode?: string;
 }
 
+interface BliRequestContext {
+  eventUnitCode?: string;
+  availabilityUnitCode?: string;
+  locationCode?: string;
+}
+
 interface DailyEventMetrics {
   date: string;
   flightEvents: number;
@@ -131,7 +137,8 @@ const isStaffMetricKey = (key: MetricKey): boolean => (
 );
 
 const isUnitScopedMetricKey = (key: MetricKey): boolean => (
-  key === 'flight'
+  key === 'availability'
+  || key === 'flight'
   || key === 'flightHours'
   || key === 'simulator'
   || key === 'simulatorHours'
@@ -367,10 +374,12 @@ const fetchBliMetrics = async (
   startDate: string,
   endDate: string,
   signal: AbortSignal,
-  unitCode?: string,
+  requestContext?: BliRequestContext,
 ): Promise<BliMetricsResponse> => {
   const params = new URLSearchParams({ startDate, endDate });
-  if (unitCode) params.set('unit', unitCode);
+  if (requestContext?.eventUnitCode) params.set('unit', requestContext.eventUnitCode);
+  if (requestContext?.availabilityUnitCode) params.set('unitCode', requestContext.availabilityUnitCode);
+  if (requestContext?.locationCode) params.set('locationCode', requestContext.locationCode);
   const query = params.toString();
   const [bliResponse, availabilityResponse] = await Promise.all([
     fetch(`/api/bli/metrics?${query}`, { credentials: 'include', signal }),
@@ -543,14 +552,31 @@ const buildUnitScopeOptions = (context?: BliOperationalContext): BliUnitScopeOpt
       .filter(Boolean),
   ));
   if (!context?.isSharedFleetContext || memberUnits.length <= 1) return [];
+  const combinedUnitCode = normalizeUnitCode(context?.unitCode);
   return [
-    { key: 'combined', label: `${memberUnits.join('+')} combined` },
+    { key: 'combined', label: `${memberUnits.join('+')} combined`, unitCode: combinedUnitCode || undefined },
     ...memberUnits.map(unitCode => ({
       key: `unit:${unitCode}`,
       label: unitCode,
       unitCode,
     })),
   ];
+};
+
+const buildBliRequestContext = (
+  context: BliOperationalContext | undefined,
+  unitScopeOptions: BliUnitScopeOption[],
+  selectedUnitScopeKey: string,
+): BliRequestContext => {
+  const selectedOption = unitScopeOptions.find(option => option.key === selectedUnitScopeKey);
+  const selectedIndividualUnitCode = selectedOption?.key.startsWith('unit:') ? normalizeUnitCode(selectedOption.unitCode) : '';
+  const contextUnitCode = normalizeUnitCode(context?.unitCode);
+  const locationCode = normalizeUnitCode(context?.locationCode);
+  return {
+    eventUnitCode: selectedIndividualUnitCode || (!context?.isSharedFleetContext ? contextUnitCode : undefined),
+    availabilityUnitCode: selectedIndividualUnitCode || contextUnitCode || undefined,
+    locationCode: locationCode || undefined,
+  };
 };
 
 const buildMetricDefinitions = (
@@ -1117,7 +1143,8 @@ const MetricModal: React.FC<{
   unitScopeOptions: BliUnitScopeOption[];
   selectedUnitScopeKey: string;
   onUnitScopeChange: (key: string) => void;
-}> = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange }) => {
+  operationalContext?: BliOperationalContext;
+}> = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange, operationalContext }) => {
   const [timeline, setTimeline] = useState<TimelineKey>('7d');
   const [modalMetrics, setModalMetrics] = useState<BliMetricsResponse>(initialMetrics);
   const [selectedStaff, setSelectedStaff] = useState(initialStaff);
@@ -1127,9 +1154,9 @@ const MetricModal: React.FC<{
   const dateRangeLabel = useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
   const showStaffSelector = isStaffMetricKey(metric.key);
   const showUnitSelector = isUnitScopedMetricKey(metric.key) && unitScopeOptions.length > 1;
-  const selectedUnitCode = showUnitSelector
-    ? unitScopeOptions.find(option => option.key === selectedUnitScopeKey)?.unitCode
-    : undefined;
+  const requestContext = showUnitSelector
+    ? buildBliRequestContext(operationalContext, unitScopeOptions, selectedUnitScopeKey)
+    : buildBliRequestContext(operationalContext, [], 'combined');
 
   useEffect(() => {
     setSelectedStaff(initialStaff);
@@ -1140,7 +1167,7 @@ const MetricModal: React.FC<{
     setLoading(true);
     setError(null);
 
-    fetchBliMetrics(range.startDate, range.endDate, controller.signal, selectedUnitCode)
+    fetchBliMetrics(range.startDate, range.endDate, controller.signal, requestContext)
       .then((data: BliMetricsResponse) => {
         setModalMetrics(data);
       })
@@ -1155,7 +1182,7 @@ const MetricModal: React.FC<{
       });
 
     return () => controller.abort();
-  }, [date, range.endDate, range.startDate, selectedUnitCode]);
+  }, [date, range.endDate, range.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
 
   const activeMetric = useMemo(() => {
     return buildMetricDefinitions(modalMetrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff)
@@ -1268,9 +1295,10 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
   const [periodDraft, setPeriodDraft] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
   const unitScopeOptions = useMemo(() => buildUnitScopeOptions(operationalContext), [operationalContext]);
   const [selectedUnitScopeKey, setSelectedUnitScopeKey] = useState('combined');
-  const selectedUnitScope = unitScopeOptions.find(option => option.key === selectedUnitScopeKey);
-  const selectedUnitCode = selectedUnitScope?.unitCode
-    || (!operationalContext?.isSharedFleetContext ? normalizeUnitCode(operationalContext?.unitCode) : undefined);
+  const requestContext = useMemo(
+    () => buildBliRequestContext(operationalContext, unitScopeOptions, selectedUnitScopeKey),
+    [operationalContext, selectedUnitScopeKey, unitScopeOptions],
+  );
 
   const previewRange = useMemo(() => getTimelineRange(date, '7d', periodSettings), [date, periodSettings]);
   const previewDateRangeLabel = useMemo(
@@ -1361,7 +1389,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
     setLoading(true);
     setError(null);
 
-    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal, selectedUnitCode)
+    fetchBliMetrics(previewRange.startDate, previewRange.endDate, controller.signal, requestContext)
       .then((data: BliMetricsResponse) => {
         setMetrics(data);
       })
@@ -1376,7 +1404,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
       });
 
     return () => controller.abort();
-  }, [date, previewRange.endDate, previewRange.startDate, selectedUnitCode]);
+  }, [date, previewRange.endDate, previewRange.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
 
   const staffGroups = useMemo(() => {
     const groups = new Map<string, Instructor[]>();
@@ -1414,6 +1442,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
           unitScopeOptions={unitScopeOptions}
           selectedUnitScopeKey={selectedUnitScopeKey}
           onUnitScopeChange={setSelectedUnitScopeKey}
+          operationalContext={operationalContext}
         />
       )}
 

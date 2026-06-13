@@ -18667,6 +18667,10 @@ const App: React.FC = () => {
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
     const [neoAvailableAircraftCount, setNeoAvailableAircraftCount] = useState(15);
     const [neoAircraftConfigCapacities, setNeoAircraftConfigCapacities] = useState<Record<string, string>>({});
+    const [neoAircraftCapacityByUnit, setNeoAircraftCapacityByUnit] = useState<Record<string, {
+        availableAircraftCount?: number;
+        aircraftConfigCapacities?: Record<string, string>;
+    }>>({});
     const [aircraftConfigStateByDate, setAircraftConfigStateByDate] = useState<Record<string, {
         availableAircraftCount: number;
         aircraftConfigCapacities: Record<string, string>;
@@ -18678,6 +18682,11 @@ const App: React.FC = () => {
         () => getResourceDisplayNames(activePlatformResourcePool),
         [activePlatformResourcePool]
     );
+    const activeNeoAircraftCapacityUnitKey = useMemo(() => {
+        const locationKey = String(school || 'DEFAULT').trim().toUpperCase() || 'DEFAULT';
+        const unitKey = String(activeUnitCode || 'DEFAULT').trim().toUpperCase() || 'DEFAULT';
+        return `${locationKey}__${unitKey}`;
+    }, [activeUnitCode, school]);
 
     const aircraftNumberSettings = useMemo(
         () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
@@ -18872,6 +18881,34 @@ const App: React.FC = () => {
             );
         }
     };
+    const handleUpdateNeoAvailableAircraftCount = useCallback((value: React.SetStateAction<number>) => {
+        setNeoAvailableAircraftCount(previous => {
+            const next = typeof value === 'function' ? (value as (current: number) => number)(previous) : value;
+            setNeoAircraftCapacityByUnit(current => ({
+                ...current,
+                [activeNeoAircraftCapacityUnitKey]: {
+                    ...(current[activeNeoAircraftCapacityUnitKey] || {}),
+                    availableAircraftCount: next,
+                    aircraftConfigCapacities: current[activeNeoAircraftCapacityUnitKey]?.aircraftConfigCapacities || neoAircraftConfigCapacities,
+                },
+            }));
+            return next;
+        });
+    }, [activeNeoAircraftCapacityUnitKey, neoAircraftConfigCapacities]);
+    const handleUpdateNeoAircraftConfigCapacities = useCallback((value: React.SetStateAction<Record<string, string>>) => {
+        setNeoAircraftConfigCapacities(previous => {
+            const next = typeof value === 'function' ? (value as (current: Record<string, string>) => Record<string, string>)(previous) : value;
+            setNeoAircraftCapacityByUnit(current => ({
+                ...current,
+                [activeNeoAircraftCapacityUnitKey]: {
+                    ...(current[activeNeoAircraftCapacityUnitKey] || {}),
+                    availableAircraftCount: current[activeNeoAircraftCapacityUnitKey]?.availableAircraftCount ?? neoAvailableAircraftCount,
+                    aircraftConfigCapacities: next,
+                },
+            }));
+            return next;
+        });
+    }, [activeNeoAircraftCapacityUnitKey, neoAvailableAircraftCount]);
     const [preferredDutyPeriod, setPreferredDutyPeriod] = useState(8);
     const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = useState(10);
     const [maxDispatchPerHour, setMaxDispatchPerHour] = useState(8);
@@ -19783,13 +19820,24 @@ const App: React.FC = () => {
                 if (saved.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
                     setAvailableAircraftCount(saved.availableAircraftCount);
                 }
-                if (saved.neoAvailableAircraftCount != null) {
-                    setNeoAvailableAircraftCount(saved.neoAvailableAircraftCount);
-                } else if (saved.availableAircraftCount != null) {
-                    setNeoAvailableAircraftCount(saved.availableAircraftCount);
-                }
-                if (saved.neoAircraftConfigCapacities) {
-                    setNeoAircraftConfigCapacities(saved.neoAircraftConfigCapacities);
+                {
+                    const savedNeoCapacityByUnit = saved.neoAircraftCapacityByUnit && typeof saved.neoAircraftCapacityByUnit === 'object'
+                        ? saved.neoAircraftCapacityByUnit
+                        : {};
+                    setNeoAircraftCapacityByUnit(savedNeoCapacityByUnit);
+                    const activeNeoCapacity = savedNeoCapacityByUnit[activeNeoAircraftCapacityUnitKey];
+                    if (activeNeoCapacity?.availableAircraftCount != null) {
+                        setNeoAvailableAircraftCount(activeNeoCapacity.availableAircraftCount);
+                    } else if (saved.neoAvailableAircraftCount != null) {
+                        setNeoAvailableAircraftCount(saved.neoAvailableAircraftCount);
+                    } else if (saved.availableAircraftCount != null) {
+                        setNeoAvailableAircraftCount(saved.availableAircraftCount);
+                    }
+                    if (activeNeoCapacity?.aircraftConfigCapacities) {
+                        setNeoAircraftConfigCapacities(activeNeoCapacity.aircraftConfigCapacities);
+                    } else if (saved.neoAircraftConfigCapacities) {
+                        setNeoAircraftConfigCapacities(saved.neoAircraftConfigCapacities);
+                    }
                 }
                 if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
                 if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
@@ -19879,6 +19927,19 @@ const App: React.FC = () => {
         loadSettings();
     }, []);
 
+    useEffect(() => {
+        const scopedNeoCapacity = neoAircraftCapacityByUnit[activeNeoAircraftCapacityUnitKey];
+        if (scopedNeoCapacity) {
+            if (scopedNeoCapacity.availableAircraftCount != null) {
+                setNeoAvailableAircraftCount(scopedNeoCapacity.availableAircraftCount);
+            }
+            setNeoAircraftConfigCapacities(scopedNeoCapacity.aircraftConfigCapacities || {});
+            return;
+        }
+        setNeoAvailableAircraftCount(availableAircraftCount);
+        setNeoAircraftConfigCapacities({});
+    }, [activeNeoAircraftCapacityUnitKey, neoAircraftCapacityByUnit]);
+
     // ─── SETTINGS: Auto-save when anything changes ────────────────────────────
     useEffect(() => {
         if (!settingsLoaded) {
@@ -19890,6 +19951,14 @@ const App: React.FC = () => {
         const flyingWindowExclusionsByUnitForSave = {
             ...flyingWindowExclusionsByUnit,
             [activeFlyingWindowExclusionUnitKey]: flyingWindowExclusions,
+        };
+        const neoAircraftCapacityByUnitForSave = {
+            ...neoAircraftCapacityByUnit,
+            [activeNeoAircraftCapacityUnitKey]: {
+                ...(neoAircraftCapacityByUnit[activeNeoAircraftCapacityUnitKey] || {}),
+                availableAircraftCount: neoAvailableAircraftCount,
+                aircraftConfigCapacities: neoAircraftConfigCapacities,
+            },
         };
 
         const snapshot = buildSettingsSnapshot({
@@ -19918,6 +19987,7 @@ const App: React.FC = () => {
             availableAircraftCount,
             neoAvailableAircraftCount,
             neoAircraftConfigCapacities,
+            neoAircraftCapacityByUnit: neoAircraftCapacityByUnitForSave,
             availableFtdCount,
             availableCptCount,
             timezoneOffset,
@@ -19949,7 +20019,7 @@ const App: React.FC = () => {
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
         flyingWindowExclusions, flyingWindowExclusionsByUnit, activeFlyingWindowExclusionUnitKey,
-        availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, availableFtdCount, availableCptCount,
+        availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, neoAircraftCapacityByUnit, activeNeoAircraftCapacityUnitKey, availableFtdCount, availableCptCount,
         timezoneOffset, showDepartureDensityOverlay, tileStatusSettings,
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
@@ -30981,10 +31051,10 @@ appliedUpdates.forEach(update => {
                     coursePercentages={coursePercentages}
                     onUpdatePercentages={setCoursePercentages}
                     availableAircraftCount={neoAvailableAircraftCount}
-                    onUpdateAircraftCount={setNeoAvailableAircraftCount}
+                    onUpdateAircraftCount={handleUpdateNeoAvailableAircraftCount}
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                     aircraftConfigCapacities={neoAircraftConfigCapacities}
-                    onUpdateAircraftConfigCapacities={setNeoAircraftConfigCapacities}
+                    onUpdateAircraftConfigCapacities={handleUpdateNeoAircraftConfigCapacities}
                     availableFtdCount={availableFtdCount}
                     onUpdateFtdCount={setAvailableFtdCount}
                     availableCptCount={availableCptCount}
@@ -31275,6 +31345,7 @@ appliedUpdates.forEach(update => {
                             buildDate={buildDfpDate}
                             analysis={buildIntelligenceAnalysis}
                             resourceDisplayNames={resourceDisplayNames}
+                            operationalModel={activeOperationalModel}
                             operationalContext={activeOperationalContext}
                         />;
             case 'MyDashboard':
@@ -32942,12 +33013,12 @@ appliedUpdates.forEach(update => {
                                     }}
                                     onDeletePriorityEvent={handleDeletePriorityEvent}
                                     availableAircraftCount={neoAvailableAircraftCount}
-                                    onUpdateAircraftCount={setNeoAvailableAircraftCount}
+                                    onUpdateAircraftCount={handleUpdateNeoAvailableAircraftCount}
                                     aircraftConfigCapacities={neoAircraftConfigCapacities}
                                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                                     aircraftCrewComposition={activeAircraftCrewComposition}
                                     crewPositionTerminology={activeCrewPositionTerminology}
-                                    onUpdateAircraftConfigCapacities={setNeoAircraftConfigCapacities}
+                                    onUpdateAircraftConfigCapacities={handleUpdateNeoAircraftConfigCapacities}
                                     availableFtdCount={availableFtdCount}
                                     onUpdateFtdCount={setAvailableFtdCount}
                                     availableCptCount={availableCptCount}

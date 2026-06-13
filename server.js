@@ -8340,24 +8340,48 @@ async function ensureAircraftAvailabilityEventTable(db) {
   }
 }
 
+const aircraftAvailabilityContextFromRequest = (source = {}) => {
+  const locationCode = String(source.locationCode || source.school || source.location || '').trim().toUpperCase();
+  const unitCode = String(source.unitCode || source.unit || '').trim().toUpperCase();
+  return {
+    locationCode: locationCode || null,
+    unitCode: unitCode || null,
+  };
+};
+
+const addAircraftAvailabilityContextFilters = (where, params, context, columns = ['locationCode', 'unitCode']) => {
+  if (columns.includes('locationCode') && context.locationCode) {
+    params.push(context.locationCode);
+    where.push(`"locationCode" = $${params.length}::text`);
+  }
+  if (columns.includes('unitCode') && context.unitCode) {
+    params.push(context.unitCode);
+    where.push(`"unitCode" = $${params.length}::text`);
+  }
+};
+
 // GET /api/aircraft-availability-history
-// Returns history records, optionally filtered by startDate and endDate
+// Returns history records, scoped by date plus optional location/unit context.
 app.get('/api/aircraft-availability-history', async (req, res) => {
   try {
     const db = await getPrisma();
     const { startDate, endDate } = req.query;
+    const context = aircraftAvailabilityContextFromRequest(req.query);
     let query = `SELECT * FROM "AircraftAvailabilityHistory"`;
     const params = [];
+    const where = [];
     if (startDate && endDate) {
-      query += ` WHERE "date" >= $1::text AND "date" <= $2::text`;
       params.push(startDate, endDate);
+      where.push(`"date" >= $1::text AND "date" <= $2::text`);
     } else if (startDate) {
-      query += ` WHERE "date" >= $1::text`;
       params.push(startDate);
+      where.push(`"date" >= $1::text`);
     } else if (endDate) {
-      query += ` WHERE "date" <= $1::text`;
       params.push(endDate);
+      where.push(`"date" <= $1::text`);
     }
+    addAircraftAvailabilityContextFilters(where, params, context);
+    if (where.length > 0) query += ` WHERE ${where.join(' AND ')}`;
     query += ` ORDER BY "date" ASC`;
     const rawRecords = await db.$queryRawUnsafe(query, ...params);
     // Normalize records: map 'totalFleet' -> 'totalAircraft' for frontend compatibility
@@ -8374,7 +8398,7 @@ app.get('/api/aircraft-availability-history', async (req, res) => {
           : 0
       )),
     }));
-    console.log(`✅ GET /api/aircraft-availability-history - returning ${records.length} records`);
+    console.log(`✅ GET /api/aircraft-availability-history - context=${context.locationCode || '*'}-${context.unitCode || '*'} returning ${records.length} records`);
     // Return both 'records' (expected by frontend) and 'history' (legacy) for compatibility
     res.json({ records, history: records });
   } catch (error) {
@@ -8388,23 +8412,107 @@ app.get('/api/aircraft-availability-history', async (req, res) => {
 app.post('/api/aircraft-availability-history', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { date, totalFleet, dailyAverage, flyingWindowStart, flyingWindowEnd } = req.body;
+    const { date, totalFleet, totalAircraft, dailyAverage, flyingWindowStart, flyingWindowEnd } = req.body;
+    const context = aircraftAvailabilityContextFromRequest(req.body);
     if (!date) return res.status(400).json({ error: 'date is required' });
-    await db.$executeRawUnsafe(`
-      INSERT INTO "AircraftAvailabilityHistory" ("date", "totalFleet", "dailyAverage", "flyingWindowStart", "flyingWindowEnd", "lastCalculatedAt", "updatedAt")
-      VALUES ($1::text, $2::int, $3::numeric, $4::text, $5::text, NOW(), NOW())
-      ON CONFLICT ("date") DO UPDATE SET
-        "totalFleet" = EXCLUDED."totalFleet",
-        "dailyAverage" = EXCLUDED."dailyAverage",
-        "flyingWindowStart" = EXCLUDED."flyingWindowStart",
-        "flyingWindowEnd" = EXCLUDED."flyingWindowEnd",
-        "lastCalculatedAt" = NOW(),
-        "updatedAt" = NOW()
-    `, date, totalFleet || 0, dailyAverage || 0, flyingWindowStart || null, flyingWindowEnd || null);
-    const updated = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1::text`, date
+
+    const columns = await db.$queryRawUnsafe(`
+      SELECT column_name, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'AircraftAvailabilityHistory'
+      ORDER BY ordinal_position
+    `);
+    const columnNames = columns.map(c => c.column_name);
+    const fleetColumn = columnNames.includes('totalAircraft') ? 'totalAircraft' : 'totalFleet';
+    const fleetValue = Number(totalAircraft ?? totalFleet ?? 0);
+
+    const where = [`"date" = $1::text`];
+    const whereParams = [date];
+    if (columnNames.includes('locationCode')) {
+      whereParams.push(context.locationCode);
+      where.push(`"locationCode" IS NOT DISTINCT FROM $${whereParams.length}::text`);
+    }
+    if (columnNames.includes('unitCode')) {
+      whereParams.push(context.unitCode);
+      where.push(`"unitCode" IS NOT DISTINCT FROM $${whereParams.length}::text`);
+    }
+
+    const existing = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE ${where.join(' AND ')} LIMIT 1`,
+      ...whereParams
     );
-    console.log(`✅ POST /api/aircraft-availability-history - upserted record for date: ${date}`);
+
+    const values = {
+      [fleetColumn]: fleetValue,
+      dailyAverage: Number(dailyAverage || 0),
+      availabilityPct: fleetValue > 0 ? (Number(dailyAverage || 0) / fleetValue) * 100 : 0,
+      flyingWindowStart: flyingWindowStart || null,
+      flyingWindowEnd: flyingWindowEnd || null,
+    };
+    const writableFields = Object.entries(values).filter(([key]) => columnNames.includes(key));
+
+    if (existing.length > 0) {
+      const setClauses = writableFields.map(([key], idx) => `"${key}" = $${whereParams.length + idx + 1}`);
+      if (columnNames.includes('lastCalculatedAt')) setClauses.push('"lastCalculatedAt" = NOW()');
+      if (columnNames.includes('updatedAt')) setClauses.push('"updatedAt" = NOW()');
+      await db.$executeRawUnsafe(
+        `UPDATE "AircraftAvailabilityHistory" SET ${setClauses.join(', ')} WHERE ${where.join(' AND ')}`,
+        ...whereParams,
+        ...writableFields.map(([, value]) => value)
+      );
+    } else {
+      const insertColumns = [];
+      const insertValues = [];
+      const insertParams = [];
+      let paramIdx = 1;
+
+      const idColumn = columns.find(c => c.column_name === 'id');
+      if (idColumn && !idColumn.column_default) {
+        insertColumns.push('"id"');
+        insertValues.push('gen_random_uuid()::text');
+      }
+      insertColumns.push('"date"');
+      insertValues.push(`$${paramIdx++}::text`);
+      insertParams.push(date);
+
+      if (columnNames.includes('locationCode')) {
+        insertColumns.push('"locationCode"');
+        insertValues.push(`$${paramIdx++}::text`);
+        insertParams.push(context.locationCode);
+      }
+      if (columnNames.includes('unitCode')) {
+        insertColumns.push('"unitCode"');
+        insertValues.push(`$${paramIdx++}::text`);
+        insertParams.push(context.unitCode);
+      }
+      for (const [key, value] of writableFields) {
+        insertColumns.push(`"${key}"`);
+        insertValues.push(`$${paramIdx++}`);
+        insertParams.push(value);
+      }
+      if (columnNames.includes('lastCalculatedAt')) {
+        insertColumns.push('"lastCalculatedAt"');
+        insertValues.push('NOW()');
+      }
+      if (columnNames.includes('createdAt')) {
+        insertColumns.push('"createdAt"');
+        insertValues.push('NOW()');
+      }
+      if (columnNames.includes('updatedAt')) {
+        insertColumns.push('"updatedAt"');
+        insertValues.push('NOW()');
+      }
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AircraftAvailabilityHistory" (${insertColumns.join(', ')}) VALUES (${insertValues.join(', ')})`,
+        ...insertParams
+      );
+    }
+
+    const updated = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE ${where.join(' AND ')} LIMIT 1`,
+      ...whereParams
+    );
+    console.log(`✅ POST /api/aircraft-availability-history - upserted record for date: ${date}, context=${context.locationCode || '*'}-${context.unitCode || '*'}`);
     res.json({ record: updated[0] });
   } catch (error) {
     console.error('❌ POST /api/aircraft-availability-history error:', error);
@@ -11078,6 +11186,10 @@ app.get('/api/bli/metrics', async (req, res) => {
     const endDate = isoDateOnly(req.query.endDate);
     const school = String(req.query.school || '').trim().toUpperCase();
     const unitFilter = normalizeBliUnit(req.query.unit);
+    const availabilityContext = aircraftAvailabilityContextFromRequest({
+      locationCode: req.query.locationCode || req.query.school,
+      unitCode: req.query.unitCode || req.query.availabilityUnitCode || req.query.unit,
+    });
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
       return res.status(400).json({ error: 'startDate and endDate must be YYYY-MM-DD' });
@@ -11167,6 +11279,8 @@ app.get('/api/bli/metrics', async (req, res) => {
           }
         }
 
+        if (!includeInUnitScopedSeries) continue;
+
         for (const staffName of eventStaffNames(event)) {
           if (!staffDaily[staffName]) staffDaily[staffName] = {};
           if (!staffDaily[staffName][dateKey]) {
@@ -11204,15 +11318,17 @@ app.get('/api/bli/metrics', async (req, res) => {
       }
     }
 
+    const availabilityWhere = ['date >= $1::text', 'date <= $2::text'];
+    const availabilityParams = [startDate, endDate];
+    addAircraftAvailabilityContextFilters(availabilityWhere, availabilityParams, availabilityContext);
     const availabilityRows = await db.$queryRawUnsafe(
       `
         SELECT *
         FROM "AircraftAvailabilityHistory"
-        WHERE date >= $1::text AND date <= $2::text
+        WHERE ${availabilityWhere.join(' AND ')}
         ORDER BY date ASC
       `,
-      startDate,
-      endDate
+      ...availabilityParams
     ).catch((error) => {
       console.warn('[BLI] Aircraft availability history unavailable:', error.message);
       return [];

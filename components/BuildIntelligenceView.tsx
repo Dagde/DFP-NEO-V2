@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { ScheduleEvent, Instructor, Trainee, Score, SyllabusItemDetail, CancellationRecord } from '../types';
 import PeopleTab from './tabs/PeopleTab';
 import CourseMetricsTab from './tabs/CourseMetricsTab';
 import BuildAnalyticsTab from './tabs/BuildAnalyticsTab';
 import TrainingIntelligenceTab from './tabs/TrainingIntelligenceTab';
 import BliTab from './tabs/BliTab';
+import AirCombatIntelligenceTab from './tabs/AirCombatIntelligenceTab';
 import ACHistoryIntelligencePanel from './ACHistoryIntelligencePanel';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
@@ -84,6 +85,7 @@ interface BuildIntelligenceViewProps {
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   resourceDisplayNames?: ResourceDisplayNames;
+  operationalModel?: string;
   operationalContext?: {
     locationCode?: string;
     unitCode?: string;
@@ -97,10 +99,11 @@ interface BuildIntelligenceViewProps {
   analysis: BuildAnalysis | null;
 }
 
-type TabType = 'people' | 'course-metrics' | 'build-analytics' | 'ac-history' | 'managerial-analytics' | 'bli';
+type TabType = 'air-combat' | 'people' | 'course-metrics' | 'build-analytics' | 'ac-history' | 'managerial-analytics' | 'bli';
 
 const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
-  const [activeTab, setActiveTab] = useState<TabType>('people');
+  const isAirCombatModel = String(props.operationalModel || '').trim().toLowerCase() === 'air_combat';
+  const [activeTab, setActiveTab] = useState<TabType>(isAirCombatModel ? 'air-combat' : 'people');
   const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
 
   const formattedDate = useMemo(() => {
@@ -115,7 +118,12 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
     });
   }, [props.date]);
 
+  useEffect(() => {
+    if (!isAirCombatModel && activeTab === 'air-combat') setActiveTab('people');
+  }, [activeTab, isAirCombatModel]);
+
   const tabs = [
+    ...(isAirCombatModel ? [{ id: 'air-combat' as TabType, label: 'Air Combat' }] : []),
     { id: 'people' as TabType, label: 'People' },
     { id: 'course-metrics' as TabType, label: 'Course Metrics' },
     { id: 'build-analytics' as TabType, label: 'Build Analytics' },
@@ -180,6 +188,18 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 traineeLMPs={props.traineeLMPs}
                 courseColors={props.courseColors}
                 resourceDisplayNames={resourceDisplayNames}
+              />
+            )}
+
+            {activeTab === 'air-combat' && (
+              <AirCombatIntelligenceTab
+                date={props.date}
+                events={props.events}
+                instructorsData={props.instructorsData}
+                currentAircraftAvailable={props.currentAircraftAvailable}
+                totalAircraft={props.totalAircraft}
+                resourceDisplayNames={resourceDisplayNames}
+                operationalContext={props.operationalContext}
               />
             )}
 

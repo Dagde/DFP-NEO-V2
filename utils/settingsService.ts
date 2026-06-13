@@ -82,6 +82,11 @@ export interface AppSettingsData {
   neoAvailableAircraftCount?: number;
   /** NEO Build aircraft capacity by configuration id. Empty strings mean unset. */
   neoAircraftConfigCapacities?: Record<string, string>;
+  /** Unit or combined-unit scoped NEO Build aircraft capacity. */
+  neoAircraftCapacityByUnit?: Record<string, {
+    availableAircraftCount?: number;
+    aircraftConfigCapacities?: Record<string, string>;
+  }>;
 
   // Phrase Bank
   phraseBank: Record<string, any>;
@@ -325,6 +330,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     coursePercentages: state.coursePercentages || {},
     neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
     neoAircraftConfigCapacities: state.neoAircraftConfigCapacities || {},
+    neoAircraftCapacityByUnit: state.neoAircraftCapacityByUnit || {},
     phraseBank: state.phraseBank || {},
     cancellationCodes: state.cancellationCodes || [],
     masterCurrencies: state.masterCurrencies || [],
