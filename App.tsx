@@ -20319,16 +20319,79 @@ const App: React.FC = () => {
         return Array.from(keys);
     }, [normaliseDiagnosticPersonName]);
 
-    const getDiagnosticEventPersonnel = useCallback((event: ScheduleEvent | EventSegment): Set<string> => {
-        return new Set([
+    const getDiagnosticEventNameCandidates = useCallback((event: ScheduleEvent | EventSegment): string[] => {
+        const candidates: string[] = [];
+        const addCandidate = (value: unknown) => {
+            if (!value) return;
+            if (Array.isArray(value)) {
+                value.forEach(addCandidate);
+                return;
+            }
+            if (typeof value !== 'string') return;
+
+            const rawValue = value.trim();
+            if (!rawValue) return;
+            const personNameMatches = rawValue.match(/[A-Z][A-Za-z.'-]+,\s*[A-Z][A-Za-z.'-]+(?:\s+[A-Z](?:\.|[A-Za-z.'-]+))*?(?:\s*\([^)]*\))?/g) || [];
+            const directValues = rawValue.includes(',') ? [rawValue] : [];
+            [...directValues, ...personNameMatches].forEach(candidate => {
+                const cleaned = candidate
+                    .split(' – ')[0]
+                    .split(' - ')[0]
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (!cleaned || /^(multiple|group|tba)$/i.test(cleaned)) return;
+                if (!cleaned.includes(',')) return;
+                candidates.push(cleaned);
+            });
+        };
+
+        [
             event.instructor,
             event.pilot,
             event.crew,
             event.student,
-            ...(event.attendees || []),
-            ...(event.crewSelectionOrder || []),
-        ].flatMap(value => getDiagnosticPersonKeys(value)).filter(Boolean));
+            event.attendees,
+            event.crewSelectionOrder,
+        ].forEach(addCandidate);
+
+        Object.entries(event as Record<string, unknown>).forEach(([key, value]) => {
+            if ([
+                'id',
+                'date',
+                'type',
+                'duration',
+                'startTime',
+                'segmentStartTime',
+                'segmentDuration',
+                'resourceId',
+                'flightNumber',
+                'eventCode',
+                'aircraftConfigId',
+                'acceptableAircraftConfigs',
+                'color',
+                'origin',
+                'destination',
+                'area',
+                'callsign',
+            ].includes(key)) {
+                return;
+            }
+            addCandidate(value);
+        });
+
+        const seen = new Set<string>();
+        return candidates.filter(candidate => {
+            const keys = getDiagnosticPersonKeys(candidate);
+            const stableKey = keys[0] || candidate.toLowerCase();
+            if (seen.has(stableKey)) return false;
+            seen.add(stableKey);
+            return true;
+        });
     }, [getDiagnosticPersonKeys]);
+
+    const getDiagnosticEventPersonnel = useCallback((event: ScheduleEvent | EventSegment): Set<string> => {
+        return new Set(getDiagnosticEventNameCandidates(event).flatMap(value => getDiagnosticPersonKeys(value)).filter(Boolean));
+    }, [getDiagnosticEventNameCandidates, getDiagnosticPersonKeys]);
 
     const getDiagnosticEventBookingWindow = useCallback((event: ScheduleEvent | EventSegment): { start: number; end: number } => {
         const eventStart = Number(event.startTime);
@@ -20387,15 +20450,22 @@ const App: React.FC = () => {
                 : isSctEvent
                     ? event.student || event.crew || ''
                     : event.student || event.crew || '';
+        const fallbackNames = getDiagnosticEventNameCandidates(event);
+        const resolvedPrimaryName = String(primaryName || fallbackNames[0] || '').trim();
+        const primaryKeys = new Set(getDiagnosticPersonKeys(resolvedPrimaryName));
+        const fallbackSecondaryName = fallbackNames.find(name =>
+            !getDiagnosticPersonKeys(name).some(key => primaryKeys.has(key))
+        ) || '';
+        const resolvedSecondaryName = String(secondaryName || (event.flightType === 'Solo' ? '' : fallbackSecondaryName) || '').trim();
         const seatOne = activeAircraftCrewComposition?.seats?.[0];
         const seatTwo = activeAircraftCrewComposition?.seats?.[1];
         const primaryRole = getDiagnosticRoleOption(seatOne?.role || seatOne?.eligibleRoles?.[0] || 'Pilot', 'Pilot');
         const secondaryRole = getDiagnosticRoleOption(seatTwo?.role || seatTwo?.eligibleRoles?.[0] || 'Crew', 'Crew');
         return [
-            { name: String(primaryName || '').trim(), roleKey: primaryRole.key, roleLabel: primaryRole.label },
-            { name: String(secondaryName || '').trim(), roleKey: secondaryRole.key, roleLabel: secondaryRole.label },
+            { name: resolvedPrimaryName, roleKey: primaryRole.key, roleLabel: primaryRole.label },
+            { name: resolvedSecondaryName, roleKey: secondaryRole.key, roleLabel: secondaryRole.label },
         ].filter(assignment => assignment.name && assignment.name !== 'Multiple' && assignment.name !== 'Group' && assignment.name !== 'TBA');
-    }, [activeAircraftCrewComposition, getDiagnosticRoleOption]);
+    }, [activeAircraftCrewComposition, getDiagnosticEventNameCandidates, getDiagnosticPersonKeys, getDiagnosticRoleOption]);
 
     const isDiagnosticUnavailableAtTime = useCallback((staff: Instructor, time: number): boolean => {
         const unavailabilityBlocks = (staff.unavailability || []).some(period => {
