@@ -80305,6 +80305,27 @@ ${"=".repeat(60)}`);
       end: hasPostEnd ? rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd : eventEnd + fallbackPostFlightTime
     };
   }, [syllabusDetails]);
+  const getDiagnosticRoleOption = reactExports.useCallback((role, fallbackLabel) => {
+    const crewPosition = findCrewPositionEntry(role, activeCrewPositionTerminology);
+    const label = crewPosition?.label || String(role || fallbackLabel || "").trim() || "Unassigned";
+    const key = crewPosition?.genericName ? `crew:${crewPosition.genericName.trim().toLowerCase()}` : `role:${label.trim().toLowerCase()}`;
+    return { key, label };
+  }, [activeCrewPositionTerminology]);
+  const getDiagnosticEventSeatAssignments = reactExports.useCallback((event) => {
+    const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+    const isSctEvent = event.eventCategory === "sct" || String(event.flightNumber || "").startsWith("SCT");
+    const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
+    const primaryName = isTaskingEvent || isAirCombatCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor || event.pilot;
+    const secondaryName = isTaskingEvent || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student || event.crew || "" : event.student || event.crew || "";
+    const seatOne = activeAircraftCrewComposition?.seats?.[0];
+    const seatTwo = activeAircraftCrewComposition?.seats?.[1];
+    const primaryRole = getDiagnosticRoleOption(seatOne?.role || seatOne?.eligibleRoles?.[0] || "Pilot", "Pilot");
+    const secondaryRole = getDiagnosticRoleOption(seatTwo?.role || seatTwo?.eligibleRoles?.[0] || "Crew", "Crew");
+    return [
+      { name: String(primaryName || "").trim(), roleKey: primaryRole.key, roleLabel: primaryRole.label },
+      { name: String(secondaryName || "").trim(), roleKey: secondaryRole.key, roleLabel: secondaryRole.label }
+    ].filter((assignment) => assignment.name && assignment.name !== "Multiple" && assignment.name !== "Group" && assignment.name !== "TBA");
+  }, [activeAircraftCrewComposition, getDiagnosticRoleOption]);
   const isDiagnosticUnavailableAtTime = reactExports.useCallback((staff, time) => {
     const unavailabilityBlocks = (staff.unavailability || []).some((period) => {
       if (!period?.startDate || !period?.endDate) return false;
@@ -80330,10 +80351,12 @@ ${"=".repeat(60)}`);
     const diagnosticTime = staffAvailabilityPointer.time;
     const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
     const rows = /* @__PURE__ */ new Map();
+    const activeStaffKeys = /* @__PURE__ */ new Set();
     instructorsData.forEach((staff) => {
       const staffUnit = String(staff.unit || "").trim().toUpperCase();
       if (activeUnits.size > 0 && !activeUnits.has(staffUnit)) return;
       if (staff.isAdminStaff) return;
+      getDiagnosticPersonKeys(staff.name).forEach((key2) => activeStaffKeys.add(key2));
       const crewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
       const label = crewPosition?.label || String(staff.role || "").trim() || "Unassigned";
       const key = crewPosition?.genericName ? `crew:${crewPosition.genericName.trim().toLowerCase()}` : `role:${label.trim().toLowerCase()}`;
@@ -80346,11 +80369,32 @@ ${"=".repeat(60)}`);
       }
       rows.set(key, row);
     });
+    if (diagnosticTime !== null) {
+      eventsForDate.forEach((event) => {
+        const bookingWindow = getDiagnosticEventBookingWindow(event);
+        if (diagnosticTime < bookingWindow.start || diagnosticTime >= bookingWindow.end) return;
+        getDiagnosticEventSeatAssignments(event).forEach((assignment) => {
+          const assignmentKeys = getDiagnosticPersonKeys(assignment.name);
+          if (assignmentKeys.some((key) => activeStaffKeys.has(key))) return;
+          const row = rows.get(assignment.roleKey);
+          if (!row) return;
+          if (row.available > 0) {
+            row.available -= 1;
+          }
+          row.unavailable += 1;
+          rows.set(assignment.roleKey, row);
+        });
+      });
+    }
     return Array.from(rows.values()).sort((a, b) => a.label.localeCompare(b.label, void 0, { sensitivity: "base" }));
   }, [
     activeContextUnitCodeSet,
     activeCrewPositionTerminology,
     activeUnitCode,
+    eventsForDate,
+    getDiagnosticEventBookingWindow,
+    getDiagnosticEventSeatAssignments,
+    getDiagnosticPersonKeys,
     instructorsData,
     isDiagnosticUnavailableAtTime,
     staffAvailabilityPointer.time
@@ -80447,7 +80491,11 @@ ${"=".repeat(60)}`);
       }
       const assignedPeople = getDiagnosticEventPersonnel(event);
       const hasActiveUnitStaff = Array.from(assignedPeople).some((personName) => activeStaffNames.has(personName));
-      if (hasActiveUnitStaff) {
+      const hasSeatFallbackStaff = getDiagnosticEventSeatAssignments(event).some((assignment) => {
+        const assignmentKeys = getDiagnosticPersonKeys(assignment.name);
+        return assignmentKeys.length > 0 && !assignmentKeys.some((key) => activeStaffNames.has(key));
+      });
+      if (hasActiveUnitStaff || hasSeatFallbackStaff) {
         highlightedIds.add(event.id);
       }
     });
@@ -80458,9 +80506,10 @@ ${"=".repeat(60)}`);
     eventSegmentsForDate,
     getDiagnosticEventBookingWindow,
     getDiagnosticEventPersonnel,
+    getDiagnosticEventSeatAssignments,
+    getDiagnosticPersonKeys,
     instructorsData,
     isStaffAvailabilityDiagnoseActive,
-    getDiagnosticPersonKeys,
     staffAvailabilityPointer.time
   ]);
   const nextDayEventSegments = reactExports.useMemo(() => {
