@@ -20646,6 +20646,48 @@ const App: React.FC = () => {
         staffAvailabilityPointer.time,
     ]);
 
+    const getDiagnosticTrainingEventKind = useCallback((event: ScheduleEvent | EventSegment): 'course' | 'training_package' | null => {
+        const source = String((event as any)._source || '').trim().toLowerCase();
+        const notes = String(event.notes || '').trim().toLowerCase();
+        if (source === 'air-combat-priority-formation' || notes.includes('air combat training package') || notes.includes('air combat course')) {
+            if (notes.includes('training package')) return 'training_package';
+            if (notes.includes('course')) return 'course';
+        }
+        return null;
+    }, []);
+
+    const staffAvailabilityTrainingRemaining = useMemo(() => {
+        if (!isStaffAvailabilityDiagnoseBuildContext) return null;
+
+        const diagnosticTime = staffAvailabilityPointer.time;
+        const counts = {
+            course: 0,
+            trainingPackage: 0,
+            total: 0,
+        };
+        const seenEventIds = new Set<string>();
+
+        staffAvailabilityDiagnosticEvents.forEach(event => {
+            if (seenEventIds.has(event.id)) return;
+            const kind = getDiagnosticTrainingEventKind(event);
+            if (!kind) return;
+            seenEventIds.add(event.id);
+
+            if (diagnosticTime !== null && event.startTime <= diagnosticTime + 0.001) return;
+
+            if (kind === 'training_package') counts.trainingPackage += 1;
+            else counts.course += 1;
+            counts.total += 1;
+        });
+
+        return counts;
+    }, [
+        getDiagnosticTrainingEventKind,
+        isStaffAvailabilityDiagnoseBuildContext,
+        staffAvailabilityDiagnosticEvents,
+        staffAvailabilityPointer.time,
+    ]);
+
     const staffAvailabilityPanelPosition = useMemo(() => {
         if (typeof window === 'undefined') return { left: 24, top: 96 };
         const width = 250;
@@ -32744,6 +32786,24 @@ appliedUpdates.forEach(update => {
                                 </div>
                             )) : (
                                 <p className="rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-slate-400">No staff roles found for this unit.</p>
+                            )}
+                            {staffAvailabilityTrainingRemaining && (
+                                <div className="mt-2 rounded border border-violet-400/35 bg-violet-950/30 px-2 py-2">
+                                    <div className="mb-1 flex items-center justify-between gap-2">
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-200">Training Remaining</span>
+                                        <span className="font-mono text-sm font-bold text-white">{staffAvailabilityTrainingRemaining.total}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-1 text-[11px]">
+                                        <div className="rounded bg-slate-950/45 px-1.5 py-1">
+                                            <div className="text-slate-400">Course</div>
+                                            <div className="font-mono font-bold text-sky-300">{staffAvailabilityTrainingRemaining.course}</div>
+                                        </div>
+                                        <div className="rounded bg-slate-950/45 px-1.5 py-1">
+                                            <div className="text-slate-400">Package</div>
+                                            <div className="font-mono font-bold text-emerald-300">{staffAvailabilityTrainingRemaining.trainingPackage}</div>
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>

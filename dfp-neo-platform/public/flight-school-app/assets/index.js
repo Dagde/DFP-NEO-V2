@@ -80527,6 +80527,41 @@ ${"=".repeat(60)}`);
     staffAvailabilityDiagnosticEvents,
     staffAvailabilityPointer.time
   ]);
+  const getDiagnosticTrainingEventKind = reactExports.useCallback((event) => {
+    const source = String(event._source || "").trim().toLowerCase();
+    const notes = String(event.notes || "").trim().toLowerCase();
+    if (source === "air-combat-priority-formation" || notes.includes("air combat training package") || notes.includes("air combat course")) {
+      if (notes.includes("training package")) return "training_package";
+      if (notes.includes("course")) return "course";
+    }
+    return null;
+  }, []);
+  const staffAvailabilityTrainingRemaining = reactExports.useMemo(() => {
+    if (!isStaffAvailabilityDiagnoseBuildContext) return null;
+    const diagnosticTime = staffAvailabilityPointer.time;
+    const counts = {
+      course: 0,
+      trainingPackage: 0,
+      total: 0
+    };
+    const seenEventIds = /* @__PURE__ */ new Set();
+    staffAvailabilityDiagnosticEvents.forEach((event) => {
+      if (seenEventIds.has(event.id)) return;
+      const kind = getDiagnosticTrainingEventKind(event);
+      if (!kind) return;
+      seenEventIds.add(event.id);
+      if (diagnosticTime !== null && event.startTime <= diagnosticTime + 1e-3) return;
+      if (kind === "training_package") counts.trainingPackage += 1;
+      else counts.course += 1;
+      counts.total += 1;
+    });
+    return counts;
+  }, [
+    getDiagnosticTrainingEventKind,
+    isStaffAvailabilityDiagnoseBuildContext,
+    staffAvailabilityDiagnosticEvents,
+    staffAvailabilityPointer.time
+  ]);
   const staffAvailabilityPanelPosition = reactExports.useMemo(() => {
     if (typeof window === "undefined") return { left: 24, top: 96 };
     const width = 250;
@@ -90441,11 +90476,29 @@ Do you want to replace the existing entry?`,
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400", children: "Esc" })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: staffAvailabilityRoleRows.length > 0 ? staffAvailabilityRoleRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto_auto] items-baseline gap-2 rounded border border-slate-800/80 bg-slate-900/65 px-2 py-1.5", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", title: row.label, children: row.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-emerald-300", title: "Available", children: row.available }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-red-300", title: "Unavailable", children: row.unavailable })
-              ] }, row.label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-slate-400", children: "No staff roles found for this unit." }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+                staffAvailabilityRoleRows.length > 0 ? staffAvailabilityRoleRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto_auto] items-baseline gap-2 rounded border border-slate-800/80 bg-slate-900/65 px-2 py-1.5", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", title: row.label, children: row.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-emerald-300", title: "Available", children: row.available }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-red-300", title: "Unavailable", children: row.unavailable })
+                ] }, row.label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-slate-400", children: "No staff roles found for this unit." }),
+                staffAvailabilityTrainingRemaining && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 rounded border border-violet-400/35 bg-violet-950/30 px-2 py-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 flex items-center justify-between gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-violet-200", children: "Training Remaining" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-sm font-bold text-white", children: staffAvailabilityTrainingRemaining.total })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-1 text-[11px]", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-slate-950/45 px-1.5 py-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-slate-400", children: "Course" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-bold text-sky-300", children: staffAvailabilityTrainingRemaining.course })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-slate-950/45 px-1.5 py-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-slate-400", children: "Package" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-bold text-emerald-300", children: staffAvailabilityTrainingRemaining.trainingPackage })
+                    ] })
+                  ] })
+                ] })
+              ] })
             ]
           }
         ),
