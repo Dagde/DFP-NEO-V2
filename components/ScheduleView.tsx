@@ -1259,6 +1259,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 <div 
                     ref={scheduleGridRef}
                     data-schedule-grid="true"
+                    data-schedule-start-hour={START_HOUR}
+                    data-schedule-pixels-per-hour={PIXELS_PER_HOUR * zoomLevel}
                     className="relative bg-gray-900"
                     onMouseDown={(e) => handleMouseDown(e)}
                     onMouseMove={handleMouseMove}

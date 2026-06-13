@@ -8925,6 +8925,8 @@ const ScheduleView = ({
           {
             ref: scheduleGridRef,
             "data-schedule-grid": "true",
+            "data-schedule-start-hour": START_HOUR$5,
+            "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$5 * zoomLevel,
             className: "relative bg-gray-900",
             onMouseDown: (e) => handleMouseDown(e),
             onMouseMove: handleMouseMove,
@@ -80264,8 +80266,11 @@ ${"=".repeat(60)}`);
         const rect = grid.getBoundingClientRect();
         inScheduleGrid = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
         if (inScheduleGrid) {
-          const pixelsPerHour = 200;
-          const rawTime = (event.clientX - rect.left) / pixelsPerHour;
+          const startHour = Number(grid.dataset.scheduleStartHour);
+          const pixelsPerHour = Number(grid.dataset.schedulePixelsPerHour);
+          const resolvedStartHour = Number.isFinite(startHour) ? startHour : 0;
+          const resolvedPixelsPerHour = Number.isFinite(pixelsPerHour) && pixelsPerHour > 0 ? pixelsPerHour : 200 * zoomLevel;
+          const rawTime = resolvedStartHour + (event.clientX - rect.left) / resolvedPixelsPerHour;
           pointerTime = Math.max(0, Math.min(24, Math.round(rawTime * 12) / 12));
         }
       }
@@ -80287,7 +80292,7 @@ ${"=".repeat(60)}`);
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isStaffAvailabilityDiagnoseActive]);
+  }, [isStaffAvailabilityDiagnoseActive, zoomLevel]);
   const parseDiagnosticTime = reactExports.useCallback((timeValue) => {
     const match = String(timeValue || "").trim().match(/^(\d{1,2}):(\d{2})/);
     if (!match) return null;
@@ -90383,7 +90388,16 @@ Do you want to replace the existing entry?`,
             onLogout: handleLogout,
             onShowAdminPanel: () => setShowAdminPanel(true),
             onShowChangePassword: () => setShowChangePassword(true),
-            onStartStaffAvailabilityDiagnose: () => setIsStaffAvailabilityDiagnoseActive(true)
+            onStartStaffAvailabilityDiagnose: () => {
+              setStaffAvailabilityPointer((pointer) => ({
+                ...pointer,
+                x: pointer.x || Math.round(window.innerWidth / 2),
+                y: pointer.y || Math.round(window.innerHeight / 2),
+                time: null,
+                inScheduleGrid: false
+              }));
+              setIsStaffAvailabilityDiagnoseActive(true);
+            }
           }
         ),
         isStaffAvailabilityDiagnoseActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
