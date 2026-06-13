@@ -20657,7 +20657,8 @@ const App: React.FC = () => {
     }, []);
 
     const staffAvailabilityTrainingRemaining = useMemo(() => {
-        if (!isStaffAvailabilityDiagnoseBuildContext) return null;
+        const showTrainingRemaining = isStaffAvailabilityDiagnoseBuildContext || activeView === 'Program Schedule';
+        if (!showTrainingRemaining) return null;
 
         const diagnosticTime = staffAvailabilityPointer.time;
         const counts = {
@@ -20683,6 +20684,7 @@ const App: React.FC = () => {
         return counts;
     }, [
         getDiagnosticTrainingEventKind,
+        activeView,
         isStaffAvailabilityDiagnoseBuildContext,
         staffAvailabilityDiagnosticEvents,
         staffAvailabilityPointer.time,

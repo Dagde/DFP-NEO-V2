@@ -80537,7 +80537,8 @@ ${"=".repeat(60)}`);
     return null;
   }, []);
   const staffAvailabilityTrainingRemaining = reactExports.useMemo(() => {
-    if (!isStaffAvailabilityDiagnoseBuildContext) return null;
+    const showTrainingRemaining = isStaffAvailabilityDiagnoseBuildContext || activeView === "Program Schedule";
+    if (!showTrainingRemaining) return null;
     const diagnosticTime = staffAvailabilityPointer.time;
     const counts = {
       course: 0,
@@ -80558,6 +80559,7 @@ ${"=".repeat(60)}`);
     return counts;
   }, [
     getDiagnosticTrainingEventKind,
+    activeView,
     isStaffAvailabilityDiagnoseBuildContext,
     staffAvailabilityDiagnosticEvents,
     staffAvailabilityPointer.time
