@@ -80256,6 +80256,9 @@ ${"=".repeat(60)}`);
     if (!match) return null;
     return Number(match[1]) + Number(match[2]) / 60;
   }, []);
+  const normaliseDiagnosticPersonName = reactExports.useCallback((value) => {
+    return String(value || "").split(" – ")[0].split(" - ")[0].replace(/\s*\([^)]*\)\s*$/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+  }, []);
   const isDiagnosticUnavailableAtTime = reactExports.useCallback((staff, time) => {
     const unavailabilityBlocks = (staff.unavailability || []).some((period) => {
       if (!period?.startDate || !period?.endDate) return false;
@@ -80268,23 +80271,23 @@ ${"=".repeat(60)}`);
       return time >= periodStart && time < periodEnd;
     });
     if (unavailabilityBlocks) return true;
-    const staffName = String(staff.name || "").trim();
+    const staffName = normaliseDiagnosticPersonName(staff.name);
     if (!staffName) return false;
     return eventsForDate.some((event) => {
-      const assignedPeople = [
+      const assignedPeople = new Set([
         event.instructor,
         event.pilot,
         event.crew,
         event.student,
         ...event.attendees || [],
         ...event.crewSelectionOrder || []
-      ].map((value) => String(value || "").trim()).filter(Boolean);
-      if (!assignedPeople.includes(staffName)) return false;
+      ].map((value) => normaliseDiagnosticPersonName(value)).filter(Boolean));
+      if (!assignedPeople.has(staffName)) return false;
       const eventStart = Number.isFinite(Number(event.preStart)) ? Number(event.preStart) : Number(event.startTime);
       const eventEnd = Number.isFinite(Number(event.postEnd)) ? Number(event.postEnd) : Number(event.startTime) + Number(event.duration || 0);
       return time >= eventStart && time < eventEnd;
     });
-  }, [date, eventsForDate, parseDiagnosticTime]);
+  }, [date, eventsForDate, normaliseDiagnosticPersonName, parseDiagnosticTime]);
   const staffAvailabilityRoleRows = reactExports.useMemo(() => {
     const diagnosticTime = staffAvailabilityPointer.time;
     const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
