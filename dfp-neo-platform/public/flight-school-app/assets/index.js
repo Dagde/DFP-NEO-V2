@@ -36348,6 +36348,24 @@ const UNIT_SORT_ORDER = { "1FTS": 1, "CFS": 2, "2FTS": 3 };
 const isPilotRole = (instructor) => String(instructor.role || "").trim().toLowerCase() === "pilot";
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
+const getStaffRoleFilterOption = (role, terminology, instructorLabel) => {
+  const entry = findCrewPositionEntry(role, terminology);
+  if (entry) {
+    return {
+      value: `crew:${entry.genericName.trim().toLowerCase()}`,
+      label: entry.label || entry.genericName
+    };
+  }
+  const rawRole = String(role || "").trim();
+  if (!rawRole) {
+    return { value: "role:unassigned", label: "Unassigned" };
+  }
+  const roleKey = rawRole.toUpperCase();
+  if (roleKey === "QFI" || roleKey === "INSTRUCTOR") {
+    return { value: "role:instructor", label: instructorLabel };
+  }
+  return { value: `role:${roleKey.toLowerCase()}`, label: rawRole };
+};
 const generateNewInstructorTemplate = () => ({
   idNumber: generateRandomIdNumber$1(),
   name: "",
@@ -36431,6 +36449,7 @@ const InstructorListView = ({
   const [isArchiveMode, setIsArchiveMode] = reactExports.useState(false);
   const [instructorToArchive, setInstructorToArchive] = reactExports.useState(null);
   const [showArchivedFlyout, setShowArchivedFlyout] = reactExports.useState(false);
+  const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = reactExports.useState("ALL");
   reactExports.useEffect(() => {
     if (selectedPersonForProfile) {
       const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.name}`);
@@ -36469,9 +36488,31 @@ const InstructorListView = ({
       return isQFI || isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology));
     }).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   }, [instructorsData, isAirCombatModel, personnelDisplaySettings, crewPositionTerminology]);
+  const staffRoleFilterOptions = reactExports.useMemo(() => {
+    const optionMap = /* @__PURE__ */ new Map();
+    qfis.forEach((instructor) => {
+      const option = getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel);
+      optionMap.set(option.value, option.label);
+    });
+    const roleOptions = Array.from(optionMap.entries()).map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, void 0, { sensitivity: "base" }));
+    return [{ value: "ALL", label: "All" }, ...roleOptions];
+  }, [qfis, crewPositionTerminology, instructorLabel]);
+  reactExports.useEffect(() => {
+    if (selectedStaffRoleFilter !== "ALL" && !staffRoleFilterOptions.some((option) => option.value === selectedStaffRoleFilter)) {
+      setSelectedStaffRoleFilter("ALL");
+    }
+  }, [selectedStaffRoleFilter, staffRoleFilterOptions]);
+  const filteredQfis = reactExports.useMemo(() => {
+    if (selectedStaffRoleFilter === "ALL") {
+      return qfis;
+    }
+    return qfis.filter(
+      (instructor) => getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel).value === selectedStaffRoleFilter
+    );
+  }, [qfis, selectedStaffRoleFilter, crewPositionTerminology, instructorLabel]);
   const qfisByUnit = reactExports.useMemo(() => {
     const groups = {};
-    qfis.forEach((instructor) => {
+    filteredQfis.forEach((instructor) => {
       const unit = instructor.unit || "Unassigned";
       if (!groups[unit]) {
         groups[unit] = [];
@@ -36479,7 +36520,7 @@ const InstructorListView = ({
       groups[unit].push(instructor);
     });
     return groups;
-  }, [qfis]);
+  }, [filteredQfis]);
   const sortedUnits = reactExports.useMemo(
     () => Object.keys(qfisByUnit).sort((a, b) => {
       const orderA = UNIT_SORT_ORDER[a] ?? 99;
@@ -36492,7 +36533,7 @@ const InstructorListView = ({
   const qfisByFlight = reactExports.useMemo(() => {
     if (!isAirCombatModel) return {};
     const groups = {};
-    qfis.forEach((instructor) => {
+    filteredQfis.forEach((instructor) => {
       const flight = String(instructor.flight || "").trim().toUpperCase();
       if (!flight) return;
       if (!groups[flight]) {
@@ -36501,7 +36542,7 @@ const InstructorListView = ({
       groups[flight].push(instructor);
     });
     return groups;
-  }, [isAirCombatModel, qfis]);
+  }, [isAirCombatModel, filteredQfis]);
   const sortedFlightGroups = reactExports.useMemo(
     () => Object.keys(qfisByFlight).sort((a, b) => {
       const simpleFlightPattern = /^[A-Z]$/;
@@ -36696,10 +36737,24 @@ const InstructorListView = ({
     },
     instructor.name
   )) });
+  const renderStaffRoleFilterSelect = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 min-w-0", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "sr-only", children: "Filter staff by role" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "select",
+      {
+        value: selectedStaffRoleFilter,
+        onChange: (event) => setSelectedStaffRoleFilter(event.target.value),
+        className: "w-full max-w-[9rem] bg-gray-900/90 border border-gray-600 text-gray-100 text-xs font-semibold rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400",
+        title: "Filter staff by role",
+        children: staffRoleFilterOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
+      }
+    )
+  ] });
   const renderInstructorUnitCard = (unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${isAirCombatModel ? "border-emerald-400/80 shadow-emerald-500/20" : "border-gray-700"}`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-3 border-b bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm ${isAirCombatModel ? "border-emerald-400/40" : "border-gray-700"}`, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400", children: unit }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-3 border-b bg-gray-800/80 grid grid-cols-[minmax(0,9rem)_1fr_minmax(0,5rem)] gap-3 items-center rounded-t-lg backdrop-blur-sm ${isAirCombatModel ? "border-emerald-400/40" : "border-gray-700"}`, children: [
+      renderStaffRoleFilterSelect(),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400 text-center truncate", children: unit }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "justify-self-end text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full whitespace-nowrap", children: [
         qfisByUnit[unit].length,
         " Staff"
       ] })
