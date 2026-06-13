@@ -6,10 +6,12 @@ import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import PersonnelColumn from './PersonnelColumn';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 
 interface NextDayInstructorScheduleViewProps {
   events: ScheduleEvent[];
-  instructors: { name: string; rank: InstructorRank; unit?: string }[];
+  instructors: { name: string; rank: InstructorRank; unit?: string; role?: string }[];
   traineesData: Trainee[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdateEvent: (updates: { eventId: string, newStartTime: number }[]) => void;
@@ -24,6 +26,9 @@ interface NextDayInstructorScheduleViewProps {
   buildDfpDate: string;
   onDateChange: (direction: 'prev' | 'next') => void;
   aircraftNumberSettings?: AircraftNumberSettings;
+  operationalModel?: string;
+  crewPositionTerminology?: CrewPositionTerminology;
+  instructorLabel?: string;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -93,7 +98,10 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
     traineesData,
     buildDfpDate,
     onDateChange,
-    aircraftNumberSettings
+    aircraftNumberSettings,
+    operationalModel,
+    crewPositionTerminology,
+    instructorLabel = 'QFI',
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -470,8 +478,11 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
             rowHeight={ROW_HEIGHT}
             onRowEnter={setHoveredRowIndex}
             onPersonClick={onSelectInstructor}
-              showUnits={false}
-              useUnitColors={true}
+            showUnits={false}
+            useUnitColors={true}
+            useRoleColors={normaliseOperationalModel(operationalModel) === 'air_combat'}
+            crewPositionTerminology={crewPositionTerminology}
+            instructorLabel={instructorLabel}
           />
         </div>
 

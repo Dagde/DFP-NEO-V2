@@ -158,7 +158,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             date={props.date}
             onDateChange={props.onDateChange}
             events={props.eventSegmentsForDate}
-            instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
+            instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
             instructorsData={locationFilteredInstructorsForSchedule}
             traineesData={props.traineesData}
             onSelectEvent={props.onSelectEvent}
@@ -172,6 +172,9 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             showValidation={props.showValidation}
             unavailabilityConflicts={props.unavailabilityConflicts}
             onSelectInstructor={props.onSelectInstructor}
+            operationalModel={props.operationalModel}
+            crewPositionTerminology={props.crewPositionTerminology}
+            instructorLabel={props.instructorLabel}
           />
         )}
       </div>

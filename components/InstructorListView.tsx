@@ -15,6 +15,7 @@ import { normaliseOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { getStaffRoleDisplay } from '../utils/staffRoleColours';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 
 // Helper to generate a unique random ID for new instructors
@@ -39,25 +40,8 @@ const getStaffRoleFilterOption = (
     terminology: CrewPositionTerminology | undefined,
     instructorLabel: string,
 ): { value: string; label: string } => {
-    const entry = findCrewPositionEntry(role, terminology);
-    if (entry) {
-        return {
-            value: `crew:${entry.genericName.trim().toLowerCase()}`,
-            label: entry.label || entry.genericName,
-        };
-    }
-
-    const rawRole = String(role || '').trim();
-    if (!rawRole) {
-        return { value: 'role:unassigned', label: 'Unassigned' };
-    }
-
-    const roleKey = rawRole.toUpperCase();
-    if (roleKey === 'QFI' || roleKey === 'INSTRUCTOR') {
-        return { value: 'role:instructor', label: instructorLabel };
-    }
-
-    return { value: `role:${roleKey.toLowerCase()}`, label: rawRole };
+    const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel);
+    return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
 };
 
 const generateNewInstructorTemplate = (): Instructor => ({
@@ -522,35 +506,40 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const renderInstructorList = (instructors: Instructor[]) => (
     <ul className="space-y-2">
-      {instructors.map((instructor, index) => (
-        <li
-          id={`instructor-row-${instructor.name}`}
-          key={instructor.name}
-          className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`}
-          onMouseEnter={(e) => handleMouseEnter(e, instructor.name)}
-          onMouseLeave={handleMouseLeave}
-          onClick={(e) => {
-              if (isArchiveMode) {
-                  setInstructorToArchive(instructor);
-              } else {
-                  handleInstructorClick(e, instructor);
-              }
-          }}
-        >
-          <div className="flex items-center space-x-3 flex-grow min-w-0">
-             <span className="font-mono text-gray-500 w-6 flex-shrink-0 text-right text-xs">{index + 1}.</span>
-            <span className="font-mono text-gray-500 w-12 flex-shrink-0 text-right text-xs">{instructor.rank}</span>
-            <span className="flex-grow truncate font-medium">{instructor.name}</span>
-          </div>
-          {isArchiveMode && (
-              <div className="p-1 rounded-full text-red-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
-                  </svg>
-              </div>
-          )}
-        </li>
-      ))}
+      {instructors.map((instructor, index) => {
+        const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
+        const roleTextClass = isAirCombatModel ? roleDisplay.textClassName : 'text-gray-300';
+        return (
+          <li
+            id={`instructor-row-${instructor.name}`}
+            key={instructor.name}
+            className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`}
+            onMouseEnter={(e) => handleMouseEnter(e, instructor.name)}
+            onMouseLeave={handleMouseLeave}
+            onClick={(e) => {
+                if (isArchiveMode) {
+                    setInstructorToArchive(instructor);
+                } else {
+                    handleInstructorClick(e, instructor);
+                }
+            }}
+            title={isAirCombatModel ? `${instructor.name} - ${roleDisplay.label}` : instructor.name}
+          >
+            <div className="flex items-center space-x-3 flex-grow min-w-0">
+               <span className="font-mono text-gray-500 w-6 flex-shrink-0 text-right text-xs">{index + 1}.</span>
+              <span className="font-mono text-gray-500 w-12 flex-shrink-0 text-right text-xs">{instructor.rank}</span>
+              <span className={`flex-grow truncate font-medium ${roleTextClass}`}>{instructor.name}</span>
+            </div>
+            {isArchiveMode && (
+                <div className="p-1 rounded-full text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
+                    </svg>
+                </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 

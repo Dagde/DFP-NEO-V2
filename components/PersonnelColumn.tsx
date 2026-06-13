@@ -1,10 +1,13 @@
 import React from 'react';
 import { InstructorRank } from '../types';
+import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { getStaffRoleDisplay } from '../utils/staffRoleColours';
 
 interface Personnel {
   name: string;
   rank: InstructorRank;
   unit?: string;
+  role?: string;
 }
 
 interface PersonnelColumnProps {
@@ -16,6 +19,9 @@ interface PersonnelColumnProps {
   onRowRef?: (name: string, element: HTMLLIElement | null) => void;
   showUnits?: boolean;
   useUnitColors?: boolean;
+  useRoleColors?: boolean;
+  crewPositionTerminology?: CrewPositionTerminology;
+  instructorLabel?: string;
 }
 
 // Unit color mapping - only text colors
@@ -67,7 +73,10 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
   onPersonClick, 
   onRowRef, 
   showUnits = false, 
-  useUnitColors = false 
+  useUnitColors = false,
+  useRoleColors = false,
+  crewPositionTerminology,
+  instructorLabel = 'QFI',
 }) => {
   console.log('🔍 PERSONNEL COLUMN DEBUG - Props:', {
        personnelCount: personnel.length,
@@ -103,7 +112,10 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
     return (
       <div className="w-40 bg-gray-800 flex-shrink-0 h-full">
         <ul>
-          {personnel.map(({ name, rank, unit }, index) => (
+          {personnel.map(({ name, rank, unit, role }, index) => {
+            const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
+            const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(unit) : 'text-gray-300';
+            return (
             <li
               key={name}
               ref={(el) => onRowRef?.(name, el)}
@@ -112,11 +124,13 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
               onMouseEnter={() => onRowEnter?.(index)}
               onMouseLeave={() => onRowLeave?.()}
               onClick={() => onPersonClick?.(name)}
+              title={useRoleColors ? `${name} - ${roleDisplay.label}` : name}
             >
               <span className="font-mono text-gray-500 w-12 flex-shrink-0">{rank}</span>
-              <span className={`truncate font-medium ${useUnitColors ? getUnitTextColor(unit) : 'text-gray-300'}`}>{name}</span>
+              <span className={`truncate font-medium ${nameTextClass}`}>{name}</span>
             </li>
-          ))}
+          );
+          })}
         </ul>
       </div>
     );
@@ -136,7 +150,10 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
             </li>
             
             {/* Personnel in this unit - NO unit text under name, only colored text */}
-            {people.map(({ name, rank, unit: personUnit }, index) => (
+            {people.map(({ name, rank, unit: personUnit, role }, index) => {
+              const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
+              const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : 'text-gray-300';
+              return (
               <li
                 key={`${unit}-${name}`}
                 ref={(el) => onRowRef?.(name, el)}
@@ -147,11 +164,13 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
                 onMouseEnter={() => onRowEnter?.(index)}
                 onMouseLeave={() => onRowLeave?.()}
                 onClick={() => onPersonClick?.(name)}
+                title={useRoleColors ? `${name} - ${roleDisplay.label}` : name}
               >
                 <span className="font-mono text-gray-500 w-10 text-xs">{rank}</span>
-                <span className={`truncate font-medium flex-1 ${useUnitColors ? getUnitTextColor(personUnit) : 'text-gray-300'}`}>{name}</span>
+                <span className={`truncate font-medium flex-1 ${nameTextClass}`}>{name}</span>
               </li>
-            ))}
+            );
+            })}
           </React.Fragment>
         ))}
       </ul>

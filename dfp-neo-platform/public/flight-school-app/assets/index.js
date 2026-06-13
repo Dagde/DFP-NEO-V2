@@ -9043,6 +9043,55 @@ const ScheduleView = ({
     }
   ) });
 };
+const ROLE_TEXT_COLOURS = [
+  "text-sky-300",
+  "text-emerald-300",
+  "text-amber-300",
+  "text-violet-300",
+  "text-rose-300",
+  "text-cyan-300",
+  "text-lime-300",
+  "text-orange-300",
+  "text-fuchsia-300",
+  "text-teal-300"
+];
+const STABLE_ROLE_COLOUR_OVERRIDES = {
+  pilot: "text-sky-300",
+  "combat systems operator": "text-emerald-300",
+  wso: "text-emerald-300",
+  loadmaster: "text-amber-300",
+  "airborne mission commander": "text-violet-300",
+  "flight engineer": "text-rose-300",
+  crew: "text-cyan-300",
+  trainee: "text-lime-300"
+};
+const normaliseRoleKey = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+const getStaffRoleDisplay = (role, terminology, instructorLabel = "QFI") => {
+  const entry = findCrewPositionEntry(role, terminology);
+  const rawRole = String(role || "").trim();
+  const label = entry?.label || rawRole || "Unassigned";
+  const stableKey = normaliseRoleKey(entry?.genericName || rawRole || "unassigned");
+  if (stableKey === "qfi" || stableKey === "instructor") {
+    return {
+      key: "instructor",
+      label: instructorLabel,
+      textClassName: "text-blue-200"
+    };
+  }
+  const override = STABLE_ROLE_COLOUR_OVERRIDES[stableKey] || STABLE_ROLE_COLOUR_OVERRIDES[normaliseRoleKey(label)];
+  if (override) {
+    return { key: stableKey, label, textClassName: override };
+  }
+  let hash = 0;
+  for (let index = 0; index < stableKey.length; index += 1) {
+    hash = hash * 31 + stableKey.charCodeAt(index) >>> 0;
+  }
+  return {
+    key: stableKey,
+    label,
+    textClassName: ROLE_TEXT_COLOURS[hash % ROLE_TEXT_COLOURS.length]
+  };
+};
 const getUnitTextColor = (unit) => {
   const unitColors = {
     "1FTS": "text-blue-300",
@@ -9088,7 +9137,10 @@ const PersonnelColumn = ({
   onPersonClick,
   onRowRef,
   showUnits = false,
-  useUnitColors = false
+  useUnitColors = false,
+  useRoleColors = false,
+  crewPositionTerminology,
+  instructorLabel = "QFI"
 }) => {
   console.log("🔍 PERSONNEL COLUMN DEBUG - Props:", {
     personnelCount: personnel.length,
@@ -9111,22 +9163,27 @@ const PersonnelColumn = ({
     return groups;
   }, [personnel, showUnits]);
   if (!showUnits) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: personnel.map(({ name, rank, unit }, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "li",
-      {
-        ref: (el) => onRowRef?.(name, el),
-        className: `flex items-center justify-start pl-3 text-xs transition-colors duration-150 border-b border-gray-700/50 ${onPersonClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
-        style: { height: rowHeight },
-        onMouseEnter: () => onRowEnter?.(index),
-        onMouseLeave: () => onRowLeave?.(),
-        onClick: () => onPersonClick?.(name),
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 flex-shrink-0", children: rank }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium ${useUnitColors ? getUnitTextColor(unit) : "text-gray-300"}`, children: name })
-        ]
-      },
-      name
-    )) }) });
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: personnel.map(({ name, rank, unit, role }, index) => {
+      const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
+      const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(unit) : "text-gray-300";
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "li",
+        {
+          ref: (el) => onRowRef?.(name, el),
+          className: `flex items-center justify-start pl-3 text-xs transition-colors duration-150 border-b border-gray-700/50 ${onPersonClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
+          style: { height: rowHeight },
+          onMouseEnter: () => onRowEnter?.(index),
+          onMouseLeave: () => onRowLeave?.(),
+          onClick: () => onPersonClick?.(name),
+          title: useRoleColors ? `${name} - ${roleDisplay.label}` : name,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 flex-shrink-0", children: rank }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium ${nameTextClass}`, children: name })
+          ]
+        },
+        name
+      );
+    }) }) });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-48 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: Object.entries(groupedPersonnel).map(([unit, people]) => /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "bg-gray-900/80 border-b border-gray-600 px-3 py-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `text-xs font-semibold ${useUnitColors ? getUnitColor(unit).split(" ").find((c) => c.startsWith("text-")) || "text-gray-400" : "text-gray-400"}`, children: [
@@ -9135,22 +9192,27 @@ const PersonnelColumn = ({
       people.length,
       ")"
     ] }) }),
-    people.map(({ name, rank, unit: personUnit }, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "li",
-      {
-        ref: (el) => onRowRef?.(name, el),
-        className: `flex items-center justify-start pl-3 pr-2 py-1 text-xs transition-colors duration-150 border-b border-gray-700/50 bg-gray-800 ${onPersonClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
-        style: { height: rowHeight, minHeight: rowHeight },
-        onMouseEnter: () => onRowEnter?.(index),
-        onMouseLeave: () => onRowLeave?.(),
-        onClick: () => onPersonClick?.(name),
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-10 text-xs", children: rank }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium flex-1 ${useUnitColors ? getUnitTextColor(personUnit) : "text-gray-300"}`, children: name })
-        ]
-      },
-      `${unit}-${name}`
-    ))
+    people.map(({ name, rank, unit: personUnit, role }, index) => {
+      const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel);
+      const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : "text-gray-300";
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "li",
+        {
+          ref: (el) => onRowRef?.(name, el),
+          className: `flex items-center justify-start pl-3 pr-2 py-1 text-xs transition-colors duration-150 border-b border-gray-700/50 bg-gray-800 ${onPersonClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
+          style: { height: rowHeight, minHeight: rowHeight },
+          onMouseEnter: () => onRowEnter?.(index),
+          onMouseLeave: () => onRowLeave?.(),
+          onClick: () => onPersonClick?.(name),
+          title: useRoleColors ? `${name} - ${roleDisplay.label}` : name,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-10 text-xs", children: rank }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium flex-1 ${nameTextClass}`, children: name })
+          ]
+        },
+        `${unit}-${name}`
+      );
+    })
   ] }, unit)) }) });
 };
 const PIXELS_PER_HOUR$4 = 200;
@@ -9238,7 +9300,7 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   });
   return unavailabilityEvents;
 };
-const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings }) => {
+const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel: operationalModel2, crewPositionTerminology, instructorLabel = "QFI" }) => {
   console.log("🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:");
   console.log("  - date:", date);
   console.log("  - events count:", events?.length);
@@ -9653,7 +9715,10 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
               onRowEnter: setHoveredRowIndex,
               onRowLeave: () => setHoveredRowIndex(null),
               showUnits: false,
-              useUnitColors: true
+              useUnitColors: true,
+              useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
+              crewPositionTerminology,
+              instructorLabel
             }
           )
         ] }),
@@ -36396,22 +36461,8 @@ const isPilotRole = (instructor) => String(instructor.role || "").trim().toLower
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
 const getStaffRoleFilterOption = (role, terminology, instructorLabel) => {
-  const entry = findCrewPositionEntry(role, terminology);
-  if (entry) {
-    return {
-      value: `crew:${entry.genericName.trim().toLowerCase()}`,
-      label: entry.label || entry.genericName
-    };
-  }
-  const rawRole = String(role || "").trim();
-  if (!rawRole) {
-    return { value: "role:unassigned", label: "Unassigned" };
-  }
-  const roleKey = rawRole.toUpperCase();
-  if (roleKey === "QFI" || roleKey === "INSTRUCTOR") {
-    return { value: "role:instructor", label: instructorLabel };
-  }
-  return { value: `role:${roleKey.toLowerCase()}`, label: rawRole };
+  const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel);
+  return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
 };
 const generateNewInstructorTemplate = () => ({
   idNumber: generateRandomIdNumber$1(),
@@ -36756,34 +36807,39 @@ const InstructorListView = ({
     setIsArchiveMode(!isArchiveMode);
     setSelectedInstructor(null);
   };
-  const renderInstructorList = (instructors) => /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: instructors.map((instructor, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    "li",
-    {
-      id: `instructor-row-${instructor.name}`,
-      className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`,
-      onMouseEnter: (e) => handleMouseEnter(e, instructor.name),
-      onMouseLeave: handleMouseLeave,
-      onClick: (e) => {
-        if (isArchiveMode) {
-          setInstructorToArchive(instructor);
-        } else {
-          handleInstructorClick(e, instructor);
-        }
-      },
-      children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 flex-grow min-w-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-500 w-6 flex-shrink-0 text-right text-xs", children: [
-            index + 1,
-            "."
+  const renderInstructorList = (instructors) => /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: instructors.map((instructor, index) => {
+    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
+    const roleTextClass = isAirCombatModel ? roleDisplay.textClassName : "text-gray-300";
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "li",
+      {
+        id: `instructor-row-${instructor.name}`,
+        className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`,
+        onMouseEnter: (e) => handleMouseEnter(e, instructor.name),
+        onMouseLeave: handleMouseLeave,
+        onClick: (e) => {
+          if (isArchiveMode) {
+            setInstructorToArchive(instructor);
+          } else {
+            handleInstructorClick(e, instructor);
+          }
+        },
+        title: isAirCombatModel ? `${instructor.name} - ${roleDisplay.label}` : instructor.name,
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 flex-grow min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-500 w-6 flex-shrink-0 text-right text-xs", children: [
+              index + 1,
+              "."
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 flex-shrink-0 text-right text-xs", children: instructor.rank }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `flex-grow truncate font-medium ${roleTextClass}`, children: instructor.name })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 flex-shrink-0 text-right text-xs", children: instructor.rank }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-grow truncate font-medium", children: instructor.name })
-        ] }),
-        isArchiveMode && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-1 rounded-full text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z", clipRule: "evenodd" }) }) })
-      ]
-    },
-    instructor.name
-  )) });
+          isArchiveMode && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-1 rounded-full text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z", clipRule: "evenodd" }) }) })
+        ]
+      },
+      instructor.name
+    );
+  }) });
   const renderStaffRoleFilterSelect = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 min-w-0", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "sr-only", children: "Filter staff by role" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37068,7 +37124,7 @@ const StaffView = (props) => {
           date: props.date,
           onDateChange: props.onDateChange,
           events: props.eventSegmentsForDate,
-          instructors: locationFilteredInstructorsForSchedule.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit })),
+          instructors: locationFilteredInstructorsForSchedule.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
           instructorsData: locationFilteredInstructorsForSchedule,
           traineesData: props.traineesData,
           onSelectEvent: props.onSelectEvent,
@@ -37081,7 +37137,10 @@ const StaffView = (props) => {
           conflictingEventIds: props.conflictingEventIds,
           showValidation: props.showValidation,
           unavailabilityConflicts: props.unavailabilityConflicts,
-          onSelectInstructor: props.onSelectInstructor
+          onSelectInstructor: props.onSelectInstructor,
+          operationalModel: props.operationalModel,
+          crewPositionTerminology: props.crewPositionTerminology,
+          instructorLabel: props.instructorLabel
         }
       )
     ] })
@@ -62122,7 +62181,10 @@ const NextDayInstructorScheduleView = ({
   traineesData,
   buildDfpDate,
   onDateChange,
-  aircraftNumberSettings
+  aircraftNumberSettings,
+  operationalModel: operationalModel2,
+  crewPositionTerminology,
+  instructorLabel = "QFI"
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(/* @__PURE__ */ new Date());
@@ -62436,7 +62498,10 @@ const NextDayInstructorScheduleView = ({
             onRowEnter: setHoveredRowIndex,
             onPersonClick: onSelectInstructor,
             showUnits: false,
-            useUnitColors: true
+            useUnitColors: true,
+            useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
+            crewPositionTerminology,
+            instructorLabel
           }
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -88373,7 +88438,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               onDateSelect: handleDateSelect,
               snapshotDates,
               events: eventSegmentsForDate,
-              instructors: locationFilteredInstructorsForSchedule.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit })),
+              instructors: locationFilteredInstructorsForSchedule.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
               instructorsData: locationFilteredInstructorsForSchedule,
               traineesData,
               onSelectEvent: handleOpenModal,
@@ -88387,7 +88452,10 @@ ${error instanceof Error ? error.message : String(error)}`,
               showValidation,
               unavailabilityConflicts,
               onSelectInstructor: handleSelectInstructorFromSchedule,
-              aircraftNumberSettings
+              aircraftNumberSettings,
+              operationalModel: activeOperationalModel,
+              crewPositionTerminology: activeCrewPositionTerminology,
+              instructorLabel
             }
           );
         } catch (error) {
@@ -88408,7 +88476,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           NextDayInstructorScheduleView,
           {
             events: nextDayEventsForStaffTraineeSchedule.map((e) => ({ ...e, date: buildDfpDate })),
-            instructors: sortedNextDayInstructors.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit })),
+            instructors: sortedNextDayInstructors.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
             traineesData,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onUpdateEvent: handleNextDayScheduleUpdate,
@@ -88422,7 +88490,10 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSelectInstructor: handleSelectInstructorFromSchedule,
             buildDfpDate,
             onDateChange: handleBuildDateChange,
-            aircraftNumberSettings
+            aircraftNumberSettings,
+            operationalModel: activeOperationalModel,
+            crewPositionTerminology: activeCrewPositionTerminology,
+            instructorLabel
           }
         );
       case "NextDayTraineeSchedule":

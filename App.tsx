@@ -30475,7 +30475,7 @@ appliedUpdates.forEach(update => {
                       onDateSelect={handleDateSelect}
                       snapshotDates={snapshotDates}
                       events={eventSegmentsForDate}
-                      instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
+                      instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
                       instructorsData={locationFilteredInstructorsForSchedule}
                       traineesData={traineesData}
                       onSelectEvent={handleOpenModal}
@@ -30490,6 +30490,9 @@ appliedUpdates.forEach(update => {
                       unavailabilityConflicts={unavailabilityConflicts}
                       onSelectInstructor={handleSelectInstructorFromSchedule}
                       aircraftNumberSettings={aircraftNumberSettings}
+                      operationalModel={activeOperationalModel}
+                      crewPositionTerminology={activeCrewPositionTerminology}
+                      instructorLabel={instructorLabel}
                     />;
                 } catch (error) {
                     console.error('🔴 STAFF SCHEDULE ERROR - Failed to render InstructorScheduleView:', error);
@@ -30510,7 +30513,7 @@ appliedUpdates.forEach(update => {
 
                 return <NextDayInstructorScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
-                    instructors={sortedNextDayInstructors.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
+                    instructors={sortedNextDayInstructors.map(i => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
                     traineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
@@ -30525,6 +30528,9 @@ appliedUpdates.forEach(update => {
                     buildDfpDate={buildDfpDate}
                     onDateChange={handleBuildDateChange}
                     aircraftNumberSettings={aircraftNumberSettings}
+                    operationalModel={activeOperationalModel}
+                    crewPositionTerminology={activeCrewPositionTerminology}
+                    instructorLabel={instructorLabel}
                 />;
             case 'NextDayTraineeSchedule':
                 return <NextDayTraineeScheduleView

@@ -6,6 +6,8 @@ import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import PersonnelColumn from './PersonnelColumn';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import { normaliseOperationalModel } from '../utils/platformConfigService';
+import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 
 interface InstructorScheduleViewProps {
   date: string;
@@ -13,7 +15,7 @@ interface InstructorScheduleViewProps {
   onDateSelect?: (date: string) => void;
   snapshotDates?: string[];
   events: ScheduleEvent[];
-  instructors: { name: string; rank: InstructorRank; unit?: string }[];
+  instructors: { name: string; rank: InstructorRank; unit?: string; role?: string }[];
   instructorsData: { name: string; rank: InstructorRank; unavailability?: any[] }[];
   traineesData: Trainee[];
   onSelectEvent: (event: ScheduleEvent) => void;
@@ -28,6 +30,9 @@ interface InstructorScheduleViewProps {
   unavailabilityConflicts: Map<string, string[]>;
   onSelectInstructor: (instructorName: string) => void;
   aircraftNumberSettings?: AircraftNumberSettings;
+  operationalModel?: string;
+  crewPositionTerminology?: CrewPositionTerminology;
+  instructorLabel?: string;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -143,7 +148,7 @@ const createUnavailabilityEvents = (date: string, personnelData: any[], isInstru
 };
 
 
-const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings }) => {
+const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = 'QFI' }) => {
   // ERROR TRACKING: Log all props to identify missing seatConfigs
   console.log('🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:');
   console.log('  - date:', date);
@@ -622,6 +627,9 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
             onRowLeave={() => setHoveredRowIndex(null)}
             showUnits={false}
             useUnitColors={true}
+            useRoleColors={normaliseOperationalModel(operationalModel) === 'air_combat'}
+            crewPositionTerminology={crewPositionTerminology}
+            instructorLabel={instructorLabel}
           />
         </div>
 
