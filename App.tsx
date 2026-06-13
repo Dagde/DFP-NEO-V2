@@ -20300,25 +20300,31 @@ const App: React.FC = () => {
         if (!isStaffAvailabilityDiagnoseActive) return;
 
         const handleMouseMove = (event: MouseEvent) => {
-            const grid = document.querySelector('[data-schedule-grid="true"]') as HTMLElement | null;
+            const targetElement = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
+            const surface = targetElement?.closest('[data-schedule-surface="true"]') as HTMLElement | null;
+            const grid = surface?.querySelector('[data-schedule-grid="true"]') as HTMLElement | null;
             let pointerTime: number | null = null;
             let inScheduleGrid = false;
 
-            if (grid) {
+            if (surface && grid) {
+                const surfaceRect = surface.getBoundingClientRect();
                 const rect = grid.getBoundingClientRect();
-                inScheduleGrid = event.clientX >= rect.left
-                    && event.clientX <= rect.right
+                const startHour = Number(grid.dataset.scheduleStartHour);
+                const pixelsPerHour = Number(grid.dataset.schedulePixelsPerHour);
+                const resolvedStartHour = Number.isFinite(startHour) ? startHour : 0;
+                const resolvedPixelsPerHour = Number.isFinite(pixelsPerHour) && pixelsPerHour > 0
+                    ? pixelsPerHour
+                    : 200 * zoomLevel;
+                const xInGrid = surface.scrollLeft + (event.clientX - surfaceRect.left) - grid.offsetLeft;
+                inScheduleGrid = event.clientX >= surfaceRect.left
+                    && event.clientX <= surfaceRect.right
                     && event.clientY >= rect.top
-                    && event.clientY <= rect.bottom;
+                    && event.clientY <= rect.bottom
+                    && xInGrid >= 0
+                    && xInGrid <= grid.scrollWidth;
 
                 if (inScheduleGrid) {
-                    const startHour = Number(grid.dataset.scheduleStartHour);
-                    const pixelsPerHour = Number(grid.dataset.schedulePixelsPerHour);
-                    const resolvedStartHour = Number.isFinite(startHour) ? startHour : 0;
-                    const resolvedPixelsPerHour = Number.isFinite(pixelsPerHour) && pixelsPerHour > 0
-                        ? pixelsPerHour
-                        : 200 * zoomLevel;
-                    const rawTime = resolvedStartHour + ((event.clientX - rect.left) / resolvedPixelsPerHour);
+                    const rawTime = resolvedStartHour + (xInGrid / resolvedPixelsPerHour);
                     pointerTime = Math.max(0, Math.min(24, Math.round(rawTime * 12) / 12));
                 }
             }
