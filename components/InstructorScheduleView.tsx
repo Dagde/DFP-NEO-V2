@@ -39,15 +39,32 @@ const PERSONNEL_COLUMN_WIDTH = 160;
 const TIME_HEADER_HEIGHT = 40;
 
 // --- Utility functions ---
+const addPersonnelName = (personnel: Set<string>, value?: string) => {
+    const name = String(value || '').trim();
+    if (name) personnel.add(name);
+};
+
 const getPersonnel = (event: ScheduleEvent): string[] => {
-    const personnel = [];
-    if (event.flightType === 'Solo') {
-        if (event.pilot) personnel.push(event.pilot);
+    const personnel = new Set<string>();
+    const eventRecord = event as ScheduleEvent & { isTaskingRequest?: boolean; taskingRequestId?: string };
+    const isTaskingEvent = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || '').startsWith('tasking-');
+    const isSctEvent = event.flightNumber?.startsWith('SCT');
+
+    if (isTaskingEvent || isSctEvent) {
+        addPersonnelName(personnel, event.pilot);
+        addPersonnelName(personnel, event.crew);
+        addPersonnelName(personnel, event.instructor);
+    } else if (event.flightType === 'Solo') {
+        addPersonnelName(personnel, event.pilot || event.student || event.instructor);
     } else {
-        if (event.instructor) personnel.push(event.instructor);
-        if (event.student) personnel.push(event.student);
+        addPersonnelName(personnel, event.instructor || event.pilot);
+        addPersonnelName(personnel, event.crew);
+        addPersonnelName(personnel, event.student);
     }
-    return personnel;
+
+    event.attendees?.forEach(person => addPersonnelName(personnel, person));
+    event.crewSelectionOrder?.forEach(person => addPersonnelName(personnel, person));
+    return Array.from(personnel);
 };
 
 // Create unavailability events for rendering
@@ -286,7 +303,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
     const rect = tileElement.getBoundingClientRect();
 
     const initialPositions = new Map<string, { startTime: number, rowIndex: number }>();
-    const instructorName = event.instructor || '';
+    const instructorName = getPersonnel(event)[0] || '';
     const rowIndex = instructors.findIndex(i => i.name === instructorName);
     
     if (rowIndex !== -1) {
@@ -638,7 +655,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
               
               if (showValidation) {
                 const instructorEventsForBars = eventsWithUnavailability
-                  .filter(e => e.instructor === instructor.name)
+                  .filter(e => getPersonnel(e).includes(instructor.name))
                   .sort((a, b) => a.startTime - b.startTime);
                 
                 for (let i = 0; i < instructorEventsForBars.length; i++) {
@@ -701,10 +718,9 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                 }
               }
               
-              const instructorEvents = eventsWithUnavailability.filter(event => 
-                event.instructor === instructor.name || 
-                (event.flightType === 'Dual' && event.student === instructor.name)
-              ).sort((a, b) => a.startTime - b.startTime);
+              const instructorEvents = eventsWithUnavailability
+                .filter(event => getPersonnel(event).includes(instructor.name))
+                .sort((a, b) => a.startTime - b.startTime);
               
               const eventTiles = instructorEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);

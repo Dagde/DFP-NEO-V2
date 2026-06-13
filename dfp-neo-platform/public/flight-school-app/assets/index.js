@@ -9160,15 +9160,29 @@ const END_HOUR$4 = 24;
 const TOTAL_HOURS$4 = END_HOUR$4 - START_HOUR$4;
 const PERSONNEL_COLUMN_WIDTH$3 = 160;
 const TIME_HEADER_HEIGHT$4 = 40;
+const addPersonnelName$1 = (personnel, value) => {
+  const name = String(value || "").trim();
+  if (name) personnel.add(name);
+};
 const getPersonnel$5 = (event) => {
-  const personnel = [];
-  if (event.flightType === "Solo") {
-    if (event.pilot) personnel.push(event.pilot);
+  const personnel = /* @__PURE__ */ new Set();
+  const eventRecord = event;
+  const isTaskingEvent = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || "").startsWith("tasking-");
+  const isSctEvent = event.flightNumber?.startsWith("SCT");
+  if (isTaskingEvent || isSctEvent) {
+    addPersonnelName$1(personnel, event.pilot);
+    addPersonnelName$1(personnel, event.crew);
+    addPersonnelName$1(personnel, event.instructor);
+  } else if (event.flightType === "Solo") {
+    addPersonnelName$1(personnel, event.pilot || event.student || event.instructor);
   } else {
-    if (event.instructor) personnel.push(event.instructor);
-    if (event.student) personnel.push(event.student);
+    addPersonnelName$1(personnel, event.instructor || event.pilot);
+    addPersonnelName$1(personnel, event.crew);
+    addPersonnelName$1(personnel, event.student);
   }
-  return personnel;
+  event.attendees?.forEach((person) => addPersonnelName$1(personnel, person));
+  event.crewSelectionOrder?.forEach((person) => addPersonnelName$1(personnel, person));
+  return Array.from(personnel);
 };
 const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) => {
   const unavailabilityEvents = [];
@@ -9351,7 +9365,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     const tileElement = e.currentTarget;
     const rect = tileElement.getBoundingClientRect();
     const initialPositions = /* @__PURE__ */ new Map();
-    const instructorName = event.instructor || "";
+    const instructorName = getPersonnel$5(event)[0] || "";
     const rowIndex = instructors.findIndex((i) => i.name === instructorName);
     if (rowIndex !== -1) {
       initialPositions.set(event.id, { startTime: event.startTime, rowIndex });
@@ -9671,7 +9685,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                 ) : null;
                 const barsForThisRow = [];
                 if (showValidation) {
-                  const instructorEventsForBars = eventsWithUnavailability.filter((e) => e.instructor === instructor.name).sort((a, b) => a.startTime - b.startTime);
+                  const instructorEventsForBars = eventsWithUnavailability.filter((e) => getPersonnel$5(e).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
                   for (let i = 0; i < instructorEventsForBars.length; i++) {
                     const currentEvent = instructorEventsForBars[i];
                     const prevEvent = instructorEventsForBars[i - 1];
@@ -9720,9 +9734,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                     }
                   }
                 }
-                const instructorEvents = eventsWithUnavailability.filter(
-                  (event) => event.instructor === instructor.name || event.flightType === "Dual" && event.student === instructor.name
-                ).sort((a, b) => a.startTime - b.startTime);
+                const instructorEvents = eventsWithUnavailability.filter((event) => getPersonnel$5(event).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
                 const eventTiles = instructorEvents.map((event) => {
                   const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                   const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
@@ -62057,15 +62069,29 @@ const END_HOUR$1 = 24;
 const TOTAL_HOURS$1 = END_HOUR$1 - START_HOUR$1;
 const PERSONNEL_COLUMN_WIDTH$1 = 160;
 const TIME_HEADER_HEIGHT$1 = 40;
+const addPersonnelName = (personnel, value) => {
+  const name = String(value || "").trim();
+  if (name) personnel.add(name);
+};
 const getPersonnel$2 = (event) => {
-  const personnel = [];
-  if (event.flightType === "Solo") {
-    if (event.pilot) personnel.push(event.pilot);
+  const personnel = /* @__PURE__ */ new Set();
+  const eventRecord = event;
+  const isTaskingEvent = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || "").startsWith("tasking-");
+  const isSctEvent = event.flightNumber?.startsWith("SCT");
+  if (isTaskingEvent || isSctEvent) {
+    addPersonnelName(personnel, event.pilot);
+    addPersonnelName(personnel, event.crew);
+    addPersonnelName(personnel, event.instructor);
+  } else if (event.flightType === "Solo") {
+    addPersonnelName(personnel, event.pilot || event.student || event.instructor);
   } else {
-    if (event.instructor) personnel.push(event.instructor);
-    if (event.student) personnel.push(event.student);
+    addPersonnelName(personnel, event.instructor || event.pilot);
+    addPersonnelName(personnel, event.crew);
+    addPersonnelName(personnel, event.student);
   }
-  return personnel;
+  event.attendees?.forEach((person) => addPersonnelName(personnel, person));
+  event.crewSelectionOrder?.forEach((person) => addPersonnelName(personnel, person));
+  return Array.from(personnel);
 };
 const getValidationEventKey$1 = (event) => [
   event.id,
@@ -62164,7 +62190,7 @@ const NextDayInstructorScheduleView = ({
     const tileElement = e.currentTarget;
     const rect = tileElement.getBoundingClientRect();
     const initialPositions = /* @__PURE__ */ new Map();
-    const instructorName = event.instructor || "";
+    const instructorName = getPersonnel$2(event)[0] || "";
     const rowIndex = instructors.findIndex((i) => i.name === instructorName);
     if (rowIndex !== -1) {
       initialPositions.set(event.id, { startTime: event.startTime, rowIndex });

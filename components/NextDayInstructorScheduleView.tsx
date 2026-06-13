@@ -34,15 +34,32 @@ const TOTAL_HOURS = END_HOUR - START_HOUR;
 const PERSONNEL_COLUMN_WIDTH = 160;
 const TIME_HEADER_HEIGHT = 40;
 
+const addPersonnelName = (personnel: Set<string>, value?: string) => {
+    const name = String(value || '').trim();
+    if (name) personnel.add(name);
+};
+
 const getPersonnel = (event: ScheduleEvent): string[] => {
-    const personnel = [];
-    if (event.flightType === 'Solo') {
-        if (event.pilot) personnel.push(event.pilot);
+    const personnel = new Set<string>();
+    const eventRecord = event as ScheduleEvent & { isTaskingRequest?: boolean; taskingRequestId?: string };
+    const isTaskingEvent = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || '').startsWith('tasking-');
+    const isSctEvent = event.flightNumber?.startsWith('SCT');
+
+    if (isTaskingEvent || isSctEvent) {
+        addPersonnelName(personnel, event.pilot);
+        addPersonnelName(personnel, event.crew);
+        addPersonnelName(personnel, event.instructor);
+    } else if (event.flightType === 'Solo') {
+        addPersonnelName(personnel, event.pilot || event.student || event.instructor);
     } else {
-        if (event.instructor) personnel.push(event.instructor);
-        if (event.student) personnel.push(event.student);
+        addPersonnelName(personnel, event.instructor || event.pilot);
+        addPersonnelName(personnel, event.crew);
+        addPersonnelName(personnel, event.student);
     }
-    return personnel;
+
+    event.attendees?.forEach(person => addPersonnelName(personnel, person));
+    event.crewSelectionOrder?.forEach(person => addPersonnelName(personnel, person));
+    return Array.from(personnel);
 };
 
 const getValidationEventKey = (event: ScheduleEvent): string =>
@@ -161,7 +178,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
     const tileElement = e.currentTarget;
     const rect = tileElement.getBoundingClientRect();
     const initialPositions = new Map<string, { startTime: number, rowIndex: number }>();
-    const instructorName = event.instructor || '';
+    const instructorName = getPersonnel(event)[0] || '';
     const rowIndex = instructors.findIndex(i => i.name === instructorName);
     
     if (rowIndex !== -1) {
