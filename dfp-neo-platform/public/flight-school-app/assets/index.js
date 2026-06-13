@@ -80221,6 +80221,7 @@ ${"=".repeat(60)}`);
   }, [nextDayBuildEvents]);
   const [isStaffAvailabilityDiagnoseActive, setIsStaffAvailabilityDiagnoseActive] = reactExports.useState(false);
   const [staffAvailabilityPointer, setStaffAvailabilityPointer] = reactExports.useState({ x: 0, y: 0, time: null, inScheduleGrid: false });
+  const lastStaffAvailabilityDiagnoseDownloadKeyRef = reactExports.useRef("");
   reactExports.useEffect(() => {
     if (!isStaffAvailabilityDiagnoseActive) return;
     const handleMouseMove = (event) => {
@@ -80572,6 +80573,184 @@ ${"=".repeat(60)}`);
     instructorsData,
     isStaffAvailabilityDiagnoseActive,
     staffAvailabilityPointer.time
+  ]);
+  reactExports.useEffect(() => {
+    if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null || !staffAvailabilityPointer.inScheduleGrid) {
+      return;
+    }
+    const diagnosticTime = staffAvailabilityPointer.time;
+    const downloadKey = `${date}:${diagnosticTime.toFixed(4)}:${eventsForDate.length}:${eventSegmentsForDate.length}`;
+    if (lastStaffAvailabilityDiagnoseDownloadKeyRef.current === downloadKey) {
+      return;
+    }
+    lastStaffAvailabilityDiagnoseDownloadKeyRef.current = downloadKey;
+    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
+    const activeStaff = instructorsData.filter((staff) => {
+      const staffUnit = String(staff.unit || "").trim().toUpperCase();
+      return !staff.isAdminStaff && (activeUnits.size === 0 || activeUnits.has(staffUnit));
+    }).map((staff) => {
+      const crewPosition = findCrewPositionEntry(staff.role, activeCrewPositionTerminology);
+      return {
+        name: staff.name,
+        role: staff.role || null,
+        roleLabel: crewPosition?.label || staff.role || "Unassigned",
+        roleGenericName: crewPosition?.genericName || null,
+        unit: staff.unit || null,
+        keys: getDiagnosticPersonKeys(staff.name),
+        unavailableAtPointer: isDiagnosticUnavailableAtTime(staff, diagnosticTime)
+      };
+    });
+    const activeStaffNames = new Set(activeStaff.flatMap((staff) => staff.keys));
+    const formatDiagnosticHours = (value) => {
+      if (!Number.isFinite(Number(value))) return null;
+      const numeric = Number(value);
+      const hours = Math.floor(numeric);
+      const minutes = Math.round((numeric - hours) * 60);
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    };
+    const getDiagnosticEventReason = (event, highlighted) => {
+      const bookingWindow = getDiagnosticEventBookingWindow(event);
+      const activeAtPointer = diagnosticTime >= bookingWindow.start && diagnosticTime < bookingWindow.end;
+      const assignedPeople = Array.from(getDiagnosticEventPersonnel(event));
+      const nameCandidates = getDiagnosticEventNameCandidates(event);
+      const seatAssignments = getDiagnosticEventSeatAssignments(event).map((assignment) => ({
+        ...assignment,
+        keys: getDiagnosticPersonKeys(assignment.name),
+        matchesActiveStaff: getDiagnosticPersonKeys(assignment.name).some((key) => activeStaffNames.has(key))
+      }));
+      const activeStaffMatches = assignedPeople.filter((personName) => activeStaffNames.has(personName));
+      const seatFallbackMatches = seatAssignments.filter((assignment) => assignment.keys.length > 0 && !assignment.matchesActiveStaff);
+      let reason = "Highlighted and counted because this event is active at the pointer time and contains active unit staff or seat-assigned staff.";
+      if (!activeAtPointer) {
+        reason = "Not counted because the pointer time is outside this event booking window.";
+      } else if (assignedPeople.length === 0 && seatAssignments.length === 0 && nameCandidates.length === 0) {
+        reason = "Not counted because no staff names could be extracted from the event payload.";
+      } else if (activeStaffMatches.length === 0 && seatFallbackMatches.length === 0) {
+        reason = "Not counted because extracted staff names did not match active unit staff and no seat fallback was available.";
+      } else if (!highlighted) {
+        reason = "Expected to count, but the event was not in the highlight set. This points to an ID, segment, or render-list mismatch.";
+      }
+      return {
+        reason,
+        bookingWindow,
+        bookingStartDisplay: formatDiagnosticHours(bookingWindow.start),
+        bookingEndDisplay: formatDiagnosticHours(bookingWindow.end),
+        activeAtPointer,
+        assignedPeople,
+        nameCandidates,
+        activeStaffMatches,
+        seatFallbackMatches,
+        seatAssignments
+      };
+    };
+    const serialiseDiagnosticEvent = (event, sourceList) => {
+      const highlighted = staffAvailabilityDiagnosticEventIds.has(event.id);
+      const reasonDetails = getDiagnosticEventReason(event, highlighted);
+      const stringFields = Object.fromEntries(
+        Object.entries(event).filter(([, value]) => typeof value === "string" && String(value).trim()).map(([key, value]) => [key, value])
+      );
+      return {
+        sourceList,
+        id: event.id,
+        flightNumber: event.flightNumber,
+        eventCode: event.eventCode || null,
+        type: event.type,
+        resourceId: event.resourceId,
+        date: event.date,
+        startTime: event.startTime,
+        startDisplay: formatDiagnosticHours(event.startTime),
+        duration: event.duration,
+        endTime: Number(event.startTime) + Number(event.duration || 0),
+        endDisplay: formatDiagnosticHours(Number(event.startTime) + Number(event.duration || 0)),
+        segmentStartTime: event.segmentStartTime ?? null,
+        segmentDuration: event.segmentDuration ?? null,
+        segmentType: event.segmentType ?? null,
+        preStart: event.preStart ?? null,
+        postEnd: event.postEnd ?? null,
+        pilot: event.pilot || null,
+        crew: event.crew || null,
+        instructor: event.instructor || null,
+        student: event.student || null,
+        attendees: event.attendees || [],
+        crewSelectionOrder: event.crewSelectionOrder || [],
+        flightType: event.flightType || null,
+        eventCategory: event.eventCategory || null,
+        source: event._source || null,
+        notes: event.notes || null,
+        highlighted,
+        includedInUnavailableCalculation: reasonDetails.activeAtPointer && (reasonDetails.activeStaffMatches.length > 0 || reasonDetails.seatFallbackMatches.length > 0),
+        ...reasonDetails,
+        stringFields
+      };
+    };
+    const rawEventDiagnostics = eventsForDate.map((event) => serialiseDiagnosticEvent(event, "raw-eventsForDate"));
+    const renderedEventDiagnostics = eventSegmentsForDate.map((event) => serialiseDiagnosticEvent(event, "rendered-eventSegmentsForDate"));
+    const report = {
+      reportType: "staff-availability-diagnose",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      instructions: "Move the pointer over the problem tile/time, then send this downloaded JSON back to Codex.",
+      date,
+      activeUnitCode,
+      activeUnits: Array.from(activeUnits),
+      pointer: {
+        x: staffAvailabilityPointer.x,
+        y: staffAvailabilityPointer.y,
+        time: diagnosticTime,
+        displayTime: formatDiagnosticHours(diagnosticTime),
+        inScheduleGrid: staffAvailabilityPointer.inScheduleGrid
+      },
+      roleRows: staffAvailabilityRoleRows,
+      activeStaff,
+      highlightedEventIds: Array.from(staffAvailabilityDiagnosticEventIds),
+      counts: {
+        rawEventsForDate: eventsForDate.length,
+        renderedEventSegmentsForDate: eventSegmentsForDate.length,
+        highlightedEvents: staffAvailabilityDiagnosticEventIds.size
+      },
+      problemEventFocus: {
+        aaEventsRaw: rawEventDiagnostics.filter((event) => String(event.flightNumber || "").toUpperCase().includes("AA")),
+        aaEventsRendered: renderedEventDiagnostics.filter((event) => String(event.flightNumber || "").toUpperCase().includes("AA")),
+        activeEventsRaw: rawEventDiagnostics.filter((event) => event.activeAtPointer),
+        activeEventsRendered: renderedEventDiagnostics.filter((event) => event.activeAtPointer)
+      },
+      rawEventDiagnostics,
+      renderedEventDiagnostics
+    };
+    try {
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+      anchor.href = url;
+      anchor.download = `staff-diagnose-${date}_${formatDiagnosticHours(diagnosticTime)?.replace(":", "") || "unknown"}_${timestamp}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1e3);
+    } catch (error) {
+      console.error("[Staff Diagnose] Failed to download diagnostic report", error, report);
+    }
+  }, [
+    activeContextUnitCodeSet,
+    activeCrewPositionTerminology,
+    activeUnitCode,
+    date,
+    eventSegmentsForDate,
+    eventsForDate,
+    getDiagnosticEventBookingWindow,
+    getDiagnosticEventNameCandidates,
+    getDiagnosticEventPersonnel,
+    getDiagnosticEventSeatAssignments,
+    getDiagnosticPersonKeys,
+    instructorsData,
+    isDiagnosticUnavailableAtTime,
+    isStaffAvailabilityDiagnoseActive,
+    staffAvailabilityDiagnosticEventIds,
+    staffAvailabilityPointer.inScheduleGrid,
+    staffAvailabilityPointer.time,
+    staffAvailabilityPointer.x,
+    staffAvailabilityPointer.y,
+    staffAvailabilityRoleRows
   ]);
   const nextDayEventSegments = reactExports.useMemo(() => {
     console.log("🚀 [NEO-Build] nextDayEventSegments useMemo recalculating");
