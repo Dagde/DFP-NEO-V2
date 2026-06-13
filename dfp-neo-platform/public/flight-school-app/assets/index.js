@@ -6529,7 +6529,7 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   }
   return "";
 };
-const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
+const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
   try {
     const testAccess = seatConfigs;
   } catch (error) {
@@ -7121,6 +7121,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const dutySupBorderClass = isDutySup ? "border border-black" : "";
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
   const pauseCompletedRingClass = isPauseCompleted ? "ring-2 ring-green-400 ring-offset-1 ring-offset-gray-900" : "";
+  const diagnosticHighlightClass = isDiagnosticHighlighted ? "border-2 border-purple-400 ring-2 ring-purple-400 ring-offset-1 ring-offset-gray-900 shadow-[0_0_16px_rgba(192,132,252,0.75)]" : "";
   const finalClasses = [commonClasses];
   if (isPreview) {
     finalClasses.push(resolvedBgColor ? "" : event.color);
@@ -7131,6 +7132,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     finalClasses.push(dutySupBorderClass);
     finalClasses.push(multiSelectRingClass);
     if (isPauseCompleted) finalClasses.push(pauseCompletedRingClass);
+    if (isDiagnosticHighlighted) finalClasses.push(diagnosticHighlightClass);
   }
   if (!isSmallTile) {
     finalClasses.push("overflow-hidden");
@@ -8019,6 +8021,7 @@ const ScheduleView = ({
   flyingWindowExclusions = [],
   isReadOnly = false,
   onExternalEventDrop,
+  diagnosticHighlightedEventIds = /* @__PURE__ */ new Set(),
   timezoneOffset = 11
   // Default to UTC+11
 }) => {
@@ -8792,6 +8795,7 @@ const ScheduleView = ({
             isSelected,
             isChanged,
             isPauseCompleted,
+            isDiagnosticHighlighted: diagnosticHighlightedEventIds.has(event.id),
             alertStatus,
             aircraftNumberSettings
           },
@@ -80259,6 +80263,30 @@ ${"=".repeat(60)}`);
   const normaliseDiagnosticPersonName = reactExports.useCallback((value) => {
     return String(value || "").split(" – ")[0].split(" - ")[0].replace(/\s*\([^)]*\)\s*$/g, "").replace(/\s+/g, " ").trim().toLowerCase();
   }, []);
+  const getDiagnosticEventPersonnel = reactExports.useCallback((event) => {
+    return new Set([
+      event.instructor,
+      event.pilot,
+      event.crew,
+      event.student,
+      ...event.attendees || [],
+      ...event.crewSelectionOrder || []
+    ].map((value) => normaliseDiagnosticPersonName(value)).filter(Boolean));
+  }, [normaliseDiagnosticPersonName]);
+  const getDiagnosticEventBookingWindow = reactExports.useCallback((event) => {
+    const eventStart = Number(event.startTime);
+    const eventEnd = eventStart + Number(event.duration || 0);
+    const rawPreStart = Number(event.preStart);
+    const rawPostEnd = Number(event.postEnd);
+    const hasPreStart = Number.isFinite(rawPreStart);
+    const hasPostEnd = Number.isFinite(rawPostEnd);
+    const rawPreLooksLikeDuration = hasPreStart && rawPreStart >= 0 && rawPreStart <= 6 && rawPreStart < eventStart && (!hasPostEnd || rawPostEnd <= 6 || rawPostEnd <= eventEnd);
+    const rawPostLooksLikeDuration = hasPostEnd && rawPostEnd >= 0 && rawPostEnd <= 6 && rawPostEnd < eventEnd;
+    return {
+      start: hasPreStart ? rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart : eventStart,
+      end: hasPostEnd ? rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd : eventEnd
+    };
+  }, []);
   const isDiagnosticUnavailableAtTime = reactExports.useCallback((staff, time) => {
     const unavailabilityBlocks = (staff.unavailability || []).some((period) => {
       if (!period?.startDate || !period?.endDate) return false;
@@ -80274,28 +80302,12 @@ ${"=".repeat(60)}`);
     const staffName = normaliseDiagnosticPersonName(staff.name);
     if (!staffName) return false;
     return eventsForDate.some((event) => {
-      const assignedPeople = new Set([
-        event.instructor,
-        event.pilot,
-        event.crew,
-        event.student,
-        ...event.attendees || [],
-        ...event.crewSelectionOrder || []
-      ].map((value) => normaliseDiagnosticPersonName(value)).filter(Boolean));
+      const assignedPeople = getDiagnosticEventPersonnel(event);
       if (!assignedPeople.has(staffName)) return false;
-      const eventStart = Number(event.startTime);
-      const eventEnd = eventStart + Number(event.duration || 0);
-      const rawPreStart = Number(event.preStart);
-      const rawPostEnd = Number(event.postEnd);
-      const hasPreStart = Number.isFinite(rawPreStart);
-      const hasPostEnd = Number.isFinite(rawPostEnd);
-      const rawPreLooksLikeDuration = hasPreStart && rawPreStart >= 0 && rawPreStart <= 6 && rawPreStart < eventStart && (!hasPostEnd || rawPostEnd <= 6 || rawPostEnd <= eventEnd);
-      const rawPostLooksLikeDuration = hasPostEnd && rawPostEnd >= 0 && rawPostEnd <= 6 && rawPostEnd < eventEnd;
-      const bookingStart = hasPreStart ? rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart : eventStart;
-      const bookingEnd = hasPostEnd ? rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd : eventEnd;
-      return time >= bookingStart && time < bookingEnd;
+      const bookingWindow = getDiagnosticEventBookingWindow(event);
+      return time >= bookingWindow.start && time < bookingWindow.end;
     });
-  }, [date, eventsForDate, normaliseDiagnosticPersonName, parseDiagnosticTime]);
+  }, [date, eventsForDate, getDiagnosticEventBookingWindow, getDiagnosticEventPersonnel, normaliseDiagnosticPersonName, parseDiagnosticTime]);
   const staffAvailabilityRoleRows = reactExports.useMemo(() => {
     const diagnosticTime = staffAvailabilityPointer.time;
     const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
@@ -80398,6 +80410,41 @@ ${"=".repeat(60)}`);
     }
     return segments;
   }, [date, publishedSchedules]);
+  const staffAvailabilityDiagnosticEventIds = reactExports.useMemo(() => {
+    if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
+      return /* @__PURE__ */ new Set();
+    }
+    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
+    const activeStaffNames = new Set(
+      instructorsData.filter((staff) => {
+        const staffUnit = String(staff.unit || "").trim().toUpperCase();
+        return !staff.isAdminStaff && (activeUnits.size === 0 || activeUnits.has(staffUnit));
+      }).map((staff) => normaliseDiagnosticPersonName(staff.name)).filter(Boolean)
+    );
+    const highlightedIds = /* @__PURE__ */ new Set();
+    eventSegmentsForDate.forEach((event) => {
+      const bookingWindow = getDiagnosticEventBookingWindow(event);
+      if (staffAvailabilityPointer.time === null || staffAvailabilityPointer.time < bookingWindow.start || staffAvailabilityPointer.time >= bookingWindow.end) {
+        return;
+      }
+      const assignedPeople = getDiagnosticEventPersonnel(event);
+      const hasActiveUnitStaff = Array.from(assignedPeople).some((personName) => activeStaffNames.has(personName));
+      if (hasActiveUnitStaff) {
+        highlightedIds.add(event.id);
+      }
+    });
+    return highlightedIds;
+  }, [
+    activeContextUnitCodeSet,
+    activeUnitCode,
+    eventSegmentsForDate,
+    getDiagnosticEventBookingWindow,
+    getDiagnosticEventPersonnel,
+    instructorsData,
+    isStaffAvailabilityDiagnoseActive,
+    normaliseDiagnosticPersonName,
+    staffAvailabilityPointer.time
+  ]);
   const nextDayEventSegments = reactExports.useMemo(() => {
     console.log("🚀 [NEO-Build] nextDayEventSegments useMemo recalculating");
     console.log("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
@@ -87913,6 +87960,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             flyingWindowExclusions,
             isReadOnly: isViewingPastDfp,
             onExternalEventDrop: handleProgramScheduleExternalEventDrop,
+            diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds,
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,

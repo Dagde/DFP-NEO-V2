@@ -20305,6 +20305,39 @@ const App: React.FC = () => {
             .toLowerCase();
     }, []);
 
+    const getDiagnosticEventPersonnel = useCallback((event: ScheduleEvent | EventSegment): Set<string> => {
+        return new Set([
+            event.instructor,
+            event.pilot,
+            event.crew,
+            event.student,
+            ...(event.attendees || []),
+            ...(event.crewSelectionOrder || []),
+        ].map(value => normaliseDiagnosticPersonName(value)).filter(Boolean));
+    }, [normaliseDiagnosticPersonName]);
+
+    const getDiagnosticEventBookingWindow = useCallback((event: ScheduleEvent | EventSegment): { start: number; end: number } => {
+        const eventStart = Number(event.startTime);
+        const eventEnd = eventStart + Number(event.duration || 0);
+        const rawPreStart = Number(event.preStart);
+        const rawPostEnd = Number(event.postEnd);
+        const hasPreStart = Number.isFinite(rawPreStart);
+        const hasPostEnd = Number.isFinite(rawPostEnd);
+        const rawPreLooksLikeDuration = hasPreStart
+            && rawPreStart >= 0
+            && rawPreStart <= 6
+            && rawPreStart < eventStart
+            && (!hasPostEnd || rawPostEnd <= 6 || rawPostEnd <= eventEnd);
+        const rawPostLooksLikeDuration = hasPostEnd
+            && rawPostEnd >= 0
+            && rawPostEnd <= 6
+            && rawPostEnd < eventEnd;
+        return {
+            start: hasPreStart ? (rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart) : eventStart,
+            end: hasPostEnd ? (rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd) : eventEnd,
+        };
+    }, []);
+
     const isDiagnosticUnavailableAtTime = useCallback((staff: Instructor, time: number): boolean => {
         const unavailabilityBlocks = (staff.unavailability || []).some(period => {
             if (!period?.startDate || !period?.endDate) return false;
@@ -20323,41 +20356,14 @@ const App: React.FC = () => {
         if (!staffName) return false;
 
         return eventsForDate.some(event => {
-            const assignedPeople = new Set([
-                event.instructor,
-                event.pilot,
-                event.crew,
-                event.student,
-                ...(event.attendees || []),
-                ...(event.crewSelectionOrder || []),
-            ].map(value => normaliseDiagnosticPersonName(value)).filter(Boolean));
+            const assignedPeople = getDiagnosticEventPersonnel(event);
 
             if (!assignedPeople.has(staffName)) return false;
 
-            const eventStart = Number(event.startTime);
-            const eventEnd = eventStart + Number(event.duration || 0);
-            const rawPreStart = Number(event.preStart);
-            const rawPostEnd = Number(event.postEnd);
-            const hasPreStart = Number.isFinite(rawPreStart);
-            const hasPostEnd = Number.isFinite(rawPostEnd);
-            const rawPreLooksLikeDuration = hasPreStart
-                && rawPreStart >= 0
-                && rawPreStart <= 6
-                && rawPreStart < eventStart
-                && (!hasPostEnd || rawPostEnd <= 6 || rawPostEnd <= eventEnd);
-            const rawPostLooksLikeDuration = hasPostEnd
-                && rawPostEnd >= 0
-                && rawPostEnd <= 6
-                && rawPostEnd < eventEnd;
-            const bookingStart = hasPreStart
-                ? (rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart)
-                : eventStart;
-            const bookingEnd = hasPostEnd
-                ? (rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd)
-                : eventEnd;
-            return time >= bookingStart && time < bookingEnd;
+            const bookingWindow = getDiagnosticEventBookingWindow(event);
+            return time >= bookingWindow.start && time < bookingWindow.end;
         });
-    }, [date, eventsForDate, normaliseDiagnosticPersonName, parseDiagnosticTime]);
+    }, [date, eventsForDate, getDiagnosticEventBookingWindow, getDiagnosticEventPersonnel, normaliseDiagnosticPersonName, parseDiagnosticTime]);
 
     const staffAvailabilityRoleRows = useMemo(() => {
         const diagnosticTime = staffAvailabilityPointer.time;
@@ -20484,6 +20490,51 @@ const App: React.FC = () => {
         }
         return segments;
     }, [date, publishedSchedules]);
+
+    const staffAvailabilityDiagnosticEventIds = useMemo(() => {
+        if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
+            return new Set<string>();
+        }
+
+        const activeUnits = activeContextUnitCodeSet.size > 0
+            ? activeContextUnitCodeSet
+            : new Set([String(activeUnitCode || '').trim().toUpperCase()].filter(Boolean));
+        const activeStaffNames = new Set(
+            instructorsData
+                .filter(staff => {
+                    const staffUnit = String(staff.unit || '').trim().toUpperCase();
+                    return !staff.isAdminStaff && (activeUnits.size === 0 || activeUnits.has(staffUnit));
+                })
+                .map(staff => normaliseDiagnosticPersonName(staff.name))
+                .filter(Boolean)
+        );
+
+        const highlightedIds = new Set<string>();
+        eventSegmentsForDate.forEach(event => {
+            const bookingWindow = getDiagnosticEventBookingWindow(event);
+            if (staffAvailabilityPointer.time === null || staffAvailabilityPointer.time < bookingWindow.start || staffAvailabilityPointer.time >= bookingWindow.end) {
+                return;
+            }
+
+            const assignedPeople = getDiagnosticEventPersonnel(event);
+            const hasActiveUnitStaff = Array.from(assignedPeople).some(personName => activeStaffNames.has(personName));
+            if (hasActiveUnitStaff) {
+                highlightedIds.add(event.id);
+            }
+        });
+
+        return highlightedIds;
+    }, [
+        activeContextUnitCodeSet,
+        activeUnitCode,
+        eventSegmentsForDate,
+        getDiagnosticEventBookingWindow,
+        getDiagnosticEventPersonnel,
+        instructorsData,
+        isStaffAvailabilityDiagnoseActive,
+        normaliseDiagnosticPersonName,
+        staffAvailabilityPointer.time,
+    ]);
 
     const nextDayEventSegments = useMemo(() => {
         console.log('🚀 [NEO-Build] nextDayEventSegments useMemo recalculating');
@@ -29951,6 +30002,7 @@ appliedUpdates.forEach(update => {
                            flyingWindowExclusions={flyingWindowExclusions}
                            isReadOnly={isViewingPastDfp}
                            onExternalEventDrop={handleProgramScheduleExternalEventDrop}
+                           diagnosticHighlightedEventIds={staffAvailabilityDiagnosticEventIds}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}

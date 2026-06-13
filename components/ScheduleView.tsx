@@ -84,6 +84,7 @@ interface ScheduleViewProps {
   flyingWindowExclusions?: FlyingWindowExclusionPeriod[];
   isReadOnly?: boolean;
   onExternalEventDrop?: (event: ScheduleEvent, placement: { startTime: number; resourceId: string }) => void;
+  diagnosticHighlightedEventIds?: Set<string>;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -189,6 +190,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     flyingWindowExclusions = [],
     isReadOnly = false,
     onExternalEventDrop,
+    diagnosticHighlightedEventIds = new Set<string>(),
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -1118,6 +1120,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         isSelected={isSelected}
                         isChanged={isChanged}
                         isPauseCompleted={isPauseCompleted}
+                        isDiagnosticHighlighted={diagnosticHighlightedEventIds.has(event.id)}
                         alertStatus={alertStatus}
                         aircraftNumberSettings={aircraftNumberSettings}
                     />

@@ -37,6 +37,7 @@ interface FlightTileProps {
   isChanged?: boolean;
   isPreview?: boolean;
   isPauseCompleted?: boolean;
+  isDiagnosticHighlighted?: boolean;
   alertStatus?: 'pending' | 'accepted' | 'rejected' | null;
   aircraftNumberSettings?: AircraftNumberSettings;
 }
@@ -156,7 +157,7 @@ const getAuthorizationTextColorClass = (
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -900,6 +901,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const dutySupBorderClass = isDutySup ? 'border border-black' : '';
   const multiSelectRingClass = isSelected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900' : '';
   const pauseCompletedRingClass = isPauseCompleted ? 'ring-2 ring-green-400 ring-offset-1 ring-offset-gray-900' : '';
+  const diagnosticHighlightClass = isDiagnosticHighlighted ? 'border-2 border-purple-400 ring-2 ring-purple-400 ring-offset-1 ring-offset-gray-900 shadow-[0_0_16px_rgba(192,132,252,0.75)]' : '';
   
   const finalClasses = [commonClasses];
 
@@ -913,6 +915,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       finalClasses.push(dutySupBorderClass);
       finalClasses.push(multiSelectRingClass);
       if (isPauseCompleted) finalClasses.push(pauseCompletedRingClass);
+      if (isDiagnosticHighlighted) finalClasses.push(diagnosticHighlightClass);
   }
   // Ensure we don't clip the flyout which sits outside
   // We can't use overflow-hidden on the tile itself if we want the flyout to potentially pop out,
