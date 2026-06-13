@@ -84,6 +84,21 @@ assert(
 );
 
 assert(
+  appSource.includes('const getScheduleEventBookingOffsets =') &&
+    appSource.includes('return numeric > 24 ? numeric / 60 : numeric;'),
+  'Air Combat/priority booking windows must normalise hour and minute pre/post values.'
+);
+
+const priorityPersonnelConflictStart = findIndex('const priorityPersonnelConflict =');
+const priorityPersonnelConflictEnd = findIndex('const isCurrencyPriorityEvent =');
+const priorityPersonnelConflictSource = appSource.slice(priorityPersonnelConflictStart, priorityPersonnelConflictEnd);
+assert(
+  !priorityPersonnelConflictSource.includes('event.startTime - (event.preStart || 0)') &&
+    !priorityPersonnelConflictSource.includes('event.startTime + event.duration + (event.postEnd || 0)'),
+  'Priority personnel conflict must use the shared booking-window resolver, not raw preStart/postEnd duration math.'
+);
+
+assert(
   appSource.includes('if (!isAirCombatBuild) {') && appSource.includes('compressCurrencyFlightPlacements();'),
   'Flight School currency compression must remain isolated from the Air Combat path.'
 );

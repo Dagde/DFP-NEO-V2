@@ -3472,16 +3472,64 @@ const isDutySupervisorEvent = (event: Omit<ScheduleEvent, 'date'> | ScheduleEven
 const isStbyResource = (resourceId?: string): boolean =>
     !!resourceId && (resourceId.startsWith('STBY') || resourceId.startsWith('BNF-STBY'));
 
+const getNonNegativeFiniteNumber = (value: unknown): number | null => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+};
+
+const normaliseBookingDurationHours = (value: unknown): number => {
+    const numeric = getNonNegativeFiniteNumber(value);
+    if (numeric === null) return 0;
+    return numeric > 24 ? numeric / 60 : numeric;
+};
+
+const getScheduleEventBookingOffsets = (
+    event: Pick<ScheduleEvent, 'startTime' | 'duration' | 'preStart' | 'postEnd'>,
+    syllabusItem?: SyllabusItemDetail
+): { preOffset: number; postOffset: number } => {
+    const startTime = Number(event.startTime) || 0;
+    const duration = Math.max(0, Number(event.duration) || 0);
+    const eventEnd = startTime + duration;
+    const syllabusPre = getNonNegativeFiniteNumber(syllabusItem?.preFlightTime);
+    const syllabusPost = getNonNegativeFiniteNumber(syllabusItem?.postFlightTime);
+
+    let preOffset = syllabusPre === null ? 0 : normaliseBookingDurationHours(syllabusPre);
+    let postOffset = syllabusPost === null ? 0 : normaliseBookingDurationHours(syllabusPost);
+
+    if (syllabusPre === null) {
+        const rawPre = getNonNegativeFiniteNumber(event.preStart);
+        if (rawPre !== null) {
+            preOffset = rawPre > 24
+                ? rawPre / 60
+                : rawPre > 6 && rawPre < startTime
+                    ? Math.max(0, startTime - rawPre)
+                    : rawPre;
+        }
+    }
+
+    if (syllabusPost === null) {
+        const rawPost = getNonNegativeFiniteNumber(event.postEnd);
+        if (rawPost !== null) {
+            postOffset = rawPost > 24
+                ? rawPost / 60
+                : rawPost > eventEnd && rawPost <= 24
+                    ? Math.max(0, rawPost - eventEnd)
+                    : rawPost;
+        }
+    }
+
+    return { preOffset, postOffset };
+};
+
 const getEventBookingWindow = (
     event: ScheduleEvent,
     syllabusDetails: SyllabusItemDetail[]
 ): { start: number, end: number } => {
     const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber || s.code === event.flightNumber);
-    const preFlightTime = syllabusItem?.preFlightTime ?? event.preStart ?? 0;
-    const postFlightTime = syllabusItem?.postFlightTime ?? event.postEnd ?? 0;
+    const { preOffset, postOffset } = getScheduleEventBookingOffsets(event, syllabusItem);
     return {
-        start: event.startTime - preFlightTime,
-        end: event.startTime + event.duration + postFlightTime,
+        start: event.startTime - preOffset,
+        end: event.startTime + event.duration + postOffset,
     };
 };
 
@@ -3490,11 +3538,10 @@ const getEventBookingWindowForAlgo = (
     syllabusDetails: SyllabusItemDetail[]
 ): { start: number, end: number } => {
     const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber || s.code === event.flightNumber);
-    const preFlightTime = syllabusItem?.preFlightTime ?? event.preStart ?? 0;
-    const postFlightTime = syllabusItem?.postFlightTime ?? event.postEnd ?? 0;
+    const { preOffset, postOffset } = getScheduleEventBookingOffsets(event, syllabusItem);
     return {
-        start: event.startTime - preFlightTime,
-        end: event.startTime + event.duration + postFlightTime,
+        start: event.startTime - preOffset,
+        end: event.startTime + event.duration + postOffset,
     };
 };
 
@@ -5859,12 +5906,6 @@ function generateDfpInternal(
     ): boolean => {
         if (!getPersonnel(candidate).some(person => person && eventHasPerson(existing, person))) return false;
         const getPriorityBookingWindow = (event: Omit<ScheduleEvent, 'date'>): { start: number; end: number } => {
-            if (typeof event.preStart === 'number' || typeof event.postEnd === 'number') {
-                return {
-                    start: event.startTime - (event.preStart || 0),
-                    end: event.startTime + event.duration + (event.postEnd || 0)
-                };
-            }
             return getEventBookingWindowForAlgo(event, syllabusDetails);
         };
         const candidateWindow = getPriorityBookingWindow(candidate);
@@ -10678,12 +10719,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (item.dayNight === 'Night' && proposedWindow !== 'Night') return 'DAY_NIGHT_MISMATCH';
             if (item.dayNight === 'Day' && proposedWindow !== 'Day') return 'DAY_NIGHT_MISMATCH';
             if (!canAssignPersonForScheduledWindow(staff.name, startTime)) return 'DAY_NIGHT_SEPARATION';
-            const bookingStart = startTime - (item.preFlightTime || 0);
-            const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
+            const bookingWindow = getEventBookingWindowForAlgo({
+                startTime,
+                duration: item.duration,
+                flightNumber: item.code,
+                preStart: item.preFlightTime,
+                postEnd: item.postFlightTime,
+            }, syllabusDetails);
             const counts = eventCounts.get(staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false };
             if ((type === 'flight' || type === 'ftd') && counts.flightFtd >= eventLimits.instructor.maxFlightFtd) return 'FLIGHT_FTD_LIMIT';
             if ((counts.flightFtd + counts.ground + counts.cpt + counts.dutySup) >= eventLimits.instructor.maxTotal) return 'TOTAL_EVENT_LIMIT';
-            if (isPersonStaticallyUnavailable(staff, bookingStart, bookingEnd, buildDate, type)) return 'STATIC_UNAVAILABLE';
+            if (isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, type)) return 'STATIC_UNAVAILABLE';
             const candidate = {
                 id: `air-combat-check-${staff.idNumber}-${item.code}-${startTime}`,
                 type,
@@ -11934,8 +11980,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                 continue;
                             }
                         }
-                        const bookingStart = startTime - (item.preFlightTime || 0);
-                        const bookingEnd = startTime + item.duration + (item.postFlightTime || 0);
+                        const bookingWindow = getEventBookingWindowForAlgo({
+                            startTime,
+                            duration: item.duration,
+                            flightNumber: item.code,
+                            preStart: item.preFlightTime,
+                            postEnd: item.postFlightTime,
+                        }, syllabusDetails);
                         const counts = eventCounts.get(entry.staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false };
                         const limitReached = (type === 'flight' || type === 'ftd')
                             ? counts.flightFtd >= eventLimits.instructor.maxFlightFtd
@@ -11944,7 +11995,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             recordAirCombatSkip({ list: kind, staff: entry.staff.name, event: item.code, reason: 'DUTY_LIMIT', startTime });
                             break;
                         }
-                        if (isPersonStaticallyUnavailable(entry.staff, bookingStart, bookingEnd, buildDate, type)) {
+                        if (isPersonStaticallyUnavailable(entry.staff, bookingWindow.start, bookingWindow.end, buildDate, type)) {
                             recordAirCombatSkip({ list: kind, staff: entry.staff.name, event: item.code, reason: 'STATIC_UNAVAILABLE', startTime });
                             candidateSlotsRejected++;
                             continue;
