@@ -80353,11 +80353,13 @@ ${"=".repeat(60)}`);
     const rawPostEnd = Number(event.postEnd);
     const hasPreStart = Number.isFinite(rawPreStart);
     const hasPostEnd = Number.isFinite(rawPostEnd);
+    const rawPreLooksLikeMinuteDuration = hasPreStart && rawPreStart > 24;
+    const rawPostLooksLikeMinuteDuration = hasPostEnd && rawPostEnd > 24;
     const rawPreLooksLikeDuration = hasPreStart && rawPreStart >= 0 && rawPreStart <= 6 && rawPreStart < eventStart && (!hasPostEnd || rawPostEnd <= 6 || rawPostEnd <= eventEnd);
     const rawPostLooksLikeDuration = hasPostEnd && rawPostEnd >= 0 && rawPostEnd <= 6 && rawPostEnd < eventEnd;
     return {
-      start: hasPreStart ? rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart : eventStart - fallbackPreFlightTime,
-      end: hasPostEnd ? rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd : eventEnd + fallbackPostFlightTime
+      start: hasPreStart ? rawPreLooksLikeMinuteDuration ? eventStart - rawPreStart / 60 : rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart : eventStart - fallbackPreFlightTime,
+      end: hasPostEnd ? rawPostLooksLikeMinuteDuration ? eventEnd + rawPostEnd / 60 : rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd : eventEnd + fallbackPostFlightTime
     };
   }, [syllabusDetails]);
   const getDiagnosticRoleOption = reactExports.useCallback((role, fallbackLabel) => {
