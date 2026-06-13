@@ -20300,8 +20300,14 @@ const App: React.FC = () => {
         if (!isStaffAvailabilityDiagnoseActive) return;
 
         const handleMouseMove = (event: MouseEvent) => {
-            const targetElement = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
-            const surface = targetElement?.closest('[data-schedule-surface="true"]') as HTMLElement | null;
+            const surfaces = Array.from(document.querySelectorAll('[data-schedule-surface="true"]')) as HTMLElement[];
+            const surface = surfaces.find(candidate => {
+                const rect = candidate.getBoundingClientRect();
+                return event.clientX >= rect.left
+                    && event.clientX <= rect.right
+                    && event.clientY >= rect.top
+                    && event.clientY <= rect.bottom;
+            }) || null;
             const grid = surface?.querySelector('[data-schedule-grid="true"]') as HTMLElement | null;
             let pointerTime: number | null = null;
             let inScheduleGrid = false;
@@ -20318,8 +20324,8 @@ const App: React.FC = () => {
                 const xInGrid = surface.scrollLeft + (event.clientX - surfaceRect.left) - grid.offsetLeft;
                 inScheduleGrid = event.clientX >= surfaceRect.left
                     && event.clientX <= surfaceRect.right
-                    && event.clientY >= rect.top
-                    && event.clientY <= rect.bottom
+                    && event.clientY >= Math.max(surfaceRect.top, rect.top)
+                    && event.clientY <= Math.min(surfaceRect.bottom, rect.bottom)
                     && xInGrid >= 0
                     && xInGrid <= grid.scrollWidth;
 

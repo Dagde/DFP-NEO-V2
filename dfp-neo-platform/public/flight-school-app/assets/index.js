@@ -80259,8 +80259,11 @@ ${"=".repeat(60)}`);
   reactExports.useEffect(() => {
     if (!isStaffAvailabilityDiagnoseActive) return;
     const handleMouseMove = (event) => {
-      const targetElement = document.elementFromPoint(event.clientX, event.clientY);
-      const surface = targetElement?.closest('[data-schedule-surface="true"]');
+      const surfaces = Array.from(document.querySelectorAll('[data-schedule-surface="true"]'));
+      const surface = surfaces.find((candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
+      }) || null;
       const grid = surface?.querySelector('[data-schedule-grid="true"]');
       let pointerTime = null;
       let inScheduleGrid = false;
@@ -80272,7 +80275,7 @@ ${"=".repeat(60)}`);
         const resolvedStartHour = Number.isFinite(startHour) ? startHour : 0;
         const resolvedPixelsPerHour = Number.isFinite(pixelsPerHour) && pixelsPerHour > 0 ? pixelsPerHour : 200 * zoomLevel;
         const xInGrid = surface.scrollLeft + (event.clientX - surfaceRect.left) - grid.offsetLeft;
-        inScheduleGrid = event.clientX >= surfaceRect.left && event.clientX <= surfaceRect.right && event.clientY >= rect.top && event.clientY <= rect.bottom && xInGrid >= 0 && xInGrid <= grid.scrollWidth;
+        inScheduleGrid = event.clientX >= surfaceRect.left && event.clientX <= surfaceRect.right && event.clientY >= Math.max(surfaceRect.top, rect.top) && event.clientY <= Math.min(surfaceRect.bottom, rect.bottom) && xInGrid >= 0 && xInGrid <= grid.scrollWidth;
         if (inScheduleGrid) {
           const rawTime = resolvedStartHour + xInGrid / resolvedPixelsPerHour;
           pointerTime = Math.max(0, Math.min(24, Math.round(rawTime * 12) / 12));
