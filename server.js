@@ -266,8 +266,8 @@ async function runPrismaRuntimeMaintenance(db) {
     await migrateIntegratedCombatOperationsTiming(db);
     // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
     await migrateAcademicsCoursesField(db);
-    // Preserve configured Air Combat crew-position labels. Legacy repairs may
-    // normalise old instructor labels to Pilot, but must not rewrite WSO/ABM/etc.
+    // 77SQN is a single-seat Air Combat unit in this model: all active staff
+    // records must remain Pilot even if a bulk import carries crew-position labels.
     await repairAirCombatPersonnelRoles(db);
     console.log(`✅ Prisma runtime maintenance checks complete in ${Date.now() - startedAt}ms`);
   } catch (error) {
@@ -333,16 +333,26 @@ async function repairAirCombatPersonnelRoles(db) {
       WHERE UPPER(COALESCE("unit", '')) = '77SQN'
         AND COALESCE("isActive", true) = true
         AND (
-          UPPER(TRIM(COALESCE("role", ''))) IN ('QFI', 'INSTRUCTOR', 'INSTRUCTORS')
-          OR (TRIM(COALESCE("role", '')) = '' AND COALESCE("isQFI", false) = true)
+          COALESCE("role", '') <> 'Pilot'
+          OR COALESCE("isQFI", false) = true
         )
     `);
     if (updated > 0) {
-      console.log(`[AirCombatRoleRepair] Normalised ${updated} legacy active 77SQN instructor role(s) to Pilot without changing configured crew positions.`);
+      console.log(`[AirCombatRoleRepair] Normalised ${updated} active 77SQN personnel record(s) to role=Pilot, isQFI=false.`);
     }
   } catch (error) {
     console.warn('[AirCombatRoleRepair] Could not repair 77SQN personnel roles:', error.message);
   }
+}
+
+function normalisePersonnelPayloadForUnit(body = {}) {
+  const unitCode = String(body.unit || '').trim().toUpperCase();
+  if (unitCode !== '77SQN') return body;
+  return {
+    ...body,
+    role: 'Pilot',
+    isQFI: false,
+  };
 }
 
 const LOCATION_NAME_BY_CODE = {
@@ -2782,7 +2792,7 @@ app.get('/api/personnel', async (req, res) => {
 app.post('/api/personnel', async (req, res) => {
   try {
     const db = await getPrisma();
-    const body = req.body;
+    const body = normalisePersonnelPayloadForUnit(req.body);
 
     // Auto-link to existing User by PMKEYS
     let linkedUserId = null;
@@ -2843,7 +2853,7 @@ app.patch('/api/personnel/:id', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
-    const updates = req.body;
+    let updates = req.body;
 
     if (!id) {
       return res.status(400).json({ error: 'Personnel ID is required' });
@@ -2853,6 +2863,10 @@ app.patch('/api/personnel/:id', async (req, res) => {
     if (!existing) {
       return res.status(404).json({ error: 'Personnel not found' });
     }
+    updates = normalisePersonnelPayloadForUnit({
+      ...updates,
+      unit: updates.unit ?? existing.unit,
+    });
 
     // Sanitize: only include fields that exist in the Personnel schema
     // Strip client-side fields like _dataSource, id (managed by DB), currencyStatus, scores, etc.
@@ -3395,8 +3409,9 @@ app.post('/api/personnel/bulk', async (req, res) => {
     let updated = 0;
     const errors = [];
 
-    for (const body of personnelList) {
+    for (const rawBody of personnelList) {
       try {
+        const body = normalisePersonnelPayloadForUnit(rawBody);
         // Auto-link to existing User by PMKEYS
         let linkedUserId = null;
         if (body.idNumber) {
