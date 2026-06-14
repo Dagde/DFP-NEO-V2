@@ -72389,43 +72389,47 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const requiredStaffCount = priorityEvent.type === "flight" ? Math.max(1, Math.min(2, getPriorityEventCrewCount(priorityEvent))) : priorityEvent.flightType === "Solo" || priorityEvent.soloOrDual === "Solo" ? 1 : 2;
       for (let time = searchStart; time + priorityEvent.duration <= searchEnd + 1e-3 && !placedEvent; time += timeIncrement) {
         const roundedTime = Math.round(time * 12) / 12;
-        const exclusionViolation = getFlightWindowExclusionViolation(roundedTime, priorityEvent.duration);
-        if (exclusionViolation) {
-          if (attemptSummary.length < 12) {
-            attemptSummary.push({
-              time: roundedTime,
-              displayTime: _fmtT(roundedTime),
-              outcome: "rejected",
-              reason: exclusionViolation.reason,
-              restriction: exclusionViolation.period.restriction
-            });
+        if (priorityEvent.type === "flight") {
+          const exclusionViolation = getFlightWindowExclusionViolation(roundedTime, priorityEvent.duration);
+          if (exclusionViolation) {
+            if (attemptSummary.length < 12) {
+              attemptSummary.push({
+                time: roundedTime,
+                displayTime: _fmtT(roundedTime),
+                outcome: "rejected",
+                reason: exclusionViolation.reason,
+                restriction: exclusionViolation.period.restriction
+              });
+            }
+            continue;
           }
-          continue;
         }
         const resourceOptionsAtTime = getTaskingResourceOptionsForFlow(priorityEvent, roundedTime);
-        const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, 1);
-        if (dispatchLimitViolation) {
-          if (attemptSummary.length < 12) {
-            attemptSummary.push({
-              time: roundedTime,
-              displayTime: _fmtT(roundedTime),
-              outcome: "rejected",
-              reason: "HOURLY_DISPATCH_LIMIT",
-              ...dispatchLimitViolation
-            });
+        if (priorityEvent.type === "flight") {
+          const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, 1);
+          if (dispatchLimitViolation) {
+            if (attemptSummary.length < 12) {
+              attemptSummary.push({
+                time: roundedTime,
+                displayTime: _fmtT(roundedTime),
+                outcome: "rejected",
+                reason: "HOURLY_DISPATCH_LIMIT",
+                ...dispatchLimitViolation
+              });
+            }
+            if (isAirCombatBuild) {
+              recordAirCombatSkip({
+                list: "task",
+                staff: "Tasking",
+                event: priorityEvent.flightNumber,
+                reason: "HOURLY_DISPATCH_LIMIT",
+                startTime: roundedTime,
+                dispatchLimitViolation
+              });
+              countAirCombatRejection("HOURLY_DISPATCH_LIMIT");
+            }
+            continue;
           }
-          if (isAirCombatBuild) {
-            recordAirCombatSkip({
-              list: "task",
-              staff: "Tasking",
-              event: priorityEvent.flightNumber,
-              reason: "HOURLY_DISPATCH_LIMIT",
-              startTime: roundedTime,
-              dispatchLimitViolation
-            });
-            countAirCombatRejection("HOURLY_DISPATCH_LIMIT");
-          }
-          continue;
         }
         if (isAirCombatBuild && resourceOptionsAtTime.length === 0) {
           recordAirCombatSkip({
@@ -73787,7 +73791,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const emittedTrainingListDiagnostics = /* @__PURE__ */ new Set();
     const exhaustedTrainingCodes = /* @__PURE__ */ new Set();
-    const placeTrainingForKind = (kind, exactStartTime) => {
+    let lastAirCombatTrainingPlacement = null;
+    const placeTrainingForKind = (kind, exactStartTime, allowedTypes) => {
       const codes = kind === "training_package" ? packageCodes : courseCodes;
       if (codes.length === 0) {
         pushAirCombatDiag("trainingAttempts", {
@@ -73870,9 +73875,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         let codeHadCandidateWork = false;
         for (const entry of priorityList) {
-          codeHadCandidateWork = true;
           const item = entry.nextItem;
           const type = getTrainingEventType(item);
+          if (allowedTypes && !allowedTypes.has(type)) {
+            continue;
+          }
+          codeHadCandidateWork = true;
           const resourceNumber = getLmpResourceNumber(item);
           if (type === "flight" && !airCombatStaffMatchesCrewRoleGroup(entry.staff, getAirCombatPrimaryRoleGroup(item))) {
             recordAirCombatSkip({ list: kind, staff: entry.staff.name, event: item.code, reason: "ROLE_NOT_PRIMARY_AIRCRAFT_CREW", startTime: null });
@@ -74061,6 +74069,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               continue;
             }
             generatedEvents.push(candidate);
+            lastAirCombatTrainingPlacement = { kind, type, startTime };
             traceTaskProvenance("generatedPushes", "air-combat-training-placement", candidate, {
               kind,
               assignmentCode: code,
@@ -74175,6 +74184,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         break;
       }
       let placedKind = null;
+      lastAirCombatTrainingPlacement = null;
       if (placeTrainingForKind(preferredKind, roundedTileTime)) {
         placedKind = preferredKind;
       } else {
@@ -74207,10 +74217,40 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       if (placedKind === "course") coursePlaced++;
       else packagePlaced++;
+      attempt++;
+      const simulatorSameTimePlacements = [];
+      const simulatorTypes = /* @__PURE__ */ new Set(["ftd", "cpt"]);
+      while (attempt < placementLimit) {
+        const simulatorPreferredKind = pickNextKind(coursePlaced, packagePlaced);
+        if (!simulatorPreferredKind) break;
+        let simulatorPlacedKind = null;
+        let simulatorPlacedType = null;
+        lastAirCombatTrainingPlacement = null;
+        if (placeTrainingForKind(simulatorPreferredKind, roundedTileTime, simulatorTypes)) {
+          simulatorPlacedKind = simulatorPreferredKind;
+          simulatorPlacedType = lastAirCombatTrainingPlacement?.type || null;
+        } else {
+          const simulatorFallbackKind = simulatorPreferredKind === "course" ? "training_package" : "course";
+          if (fallbackPreservesTrainingMix(simulatorFallbackKind)) {
+            lastAirCombatTrainingPlacement = null;
+            if (placeTrainingForKind(simulatorFallbackKind, roundedTileTime, simulatorTypes)) {
+              simulatorPlacedKind = simulatorFallbackKind;
+              simulatorPlacedType = lastAirCombatTrainingPlacement?.type || null;
+            }
+          }
+        }
+        if (!simulatorPlacedKind || !simulatorPlacedType || !simulatorTypes.has(simulatorPlacedType)) break;
+        if (simulatorPlacedKind === "course") coursePlaced++;
+        else packagePlaced++;
+        attempt++;
+        simulatorSameTimePlacements.push({ kind: simulatorPlacedKind, type: simulatorPlacedType });
+      }
       cycleTrace.coursePlacedAfter = coursePlaced;
       cycleTrace.packagePlacedAfter = packagePlaced;
+      if (simulatorSameTimePlacements.length > 0) {
+        cycleTrace.sameTimeSimulatorPlacements = simulatorSameTimePlacements;
+      }
       pushAirCombatDiag("placementCycles", cycleTrace, 300);
-      attempt++;
     }
     neoBuildDiag.airCombatPriority.schedulerSummary = {
       placementLimit,
