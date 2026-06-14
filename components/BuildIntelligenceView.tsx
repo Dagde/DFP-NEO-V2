@@ -188,6 +188,8 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 traineeLMPs={props.traineeLMPs}
                 courseColors={props.courseColors}
                 resourceDisplayNames={resourceDisplayNames}
+                operationalModel={props.operationalModel}
+                operationalContext={props.operationalContext}
               />
             )}
 
@@ -212,6 +214,10 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 onNavigateAndSelectPerson={props.onNavigateAndSelectPerson}
                 analysis={props.analysis}
                 resourceDisplayNames={resourceDisplayNames}
+                instructorsData={props.instructorsData}
+                syllabusDetails={props.syllabusDetails}
+                operationalModel={props.operationalModel}
+                operationalContext={props.operationalContext}
               />
             )}
 

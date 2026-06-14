@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { ScheduleEvent, Trainee } from '../../types';
+import { ScheduleEvent, Trainee, Instructor, SyllabusItemDetail } from '../../types';
 import InteractiveStatCard from '../shared/InteractiveStatCard';
 import CourseDistributionTable from '../shared/CourseDistributionTable';
 import PieChart from '../shared/PieChart';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
+import { normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports, type AirCombatTrainingKind } from '../../utils/airCombatTraining';
 
 interface CourseAnalysis {
   courseName: string;
@@ -49,6 +50,14 @@ interface CourseMetricsTabProps {
   onNavigateAndSelectPerson: (name: string) => void;
   analysis: BuildAnalysis | null;
   resourceDisplayNames?: ResourceDisplayNames;
+  instructorsData?: Instructor[];
+  syllabusDetails?: SyllabusItemDetail[];
+  operationalModel?: string;
+  operationalContext?: {
+    locationCode?: string;
+    unitCode?: string;
+    unitCodes?: string[];
+  };
 }
 
 const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
@@ -58,8 +67,142 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
   activeCourses,
   onNavigateAndSelectPerson,
   analysis,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorsData = [],
+  syllabusDetails = [],
+  operationalModel,
+  operationalContext,
 }) => {
+  const isAirCombatModel = String(operationalModel || '').trim().toLowerCase() === 'air_combat';
+  const activeUnitCodes = useMemo(() => {
+    const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0
+      ? operationalContext.unitCodes
+      : String(operationalContext?.unitCode || '').split('+');
+    return new Set(codes.map(code => String(code || '').trim().toUpperCase()).filter(Boolean));
+  }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
+
+  const getTrainingCodeFromItem = (item: SyllabusItemDetail): string => (
+    (item.courses || []).find(Boolean) || item.code || ''
+  );
+
+  const matchesAirCombatAssignment = (
+    item: SyllabusItemDetail,
+    kind: AirCombatTrainingKind,
+    code: string,
+    unitCode?: string,
+  ): boolean => {
+    const itemKind: AirCombatTrainingKind = item.lmpType === 'Staff CAT' ? 'training_package' : 'course';
+    if (itemKind !== kind) return false;
+    const itemCode = String(getTrainingCodeFromItem(item) || '').trim().toUpperCase();
+    const assignmentCode = String(code || '').trim().toUpperCase();
+    if (itemCode !== assignmentCode && !String(item.code || '').trim().toUpperCase().startsWith(assignmentCode)) return false;
+    const itemUnit = String(item.unit || '').trim().toUpperCase();
+    const assignmentUnit = String(unitCode || '').trim().toUpperCase();
+    return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
+  };
+
+  const getAirCombatEventStreamCode = (event: ScheduleEvent): string => {
+    const explicit = String((event as any).assignmentCode || event.taskingDisplayLabel || '').trim().toUpperCase();
+    if (explicit) return explicit;
+    const code = String(event.eventCode || event.flightNumber || '').trim().toUpperCase();
+    const match = code.match(/^([A-Z]+|[A-Z]+\d+)/);
+    if (!match) return code;
+    if (code.startsWith('ICO') || code.startsWith('IC')) return 'ICO';
+    if (code.startsWith('AA')) return 'AA';
+    if (code.startsWith('ATA')) return 'ATA';
+    return match[1].replace(/\d+$/, '') || code;
+  };
+
+  const getEventPeople = (event: ScheduleEvent): string[] => {
+    const names = [
+      event.instructor,
+      event.pilot,
+      event.crew,
+      event.student,
+      ...((event.attendees || []) as string[]),
+    ].map(name => String(name || '').trim()).filter(name => name && !/^TBA$/i.test(name));
+    return Array.from(new Set(names));
+  };
+
+  const airCombatCourseStats = useMemo(() => {
+    const streams = new Map<string, {
+      key: string;
+      kind: AirCombatTrainingKind;
+      code: string;
+      title: string;
+      staff: Set<string>;
+      availableStaff: Set<string>;
+      eventCount: number;
+      eventsByType: { flight: number; ftd: number; cpt: number; ground: number };
+      completedReports: number;
+      syllabusItems: number;
+      personnel: Set<string>;
+    }>();
+    const ensureStream = (kind: AirCombatTrainingKind, code: string, title?: string) => {
+      const key = `${kind}:${String(code || '').trim().toUpperCase()}`;
+      if (!streams.has(key)) {
+        streams.set(key, {
+          key,
+          kind,
+          code,
+          title: title || code,
+          staff: new Set(),
+          availableStaff: new Set(),
+          eventCount: 0,
+          eventsByType: { flight: 0, ftd: 0, cpt: 0, ground: 0 },
+          completedReports: 0,
+          syllabusItems: 0,
+          personnel: new Set(),
+        });
+      }
+      return streams.get(key)!;
+    };
+
+    instructorsData.forEach(staff => {
+      const staffUnit = String(staff.unit || '').trim().toUpperCase();
+      if (activeUnitCodes.size > 0 && staffUnit && !activeUnitCodes.has(staffUnit)) return;
+      const isAvailable = !(staff.unavailability || []).some(period => date >= period.startDate && date < period.endDate);
+      const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      [...assignments.courses, ...assignments.trainingPackages].forEach(assignment => {
+        const assignmentUnit = String(assignment.unitCode || staffUnit).trim().toUpperCase();
+        if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return;
+        const stream = ensureStream(assignment.kind, assignment.code, assignment.title);
+        stream.staff.add(staff.name);
+        if (isAvailable) stream.availableStaff.add(staff.name);
+      });
+      normaliseAirCombatTrainingReports(staff.preferences).forEach(report => {
+        if (report.status && report.status !== 'Complete') return;
+        if (!report.trainingKind || !report.trainingCode) return;
+        const stream = ensureStream(report.trainingKind, report.trainingCode, report.trainingTitle || report.trainingCode);
+        stream.completedReports += 1;
+      });
+    });
+
+    syllabusDetails.forEach(item => {
+      streams.forEach(stream => {
+        if (matchesAirCombatAssignment(item, stream.kind, stream.code)) stream.syllabusItems += 1;
+      });
+    });
+
+    events.forEach(event => {
+      const eventStreamCode = getAirCombatEventStreamCode(event);
+      streams.forEach(stream => {
+        if (String(stream.code || '').toUpperCase() !== eventStreamCode) return;
+        stream.eventCount += 1;
+        if (event.type === 'flight') stream.eventsByType.flight += 1;
+        else if (event.type === 'ftd') stream.eventsByType.ftd += 1;
+        else if (event.type === 'cpt') stream.eventsByType.cpt += 1;
+        else stream.eventsByType.ground += 1;
+        getEventPeople(event).forEach(person => stream.personnel.add(person));
+      });
+    });
+
+    return Array.from(streams.values()).sort((left, right) =>
+      left.kind.localeCompare(right.kind) ||
+      left.code.localeCompare(right.code)
+    );
+  }, [activeUnitCodes, date, events, instructorsData, syllabusDetails]);
+
   // Build a lookup map: trainee fullName/name → course
   const traineeCourseLookup = useMemo(() => {
     const map = new Map<string, string>();
@@ -139,6 +282,86 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
       availableTraineesPerCourse
     };
   }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
+
+  const airCombatCourseAnalysis: CourseAnalysis[] = airCombatCourseStats.map(stream => {
+    const possibleEvents = Math.max(stream.syllabusItems * Math.max(stream.staff.size, 1), stream.eventCount);
+    const schedulingEfficiency = possibleEvents > 0 ? (stream.eventCount / possibleEvents) * 100 : 0;
+    return {
+      courseName: `${stream.kind === 'course' ? 'Course' : 'Package'} ${stream.code}`,
+      targetPercentage: 0,
+      actualPercentage: 0,
+      deviation: 0,
+      eventCount: stream.eventCount,
+      possibleEvents,
+      schedulingEfficiency,
+      eventsByType: stream.eventsByType,
+      limitingFactors: {
+        insufficientInstructors: 0,
+        noAircraftSlots: 0,
+        noFtdSlots: 0,
+        noCptSlots: 0,
+        traineeLimit: 0,
+        instructorLimit: 0,
+        noTimeSlots: 0,
+      },
+      status: schedulingEfficiency >= 70 ? 'good' : schedulingEfficiency >= 35 ? 'fair' : 'poor',
+    };
+  });
+
+  if (isAirCombatModel) {
+    return (
+      <div className="space-y-6">
+        <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+          <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
+            <h2 className="text-lg font-semibold text-white">Air Combat Course & Package Metrics</h2>
+            <p className="mt-1 text-sm text-slate-400">Only courses and packages with staff assigned in this unit are shown.</p>
+          </div>
+          <div className="p-5">
+            {airCombatCourseStats.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {airCombatCourseStats.map(stream => (
+                  <InteractiveStatCard
+                    key={stream.key}
+                    title={`${stream.kind === 'course' ? 'Course' : 'Package'} ${stream.code}`}
+                    value={stream.eventCount}
+                    description={`${stream.availableStaff.size}/${stream.staff.size} staff available, ${stream.syllabusItems} LMP events`}
+                    personnelList={Array.from(stream.staff).sort()}
+                    onPersonClick={onNavigateAndSelectPerson}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="py-8 text-center text-slate-400">No Air Combat courses or training packages have staff assigned in this unit.</p>
+            )}
+          </div>
+        </div>
+
+        {airCombatCourseAnalysis.length > 0 && (
+          <>
+            <CourseDistributionTable courseAnalysis={airCombatCourseAnalysis} resourceDisplayNames={resourceDisplayNames} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PieChart
+                title="Flight Events per Course / Package"
+                data={airCombatCourseAnalysis.map((course, index) => ({
+                  label: course.courseName,
+                  value: course.eventsByType.flight,
+                  color: `hsl(${(index * 360) / Math.max(airCombatCourseAnalysis.length, 1)}, 70%, 60%)`
+                }))}
+              />
+              <PieChart
+                title="Total Events per Course / Package"
+                data={airCombatCourseAnalysis.map((course, index) => ({
+                  label: course.courseName,
+                  value: course.eventCount,
+                  color: `hsl(${(index * 360) / Math.max(airCombatCourseAnalysis.length, 1)}, 70%, 60%)`
+                }))}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

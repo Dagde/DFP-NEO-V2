@@ -4,6 +4,11 @@ import InteractiveStatCard from '../shared/InteractiveStatCard';
 import AvailabilityCard from '../shared/AvailabilityCard';
 import ListCard from '../shared/ListCard';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
+import {
+  normaliseAirCombatTrainingAssignments,
+  normaliseAirCombatTrainingReports,
+  type AirCombatTrainingKind,
+} from '../../utils/airCombatTraining';
 
 interface PeopleTabProps {
   date: string;
@@ -15,6 +20,12 @@ interface PeopleTabProps {
   traineeLMPs: Map<string, SyllabusItemDetail[]>;
   courseColors: { [key: string]: string };
   resourceDisplayNames?: ResourceDisplayNames;
+  operationalModel?: string;
+  operationalContext?: {
+    locationCode?: string;
+    unitCode?: string;
+    unitCodes?: string[];
+  };
 }
 
 const PeopleTab: React.FC<PeopleTabProps> = ({
@@ -26,7 +37,9 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
   scores,
   traineeLMPs,
   courseColors,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  operationalModel,
+  operationalContext,
 }) => {
   // State for availability filtering
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
@@ -343,6 +356,314 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
   const fieldsetShell = 'rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]';
   const legendClass = 'px-2 text-lg font-semibold text-white';
   const inputClass = 'bg-slate-950 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all';
+  const isAirCombatModel = String(operationalModel || '').trim().toLowerCase() === 'air_combat';
+  const activeUnitCodes = useMemo(() => {
+    const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0
+      ? operationalContext.unitCodes
+      : String(operationalContext?.unitCode || '').split('+');
+    return new Set(codes.map(code => String(code || '').trim().toUpperCase()).filter(Boolean));
+  }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
+
+  const getEventPeople = (event: ScheduleEvent): string[] => {
+    const names = [
+      event.instructor,
+      event.pilot,
+      event.crew,
+      event.student,
+      ...((event.attendees || []) as string[]),
+    ].map(name => String(name || '').trim()).filter(name => name && !/^TBA$/i.test(name));
+    return Array.from(new Set(names));
+  };
+
+  const normaliseEventType = (item?: SyllabusItemDetail | null): 'flight' | 'ftd' | 'cpt' | 'ground' => {
+    if (!item) return 'ground';
+    if (item.type === 'Flight') return 'flight';
+    if (item.type === 'FTD') return String(item.code || '').toUpperCase().includes('CPT') ? 'cpt' : 'ftd';
+    if (String(item.code || '').toUpperCase().includes('CPT')) return 'cpt';
+    return 'ground';
+  };
+
+  const getTrainingCodeFromItem = (item: SyllabusItemDetail): string => (
+    (item.courses || []).find(Boolean) || item.code || ''
+  );
+
+  const matchesAirCombatAssignment = (
+    item: SyllabusItemDetail,
+    kind: AirCombatTrainingKind,
+    code: string,
+    unitCode?: string,
+  ): boolean => {
+    const itemKind: AirCombatTrainingKind = item.lmpType === 'Staff CAT' ? 'training_package' : 'course';
+    if (itemKind !== kind) return false;
+    const itemCode = String(getTrainingCodeFromItem(item) || '').trim().toUpperCase();
+    const assignmentCode = String(code || '').trim().toUpperCase();
+    if (itemCode !== assignmentCode && !String(item.code || '').trim().toUpperCase().startsWith(assignmentCode)) return false;
+    const itemUnit = String(item.unit || '').trim().toUpperCase();
+    const assignmentUnit = String(unitCode || '').trim().toUpperCase();
+    return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
+  };
+
+  const sortTrainingItems = (items: SyllabusItemDetail[]): SyllabusItemDetail[] => (
+    [...items].sort((left, right) =>
+      Number((left as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
+      String(left.orderKey || '').localeCompare(String(right.orderKey || '')) ||
+      String(left.code || '').localeCompare(String(right.code || ''))
+    )
+  );
+
+  const airCombatPeopleMetrics = useMemo(() => {
+    const activeStaff = instructorsData.filter(staff => {
+      const staffUnit = String(staff.unit || '').trim().toUpperCase();
+      return activeUnitCodes.size === 0 || !staffUnit || activeUnitCodes.has(staffUnit);
+    });
+    const eventStaff = new Set(events.flatMap(getEventPeople));
+    const unavailableNames = new Set<string>();
+    activeStaff.forEach(staff => {
+      const unavailable = (staff.unavailability || []).some(period => date >= period.startDate && date < period.endDate);
+      if (unavailable) unavailableNames.add(staff.name);
+    });
+
+    const roleRows = new Map<string, { role: string; total: number; available: number; unavailable: number; scheduled: number; names: string[] }>();
+    activeStaff.forEach(staff => {
+      const role = String(staff.role || 'Unassigned').trim() || 'Unassigned';
+      if (!roleRows.has(role)) roleRows.set(role, { role, total: 0, available: 0, unavailable: 0, scheduled: 0, names: [] });
+      const row = roleRows.get(role)!;
+      row.total += 1;
+      row.names.push(staff.name);
+      if (unavailableNames.has(staff.name)) row.unavailable += 1;
+      else row.available += 1;
+      if (eventStaff.has(staff.name)) row.scheduled += 1;
+    });
+
+    const totals = Array.from(roleRows.values()).reduce((acc, row) => ({
+      total: acc.total + row.total,
+      available: acc.available + row.available,
+      unavailable: acc.unavailable + row.unavailable,
+      scheduled: acc.scheduled + row.scheduled,
+    }), { total: 0, available: 0, unavailable: 0, scheduled: 0 });
+
+    const completedReportCodesByStaffAndKey = new Map<string, Set<string>>();
+    const reportDatesByStaffAndKey = new Map<string, string[]>();
+    activeStaff.forEach(staff => {
+      normaliseAirCombatTrainingReports(staff.preferences).forEach(report => {
+        if (report.status && report.status !== 'Complete') return;
+        const key = `${staff.name}::${report.trainingKind || ''}::${String(report.trainingCode || '').toUpperCase()}`;
+        if (!completedReportCodesByStaffAndKey.has(key)) completedReportCodesByStaffAndKey.set(key, new Set());
+        completedReportCodesByStaffAndKey.get(key)!.add(String(report.eventCode || '').toUpperCase());
+        if (!reportDatesByStaffAndKey.has(key)) reportDatesByStaffAndKey.set(key, []);
+        if (report.date) reportDatesByStaffAndKey.get(key)!.push(report.date);
+      });
+    });
+
+    const assignmentRows = activeStaff.flatMap(staff => {
+      const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      return [...assignments.courses, ...assignments.trainingPackages].map(assignment => {
+        const assignmentUnit = String(assignment.unitCode || staff.unit || '').trim().toUpperCase();
+        if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return null;
+        const items = sortTrainingItems(syllabusDetails.filter(item => matchesAirCombatAssignment(item, assignment.kind, assignment.code, assignment.unitCode)));
+        const reportKey = `${staff.name}::${assignment.kind}::${String(assignment.code || '').toUpperCase()}`;
+        const completedCodes = completedReportCodesByStaffAndKey.get(reportKey) || new Set<string>();
+        const nextItem = items.find(item => !completedCodes.has(String(item.code || '').toUpperCase())) || null;
+        const reportDates = reportDatesByStaffAndKey.get(reportKey) || [];
+        const lastDate = reportDates.sort().slice(-1)[0] || '';
+        const daysSince = lastDate
+          ? Math.max(0, Math.floor((new Date(`${date}T00:00:00Z`).getTime() - new Date(`${lastDate}T00:00:00Z`).getTime()) / (1000 * 60 * 60 * 24)))
+          : 999;
+        return {
+          staff,
+          kind: assignment.kind,
+          code: assignment.code,
+          title: assignment.title || assignment.code,
+          nextItem,
+          completedCount: completedCodes.size,
+          totalEvents: items.length,
+          lastDate,
+          daysSince,
+          reason: lastDate
+            ? `${daysSince} days since last completed ${assignment.code} event, ${completedCodes.size}/${items.length} complete.`
+            : `No completed ${assignment.code} event recorded, ${completedCodes.size}/${items.length} complete.`,
+        };
+      }).filter(Boolean);
+    }) as Array<{
+      staff: Instructor;
+      kind: AirCombatTrainingKind;
+      code: string;
+      title: string;
+      nextItem: SyllabusItemDetail | null;
+      completedCount: number;
+      totalEvents: number;
+      lastDate: string;
+      daysSince: number;
+      reason: string;
+    }>;
+
+    const priorityRows = assignmentRows
+      .filter(row => row.nextItem)
+      .sort((left, right) =>
+        right.daysSince - left.daysSince ||
+        left.completedCount - right.completedCount ||
+        left.staff.name.localeCompare(right.staff.name) ||
+        left.code.localeCompare(right.code)
+      );
+    const courseRows = priorityRows.filter(row => row.kind === 'course');
+    const packageRows = priorityRows.filter(row => row.kind === 'training_package');
+    const byType = (rows: typeof priorityRows, type: 'flight' | 'ftd' | 'cpt' | 'ground') => rows.filter(row => normaliseEventType(row.nextItem) === type);
+
+    return {
+      roleRows: Array.from(roleRows.values()).sort((left, right) => left.role.localeCompare(right.role)),
+      totals,
+      unavailableList: activeStaff
+        .filter(staff => unavailableNames.has(staff.name))
+        .map(staff => ({ name: staff.name, rank: staff.rank, role: staff.role || 'Unassigned' }))
+        .sort((left, right) => left.name.localeCompare(right.name)),
+      priorityRows,
+      courseRows,
+      packageRows,
+      nextLists: {
+        flight: byType(priorityRows, 'flight'),
+        ftd: byType(priorityRows, 'ftd'),
+        cpt: byType(priorityRows, 'cpt'),
+        ground: byType(priorityRows, 'ground'),
+      },
+    };
+  }, [activeUnitCodes, date, events, instructorsData, syllabusDetails]);
+
+  const AirCombatPriorityTable: React.FC<{ title: string; rows: typeof airCombatPeopleMetrics.priorityRows; limit?: number }> = ({ title, rows, limit = 12 }) => (
+    <div className="overflow-hidden rounded-lg border border-slate-700/80 bg-slate-950/45">
+      <div className="border-b border-slate-700/80 px-4 py-3">
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+      </div>
+      <div className="max-h-96 overflow-auto">
+        {rows.length > 0 ? (
+          <table className="w-full text-left text-sm">
+            <thead className="sticky top-0 bg-slate-950 text-[10px] uppercase tracking-[0.16em] text-slate-500">
+              <tr>
+                <th className="px-3 py-2">Rank</th>
+                <th className="px-3 py-2">Staff</th>
+                <th className="px-3 py-2">Stream</th>
+                <th className="px-3 py-2">Next</th>
+                <th className="px-3 py-2">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, limit).map((row, index) => (
+                <tr key={`${row.staff.idNumber}-${row.kind}-${row.code}`} className="border-t border-slate-800">
+                  <td className="px-3 py-2 font-mono text-slate-400">{index + 1}</td>
+                  <td className="px-3 py-2">
+                    <button className="text-left font-semibold text-cyan-100 hover:text-cyan-300" onClick={() => onNavigateAndSelectPerson(row.staff.name)}>
+                      {row.staff.name}
+                    </button>
+                    <div className="text-xs text-slate-500">{row.staff.role || 'Unassigned'}</div>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className="font-semibold text-slate-100">{row.code}</span>
+                    <div className="text-xs text-slate-500">{row.kind === 'course' ? 'Course' : 'Package'}</div>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-emerald-200">{row.nextItem?.code || 'Complete'}</td>
+                  <td className="px-3 py-2 text-xs text-slate-300">{row.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="p-5 text-center text-sm text-slate-400">No active priority items found.</p>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isAirCombatModel) {
+    return (
+      <div className="space-y-6">
+        <div className={sectionShell}>
+          <div className={sectionHeader}>
+            <h2 className="text-lg font-semibold text-white">Staff Availability</h2>
+          </div>
+          <div className={sectionBody}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="rounded-lg border border-slate-700 bg-slate-950/45 p-4">
+                <p className="text-sm text-slate-400">Total Staff</p>
+                <p className="text-2xl font-bold text-white">{airCombatPeopleMetrics.totals.total}</p>
+              </div>
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4">
+                <p className="text-sm text-green-400">Available</p>
+                <p className="text-2xl font-bold text-green-400">{airCombatPeopleMetrics.totals.available}</p>
+              </div>
+              <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4">
+                <p className="text-sm text-red-400">Unavailable</p>
+                <p className="text-2xl font-bold text-red-400">{airCombatPeopleMetrics.totals.unavailable}</p>
+              </div>
+              <div className="rounded-lg border border-cyan-500/40 bg-cyan-500/10 p-4">
+                <p className="text-sm text-cyan-300">Scheduled</p>
+                <p className="text-2xl font-bold text-cyan-200">{airCombatPeopleMetrics.totals.scheduled}</p>
+              </div>
+            </div>
+            <div className="mt-5 overflow-hidden rounded-lg border border-slate-700/80">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-950/70 text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Role</th>
+                    <th className="px-4 py-3">Total</th>
+                    <th className="px-4 py-3">Available</th>
+                    <th className="px-4 py-3">Unavailable</th>
+                    <th className="px-4 py-3">Scheduled</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {airCombatPeopleMetrics.roleRows.map(row => (
+                    <tr key={row.role} className="border-t border-slate-800">
+                      <td className="px-4 py-3 font-semibold text-white">{row.role}</td>
+                      <td className="px-4 py-3 text-slate-200">{row.total}</td>
+                      <td className="px-4 py-3 text-emerald-300">{row.available}</td>
+                      <td className="px-4 py-3 text-rose-300">{row.unavailable}</td>
+                      <td className="px-4 py-3 text-cyan-200">{row.scheduled}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t border-cyan-500/30 bg-cyan-500/10 font-semibold">
+                    <td className="px-4 py-3 text-white">Total</td>
+                    <td className="px-4 py-3 text-white">{airCombatPeopleMetrics.totals.total}</td>
+                    <td className="px-4 py-3 text-emerald-200">{airCombatPeopleMetrics.totals.available}</td>
+                    <td className="px-4 py-3 text-rose-200">{airCombatPeopleMetrics.totals.unavailable}</td>
+                    <td className="px-4 py-3 text-cyan-100">{airCombatPeopleMetrics.totals.scheduled}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <fieldset className={fieldsetShell}>
+          <legend className={legendClass}>Staff</legend>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <InteractiveStatCard title="Staff with 4 Events" value={stats.instructorsWithFourEvents} description={`of ${stats.totalAvailableInstructors} available`} personnelList={stats.instructorsWithFourEventsList} onPersonClick={onNavigateAndSelectPerson} />
+            <InteractiveStatCard title="Staff with 3 Events" value={stats.instructorsWithThreeEvents} description={`of ${stats.totalAvailableInstructors} available`} personnelList={stats.instructorsWithThreeEventsList} onPersonClick={onNavigateAndSelectPerson} />
+            <InteractiveStatCard title="Staff with 2 Events" value={stats.instructorsWithTwoEvents} description={`of ${stats.totalAvailableInstructors} available`} personnelList={stats.instructorsWithTwoEventsList} onPersonClick={onNavigateAndSelectPerson} />
+            <InteractiveStatCard title="Staff with 1 Event" value={stats.instructorsWithOneEvent} description={`of ${stats.totalAvailableInstructors} available`} personnelList={stats.instructorsWithOneEventList} onPersonClick={onNavigateAndSelectPerson} />
+            <InteractiveStatCard title="Staff with 0 Events" value={stats.instructorsWithZeroEvents} description={`of ${stats.totalAvailableInstructors} available`} personnelList={stats.instructorsWithZeroEventsList} onPersonClick={onNavigateAndSelectPerson} />
+          </div>
+        </fieldset>
+
+        <div className={sectionShell}>
+          <div className={sectionHeader}>
+            <h2 className="text-lg font-semibold text-white">Air Combat Training Priority Lists</h2>
+          </div>
+          <div className={`${sectionBody} space-y-4`}>
+            <AirCombatPriorityTable title="Composite Course / Package Priority List" rows={airCombatPeopleMetrics.priorityRows} limit={20} />
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <AirCombatPriorityTable title="Courses Priority Table" rows={airCombatPeopleMetrics.courseRows} />
+              <AirCombatPriorityTable title="Training Packages Priority Table" rows={airCombatPeopleMetrics.packageRows} />
+            </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+              <AirCombatPriorityTable title="Next Flight" rows={airCombatPeopleMetrics.nextLists.flight} limit={8} />
+              <AirCombatPriorityTable title={`Next ${resourceDisplayNames.ftd}`} rows={airCombatPeopleMetrics.nextLists.ftd} limit={8} />
+              <AirCombatPriorityTable title={`Next ${resourceDisplayNames.cpt}`} rows={airCombatPeopleMetrics.nextLists.cpt} limit={8} />
+              <AirCombatPriorityTable title="Next Ground" rows={airCombatPeopleMetrics.nextLists.ground} limit={8} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
