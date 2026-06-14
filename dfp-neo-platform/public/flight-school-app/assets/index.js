@@ -2150,7 +2150,7 @@ const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
   const targetModel = normaliseOperationalModel(context.operationalModel);
   const activeRulesForLmp = normaliseMasterLmpAccessRules(config).filter((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp);
   const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
-  if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel === "air_combat") {
+  if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel !== "flight_school") {
     return "Manage";
   }
   if (matchingLevels.length === 0) return null;
@@ -39231,7 +39231,9 @@ const SyllabusView = ({
   const activeCollectionNoun = isTrainingPackagesTab ? "package" : "course";
   const activeCollectionTitle = isTrainingPackagesTab ? "Training Packages" : "Master LMP";
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
-  const isAirCombatModel = normaliseOperationalModel(operationalModel2) === "air_combat";
+  const activeOperationalModel = normaliseOperationalModel(operationalModel2);
+  const isAirCombatModel = activeOperationalModel === "air_combat";
+  const shouldScopeCreatedItemsToActiveUnit = isTrainingPackagesTab || activeOperationalModel !== "flight_school";
   const availableTabs = reactExports.useMemo(() => {
     const tabs = [
       { id: "master", label: "Master LMP" }
@@ -39634,7 +39636,7 @@ const SyllabusView = ({
       formData.append("packageName", destinationName);
       formData.append("uploadMode", isTrainingPackagesTab ? uploadMode : "update");
       formData.append("lmpType", activeLmpType);
-      if (isTrainingPackagesTab) {
+      if (shouldScopeCreatedItemsToActiveUnit) {
         formData.append("locationCode", activeLocationNormalised);
         formData.append("unitCode", activeUnitNormalised);
       }
@@ -39825,8 +39827,8 @@ const SyllabusView = ({
       resourceNumber: 0,
       acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
       resourcesHuman: [],
-      location: isTrainingPackagesTab ? activeLocationNormalised : "",
-      unit: isTrainingPackagesTab ? activeUnitNormalised : void 0,
+      location: shouldScopeCreatedItemsToActiveUnit ? activeLocationNormalised : "",
+      unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : void 0,
       courses: [courseCode],
       lmpType: activeLmpType
     };
@@ -39871,8 +39873,8 @@ const SyllabusView = ({
       resourceNumber: 0,
       acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
       resourcesHuman: [],
-      location: isTrainingPackagesTab ? activeLocationNormalised : "",
-      unit: isTrainingPackagesTab ? activeUnitNormalised : void 0,
+      location: shouldScopeCreatedItemsToActiveUnit ? activeLocationNormalised : "",
+      unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : void 0,
       courses: [selectedCourseType],
       lmpType: activeLmpType
     };

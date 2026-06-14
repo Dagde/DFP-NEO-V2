@@ -874,7 +874,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const activeCollectionNoun = isTrainingPackagesTab ? 'package' : 'course';
   const activeCollectionTitle = isTrainingPackagesTab ? 'Training Packages' : 'Master LMP';
   const activeCollectionSelectLabel = isTrainingPackagesTab ? 'Package:' : 'Course:';
-  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
+  const activeOperationalModel = normaliseOperationalModel(operationalModel);
+  const isAirCombatModel = activeOperationalModel === 'air_combat';
+  const shouldScopeCreatedItemsToActiveUnit = isTrainingPackagesTab || activeOperationalModel !== 'flight_school';
   const availableTabs = useMemo(() => {
       const tabs: Array<{ id: LmpDetailsTab; label: string }> = [
           { id: 'master', label: 'Master LMP' },
@@ -1344,7 +1346,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           formData.append('packageName', destinationName);
           formData.append('uploadMode', isTrainingPackagesTab ? uploadMode : 'update');
           formData.append('lmpType', activeLmpType);
-          if (isTrainingPackagesTab) {
+          if (shouldScopeCreatedItemsToActiveUnit) {
               formData.append('locationCode', activeLocationNormalised);
               formData.append('unitCode', activeUnitNormalised);
           }
@@ -1548,8 +1550,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           resourceNumber: 0,
           acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
           resourcesHuman: [],
-          location: isTrainingPackagesTab ? activeLocationNormalised : '',
-          unit: isTrainingPackagesTab ? activeUnitNormalised : undefined,
+          location: shouldScopeCreatedItemsToActiveUnit ? activeLocationNormalised : '',
+          unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : undefined,
           courses: [courseCode],
           lmpType: activeLmpType,
       };
@@ -1600,8 +1602,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           resourceNumber: 0,
           acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
           resourcesHuman: [],
-          location: isTrainingPackagesTab ? activeLocationNormalised : '',
-          unit: isTrainingPackagesTab ? activeUnitNormalised : undefined,
+          location: shouldScopeCreatedItemsToActiveUnit ? activeLocationNormalised : '',
+          unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : undefined,
           courses: [selectedCourseType],
           lmpType: activeLmpType,
       };

@@ -124,6 +124,8 @@ export async function POST(request: NextRequest) {
     const uploadMode = String(formData.get('uploadMode') || 'update').trim();
     const requestedLmpType = String(formData.get('lmpType') || 'Master LMP').trim();
     const lmpType = requestedLmpType === 'Staff CAT' ? 'Staff CAT' : 'Master LMP';
+    const locationCode = String(formData.get('locationCode') || formData.get('location') || '').trim();
+    const unitCode = String(formData.get('unitCode') || formData.get('unit') || '').trim();
     if (!selectedCourseCode && lmpType === 'Staff CAT' && uploadMode === 'create') {
       selectedCourseCode = getPackageCodeFromTitle(packageName);
     }
@@ -300,7 +302,8 @@ export async function POST(request: NextRequest) {
         prerequisitesFlying: getList(row, ['Pre-requisite Events (Sim/Flying)', 'prerequisitesFlying']),
         resourceNumber: getNumber(row, ['Resource Number', 'resourceNumber', 'Resources Required Number']) ?? 0,
         acceptableAircraftConfigs: normaliseAircraftConfigs(getString(row, ['CONFIG', 'Config', 'Acceptable CONFIG', 'Acceptable Aircraft CONFIG', 'acceptableAircraftConfigs'])),
-        location: '',
+        location: locationCode,
+        unit: unitCode,
         lmpType,
         isActive: true,
       };
