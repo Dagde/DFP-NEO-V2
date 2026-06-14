@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
       ...asJsonObject(body.preferences),
       ...(body.callsign !== undefined ? { callsign: body.callsign || null } : {}),
       ...(body.secondaryCallsign !== undefined ? { secondaryCallsign: body.secondaryCallsign || null } : {}),
+      ...(body.crew !== undefined ? { crew: body.crew || null } : {}),
     };
 
     // Create new personnel record

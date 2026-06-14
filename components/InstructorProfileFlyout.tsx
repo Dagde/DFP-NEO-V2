@@ -321,6 +321,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [location, setLocation] = useState(instructor.location || '');
   const [unit, setUnit] = useState(instructor.unit || '');
   const [flight, setFlight] = useState(instructor.flight || '');
+  const [secondaryCallsign, setSecondaryCallsign] = useState(instructor.secondaryCallsign || '');
+  const [crew, setCrew] = useState(instructor.crew || '');
   const [phoneNumber, setPhoneNumber] = useState(instructor.phoneNumber || '');
   const [email, setEmail] = useState(instructor.email || '');
   const [permissions, setPermissions] = useState<string[]>(instructor.permissions || []);
@@ -558,6 +560,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     setCategory(instructor.category); setSeatConfig(instructor.seatConfig);
     setUnavailabilityPeriods(instructor.unavailability || []); setLocation(instructor.location || '');
     setUnit(instructor.unit || ''); setFlight(instructor.flight || '');
+    setSecondaryCallsign(instructor.secondaryCallsign || '');
+    setCrew(instructor.crew || '');
     setPhoneNumber(instructor.phoneNumber || ''); setEmail(instructor.email || '');
     setPermissions(instructor.permissions || []); setPriorExperience(instructor.priorExperience || initialExperience);
     setIsTestingOfficer(instructor.isTestingOfficer); setIsExecutive(instructor.isExecutive);
@@ -650,7 +654,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     // ─────────────────────────────────────────────────────────────────────────
 
     const updatedInstructor: Instructor = {
-      ...instructor, idNumber, name, rank, role: savedRole, callsignNumber, callsign: displayCallsign, service, category, seatConfig,
+      ...instructor, idNumber, name, rank, role: savedRole, callsignNumber, callsign: displayCallsign, secondaryCallsign, service, category, seatConfig,
+      crew,
+      preferences: {
+        ...(instructor.preferences || {}),
+        secondaryCallsign: secondaryCallsign || null,
+        crew: crew || null,
+      },
       unavailability: unavailabilityPeriods, location, unit, flight, phoneNumber, email, permissions,
       priorExperience, isTestingOfficer, isExecutive, isFlyingSupervisor, isIRE,
       isCommandingOfficer, isCFI, isDeputyFlightCommander, isContractor, isAdminStaff, isQFI, isOFI,
@@ -668,6 +678,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       if (instructor.role !== savedRole) changes.push(`Role: ${instructor.role} → ${savedRole}`);
       if (instructor.unit !== unit) changes.push(`Unit: ${instructor.unit || '(none)'} → ${unit || '(none)'}`);
       if (instructor.flight !== flight) changes.push(`Flight: ${instructor.flight || '(none)'} → ${flight || '(none)'}`);
+      if ((instructor.secondaryCallsign || '') !== secondaryCallsign) changes.push(`Secondary Callsign: ${instructor.secondaryCallsign || '(none)'} → ${secondaryCallsign || '(none)'}`);
+      if ((instructor.crew || '') !== crew) changes.push(`Crew: ${instructor.crew || '(none)'} → ${crew || '(none)'}`);
       if (instructor.location !== location) changes.push(`Location: ${instructor.location || '(none)'} → ${location || '(none)'}`);
       if (instructor.phoneNumber !== phoneNumber) changes.push(`Phone: ${instructor.phoneNumber || '(none)'} → ${phoneNumber || '(none)'}`);
       if (instructor.email !== email) changes.push(`Email: ${instructor.email || '(none)'} → ${email || '(none)'}`);
@@ -1574,8 +1586,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         ))}
                       </Dropdown>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                       <InputField label="Callsign" value={displayCallsign || 'Auto assigned'} onChange={() => {}} readOnly />
+                      <InputField label="Secondary Callsign" value={secondaryCallsign} onChange={e => setSecondaryCallsign(e.target.value)} />
+                      <InputField label="Crew" value={crew} onChange={e => setCrew(e.target.value)} />
                       <Dropdown label="Service" value={service || ''} onChange={e => setService(e.target.value as any)}>
                         <option value="">Select...</option><option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
                       </Dropdown>
@@ -1585,17 +1599,19 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
                         <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
                       </Dropdown>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <Dropdown label="Unit" value={unit} onChange={e => setUnit(e.target.value)}>
                         <option value="">Select...</option>
                         {(units || []).map(u => <option key={u} value={u}>{u}</option>)}
                       </Dropdown>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <Dropdown label="Location" value={location} onChange={e => setLocation(e.target.value)}>
                         {(locations || []).map(loc => <option key={loc} value={loc}>{loc}</option>)}
                       </Dropdown>
                       <InputField label="Flight" value={flight} onChange={e => setFlight(e.target.value)} />
                       <InputField label="Phone Number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
                     </div>
                     {/* Role checkboxes */}
@@ -1669,7 +1685,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{displayCallsign || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{instructor.secondaryCallsign || '[None]'}</span></div>
-                        <div></div>
+                        <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{instructor.crew || '[None]'}</span></div>
                         {/* Row 2 */}
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{instructor.service || 'RAAF'}</span></div>

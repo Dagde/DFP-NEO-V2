@@ -168,6 +168,7 @@ export interface Instructor {
   priorExperience?: LogbookExperience;
   callsign?: string;           // Primary callsign string (e.g. "ROLR042")
   secondaryCallsign?: string;  // Secondary callsign string (e.g. "VIPR007")
+  crew?: string;               // Fixed crew grouping/name for Fixed Crew Model
   preferences?: PersonnelPreferences;
 }
 

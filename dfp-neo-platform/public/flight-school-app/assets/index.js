@@ -35341,6 +35341,8 @@ const InstructorProfileFlyout = ({
   const [location, setLocation] = reactExports.useState(instructor.location || "");
   const [unit, setUnit] = reactExports.useState(instructor.unit || "");
   const [flight, setFlight] = reactExports.useState(instructor.flight || "");
+  const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(instructor.secondaryCallsign || "");
+  const [crew, setCrew] = reactExports.useState(instructor.crew || "");
   const [phoneNumber, setPhoneNumber] = reactExports.useState(instructor.phoneNumber || "");
   const [email, setEmail] = reactExports.useState(instructor.email || "");
   const [permissions, setPermissions] = reactExports.useState(instructor.permissions || []);
@@ -35532,6 +35534,8 @@ const InstructorProfileFlyout = ({
     setLocation(instructor.location || "");
     setUnit(instructor.unit || "");
     setFlight(instructor.flight || "");
+    setSecondaryCallsign(instructor.secondaryCallsign || "");
+    setCrew(instructor.crew || "");
     setPhoneNumber(instructor.phoneNumber || "");
     setEmail(instructor.email || "");
     setPermissions(instructor.permissions || []);
@@ -35639,9 +35643,16 @@ const InstructorProfileFlyout = ({
       role: savedRole,
       callsignNumber,
       callsign: displayCallsign,
+      secondaryCallsign,
       service,
       category,
       seatConfig,
+      crew,
+      preferences: {
+        ...instructor.preferences || {},
+        secondaryCallsign: secondaryCallsign || null,
+        crew: crew || null
+      },
       unavailability: unavailabilityPeriods,
       location,
       unit,
@@ -35673,6 +35684,8 @@ const InstructorProfileFlyout = ({
       if (instructor.role !== savedRole) changes.push(`Role: ${instructor.role} → ${savedRole}`);
       if (instructor.unit !== unit) changes.push(`Unit: ${instructor.unit || "(none)"} → ${unit || "(none)"}`);
       if (instructor.flight !== flight) changes.push(`Flight: ${instructor.flight || "(none)"} → ${flight || "(none)"}`);
+      if ((instructor.secondaryCallsign || "") !== secondaryCallsign) changes.push(`Secondary Callsign: ${instructor.secondaryCallsign || "(none)"} → ${secondaryCallsign || "(none)"}`);
+      if ((instructor.crew || "") !== crew) changes.push(`Crew: ${instructor.crew || "(none)"} → ${crew || "(none)"}`);
       if (instructor.location !== location) changes.push(`Location: ${instructor.location || "(none)"} → ${location || "(none)"}`);
       if (instructor.phoneNumber !== phoneNumber) changes.push(`Phone: ${instructor.phoneNumber || "(none)"} → ${phoneNumber || "(none)"}`);
       if (instructor.email !== email) changes.push(`Email: ${instructor.email || "(none)"} → ${email || "(none)"}`);
@@ -36524,9 +36537,11 @@ const InstructorProfileFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: staffRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: staffRoleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-5 gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-6 gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Callsign", value: displayCallsign || "Auto assigned", onChange: () => {
               }, readOnly: true }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Secondary Callsign", value: secondaryCallsign, onChange: (e) => setSecondaryCallsign(e.target.value) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Crew", value: crew, onChange: (e) => setCrew(e.target.value) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Service", value: service || "", onChange: (e) => setService(e.target.value), children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAAF", children: "RAAF" }),
@@ -36545,18 +36560,18 @@ const InstructorProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FWD/SHORT", children: "FWD/SHORT" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "REAR/SHORT", children: "REAR/SHORT" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FWD/LONG", children: "FWD/LONG" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Unit", value: unit, onChange: (e) => setUnit(e.target.value), children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
-                (units || []).map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u, children: u }, u))
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Unit", value: unit, onChange: (e) => setUnit(e.target.value), children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
+                (units || []).map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u, children: u }, u))
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Location", value: location, onChange: (e) => setLocation(e.target.value), children: (locations || []).map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc)) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Flight", value: flight, onChange: (e) => setFlight(e.target.value) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Phone Number", value: phoneNumber, onChange: (e) => setPhoneNumber(e.target.value) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Phone Number", value: phoneNumber, onChange: (e) => setPhoneNumber(e.target.value) })
             ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-2", children: "Roles & Qualifications" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-4 gap-2", children: [
@@ -36617,7 +36632,10 @@ const InstructorProfileFlyout = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Secondary Callsign" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: instructor.secondaryCallsign || "[None]" })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", {}),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Crew" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.crew || "[None]" })
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Rank" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.rank })
@@ -67725,7 +67743,8 @@ const normalisePersonnelRecord = (person) => {
     ...person,
     role: unitCode === "77SQN" ? "Pilot" : person?.role,
     callsign: person?.callsign || preferences.callsign || "",
-    secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || ""
+    secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || "",
+    crew: person?.crew || preferences.crew || ""
   };
 };
 const PT051_STRUCTURE = [

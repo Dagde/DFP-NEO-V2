@@ -189,12 +189,13 @@ export async function PATCH(
       if (body[field] !== undefined) data[field] = body[field];
     });
 
-    if (body.callsign !== undefined || body.secondaryCallsign !== undefined || body.preferences !== undefined) {
+    if (body.callsign !== undefined || body.secondaryCallsign !== undefined || body.crew !== undefined || body.preferences !== undefined) {
       data.preferences = {
         ...asJsonObject(existingPersonnel.preferences),
         ...asJsonObject(body.preferences),
         ...(body.callsign !== undefined ? { callsign: body.callsign || null } : {}),
         ...(body.secondaryCallsign !== undefined ? { secondaryCallsign: body.secondaryCallsign || null } : {}),
+        ...(body.crew !== undefined ? { crew: body.crew || null } : {}),
       };
     }
 

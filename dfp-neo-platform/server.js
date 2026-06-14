@@ -304,6 +304,13 @@ app.post('/api/personnel', async (req, res) => {
       }
     }
 
+    const preferences = {
+      ...(body.preferences && typeof body.preferences === 'object' && !Array.isArray(body.preferences) ? body.preferences : {}),
+      ...(body.callsign !== undefined ? { callsign: body.callsign || null } : {}),
+      ...(body.secondaryCallsign !== undefined ? { secondaryCallsign: body.secondaryCallsign || null } : {}),
+      ...(body.crew !== undefined ? { crew: body.crew || null } : {}),
+    };
+
     const newPersonnel = await db.personnel.create({
       data: {
         name: body.name || '',
@@ -327,6 +334,7 @@ app.post('/api/personnel', async (req, res) => {
         isTestingOfficer: body.isTestingOfficer || false,
         isContractor: body.isContractor || false,
         isAdminStaff: body.isAdminStaff || false,
+        preferences,
         isActive: true,
         userId: linkedUserId,
       }
@@ -2827,6 +2835,16 @@ app.patch('/api/personnel/:id', async (req, res) => {
 
     for (const field of allowedFields) {
       if (field in body) updateData[field] = body[field];
+    }
+
+    if ('crew' in body) {
+      const incomingPreferences = body.preferences && typeof body.preferences === 'object' && !Array.isArray(body.preferences)
+        ? body.preferences
+        : {};
+      updateData.preferences = {
+        ...incomingPreferences,
+        crew: body.crew || null,
+      };
     }
 
     const personnel = await db.personnel.update({

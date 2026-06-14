@@ -3225,6 +3225,7 @@ const normalisePersonnelRecord = (person: any): any => {
         role: unitCode === '77SQN' ? 'Pilot' : person?.role,
         callsign: person?.callsign || preferences.callsign || '',
         secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || '',
+        crew: person?.crew || preferences.crew || '',
     };
 };
 
