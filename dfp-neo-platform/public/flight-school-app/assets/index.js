@@ -67035,28 +67035,36 @@ const isOverlapping = (f1, f2) => {
 };
 const getPersonnel = (event) => {
   const personnel = /* @__PURE__ */ new Set();
+  const addPersonnel = (name) => {
+    if (!isPlaceholderPersonnelName(name)) personnel.add(name || "");
+  };
   const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = event.flightNumber?.startsWith("SCT");
   if (isTaskingEvent2) {
-    if (event.pilot) personnel.add(event.pilot);
-    if (event.crew) personnel.add(event.crew);
-    if (event.instructor) personnel.add(event.instructor);
+    if (event.pilot) addPersonnel(event.pilot);
+    if (event.crew) addPersonnel(event.crew);
+    if (event.instructor) addPersonnel(event.instructor);
   } else if (isSctEvent) {
-    if (event.pilot) personnel.add(event.pilot);
-    if (event.crew) personnel.add(event.crew);
+    if (event.pilot) addPersonnel(event.pilot);
+    if (event.crew) addPersonnel(event.crew);
   } else if (event.flightType === "Solo") {
-    if (event.pilot) personnel.add(event.pilot);
+    if (event.pilot) addPersonnel(event.pilot);
   } else {
-    if (event.instructor) personnel.add(event.instructor);
-    else if (event.pilot) personnel.add(event.pilot);
-    if (event.crew && !event.student) personnel.add(event.crew);
-    if (event.student) personnel.add(event.student);
+    if (event.instructor) addPersonnel(event.instructor);
+    else if (event.pilot) addPersonnel(event.pilot);
+    if (event.crew && !event.student) addPersonnel(event.crew);
+    if (event.student) addPersonnel(event.student);
   }
-  if (event.attendees) event.attendees.forEach((p) => personnel.add(p));
+  if (event.attendees) event.attendees.forEach(addPersonnel);
   if (event.groupTraineeIds && event.groupTraineeIds.length > 0) ;
   return Array.from(personnel);
 };
 const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+const PLACEHOLDER_PERSONNEL_NAMES = /* @__PURE__ */ new Set(["tba", "to be advised", "multiple", "group"]);
+const isPlaceholderPersonnelName = (name) => {
+  const normalizedName = (name || "").replace(/\s+/g, " ").trim().toLowerCase();
+  return !normalizedName || PLACEHOLDER_PERSONNEL_NAMES.has(normalizedName);
+};
 const normalizePersonnelNameForMatch = (name) => (name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
 const personnelNamesMatch = (a, b) => {
   const left = normalizePersonnelNameForMatch(a);
@@ -67098,6 +67106,7 @@ const markNeoBuildTiming = (report, name, details) => {
   saveNeoBuildTimingReport(report);
 };
 const makePersonnelIdentityRef = (label, role) => {
+  if (isPlaceholderPersonnelName(label)) return null;
   const normalizedName = normalizePersonnelNameForMatch(label);
   if (!normalizedName) return null;
   return {
@@ -81551,6 +81560,7 @@ ${"=".repeat(60)}`);
       return conflictingEventIds;
     }
     const eventsForConflictCheck = eventsForDate.map((event) => {
+      if (isStbyFlightLineEvent(event) && event.flightType !== "Solo") return event;
       if (event.pilot) return event;
       if (event.instructor) return { ...event, pilot: event.instructor };
       if (event.student) return { ...event, pilot: event.student };

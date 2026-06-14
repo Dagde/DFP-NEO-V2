@@ -3263,30 +3263,33 @@ const isOverlapping = (f1: Omit<ScheduleEvent, 'date'>, f2: Omit<ScheduleEvent, 
 
 const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): string[] => {
     const personnel = new Set<string>();
+    const addPersonnel = (name?: string) => {
+        if (!isPlaceholderPersonnelName(name)) personnel.add(name || '');
+    };
 
     const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
     const isSctEvent = event.flightNumber?.startsWith('SCT');
 
     if (isTaskingEvent) {
-        if (event.pilot) personnel.add(event.pilot);
-        if (event.crew) personnel.add(event.crew);
-        if (event.instructor) personnel.add(event.instructor);
+        if (event.pilot) addPersonnel(event.pilot);
+        if (event.crew) addPersonnel(event.crew);
+        if (event.instructor) addPersonnel(event.instructor);
     } else if (isSctEvent) {
         // For SCT events: pilot (PIC) + crew (second pilot)
-        if (event.pilot) personnel.add(event.pilot);
-        if (event.crew) personnel.add(event.crew);
+        if (event.pilot) addPersonnel(event.pilot);
+        if (event.crew) addPersonnel(event.crew);
     } else if (event.flightType === 'Solo') {
-        if (event.pilot) personnel.add(event.pilot);
+        if (event.pilot) addPersonnel(event.pilot);
     } else {
         // For non-SCT Dual training events, the instructor field is authoritative.
         // The pilot field is a legacy mirror of instructor and may be stale after crew swaps.
-        if (event.instructor) personnel.add(event.instructor);
-        else if (event.pilot) personnel.add(event.pilot);
-        if (event.crew && !event.student) personnel.add(event.crew);
-        if (event.student) personnel.add(event.student);
+        if (event.instructor) addPersonnel(event.instructor);
+        else if (event.pilot) addPersonnel(event.pilot);
+        if (event.crew && !event.student) addPersonnel(event.crew);
+        if (event.student) addPersonnel(event.student);
     }
 
-    if (event.attendees) event.attendees.forEach(p => personnel.add(p));
+    if (event.attendees) event.attendees.forEach(addPersonnel);
     if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
         // In a real app you'd resolve these IDs to names, but for conflict checks, the presence of people is enough.
         // For now, let's assume if there are group IDs, the main people are already in instructor/student fields for conflict checks.
@@ -3296,6 +3299,13 @@ const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): strin
 };
 
 const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+
+const PLACEHOLDER_PERSONNEL_NAMES = new Set(['tba', 'to be advised', 'multiple', 'group']);
+
+const isPlaceholderPersonnelName = (name?: string): boolean => {
+    const normalizedName = (name || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    return !normalizedName || PLACEHOLDER_PERSONNEL_NAMES.has(normalizedName);
+};
 
 const normalizePersonnelNameForMatch = (name?: string): string =>
     (name || '')
@@ -3381,6 +3391,7 @@ interface PersonnelIdentityRef {
 }
 
 const makePersonnelIdentityRef = (label: string | undefined, role: PersonnelIdentityRole): PersonnelIdentityRef | null => {
+    if (isPlaceholderPersonnelName(label)) return null;
     const normalizedName = normalizePersonnelNameForMatch(label);
     if (!normalizedName) return null;
     return {
@@ -21593,6 +21604,7 @@ const App: React.FC = () => {
         // console.log('🔴 Total events to check:', eventsForDate.length);
         // Ensure events have a pilot for conflict checks without mutating the published schedule.
         const eventsForConflictCheck = eventsForDate.map(event => {
+            if (isStbyFlightLineEvent(event) && event.flightType !== 'Solo') return event;
             if (event.pilot) return event;
             if (event.instructor) return { ...event, pilot: event.instructor };
             if (event.student) return { ...event, pilot: event.student };
