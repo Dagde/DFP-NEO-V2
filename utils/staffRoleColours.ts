@@ -20,6 +20,9 @@ const STABLE_ROLE_COLOUR_OVERRIDES: Record<string, string> = {
   loadmaster: 'text-amber-300',
   'airborne mission commander': 'text-violet-300',
   'flight engineer': 'text-rose-300',
+  mpro: 'text-amber-300',
+  ewo: 'text-rose-300',
+  aea: 'text-cyan-300',
   crew: 'text-cyan-300',
   trainee: 'text-lime-300',
 };
