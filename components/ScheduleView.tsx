@@ -149,6 +149,13 @@ const checkIsChanged = (event: ScheduleEvent, baselineEvents: ScheduleEvent[] | 
     );
 };
 
+const getLocalDateString = (date: Date = new Date()): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const getResourceCategory = (res: string) => {
     if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'PC-21';
     if (res.startsWith('STBY')) return 'STBY';
@@ -1046,7 +1053,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 }
 
                 const isSelected = selectedEventIds.has(event.id);
-                const isChanged = checkIsChanged(event, baselineEvents);
+                const shouldShowChangeBarsForDate = date === getLocalDateString();
+                const isChanged = shouldShowChangeBarsForDate && checkIsChanged(event, baselineEvents);
                 // Stay highlighted as long as event is in pauseCompletedEventIds (not just during selection mode)
                 const isPauseCompleted = !!(pauseCompletedEventIds?.size && pauseCompletedEventIds.has(event.id));
 

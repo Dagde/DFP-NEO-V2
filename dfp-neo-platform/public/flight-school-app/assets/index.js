@@ -7940,6 +7940,12 @@ const checkIsChanged = (event, baselineEvents) => {
   if (Math.abs(event.duration - baseline.duration) > epsilon) return true;
   return event.resourceId !== baseline.resourceId || event.instructor !== baseline.instructor || event.student !== baseline.student || event.pilot !== baseline.pilot || (event.area || "") !== (baseline.area || "");
 };
+const getLocalDateString = (date = /* @__PURE__ */ new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 const getResourceCategory$1 = (res) => {
   if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "PC-21";
   if (res.startsWith("STBY")) return "STBY";
@@ -8729,7 +8735,8 @@ const ScheduleView = ({
           }
         }
         const isSelected = selectedEventIds.has(event.id);
-        const isChanged = checkIsChanged(event, baselineEvents);
+        const shouldShowChangeBarsForDate = date === getLocalDateString();
+        const isChanged = shouldShowChangeBarsForDate && checkIsChanged(event, baselineEvents);
         const isPauseCompleted = !!(pauseCompletedEventIds?.size && pauseCompletedEventIds.has(event.id));
         const alertEntry = alertsData?.[event.id];
         let alertStatus = null;
@@ -33148,7 +33155,7 @@ const ACHistoryAircraftAvailability = ({
   const refreshTodaysAverage = async () => {
     setTodaysAverageLoading(true);
     try {
-      const today = getLocalDateString();
+      const today = getLocalDateString2();
       console.log(`[AV-REFRESH] Refreshing average for date: ${today}, local time: ${(/* @__PURE__ */ new Date()).getHours()}:${(/* @__PURE__ */ new Date()).getMinutes()}`);
       const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
         method: "POST",
@@ -33240,7 +33247,7 @@ const ACHistoryAircraftAvailability = ({
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   };
-  const getLocalDateString = (d = /* @__PURE__ */ new Date()) => {
+  const getLocalDateString2 = (d = /* @__PURE__ */ new Date()) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
@@ -33322,7 +33329,7 @@ const ACHistoryAircraftAvailability = ({
     const fetchTodaysAverage = async () => {
       setTodaysAverageLoading(true);
       try {
-        const today = getLocalDateString();
+        const today = getLocalDateString2();
         console.log(`[AV-FETCH] Fetching average for date: ${today}, local time: ${(/* @__PURE__ */ new Date()).getHours()}:${(/* @__PURE__ */ new Date()).getMinutes()}`);
         const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
           method: "POST",
@@ -33360,7 +33367,7 @@ const ACHistoryAircraftAvailability = ({
         }
       } catch (err) {
         console.error("Failed to fetch today's average:", err);
-        const today = getLocalDateString();
+        const today = getLocalDateString2();
         const localAvg = computeAverageFromLocalStorage(today);
         if (localAvg !== null) {
           setTodaysAverageWithMetadata({
@@ -33382,7 +33389,7 @@ const ACHistoryAircraftAvailability = ({
   }, [timezoneOffset, dayFlyingStart, dayFlyingEnd]);
   reactExports.useEffect(() => {
     const timeoutId = setTimeout(async () => {
-      const today = getLocalDateString();
+      const today = getLocalDateString2();
       try {
         const res = await fetch("/api/aircraft-availability-recalculate", {
           method: "POST",
@@ -48629,7 +48636,7 @@ const generateDataSet = (location) => {
   });
   const allocatedTrainees = allocateInstructors(trainees, instructors);
   const scores = simulateProgressAndScores(allocatedTrainees, INITIAL_SYLLABUS_DETAILS, instructors);
-  const getLocalDateString = (date = /* @__PURE__ */ new Date()) => {
+  const getLocalDateString2 = (date = /* @__PURE__ */ new Date()) => {
     const timezoneOffset = 11;
     const offsetMs = timezoneOffset * 60 * 60 * 1e3;
     const adjustedDate = new Date(date.getTime() + offsetMs);
@@ -48638,7 +48645,7 @@ const generateDataSet = (location) => {
     const day = String(adjustedDate.getUTCDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
-  const todayStr = getLocalDateString();
+  const todayStr = getLocalDateString2();
   let events = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
   const historicalEvents = generateHistoricalEvents(instructors, allocatedTrainees, INITIAL_SYLLABUS_DETAILS);
   events = [...events, ...historicalEvents];
@@ -77233,7 +77240,7 @@ const App = () => {
   reactExports.useEffect(() => {
     writeTileStatusSettingsToLocalStorage(tileStatusSettings);
   }, [tileStatusSettings]);
-  const getLocalDateString = (date2 = /* @__PURE__ */ new Date()) => {
+  const getLocalDateString2 = (date2 = /* @__PURE__ */ new Date()) => {
     const offsetMs = timezoneOffset * 60 * 60 * 1e3;
     const adjustedDate = new Date(date2.getTime() + offsetMs);
     const year = adjustedDate.getUTCFullYear();
@@ -77241,7 +77248,7 @@ const App = () => {
     const day = String(adjustedDate.getUTCDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
-  const isPastDfpDate = (targetDate) => Boolean(targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) && targetDate < getLocalDateString());
+  const isPastDfpDate = (targetDate) => Boolean(targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) && targetDate < getLocalDateString2());
   const denyPastDfpEdit = (action = "modify this DFP") => {
     showDarkAlert2(
       `Past DFPs are locked. You cannot ${action} for ${date}.`,
@@ -77329,7 +77336,7 @@ const App = () => {
       }
     } catch (e) {
     }
-    return getLocalDateString();
+    return getLocalDateString2();
   });
   const isViewingPastDfp = isPastDfpDate(date);
   const [events, setEvents] = reactExports.useState([]);
@@ -79394,7 +79401,7 @@ const App = () => {
   const aircraftConfigLabelsByResource = reactExports.useMemo(() => {
     const snapshotKey = getDailySnapshotKey(date);
     const dateConfigState = aircraftConfigStateByDate[snapshotKey];
-    const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getLocalDateString();
+    const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getLocalDateString2();
     return buildAircraftConfigLabelsByResource(isFutureBuildDate ? currentAircraftConfigState : dateConfigState || currentAircraftConfigState);
   }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date, timezoneOffset]);
   const nextDayBuildAircraftConfigLabelsByResource = reactExports.useMemo(() => buildAircraftConfigLabelsByResource(currentAircraftConfigState), [buildAircraftConfigLabelsByResource, currentAircraftConfigState]);
@@ -80593,7 +80600,7 @@ ${"=".repeat(60)}`);
     }
   }, [date]);
   reactExports.useEffect(() => {
-    const currentDateStr = getLocalDateString();
+    const currentDateStr = getLocalDateString2();
     if (date !== currentDateStr) {
       console.log("📅 Updating current date from", date, "to", currentDateStr, "due to timezone change");
       setDate(currentDateStr);
@@ -80609,8 +80616,8 @@ ${"=".repeat(60)}`);
     const updateBuildDate = () => {
       const tomorrow = /* @__PURE__ */ new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = getLocalDateString(tomorrow);
-      const todayStr = getLocalDateString();
+      const tomorrowStr = getLocalDateString2(tomorrow);
+      const todayStr = getLocalDateString2();
       if (buildDfpDate <= todayStr) {
         console.log("Advancing build DFP date from", buildDfpDate, "to", tomorrowStr, "(was past/today)");
         setBuildDfpDate(tomorrowStr);
@@ -81824,7 +81831,7 @@ ${"=".repeat(60)}`);
       setShowInfoNotification("Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.");
       return;
     }
-    const today = getLocalDateString();
+    const today = getLocalDateString2();
     const isDashboard = view2 === "MyDashboard" || view2 === "SupervisorDashboard";
     if (isDashboard && date !== today) {
       setDate(today);
@@ -82024,7 +82031,7 @@ ${"=".repeat(60)}`);
   }, [activeView, eventForPt051, selectedTraineeForHateSheet, loadedPt051Keys, loadPersistedPt051Assessment]);
   const buildPt051EventFromLmpItem = (trainee, item) => {
     const eventType = item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.includes("CPT") ? "cpt" : "ground";
-    const eventDate = getLocalDateString();
+    const eventDate = getLocalDateString2();
     const duration = item.totalEventHours || item.duration || item.flightOrSimHours || 1;
     return {
       id: `lmp-${trainee.id || trainee.idNumber}-${item.code}`,
@@ -82135,7 +82142,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const buildAirCombatTrainingReportEventFromItem = (staff, assignment, item) => {
     const eventType = item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.includes("CPT") ? "cpt" : "ground";
-    const eventDate = getLocalDateString();
+    const eventDate = getLocalDateString2();
     const duration = item.totalEventHours || item.duration || item.flightOrSimHours || 1;
     const stableStaffId = staff.id || staff.idNumber;
     const stableEventId = item.id || item.code;
@@ -82273,7 +82280,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       eventCode: eventCode2,
       eventDescription: matchingItem.eventDescription || sourceEvent.notes,
       eventType: matchingItem.type || sourceEvent.type,
-      date: sourceEvent.date || getLocalDateString(),
+      date: sourceEvent.date || getLocalDateString2(),
       startTime: sourceEvent.startTime,
       duration: sourceEvent.duration,
       resourceId: sourceEvent.resourceId,
@@ -82346,7 +82353,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
     setNextDayBuildEvents([]);
-    setBuildDfpDate(getLocalDateString(currentDate));
+    setBuildDfpDate(getLocalDateString2(currentDate));
   };
   const handleAddTrainee = reactExports.useCallback((newTrainee) => {
     setTraineesData((prev) => [...prev, newTrainee]);
@@ -85039,7 +85046,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
     console.log("🚀 [NEO-Build] handleBuildDfp called");
     console.log("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
-    const todayStr = getLocalDateString();
+    const todayStr = getLocalDateString2();
     console.log("🚀 [NEO-Build] todayStr:", todayStr);
     console.log("🚀 [NEO-Build] Date comparison:", buildDfpDate, "<=", todayStr, "=", buildDfpDate <= todayStr);
     if (buildDfpDate <= todayStr) {
