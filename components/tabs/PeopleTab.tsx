@@ -18,6 +18,7 @@ interface PeopleTabProps {
   onNavigateAndSelectPerson: (name: string) => void;
   scores: Map<string, Score[]>;
   traineeLMPs: Map<string, SyllabusItemDetail[]>;
+  syllabusDetails?: SyllabusItemDetail[];
   courseColors: { [key: string]: string };
   resourceDisplayNames?: ResourceDisplayNames;
   operationalModel?: string;
@@ -36,6 +37,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
   onNavigateAndSelectPerson,
   scores,
   traineeLMPs,
+  syllabusDetails = [],
   courseColors,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   operationalModel,

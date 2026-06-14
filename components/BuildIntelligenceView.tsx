@@ -4,6 +4,7 @@ import PeopleTab from './tabs/PeopleTab';
 import CourseMetricsTab from './tabs/CourseMetricsTab';
 import BuildAnalyticsTab from './tabs/BuildAnalyticsTab';
 import TrainingIntelligenceTab from './tabs/TrainingIntelligenceTab';
+import AirCombatTrainingAnalyticsTab from './tabs/AirCombatTrainingAnalyticsTab';
 import BliTab from './tabs/BliTab';
 import AirCombatIntelligenceTab from './tabs/AirCombatIntelligenceTab';
 import ACHistoryIntelligencePanel from './ACHistoryIntelligencePanel';
@@ -186,6 +187,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 onNavigateAndSelectPerson={props.onNavigateAndSelectPerson}
                 scores={props.scores}
                 traineeLMPs={props.traineeLMPs}
+                syllabusDetails={props.syllabusDetails}
                 courseColors={props.courseColors}
                 resourceDisplayNames={resourceDisplayNames}
                 operationalModel={props.operationalModel}
@@ -244,7 +246,15 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
             )}
 
             {activeTab === 'managerial-analytics' && (
-              <TrainingIntelligenceTab />
+              isAirCombatModel ? (
+                <AirCombatTrainingAnalyticsTab
+                  instructorsData={props.instructorsData}
+                  syllabusDetails={props.syllabusDetails}
+                  operationalContext={props.operationalContext}
+                />
+              ) : (
+                <TrainingIntelligenceTab />
+              )
             )}
 
             {activeTab === 'bli' && (

@@ -3639,7 +3639,7 @@ const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
   courses: 60,
   trainingPackages: 40
 };
-const normaliseCode = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
 const AIR_COMBAT_ICO_PACKAGE_CODE = "ICO";
 const AIR_COMBAT_ICO_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
@@ -3655,7 +3655,7 @@ const getAuthoritativeSyllabusDuration = (item) => {
 const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
   if (!item || item.lmpType !== "Staff CAT") return false;
   const courses = Array.isArray(item.courses) ? item.courses : [];
-  return courses.some((course) => normaliseCode(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
+  return courses.some((course) => normaliseCode$1(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
 };
 const normaliseIntegratedCombatOperationsTiming = (item) => {
   if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
@@ -3682,10 +3682,10 @@ const normaliseSyllabusRuntimeTimings = (items) => items.map(normaliseSyllabusRu
 const getAirCombatTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getAirCombatTrainingKey = (kind, code, locationCode, unitCode) => [
   "air_combat",
-  normaliseCode(locationCode) || "GLOBAL",
-  normaliseCode(unitCode) || "GLOBAL",
+  normaliseCode$1(locationCode) || "GLOBAL",
+  normaliseCode$1(unitCode) || "GLOBAL",
   kind,
-  normaliseCode(code)
+  normaliseCode$1(code)
 ].join(":");
 const getAirCombatTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getAirCombatTrainingTitleFromItem = (item) => {
@@ -3695,8 +3695,8 @@ const getAirCombatTrainingTitleFromItem = (item) => {
 const getAirCombatAssignmentFromItem = (item, locationCode, unitCode, assignedBy) => {
   const kind = getAirCombatTrainingKindForLmpType(item.lmpType);
   const code = getAirCombatTrainingCodeFromItem(item);
-  const assignmentLocation = normaliseCode(locationCode || item.location);
-  const assignmentUnit = normaliseCode(unitCode || item.unit);
+  const assignmentLocation = normaliseCode$1(locationCode || item.location);
+  const assignmentUnit = normaliseCode$1(unitCode || item.unit);
   const trainingKey = getAirCombatTrainingKey(kind, code, assignmentLocation, assignmentUnit);
   return {
     assignmentId: trainingKey,
@@ -3717,8 +3717,8 @@ const normaliseAirCombatTrainingAssignments = (preferences) => {
   const normaliseList = (items, kind) => (Array.isArray(items) ? items : []).map((item) => {
     const code = String(item.code || "").trim();
     if (!code) return null;
-    const locationCode = normaliseCode(item.locationCode);
-    const unitCode = normaliseCode(item.unitCode);
+    const locationCode = normaliseCode$1(item.locationCode);
+    const unitCode = normaliseCode$1(item.unitCode);
     const trainingKey = String(item.trainingKey || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     return {
       assignmentId: String(item.assignmentId || trainingKey),
@@ -3807,8 +3807,8 @@ const normaliseAirCombatSchedulingWeights = (value) => {
     const kind = stream?.kind === "training_package" ? "training_package" : stream?.kind === "course" ? "course" : null;
     const code = String(stream?.code || "").trim();
     if (!kind || !code) return null;
-    const locationCode = normaliseCode(stream?.locationCode);
-    const unitCode = normaliseCode(stream?.unitCode);
+    const locationCode = normaliseCode$1(stream?.locationCode);
+    const unitCode = normaliseCode$1(stream?.unitCode);
     const key = String(stream?.key || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     const weight = Number(stream?.weight);
     return {
@@ -8021,7 +8021,7 @@ const ScheduleView = ({
   zoomLevel,
   showValidation,
   showPrePost,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   personnelData,
   seatConfigs,
   daylightTimes,
@@ -8195,12 +8195,12 @@ const ScheduleView = ({
   const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
     for (const eventToCheck of eventsToCheck) {
       if (eventToCheck.resourceId?.startsWith("STBY") || eventToCheck.type === "deployment") continue;
-      const s1 = syllabusDetails2.find((d) => d.id === eventToCheck.flightNumber);
+      const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
       const e1StartWithPre = eventToCheck.startTime - (s1?.preFlightTime || 0);
       const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + (s1?.postFlightTime || 0);
       for (const existingEvent of existingEvents) {
         if (existingEvent.resourceId?.startsWith("STBY") || existingEvent.type === "deployment") continue;
-        const s2 = syllabusDetails2.find((d) => d.id === existingEvent.flightNumber);
+        const s2 = syllabusDetails.find((d) => d.id === existingEvent.flightNumber);
         const e2StartWithPre = existingEvent.startTime - (s2?.preFlightTime || 0);
         const e2EndWithPost = existingEvent.startTime + existingEvent.duration + (s2?.postFlightTime || 0);
         if (e1StartWithPre < e2EndWithPost && e1EndWithPost > e2StartWithPre) {
@@ -8217,7 +8217,7 @@ const ScheduleView = ({
       }
     }
     return null;
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
     console.log("handleMouseDown called, event:", event?.id, "isMultiSelectMode:", isMultiSelectMode);
     console.log("Event target:", e.target);
@@ -9343,7 +9343,7 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   });
   return unavailabilityEvents;
 };
-const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails: syllabusDetails2, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel: operationalModel2, crewPositionTerminology, instructorLabel = "QFI" }) => {
+const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel: operationalModel2, crewPositionTerminology, instructorLabel = "QFI" }) => {
   console.log("🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:");
   console.log("  - date:", date);
   console.log("  - events count:", events?.length);
@@ -9357,7 +9357,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
   console.log("  - seatConfigs value:", seatConfigs);
   console.log("  - seatConfigs === undefined:", seatConfigs === void 0);
   console.log("  - seatConfigs === null:", seatConfigs === null);
-  console.log("  - syllabusDetails count:", syllabusDetails2?.length);
+  console.log("  - syllabusDetails count:", syllabusDetails?.length);
   console.log("  - conflictingEventIds size:", conflictingEventIds?.size);
   console.log("  - showValidation:", showValidation);
   console.log("  - unavailabilityConflicts size:", unavailabilityConflicts?.size);
@@ -9439,12 +9439,12 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
   }, [zoomLevel]);
   const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
     for (const eventToCheck of eventsToCheck) {
-      const s1 = syllabusDetails2.find((d) => d.id === eventToCheck.flightNumber);
+      const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
       if (!s1) continue;
       const e1StartWithPre = eventToCheck.startTime - s1.preFlightTime;
       const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + s1.postFlightTime;
       for (const existingEvent of existingEvents) {
-        const s2 = syllabusDetails2.find((d) => d.id === existingEvent.flightNumber);
+        const s2 = syllabusDetails.find((d) => d.id === existingEvent.flightNumber);
         if (!s2) continue;
         const e2StartWithPre = existingEvent.startTime - s2.preFlightTime;
         const e2EndWithPost = existingEvent.startTime + existingEvent.duration + s2.postFlightTime;
@@ -9462,7 +9462,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
       }
     }
     return null;
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
     if (e.button !== 0) return;
     didDragRef.current = false;
@@ -9798,17 +9798,17 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                     const currentEvent = instructorEventsForBars[i];
                     const prevEvent = instructorEventsForBars[i - 1];
                     const nextEvent = instructorEventsForBars[i + 1];
-                    const currentSyllabus = syllabusDetails2.find((d) => d.id === currentEvent.flightNumber);
+                    const currentSyllabus = syllabusDetails.find((d) => d.id === currentEvent.flightNumber);
                     if (!currentSyllabus) continue;
                     const hasPreConflict = prevEvent && (() => {
-                      const prevSyllabus = syllabusDetails2.find((d) => d.id === prevEvent.flightNumber);
+                      const prevSyllabus = syllabusDetails.find((d) => d.id === prevEvent.flightNumber);
                       if (!prevSyllabus) return false;
                       const prevPostEnd = prevEvent.startTime + prevEvent.duration + prevSyllabus.postFlightTime;
                       const currentPreStart = currentEvent.startTime - currentSyllabus.preFlightTime;
                       return prevPostEnd > currentPreStart;
                     })();
                     const hasPostConflict = nextEvent && (() => {
-                      const nextSyllabus = syllabusDetails2.find((d) => d.id === nextEvent.flightNumber);
+                      const nextSyllabus = syllabusDetails.find((d) => d.id === nextEvent.flightNumber);
                       if (!nextSyllabus) return false;
                       const currentPostEnd = currentEvent.startTime + currentEvent.duration + currentSyllabus.postFlightTime;
                       const nextPreStart = nextEvent.startTime - nextSyllabus.preFlightTime;
@@ -10043,7 +10043,7 @@ const createUnavailabilityEvents = (date, personnelData) => {
   });
   return unavailabilityEvents;
 };
-const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails: syllabusDetails2, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
+const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
@@ -10100,12 +10100,12 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
   }, [zoomLevel]);
   const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
     for (const eventToCheck of eventsToCheck) {
-      const s1 = syllabusDetails2.find((d) => d.id === eventToCheck.flightNumber);
+      const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
       if (!s1) continue;
       const e1StartWithPre = eventToCheck.startTime - s1.preFlightTime;
       const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + s1.postFlightTime;
       for (const existingEvent of existingEvents) {
-        const s2 = syllabusDetails2.find((d) => d.id === existingEvent.flightNumber);
+        const s2 = syllabusDetails.find((d) => d.id === existingEvent.flightNumber);
         if (!s2) continue;
         const e2StartWithPre = existingEvent.startTime - s2.preFlightTime;
         const e2EndWithPost = existingEvent.startTime + existingEvent.duration + s2.postFlightTime;
@@ -10123,7 +10123,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
       }
     }
     return null;
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
     if (e.button !== 0) return;
     didDragRef.current = false;
@@ -10418,17 +10418,17 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                     const currentEvent = traineeEventsForBars[i];
                     const prevEvent = traineeEventsForBars[i - 1];
                     const nextEvent = traineeEventsForBars[i + 1];
-                    const currentSyllabus = syllabusDetails2.find((d) => d.id === currentEvent.flightNumber);
+                    const currentSyllabus = syllabusDetails.find((d) => d.id === currentEvent.flightNumber);
                     if (!currentSyllabus) continue;
                     const hasPreConflict = prevEvent && (() => {
-                      const prevSyllabus = syllabusDetails2.find((d) => d.id === prevEvent.flightNumber);
+                      const prevSyllabus = syllabusDetails.find((d) => d.id === prevEvent.flightNumber);
                       if (!prevSyllabus) return false;
                       const prevPostEnd = prevEvent.startTime + prevEvent.duration + prevSyllabus.postFlightTime;
                       const currentPreStart = currentEvent.startTime - currentSyllabus.preFlightTime;
                       return prevPostEnd > currentPreStart;
                     })();
                     const hasPostConflict = nextEvent && (() => {
-                      const nextSyllabus = syllabusDetails2.find((d) => d.id === nextEvent.flightNumber);
+                      const nextSyllabus = syllabusDetails.find((d) => d.id === nextEvent.flightNumber);
                       if (!nextSyllabus) return false;
                       const currentPostEnd = currentEvent.startTime + currentEvent.duration + currentSyllabus.postFlightTime;
                       const nextPreStart = nextEvent.startTime - nextSyllabus.preFlightTime;
@@ -12316,7 +12316,7 @@ const MissedIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "
 const AcademicLmpTab = ({
   trainee,
   scores,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   allTraineesData,
   onOpenPt051ForLesson,
   canOpenPt051 = true,
@@ -12326,14 +12326,14 @@ const AcademicLmpTab = ({
   const academicSyllabus = reactExports.useMemo(() => {
     const academicLmpType2 = trainee.academicLmpType;
     if (!academicLmpType2) return [];
-    return syllabusDetails2.filter(
+    return syllabusDetails.filter(
       (s) => s.type === "Academics" && s.courses?.includes(academicLmpType2)
     ).sort((a, b) => {
       if (a.phase !== b.phase) return (a.phase || "").localeCompare(b.phase || "");
       if (a.module !== b.module) return (a.module || "").localeCompare(b.module || "");
       return (a.code || "").localeCompare(b.code || "");
     });
-  }, [syllabusDetails2, trainee.academicLmpType]);
+  }, [syllabusDetails, trainee.academicLmpType]);
   const completedLessonCodes = reactExports.useMemo(() => {
     const codes = /* @__PURE__ */ new Set();
     scores.forEach((s) => {
@@ -12418,11 +12418,11 @@ const AcademicLmpTab = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-700 text-xs mt-1", children: [
         "Total syllabus items loaded: ",
-        syllabusDetails2.length,
+        syllabusDetails.length,
         " | Academics type items: ",
-        syllabusDetails2.filter((s) => s.type === "Academics").length,
+        syllabusDetails.filter((s) => s.type === "Academics").length,
         " | Matching course: ",
-        syllabusDetails2.filter((s) => s.type === "Academics" && s.courses?.includes(academicLmpType)).length
+        syllabusDetails.filter((s) => s.type === "Academics" && s.courses?.includes(academicLmpType)).length
       ] })
     ] });
   }
@@ -12588,7 +12588,7 @@ const TraineeLmpView = ({
   traineeLmp,
   scores,
   onBack,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   allTraineesData,
   onOpenPt051ForLesson,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
@@ -12606,7 +12606,7 @@ const TraineeLmpView = ({
   const [activeTab, setActiveTab] = reactExports.useState("neo");
   const [showInsertEventModal, setShowInsertEventModal] = reactExports.useState(false);
   const [itemBeingEdited, setItemBeingEdited] = reactExports.useState(null);
-  const hasAcademicSyllabus = !!(syllabusDetails2 && syllabusDetails2.length > 0);
+  const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
   const completedEventIds = reactExports.useMemo(() => {
     const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
     traineeLmp.forEach((item) => {
@@ -12723,12 +12723,12 @@ const TraineeLmpView = ({
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-row overflow-hidden relative", children: [
       isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-      activeTab === "academic" && syllabusDetails2 && allTraineesData ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+      activeTab === "academic" && syllabusDetails && allTraineesData ? /* @__PURE__ */ jsxRuntimeExports.jsx(
         AcademicLmpTab,
         {
           trainee,
           scores,
-          syllabusDetails: syllabusDetails2,
+          syllabusDetails,
           allTraineesData,
           onOpenPt051ForLesson,
           canOpenPt051,
@@ -12936,7 +12936,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails: syllabusDetails2, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", embeddedInProfile = false }) => {
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", embeddedInProfile = false }) => {
   const reportTemplate = reactExports.useMemo(() => {
     const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
     const terminologyName = String(trainingReportTerminology?.name || "").trim();
@@ -13041,8 +13041,8 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
       currentEvent?.flightNumber,
       initialAssessment?.flightNumber
     ].map((code) => String(code || "").trim()).filter(Boolean);
-    return syllabusDetails2.find((item) => eventCodes.some((code) => String(item.code || "").trim() === code || String(item.id || "").trim() === code));
-  }, [event.eventCode, event.flightNumber, currentEvent?.eventCode, currentEvent?.flightNumber, initialAssessment?.flightNumber, syllabusDetails2]);
+    return syllabusDetails.find((item) => eventCodes.some((code) => String(item.code || "").trim() === code || String(item.id || "").trim() === code));
+  }, [event.eventCode, event.flightNumber, currentEvent?.eventCode, currentEvent?.flightNumber, initialAssessment?.flightNumber, syllabusDetails]);
   const assessmentStructure = reactExports.useMemo(
     () => buildAssessmentStructure(syllabusEvent?.assessedElements),
     [syllabusEvent?.assessedElements]
@@ -13103,7 +13103,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const recentPerformanceHistory = reactExports.useMemo(() => {
     const history = [];
     const isFlightOrFtd = (eventName) => {
-      const detail = syllabusDetails2.find((d) => d.id === eventName || d.code === eventName);
+      const detail = syllabusDetails.find((d) => d.id === eventName || d.code === eventName);
       if (detail) {
         return detail.type === "Flight" || detail.type === "FTD";
       }
@@ -13140,7 +13140,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     history.sort((a, b) => b.timestamp - a.timestamp);
     const currentEventTime = new Date(event.date).getTime();
     return history.filter((h) => h.timestamp < currentEventTime);
-  }, [lmpScores, pt051Assessments, trainee.fullName, syllabusDetails2, event.date, event.id]);
+  }, [lmpScores, pt051Assessments, trainee.fullName, syllabusDetails, event.date, event.id]);
   recentPerformanceHistory.length > 0 ? recentPerformanceHistory[0] : null;
   const shouldRepeatForGrade = (grade) => {
     if (typeof grade !== "number") return false;
@@ -13338,7 +13338,7 @@ ${commentFields[key]}`).join("\n\n");
   const getEventDescription = () => {
     const eventNum = (event.flightNumber || assessment.flightNumber || "").trim();
     const normaliseCode2 = (value) => (value || "").replace(/\s+/g, "").toLowerCase();
-    const syllabusDetail = syllabusDetails2.find((d) => {
+    const syllabusDetail = syllabusDetails.find((d) => {
       const id = (d.id || "").trim();
       const code = (d.code || "").trim();
       return id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase() || normaliseCode2(id) === normaliseCode2(eventNum) || normaliseCode2(code) === normaliseCode2(eventNum);
@@ -13673,9 +13673,9 @@ This action cannot be undone.`;
                 /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white", children: (() => {
                   const eventNum = (event.flightNumber || "").trim();
                   console.log("🔍 Event Description Debug - Event Number:", eventNum);
-                  console.log("🔍 Event Description Debug - syllabusDetails count:", syllabusDetails2.length);
-                  console.log("🔍 Event Description Debug - First 5 syllabus items:", syllabusDetails2.slice(0, 5).map((d) => ({ id: d.id, code: d.code, title: d.title })));
-                  let syllabusDetail = syllabusDetails2.find((d) => {
+                  console.log("🔍 Event Description Debug - syllabusDetails count:", syllabusDetails.length);
+                  console.log("🔍 Event Description Debug - First 5 syllabus items:", syllabusDetails.slice(0, 5).map((d) => ({ id: d.id, code: d.code, title: d.title })));
+                  let syllabusDetail = syllabusDetails.find((d) => {
                     const id = (d.id || "").trim();
                     const code = (d.code || "").trim();
                     if (id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase()) {
@@ -14222,7 +14222,7 @@ const TraineeProfileFlyout = ({
   personnelData,
   courseColors,
   scores,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   onNavigateToSyllabus,
   onNavigateToCurrency,
   locations,
@@ -14270,13 +14270,13 @@ const TraineeProfileFlyout = ({
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
   const allAcademicLmpCourses = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
-    syllabusDetails2.forEach((s) => {
+    syllabusDetails.forEach((s) => {
       if (s.type === "Academics" && s.courses) {
         s.courses.forEach((c) => courseCodes.add(c));
       }
     });
     return Array.from(courseCodes).sort();
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const card3d2 = "rounded-lg border border-gray-500/60 shadow-md";
   const card3dStyle2 = { background: "linear-gradient(180deg, #243044 0%, #1e2d42 60%)", boxShadow: "0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)" };
   const [activeTab, setActiveTab] = reactExports.useState(initialActiveTab);
@@ -14326,7 +14326,7 @@ const TraineeProfileFlyout = ({
   const [traineeCallsign, setTraineeCallsign] = reactExports.useState(trainee.traineeCallsign || "");
   const assignableMasterLmps = reactExports.useMemo(() => {
     const courseCodes = new Set(COURSE_MASTER_LMPS$1.filter((lmp) => lmp !== "Staff CAT"));
-    syllabusDetails2.forEach((s) => {
+    syllabusDetails.forEach((s) => {
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
     });
@@ -14335,7 +14335,7 @@ const TraineeProfileFlyout = ({
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig, syllabusDetails2, trainee.unit, unit]);
+  }, [platformConfig, syllabusDetails, trainee.unit, unit]);
   const academicLmpCourses = reactExports.useMemo(() => {
     const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
       unitCode: unit || trainee.unit,
@@ -14378,7 +14378,7 @@ const TraineeProfileFlyout = ({
     const sortedScores = [...traineeScores].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const lastEvt = sortedScores[0] || null;
     const lastFlt = sortedScores.find((score) => {
-      const syllabusItem = syllabusDetails2.find((item) => item.id === score.event);
+      const syllabusItem = syllabusDetails.find((item) => item.id === score.event);
       return syllabusItem?.type === "Flight";
     }) || null;
     return {
@@ -14387,7 +14387,7 @@ const TraineeProfileFlyout = ({
       daysSinceLastFlight: calculateDays(lastFlt?.date),
       daysSinceLastEvent: calculateDays(lastEvt?.date)
     };
-  }, [trainee.fullName, scores, syllabusDetails2]);
+  }, [trainee.fullName, scores, syllabusDetails]);
   const { nextEvent, subsequentEvent, nextEventReason } = reactExports.useMemo(() => {
     if (isCreating) return { nextEvent: null, subsequentEvent: null, nextEventReason: "New Trainee" };
     const traineeScores = scores.get(trainee.fullName) || [];
@@ -15145,7 +15145,7 @@ ${errorText || `HTTP ${response.status}`}`);
                     pt051Assessments: pt051Assessments || /* @__PURE__ */ new Map(),
                     events,
                     lmpScores: scores.get(trainee.fullName) || [],
-                    syllabusDetails: syllabusDetails2,
+                    syllabusDetails,
                     registerDirtyCheck,
                     phraseBank: activeTrainingReportPhraseBank,
                     currentUserPin: currentUserId || "1111",
@@ -16079,7 +16079,7 @@ const CourseRosterView = ({
   onAddTrainee,
   school,
   scores,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   onNavigateToSyllabus,
   onNavigateToCurrency,
   onAddRemedialPackage,
@@ -16219,7 +16219,7 @@ const CourseRosterView = ({
     }
     const traineeScores = scores.get(trainee.fullName) || [];
     const nonRemedialFlightFtdScores = traineeScores.filter((score) => {
-      const syllabusItem = syllabusDetails2.find((item) => item.id === score.event);
+      const syllabusItem = syllabusDetails.find((item) => item.id === score.event);
       return syllabusItem && (syllabusItem.type === "Flight" || syllabusItem.type === "FTD") && !syllabusItem.isRemedial;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     if (nonRemedialFlightFtdScores.length > 0) {
@@ -16398,7 +16398,7 @@ const CourseRosterView = ({
         personnelData,
         courseColors,
         scores,
-        syllabusDetails: syllabusDetails2,
+        syllabusDetails,
         onNavigateToSyllabus,
         onNavigateToCurrency,
         locations,
@@ -17247,8 +17247,8 @@ const TraineeScoresModal = ({ trainee, onClose }) => {
     }
   ) });
 };
-const getEventTypeFromSyllabus = (syllabusId, syllabusDetails2) => {
-  const detail = syllabusDetails2.find((d) => d.id === syllabusId);
+const getEventTypeFromSyllabus = (syllabusId, syllabusDetails) => {
+  const detail = syllabusDetails.find((d) => d.id === syllabusId);
   if (!detail) {
     if (syllabusId.includes("FTD")) return "ftd";
     if (syllabusId.includes("CPT") || syllabusId.includes("MB") || syllabusId.includes("TUT") || syllabusId.includes("QUIZ")) return "ground";
@@ -17276,7 +17276,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails: syllabusDetails2, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel: operationalModel2, personnelDisplaySettings, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel: operationalModel2, personnelDisplaySettings, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -17417,7 +17417,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (!traineeLMPs || !selectedTraineeNameForLmp) return null;
     return traineeLMPs.get(selectedTraineeNameForLmp) || null;
   }, [selectedTraineeNameForLmp, traineeLMPs]);
-  const getSyllabusItemForOption = (option) => selectedIndividualLmp?.find((item) => item.id === option || item.code === option) || syllabusDetails2.find((item) => item.id === option || item.code === option);
+  const getSyllabusItemForOption = (option) => selectedIndividualLmp?.find((item) => item.id === option || item.code === option) || syllabusDetails.find((item) => item.id === option || item.code === option);
   const formatSyllabusOptionLabel = (option) => {
     if (option === "SCT FORM") return option;
     const item = getSyllabusItemForOption(option);
@@ -17430,12 +17430,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (eventCategory === "sct") {
       options = sctEvents;
     } else if (eventCategory === "lmp_event" || eventCategory === "lmp_currency") {
-      const lmpSource = selectedIndividualLmp?.length ? selectedIndividualLmp : syllabusDetails2.filter((item) => item.lmpType === "Master LMP" || !item.lmpType);
+      const lmpSource = selectedIndividualLmp?.length ? selectedIndividualLmp : syllabusDetails.filter((item) => item.lmpType === "Master LMP" || !item.lmpType);
       options = lmpSource.map((item) => item.id || item.code).filter(Boolean);
     } else if (eventCategory === "staff_cat") {
-      options = syllabusDetails2.filter((item) => item.lmpType === "Staff CAT").map((item) => item.id);
+      options = syllabusDetails.filter((item) => item.lmpType === "Staff CAT").map((item) => item.id);
     } else if (eventCategory === "twr_di") {
-      options = syllabusDetails2.map((item) => item.id);
+      options = syllabusDetails.map((item) => item.id);
     } else {
       options = dynamicSyllabusOptions;
     }
@@ -17446,7 +17446,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       options = [flightNumber, ...options];
     }
     return options;
-  }, [eventCategory, sctEvents, syllabusDetails2, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber]);
+  }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber]);
   const staffInstructorsByUnit = reactExports.useMemo(() => {
     const traineeNames = new Set(traineesData.map((t) => t.fullName));
     const staffOnly = instructorList.filter((name) => !traineeNames.has(name));
@@ -17539,7 +17539,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           else if (evt.type === "ftd") stats[person].ftdCount++;
           else if (evt.type === "cpt") stats[person].cptCount++;
           else if (evt.type === "ground") stats[person].groundCount++;
-          const syllabusItem = syllabusDetails2.find((s) => s.id === evt.flightNumber);
+          const syllabusItem = syllabusDetails.find((s) => s.id === evt.flightNumber);
           const preFlightHours = syllabusItem?.preFlightTime || 0;
           const eventStartTime = evt.startTime - preFlightHours;
           if (!stats[person].startTime || eventStartTime < parseFloat(stats[person].startTime.replace(":", "."))) {
@@ -17551,7 +17551,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       });
     });
     return stats;
-  }, [eventsForDate, instructorList, traineeList, instructorsData, traineesData, syllabusDetails2]);
+  }, [eventsForDate, instructorList, traineeList, instructorsData, traineesData, syllabusDetails]);
   const renderStaffInstructorDropdown = (value, onChange, label = "Instructor", disabled = false, includePax = false) => {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
@@ -17650,7 +17650,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         setCrew((prev) => prev.map((c) => ({ ...c, flightType: syllabusItem.flightType })));
       }
     }
-  }, [flightNumber, eventCategory, syllabusDetails2, selectedIndividualLmp]);
+  }, [flightNumber, eventCategory, syllabusDetails, selectedIndividualLmp]);
   reactExports.useEffect(() => {
     if (isAddingTile || isEditingDefault && (!event.id || event.id.startsWith("2d1b6a22"))) {
       console.log(`📝 [Flight Number Change] isAddingTile: ${isAddingTile}, isEditingDefault: ${isEditingDefault}, event.id: ${event.id}, flightNumber: ${flightNumber}`);
@@ -17800,8 +17800,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     }
   }, [aircraftCount, flightNumber, crew, eventCategory]);
   reactExports.useEffect(() => {
-    setEventType(getEventTypeFromSyllabus(flightNumber, syllabusDetails2));
-  }, [flightNumber, syllabusDetails2]);
+    setEventType(getEventTypeFromSyllabus(flightNumber, syllabusDetails));
+  }, [flightNumber, syllabusDetails]);
   const getCurrentDeployments = () => {
     const deployments = [];
     const targetDate = event.date;
@@ -17899,7 +17899,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         const sctOptions = instructorScts.map((req) => req.event);
         setDynamicSyllabusOptions(sctOptions);
         setFlightNumber(sctOptions[0]);
-        const detail = syllabusDetails2.find((d) => d.id === sctOptions[0]);
+        const detail = syllabusDetails.find((d) => d.id === sctOptions[0]);
         if (detail) {
           setDuration(detail.duration);
         }
@@ -17913,7 +17913,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (!event.flightNumber && isOracleContext) {
       setFlightNumber("");
     }
-  }, [crew, isOracleContext, oracleContextForModal, sctRequests, syllabus, syllabusDetails2, event.flightNumber]);
+  }, [crew, isOracleContext, oracleContextForModal, sctRequests, syllabus, syllabusDetails, event.flightNumber]);
   reactExports.useEffect(() => {
     const handleClickOutside = (e) => {
       if (groupInputRef.current && !groupInputRef.current.contains(e.target)) {
@@ -20386,7 +20386,7 @@ const AddFlightTileModal = ({
   onSave,
   instructors,
   trainees,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   school,
   traineesData,
   instructorsData,
@@ -20644,7 +20644,7 @@ const AddFlightTileModal = ({
   }, [picName, studentName, flightType, traineesData, courseColors, eventCategory]);
   const syllabusByCourse = reactExports.useMemo(() => {
     const grouped = /* @__PURE__ */ new Map();
-    const flightItems = syllabusDetails2.filter(
+    const flightItems = syllabusDetails.filter(
       (d) => d.type === "Flight" || d.type === "flight" || !d.type && !d.id?.includes("FTD") && !d.id?.includes("CPT")
     );
     flightItems.forEach((item) => {
@@ -20668,7 +20668,7 @@ const AddFlightTileModal = ({
     };
     grouped.forEach((items, c) => grouped.set(c, items.sort((a, b) => natSort(a.code || a.id || "", b.code || b.id || ""))));
     return grouped;
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const courseOptions = reactExports.useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
     return ["SCT", ...courses.filter((c) => c !== "SCT")];
@@ -20780,7 +20780,7 @@ const AddFlightTileModal = ({
     const selectedName = flightType === "Solo" ? picName : studentName;
     const matchesCode = (item) => item.id === code || item.code === code;
     const selectedLmpItem = selectedName ? traineeLMPs?.get(selectedName)?.find(matchesCode) : void 0;
-    const masterSyllabusItem = syllabusDetails2.find(matchesCode);
+    const masterSyllabusItem = syllabusDetails.find(matchesCode);
     const durationSource = selectedLmpItem || masterSyllabusItem;
     const resolved = [durationSource?.duration, durationSource?.flightOrSimHours, fallback].map((value) => Number(value)).find((value) => Number.isFinite(value) && value > 0);
     return resolved;
@@ -21649,7 +21649,7 @@ function getTraineeStatus(trainee, events, date) {
   return { status: "available" };
 }
 const AcademicsTab = ({
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   allTraineesByCourse,
   traineesData,
   scores,
@@ -21755,15 +21755,15 @@ Do you still want to include them in this academic session?`
   };
   const academicLmpCourses = reactExports.useMemo(() => {
     const courseCodeSet = /* @__PURE__ */ new Set();
-    syllabusDetails2.forEach((s) => {
+    syllabusDetails.forEach((s) => {
       (s.courses || []).forEach((c) => courseCodeSet.add(c));
     });
     return Array.from(courseCodeSet).map((code) => {
-      const firstItem = syllabusDetails2.find((s) => s.courses?.includes(code));
+      const firstItem = syllabusDetails.find((s) => s.courses?.includes(code));
       const title = firstItem?.module?.trim() || code;
       return { code, title };
     }).sort((a, b) => a.title.localeCompare(b.title));
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const [selectedAcademicLmp, setSelectedAcademicLmp] = reactExports.useState(() => persistedAcademicLmp || "");
   reactExports.useEffect(() => {
     if (persistedAcademicLmp && !selectedAcademicLmp) {
@@ -21779,8 +21779,8 @@ Do you still want to include them in this academic session?`
   }, [academicLmpCourses]);
   const academicSyllabus = reactExports.useMemo(() => {
     if (!selectedAcademicLmp) return [];
-    return syllabusDetails2.filter((s) => s.courses?.includes(selectedAcademicLmp));
-  }, [syllabusDetails2, selectedAcademicLmp]);
+    return syllabusDetails.filter((s) => s.courses?.includes(selectedAcademicLmp));
+  }, [syllabusDetails, selectedAcademicLmp]);
   const moduleGroups = reactExports.useMemo(() => groupByModule(academicSyllabus), [academicSyllabus]);
   const [tiles, setTiles] = reactExports.useState([]);
   const editTile = editTileId ? tiles.find((t) => t.id === editTileId) ?? null : null;
@@ -22504,7 +22504,7 @@ const AddGroundEventFlyout = ({
   allTraineesByCourse,
   instructors,
   traineesData,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   scores,
   traineeLMPs,
   events,
@@ -22773,7 +22773,7 @@ const AddGroundEventFlyout = ({
                 activeTab === "academics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
                   AcademicsTab,
                   {
-                    syllabusDetails: syllabusDetails2 || groundSyllabus,
+                    syllabusDetails: syllabusDetails || groundSyllabus,
                     allTraineesByCourse,
                     traineesData,
                     scores: scores || /* @__PURE__ */ new Map(),
@@ -23706,7 +23706,7 @@ const NextDayBuildView = ({
   showValidation,
   showPrePost,
   showDepartureDensityOverlay = false,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   personnelData,
   seatConfigs,
   daylightTimes,
@@ -23814,12 +23814,12 @@ const NextDayBuildView = ({
   }, [zoomLevel]);
   const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
     for (const eventToCheck of eventsToCheck) {
-      const s1 = syllabusDetails2.find((d) => d.id === eventToCheck.flightNumber);
+      const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
       if (!s1) continue;
       const e1StartWithPre = eventToCheck.startTime - (s1.preFlightTime || 0);
       const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + (s1.postFlightTime || 0);
       for (const existingEvent of existingEvents) {
-        const s2 = syllabusDetails2.find((d) => d.id === existingEvent.flightNumber);
+        const s2 = syllabusDetails.find((d) => d.id === existingEvent.flightNumber);
         if (!s2) continue;
         const e2StartWithPre = existingEvent.startTime - (s2.preFlightTime || 0);
         const e2EndWithPost = existingEvent.startTime + existingEvent.duration + (s2.postFlightTime || 0);
@@ -23837,7 +23837,7 @@ const NextDayBuildView = ({
       }
     }
     return null;
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
     if (e.button !== 0) return;
     didDragRef.current = false;
@@ -25092,7 +25092,7 @@ const PrioritiesView = ({
   onUpdateSctRequest,
   onSubmitSctRequest,
   onToggleSctInclude,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   scores = /* @__PURE__ */ new Map(),
   traineeLMPs = /* @__PURE__ */ new Map(),
   remedialRequests = [],
@@ -26087,7 +26087,7 @@ const PrioritiesView = ({
     const list = [];
     traineesData.forEach((t) => {
       if (t.isPaused) return;
-      const lmp = traineeLMPs.get(t.fullName) || syllabusDetails2;
+      const lmp = traineeLMPs.get(t.fullName) || syllabusDetails;
       const tScores = scores.get(t.fullName) || [];
       const completedIds = new Set(tScores.map((s) => s.event));
       lmp.forEach((item) => {
@@ -26097,7 +26097,7 @@ const PrioritiesView = ({
       });
     });
     return list.sort((a, b) => a.trainee.name.localeCompare(b.trainee.name));
-  }, [traineesData, traineeLMPs, scores, syllabusDetails2]);
+  }, [traineesData, traineeLMPs, scores, syllabusDetails]);
   const PriorityEventTable = ({ events }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
@@ -27538,6 +27538,7 @@ const PeopleTab = ({
   onNavigateAndSelectPerson,
   scores,
   traineeLMPs,
+  syllabusDetails = [],
   courseColors,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   operationalModel: operationalModel2,
@@ -27816,11 +27817,11 @@ const PeopleTab = ({
     if (String(item.code || "").toUpperCase().includes("CPT")) return "cpt";
     return "ground";
   };
-  const getTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
+  const getTrainingCodeFromItem2 = (item) => (item.courses || []).find(Boolean) || item.code || "";
   const matchesAirCombatAssignment = (item, kind, code, unitCode) => {
     const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
     if (itemKind !== kind) return false;
-    const itemCode = String(getTrainingCodeFromItem(item) || "").trim().toUpperCase();
+    const itemCode = String(getTrainingCodeFromItem2(item) || "").trim().toUpperCase();
     const assignmentCode = String(code || "").trim().toUpperCase();
     if (itemCode !== assignmentCode && !String(item.code || "").trim().toUpperCase().startsWith(assignmentCode)) return false;
     const itemUnit = String(item.unit || "").trim().toUpperCase();
@@ -28425,7 +28426,7 @@ const CourseMetricsTab = ({
   analysis,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorsData = [],
-  syllabusDetails: syllabusDetails2 = [],
+  syllabusDetails = [],
   operationalModel: operationalModel2,
   operationalContext
 }) => {
@@ -28434,27 +28435,28 @@ const CourseMetricsTab = ({
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
   }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
-  const getTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
+  const getTrainingCodeFromItem2 = (item) => (item.courses || []).find(Boolean) || item.code || "";
   const matchesAirCombatAssignment = (item, kind, code, unitCode) => {
     const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
     if (itemKind !== kind) return false;
-    const itemCode = String(getTrainingCodeFromItem(item) || "").trim().toUpperCase();
+    const itemCode = String(getTrainingCodeFromItem2(item) || "").trim().toUpperCase();
     const assignmentCode = String(code || "").trim().toUpperCase();
     if (itemCode !== assignmentCode && !String(item.code || "").trim().toUpperCase().startsWith(assignmentCode)) return false;
     const itemUnit = String(item.unit || "").trim().toUpperCase();
     const assignmentUnit = String("").trim().toUpperCase();
     return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
   };
+  const normaliseAirCombatStreamCode = (value) => {
+    const code = String(value || "").trim().toUpperCase();
+    if (code.startsWith("AA") || code.startsWith("ATA")) return "ATA";
+    if (code.startsWith("ICO") || code.startsWith("IC")) return "ICO";
+    return code.replace(/\d+$/, "") || code;
+  };
   const getAirCombatEventStreamCode = (event) => {
     const explicit = String(event.assignmentCode || event.taskingDisplayLabel || "").trim().toUpperCase();
-    if (explicit) return explicit;
+    if (explicit) return normaliseAirCombatStreamCode(explicit);
     const code = String(event.eventCode || event.flightNumber || "").trim().toUpperCase();
-    const match = code.match(/^([A-Z]+|[A-Z]+\d+)/);
-    if (!match) return code;
-    if (code.startsWith("ICO") || code.startsWith("IC")) return "ICO";
-    if (code.startsWith("AA")) return "AA";
-    if (code.startsWith("ATA")) return "ATA";
-    return match[1].replace(/\d+$/, "") || code;
+    return normaliseAirCombatStreamCode(code);
   };
   const getEventPeople2 = (event) => {
     const names = [
@@ -28506,7 +28508,7 @@ const CourseMetricsTab = ({
         stream.completedReports += 1;
       });
     });
-    syllabusDetails2.forEach((item) => {
+    syllabusDetails.forEach((item) => {
       streams.forEach((stream) => {
         if (matchesAirCombatAssignment(item, stream.kind, stream.code)) stream.syllabusItems += 1;
       });
@@ -28514,7 +28516,7 @@ const CourseMetricsTab = ({
     events.forEach((event) => {
       const eventStreamCode = getAirCombatEventStreamCode(event);
       streams.forEach((stream) => {
-        if (String(stream.code || "").toUpperCase() !== eventStreamCode) return;
+        if (normaliseAirCombatStreamCode(stream.code) !== eventStreamCode) return;
         stream.eventCount += 1;
         if (event.type === "flight") stream.eventsByType.flight += 1;
         else if (event.type === "ftd") stream.eventsByType.ftd += 1;
@@ -28526,7 +28528,7 @@ const CourseMetricsTab = ({
     return Array.from(streams.values()).sort(
       (left, right) => left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code)
     );
-  }, [activeUnitCodes, date, events, instructorsData, syllabusDetails2]);
+  }, [activeUnitCodes, date, events, instructorsData, syllabusDetails]);
   const traineeCourseLookup = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
     traineesData.forEach((t) => {
@@ -28591,75 +28593,84 @@ const CourseMetricsTab = ({
       availableTraineesPerCourse
     };
   }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
-  const airCombatCourseAnalysis = airCombatCourseStats.map((stream) => {
-    const possibleEvents = Math.max(stream.syllabusItems * Math.max(stream.staff.size, 1), stream.eventCount);
-    const schedulingEfficiency = possibleEvents > 0 ? stream.eventCount / possibleEvents * 100 : 0;
-    return {
-      courseName: `${stream.kind === "course" ? "Course" : "Package"} ${stream.code}`,
-      targetPercentage: 0,
-      actualPercentage: 0,
-      deviation: 0,
-      eventCount: stream.eventCount,
-      possibleEvents,
-      schedulingEfficiency,
-      eventsByType: stream.eventsByType,
-      limitingFactors: {
-        insufficientInstructors: 0,
-        noAircraftSlots: 0,
-        noFtdSlots: 0,
-        noCptSlots: 0,
-        traineeLimit: 0,
-        instructorLimit: 0,
-        noTimeSlots: 0
-      },
-      status: schedulingEfficiency >= 70 ? "good" : schedulingEfficiency >= 35 ? "fair" : "poor"
-    };
-  });
   if (isAirCombatModel) {
+    const totalScheduled = airCombatCourseStats.reduce((sum, stream) => sum + stream.eventCount, 0);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Air Combat Course & Package Metrics" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Only courses and packages with staff assigned in this unit are shown." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Each card is a course or training package assigned to at least one staff member in this unit. The large number is how many events from that stream are on the selected DFP." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5", children: airCombatCourseStats.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3", children: airCombatCourseStats.map((stream) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
             title: `${stream.kind === "course" ? "Course" : "Package"} ${stream.code}`,
             value: stream.eventCount,
-            description: `${stream.availableStaff.size}/${stream.staff.size} staff available, ${stream.syllabusItems} LMP events`,
+            description: `${stream.staff.size} assigned staff, ${stream.availableStaff.size} available today, ${stream.syllabusItems} LMP events in stream`,
             personnelList: Array.from(stream.staff).sort(),
             onPersonClick: onNavigateAndSelectPerson
           },
           stream.key
         )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-8 text-center text-slate-400", children: "No Air Combat courses or training packages have staff assigned in this unit." }) })
       ] }),
-      airCombatCourseAnalysis.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CourseDistributionTable, { courseAnalysis: airCombatCourseAnalysis, resourceDisplayNames }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PieChart,
-            {
-              title: "Flight Events per Course / Package",
-              data: airCombatCourseAnalysis.map((course, index) => ({
-                label: course.courseName,
-                value: course.eventsByType.flight,
-                color: `hsl(${index * 360 / Math.max(airCombatCourseAnalysis.length, 1)}, 70%, 60%)`
-              }))
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PieChart,
-            {
-              title: "Total Events per Course / Package",
-              data: airCombatCourseAnalysis.map((course, index) => ({
-                label: course.courseName,
-                value: course.eventCount,
-                color: `hsl(${index * 360 / Math.max(airCombatCourseAnalysis.length, 1)}, 70%, 60%)`
-              }))
-            }
-          )
-        ] })
+      airCombatCourseStats.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Course And Package Schedule Summary" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "This table shows what is loaded for the selected Air Combat unit and what was actually scheduled on this DFP." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[920px] text-left text-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-[10px] uppercase tracking-[0.16em] text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Code" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Assigned Staff" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Available" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "LMP Events" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Scheduled" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("th", { className: "px-4 py-3", children: [
+              resourceDisplayNames.aircraft,
+              " Flight"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: resourceDisplayNames.ftd }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: resourceDisplayNames.cpt }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Ground" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Completed Reports" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: airCombatCourseStats.map((stream) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-slate-800", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-300", children: stream.kind === "course" ? "Course" : "Package" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-white", children: stream.code }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.staff.size }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-emerald-300", children: stream.availableStaff.size }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.syllabusItems }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-cyan-200", children: stream.eventCount }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.flight }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.ftd }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.cpt }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.eventsByType.ground }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.completedReports })
+          ] }, stream.key)) })
+        ] }) })
+      ] }),
+      airCombatCourseStats.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Scheduled Events By Stream" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-5", children: airCombatCourseStats.map((stream) => {
+          const percent = totalScheduled > 0 ? Math.round(stream.eventCount / totalScheduled * 100) : 0;
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-white", children: [
+                stream.kind === "course" ? "Course" : "Package",
+                " ",
+                stream.code
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-slate-300", children: [
+                stream.eventCount,
+                " scheduled (",
+                percent,
+                "%)"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-2 overflow-hidden rounded-full bg-slate-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full rounded-full bg-cyan-400", style: { width: `${percent}%` } }) })
+          ] }, stream.key);
+        }) })
       ] })
     ] });
   }
@@ -28830,6 +28841,7 @@ const TimeDistributionChart = ({ timeDistribution }) => {
   const eventsByHour = timeDistribution.eventsByHour instanceof Map ? timeDistribution.eventsByHour : new Map(Object.entries(timeDistribution.eventsByHour).map(([k, v]) => [parseInt(k), v]));
   const maxEvents = Math.max(...Array.from(eventsByHour.values()), 0);
   const hours = Array.from({ length: 24 }, (_, i) => i).filter((hour) => eventsByHour.get(hour) && eventsByHour.get(hour) > 0);
+  const chartMaxHeight = 180;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Time Distribution" }),
@@ -28841,22 +28853,22 @@ const TimeDistributionChart = ({ timeDistribution }) => {
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative h-64 flex items-end justify-start gap-2 px-5 py-5", children: hours.map((hour) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 py-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative flex h-56 items-end justify-start gap-2", children: hours.map((hour) => {
       const count = eventsByHour.get(hour) || 0;
-      const heightPx = maxEvents > 0 ? count / maxEvents * 240 : 0;
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-end flex-1 min-w-[40px]", children: [
+      const heightPx = maxEvents > 0 ? Math.max(28, count / maxEvents * chartMaxHeight) : 0;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full min-w-[40px] flex-1 flex-col items-center justify-end", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
-            className: "w-full bg-cyan-500 rounded-t transition-all hover:bg-cyan-400 flex items-start justify-center",
-            style: { height: `${heightPx}px`, minHeight: "30px" },
+            className: "flex w-full items-start justify-center rounded-t bg-cyan-500 transition-all hover:bg-cyan-400",
+            style: { height: `${heightPx}px` },
             title: `${hour.toString().padStart(2, "0")}:00 - ${count} events`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-white font-semibold pt-1", children: count })
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-1 text-xs font-semibold text-white", children: count })
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-400 mt-1", children: hour.toString().padStart(2, "0") })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-xs text-slate-400", children: hour.toString().padStart(2, "0") })
       ] }, hour);
-    }) })
+    }) }) })
   ] });
 };
 const InsightsSection = ({ insights }) => {
@@ -31281,6 +31293,139 @@ const TrainingIntelligenceTab = () => {
       activeTab === "trainee" && /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeTab, { trainees }),
       activeTab === "events" && /* @__PURE__ */ jsxRuntimeExports.jsx(EventsTab, { events })
     ] })
+  ] }) });
+};
+const normaliseCode = (value) => String(value || "").trim().toUpperCase();
+const getTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
+const getTrainingTitleFromItem = (item, fallback) => item.module && item.module !== fallback ? item.module : item.eventDescription || fallback;
+const matchesTrainingAssignment = (item, kind, code, unitCode) => {
+  const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
+  if (itemKind !== kind) return false;
+  const itemCode = normaliseCode(getTrainingCodeFromItem(item));
+  const assignmentCode = normaliseCode(code);
+  if (itemCode !== assignmentCode && !normaliseCode(item.code).startsWith(assignmentCode)) return false;
+  const itemUnit = normaliseCode(item.unit);
+  const assignmentUnit = normaliseCode(unitCode);
+  return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
+};
+const AirCombatTrainingAnalyticsTab = ({
+  instructorsData,
+  syllabusDetails,
+  operationalContext
+}) => {
+  const activeUnitCodes = reactExports.useMemo(() => {
+    const rawCodes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
+    return new Set(rawCodes.map(normaliseCode).filter(Boolean));
+  }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
+  const streams = reactExports.useMemo(() => {
+    const streamMap = /* @__PURE__ */ new Map();
+    const ensureStream = (kind, code, title) => {
+      const normalisedCode = normaliseCode(code);
+      const key = `${kind}:${normalisedCode}`;
+      if (!streamMap.has(key)) {
+        streamMap.set(key, {
+          key,
+          kind,
+          code: normalisedCode,
+          title: title || normalisedCode,
+          assignedStaff: /* @__PURE__ */ new Set(),
+          lmpEvents: [],
+          completedReports: 0
+        });
+      }
+      return streamMap.get(key);
+    };
+    instructorsData.forEach((staff) => {
+      const staffUnit = normaliseCode(staff.unit);
+      if (activeUnitCodes.size > 0 && staffUnit && !activeUnitCodes.has(staffUnit)) return;
+      const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      [...assignments.courses, ...assignments.trainingPackages].forEach((assignment) => {
+        const assignmentUnit = normaliseCode(assignment.unitCode || staffUnit);
+        if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return;
+        const stream = ensureStream(assignment.kind, assignment.code, assignment.title);
+        stream.assignedStaff.add(staff.name);
+      });
+      normaliseAirCombatTrainingReports(staff.preferences).forEach((report) => {
+        if (report.status && report.status !== "Complete") return;
+        if (!report.trainingKind || !report.trainingCode) return;
+        const reportUnit = normaliseCode(report.unitCode || staffUnit);
+        if (activeUnitCodes.size > 0 && reportUnit && !activeUnitCodes.has(reportUnit)) return;
+        const stream = ensureStream(report.trainingKind, report.trainingCode, report.trainingTitle || report.trainingCode);
+        stream.completedReports += 1;
+      });
+    });
+    syllabusDetails.forEach((item) => {
+      streamMap.forEach((stream) => {
+        if (!matchesTrainingAssignment(item, stream.kind, stream.code)) return;
+        stream.lmpEvents.push(item);
+        stream.title = getTrainingTitleFromItem(item, stream.title);
+      });
+    });
+    return Array.from(streamMap.values()).sort(
+      (left, right) => left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code)
+    );
+  }, [activeUnitCodes, instructorsData, syllabusDetails]);
+  const [selectedStreamKey, setSelectedStreamKey] = reactExports.useState("");
+  const selectedStream = streams.find((stream) => stream.key === selectedStreamKey) || streams[0] || null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Air Combat Training Analytics" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: "Showing only courses and training packages assigned to staff in the selected unit." })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-5 p-5", children: streams.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", children: "Current Unit Course / Package" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              value: selectedStream?.key || "",
+              onChange: (event) => setSelectedStreamKey(event.target.value),
+              className: "min-w-[260px] rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400",
+              children: streams.map((stream) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: stream.key, children: [
+                stream.kind === "course" ? "Course" : "Package",
+                " ",
+                stream.code,
+                " - ",
+                stream.title
+              ] }, stream.key))
+            }
+          )
+        ] }),
+        selectedStream && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid flex-1 grid-cols-1 gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Assigned Staff" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xl font-bold text-white", children: selectedStream.assignedStaff.size })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: "LMP Events" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xl font-bold text-cyan-200", children: selectedStream.lmpEvents.length })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Completed Reports" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xl font-bold text-emerald-300", children: selectedStream.completedReports })
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-700/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-left text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-[10px] uppercase tracking-[0.16em] text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Type" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Code" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Title" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Assigned Staff" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "LMP Events" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3", children: "Completed Reports" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: streams.map((stream) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-slate-800", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-300", children: stream.kind === "course" ? "Course" : "Package" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-white", children: stream.code }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-300", children: stream.title }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-cyan-200", children: stream.assignedStaff.size }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-slate-200", children: stream.lmpEvents.length }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-emerald-300", children: stream.completedReports })
+        ] }, stream.key)) })
+      ] }) })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-8 text-center text-slate-400", children: "No Air Combat courses or training packages are assigned to staff in this unit." }) })
   ] }) });
 };
 function ArrowTopRightOnSquareIcon({
@@ -34665,6 +34810,7 @@ const BuildIntelligenceView = (props) => {
           onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
           scores: props.scores,
           traineeLMPs: props.traineeLMPs,
+          syllabusDetails: props.syllabusDetails,
           courseColors: props.courseColors,
           resourceDisplayNames,
           operationalModel: props.operationalModel,
@@ -34721,7 +34867,14 @@ const BuildIntelligenceView = (props) => {
           resourceDisplayNames
         }
       ),
-      activeTab === "managerial-analytics" && /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingIntelligenceTab, {}),
+      activeTab === "managerial-analytics" && (isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AirCombatTrainingAnalyticsTab,
+        {
+          instructorsData: props.instructorsData,
+          syllabusDetails: props.syllabusDetails,
+          operationalContext: props.operationalContext
+        }
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingIntelligenceTab, {})),
       activeTab === "bli" && /* @__PURE__ */ jsxRuntimeExports.jsx(
         BliTab,
         {
@@ -35082,7 +35235,7 @@ const InstructorProfileFlyout = ({
   traineesData,
   events = [],
   scheduleHistoryEvents = [],
-  syllabusDetails: syllabusDetails2 = [],
+  syllabusDetails = [],
   insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
   aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent,
@@ -35233,8 +35386,8 @@ const InstructorProfileFlyout = ({
   }, [events, instructor.name, scheduleHistoryEvents]);
   const getTrainingSyllabusItems = reactExports.useCallback((assignment) => {
     const assignmentCode = normaliseTrainingCode(assignment.code);
-    return syllabusDetails2.filter((item) => item.isActive !== false).filter((item) => assignment.kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).some((course) => normaliseTrainingCode(course) === assignmentCode) || normaliseTrainingCode(item.code) === assignmentCode).sort((left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || String(left.orderKey || "").localeCompare(String(right.orderKey || "")) || normaliseTrainingCode(left.code).localeCompare(normaliseTrainingCode(right.code)));
-  }, [syllabusDetails2]);
+    return syllabusDetails.filter((item) => item.isActive !== false).filter((item) => assignment.kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).some((course) => normaliseTrainingCode(course) === assignmentCode) || normaliseTrainingCode(item.code) === assignmentCode).sort((left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || String(left.orderKey || "").localeCompare(String(right.orderKey || "")) || normaliseTrainingCode(left.code).localeCompare(normaliseTrainingCode(right.code)));
+  }, [syllabusDetails]);
   const airCombatTrainingSummaries = reactExports.useMemo(() => assignedAirCombatTraining.map((assignment) => {
     const sequenceItems = getTrainingSyllabusItems(assignment);
     const sequenceCodeSet = new Set(sequenceItems.map((item) => normaliseTrainingCode(item.code)));
@@ -37234,7 +37387,7 @@ const InstructorListView = ({
   instructorsData,
   archivedInstructorsData,
   scheduleHistoryEvents = [],
-  syllabusDetails: syllabusDetails2 = [],
+  syllabusDetails = [],
   insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
   aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent,
@@ -37270,7 +37423,7 @@ const InstructorListView = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails: syllabusDetails2, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel: operationalModel2, crewPositionTerminology };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel: operationalModel2, crewPositionTerminology };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -37713,7 +37866,7 @@ const InstructorListView = ({
         traineesData,
         events,
         scheduleHistoryEvents,
-        syllabusDetails: syllabusDetails2,
+        syllabusDetails,
         insertEventTypes,
         aircraftConfigurations,
         onInsertAirCombatTrainingEvent,
@@ -38926,7 +39079,7 @@ const getPackageCodeFromTitle = (title) => {
   return words.length === 1 ? words[0].toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) : words.map((word) => word[0].toUpperCase()).join("").replace(/[^A-Z0-9]/g, "").slice(0, 8);
 };
 const SyllabusView = ({
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   onBack,
   initialSelectedId,
   onUpdateItem,
@@ -38983,17 +39136,17 @@ const SyllabusView = ({
   const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = reactExports.useState(false);
   const courseLMPs = reactExports.useMemo(() => {
     const fromSyllabus = /* @__PURE__ */ new Set();
-    syllabusDetails2.filter((item) => item.isActive !== false).forEach((item) => {
+    syllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
       if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach((c) => {
         if (c) fromSyllabus.add(c);
       });
     });
     return Array.from(fromSyllabus).sort();
-  }, [activeTab, syllabusDetails2]);
+  }, [activeTab, syllabusDetails]);
   const courseTitleMap = reactExports.useMemo(() => {
     const map = {};
-    syllabusDetails2.filter((item) => item.isActive !== false).forEach((item) => {
+    syllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
       if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach((c) => {
         if (c && !map[c] && item.module && item.module !== c) {
@@ -39002,7 +39155,7 @@ const SyllabusView = ({
       });
     });
     return map;
-  }, [activeTab, syllabusDetails2]);
+  }, [activeTab, syllabusDetails]);
   const getCourseTitle = (code) => courseTitleMap[code] || code;
   const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
   const activeUnitNormalised = normaliseContextCode(activeUnitCode);
@@ -39056,7 +39209,7 @@ const SyllabusView = ({
   const [isDeleting, setIsDeleting] = reactExports.useState(false);
   const [isSaving2, setIsSaving] = reactExports.useState(false);
   const filteredSyllabusDetails = reactExports.useMemo(() => {
-    return syllabusDetails2.filter((item) => {
+    return syllabusDetails.filter((item) => {
       if (item.isActive === false) return false;
       if (getItemLmpDetailsTab(item) !== activeTab) return false;
       if (!item.courses || item.courses.length === 0) {
@@ -39064,7 +39217,7 @@ const SyllabusView = ({
       }
       return item.courses.includes(selectedCourseType);
     });
-  }, [activeTab, syllabusDetails2, selectedCourseType]);
+  }, [activeTab, syllabusDetails, selectedCourseType]);
   const activeTrainingAssignmentItem = reactExports.useMemo(() => filteredSyllabusDetails[0] || selectedItem || null, [filteredSyllabusDetails, selectedItem]);
   const activeTrainingAssignment = reactExports.useMemo(() => {
     if (!activeTrainingAssignmentItem || !selectedCourseType) return null;
@@ -39194,7 +39347,7 @@ const SyllabusView = ({
   }, [activeTab, selectedCourseType]);
   reactExports.useEffect(() => {
     if (initialSelectedId) {
-      const itemToSelect = syllabusDetails2.find((item) => item.code === initialSelectedId);
+      const itemToSelect = syllabusDetails.find((item) => item.code === initialSelectedId);
       if (itemToSelect) {
         const itemTab = getItemLmpDetailsTab(itemToSelect);
         if (itemTab !== activeTab) {
@@ -39211,11 +39364,11 @@ const SyllabusView = ({
       if (filteredSyllabusDetails.length > 0 && !selectedItem) {
         setSelectedItem(filteredSyllabusDetails[0]);
       } else if (selectedItem) {
-        const updated = syllabusDetails2.find((item) => item.code === selectedItem.code);
+        const updated = syllabusDetails.find((item) => item.code === selectedItem.code);
         if (updated && getItemLmpDetailsTab(updated) === activeTab) setSelectedItem(updated);
       }
     }
-  }, [activeTab, initialSelectedId, syllabusDetails2, selectedItem, selectedCourseType, filteredSyllabusDetails]);
+  }, [activeTab, initialSelectedId, syllabusDetails, selectedItem, selectedCourseType, filteredSyllabusDetails]);
   reactExports.useEffect(() => {
     if (filteredSyllabusDetails.length > 0) {
       setSelectedItem(filteredSyllabusDetails[0]);
@@ -39264,7 +39417,7 @@ const SyllabusView = ({
       const currentTitle = getCourseTitle(selectedCourseType);
       const newTitle = editingCourseTitle.trim();
       if (newTitle && newTitle !== currentTitle) {
-        const courseItems = syllabusDetails2.filter(
+        const courseItems = syllabusDetails.filter(
           (item) => item.isActive !== false && getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
         );
         await Promise.all(courseItems.map(
@@ -39314,12 +39467,12 @@ const SyllabusView = ({
         setIsDeleting(false);
         return;
       }
-      const itemsToDelete = syllabusDetails2.filter(
+      const itemsToDelete = syllabusDetails.filter(
         (item) => getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
       );
       console.log(`🗑️ Deleting ${itemsToDelete.length} items for ${activeCollectionNoun}: ${selectedCourseType}`, itemsToDelete.map((i) => i.id));
       if (itemsToDelete.length === 0) {
-        console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails2.length} total items)`);
+        console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
       } else {
         await Promise.all(itemsToDelete.map(
           (item) => retireSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
@@ -44226,7 +44379,7 @@ const SettingsView = ({
   onUpdateLocationOpAreas,
   instructorsData,
   traineesData,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   onBulkUpdateInstructors,
   onReplaceInstructors,
   onBulkUpdateTrainees,
@@ -45231,7 +45384,7 @@ const SettingsView = ({
           setSkippedCount((prev) => prev + 1);
           return;
         }
-        existingRecord = syllabusDetails2.find(
+        existingRecord = syllabusDetails.find(
           (s) => s.code.trim().replace(/\s/g, "").toLowerCase() === String(parsedData.code).trim().replace(/\s/g, "").toLowerCase()
         );
         break;
@@ -45287,7 +45440,7 @@ const SettingsView = ({
             newRecordsWithCourse.forEach((trainee) => {
               console.log(`[DEBUG] Processing trainee: ${trainee.fullName}, LMP Type: ${trainee.lmpType}`);
               if (trainee.fullName && trainee.lmpType) {
-                const masterLMP = syllabusDetails2.filter((item) => {
+                const masterLMP = syllabusDetails.filter((item) => {
                   return item.courses.includes(trainee.lmpType);
                 });
                 console.log(`[DEBUG] Found ${masterLMP.length} master LMP items for ${trainee.lmpType}`);
@@ -45324,7 +45477,7 @@ const SettingsView = ({
         break;
       case "lmp_loads":
         const updatedMap = new Map(updatedRecords.map((s) => [s.code.trim().replace(/\s/g, "").toLowerCase(), s]));
-        const finalSyllabus = syllabusDetails2.map((s) => {
+        const finalSyllabus = syllabusDetails.map((s) => {
           const key = s.code.trim().replace(/\s/g, "").toLowerCase();
           return updatedMap.get(key) || s;
         });
@@ -55518,7 +55671,7 @@ const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
 };
 const PeopleProfilePage = ({
   traineesData,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   locations,
   neoBuildCourse,
   onUpdateNeoBuildCourse,
@@ -55531,7 +55684,7 @@ const PeopleProfilePage = ({
   const [pendingCourse, setPendingCourse] = reactExports.useState(neoBuildCourse);
   const availableLmpTypes = reactExports.useMemo(() => {
     const lmpTypeSet = /* @__PURE__ */ new Set();
-    syllabusDetails2.forEach((item) => {
+    syllabusDetails.forEach((item) => {
       if (item.lmpType && item.lmpType !== "Staff CAT") {
         lmpTypeSet.add(item.lmpType);
       }
@@ -55539,14 +55692,14 @@ const PeopleProfilePage = ({
         lmpTypeSet.add("BPC+IPC");
       }
     });
-    const hasFicCourses = syllabusDetails2.some(
+    const hasFicCourses = syllabusDetails.some(
       (item) => item.courses && item.courses.some((c) => c.includes("FIC"))
     );
     if (hasFicCourses) {
       lmpTypeSet.add("FIC");
     }
     return Array.from(lmpTypeSet).sort();
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const availableCourses = reactExports.useMemo(() => {
     const courseSet = /* @__PURE__ */ new Set();
     traineesData.forEach((t) => {
@@ -59961,7 +60114,7 @@ const EditCourseFlyout = ({
   academicLmpType: initialAcademicLmpType = "",
   locations = [],
   units = [],
-  syllabusDetails: syllabusDetails2 = [],
+  syllabusDetails = [],
   platformConfig = null,
   onClose,
   onSave
@@ -59974,7 +60127,7 @@ const EditCourseFlyout = ({
   const [academicLmpType, setAcademicLmpType] = reactExports.useState(initialAcademicLmpType || "");
   const academicLmpCourses = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
-    syllabusDetails2.forEach((s) => {
+    syllabusDetails.forEach((s) => {
       if (s.type === "Academics" && s.courses) {
         s.courses.forEach((c) => courseCodes.add(c));
       }
@@ -59984,10 +60137,10 @@ const EditCourseFlyout = ({
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig, syllabusDetails2, unit]);
+  }, [platformConfig, syllabusDetails, unit]);
   const assignableMasterLmps = reactExports.useMemo(() => {
     const courseCodes = new Set(COURSE_MASTER_LMPS.filter((lmp) => lmp !== "Staff CAT"));
-    syllabusDetails2.forEach((s) => {
+    syllabusDetails.forEach((s) => {
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
     });
@@ -59996,7 +60149,7 @@ const EditCourseFlyout = ({
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig, syllabusDetails2, unit]);
+  }, [platformConfig, syllabusDetails, unit]);
   reactExports.useEffect(() => {
     setStartDate(initialStartDate);
     setGradDate(initialGradDate);
@@ -60214,7 +60367,7 @@ const CoursesManagementView = ({
   onUpdateCourse,
   locations = [],
   units = [],
-  syllabusDetails: syllabusDetails2 = [],
+  syllabusDetails = [],
   platformConfig = null
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
@@ -60480,7 +60633,7 @@ const CoursesManagementView = ({
         academicLmpType: courseToEdit.academicLmpType || "",
         locations,
         units,
-        syllabusDetails: syllabusDetails2,
+        syllabusDetails,
         platformConfig,
         onClose: () => {
           setShowEditFlyout(false);
@@ -60582,7 +60735,7 @@ const TrainingRecordsExportView = ({
   archivedCourses,
   scores,
   publishedSchedules,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   pt051Assessments,
   onSavePT051Assessment,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
@@ -61127,7 +61280,7 @@ const TrainingRecordsExportView = ({
     pdf.setFont("helvetica", "bold");
     pdf.text("Event Description:", col1X, y);
     const eventNum = (event.flightNumber || "").trim();
-    const syllabusDetail = syllabusDetails2.find((d) => {
+    const syllabusDetail = syllabusDetails.find((d) => {
       const id = (d.id || "").trim();
       const code = (d.code || "").trim();
       if (id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase()) {
@@ -62140,7 +62293,7 @@ const TrainingRecordsView = ({
   events,
   scores,
   publishedSchedules,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   pt051Assessments,
   onSavePT051Assessment,
   locations = [],
@@ -62193,7 +62346,7 @@ const TrainingRecordsView = ({
           onUpdateCourse,
           locations,
           units,
-          syllabusDetails: syllabusDetails2,
+          syllabusDetails,
           platformConfig
         }
       ),
@@ -62209,7 +62362,7 @@ const TrainingRecordsView = ({
           archivedCourses,
           scores,
           publishedSchedules,
-          syllabusDetails: syllabusDetails2,
+          syllabusDetails,
           pt051Assessments,
           onSavePT051Assessment,
           resourceDisplayNames,
@@ -62919,7 +63072,7 @@ const NextDayInstructorScheduleView = ({
   daylightTimes,
   personnelData,
   seatConfigs,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   conflictingEventIds,
   showValidation,
   onSelectInstructor,
@@ -62968,13 +63121,13 @@ const NextDayInstructorScheduleView = ({
   }, [zoomLevel]);
   const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
     for (const eventToCheck of eventsToCheck) {
-      const s1 = syllabusDetails2.find((d) => d.id === eventToCheck.flightNumber);
+      const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
       if (!s1) continue;
       const e1StartWithPre = eventToCheck.startTime - s1.preFlightTime;
       const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + s1.postFlightTime;
       for (const existingEvent of existingEvents) {
         if (eventToCheck.id === existingEvent.id) continue;
-        const s2 = syllabusDetails2.find((d) => d.id === existingEvent.flightNumber);
+        const s2 = syllabusDetails.find((d) => d.id === existingEvent.flightNumber);
         if (!s2) continue;
         const e2StartWithPre = existingEvent.startTime - s2.preFlightTime;
         const e2EndWithPost = existingEvent.startTime + existingEvent.duration + s2.postFlightTime;
@@ -62989,7 +63142,7 @@ const NextDayInstructorScheduleView = ({
       }
     }
     return null;
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
     if (e.button !== 0) return;
     didDragRef.current = false;
@@ -63096,17 +63249,17 @@ const NextDayInstructorScheduleView = ({
         const currentEvent = instructorEvents[i];
         const prevEvent = instructorEvents[i - 1];
         const nextEvent = instructorEvents[i + 1];
-        const currentSyllabus = syllabusDetails2.find((d) => d.id === currentEvent.flightNumber);
+        const currentSyllabus = syllabusDetails.find((d) => d.id === currentEvent.flightNumber);
         if (!currentSyllabus) continue;
         const hasPreConflict = prevEvent && (() => {
-          const prevSyllabus = syllabusDetails2.find((d) => d.id === prevEvent.flightNumber);
+          const prevSyllabus = syllabusDetails.find((d) => d.id === prevEvent.flightNumber);
           if (!prevSyllabus) return false;
           const prevPostEnd = prevEvent.startTime + prevEvent.duration + prevSyllabus.postFlightTime;
           const currentPreStart = currentEvent.startTime - currentSyllabus.preFlightTime;
           return prevPostEnd > currentPreStart;
         })();
         const hasPostConflict = nextEvent && (() => {
-          const nextSyllabus = syllabusDetails2.find((d) => d.id === nextEvent.flightNumber);
+          const nextSyllabus = syllabusDetails.find((d) => d.id === nextEvent.flightNumber);
           if (!nextSyllabus) return false;
           const currentPostEnd = currentEvent.startTime + currentEvent.duration + currentSyllabus.postFlightTime;
           const nextPreStart = nextEvent.startTime - nextSyllabus.preFlightTime;
@@ -63383,7 +63536,7 @@ const NextDayTraineeScheduleView = ({
   daylightTimes,
   personnelData,
   seatConfigs,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   conflictingEventIds,
   showValidation,
   onSelectTrainee,
@@ -63479,13 +63632,13 @@ const NextDayTraineeScheduleView = ({
   }, [zoomLevel]);
   const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
     for (const eventToCheck of eventsToCheck) {
-      const s1 = syllabusDetails2.find((d) => d.id === eventToCheck.flightNumber);
+      const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
       if (!s1) continue;
       const e1StartWithPre = eventToCheck.startTime - (s1.preFlightTime || 0);
       const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + (s1.postFlightTime || 0);
       for (const existingEvent of existingEvents) {
         if (eventToCheck.id === existingEvent.id) continue;
-        const s2 = syllabusDetails2.find((d) => d.id === existingEvent.flightNumber);
+        const s2 = syllabusDetails.find((d) => d.id === existingEvent.flightNumber);
         if (!s2) continue;
         const e2StartWithPre = existingEvent.startTime - (s2.preFlightTime || 0);
         const e2EndWithPost = existingEvent.startTime + existingEvent.duration + (s2.postFlightTime || 0);
@@ -63503,7 +63656,7 @@ const NextDayTraineeScheduleView = ({
       }
     }
     return null;
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
     if (e.button !== 0) return;
     didDragRef.current = false;
@@ -63738,17 +63891,17 @@ const NextDayTraineeScheduleView = ({
                       const currentEvent = traineeEventsForBars[i];
                       const prevEvent = traineeEventsForBars[i - 1];
                       const nextEvent = traineeEventsForBars[i + 1];
-                      const currentSyllabus = syllabusDetails2.find((d) => d.id === currentEvent.flightNumber);
+                      const currentSyllabus = syllabusDetails.find((d) => d.id === currentEvent.flightNumber);
                       if (!currentSyllabus) continue;
                       const hasPreConflict = prevEvent && (() => {
-                        const prevSyllabus = syllabusDetails2.find((d) => d.id === prevEvent.flightNumber);
+                        const prevSyllabus = syllabusDetails.find((d) => d.id === prevEvent.flightNumber);
                         if (!prevSyllabus) return false;
                         const prevPostEnd = prevEvent.startTime + prevEvent.duration + prevSyllabus.postFlightTime;
                         const currentPreStart = currentEvent.startTime - currentSyllabus.preFlightTime;
                         return prevPostEnd > currentPreStart;
                       })();
                       const hasPostConflict = nextEvent && (() => {
-                        const nextSyllabus = syllabusDetails2.find((d) => d.id === nextEvent.flightNumber);
+                        const nextSyllabus = syllabusDetails.find((d) => d.id === nextEvent.flightNumber);
                         if (!nextSyllabus) return false;
                         const currentPostEnd = currentEvent.startTime + currentEvent.duration + currentSyllabus.postFlightTime;
                         const nextPreStart = nextEvent.startTime - nextSyllabus.preFlightTime;
@@ -64963,7 +65116,7 @@ const DfpSidePanelTimeline = ({
   activeDfpEvents,
   resources,
   instructors,
-  syllabusDetails: syllabusDetails2,
+  syllabusDetails,
   taskProfiles,
   taskProfileAbbreviations,
   coursePriorities,
@@ -65010,8 +65163,8 @@ const DfpSidePanelTimeline = ({
   const wizardRepeatRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
   const [activeAssistSection, setActiveAssistSection] = reactExports.useState("details");
-  const filteredEventOptions = reactExports.useMemo(() => syllabusDetails2.filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails2]);
-  const fullAssistEventOptions = reactExports.useMemo(() => syllabusDetails2, [syllabusDetails2]);
+  const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
+  const fullAssistEventOptions = reactExports.useMemo(() => syllabusDetails, [syllabusDetails]);
   const [selectedEventCode, setSelectedEventCode] = reactExports.useState("");
   const [selectedTaskProfile, setSelectedTaskProfile] = reactExports.useState("");
   const [selectedCurrencyName, setSelectedCurrencyName] = reactExports.useState("");
@@ -65745,7 +65898,7 @@ const DfpSidePanelTimeline = ({
   const getScheduleEventBookingWindow = (event) => {
     const startTime = Number(event.startTime) || 0;
     const duration = Math.max(0, Number(event.duration) || 0);
-    const syllabusItem = syllabusDetails2.find(
+    const syllabusItem = syllabusDetails.find(
       (item) => item.id === event.flightNumber || item.code === event.flightNumber || item.id === event.eventCode || item.code === event.eventCode
     );
     const preStart = Number.isFinite(Number(event.preStart)) ? Number(event.preStart) : startTime - getSyllabusDurationOffset(syllabusItem?.preFlightTime);
@@ -65806,7 +65959,7 @@ const DfpSidePanelTimeline = ({
       }
     });
     return statusMap;
-  }, [activeDfpEvents, assistBookingWindow, date, displayedCrewOptions, instructors, selectedResourceKind, syllabusDetails2]);
+  }, [activeDfpEvents, assistBookingWindow, date, displayedCrewOptions, instructors, selectedResourceKind, syllabusDetails]);
   const normaliseCapacityInput = (value) => {
     const digitsOnly = String(value || "").trim().replace(/[^\d]/g, "");
     if (!digitsOnly) return "";
@@ -67719,23 +67872,23 @@ const getScheduleEventBookingOffsets = (event, syllabusItem) => {
   }
   return { preOffset, postOffset };
 };
-const getEventBookingWindow = (event, syllabusDetails2) => {
-  const syllabusItem = syllabusDetails2.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
+const getEventBookingWindow = (event, syllabusDetails) => {
+  const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
   const { preOffset, postOffset } = getScheduleEventBookingOffsets(event, syllabusItem);
   return {
     start: event.startTime - preOffset,
     end: event.startTime + event.duration + postOffset
   };
 };
-const getEventBookingWindowForAlgo = (event, syllabusDetails2) => {
-  const syllabusItem = syllabusDetails2.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
+const getEventBookingWindowForAlgo = (event, syllabusDetails) => {
+  const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
   const { preOffset, postOffset } = getScheduleEventBookingOffsets(event, syllabusItem);
   return {
     start: event.startTime - preOffset,
     end: event.startTime + event.duration + postOffset
   };
 };
-const getEventDayNightClassification = (event, syllabusDetails2, sctEvents) => {
+const getEventDayNightClassification = (event, syllabusDetails, sctEvents) => {
   if (event.dayNight) {
     return event.dayNight;
   }
@@ -67751,7 +67904,7 @@ const getEventDayNightClassification = (event, syllabusDetails2, sctEvents) => {
     }
     return "Day";
   }
-  const syllabusItem = syllabusDetails2.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
+  const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
   if (syllabusItem && syllabusItem.dayNight) {
     return syllabusItem.dayNight;
   }
@@ -67958,13 +68111,13 @@ const formatDecimalHourToString = (decimalHour) => {
   const minutes = Math.round(decimalHour % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const calculateProjectedDuty = (instructorName, events, newEvent, syllabusDetails2 = []) => {
+const calculateProjectedDuty = (instructorName, events, newEvent, syllabusDetails = []) => {
   const instructorEvents = [...events.filter((e) => eventHasPerson(e, instructorName)), newEvent];
   if (instructorEvents.length === 0) return 0;
-  const sortedWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails2)).sort((a, b) => a.start - b.start);
+  const sortedWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
   const firstEventStart = sortedWindows[0].start;
   instructorEvents.find(
-    (e) => getEventBookingWindowForAlgo(e, syllabusDetails2).end === sortedWindows[sortedWindows.length - 1].end
+    (e) => getEventBookingWindowForAlgo(e, syllabusDetails).end === sortedWindows[sortedWindows.length - 1].end
   );
   const lastEventEnd = sortedWindows[sortedWindows.length - 1].end;
   const dutyHours = Math.max(0, lastEventEnd - firstEventStart);
@@ -68171,7 +68324,7 @@ const calculateTraineePriorityScore = (trainee, buildDate, courseMedian, trainee
   if (isRemedial) score += 500;
   return score;
 };
-function countPossibleEvents(allTraineesData, coursePriorities, traineeLMPs, scores, syllabusDetails2, publishedSchedules, buildDate) {
+function countPossibleEvents(allTraineesData, coursePriorities, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate) {
   const possibleEventCounts = /* @__PURE__ */ new Map();
   coursePriorities.forEach((course) => {
     possibleEventCounts.set(course, 0);
@@ -68183,7 +68336,7 @@ function countPossibleEvents(allTraineesData, coursePriorities, traineeLMPs, sco
       trainee,
       traineeLMPs,
       scores,
-      syllabusDetails2,
+      syllabusDetails,
       publishedSchedules,
       buildDate
     );
@@ -68198,7 +68351,7 @@ function countPossibleEvents(allTraineesData, coursePriorities, traineeLMPs, sco
   });
   return possibleEventCounts;
 }
-function analyzeBuildResults(events, coursePercentages, coursePriorities, availableAircraft, buildDate, allTraineesData, traineeLMPs, scores, syllabusDetails2, publishedSchedules) {
+function analyzeBuildResults(events, coursePercentages, coursePriorities, availableAircraft, buildDate, allTraineesData, traineeLMPs, scores, syllabusDetails, publishedSchedules) {
   const scheduledEvents = events.filter((e) => {
     if (e.flightNumber.includes("Duty Sup")) return false;
     if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
@@ -68238,7 +68391,7 @@ function analyzeBuildResults(events, coursePercentages, coursePriorities, availa
     coursePriorities,
     traineeLMPs,
     scores,
-    syllabusDetails2,
+    syllabusDetails,
     publishedSchedules,
     buildDate
   );
@@ -68629,7 +68782,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const {
     instructors: originalInstructors,
     trainees,
-    syllabus: syllabusDetails2,
+    syllabus: syllabusDetails,
     scores,
     coursePriorities,
     coursePercentages,
@@ -68749,7 +68902,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const eventsToCheck = includeProposedEvent ? [...generatedEvents, includeProposedEvent] : generatedEvents;
     const instructorEvents = eventsToCheck.filter((e) => getPersonnel(e).includes(instructorName));
     if (instructorEvents.length === 0) return 0;
-    const bookingWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails2)).sort((a, b) => a.start - b.start);
+    const bookingWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
     let totalDutyHours = 0;
     let currentWindow = null;
     for (const window2 of bookingWindows) {
@@ -68812,7 +68965,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (typeof event.startTime === "number") {
       return isStartWithinNightWindow(event.startTime) ? "Night" : "Day";
     }
-    return getEventDayNightClassification2(event, syllabusDetails2, sctEvents);
+    return getEventDayNightClassification2(event, syllabusDetails, sctEvents);
   };
   const isPersonScheduledForDayEvents = (personName) => {
     const hasDayEvents = generatedEvents.some((e) => {
@@ -68918,7 +69071,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     input: {
       instructors: originalInstructors.length,
       trainees: trainees.length,
-      syllabus: syllabusDetails2.length,
+      syllabus: syllabusDetails.length,
       scoresTrainees: scores.size,
       traineeLmps: traineeLMPs.size,
       highestPriorityEvents: highestPriorityEvents.length,
@@ -69068,7 +69221,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           return counts;
         }, {}),
         highestPriorityEvents: highestPriorityEvents.length,
-        syllabusItems: syllabusDetails2.length,
+        syllabusItems: syllabusDetails.length,
         generatedEventsAtBuildStart: generatedEvents.length
       },
       stageTrace: [{
@@ -69305,7 +69458,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const priorityPersonnelConflict = (candidate, existing) => {
     if (!getPersonnel(candidate).some((person) => person && eventHasPerson(existing, person))) return false;
     const getPriorityBookingWindow = (event) => {
-      return getEventBookingWindowForAlgo(event, syllabusDetails2);
+      return getEventBookingWindowForAlgo(event, syllabusDetails);
     };
     const candidateWindow = getPriorityBookingWindow(candidate);
     const existingWindow = getPriorityBookingWindow(existing);
@@ -69955,7 +70108,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   ).length;
   const traineeNextEventMap = /* @__PURE__ */ new Map();
   activeTrainees.forEach((trainee) => {
-    const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails2, publishedSchedules, buildDate, config.dbElceMap);
+    const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
     traineeNextEventMap.set(trainee.fullName, nextEvents);
   });
   const nextEventLists = { flight: [], ftd: [], cpt: [], ground: [], bnf: [] };
@@ -70989,7 +71142,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
       const hasTraineeConflict = options.traineeOverlapRole === "trainee" ? eventHasPersonWithRole(e, trainee.fullName, "trainee") : eventHasPerson(e, trainee.fullName);
       if (!hasTraineeConflict) return false;
-      const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails2);
+      const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
       return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
     });
     if (traineeOverlapEvents.length > 0) {
@@ -71003,7 +71156,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           flightNumber: existing.flightNumber,
           startTime: existing.startTime,
           endTime: existing.startTime + existing.duration,
-          bookingWindow: getEventBookingWindowForAlgo(existing, syllabusDetails2),
+          bookingWindow: getEventBookingWindowForAlgo(existing, syllabusDetails),
           resourceId: existing.resourceId,
           instructor: existing.instructor || null,
           student: existing.student || null,
@@ -71093,7 +71246,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const hasOverlap = generatedEvents.some((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!eventHasPerson(e, instructor2.name)) return false;
-          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails2);
+          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
           if (overlaps) {
             _logOverlapRejection(
@@ -71132,7 +71285,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             (e) => e.flightNumber === next?.id && getPersonnel(e).includes(traineeForCheck.fullName) && getPersonnel(e).includes(instructor2.name)
           );
           if (firstNightEvent) {
-            const firstSyllabus = syllabusDetails2.find((s) => s.id === firstNightEvent.flightNumber || s.code === firstNightEvent.flightNumber);
+            const firstSyllabus = syllabusDetails.find((s) => s.id === firstNightEvent.flightNumber || s.code === firstNightEvent.flightNumber);
             const earliestBriefStartTimeForInstructor = firstNightEvent.startTime + firstNightEvent.duration + (firstSyllabus?.postFlightTime || 0);
             const earliestEventStartByTurnaround = firstNightEvent.startTime + firstNightEvent.duration + flightTurnaround;
             const proposedBriefStartTime = startTime - (syllabusItemForCheck.preFlightTime || 0);
@@ -71389,7 +71542,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const overlappingEvents = generatedEvents.filter((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!eventHasPerson(e, ip.name)) return false;
-          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails2);
+          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
           if (overlaps) {
             _logOverlapRejection(
@@ -71466,8 +71619,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
           const firstEvent = sortedIpEvents[0];
           const lastEvent = sortedIpEvents[sortedIpEvents.length - 1];
-          const firstEventSyllabus = syllabusDetails2.find((s) => s.id === firstEvent.flightNumber || s.code === firstEvent.flightNumber);
-          const lastEventSyllabus = syllabusDetails2.find((s) => s.id === lastEvent.flightNumber || s.code === lastEvent.flightNumber);
+          const firstEventSyllabus = syllabusDetails.find((s) => s.id === firstEvent.flightNumber || s.code === firstEvent.flightNumber);
+          const lastEventSyllabus = syllabusDetails.find((s) => s.id === lastEvent.flightNumber || s.code === lastEvent.flightNumber);
           const dutyStartTime = firstEvent.startTime - (firstEventSyllabus?.preFlightTime || 0);
           const dutyEndTime = lastEvent.startTime + lastEvent.duration + (lastEventSyllabus?.postFlightTime || 0);
           if (dutyEndTime - dutyStartTime > maxCrewDutyPeriod) {
@@ -71651,7 +71804,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             const existingCrew = getPersonnel(e);
             const hasCommonCrew = currentCrew.some((p) => p && existingCrew.includes(p));
             if (hasCommonCrew) {
-              const existingSyllabus = syllabusDetails2.find((s) => s.id === e.flightNumber || s.code === e.flightNumber);
+              const existingSyllabus = syllabusDetails.find((s) => s.id === e.flightNumber || s.code === e.flightNumber);
               const lmpCrewTurnaround = (existingSyllabus?.postFlightTime || 0) + (syllabusItem.preFlightTime || 0);
               existingTurnaround = Math.max(flightTurnaround, lmpCrewTurnaround);
             } else {
@@ -71988,7 +72141,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const hasOverlapAtStart = generatedEvents.some((e) => {
         if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
         if (!getPersonnel(e).includes(sup.name)) return false;
-        const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails2);
+        const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
         return currentSupTime < bookingWindow.end && currentSupTime + 0.1 > bookingWindow.start;
       });
       if (hasOverlapAtStart) continue;
@@ -72007,7 +72160,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const proposedEvents = [...generatedEvents, proposedDutySupEvent2];
         const instructorEventsForDay = proposedEvents.filter((e) => getPersonnel(e).includes(sup.name));
         if (instructorEventsForDay.length > 0) {
-          const bookingWindows = instructorEventsForDay.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails2)).sort((a, b) => a.start - b.start);
+          const bookingWindows = instructorEventsForDay.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
           const dayStart = bookingWindows[0].start;
           const dayEnd = bookingWindows[bookingWindows.length - 1].end;
           const totalDutyHours2 = dayEnd - dayStart;
@@ -72018,7 +72171,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const hasFutureOverlap = generatedEvents.some((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!getPersonnel(e).includes(sup.name)) return false;
-          const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails2);
+          const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           return t < bookingWindow.end && proposedEnd > bookingWindow.start;
         });
         if (hasFutureOverlap) break;
@@ -72065,7 +72218,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     const nightDutySupHasOverlap = generatedEvents.some((e) => {
       if (!getPersonnel(e).includes(nightDutySup.name)) return false;
-      const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails2);
+      const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
       return commenceNightFlying < bookingWindow.end && ceaseNightFlying > bookingWindow.start;
     });
     if (existingNightDutySup) {
@@ -72217,8 +72370,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       taskingPriorityEvents: taskingPriorityEvents.length,
       mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length,
       nonMandatoryTaskingEvents: taskingPriorityEvents.length - airCombatMandatoryTaskingEvents.length,
-      syllabusItems: syllabusDetails2.length,
-      activeSyllabusItems: syllabusDetails2.filter((item) => item.isActive !== false).length,
+      syllabusItems: syllabusDetails.length,
+      activeSyllabusItems: syllabusDetails.filter((item) => item.isActive !== false).length,
       generatedEventsAtAirCombatStart: generatedEvents.length,
       windows: {
         flyingStartTime,
@@ -73101,7 +73254,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       scheduleMode,
       generatedEvents: generatedEvents.length,
       staff: instructors.length,
-      syllabus: syllabusDetails2.length
+      syllabus: syllabusDetails.length
     });
     const slotIncrement = 5 / 60;
     const scheduleWindowStart = scheduleMode === "night" ? commenceNightFlying : flyingStartTime;
@@ -73113,7 +73266,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (!sortedTrainingItemsCache.has(cacheKey)) {
         sortedTrainingItemsCache.set(
           cacheKey,
-          syllabusDetails2.filter((item) => item.isActive !== false).filter(trainingItemMatchesScheduleMode).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
+          syllabusDetails.filter((item) => item.isActive !== false).filter(trainingItemMatchesScheduleMode).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
             (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
           )
         );
@@ -73294,7 +73447,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         flightNumber: item.code,
         preStart: item.preFlightTime,
         postEnd: item.postFlightTime
-      }, syllabusDetails2);
+      }, syllabusDetails);
       const counts = eventCounts.get(staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0 };
       if (counts.flightFtd >= eventLimits.instructor.maxFlightFtd) return "FLIGHT_FTD_LIMIT";
       if (counts.flightFtd + counts.ground + counts.cpt + counts.dutySup >= eventLimits.instructor.maxTotal) return "TOTAL_EVENT_LIMIT";
@@ -74490,7 +74643,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               flightNumber: item.code,
               preStart: item.preFlightTime,
               postEnd: item.postFlightTime
-            }, syllabusDetails2);
+            }, syllabusDetails);
             const counts = eventCounts.get(entry.staff.name) || { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0 };
             const limitReached = type === "flight" || type === "ftd" ? counts.flightFtd >= eventLimits.instructor.maxFlightFtd : false;
             if (limitReached || counts.flightFtd + counts.ground + counts.cpt + counts.dutySup >= eventLimits.instructor.maxTotal) {
@@ -74844,7 +74997,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
     );
     const getItemsForAssignment = (kind, code) => sortItems(
-      syllabusDetails2.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code))
+      syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code))
     );
     const rows = [];
     instructors.filter(isAirCombatCrewPositionStaff).forEach((staff) => {
@@ -75343,7 +75496,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const individualLmp = traineeLMPs.get(trainee.fullName) || [];
     const matchedItem = individualLmp.find(
       (item) => normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) || normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
-    ) || syllabusDetails2.find(
+    ) || syllabusDetails.find(
       (item) => normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) || normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
     ) || null;
     if (!matchedItem) return null;
@@ -75769,7 +75922,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         (event) => event.type === "ftd" && event._source === "highest-priority-currency" && isCurrencyPriorityEvent(event) && eventHasPerson(event, personName)
       ).sort((a, b) => b.startTime - a.startTime)[0] || null;
       if (!pairedFtd) return flyingStartTime;
-      const pairedFtdWindow = getEventBookingWindowForAlgo(pairedFtd, syllabusDetails2);
+      const pairedFtdWindow = getEventBookingWindowForAlgo(pairedFtd, syllabusDetails);
       return roundUpToFlightSlot(Math.max(
         flyingStartTime,
         pairedFtdWindow.end + getCurrencyPreFlightTime(priorityEvent)
@@ -76283,7 +76436,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const stbyEnd = startTime + duration + postTime;
       return !events.some((e) => {
         if (!getPersonnel(e).includes(instructorName)) return false;
-        const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails2);
+        const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
         return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
       });
     };
@@ -76355,7 +76508,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         stbyEvent.instructor = "TBA";
         continue;
       }
-      const syllabusItem = syllabusDetails2.find((s) => s.id === stbyEvent.flightNumber);
+      const syllabusItem = syllabusDetails.find((s) => s.id === stbyEvent.flightNumber);
       if (!syllabusItem) {
         stbyEvent.instructor = "TBA";
         continue;
@@ -76496,7 +76649,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const recoveryStart = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
       for (let time = recoveryStart; time <= ftdEndTime - next.duration + 1e-3; time += recoveryIncrement) {
         if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
-        const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails2);
+        const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails);
         if (isPersonStaticallyUnavailable(trainee, bookingWindow.start, bookingWindow.end, buildDate, "ftd")) continue;
         const resourceId = findAvailableFtdResourceForStbyCandidate(time, next.duration);
         if (!resourceId) continue;
@@ -76613,7 +76766,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       type: "flight"
     });
     const getCurrencyCompressionConflict = (candidate, existingEvents) => {
-      const candidateWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails2);
+      const candidateWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
       if (candidateWindow.start < flyingStartTime - 1e-3 || candidate.startTime + candidate.duration > flyingEndTime + 1e-3) {
         return {
           conflict: true,
@@ -76647,7 +76800,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             details: {
               commonPersonnel: getCommonPersonnel(candidate, existing),
               candidateWindow,
-              existingWindow: getEventBookingWindowForAlgo(existing, syllabusDetails2),
+              existingWindow: getEventBookingWindowForAlgo(existing, syllabusDetails),
               existing: {
                 id: existing.id,
                 flightNumber: existing.flightNumber,
@@ -76760,7 +76913,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const pairedFtd = generatedEvents.filter(
         (existing) => existing.type === "ftd" && existing._source === "highest-priority-currency" && isCurrencyPriorityEvent(existing) && eventHasPerson(existing, personName)
       ).sort((a, b) => b.startTime - a.startTime)[0] || null;
-      const pairedFtdBookingWindow = pairedFtd ? getEventBookingWindowForAlgo(pairedFtd, syllabusDetails2) : null;
+      const pairedFtdBookingWindow = pairedFtd ? getEventBookingWindowForAlgo(pairedFtd, syllabusDetails) : null;
       const earliestByFtd = pairedFtdBookingWindow ? pairedFtdBookingWindow.end + getCurrencyPreFlightTime(priorityEvent) : flyingStartTime;
       const searchStart = roundUpToIncrement(Math.max(
         flyingStartTime,
@@ -76832,7 +76985,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           duration: syllabusItem.duration,
           preStart: syllabusItem.preFlightTime,
           postEnd: syllabusItem.postFlightTime
-        }, syllabusDetails2);
+        }, syllabusDetails);
         const resourceReasonCounts = {};
         const resourceExamples = [];
         for (const resourceId of flightResources) {
@@ -77106,7 +77259,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     const groundResources = Array.from({ length: groundResourceCount }, (_, index) => `Ground ${index + 1}`);
     const timeIncrement = 15 / 60;
-    const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails2);
+    const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails);
     const windowsOverlap = (a, b) => a.start < b.end && a.end > b.start;
     const resourceTurnaroundFor = (event) => {
       if (event.type === "flight") return flightTurnaround;
@@ -77363,7 +77516,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   }
   const generateBuildConflictDiagnostic = (events) => {
-    const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails2);
+    const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails);
     const resourceTurnaroundFor = (event) => {
       if (event.type === "flight") return flightTurnaround;
       if (event.type === "ftd") return ftdTurnaround;
@@ -77372,7 +77525,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const formatEvent = (event) => {
       const window2 = eventWindow(event);
-      const syllabusItem = syllabusDetails2.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
+      const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
       return {
         id: event.id,
         source: event._source || "unknown",
@@ -77403,7 +77556,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         invalidWindows.push({
           reason: "NON_FINITE_BOOKING_WINDOW",
           event: formatEvent(event),
-          matchedSyllabus: syllabusDetails2.find((s) => s.id === event.flightNumber || s.code === event.flightNumber) || null
+          matchedSyllabus: syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber) || null
         });
       }
     });
@@ -78792,19 +78945,19 @@ const App = () => {
       setCurrentUser(userString);
     }
   }, [authUser, currentUser2, currentUserName]);
-  const [syllabusDetails2, setSyllabusDetails] = reactExports.useState([]);
+  const [syllabusDetails, setSyllabusDetails] = reactExports.useState([]);
   const [syllabusLoading, setSyllabusLoading] = reactExports.useState(false);
   const [syllabusError, setSyllabusError] = reactExports.useState(null);
   const visibleSyllabusDetails = reactExports.useMemo(() => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnit = normaliseContextCode(activeUnitCode);
-    return filterSyllabusForMasterLmpAccess(syllabusDetails2, "View", activeUnitCode).filter((item) => {
+    return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode).filter((item) => {
       if (item.lmpType !== "Staff CAT") return true;
       if (activeOperationalModel !== "air_combat") return false;
       const packageUnit = normaliseContextCode(item.unit);
       return !packageUnit || packageUnit === activeUnit;
     });
-  }, [activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails2]);
+  }, [activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
   reactExports.useEffect(() => {
     const loadSyllabus = async () => {
       setSyllabusLoading(true);
@@ -78877,7 +79030,7 @@ const App = () => {
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
           try {
-            const assignableSyncSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails2, "Assign", activeUnitCode);
+            const assignableSyncSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
             const bpcIpcSyllabus = assignableSyncSyllabus.filter(
               (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
             );
@@ -79028,7 +79181,7 @@ const App = () => {
               const isFicTrainee = lmpType === "FIC";
               const alreadySet = newLMPs.has(trainee.fullName);
               if (!alreadySet || isFicTrainee) {
-                const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails2, "Assign", traineeUnitCode).filter((item) => {
+                const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", traineeUnitCode).filter((item) => {
                   if (lmpType === "BPC+IPC") {
                     return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
                   }
@@ -79090,8 +79243,8 @@ const App = () => {
     loadInitialData();
   }, [platformConfigLoaded]);
   reactExports.useEffect(() => {
-    if (!platformConfigLoaded || !syllabusDetails2.length || !allTraineesData.length) return;
-    console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails2.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
+    if (!platformConfigLoaded || !syllabusDetails.length || !allTraineesData.length) return;
+    console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
     setTraineeLMPs((prev) => {
       const newLMPs = new Map(prev);
       allTraineesData.forEach((trainee) => {
@@ -79111,7 +79264,7 @@ const App = () => {
           return;
         }
         if (!alreadySet || isFicTrainee) {
-          const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails2, "Assign", traineeUnitCode).filter((item) => {
+          const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", traineeUnitCode).filter((item) => {
             if (lmpType === "BPC+IPC") {
               return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
             }
@@ -79129,7 +79282,7 @@ const App = () => {
       console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
       return newLMPs;
     });
-  }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, syllabusDetails2]);
+  }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, syllabusDetails]);
   reactExports.useEffect(() => {
     let cancelled = false;
     const requestedSchool = school;
@@ -81403,7 +81556,7 @@ ${"=".repeat(60)}`);
     const eventEnd = eventStart + Number(event.duration || 0);
     const eventCodeMatch = String(event.eventCode || event.flightNumber || "").trim().toUpperCase().match(/[A-Z]{1,5}\d{1,3}/);
     const eventCode2 = eventCodeMatch?.[0] || "";
-    const lmpItem = eventCode2 ? syllabusDetails2.find((item) => String(item.code || "").trim().toUpperCase() === eventCode2) : void 0;
+    const lmpItem = eventCode2 ? syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === eventCode2) : void 0;
     const fallbackPreFlightTime = Number.isFinite(Number(lmpItem?.preFlightTime)) ? Number(lmpItem?.preFlightTime) : 0;
     const fallbackPostFlightTime = Number.isFinite(Number(lmpItem?.postFlightTime)) ? Number(lmpItem?.postFlightTime) : 0;
     const rawPreStart = Number(event.preStart);
@@ -81418,7 +81571,7 @@ ${"=".repeat(60)}`);
       start: hasPreStart ? rawPreLooksLikeMinuteDuration ? eventStart - rawPreStart / 60 : rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart : eventStart - fallbackPreFlightTime,
       end: hasPostEnd ? rawPostLooksLikeMinuteDuration ? eventEnd + rawPostEnd / 60 : rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd : eventEnd + fallbackPostFlightTime
     };
-  }, [syllabusDetails2]);
+  }, [syllabusDetails]);
   const getDiagnosticRoleOption = reactExports.useCallback((role, fallbackLabel) => {
     const crewPosition = findCrewPositionEntry(role, activeCrewPositionTerminology);
     const label = crewPosition?.label || String(role || fallbackLabel || "").trim() || "Unassigned";
@@ -81841,8 +81994,8 @@ ${"=".repeat(60)}`);
     if (typeof event.startTime === "number") {
       return classifyStartBySolarDaylight(event.startTime, event.date || date);
     }
-    return getEventDayNightClassification(event, syllabusDetails2, sctEvents);
-  }, [classifyStartBySolarDaylight, date, syllabusDetails2, sctEvents]);
+    return getEventDayNightClassification(event, syllabusDetails, sctEvents);
+  }, [classifyStartBySolarDaylight, date, syllabusDetails, sctEvents]);
   const checkTimeOverlap = reactExports.useCallback((event1, event2) => {
     const start1 = event1.startTime;
     const end1 = event1.startTime + event1.duration;
@@ -81935,7 +82088,7 @@ ${"=".repeat(60)}`);
     }
     const targetPersonnel = getPersonnel(targetEvent);
     const targetEventWithDate = "date" in targetEvent ? targetEvent : { ...targetEvent };
-    const targetWindow = getEventBookingWindow(targetEventWithDate, syllabusDetails2);
+    const targetWindow = getEventBookingWindow(targetEventWithDate, syllabusDetails);
     if (targetEvent.flightNumber === "SCT FORM") {
       console.log(`   Target personnel for conflict check:`, targetPersonnel);
       console.log(`   Target window: ${targetWindow.start} - ${targetWindow.end}`);
@@ -81944,7 +82097,7 @@ ${"=".repeat(60)}`);
       const commonPersonnel = getCommonPersonnel(targetEvent, event);
       if (commonPersonnel.length > 0) {
         const eventWithDate = "date" in event ? event : { ...event };
-        const eventWindow = getEventBookingWindow(eventWithDate, syllabusDetails2);
+        const eventWindow = getEventBookingWindow(eventWithDate, syllabusDetails);
         if (targetWindow.start < eventWindow.end && targetWindow.end > eventWindow.start) {
           if (targetEvent.flightNumber === "SCT FORM") {
             console.log(`   ❌ PERSONNEL CONFLICT FOUND!`);
@@ -82015,7 +82168,7 @@ ${"=".repeat(60)}`);
       }
     }
     return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
-  }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails2, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying, getScheduleEventDayNightClassification]);
+  }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying, getScheduleEventDayNightClassification]);
   const enforceDayNightSeparation = (personName, proposedStartTime, proposedDuration = 1.5, eventType = "flight", checkDate, proposedFlightNumber, excludeEventId, personRole) => {
     const analysisDate = checkDate || date;
     const existingEvents = eventsForDate.filter(
@@ -82104,7 +82257,7 @@ ${"=".repeat(60)}`);
   const isSoloFlightNeedingTwrDi = (event) => {
     if (event.type !== "flight" || isTwrDiEvent(event)) return false;
     if (event.flightType === "Solo") return true;
-    const syllabusItem = syllabusDetails2.find((item) => item.id === event.flightNumber);
+    const syllabusItem = syllabusDetails.find((item) => item.id === event.flightNumber);
     return syllabusItem?.sortieType === "Solo";
   };
   const isStbyFlightLineEvent = (event) => isStbyResource(event.resourceId);
@@ -82201,7 +82354,7 @@ ${"=".repeat(60)}`);
       }
     }
     return conflictingEventIds;
-  }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, syllabusDetails2]);
+  }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, syllabusDetails]);
   const nextDayPersonnelAndResourceConflictIds = reactExports.useMemo(() => {
     const conflictingEventIds = /* @__PURE__ */ new Set();
     if (!nextDayBuildEvents || nextDayBuildEvents.length === 0) {
@@ -82240,7 +82393,7 @@ ${"=".repeat(60)}`);
       }
     }
     return conflictingEventIds;
-  }, [nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails2]);
+  }, [nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
   const calculateUnavailabilityConflictsForEvents = reactExports.useCallback((eventsToCheck) => {
     const newConflicts = /* @__PURE__ */ new Map();
     const allPersonnel = [...allInstructorsData, ...allTraineesData];
@@ -82254,7 +82407,7 @@ ${"=".repeat(60)}`);
       }
       const personnelNames = getPersonnel(event);
       const conflictedNamesForEvent = [];
-      const eventWindow = getEventBookingWindow(event, syllabusDetails2);
+      const eventWindow = getEventBookingWindow(event, syllabusDetails);
       const [eventYear, eventMonth, eventDay] = event.date.split("-").map(Number);
       const eventStartUTC = new Date(Date.UTC(eventYear, eventMonth - 1, eventDay, 0, eventWindow.start * 60));
       const eventEndUTC = new Date(Date.UTC(eventYear, eventMonth - 1, eventDay, 0, eventWindow.end * 60));
@@ -82299,7 +82452,7 @@ ${"=".repeat(60)}`);
       }
     }
     return newConflicts;
-  }, [allInstructorsData, allTraineesData, syllabusDetails2]);
+  }, [allInstructorsData, allTraineesData, syllabusDetails]);
   const unavailabilityConflicts = reactExports.useMemo(() => {
     const eventsToCheck = eventsForDate || [];
     const newConflicts = calculateUnavailabilityConflictsForEvents(eventsToCheck);
@@ -82768,7 +82921,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setAirCombatTrainingReportDraft({ staff, assignment, item, sourceEvent: reportEvent });
   };
   const handleOpenAirCombatTrainingReportFromFlightDetails = async (staff, sourceEvent) => {
-    const matchingItem = syllabusDetails2.find((item) => String(item.code || "").trim().toUpperCase() === String(sourceEvent.flightNumber || "").trim().toUpperCase());
+    const matchingItem = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(sourceEvent.flightNumber || "").trim().toUpperCase());
     let assignment;
     if (matchingItem) {
       const staffAssignments = normaliseAirCombatTrainingAssignments(staff.preferences);
@@ -82836,7 +82989,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       console.warn(`[PostFlight] Air Combat draft report skipped: staff not found for ${staffName}`);
       return;
     }
-    const matchingItem = syllabusDetails2.find((item) => item.isActive !== false && String(item.code || "").trim().toUpperCase() === eventCode2.toUpperCase() && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType));
+    const matchingItem = syllabusDetails.find((item) => item.isActive !== false && String(item.code || "").trim().toUpperCase() === eventCode2.toUpperCase() && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType));
     if (!matchingItem) {
       console.log(`[PostFlight] Air Combat draft report skipped: ${eventCode2} is not a course/training package syllabus event`);
       return;
@@ -82960,7 +83113,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
       return;
     }
-    const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails2, "Assign", traineeUnitCode).filter((item) => {
+    const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", traineeUnitCode).filter((item) => {
       if (lmpType === "BPC+IPC") {
         return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
       }
@@ -82975,7 +83128,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
     }
     setSuccessMessage("New Trainee Added!");
-  }, [activeUnitCode, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails2]);
+  }, [activeUnitCode, courses, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, syllabusDetails]);
   const handleUpdateTrainee = reactExports.useCallback(async (data) => {
     console.log("📝 [APP] handleUpdateTrainee called");
     console.log("📝 [APP] Trainee data received:", {
@@ -83870,7 +84023,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       return `Deployed ${totalDeploymentCount}`;
     }
     let resourcePrefix;
-    const syllabusItem = syllabusDetails2.find((s) => s.id === eventToPlace.flightNumber);
+    const syllabusItem = syllabusDetails.find((s) => s.id === eventToPlace.flightNumber);
     if (syllabusItem) {
       switch (syllabusItem.type) {
         case "Flight":
@@ -83993,7 +84146,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         console.warn(`No Individual LMP found for trainee: ${traineeFullName}`);
         return prev;
       }
-      const baseEvent = syllabusDetails2.find((item) => item.id === currencyEventId);
+      const baseEvent = syllabusDetails.find((item) => item.id === currencyEventId);
       if (!baseEvent) {
         console.warn(`Currency event ${currencyEventId} not found in syllabus`);
         return prev;
@@ -84809,7 +84962,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         (e) => e.id === `sct-flight-${sctReq.id}`
       );
       if (existingInPriorityIndex > -1) {
-        const syllabusItem = syllabusDetails2.find((s) => s.code === sctReq.event);
+        const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         const duration = syllabusItem?.duration || 1.5;
         let startTime = 8;
         if (sctReq.requestedTime) {
@@ -84833,7 +84986,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         };
         console.log("🔄 Updated HIGH priority SCT flight:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
-        const syllabusItem = syllabusDetails2.find((s) => s.code === sctReq.event);
+        const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
         const duration = syllabusItem?.duration || 1.5;
         const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
@@ -84888,7 +85041,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         (e) => e.id === `sct-ftd-${sctReq.id}`
       );
       if (existingInPriorityIndex > -1) {
-        const syllabusItem = syllabusDetails2.find((s) => s.code === sctReq.event);
+        const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         const duration = syllabusItem?.duration || 1.5;
         let startTime = 8;
         if (sctReq.requestedTime) {
@@ -84909,7 +85062,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         };
         console.log("🔄 Updated HIGH priority SCT FTD:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
-        const syllabusItem = syllabusDetails2.find((s) => s.code === sctReq.event);
+        const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
         const duration = syllabusItem?.duration || 1.5;
         let startTime = 8;
@@ -85016,7 +85169,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           }
         }
         if (!syllabusItem) {
-          syllabusItem = syllabusDetails2.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
+          syllabusItem = syllabusDetails.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
           if (syllabusItem) {
             syllabusSource = "master-syllabus";
             console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
@@ -85607,7 +85760,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
     let bnfTraineeCount = 0;
     activeTrainees.forEach((trainee) => {
-      const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails2, buildPublishedSchedulesForRun, buildDfpDate);
+      const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, buildPublishedSchedulesForRun, buildDfpDate);
       if (next && next.code.startsWith("BNF") && next.type === "Flight") {
         bnfTraineeCount++;
       }
@@ -85718,7 +85871,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     let buildTraineeLMPs = traineeLMPs;
     try {
       const apiBase2 = getApiBaseUrl();
-      const assignableBuildSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails2, "Assign", activeUnitCode);
+      const assignableBuildSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
       const bpcIpcSyllabus = assignableBuildSyllabus.filter(
         (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
       );
@@ -85828,7 +85981,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
       instructors: instructorsInBuild,
       trainees: traineesInBuild,
-      syllabus: syllabusDetails2,
+      syllabus: syllabusDetails,
       scores,
       coursePriorities,
       coursePercentages,
@@ -85956,7 +86109,7 @@ ${conflictLines.join("\n")}${moreText}`,
           allTraineesData,
           buildTraineeLMPs,
           scores,
-          syllabusDetails2,
+          syllabusDetails,
           publishedSchedules
         );
         markNeoBuildTiming(timingReport, "analysis:complete", { totalEvents: analysis.totalEvents });
@@ -86065,7 +86218,7 @@ ${conflictLines.join("\n")}${moreText}`,
                 return !staff.isAdminStaff && Boolean(staff.name) && (roleText === "pilot" || roleText === "qfi" || roleText === "instructor" || isPilotCrewPosition(staff.role, activeCrewPositionTerminology));
               }).length,
               highestPriorityEvents: config.highestPriorityEvents.length,
-              syllabusItems: syllabusDetails2.length
+              syllabusItems: syllabusDetails.length
             },
             stageTrace: [{
               stage: "runtime-error-before-air-combat-diagnostics",
@@ -86235,7 +86388,7 @@ ${conflictLines.join("\n")}${moreText}`,
           trainee,
           traineeLMPs,
           scores,
-          syllabusDetails2,
+          syllabusDetails,
           publishedSchedules,
           pauseDate
         );
@@ -87204,8 +87357,8 @@ ${conflictLines.join("\n")}${moreText}`,
     logAudit("Next Day Build", "Create", "Added NEO Assist tile", `${droppedEvents.length} x ${draft.flightNumber} at ${placement.resourceId}`);
   }, [buildDroppedNeoAssistEvents, buildDfpDate, buildResources]);
   const syllabusForModal = reactExports.useMemo(() => {
-    return syllabusDetails2.map((item) => item.id);
-  }, [syllabusDetails2]);
+    return syllabusDetails.map((item) => item.id);
+  }, [syllabusDetails]);
   const addTileSyllabusOptions = reactExports.useMemo(() => {
     console.log("addTileSyllabusOptions filtering visibleSyllabusDetails:", visibleSyllabusDetails);
     const filtered = visibleSyllabusDetails.filter(
@@ -87760,7 +87913,7 @@ ${conflictLines.join("\n")}${moreText}`,
       return false;
     }
     const cleanedLabel = request.label.trim().slice(0, 8).toUpperCase();
-    const existingCodes = new Set(syllabusDetails2.map((item) => String(item.code || item.id || "").trim().toUpperCase()));
+    const existingCodes = new Set(syllabusDetails.map((item) => String(item.code || item.id || "").trim().toUpperCase()));
     let sequence = 1;
     let eventCode2 = cleanedLabel;
     while (existingCodes.has(eventCode2.toUpperCase())) {
@@ -87836,7 +87989,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const originalId = originalItem.id || originalItem.code;
     const originalCode = originalItem.code || originalItem.id;
     const updatedCode = String(updatedItem.code || updatedItem.id || "").trim().toUpperCase();
-    const duplicateCode = syllabusDetails2.some((item) => {
+    const duplicateCode = syllabusDetails.some((item) => {
       const matchesOriginal = (item.id || item.code) === originalId || (item.code || item.id) === originalCode;
       if (matchesOriginal) return false;
       return String(item.code || item.id || "").trim().toUpperCase() === updatedCode;
@@ -87926,7 +88079,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     return groups;
   }, [allTraineesData]);
   const handleSaveGroundEvent = (data) => {
-    const syllabusItem = syllabusDetails2.find((s) => s.code === data.flightNumber);
+    const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
     if (!syllabusItem) return;
     const newEvent = {
       id: v4(),
@@ -88080,7 +88233,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, []);
   const isReplacementAvailableForCandidateEvent = reactExports.useCallback((person, personName, candidateEvent, allEvents) => {
     const candidateEventType = candidateEvent.type;
-    const eventWindow = getEventBookingWindow(candidateEvent, syllabusDetails2);
+    const eventWindow = getEventBookingWindow(candidateEvent, syllabusDetails);
     const personRole = "fullName" in person ? "trainee" : "staff";
     if (isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, candidateEvent.date, candidateEventType)) {
       return false;
@@ -88090,7 +88243,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const replacementHasOverlap = allEvents.some((event) => {
       if (event.id === candidateEvent.id || !eventHasPersonWithRole(event, personName, personRole)) return false;
-      const otherEventWindow = getEventBookingWindow(event, syllabusDetails2);
+      const otherEventWindow = getEventBookingWindow(event, syllabusDetails);
       return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
     });
     if (replacementHasOverlap) {
@@ -88105,13 +88258,13 @@ ${error instanceof Error ? error.message : String(error)}`,
       return false;
     }
     return true;
-  }, [detectConflictsForEvent, hasTwrDiCoverageForSolo, replacementViolatesDayNightSeparation, shouldRequireTwrDiCoverage, syllabusDetails2]);
+  }, [detectConflictsForEvent, hasTwrDiCoverageForSolo, replacementViolatesDayNightSeparation, shouldRequireTwrDiCoverage, syllabusDetails]);
   const generateTraineeRemedies = reactExports.useCallback((conflictedEvent, allEvents) => {
     const suggestions = [];
     const conflictedSyllabusId = conflictedEvent.flightNumber;
     const otherTrainees = allTraineesData.filter((t) => !personnelNamesMatch(t.fullName, conflictedEvent.student) && !t.isPaused);
     for (const trainee of otherTrainees) {
-      const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails2, publishedSchedules, buildDfpDate);
+      const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
       if (nextEvents.next?.id !== conflictedSyllabusId) {
         continue;
       }
@@ -88165,7 +88318,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       const ftdsToday = instructorEventsToday.filter((e) => e.type === "ftd").length;
       const cptsToday = instructorEventsToday.filter((e) => e.type === "cpt" || e.type === "ground" && e.flightNumber.includes("CPT")).length;
       const groundToday = instructorEventsToday.filter((e) => e.type === "ground" && !(e.type === "cpt" || e.flightNumber.includes("CPT"))).length;
-      const dutyHours = calculateProjectedDuty(instructor.name, allEvents.filter((e) => e.id !== conflictedEvent.id), eventAtNewTime, syllabusDetails2);
+      const dutyHours = calculateProjectedDuty(instructor.name, allEvents.filter((e) => e.id !== conflictedEvent.id), eventAtNewTime, syllabusDetails);
       suggestions.push({
         type: "instructor",
         instructor: {
@@ -88190,7 +88343,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (eventCountA !== eventCountB) return eventCountA - eventCountB;
       return a.instructor.dutyHours - b.instructor.dutyHours;
     });
-  }, [instructorsData, syllabusDetails2, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
+  }, [instructorsData, syllabusDetails, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
   const generatePilotRemediesAtTime = reactExports.useCallback((conflictedEvent, allEvents, atTime) => {
     const suggestions = [];
     console.log("🔍 generatePilotRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
@@ -88224,7 +88377,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       const ftdsToday = pilotEventsToday.filter((e) => e.type === "ftd").length;
       const cptsToday = pilotEventsToday.filter((e) => e.type === "cpt" || e.type === "ground" && e.flightNumber.includes("CPT")).length;
       const groundToday = pilotEventsToday.filter((e) => e.type === "ground" && !(e.type === "cpt" || e.flightNumber.includes("CPT"))).length;
-      const dutyHours = calculateProjectedDuty(pilot.name, allEvents.filter((e) => e.id !== conflictedEvent.id), eventAtNewTime, syllabusDetails2);
+      const dutyHours = calculateProjectedDuty(pilot.name, allEvents.filter((e) => e.id !== conflictedEvent.id), eventAtNewTime, syllabusDetails);
       suggestions.push({
         type: "instructor",
         // Reusing the same type for display purposes
@@ -88249,9 +88402,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (eventCountA !== eventCountB) return eventCountA - eventCountB;
       return a.instructor.dutyHours - b.instructor.dutyHours;
     });
-  }, [instructorsData, syllabusDetails2, school, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
+  }, [instructorsData, syllabusDetails, school, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
   const findClosestTurnaroundFix = (problemEvent, allEvents, context, flyingWindow) => {
-    const { flightTurnaround: flightTurnaround2, ftdTurnaround: ftdTurnaround2, syllabusDetails: syllabusDetails22, getEventBookingWindow: getEventBookingWindow2, isPersonStaticallyUnavailable: isPersonStaticallyUnavailable2, maxCrewDutyPeriod: maxCrewDutyPeriod2 } = context;
+    const { flightTurnaround: flightTurnaround2, ftdTurnaround: ftdTurnaround2, syllabusDetails: syllabusDetails2, getEventBookingWindow: getEventBookingWindow2, isPersonStaticallyUnavailable: isPersonStaticallyUnavailable2, maxCrewDutyPeriod: maxCrewDutyPeriod2 } = context;
     const eventsOnResource = allEvents.filter((e) => e.resourceId === problemEvent.resourceId && e.id !== problemEvent.id).sort((a, b) => a.startTime - b.startTime);
     const prevEvent = eventsOnResource.filter((e) => e.startTime < problemEvent.startTime).pop();
     const nextEvent = eventsOnResource.find((e) => e.startTime > problemEvent.startTime);
@@ -88263,7 +88416,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     else if (problemEvent.type === "ftd") baseTurnaround = ftdTurnaround2;
     const testTime = (newStartTime) => {
       const tempEvent = { ...problemEvent, startTime: newStartTime };
-      const eventWindow = getEventBookingWindow2(tempEvent, syllabusDetails22);
+      const eventWindow = getEventBookingWindow2(tempEvent, syllabusDetails2);
       if (eventWindow.start < flyingWindow.start || eventWindow.end > flyingWindow.end) return false;
       const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
       if (newStartTime < problemEvent.startTime && eventWindow.start < nowInHours) return false;
@@ -88277,8 +88430,8 @@ ${error instanceof Error ? error.message : String(error)}`,
         let effectiveTurnaround = baseTurnaround;
         const hasCommonCrew = getCommonPersonnel(prevEvent, problemEvent).length > 0;
         if (hasCommonCrew) {
-          const prevSyllabus = syllabusDetails22.find((s) => s.id === prevEvent.flightNumber);
-          const currentSyllabus = syllabusDetails22.find((s) => s.id === problemEvent.flightNumber);
+          const prevSyllabus = syllabusDetails2.find((s) => s.id === prevEvent.flightNumber);
+          const currentSyllabus = syllabusDetails2.find((s) => s.id === problemEvent.flightNumber);
           const crewGap = (prevSyllabus?.postFlightTime || 0) + (currentSyllabus?.preFlightTime || 0);
           effectiveTurnaround = Math.max(baseTurnaround, crewGap);
         }
@@ -88288,8 +88441,8 @@ ${error instanceof Error ? error.message : String(error)}`,
         let effectiveTurnaround = baseTurnaround;
         const hasCommonCrew = getCommonPersonnel(nextEvent, problemEvent).length > 0;
         if (hasCommonCrew) {
-          const currentSyllabus = syllabusDetails22.find((s) => s.id === problemEvent.flightNumber);
-          const nextSyllabus = syllabusDetails22.find((s) => s.id === nextEvent.flightNumber);
+          const currentSyllabus = syllabusDetails2.find((s) => s.id === problemEvent.flightNumber);
+          const nextSyllabus = syllabusDetails2.find((s) => s.id === nextEvent.flightNumber);
           const crewGap = (currentSyllabus?.postFlightTime || 0) + (nextSyllabus?.preFlightTime || 0);
           effectiveTurnaround = Math.max(baseTurnaround, crewGap);
         }
@@ -88304,12 +88457,12 @@ ${error instanceof Error ? error.message : String(error)}`,
         const hasOverlap = allEvents.some((e) => {
           if (e.id === problemEvent.id) return false;
           if (!eventHasPersonWithRole(e, personName, crewMember.role)) return false;
-          const otherEventWindow = getEventBookingWindow2(e, syllabusDetails22);
+          const otherEventWindow = getEventBookingWindow2(e, syllabusDetails2);
           return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
         });
         if (hasOverlap) return false;
         const otherEventsForPerson = allEvents.filter((e) => e.id !== problemEvent.id && eventHasPersonWithRole(e, personName, crewMember.role));
-        const projectedDuty = calculateProjectedDuty(personName, otherEventsForPerson, tempEvent, syllabusDetails22);
+        const projectedDuty = calculateProjectedDuty(personName, otherEventsForPerson, tempEvent, syllabusDetails2);
         if (projectedDuty > maxCrewDutyPeriod2) return false;
       }
       return true;
@@ -88380,7 +88533,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const isTurnaroundViolationOnly = errors.every((e) => e.toLowerCase().includes("turnaround")) && errors.length > 0;
     const instructorIsConflicted = errors.some((e) => eventForNeo.instructor && e.includes(eventForNeo.instructor.split(",")[0]));
     if (isTurnaroundViolationOnly || !instructorIsConflicted) {
-      const context = { flightTurnaround, ftdTurnaround, syllabusDetails: syllabusDetails2, getEventBookingWindow, isPersonStaticallyUnavailable, maxCrewDutyPeriod };
+      const context = { flightTurnaround, ftdTurnaround, syllabusDetails, getEventBookingWindow, isPersonStaticallyUnavailable, maxCrewDutyPeriod };
       const timeRemedy = findClosestTurnaroundFix(eventForNeo, allEvents, context, { start: flyingStartTime, end: flyingEndTime });
       if (timeRemedy) {
         setTimeOnlyRemedyForConfirmation(timeRemedy);
@@ -88564,7 +88717,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (shouldRequireTwrDiCoverage(event, options) && !hasTwrDiCoverageForSolo(event, allEventsForDate)) {
       errors.push("❌ TWR DI coverage missing - Solo flights require a TWR DI event that starts before or at the solo start time and finishes after or at the solo finish time.");
     }
-    const eventWindow = getEventBookingWindow(event, syllabusDetails2);
+    const eventWindow = getEventBookingWindow(event, syllabusDetails);
     const personnel = getPersonnel(event);
     const allPersonnelData = [...allInstructorsData, ...allTraineesData];
     personnel.forEach((name) => {
@@ -88869,7 +89022,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       const hasFtd = events2.some((e) => e.type === "ftd" && e.date === analysisDate);
       const hasFlight = events2.some((e) => e.type === "flight" && e.date === analysisDate);
       const groundEventsToday = events2.filter((e) => e.type === "ground" && e.date === analysisDate).length;
-      const nextSyllabusEvent = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails2, publishedSchedules, buildDfpDate).next;
+      const nextSyllabusEvent = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate).next;
       let isEligible = nextSyllabusEvent?.type === "Flight";
       if (trainee.isPaused) {
         isEligible = false;
@@ -88904,7 +89057,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     traineesAnalysis.filter((t) => t.isEligible).length;
     setOracleAnalysis({ instructors: instructorsAnalysis, trainees: traineesAnalysis });
-  }, [allInstructorsData, allTraineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails2]);
+  }, [allInstructorsData, allTraineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails]);
   const handleToggleOracleMode = reactExports.useCallback(() => {
     if (!canRunNeoBuild) {
       denyPlatformAction("NEO tile assistance is not permitted for your assigned permission profile");
@@ -88961,7 +89114,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const instructorAvailable = oracleAnalysis.instructors.some((inst) => {
       const personEvents = currentEvents.filter((e) => getPersonnel(e).includes(inst.instructor.name));
       const hasOverlap = personEvents.some((e) => {
-        const existingWindow = getEventBookingWindow(e, syllabusDetails2);
+        const existingWindow = getEventBookingWindow(e, syllabusDetails);
         return bookingWindow.start < existingWindow.end && bookingWindow.end > existingWindow.start;
       });
       return !isPersonStaticallyUnavailable(inst.instructor, bookingWindow.start, bookingWindow.end, analysisDate, "flight") && !hasOverlap;
@@ -88970,7 +89123,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (!tr.isEligible) return false;
       const personEvents = currentEvents.filter((e) => getPersonnel(e).includes(tr.trainee.fullName));
       const hasOverlap = personEvents.some((e) => {
-        const existingWindow = getEventBookingWindow(e, syllabusDetails2);
+        const existingWindow = getEventBookingWindow(e, syllabusDetails);
         return bookingWindow.start < existingWindow.end && bookingWindow.end > existingWindow.start;
       });
       return !isPersonStaticallyUnavailable(tr.trainee, bookingWindow.start, bookingWindow.end, analysisDate, "flight") && !hasOverlap;
@@ -88982,7 +89135,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       instructor: instructorAvailable ? "Instructor ✓" : "NO INSTRUCTOR ✕",
       student: traineeAvailable ? "Trainee ✓" : "NO TRAINEE ✕"
     });
-  }, [oraclePreviewEvent, oracleAnalysis, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails2]);
+  }, [oraclePreviewEvent, oracleAnalysis, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails]);
   const handleOracleMouseUp = reactExports.useCallback(() => {
     if (!oraclePreviewEvent || !oracleAnalysis) return;
     const currentEvents = (oracleContext === "nextDayBuild" ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate).filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));
@@ -88994,7 +89147,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const availableInstructors = oracleAnalysis.instructors.filter((inst) => {
       const personEvents = currentEvents.filter((e) => getPersonnel(e).includes(inst.instructor.name));
       const hasOverlap = personEvents.some((e) => {
-        const existingWindow = getEventBookingWindow(e, syllabusDetails2);
+        const existingWindow = getEventBookingWindow(e, syllabusDetails);
         return bookingWindow.start < existingWindow.end && bookingWindow.end > existingWindow.start;
       });
       return !isPersonStaticallyUnavailable(inst.instructor, bookingWindow.start, bookingWindow.end, analysisDate, "flight") && !hasOverlap;
@@ -89019,10 +89172,10 @@ ${error instanceof Error ? error.message : String(error)}`,
         }
       }
       const hasOverlap = personEvents.some((e) => {
-        const existingWindow = getEventBookingWindow(e, syllabusDetails2);
+        const existingWindow = getEventBookingWindow(e, syllabusDetails);
         return bookingWindow.start < existingWindow.end && bookingWindow.end > existingWindow.start;
       });
-      const nextEventClassification = tr.nextSyllabusEvent ? getEventDayNightClassification({ flightNumber: tr.nextSyllabusEvent.code }, syllabusDetails2, sctEvents) : "Unknown";
+      const nextEventClassification = tr.nextSyllabusEvent ? getEventDayNightClassification({ flightNumber: tr.nextSyllabusEvent.code }, syllabusDetails, sctEvents) : "Unknown";
       if (tr.nextSyllabusEvent && nextEventClassification !== "Day/Night") {
         const proposedIsNight = classifyStartBySolarDaylight(bookingWindow.start, analysisDate) === "Night";
         const proposedIsDay = !proposedIsNight;
@@ -89071,7 +89224,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setSelectedEvent(newEvent);
     setIsEditingDefault(true);
     setOraclePreviewEvent(null);
-  }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails2, classifyStartBySolarDaylight]);
+  }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails, classifyStartBySolarDaylight]);
   const handleSelectMyProfile = () => {
     const user = instructorsData.find((i) => i.name === currentUserName);
     if (user) {
@@ -89229,7 +89382,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             zoomLevel,
             showValidation,
             showPrePost,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             personnelData,
             seatConfigs,
             daylightTimes: selectedDfpDaylightTimes,
@@ -89337,7 +89490,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             daylightTimes: selectedDfpDaylightTimes,
             personnelData,
             seatConfigs,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             conflictingEventIds: personnelAndResourceConflictIds,
             showValidation,
             unavailabilityConflicts,
@@ -89378,7 +89531,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               daylightTimes: selectedDfpDaylightTimes,
               personnelData,
               seatConfigs,
-              syllabusDetails: syllabusDetails2,
+              syllabusDetails,
               conflictingEventIds: personnelAndResourceConflictIds,
               showValidation,
               unavailabilityConflicts,
@@ -89415,7 +89568,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             daylightTimes: buildDfpDaylightTimes,
             personnelData,
             seatConfigs,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             conflictingEventIds: nextDayPersonnelAndResourceConflictIds,
             showValidation,
             onSelectInstructor: handleSelectInstructorFromSchedule,
@@ -89445,7 +89598,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             daylightTimes: buildDfpDaylightTimes,
             personnelData,
             seatConfigs,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             conflictingEventIds: nextDayPersonnelAndResourceConflictIds,
             showValidation,
             onSelectTrainee: handleSelectTraineeFromSchedule,
@@ -89477,7 +89630,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onAddTrainee: handleAddTrainee,
             school,
             scores,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             onNavigateToSyllabus,
             onNavigateToCurrency: handleNavigateToCurrency,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
@@ -89631,7 +89784,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onAddTrainee: handleAddTrainee,
             school,
             scores,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             onNavigateToSyllabus,
             onNavigateToCurrency: handleNavigateToCurrency,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
@@ -89783,7 +89936,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             zoomLevel,
             showValidation,
             showPrePost,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             personnelData,
             seatConfigs,
             daylightTimes: buildDfpDaylightTimes,
@@ -90014,7 +90167,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 syncPriorityEventsWithSctAndRemedial();
               }, 100);
             },
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             scores,
             traineeLMPs,
             remedialRequests,
@@ -90096,7 +90249,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             events,
             scores,
             publishedSchedules,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             pt051Assessments,
             onSavePT051Assessment,
             locations,
@@ -90133,7 +90286,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               }
             },
             scores,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             traineeLMPs,
             courseColors: scopedCourseColors,
             currentUserRole: currentUserPermission,
@@ -90381,7 +90534,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             zoomLevel,
             daylightTimes: selectedDfpDaylightTimes,
             seatConfigs,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             conflictingEventIds: personnelAndResourceConflictIds,
             showValidation,
             unavailabilityConflicts,
@@ -90417,7 +90570,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             instructorsData,
             archivedInstructorsData,
             scheduleHistoryEvents: publishedScheduleHistoryEvents,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             insertEventTypes,
             aircraftConfigurations,
             onInsertAirCombatTrainingEvent: handleInsertAirCombatTrainingEvent,
@@ -90575,7 +90728,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             crewPositionTerminology: activeCrewPositionTerminology,
             activeLocationCode: school,
             activeUnitCode,
-            trainingPackageTemplates: syllabusDetails2.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false),
+            trainingPackageTemplates: syllabusDetails.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false),
             instructorsData,
             operationalModel: activeOperationalModel,
             currentUserName,
@@ -90648,7 +90801,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             traineesData,
             onDataSourceSettingsChange: (newSettings) => setDataSourceSettings(newSettings),
             onDatabaseDataChanged: handleDatabaseDataChanged,
-            syllabusDetails: syllabusDetails2,
+            syllabusDetails,
             onBulkUpdateInstructors: handleBulkUpdateInstructors,
             onReplaceInstructors: handleReplaceInstructors,
             onBulkUpdateTrainees: handleBulkUpdateTrainees,
@@ -90936,7 +91089,7 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
               pt051Assessments,
               events,
               lmpScores: scores.get(selectedTraineeForHateSheet.fullName) || [],
-              syllabusDetails: syllabusDetails2,
+              syllabusDetails,
               registerDirtyCheck,
               phraseBank: getUnitTrainingReportPhraseBank(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode, phraseBank),
               currentUserPin: currentUser2?.pin || "1111",
@@ -91796,7 +91949,7 @@ Do you want to replace the existing entry?`,
           },
           instructors: instructorsData.map((i) => i.name),
           trainees: allTraineesData.map((t) => t.fullName),
-          syllabusDetails: syllabusDetails2,
+          syllabusDetails,
           school,
           traineesData,
           instructorsData,
@@ -91833,7 +91986,7 @@ Do you want to replace the existing entry?`,
             console.log("syllabusForModal length:", syllabusForModal.length);
             return isAddingTile ? addTileSyllabusOptions : syllabusForModal;
           })(),
-          syllabusDetails: syllabusDetails2,
+          syllabusDetails,
           highlightedField,
           school,
           traineesData,
@@ -91892,7 +92045,7 @@ Do you want to replace the existing entry?`,
                 if (lmpType === "BPC+IPC" && trainee.course?.toUpperCase().startsWith("FIC")) {
                   lmpType = "FIC";
                 }
-                const masterSyllabus = syllabusDetails2.filter((item) => {
+                const masterSyllabus = syllabusDetails.filter((item) => {
                   if (lmpType === "BPC+IPC") return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
                   return item.courses && item.courses.includes(lmpType);
                 });
@@ -92078,12 +92231,12 @@ Do you want to replace the existing entry?`,
           onClose: () => setShowAddGroundEvent(false),
           onSave: handleSaveGroundEvent,
           onSaveAcademic: handleSaveAcademicEvent,
-          groundSyllabus: syllabusDetails2.filter((s) => s.type === "Ground School"),
+          groundSyllabus: syllabusDetails.filter((s) => s.type === "Ground School"),
           activeCourses: scopedCourseColors,
           allTraineesByCourse,
           instructors: instructorsData.map((i) => i.name),
           traineesData,
-          syllabusDetails: syllabusDetails2,
+          syllabusDetails,
           scores,
           traineeLMPs,
           events,

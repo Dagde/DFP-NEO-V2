@@ -101,16 +101,18 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
     return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
   };
 
+  const normaliseAirCombatStreamCode = (value: string): string => {
+    const code = String(value || '').trim().toUpperCase();
+    if (code.startsWith('AA') || code.startsWith('ATA')) return 'ATA';
+    if (code.startsWith('ICO') || code.startsWith('IC')) return 'ICO';
+    return code.replace(/\d+$/, '') || code;
+  };
+
   const getAirCombatEventStreamCode = (event: ScheduleEvent): string => {
     const explicit = String((event as any).assignmentCode || event.taskingDisplayLabel || '').trim().toUpperCase();
-    if (explicit) return explicit;
+    if (explicit) return normaliseAirCombatStreamCode(explicit);
     const code = String(event.eventCode || event.flightNumber || '').trim().toUpperCase();
-    const match = code.match(/^([A-Z]+|[A-Z]+\d+)/);
-    if (!match) return code;
-    if (code.startsWith('ICO') || code.startsWith('IC')) return 'ICO';
-    if (code.startsWith('AA')) return 'AA';
-    if (code.startsWith('ATA')) return 'ATA';
-    return match[1].replace(/\d+$/, '') || code;
+    return normaliseAirCombatStreamCode(code);
   };
 
   const getEventPeople = (event: ScheduleEvent): string[] => {
@@ -187,7 +189,7 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
     events.forEach(event => {
       const eventStreamCode = getAirCombatEventStreamCode(event);
       streams.forEach(stream => {
-        if (String(stream.code || '').toUpperCase() !== eventStreamCode) return;
+        if (normaliseAirCombatStreamCode(stream.code) !== eventStreamCode) return;
         stream.eventCount += 1;
         if (event.type === 'flight') stream.eventsByType.flight += 1;
         else if (event.type === 'ftd') stream.eventsByType.ftd += 1;
@@ -283,38 +285,16 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
     };
   }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
 
-  const airCombatCourseAnalysis: CourseAnalysis[] = airCombatCourseStats.map(stream => {
-    const possibleEvents = Math.max(stream.syllabusItems * Math.max(stream.staff.size, 1), stream.eventCount);
-    const schedulingEfficiency = possibleEvents > 0 ? (stream.eventCount / possibleEvents) * 100 : 0;
-    return {
-      courseName: `${stream.kind === 'course' ? 'Course' : 'Package'} ${stream.code}`,
-      targetPercentage: 0,
-      actualPercentage: 0,
-      deviation: 0,
-      eventCount: stream.eventCount,
-      possibleEvents,
-      schedulingEfficiency,
-      eventsByType: stream.eventsByType,
-      limitingFactors: {
-        insufficientInstructors: 0,
-        noAircraftSlots: 0,
-        noFtdSlots: 0,
-        noCptSlots: 0,
-        traineeLimit: 0,
-        instructorLimit: 0,
-        noTimeSlots: 0,
-      },
-      status: schedulingEfficiency >= 70 ? 'good' : schedulingEfficiency >= 35 ? 'fair' : 'poor',
-    };
-  });
-
   if (isAirCombatModel) {
+    const totalScheduled = airCombatCourseStats.reduce((sum, stream) => sum + stream.eventCount, 0);
     return (
       <div className="space-y-6">
         <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
           <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
             <h2 className="text-lg font-semibold text-white">Air Combat Course & Package Metrics</h2>
-            <p className="mt-1 text-sm text-slate-400">Only courses and packages with staff assigned in this unit are shown.</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Each card is a course or training package assigned to at least one staff member in this unit. The large number is how many events from that stream are on the selected DFP.
+            </p>
           </div>
           <div className="p-5">
             {airCombatCourseStats.length > 0 ? (
@@ -324,7 +304,7 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
                     key={stream.key}
                     title={`${stream.kind === 'course' ? 'Course' : 'Package'} ${stream.code}`}
                     value={stream.eventCount}
-                    description={`${stream.availableStaff.size}/${stream.staff.size} staff available, ${stream.syllabusItems} LMP events`}
+                    description={`${stream.staff.size} assigned staff, ${stream.availableStaff.size} available today, ${stream.syllabusItems} LMP events in stream`}
                     personnelList={Array.from(stream.staff).sort()}
                     onPersonClick={onNavigateAndSelectPerson}
                   />
@@ -336,28 +316,75 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
           </div>
         </div>
 
-        {airCombatCourseAnalysis.length > 0 && (
-          <>
-            <CourseDistributionTable courseAnalysis={airCombatCourseAnalysis} resourceDisplayNames={resourceDisplayNames} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <PieChart
-                title="Flight Events per Course / Package"
-                data={airCombatCourseAnalysis.map((course, index) => ({
-                  label: course.courseName,
-                  value: course.eventsByType.flight,
-                  color: `hsl(${(index * 360) / Math.max(airCombatCourseAnalysis.length, 1)}, 70%, 60%)`
-                }))}
-              />
-              <PieChart
-                title="Total Events per Course / Package"
-                data={airCombatCourseAnalysis.map((course, index) => ({
-                  label: course.courseName,
-                  value: course.eventCount,
-                  color: `hsl(${(index * 360) / Math.max(airCombatCourseAnalysis.length, 1)}, 70%, 60%)`
-                }))}
-              />
+        {airCombatCourseStats.length > 0 && (
+          <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+            <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
+              <h2 className="text-lg font-semibold text-white">Course And Package Schedule Summary</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                This table shows what is loaded for the selected Air Combat unit and what was actually scheduled on this DFP.
+              </p>
             </div>
-          </>
+            <div className="overflow-x-auto p-5">
+              <table className="w-full min-w-[920px] text-left text-sm">
+                <thead className="bg-slate-950/80 text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Code</th>
+                    <th className="px-4 py-3">Assigned Staff</th>
+                    <th className="px-4 py-3">Available</th>
+                    <th className="px-4 py-3">LMP Events</th>
+                    <th className="px-4 py-3">Scheduled</th>
+                    <th className="px-4 py-3">{resourceDisplayNames.aircraft} Flight</th>
+                    <th className="px-4 py-3">{resourceDisplayNames.ftd}</th>
+                    <th className="px-4 py-3">{resourceDisplayNames.cpt}</th>
+                    <th className="px-4 py-3">Ground</th>
+                    <th className="px-4 py-3">Completed Reports</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {airCombatCourseStats.map(stream => (
+                    <tr key={stream.key} className="border-t border-slate-800">
+                      <td className="px-4 py-3 text-slate-300">{stream.kind === 'course' ? 'Course' : 'Package'}</td>
+                      <td className="px-4 py-3 font-semibold text-white">{stream.code}</td>
+                      <td className="px-4 py-3 text-slate-200">{stream.staff.size}</td>
+                      <td className="px-4 py-3 text-emerald-300">{stream.availableStaff.size}</td>
+                      <td className="px-4 py-3 text-slate-200">{stream.syllabusItems}</td>
+                      <td className="px-4 py-3 font-semibold text-cyan-200">{stream.eventCount}</td>
+                      <td className="px-4 py-3 text-slate-200">{stream.eventsByType.flight}</td>
+                      <td className="px-4 py-3 text-slate-200">{stream.eventsByType.ftd}</td>
+                      <td className="px-4 py-3 text-slate-200">{stream.eventsByType.cpt}</td>
+                      <td className="px-4 py-3 text-slate-200">{stream.eventsByType.ground}</td>
+                      <td className="px-4 py-3 text-slate-200">{stream.completedReports}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {airCombatCourseStats.length > 0 && (
+          <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+            <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
+              <h2 className="text-lg font-semibold text-white">Scheduled Events By Stream</h2>
+            </div>
+            <div className="space-y-3 p-5">
+              {airCombatCourseStats.map(stream => {
+                const percent = totalScheduled > 0 ? Math.round((stream.eventCount / totalScheduled) * 100) : 0;
+                return (
+                  <div key={stream.key} className="rounded-lg border border-slate-700 bg-slate-950/45 p-4">
+                    <div className="mb-2 flex items-center justify-between gap-4">
+                      <span className="font-semibold text-white">{stream.kind === 'course' ? 'Course' : 'Package'} {stream.code}</span>
+                      <span className="text-sm text-slate-300">{stream.eventCount} scheduled ({percent}%)</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                      <div className="h-full rounded-full bg-cyan-400" style={{ width: `${percent}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
     );
