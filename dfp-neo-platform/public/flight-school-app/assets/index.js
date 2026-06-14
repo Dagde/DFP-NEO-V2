@@ -37432,6 +37432,7 @@ const isSupportStaffRole = (instructor) => {
   const role = String(instructor.role || "").trim().toUpperCase();
   return role === "SIM IP" || role === "OFI" || instructor.isOFI === true;
 };
+const getInstructorCrewGroup = (instructor) => String(instructor.crew || instructor.preferences?.crew || "").trim();
 const getStaffRoleFilterOption = (role, terminology, instructorLabel) => {
   const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel);
   return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
@@ -37692,7 +37693,7 @@ const InstructorListView = ({
     if (!isFixedCrewModel) return {};
     const groups = {};
     filteredQfis.forEach((instructor) => {
-      const crewName = String(instructor.crew || "").trim();
+      const crewName = getInstructorCrewGroup(instructor);
       if (!crewName) return;
       if (!groups[crewName]) {
         groups[crewName] = [];
@@ -47507,6 +47508,7 @@ async function fetchInstructors() {
         ...p,
         callsign: p.callsign || preferences.callsign || "",
         secondaryCallsign: p.secondaryCallsign || preferences.secondaryCallsign || "",
+        crew: p.crew || preferences.crew || "",
         currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || []
       };
     });

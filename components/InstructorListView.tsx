@@ -39,6 +39,9 @@ const isSupportStaffRole = (instructor: Instructor): boolean => {
     const role = String(instructor.role || '').trim().toUpperCase();
     return role === 'SIM IP' || role === 'OFI' || instructor.isOFI === true;
 };
+const getInstructorCrewGroup = (instructor: Instructor): string => (
+    String(instructor.crew || instructor.preferences?.crew || '').trim()
+);
 const getStaffRoleFilterOption = (
     role: string | undefined,
     terminology: CrewPositionTerminology | undefined,
@@ -408,7 +411,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       if (!isFixedCrewModel) return {};
       const groups: { [key: string]: Instructor[] } = {};
       filteredQfis.forEach(instructor => {
-          const crewName = String(instructor.crew || '').trim();
+          const crewName = getInstructorCrewGroup(instructor);
           if (!crewName) return;
           if (!groups[crewName]) {
               groups[crewName] = [];

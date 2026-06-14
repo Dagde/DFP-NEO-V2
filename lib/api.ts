@@ -53,6 +53,7 @@ export async function fetchInstructors(): Promise<any[]> {
         ...p,
         callsign: p.callsign || preferences.callsign || '',
         secondaryCallsign: p.secondaryCallsign || preferences.secondaryCallsign || '',
+        crew: p.crew || preferences.crew || '',
         currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
       };
     });
