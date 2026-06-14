@@ -32148,8 +32148,24 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
   const fallback = buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft);
   const eventSeries = metrics.eventSeries.length > 0 ? metrics.eventSeries : fallback.eventSeries;
   const staffDays = selectedStaff ? metrics.staffSeries?.[selectedStaff] || dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 })) : dates.map((day) => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }));
-  const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
-  const availabilityPoints = availabilitySeries.filter((point) => point.availableAverage !== null && Number.isFinite(Number(point.availableAverage))).map((point) => ({
+  const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : fallback.availabilitySeries;
+  const liveAvailabilityAvailable = currentAircraftAvailable !== void 0 && Number.isFinite(Number(currentAircraftAvailable)) && totalAircraft !== void 0 && Number.isFinite(Number(totalAircraft)) && Number(totalAircraft) > 0;
+  const availabilityByDate = /* @__PURE__ */ new Map();
+  availabilitySeries.forEach((point) => {
+    availabilityByDate.set(normalizeAvailabilityDate(point.date), point);
+  });
+  if (liveAvailabilityAvailable && dates.map(normalizeAvailabilityDate).includes(date)) {
+    const existing = availabilityByDate.get(date);
+    if (!existing || existing.availableAverage === null || !Number.isFinite(Number(existing.availableAverage))) {
+      availabilityByDate.set(date, {
+        date,
+        availableAverage: Number(currentAircraftAvailable),
+        totalAircraft: Number(totalAircraft),
+        availabilityPct: Number(currentAircraftAvailable) / Number(totalAircraft) * 100
+      });
+    }
+  }
+  const availabilityPoints = dates.map((day) => availabilityByDate.get(normalizeAvailabilityDate(day))).filter((point) => Boolean(point)).filter((point) => point.availableAverage !== null && Number.isFinite(Number(point.availableAverage))).map((point) => ({
     date: point.date,
     value: Number(point.availableAverage)
   }));
@@ -32166,13 +32182,13 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
     {
       key: "availability",
       title: "Aircraft availability",
-      subtitle: "Daily average aircraft available from AC History records.",
+      subtitle: "Daily average aircraft available from AC History records, with the selected DFP day filled from live aircraft availability when history is not saved yet.",
       icon: ForwardRef$4,
       color: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
       unit: " ac",
       series: availabilityPoints,
       summary: `${compactNumber(valueAvg(availabilityPoints), 1)} ac`,
-      footer: `${availabilityPoints.filter((point) => point.value !== null).length} availability records`
+      footer: `${availabilityPoints.filter((point) => point.value !== null).length} availability points`
     },
     {
       key: "flight",

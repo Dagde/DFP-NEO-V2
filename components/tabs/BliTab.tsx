@@ -593,9 +593,31 @@ const buildMetricDefinitions = (
   const staffDays = selectedStaff
     ? (metrics.staffSeries?.[selectedStaff] || dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 })))
     : dates.map(day => ({ date: day, flightEvents: 0, simulatorEvents: 0, totalEvents: 0, flightHours: 0, simulatorHours: 0 }));
-  const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : [];
+  const availabilitySeries = metrics.availabilitySeries.length > 0 ? metrics.availabilitySeries : fallback.availabilitySeries;
+  const liveAvailabilityAvailable = currentAircraftAvailable !== undefined
+    && Number.isFinite(Number(currentAircraftAvailable))
+    && totalAircraft !== undefined
+    && Number.isFinite(Number(totalAircraft))
+    && Number(totalAircraft) > 0;
+  const availabilityByDate = new Map<string, AvailabilityMetrics>();
+  availabilitySeries.forEach(point => {
+    availabilityByDate.set(normalizeAvailabilityDate(point.date), point);
+  });
+  if (liveAvailabilityAvailable && dates.map(normalizeAvailabilityDate).includes(date)) {
+    const existing = availabilityByDate.get(date);
+    if (!existing || existing.availableAverage === null || !Number.isFinite(Number(existing.availableAverage))) {
+      availabilityByDate.set(date, {
+        date,
+        availableAverage: Number(currentAircraftAvailable),
+        totalAircraft: Number(totalAircraft),
+        availabilityPct: (Number(currentAircraftAvailable) / Number(totalAircraft)) * 100,
+      });
+    }
+  }
 
-  const availabilityPoints = availabilitySeries
+  const availabilityPoints = dates
+    .map(day => availabilityByDate.get(normalizeAvailabilityDate(day)))
+    .filter((point): point is AvailabilityMetrics => Boolean(point))
     .filter(point => point.availableAverage !== null && Number.isFinite(Number(point.availableAverage)))
     .map(point => ({
       date: point.date,
@@ -615,13 +637,13 @@ const buildMetricDefinitions = (
     {
       key: 'availability',
       title: 'Aircraft availability',
-      subtitle: 'Daily average aircraft available from AC History records.',
+      subtitle: 'Daily average aircraft available from AC History records, with the selected DFP day filled from live aircraft availability when history is not saved yet.',
       icon: PaperAirplaneIcon,
       color: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-200',
       unit: ' ac',
       series: availabilityPoints,
       summary: `${compactNumber(valueAvg(availabilityPoints), 1)} ac`,
-      footer: `${availabilityPoints.filter(point => point.value !== null).length} availability records`,
+      footer: `${availabilityPoints.filter(point => point.value !== null).length} availability points`,
     },
     {
       key: 'flight',
