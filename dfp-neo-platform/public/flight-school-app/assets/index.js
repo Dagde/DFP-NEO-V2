@@ -87890,9 +87890,34 @@ ${error instanceof Error ? error.message : String(error)}`,
     const conflictResult = detectConflictsForEvent(event, allEventsForDate, event.date);
     if (conflictResult.hasConflict) {
       const conflictingEvent = allEventsForDate.find((e) => e.id === conflictResult.conflictingEventId);
+      const getConflictPersonLabel = (otherEvent) => {
+        const candidates = [
+          conflictResult.conflictedPersonnel,
+          ...otherEvent ? getCommonPersonnel(event, otherEvent) : []
+        ].filter((name) => !!name && !isPlaceholderPersonnelName(name));
+        if (candidates.length === 0) return "";
+        const personName = candidates[0];
+        const roleLabels = [];
+        const addRole = (label, value) => {
+          if (personnelNamesMatch(value, personName) && !roleLabels.includes(label)) {
+            roleLabels.push(label);
+          }
+        };
+        addRole("Pilot/PIC", event.pilot);
+        addRole("Pilot/PIC", otherEvent?.pilot);
+        addRole("Instructor", event.instructor);
+        addRole("Instructor", otherEvent?.instructor);
+        addRole("Pilot 2 / WSO / Crew", event.crew);
+        addRole("Pilot 2 / WSO / Crew", otherEvent?.crew);
+        addRole("Student", event.student);
+        addRole("Student", otherEvent?.student);
+        return roleLabels.length > 0 ? `${personName.split(",")[0]} (${roleLabels.join(", ")})` : personName.split(",")[0];
+      };
       switch (conflictResult.conflictType) {
         case "turnaround":
           if (conflictingEvent) {
+            const conflictPerson = getConflictPersonLabel(conflictingEvent);
+            const personText = conflictPerson ? ` for ${conflictPerson}` : "";
             const getTurnaroundRequirement = (candidate) => {
               if (candidate.type === "flight") return flightTurnaround;
               if (candidate.type === "ftd") return ftdTurnaround;
@@ -87904,11 +87929,11 @@ ${error instanceof Error ? error.message : String(error)}`,
             if (event.startTime > conflictingEvent.startTime) {
               const gap = event.startTime - (conflictingEvent.startTime + conflictingEvent.duration);
               const requiredTurnaround = Math.max(selectedEventTurnaround, conflictingEventTurnaround);
-              errors.push(`❌ Turnaround violation - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and previous event ${conflictingEvent.flightNumber} (minimum required: ${requiredTurnaround}hrs)`);
+              errors.push(`❌ Turnaround violation${personText} - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and previous event ${conflictingEvent.flightNumber} (minimum required: ${requiredTurnaround}hrs)`);
             } else {
               const gap = conflictingEvent.startTime - (event.startTime + event.duration);
               const requiredTurnaround = Math.max(selectedEventTurnaround, conflictingEventTurnaround);
-              errors.push(`❌ Turnaround violation - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and next event ${conflictingEvent.flightNumber} (minimum required: ${requiredTurnaround}hrs)`);
+              errors.push(`❌ Turnaround violation${personText} - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and next event ${conflictingEvent.flightNumber} (minimum required: ${requiredTurnaround}hrs)`);
             }
           }
           break;
@@ -87918,15 +87943,17 @@ ${error instanceof Error ? error.message : String(error)}`,
           }
           break;
         case "personnel":
-          if (conflictingEvent && conflictResult.conflictedPersonnel) {
-            errors.push(`❌ ${conflictResult.conflictedPersonnel.split(",")[0]} is double-booked - Scheduled for both ${event.flightNumber} and ${conflictingEvent.flightNumber} at overlapping times`);
+          if (conflictingEvent) {
+            const conflictPerson = getConflictPersonLabel(conflictingEvent);
+            errors.push(`❌ ${conflictPerson || "Crew member"} is double-booked - Scheduled for both ${event.flightNumber} and ${conflictingEvent.flightNumber} at overlapping times`);
           }
           break;
         case "day-night":
-          if (conflictingEvent && conflictResult.conflictedPersonnel) {
+          if (conflictingEvent) {
+            const conflictPerson = getConflictPersonLabel(conflictingEvent);
             const eventClassification = getScheduleEventDayNightClassification(event);
             const conflictingEventClassification = getScheduleEventDayNightClassification(conflictingEvent);
-            errors.push(`❌ Day/Night separation violation - ${conflictResult.conflictedPersonnel.split(",")[0]} cannot be scheduled for both ${eventClassification} event (${event.flightNumber}) and ${conflictingEventClassification} event (${conflictingEvent.flightNumber})`);
+            errors.push(`❌ Day/Night separation violation - ${conflictPerson || "Crew member"} cannot be scheduled for both ${eventClassification} event (${event.flightNumber}) and ${conflictingEventClassification} event (${conflictingEvent.flightNumber})`);
           }
           break;
       }
