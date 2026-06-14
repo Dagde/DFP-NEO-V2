@@ -9,9 +9,20 @@ import {
 
 export type AirCombatTrainingKind = AirCombatTrainingAssignment['kind'];
 
+export interface AirCombatTrainingStreamWeight {
+  key: string;
+  kind: AirCombatTrainingKind;
+  code: string;
+  title?: string;
+  locationCode?: string;
+  unitCode?: string;
+  weight: number;
+}
+
 export interface AirCombatSchedulingWeights {
   courses: number;
   trainingPackages: number;
+  trainingStreams?: AirCombatTrainingStreamWeight[];
 }
 
 export const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS: AirCombatSchedulingWeights = {
@@ -242,6 +253,47 @@ export const staffHasAirCombatAssignment = (
 };
 
 export const normaliseAirCombatSchedulingWeights = (value: any): AirCombatSchedulingWeights => {
+  const rawStreams = Array.isArray(value?.trainingStreams) ? value.trainingStreams : [];
+  const trainingStreams = rawStreams
+    .map((stream: any): AirCombatTrainingStreamWeight | null => {
+      const kind = stream?.kind === 'training_package' ? 'training_package' : stream?.kind === 'course' ? 'course' : null;
+      const code = String(stream?.code || '').trim();
+      if (!kind || !code) return null;
+      const locationCode = normaliseCode(stream?.locationCode);
+      const unitCode = normaliseCode(stream?.unitCode);
+      const key = String(stream?.key || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
+      const weight = Number(stream?.weight);
+      return {
+        key,
+        kind,
+        code,
+        title: stream?.title ? String(stream.title) : undefined,
+        locationCode,
+        unitCode,
+        weight: Number.isFinite(weight) && weight > 0 ? weight : 0,
+      };
+    })
+    .filter(Boolean) as AirCombatTrainingStreamWeight[];
+
+  const streamTotal = trainingStreams.reduce((sum, stream) => sum + stream.weight, 0);
+  if (trainingStreams.length > 0 && streamTotal > 0) {
+    let runningTotal = 0;
+    const normalisedStreams = trainingStreams.map((stream, index) => {
+      const isLast = index === trainingStreams.length - 1;
+      const weight = isLast ? Math.max(0, 100 - runningTotal) : Math.round((stream.weight / streamTotal) * 100);
+      runningTotal += weight;
+      return { ...stream, weight };
+    });
+    const courseWeight = normalisedStreams
+      .filter(stream => stream.kind === 'course')
+      .reduce((sum, stream) => sum + stream.weight, 0);
+    return {
+      courses: Math.max(0, Math.min(100, courseWeight)),
+      trainingPackages: Math.max(0, 100 - Math.max(0, Math.min(100, courseWeight))),
+      trainingStreams: normalisedStreams,
+    };
+  }
+
   const courses = Number(value?.courses);
   const trainingPackages = Number(value?.trainingPackages);
   if (!Number.isFinite(courses) || !Number.isFinite(trainingPackages) || courses + trainingPackages <= 0) {

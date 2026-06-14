@@ -11,7 +11,10 @@ import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { ANY_AIRCRAFT_CONFIG, BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import {
+  getAirCombatTrainingKey,
+  normaliseAirCombatTrainingAssignments,
   normaliseAirCombatSchedulingWeights,
+  type AirCombatTrainingStreamWeight,
   type AirCombatSchedulingWeights,
 } from '../utils/airCombatTraining';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
@@ -79,6 +82,8 @@ interface PrioritiesViewProps {
   taskProfileAbbreviations?: Record<string, string>;
   operationalModel?: string;
   operationalModelLabel?: string;
+  activeUnitCode?: string;
+  activeUnitCodes?: string[];
   airCombatSchedulingWeights?: AirCombatSchedulingWeights;
   onUpdateAirCombatSchedulingWeights?: (weights: AirCombatSchedulingWeights) => void;
   isSingleSeatAircraft?: boolean;
@@ -762,6 +767,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   taskProfileAbbreviations = {},
   operationalModel = 'flight_school',
   operationalModelLabel = 'Flight School Model',
+  activeUnitCode,
+  activeUnitCodes = [],
   airCombatSchedulingWeights,
   onUpdateAirCombatSchedulingWeights,
   isSingleSeatAircraft = false,
@@ -803,6 +810,51 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
     [airCombatSchedulingWeights],
   );
+  const activeUnitCodeSet = useMemo(() => {
+    const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || '').split('+');
+    return new Set(codes.map(code => String(code || '').trim().toUpperCase()).filter(Boolean));
+  }, [activeUnitCode, activeUnitCodes]);
+  const airCombatTrainingStreams = useMemo(() => {
+    if (!isAirCombatModel) return [];
+    const streams = new Map<string, AirCombatTrainingStreamWeight>();
+    instructorsData.forEach(staff => {
+      const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      ([...assignments.courses, ...assignments.trainingPackages]).forEach(assignment => {
+        const assignmentUnit = String(assignment.unitCode || staff.unit || '').trim().toUpperCase();
+        if (activeUnitCodeSet.size > 0 && assignmentUnit && !activeUnitCodeSet.has(assignmentUnit)) return;
+        const key = assignment.trainingKey || getAirCombatTrainingKey(
+          assignment.kind,
+          assignment.code,
+          assignment.locationCode || school,
+          assignment.unitCode || assignmentUnit,
+        );
+        if (!streams.has(key)) {
+          streams.set(key, {
+            key,
+            kind: assignment.kind,
+            code: assignment.code,
+            title: assignment.title,
+            locationCode: assignment.locationCode || school,
+            unitCode: assignment.unitCode || assignmentUnit,
+            weight: 0,
+          });
+        }
+      });
+    });
+    const savedWeights = new Map((normalisedAirCombatWeights.trainingStreams || []).map(stream => [stream.key, stream.weight]));
+    const list = Array.from(streams.values()).sort((left, right) =>
+      left.kind.localeCompare(right.kind) ||
+      left.code.localeCompare(right.code) ||
+      String(left.title || '').localeCompare(String(right.title || ''))
+    );
+    if (list.length === 0) return list;
+    const missingDefault = Math.max(1, Math.floor(100 / list.length));
+    const weighted = list.map(stream => ({
+      ...stream,
+      weight: savedWeights.get(stream.key) ?? missingDefault,
+    }));
+    return normaliseAirCombatSchedulingWeights({ trainingStreams: weighted }).trainingStreams || weighted;
+  }, [activeUnitCodeSet, instructorsData, isAirCombatModel, normalisedAirCombatWeights.trainingStreams, school]);
 
 
   useEffect(() => {
@@ -835,19 +887,50 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     onUpdateAircraftConfigCapacities(nextCapacities);
   };
 
-  const handleAirCombatCourseWeightChange = (value: number) => {
-    const courses = Math.max(0, Math.min(100, Math.round(value)));
-    const nextWeights = {
-      courses,
-      trainingPackages: 100 - courses,
-    };
+  const updateAirCombatStreamWeights = (nextStreams: AirCombatTrainingStreamWeight[], auditLabel: string) => {
+    const nextWeights = normaliseAirCombatSchedulingWeights({ trainingStreams: nextStreams });
     logAudit(
       'Priorities',
       'Edit',
-      'Updated Air Combat priority mix',
-      `Courses ${normalisedAirCombatWeights.courses}% / Training Packages ${normalisedAirCombatWeights.trainingPackages}% → Courses ${nextWeights.courses}% / Training Packages ${nextWeights.trainingPackages}%`,
+      'Updated Air Combat course/package priority weights',
+      auditLabel,
     );
     onUpdateAirCombatSchedulingWeights?.(nextWeights);
+  };
+
+  const handleAirCombatStreamWeightChange = (streamKey: string, direction: 'increase' | 'decrease') => {
+    const changeAmount = direction === 'increase' ? 5 : -5;
+    const currentStreams = airCombatTrainingStreams.length > 0 ? airCombatTrainingStreams : (normalisedAirCombatWeights.trainingStreams || []);
+    const nextStreams = currentStreams.map(stream => ({ ...stream }));
+    const target = nextStreams.find(stream => stream.key === streamKey);
+    if (!target) return;
+    const previousWeight = target.weight;
+    target.weight = Math.max(0, target.weight + changeAmount);
+    const delta = target.weight - previousWeight;
+    if (delta !== 0) {
+      const others = nextStreams
+        .filter(stream => stream.key !== streamKey)
+        .sort((left, right) => direction === 'increase' ? right.weight - left.weight : left.weight - right.weight);
+      let remaining = Math.abs(delta);
+      for (const other of others) {
+        if (remaining <= 0) break;
+        if (direction === 'increase') {
+          const take = Math.min(other.weight, remaining);
+          other.weight -= take;
+          remaining -= take;
+        } else {
+          other.weight += remaining;
+          remaining = 0;
+        }
+      }
+    }
+    updateAirCombatStreamWeights(nextStreams, `${target.code} ${previousWeight}% → ${target.weight}%`);
+  };
+
+  const handleEqualiseAirCombatStreams = () => {
+    const currentStreams = airCombatTrainingStreams.length > 0 ? airCombatTrainingStreams : (normalisedAirCombatWeights.trainingStreams || []);
+    if (currentStreams.length === 0) return;
+    updateAirCombatStreamWeights(currentStreams.map(stream => ({ ...stream, weight: 1 })), 'Equalised all active Air Combat course/package streams');
   };
 
   const nonCleanConfigCapacityTotal = useMemo(() => (
@@ -2064,54 +2147,60 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         <div className="mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
                             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <h3 className="text-sm font-bold text-emerald-100">Air Combat Priority Mix</h3>
+                                    <h3 className="text-sm font-bold text-emerald-100">Air Combat Course & Package Priority</h3>
                                     <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
-                                        Sets how remaining Air Combat capacity is shared after mandatory tasking is attempted.
+                                        Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after tasking and currency are attempted.
                                     </p>
                                 </div>
-                                <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100">
-                                    Courses {normalisedAirCombatWeights.courses}% / Training Packages {normalisedAirCombatWeights.trainingPackages}%
-                                </span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100">
+                                        Courses {normalisedAirCombatWeights.courses}% / Packages {normalisedAirCombatWeights.trainingPackages}%
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={handleEqualiseAirCombatStreams}
+                                        disabled={airCombatTrainingStreams.length < 2}
+                                        className="rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        Equalise
+                                    </button>
+                                </div>
                             </div>
-                            <div className="grid gap-3 md:grid-cols-[1fr_120px_150px]">
-                                <label className="block">
-                                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Course Weight</span>
-                                    <input
-                                        type="range"
-                                        min={0}
-                                        max={100}
-                                        step={5}
-                                        value={normalisedAirCombatWeights.courses}
-                                        onChange={(event) => handleAirCombatCourseWeightChange(Number(event.target.value))}
-                                        className="mt-3 w-full accent-emerald-500"
-                                    />
-                                </label>
-                                <label className="block">
-                                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Courses</span>
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        step={5}
-                                        value={normalisedAirCombatWeights.courses}
-                                        onChange={(event) => handleAirCombatCourseWeightChange(Number(event.target.value))}
-                                        className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500"
-                                    />
-                                </label>
-                                <label className="block">
-                                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Training Packages</span>
-                                    <input
-                                        type="number"
-                                        value={normalisedAirCombatWeights.trainingPackages}
-                                        readOnly
-                                        disabled
-                                        className="mt-1 w-full cursor-not-allowed rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-400 opacity-80"
-                                    />
-                                </label>
-                            </div>
+                            {airCombatTrainingStreams.length === 0 ? (
+                                <div className="rounded border border-slate-700/70 bg-slate-950/60 p-3 text-sm text-slate-300">
+                                    No Air Combat course or training package assignments were found for {activeUnitCode || school}. Assign staff to unit courses/packages and they will appear here.
+                                </div>
+                            ) : (
+                                <ul className="space-y-2">
+                                    {airCombatTrainingStreams.map((stream, index) => (
+                                        <li
+                                            key={stream.key}
+                                            className="grid items-center gap-3 rounded-md border border-slate-700 bg-slate-950/70 p-3 text-white md:grid-cols-[42px_96px_1fr_86px_34px]"
+                                        >
+                                            <span className="font-mono text-sm text-slate-500">{index + 1}</span>
+                                            <span className={`rounded px-2 py-1 text-center text-[11px] font-bold uppercase tracking-wide ${
+                                                stream.kind === 'course'
+                                                    ? 'border border-sky-400/30 bg-sky-500/10 text-sky-100'
+                                                    : 'border border-violet-400/30 bg-violet-500/10 text-violet-100'
+                                            }`}>
+                                                {stream.kind === 'course' ? 'Course' : 'Package'}
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-slate-100">{stream.code}</p>
+                                                <p className="truncate text-xs text-slate-400">{stream.title || stream.code}{stream.unitCode ? ` • ${stream.unitCode}` : ''}</p>
+                                            </div>
+                                            <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.weight}%</span>
+                                            <div className="flex flex-col">
+                                                <ArrowButton direction="up" onClick={() => handleAirCombatStreamWeightChange(stream.key, 'increase')} disabled={stream.weight >= 100} />
+                                                <ArrowButton direction="down" onClick={() => handleAirCombatStreamWeightChange(stream.key, 'decrease')} disabled={stream.weight <= 0} />
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                     )}
-                    {coursePriorities.length === 0 ? (
+                    {isAirCombatModel ? null : coursePriorities.length === 0 ? (
                         <div className="py-8 text-center text-gray-500">
                             <p className="text-sm font-medium">No courses found for {locationDisplayName}</p>
                             <p className="text-xs mt-1">Courses will appear here once trainees are loaded for this locality.</p>

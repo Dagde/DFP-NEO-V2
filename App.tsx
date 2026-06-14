@@ -82,6 +82,7 @@ import {
     normaliseAirCombatTrainingAssignments,
     normaliseAirCombatTrainingReports,
     type AirCombatSchedulingWeights,
+    type AirCombatTrainingStreamWeight,
 } from './utils/airCombatTraining';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
@@ -10922,6 +10923,46 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const courseCodes = assignmentCodes('course');
         const packageCodes = assignmentCodes('training_package');
         const placementLimit = Math.max(0, courseCodes.length + packageCodes.length + instructors.length);
+        type AirCombatTrainingStreamRuntime = AirCombatTrainingStreamWeight & { key: string; weight: number };
+        const makeTrainingStreamKey = (kind: 'course' | 'training_package', code: string): string => `${kind}:${String(code || '').trim().toUpperCase()}`;
+        const normaliseTrainingStreamsForScheduler = (streams: AirCombatTrainingStreamRuntime[]): AirCombatTrainingStreamRuntime[] => {
+            const filtered = streams
+                .filter(stream => stream.code && (stream.kind === 'course' ? courseCodes.includes(stream.code) : packageCodes.includes(stream.code)))
+                .map(stream => ({ ...stream, key: makeTrainingStreamKey(stream.kind, stream.code), weight: Math.max(0, Number(stream.weight) || 0) }));
+            const total = filtered.reduce((sum, stream) => sum + stream.weight, 0);
+            if (filtered.length === 0 || total <= 0) return filtered;
+            let runningTotal = 0;
+            return filtered.map((stream, index) => {
+                const weight = index === filtered.length - 1 ? Math.max(0, 100 - runningTotal) : Math.round((stream.weight / total) * 100);
+                runningTotal += weight;
+                return { ...stream, weight };
+            });
+        };
+        const legacyWeightedStreams = [
+            ...courseCodes.map(code => ({
+                key: makeTrainingStreamKey('course', code),
+                kind: 'course' as const,
+                code,
+                weight: courseCodes.length > 0 ? airCombatWeights.courses / courseCodes.length : 0,
+            })),
+            ...packageCodes.map(code => ({
+                key: makeTrainingStreamKey('training_package', code),
+                kind: 'training_package' as const,
+                code,
+                weight: packageCodes.length > 0 ? airCombatWeights.trainingPackages / packageCodes.length : 0,
+            })),
+        ];
+        const configuredWeightByStream = new Map((airCombatWeights.trainingStreams || []).map(stream => [
+            makeTrainingStreamKey(stream.kind, stream.code),
+            stream.weight,
+        ]));
+        const configuredWeightedStreams = legacyWeightedStreams.map(stream => ({
+            ...stream,
+            weight: configuredWeightByStream.get(stream.key) ?? stream.weight,
+        }));
+        const weightedTrainingStreams = normaliseTrainingStreamsForScheduler(
+            configuredWeightedStreams.length > 0 ? configuredWeightedStreams : legacyWeightedStreams,
+        );
         const syllabusMatchAudit = (kind: 'course' | 'training_package', codes: string[]) => codes.map(code => {
             const matches = sortedTrainingItems(kind, code);
             return {
@@ -10946,6 +10987,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             scheduleMode,
             courseCodes,
             packageCodes,
+            weightedTrainingStreams,
             placementLimit,
             courseSyllabusMatches: syllabusMatchAudit('course', courseCodes),
             trainingPackageSyllabusMatches: syllabusMatchAudit('training_package', packageCodes),
@@ -10954,6 +10996,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             scheduleMode,
             courseCodes,
             packageCodes,
+            weightedTrainingStreams,
             placementLimit,
             courseMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.courseSyllabusMatches.map((item: any) => ({ code: item.code, matches: item.matches })),
             packageMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.trainingPackageSyllabusMatches.map((item: any) => ({ code: item.code, matches: item.matches })),
@@ -10970,21 +11013,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 reason: 'NO_ACTIVE_SYLLABUS_EVENTS_FOR_ASSIGNMENT_CODE',
                 startTime: null,
             }));
-        const pickNextKind = (coursePlaced: number, packagePlaced: number): 'course' | 'training_package' | null => {
-            if (courseCodes.length === 0 && packageCodes.length === 0) return null;
-            if (courseCodes.length === 0) return 'training_package';
-            if (packageCodes.length === 0) return 'course';
-            const total = coursePlaced + packagePlaced + 1;
-            const courseDeficit = (airCombatWeights.courses / 100) * total - coursePlaced;
-            const packageDeficit = (airCombatWeights.trainingPackages / 100) * total - packagePlaced;
-            return courseDeficit >= packageDeficit ? 'course' : 'training_package';
-        };
-        const fallbackPreservesTrainingMix = (fallbackKind: 'course' | 'training_package', coursePlaced: number, packagePlaced: number): boolean => {
-            if (fallbackKind === 'course' && courseCodes.length === 0) return false;
-            if (fallbackKind === 'training_package' && packageCodes.length === 0) return false;
-            // Weighting steers the next preferred kind; it must not block a valid fallback
-            // when the preferred table cannot place at the current 5-minute tile.
-            return true;
+        const streamPlacementCounts = new Map<string, number>();
+        const getStreamPlacementCount = (stream: AirCombatTrainingStreamRuntime): number => streamPlacementCounts.get(stream.key) || 0;
+        const pickTrainingStreamsByDeficit = (): AirCombatTrainingStreamRuntime[] => {
+            if (weightedTrainingStreams.length === 0) return [];
+            const totalPlaced = Array.from(streamPlacementCounts.values()).reduce((sum, count) => sum + count, 0);
+            const totalTarget = totalPlaced + 1;
+            return [...weightedTrainingStreams].sort((left, right) => {
+                const leftDeficit = (left.weight / 100) * totalTarget - getStreamPlacementCount(left);
+                const rightDeficit = (right.weight / 100) * totalTarget - getStreamPlacementCount(right);
+                return rightDeficit - leftDeficit ||
+                    right.weight - left.weight ||
+                    left.kind.localeCompare(right.kind) ||
+                    left.code.localeCompare(right.code);
+            });
         };
         const findResourceForTraining = (item: SyllabusItemDetail, type: 'flight' | 'ftd' | 'ground' | 'cpt', startTime: number): { resourceId: string; area?: string; aircraftConfigId?: string } | null => {
             const prefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
@@ -11861,12 +11903,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const placeTrainingForKind = (
             kind: 'course' | 'training_package',
             exactStartTime?: number,
-            allowedTypes?: Set<AirCombatTrainingType>
+            allowedTypes?: Set<AirCombatTrainingType>,
+            onlyCode?: string,
         ): boolean => {
-            const codes = kind === 'training_package' ? packageCodes : courseCodes;
+            const allCodes = kind === 'training_package' ? packageCodes : courseCodes;
+            const codes = onlyCode ? allCodes.filter(code => code === onlyCode) : allCodes;
             if (codes.length === 0) {
                 pushAirCombatDiag('trainingAttempts', {
                     kind,
+                    code: onlyCode || null,
                     startTime: exactStartTime ?? null,
                     placed: false,
                     reason: 'NO_ASSIGNMENT_CODES_FOR_KIND',
@@ -12231,99 +12276,90 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             placementLimit,
             courseCodes,
             packageCodes,
+            weightedTrainingStreams,
             generatedEventsAtLoopStart: generatedEvents.length,
         });
         let attempt = 0;
         for (let tileTime = scheduleWindowStart; tileTime <= scheduleWindowEnd + 0.001 && attempt < placementLimit; tileTime += slotIncrement) {
             const roundedTileTime = Math.round(tileTime * 12) / 12;
-            const preferredKind = pickNextKind(coursePlaced, packagePlaced);
+            const preferredStreams = pickTrainingStreamsByDeficit();
+            const preferredStream = preferredStreams[0] || null;
             const cycleTrace: any = {
                 scheduleMode,
                 attempt: attempt + 1,
                 placementLimit,
                 tileTime: roundedTileTime,
                 displayTime: _fmtT(roundedTileTime),
-                preferredKind,
+                preferredKind: preferredStream?.kind || null,
+                preferredStream: preferredStream ? { kind: preferredStream.kind, code: preferredStream.code, weight: preferredStream.weight, placed: getStreamPlacementCount(preferredStream) } : null,
                 coursePlacedBefore: coursePlaced,
                 packagePlacedBefore: packagePlaced,
+                streamPlacedBefore: Array.from(streamPlacementCounts.entries()),
                 generatedEventsBefore: generatedEvents.length,
                 courseCodes,
                 packageCodes,
+                weightedTrainingStreams,
                 weights: airCombatWeights,
             };
-            if (!preferredKind) {
+            if (!preferredStream) {
                 cycleTrace.placedKind = null;
-                cycleTrace.breakReason = 'NO_PREFERRED_KIND';
+                cycleTrace.breakReason = 'NO_PREFERRED_STREAM';
                 pushAirCombatDiag('placementCycles', cycleTrace, 300);
                 break;
             }
             let placedKind: 'course' | 'training_package' | null = null;
+            let placedStream: AirCombatTrainingStreamRuntime | null = null;
             lastAirCombatTrainingPlacement = null;
-            if (placeTrainingForKind(preferredKind, roundedTileTime)) {
-                placedKind = preferredKind;
-            } else {
-                const fallbackKind = preferredKind === 'course' ? 'training_package' : 'course';
-                cycleTrace.fallbackKind = fallbackKind;
-                const fallbackAllowed = fallbackPreservesTrainingMix(fallbackKind, coursePlaced, packagePlaced);
-                cycleTrace.fallbackAllowed = fallbackAllowed;
-                if (fallbackAllowed) {
-                    if (placeTrainingForKind(fallbackKind, roundedTileTime)) placedKind = fallbackKind;
-                } else {
-                    cycleTrace.fallbackSkipReason = 'FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX';
-                    pushAirCombatDiag('trainingAttempts', {
-                        kind: fallbackKind,
-                        placed: false,
-                        reason: 'FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX',
-                        coursePlaced,
-                        packagePlaced,
-                        weights: airCombatWeights,
-                    }, 700);
-                    countAirCombatRejection('FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX');
+            for (const stream of preferredStreams) {
+                if (placeTrainingForKind(stream.kind, roundedTileTime, undefined, stream.code)) {
+                    placedKind = stream.kind;
+                    placedStream = stream;
+                    break;
                 }
             }
             cycleTrace.placedKind = placedKind;
+            cycleTrace.placedStream = placedStream ? { kind: placedStream.kind, code: placedStream.code, weight: placedStream.weight } : null;
             cycleTrace.generatedEventsAfter = generatedEvents.length;
             cycleTrace.placementsAfter = neoBuildDiag.airCombatPriority.placements.length;
             if (!placedKind) {
-                cycleTrace.noPlacementReason = 'NO_PLACEMENT_FROM_PREFERRED_OR_FALLBACK_AT_TILE';
+                cycleTrace.noPlacementReason = 'NO_PLACEMENT_FROM_WEIGHTED_STREAMS_AT_TILE';
                 pushAirCombatDiag('placementCycles', cycleTrace, 300);
                 continue;
             }
             if (placedKind === 'course') coursePlaced++;
             else packagePlaced++;
+            if (placedStream) streamPlacementCounts.set(placedStream.key, getStreamPlacementCount(placedStream) + 1);
             attempt++;
 
             const simulatorSameTimePlacements: Array<{ kind: 'course' | 'training_package'; type: AirCombatTrainingType }> = [];
             const simulatorTypes = new Set<AirCombatTrainingType>(['ftd', 'cpt']);
             while (attempt < placementLimit) {
-                const simulatorPreferredKind = pickNextKind(coursePlaced, packagePlaced);
-                if (!simulatorPreferredKind) break;
+                const simulatorStreams = pickTrainingStreamsByDeficit();
+                if (simulatorStreams.length === 0) break;
                 let simulatorPlacedKind: 'course' | 'training_package' | null = null;
                 let simulatorPlacedType: AirCombatTrainingType | null = null;
+                let simulatorPlacedStream: AirCombatTrainingStreamRuntime | null = null;
 
-                lastAirCombatTrainingPlacement = null;
-                if (placeTrainingForKind(simulatorPreferredKind, roundedTileTime, simulatorTypes)) {
-                    simulatorPlacedKind = simulatorPreferredKind;
-                    simulatorPlacedType = lastAirCombatTrainingPlacement?.type || null;
-                } else {
-                    const simulatorFallbackKind = simulatorPreferredKind === 'course' ? 'training_package' : 'course';
-                    if (fallbackPreservesTrainingMix(simulatorFallbackKind, coursePlaced, packagePlaced)) {
-                        lastAirCombatTrainingPlacement = null;
-                        if (placeTrainingForKind(simulatorFallbackKind, roundedTileTime, simulatorTypes)) {
-                            simulatorPlacedKind = simulatorFallbackKind;
-                            simulatorPlacedType = lastAirCombatTrainingPlacement?.type || null;
-                        }
+                for (const stream of simulatorStreams) {
+                    lastAirCombatTrainingPlacement = null;
+                    if (placeTrainingForKind(stream.kind, roundedTileTime, simulatorTypes, stream.code)) {
+                        simulatorPlacedKind = stream.kind;
+                        simulatorPlacedStream = stream;
+                        simulatorPlacedType = lastAirCombatTrainingPlacement?.type || null;
+                        break;
                     }
                 }
 
                 if (!simulatorPlacedKind || !simulatorPlacedType || !simulatorTypes.has(simulatorPlacedType)) break;
                 if (simulatorPlacedKind === 'course') coursePlaced++;
                 else packagePlaced++;
+                if (simulatorPlacedStream) streamPlacementCounts.set(simulatorPlacedStream.key, getStreamPlacementCount(simulatorPlacedStream) + 1);
                 attempt++;
                 simulatorSameTimePlacements.push({ kind: simulatorPlacedKind, type: simulatorPlacedType });
             }
             cycleTrace.coursePlacedAfter = coursePlaced;
             cycleTrace.packagePlacedAfter = packagePlaced;
+            cycleTrace.streamPlacedAfter = Array.from(streamPlacementCounts.entries());
             if (simulatorSameTimePlacements.length > 0) {
                 cycleTrace.sameTimeSimulatorPlacements = simulatorSameTimePlacements;
             }
@@ -12336,6 +12372,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             packageCodes,
             coursePlaced,
             packagePlaced,
+            streamPlaced: Array.from(streamPlacementCounts.entries()).map(([key, count]) => {
+                const stream = weightedTrainingStreams.find(item => item.key === key);
+                return {
+                    key,
+                    kind: stream?.kind || null,
+                    code: stream?.code || null,
+                    targetWeight: stream?.weight || 0,
+                    placed: count,
+                };
+            }),
             totalTrainingPlacements: coursePlaced + packagePlaced,
             generatedEventsAfterTrainingLoop: generatedEvents.length,
             placementCount: neoBuildDiag.airCombatPriority.placements.length,
@@ -31360,6 +31406,8 @@ appliedUpdates.forEach(update => {
                     taskProfileAbbreviations={activeTaskProfileAbbreviations}
                     operationalModel={activeOperationalModel}
                     operationalModelLabel={activeOperationalModelLabel}
+                    activeUnitCode={activeUnitCode}
+                    activeUnitCodes={activeContextUnitCodes}
                     airCombatSchedulingWeights={airCombatSchedulingWeights}
                     onUpdateAirCombatSchedulingWeights={handleUpdateAirCombatSchedulingWeights}
                 />;
