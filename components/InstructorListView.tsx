@@ -237,6 +237,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const isAirCombatModel = activeOperationalModel === 'air_combat';
   const isFixedCrewModel = activeOperationalModel === 'fixed_crew';
   const isCrewPositionStaffModel = isAirCombatModel || isFixedCrewModel;
+  const useRoleColours = isAirCombatModel || isFixedCrewModel;
 
   const qfis = useMemo(() => {
       return instructorsData
@@ -403,7 +404,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       if (!isFixedCrewModel) return {};
       const groups: { [key: string]: Instructor[] } = {};
       filteredQfis.forEach(instructor => {
-          const crewName = String(instructor.crew || '').trim() || 'Unassigned Crew';
+          const crewName = String(instructor.crew || '').trim();
+          if (!crewName) return;
           if (!groups[crewName]) {
               groups[crewName] = [];
           }
@@ -413,11 +415,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   }, [filteredQfis, isFixedCrewModel]);
 
   const sortedFixedCrewGroups = useMemo(() =>
-      Object.keys(fixedCrewGroups).sort((a, b) => {
-          if (a === 'Unassigned Crew') return 1;
-          if (b === 'Unassigned Crew') return -1;
-          return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-      }),
+      Object.keys(fixedCrewGroups).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
   [fixedCrewGroups]);
 
   // SIM IPs are shown as a single combined section (not split by unit)
@@ -532,7 +530,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     <ul className="space-y-2">
       {instructors.map((instructor, index) => {
         const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
-        const roleTextClass = isAirCombatModel ? roleDisplay.textClassName : 'text-gray-300';
+        const roleTextClass = useRoleColours ? roleDisplay.textClassName : 'text-gray-300';
         return (
           <li
             id={`instructor-row-${instructor.name}`}
@@ -547,13 +545,18 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     handleInstructorClick(e, instructor);
                 }
             }}
-            title={isAirCombatModel ? `${instructor.name} - ${roleDisplay.label}` : instructor.name}
+            title={useRoleColours ? `${instructor.name} - ${roleDisplay.label}` : instructor.name}
           >
             <div className="flex items-center space-x-3 flex-grow min-w-0">
                <span className="font-mono text-gray-500 w-6 flex-shrink-0 text-right text-xs">{index + 1}.</span>
               <span className="font-mono text-gray-500 w-12 flex-shrink-0 text-right text-xs">{instructor.rank}</span>
               <span className={`flex-grow truncate font-medium ${roleTextClass}`}>{instructor.name}</span>
             </div>
+            {useRoleColours && (
+                <span className={`max-w-[6rem] flex-shrink-0 truncate text-[10px] font-semibold ${roleTextClass}`}>
+                    {roleDisplay.label}
+                </span>
+            )}
             {isArchiveMode && (
                 <div className="p-1 rounded-full text-red-400">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

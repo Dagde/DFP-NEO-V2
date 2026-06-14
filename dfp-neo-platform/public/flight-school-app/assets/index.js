@@ -37548,6 +37548,7 @@ const InstructorListView = ({
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isFixedCrewModel = activeOperationalModel === "fixed_crew";
   const isCrewPositionStaffModel = isAirCombatModel || isFixedCrewModel;
+  const useRoleColours = isAirCombatModel || isFixedCrewModel;
   const qfis = reactExports.useMemo(() => {
     return instructorsData.filter((i) => {
       const isQFI = isQfiRole(i);
@@ -37684,7 +37685,8 @@ const InstructorListView = ({
     if (!isFixedCrewModel) return {};
     const groups = {};
     filteredQfis.forEach((instructor) => {
-      const crewName = String(instructor.crew || "").trim() || "Unassigned Crew";
+      const crewName = String(instructor.crew || "").trim();
+      if (!crewName) return;
       if (!groups[crewName]) {
         groups[crewName] = [];
       }
@@ -37693,11 +37695,7 @@ const InstructorListView = ({
     return groups;
   }, [filteredQfis, isFixedCrewModel]);
   const sortedFixedCrewGroups = reactExports.useMemo(
-    () => Object.keys(fixedCrewGroups).sort((a, b) => {
-      if (a === "Unassigned Crew") return 1;
-      if (b === "Unassigned Crew") return -1;
-      return a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" });
-    }),
+    () => Object.keys(fixedCrewGroups).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })),
     [fixedCrewGroups]
   );
   const ofisByUnit = reactExports.useMemo(() => {
@@ -37797,7 +37795,7 @@ const InstructorListView = ({
   };
   const renderInstructorList = (instructors) => /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: instructors.map((instructor, index) => {
     const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel);
-    const roleTextClass = isAirCombatModel ? roleDisplay.textClassName : "text-gray-300";
+    const roleTextClass = useRoleColours ? roleDisplay.textClassName : "text-gray-300";
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "li",
       {
@@ -37812,7 +37810,7 @@ const InstructorListView = ({
             handleInstructorClick(e, instructor);
           }
         },
-        title: isAirCombatModel ? `${instructor.name} - ${roleDisplay.label}` : instructor.name,
+        title: useRoleColours ? `${instructor.name} - ${roleDisplay.label}` : instructor.name,
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 flex-grow min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-500 w-6 flex-shrink-0 text-right text-xs", children: [
@@ -37822,6 +37820,7 @@ const InstructorListView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 flex-shrink-0 text-right text-xs", children: instructor.rank }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `flex-grow truncate font-medium ${roleTextClass}`, children: instructor.name })
           ] }),
+          useRoleColours && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `max-w-[6rem] flex-shrink-0 truncate text-[10px] font-semibold ${roleTextClass}`, children: roleDisplay.label }),
           isArchiveMode && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-1 rounded-full text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z", clipRule: "evenodd" }) }) })
         ]
       },
