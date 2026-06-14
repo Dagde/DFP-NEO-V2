@@ -37428,6 +37428,10 @@ const UNIT_SORT_ORDER = { "1FTS": 1, "CFS": 2, "2FTS": 3 };
 const isPilotRole = (instructor) => String(instructor.role || "").trim().toLowerCase() === "pilot";
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
+const isSupportStaffRole = (instructor) => {
+  const role = String(instructor.role || "").trim().toUpperCase();
+  return role === "SIM IP" || role === "OFI" || instructor.isOFI === true;
+};
 const getStaffRoleFilterOption = (role, terminology, instructorLabel) => {
   const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel);
   return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
@@ -37550,14 +37554,14 @@ const InstructorListView = ({
   const activeOperationalModel = normaliseOperationalModel(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isFixedCrewModel = activeOperationalModel === "fixed_crew";
-  const isCrewPositionStaffModel = isAirCombatModel || isFixedCrewModel;
   const useRoleColours = isAirCombatModel || isFixedCrewModel;
   const qfis = reactExports.useMemo(() => {
     return instructorsData.filter((i) => {
       const isQFI = isQfiRole(i);
-      return isQFI || isCrewPositionStaffModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology));
+      if (isFixedCrewModel) return !i.isAdminStaff && !isSupportStaffRole(i);
+      return isQFI || isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology));
     }).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
-  }, [instructorsData, isCrewPositionStaffModel, personnelDisplaySettings, crewPositionTerminology]);
+  }, [instructorsData, isAirCombatModel, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology]);
   const staffRoleFilterOptions = reactExports.useMemo(() => {
     const optionMap = /* @__PURE__ */ new Map();
     qfis.forEach((instructor) => {
@@ -37666,7 +37670,7 @@ const InstructorListView = ({
   const otherStaff = reactExports.useMemo(() => {
     console.log("🔍 [OTHER STAFF] instructorsData length:", instructorsData.length);
     const otherStaffCandidates = instructorsData.filter((i) => {
-      const isQfi = isQfiRole(i) || isCrewPositionStaffModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology));
+      const isQfi = isQfiRole(i) || isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology)) || isFixedCrewModel && !i.isAdminStaff && !isSupportStaffRole(i);
       const isSimIp2 = i.role === "SIM IP";
       const isOfi = i.role === "OFI" || i.isOFI === true;
       const isOther = !isQfi && !isSimIp2 && !isOfi;
@@ -37683,7 +37687,7 @@ const InstructorListView = ({
       }
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, isCrewPositionStaffModel, personnelDisplaySettings, crewPositionTerminology]);
+  }, [instructorsData, isAirCombatModel, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology]);
   const fixedCrewGroups = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return {};
     const groups = {};
