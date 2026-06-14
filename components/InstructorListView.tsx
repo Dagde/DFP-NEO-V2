@@ -233,16 +233,19 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     }
   }, [instructorsData]);
 
-  const isAirCombatModel = normaliseOperationalModel(operationalModel) === 'air_combat';
+  const activeOperationalModel = normaliseOperationalModel(operationalModel);
+  const isAirCombatModel = activeOperationalModel === 'air_combat';
+  const isFixedCrewModel = activeOperationalModel === 'fixed_crew';
+  const isCrewPositionStaffModel = isAirCombatModel || isFixedCrewModel;
 
   const qfis = useMemo(() => {
       return instructorsData
           .filter(i => {
               const isQFI = isQfiRole(i);
-              return isQFI || (isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology)));
+              return isQFI || (isCrewPositionStaffModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology)));
           })
           .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
-  }, [instructorsData, isAirCombatModel, personnelDisplaySettings, crewPositionTerminology]);
+  }, [instructorsData, isCrewPositionStaffModel, personnelDisplaySettings, crewPositionTerminology]);
 
   const staffRoleFilterOptions = useMemo(() => {
       const optionMap = new Map<string, string>();
@@ -372,7 +375,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
         const otherStaffCandidates = instructorsData.filter(i => {
             // Exclude QFIs, INSTRUCTORs, SIM IPs, and OFIs
-            const isQfi = isQfiRole(i) || (isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology)));
+            const isQfi = isQfiRole(i) || (isCrewPositionStaffModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology)));
             const isSimIp = i.role === 'SIM IP';
             const isOfi = i.role === 'OFI' || i.isOFI === true;
 
@@ -394,7 +397,28 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             }
             return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
-    }, [instructorsData, isAirCombatModel, personnelDisplaySettings, crewPositionTerminology]);
+    }, [instructorsData, isCrewPositionStaffModel, personnelDisplaySettings, crewPositionTerminology]);
+
+  const fixedCrewGroups = useMemo(() => {
+      if (!isFixedCrewModel) return {};
+      const groups: { [key: string]: Instructor[] } = {};
+      filteredQfis.forEach(instructor => {
+          const crewName = String(instructor.crew || '').trim() || 'Unassigned Crew';
+          if (!groups[crewName]) {
+              groups[crewName] = [];
+          }
+          groups[crewName].push(instructor);
+      });
+      return groups;
+  }, [filteredQfis, isFixedCrewModel]);
+
+  const sortedFixedCrewGroups = useMemo(() =>
+      Object.keys(fixedCrewGroups).sort((a, b) => {
+          if (a === 'Unassigned Crew') return 1;
+          if (b === 'Unassigned Crew') return -1;
+          return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      }),
+  [fixedCrewGroups]);
 
   // SIM IPs are shown as a single combined section (not split by unit)
   // simIps is already sorted by unit → rank → name from the simIps useMemo above
@@ -587,6 +611,21 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     </div>
   );
 
+  const renderFixedCrewCard = (crewName: string) => (
+    <div key={`fixed-crew-${crewName}`} className="bg-gray-800 border border-sky-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+        <div className="p-3 border-b border-sky-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
+            <div>
+                <h3 className="text-lg font-bold text-sky-400">{crewName}</h3>
+                <p className="text-xs text-gray-400">Fixed crew group</p>
+            </div>
+            <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{fixedCrewGroups[crewName].length}</span>
+        </div>
+        <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+            {renderInstructorList(fixedCrewGroups[crewName])}
+        </div>
+    </div>
+  );
+
   const renderSupportStaffCards = () => (
     <>
         {/* SIM IPs - single combined card regardless of unit */}
@@ -685,6 +724,20 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                             </div>
                         </div>
                     </div>
+                 ) : isFixedCrewModel ? (
+                    <div className="flex flex-col xl:flex-row gap-6 max-w-[1920px] mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:block xl:w-[360px] xl:flex-shrink-0 gap-6 xl:space-y-6">
+                            {sortedUnits.map(renderInstructorUnitCard)}
+                        </div>
+                        <div className="flex-1 space-y-6 min-w-0">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {sortedFixedCrewGroups.map(renderFixedCrewCard)}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {renderSupportStaffCards()}
+                            </div>
+                        </div>
+                    </div>
                  ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1920px] mx-auto">
                         {sortedUnits.map(renderInstructorUnitCard)}
@@ -735,6 +788,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     personnelDisplaySettings={personnelDisplaySettings}
                     instructorLabel={instructorLabel}
                     operationalModel={operationalModel}
+                    crewPositionTerminology={crewPositionTerminology}
                 />
         )}
 

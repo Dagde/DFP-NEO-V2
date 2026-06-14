@@ -37536,13 +37536,16 @@ const InstructorListView = ({
       }
     }
   }, [instructorsData]);
-  const isAirCombatModel = normaliseOperationalModel(operationalModel2) === "air_combat";
+  const activeOperationalModel = normaliseOperationalModel(operationalModel2);
+  const isAirCombatModel = activeOperationalModel === "air_combat";
+  const isFixedCrewModel = activeOperationalModel === "fixed_crew";
+  const isCrewPositionStaffModel = isAirCombatModel || isFixedCrewModel;
   const qfis = reactExports.useMemo(() => {
     return instructorsData.filter((i) => {
       const isQFI = isQfiRole(i);
-      return isQFI || isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology));
+      return isQFI || isCrewPositionStaffModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology));
     }).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
-  }, [instructorsData, isAirCombatModel, personnelDisplaySettings, crewPositionTerminology]);
+  }, [instructorsData, isCrewPositionStaffModel, personnelDisplaySettings, crewPositionTerminology]);
   const staffRoleFilterOptions = reactExports.useMemo(() => {
     const optionMap = /* @__PURE__ */ new Map();
     qfis.forEach((instructor) => {
@@ -37651,7 +37654,7 @@ const InstructorListView = ({
   const otherStaff = reactExports.useMemo(() => {
     console.log("🔍 [OTHER STAFF] instructorsData length:", instructorsData.length);
     const otherStaffCandidates = instructorsData.filter((i) => {
-      const isQfi = isQfiRole(i) || isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology));
+      const isQfi = isQfiRole(i) || isCrewPositionStaffModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology));
       const isSimIp2 = i.role === "SIM IP";
       const isOfi = i.role === "OFI" || i.isOFI === true;
       const isOther = !isQfi && !isSimIp2 && !isOfi;
@@ -37668,7 +37671,27 @@ const InstructorListView = ({
       }
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, isAirCombatModel, personnelDisplaySettings, crewPositionTerminology]);
+  }, [instructorsData, isCrewPositionStaffModel, personnelDisplaySettings, crewPositionTerminology]);
+  const fixedCrewGroups = reactExports.useMemo(() => {
+    if (!isFixedCrewModel) return {};
+    const groups = {};
+    filteredQfis.forEach((instructor) => {
+      const crewName = String(instructor.crew || "").trim() || "Unassigned Crew";
+      if (!groups[crewName]) {
+        groups[crewName] = [];
+      }
+      groups[crewName].push(instructor);
+    });
+    return groups;
+  }, [filteredQfis, isFixedCrewModel]);
+  const sortedFixedCrewGroups = reactExports.useMemo(
+    () => Object.keys(fixedCrewGroups).sort((a, b) => {
+      if (a === "Unassigned Crew") return 1;
+      if (b === "Unassigned Crew") return -1;
+      return a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" });
+    }),
+    [fixedCrewGroups]
+  );
   const ofisByUnit = reactExports.useMemo(() => {
     const groups = {};
     ofis.forEach((instructor) => {
@@ -37834,6 +37857,16 @@ const InstructorListView = ({
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(qfisByFlight[flight]) })
   ] }, `flight-${flight}`);
+  const renderFixedCrewCard = (crewName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-sky-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-sky-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400", children: crewName }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Fixed crew group" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: fixedCrewGroups[crewName].length })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(fixedCrewGroups[crewName]) })
+  ] }, `fixed-crew-${crewName}`);
   const renderSupportStaffCards = () => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     simIps.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm", children: [
@@ -37903,6 +37936,12 @@ const InstructorListView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6", children: sortedFlightGroups.map(renderFlightCard) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6", children: renderSupportStaffCards() })
         ] })
+      ] }) : isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col xl:flex-row gap-6 max-w-[1920px] mx-auto", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:block xl:w-[360px] xl:flex-shrink-0 gap-6 xl:space-y-6", children: sortedUnits.map(renderInstructorUnitCard) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 space-y-6 min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6", children: sortedFixedCrewGroups.map(renderFixedCrewCard) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6", children: renderSupportStaffCards() })
+        ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1920px] mx-auto", children: [
         sortedUnits.map(renderInstructorUnitCard),
         renderSupportStaffCards()
@@ -37948,7 +37987,8 @@ const InstructorListView = ({
         resourceDisplayNames,
         personnelDisplaySettings,
         instructorLabel,
-        operationalModel: operationalModel2
+        operationalModel: operationalModel2,
+        crewPositionTerminology
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
