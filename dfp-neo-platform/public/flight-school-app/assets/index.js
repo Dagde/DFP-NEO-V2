@@ -27837,11 +27837,23 @@ const PeopleTab = ({
       return activeUnitCodes.size === 0 || !staffUnit || activeUnitCodes.has(staffUnit);
     });
     const eventStaff = new Set(events.flatMap(getEventPeople2));
+    const staffEventCounts = /* @__PURE__ */ new Map();
+    events.forEach((event) => {
+      getEventPeople2(event).forEach((name) => {
+        staffEventCounts.set(name, (staffEventCounts.get(name) || 0) + 1);
+      });
+    });
     const unavailableNames = /* @__PURE__ */ new Set();
     activeStaff.forEach((staff) => {
       const unavailable = (staff.unavailability || []).some((period) => date >= period.startDate && date < period.endDate);
       if (unavailable) unavailableNames.add(staff.name);
     });
+    const availableActiveStaff = activeStaff.filter((staff) => !unavailableNames.has(staff.name));
+    const staffWithFourEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) >= 4).map((staff) => staff.name).sort();
+    const staffWithThreeEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) === 3).map((staff) => staff.name).sort();
+    const staffWithTwoEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) === 2).map((staff) => staff.name).sort();
+    const staffWithOneEventList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) === 1).map((staff) => staff.name).sort();
+    const staffWithZeroEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) === 0).map((staff) => staff.name).sort();
     const roleRows = /* @__PURE__ */ new Map();
     activeStaff.forEach((staff) => {
       const role = String(staff.role || "Unassigned").trim() || "Unassigned";
@@ -27906,6 +27918,19 @@ const PeopleTab = ({
     return {
       roleRows: Array.from(roleRows.values()).sort((left, right) => left.role.localeCompare(right.role)),
       totals,
+      staffEventBuckets: {
+        totalAvailable: availableActiveStaff.length,
+        withFourEvents: staffWithFourEventsList.length,
+        withThreeEvents: staffWithThreeEventsList.length,
+        withTwoEvents: staffWithTwoEventsList.length,
+        withOneEvent: staffWithOneEventList.length,
+        withZeroEvents: staffWithZeroEventsList.length,
+        withFourEventsList: staffWithFourEventsList,
+        withThreeEventsList: staffWithThreeEventsList,
+        withTwoEventsList: staffWithTwoEventsList,
+        withOneEventList: staffWithOneEventList,
+        withZeroEventsList: staffWithZeroEventsList
+      },
       unavailableList: activeStaff.filter((staff) => unavailableNames.has(staff.name)).map((staff) => ({ name: staff.name, rank: staff.rank, role: staff.role || "Unassigned" })).sort((left, right) => left.name.localeCompare(right.name)),
       priorityRows,
       courseRows,
@@ -27996,11 +28021,11 @@ const PeopleTab = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: fieldsetShell, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Staff" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-5 gap-6", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 4 Events", value: stats.instructorsWithFourEvents, description: `of ${stats.totalAvailableInstructors} available`, personnelList: stats.instructorsWithFourEventsList, onPersonClick: onNavigateAndSelectPerson }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 3 Events", value: stats.instructorsWithThreeEvents, description: `of ${stats.totalAvailableInstructors} available`, personnelList: stats.instructorsWithThreeEventsList, onPersonClick: onNavigateAndSelectPerson }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 2 Events", value: stats.instructorsWithTwoEvents, description: `of ${stats.totalAvailableInstructors} available`, personnelList: stats.instructorsWithTwoEventsList, onPersonClick: onNavigateAndSelectPerson }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 1 Event", value: stats.instructorsWithOneEvent, description: `of ${stats.totalAvailableInstructors} available`, personnelList: stats.instructorsWithOneEventList, onPersonClick: onNavigateAndSelectPerson }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 0 Events", value: stats.instructorsWithZeroEvents, description: `of ${stats.totalAvailableInstructors} available`, personnelList: stats.instructorsWithZeroEventsList, onPersonClick: onNavigateAndSelectPerson })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 4+ Events", value: airCombatPeopleMetrics.staffEventBuckets.withFourEvents, description: `of ${airCombatPeopleMetrics.staffEventBuckets.totalAvailable} available`, personnelList: airCombatPeopleMetrics.staffEventBuckets.withFourEventsList, onPersonClick: onNavigateAndSelectPerson }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 3 Events", value: airCombatPeopleMetrics.staffEventBuckets.withThreeEvents, description: `of ${airCombatPeopleMetrics.staffEventBuckets.totalAvailable} available`, personnelList: airCombatPeopleMetrics.staffEventBuckets.withThreeEventsList, onPersonClick: onNavigateAndSelectPerson }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 2 Events", value: airCombatPeopleMetrics.staffEventBuckets.withTwoEvents, description: `of ${airCombatPeopleMetrics.staffEventBuckets.totalAvailable} available`, personnelList: airCombatPeopleMetrics.staffEventBuckets.withTwoEventsList, onPersonClick: onNavigateAndSelectPerson }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 1 Event", value: airCombatPeopleMetrics.staffEventBuckets.withOneEvent, description: `of ${airCombatPeopleMetrics.staffEventBuckets.totalAvailable} available`, personnelList: airCombatPeopleMetrics.staffEventBuckets.withOneEventList, onPersonClick: onNavigateAndSelectPerson }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(InteractiveStatCard, { title: "Staff with 0 Events", value: airCombatPeopleMetrics.staffEventBuckets.withZeroEvents, description: `of ${airCombatPeopleMetrics.staffEventBuckets.totalAvailable} available`, personnelList: airCombatPeopleMetrics.staffEventBuckets.withZeroEventsList, onPersonClick: onNavigateAndSelectPerson })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: sectionShell, children: [
