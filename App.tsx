@@ -16852,14 +16852,34 @@ const App: React.FC = () => {
         items: SyllabusItemDetail[],
         requiredAccess: 'View' | 'Assign' | 'Manage' = 'View',
         unitCode?: string | null,
-    ) => (
-        items.filter((item) => {
-            if (item.lmpType === 'Staff CAT') return true;
+    ) => {
+        const normaliseContextCode = (value?: string | null) => String(value || '').trim().toUpperCase();
+        const activeUnit = normaliseContextCode(unitCode || activeUnitCode);
+        const activeLocation = normaliseContextCode(school);
+        const activeModel = getOperationalModelForUnitCode(activeUnit);
+        const itemMatchesActiveUnitContext = (item: SyllabusItemDetail): boolean => {
+            const itemUnit = normaliseContextCode((item as any).unit);
+            const itemLocation = normaliseContextCode((item as any).location);
+            if (itemUnit) {
+                return itemUnit.split('+').map(part => part.trim()).filter(Boolean).includes(activeUnit);
+            }
+            return Boolean(itemLocation && activeLocation && itemLocation === activeLocation);
+        };
+
+        return items.filter((item) => {
+            if (item.lmpType === 'Staff CAT') {
+                if (activeModel === 'air_combat') return true;
+                if (activeModel !== 'flight_school') return itemMatchesActiveUnitContext(item);
+                return false;
+            }
             const lmpCodes = getSyllabusMasterLmpCodes(item);
             if (lmpCodes.length === 0) return true;
+            if (activeModel !== 'flight_school' && activeModel !== 'air_combat') {
+                return itemMatchesActiveUnitContext(item);
+            }
             return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
-        })
-    ), [getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess]);
+        });
+    }, [activeUnitCode, getOperationalModelForUnitCode, getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess, school]);
 
     const activePlatformResourcePool = useMemo(
         () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
@@ -17473,8 +17493,9 @@ const App: React.FC = () => {
         return filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', activeUnitCode)
             .filter((item) => {
                 if (item.lmpType !== 'Staff CAT') return true;
-                if (activeOperationalModel !== 'air_combat') return false;
                 const packageUnit = normaliseContextCode((item as any).unit);
+                if (activeOperationalModel === 'fixed_crew') return packageUnit === activeUnit;
+                if (activeOperationalModel !== 'air_combat') return false;
                 return !packageUnit || packageUnit === activeUnit;
             });
     }, [activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);

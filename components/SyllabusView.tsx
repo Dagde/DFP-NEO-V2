@@ -876,16 +876,17 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const activeCollectionSelectLabel = isTrainingPackagesTab ? 'Package:' : 'Course:';
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === 'air_combat';
+  const usesPackageTab = activeOperationalModel === 'air_combat' || activeOperationalModel === 'fixed_crew';
   const shouldScopeCreatedItemsToActiveUnit = isTrainingPackagesTab || activeOperationalModel !== 'flight_school';
   const availableTabs = useMemo(() => {
       const tabs: Array<{ id: LmpDetailsTab; label: string }> = [
           { id: 'master', label: 'Master LMP' },
       ];
-      if (isAirCombatModel) {
+      if (usesPackageTab) {
           tabs.push({ id: 'packages', label: 'Training Packages' });
       }
       return tabs;
-  }, [isAirCombatModel]);
+  }, [usesPackageTab]);
       const scoringMatrixElements = useMemo(
           () => getScoringMatrixElementOptions(scoringMatrixPhraseBank),
           [scoringMatrixPhraseBank]
@@ -1118,7 +1119,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     }, []);
 
   useEffect(() => {
-    if (!isAirCombatModel && activeTab === 'packages') {
+    if (!usesPackageTab && activeTab === 'packages') {
         setActiveTab('master');
         setSelectedCourseType('BPC+IPC');
         setSelectedItem(null);
@@ -1144,7 +1145,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
         setIsEditing(false);
         setEditedItem(null);
     }
-  }, [activeTab, courseLMPs, isAirCombatModel, selectedCourseType]);
+  }, [activeTab, courseLMPs, selectedCourseType, usesPackageTab]);
 
   useEffect(() => {
       localStorage.setItem('neo_lmp_details_active_tab', activeTab);

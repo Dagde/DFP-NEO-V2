@@ -456,7 +456,7 @@ export const getMasterLmpAccessLevel = (
     .filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel)
     .map((rule) => normaliseAccessLevel(rule.accessLevel));
 
-  if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel !== 'flight_school') {
+  if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel === 'air_combat') {
     return 'Manage';
   }
 

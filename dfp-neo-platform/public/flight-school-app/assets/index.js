@@ -2150,7 +2150,7 @@ const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
   const targetModel = normaliseOperationalModel(context.operationalModel);
   const activeRulesForLmp = normaliseMasterLmpAccessRules(config).filter((rule) => String(rule.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((rule) => normaliseAccessValue(rule.lmpCode) === targetLmp);
   const matchingLevels = activeRulesForLmp.filter((rule) => !rule.organisationCode || normaliseAccessValue(rule.organisationCode) === targetOrganisation).filter((rule) => !rule.locationCode || !targetLocation || normaliseAccessValue(rule.locationCode) === targetLocation).filter((rule) => !rule.unitCode || targetUnitSet.size === 0 || targetUnitSet.has(normaliseAccessValue(rule.unitCode))).filter((rule) => !rule.operationalModel || normaliseOperationalModel(rule.operationalModel) === targetModel).map((rule) => normaliseAccessLevel(rule.accessLevel));
-  if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel !== "flight_school") {
+  if (matchingLevels.length === 0 && activeRulesForLmp.length === 0 && targetModel === "air_combat") {
     return "Manage";
   }
   if (matchingLevels.length === 0) return null;
@@ -39233,16 +39233,17 @@ const SyllabusView = ({
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
   const activeOperationalModel = normaliseOperationalModel(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
+  const usesPackageTab = activeOperationalModel === "air_combat" || activeOperationalModel === "fixed_crew";
   const shouldScopeCreatedItemsToActiveUnit = isTrainingPackagesTab || activeOperationalModel !== "flight_school";
   const availableTabs = reactExports.useMemo(() => {
     const tabs = [
       { id: "master", label: "Master LMP" }
     ];
-    if (isAirCombatModel) {
+    if (usesPackageTab) {
       tabs.push({ id: "packages", label: "Training Packages" });
     }
     return tabs;
-  }, [isAirCombatModel]);
+  }, [usesPackageTab]);
   const scoringMatrixElements = reactExports.useMemo(
     () => getScoringMatrixElementOptions(scoringMatrixPhraseBank),
     [scoringMatrixPhraseBank]
@@ -39430,7 +39431,7 @@ const SyllabusView = ({
     });
   }, []);
   reactExports.useEffect(() => {
-    if (!isAirCombatModel && activeTab === "packages") {
+    if (!usesPackageTab && activeTab === "packages") {
       setActiveTab("master");
       setSelectedCourseType("BPC+IPC");
       setSelectedItem(null);
@@ -39456,7 +39457,7 @@ const SyllabusView = ({
       setIsEditing(false);
       setEditedItem(null);
     }
-  }, [activeTab, courseLMPs, isAirCombatModel, selectedCourseType]);
+  }, [activeTab, courseLMPs, selectedCourseType, usesPackageTab]);
   reactExports.useEffect(() => {
     localStorage.setItem("neo_lmp_details_active_tab", activeTab);
     localStorage.setItem("neo_lmp_details_selected_package", selectedCourseType);
@@ -78633,12 +78634,33 @@ const App = () => {
       operationalModel: getOperationalModelForUnitCode(contextUnitCode)
     }, requiredAccess);
   }, [activeUnitCode, getOperationalModelForUnitCode, platformConfig, platformConfigLoaded]);
-  const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => items.filter((item) => {
-    if (item.lmpType === "Staff CAT") return true;
-    const lmpCodes = getSyllabusMasterLmpCodes(item);
-    if (lmpCodes.length === 0) return true;
-    return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
-  }), [getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess]);
+  const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => {
+    const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
+    const activeUnit = normaliseContextCode(unitCode || activeUnitCode);
+    const activeLocation = normaliseContextCode(school);
+    const activeModel = getOperationalModelForUnitCode(activeUnit);
+    const itemMatchesActiveUnitContext = (item) => {
+      const itemUnit = normaliseContextCode(item.unit);
+      const itemLocation = normaliseContextCode(item.location);
+      if (itemUnit) {
+        return itemUnit.split("+").map((part) => part.trim()).filter(Boolean).includes(activeUnit);
+      }
+      return Boolean(itemLocation && activeLocation && itemLocation === activeLocation);
+    };
+    return items.filter((item) => {
+      if (item.lmpType === "Staff CAT") {
+        if (activeModel === "air_combat") return true;
+        if (activeModel !== "flight_school") return itemMatchesActiveUnitContext(item);
+        return false;
+      }
+      const lmpCodes = getSyllabusMasterLmpCodes(item);
+      if (lmpCodes.length === 0) return true;
+      if (activeModel !== "flight_school" && activeModel !== "air_combat") {
+        return itemMatchesActiveUnitContext(item);
+      }
+      return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
+    });
+  }, [activeUnitCode, getOperationalModelForUnitCode, getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess, school]);
   const activePlatformResourcePool = reactExports.useMemo(
     () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
     [activeResourcePoolUnitCode, platformConfig, school]
@@ -79073,8 +79095,9 @@ const App = () => {
     const activeUnit = normaliseContextCode(activeUnitCode);
     return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode).filter((item) => {
       if (item.lmpType !== "Staff CAT") return true;
-      if (activeOperationalModel !== "air_combat") return false;
       const packageUnit = normaliseContextCode(item.unit);
+      if (activeOperationalModel === "fixed_crew") return packageUnit === activeUnit;
+      if (activeOperationalModel !== "air_combat") return false;
       return !packageUnit || packageUnit === activeUnit;
     });
   }, [activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
