@@ -83,6 +83,12 @@ const normaliseSeatConfig = (value: string): SeatConfig | undefined => {
     return value as SeatConfig;
 };
 
+const normaliseImportedUnit = (value: string): string | undefined => {
+    const cleanValue = value.trim();
+    if (!cleanValue) return undefined;
+    return cleanValue.toUpperCase().replace(/[\s-]+/g, '');
+};
+
 const normaliseImportedStaffRole = (
     value: string,
     crewPositionTerminology?: CrewPositionTerminology,
@@ -243,10 +249,14 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 if (location) parsedData.location = location;
 
                 const unit = getStringFromRow(row, ['Unit', 'Unit Code']);
-                if (unit) parsedData.unit = unit;
+                const normalisedUnit = normaliseImportedUnit(unit);
+                if (normalisedUnit) parsedData.unit = normalisedUnit;
 
                 const flight = getStringFromRow(row, ['Flight', 'Flight/Sqn', 'Section']);
                 if (flight) parsedData.flight = flight;
+
+                const crew = getStringFromRow(row, ['Crew', 'Fixed Crew', 'Crew Group', 'Fixed Crew Group', 'Crew Name']);
+                if (crew) parsedData.crew = crew;
 
                 const seatConfig = getStringFromRow(row, ['Seat config', 'Seatconfig', 'Seat Configuration']);
                 const normalisedSeatConfig = normaliseSeatConfig(seatConfig);

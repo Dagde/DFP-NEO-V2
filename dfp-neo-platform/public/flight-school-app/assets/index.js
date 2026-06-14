@@ -37099,6 +37099,11 @@ const normaliseSeatConfig = (value) => {
   if (["fwd/long", "forward/long", "fwd long", "forward long", "long"].includes(cleanValue)) return "FWD/LONG";
   return value;
 };
+const normaliseImportedUnit = (value) => {
+  const cleanValue = value.trim();
+  if (!cleanValue) return void 0;
+  return cleanValue.toUpperCase().replace(/[\s-]+/g, "");
+};
 const normaliseImportedStaffRole = (value, crewPositionTerminology) => {
   const cleanValue = value.trim();
   const cleanLower = cleanValue.toLowerCase();
@@ -37224,9 +37229,12 @@ const BulkUpdateFlyout = ({
         const location = getStringFromRow(row, ["Location", "Base", "Location Code"]);
         if (location) parsedData.location = location;
         const unit = getStringFromRow(row, ["Unit", "Unit Code"]);
-        if (unit) parsedData.unit = unit;
+        const normalisedUnit = normaliseImportedUnit(unit);
+        if (normalisedUnit) parsedData.unit = normalisedUnit;
         const flight = getStringFromRow(row, ["Flight", "Flight/Sqn", "Section"]);
         if (flight) parsedData.flight = flight;
+        const crew = getStringFromRow(row, ["Crew", "Fixed Crew", "Crew Group", "Fixed Crew Group", "Crew Name"]);
+        if (crew) parsedData.crew = crew;
         const seatConfig = getStringFromRow(row, ["Seat config", "Seatconfig", "Seat Configuration"]);
         const normalisedSeatConfig = normaliseSeatConfig(seatConfig);
         if (normalisedSeatConfig) parsedData.seatConfig = normalisedSeatConfig;
@@ -67787,6 +67795,7 @@ const normalisePersonnelRecord = (person) => {
     crew: person?.crew || preferences.crew || ""
   };
 };
+const normalisePersonnelUnitCode = (value) => String(value || "").split("/")[0].trim().toUpperCase().replace(/[\s-]+/g, "");
 const PT051_STRUCTURE = [
   { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
   { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
@@ -78338,9 +78347,10 @@ const App = () => {
       AMB: ["YAMB", "AMBERLEY"],
       YAMB: ["AMB", "AMBERLEY"],
       AMBERLEY: ["AMB", "YAMB"],
-      EDI: ["YPED", "EDINBURGH"],
-      YPED: ["EDI", "EDINBURGH"],
-      EDINBURGH: ["EDI", "YPED"],
+      EDI: ["EDN", "YPED", "EDINBURGH"],
+      EDN: ["EDI", "YPED", "EDINBURGH"],
+      YPED: ["EDI", "EDN", "EDINBURGH"],
+      EDINBURGH: ["EDI", "EDN", "YPED"],
       TIN: ["YPTN", "TINDAL"],
       YPTN: ["TIN", "TINDAL"],
       TINDAL: ["TIN", "YPTN"]
@@ -78704,7 +78714,7 @@ const App = () => {
     const personUnit = String(person?.unit || "").trim();
     if (!personLocation && !personUnit) return true;
     if (personLocation && isActiveLocationAlias(personLocation)) return true;
-    const unitCode = personUnit.split("/")[0].trim().toUpperCase();
+    const unitCode = normalisePersonnelUnitCode(personUnit);
     if (!unitCode) return !personLocation;
     const configuredUnit = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => String(unit.code || "").trim().toUpperCase() === unitCode);
     if (configuredUnit?.locationCode && isActiveLocationAlias(configuredUnit.locationCode)) return true;
@@ -78734,7 +78744,7 @@ const App = () => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     const locationFiltered = allInstructorsData.filter(personMatchesActiveLocation);
     const contextFiltered = activeContextUnitCodeSet.size > 0 ? locationFiltered.filter((i) => {
-      const unitCode = String(i.unit || "").split("/")[0].trim().toUpperCase();
+      const unitCode = normalisePersonnelUnitCode(i.unit);
       return !unitCode || activeContextUnitCodeSet.has(unitCode);
     }) : locationFiltered;
     if (!mockOn && !dbOn) return [];
@@ -78746,7 +78756,7 @@ const App = () => {
     const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
     const locationFilteredTrainees = allTraineesData.filter(personMatchesActiveLocation);
     const contextFilteredTrainees = activeContextUnitCodeSet.size > 0 ? locationFilteredTrainees.filter((t) => {
-      const unitCode = String(t.unit || "").split("/")[0].trim().toUpperCase();
+      const unitCode = normalisePersonnelUnitCode(t.unit);
       return !unitCode || activeContextUnitCodeSet.has(unitCode);
     }) : locationFilteredTrainees;
     if (!mockOn && !dbOn) return [];

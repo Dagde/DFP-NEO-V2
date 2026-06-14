@@ -3229,6 +3229,10 @@ const normalisePersonnelRecord = (person: any): any => {
     };
 };
 
+const normalisePersonnelUnitCode = (value: unknown): string => (
+    String(value || '').split('/')[0].trim().toUpperCase().replace(/[\s-]+/g, '')
+);
+
 // --- MOCK DATA ---
 import { ESL_DATA } from './mockData';
 import { initializeData } from './lib/dataService';
@@ -16496,9 +16500,10 @@ const App: React.FC = () => {
             AMB: ['YAMB', 'AMBERLEY'],
             YAMB: ['AMB', 'AMBERLEY'],
             AMBERLEY: ['AMB', 'YAMB'],
-            EDI: ['YPED', 'EDINBURGH'],
-            YPED: ['EDI', 'EDINBURGH'],
-            EDINBURGH: ['EDI', 'YPED'],
+            EDI: ['EDN', 'YPED', 'EDINBURGH'],
+            EDN: ['EDI', 'YPED', 'EDINBURGH'],
+            YPED: ['EDI', 'EDN', 'EDINBURGH'],
+            EDINBURGH: ['EDI', 'EDN', 'YPED'],
             TIN: ['YPTN', 'TINDAL'],
             YPTN: ['TIN', 'TINDAL'],
             TINDAL: ['TIN', 'YPTN'],
@@ -16978,7 +16983,7 @@ const App: React.FC = () => {
         if (!personLocation && !personUnit) return true;
         if (personLocation && isActiveLocationAlias(personLocation)) return true;
 
-        const unitCode = personUnit.split('/')[0].trim().toUpperCase();
+        const unitCode = normalisePersonnelUnitCode(personUnit);
         if (!unitCode) return !personLocation;
 
         const configuredUnit = (platformConfig?.units || [])
@@ -17018,7 +17023,7 @@ const App: React.FC = () => {
         const locationFiltered = allInstructorsData.filter(personMatchesActiveLocation);
         const contextFiltered = activeContextUnitCodeSet.size > 0
             ? locationFiltered.filter((i: any) => {
-                const unitCode = String(i.unit || '').split('/')[0].trim().toUpperCase();
+                const unitCode = normalisePersonnelUnitCode(i.unit);
                 return !unitCode || activeContextUnitCodeSet.has(unitCode);
             })
             : locationFiltered;
@@ -17035,7 +17040,7 @@ const App: React.FC = () => {
         const locationFilteredTrainees = allTraineesData.filter(personMatchesActiveLocation);
         const contextFilteredTrainees = activeContextUnitCodeSet.size > 0
             ? locationFilteredTrainees.filter((t: any) => {
-                const unitCode = String(t.unit || '').split('/')[0].trim().toUpperCase();
+                const unitCode = normalisePersonnelUnitCode(t.unit);
                 return !unitCode || activeContextUnitCodeSet.has(unitCode);
             })
             : locationFilteredTrainees;
