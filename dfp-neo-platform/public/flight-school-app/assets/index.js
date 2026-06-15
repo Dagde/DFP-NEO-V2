@@ -79718,6 +79718,24 @@ const App = () => {
       return !packageUnit || packageUnit === activeUnit;
     });
   }, [activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+  const trainingPackageTemplatesForActiveModel = reactExports.useMemo(() => {
+    const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
+    const activeUnit = normaliseContextCode(activeUnitCode);
+    const getPackageUnitModel = (unitCode) => getOperationalModelForUnitCode(unitCode);
+    return syllabusDetails.filter((item) => {
+      if (item.lmpType !== "Staff CAT" || item.isActive === false || isSyllabusCourseShell(item)) return false;
+      const packageUnit = normaliseContextCode(item.unit);
+      if (activeOperationalModel === "fixed_crew") {
+        if (!packageUnit || packageUnit === activeUnit) return false;
+        return getPackageUnitModel(packageUnit) === "fixed_crew";
+      }
+      if (activeOperationalModel === "air_combat") {
+        if (!packageUnit) return true;
+        return getPackageUnitModel(packageUnit) === "air_combat";
+      }
+      return false;
+    });
+  }, [activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, syllabusDetails]);
   reactExports.useEffect(() => {
     const loadSyllabus = async () => {
       setSyllabusLoading(true);
@@ -91493,7 +91511,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             crewPositionTerminology: activeCrewPositionTerminology,
             activeLocationCode: school,
             activeUnitCode,
-            trainingPackageTemplates: syllabusDetails.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false && !isSyllabusCourseShell(item)),
+            trainingPackageTemplates: trainingPackageTemplatesForActiveModel,
             instructorsData,
             operationalModel: activeOperationalModel,
             currentUserName,
