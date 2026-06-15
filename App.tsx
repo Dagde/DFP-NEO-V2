@@ -16867,25 +16867,26 @@ const App: React.FC = () => {
         const activeUnit = normaliseContextCode(unitCode || activeUnitCode);
         const activeLocation = normaliseContextCode(school);
         const activeModel = getOperationalModelForUnitCode(activeUnit);
-        const itemMatchesActiveUnitContext = (item: SyllabusItemDetail): boolean => {
+        const itemMatchesActiveUnitContext = (item: SyllabusItemDetail, options: { requireExplicitUnit?: boolean } = {}): boolean => {
             const itemUnit = normaliseContextCode((item as any).unit);
             const itemLocation = normaliseContextCode((item as any).location);
             if (itemUnit) {
                 return itemUnit.split('+').map(part => part.trim()).filter(Boolean).includes(activeUnit);
             }
+            if (options.requireExplicitUnit) return false;
             return Boolean(itemLocation && activeLocation && itemLocation === activeLocation);
         };
 
         return items.filter((item) => {
             if (item.lmpType === 'Staff CAT') {
                 if (activeModel === 'air_combat') return true;
-                if (activeModel !== 'flight_school') return itemMatchesActiveUnitContext(item);
+                if (activeModel !== 'flight_school') return itemMatchesActiveUnitContext(item, { requireExplicitUnit: true });
                 return false;
             }
             const lmpCodes = getSyllabusMasterLmpCodes(item);
             if (lmpCodes.length === 0) return true;
             if (activeModel !== 'flight_school' && activeModel !== 'air_combat') {
-                return itemMatchesActiveUnitContext(item);
+                return itemMatchesActiveUnitContext(item, { requireExplicitUnit: true });
             }
             return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
         });

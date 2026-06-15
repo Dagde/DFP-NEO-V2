@@ -836,6 +836,14 @@ const getPackageCodeFromTitle = (title: string): string => {
         : words.map(word => word[0].toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 8);
 };
 
+const getUnitScopedCollectionCode = (baseCode: string, unitCode: string, shouldScope: boolean): string => {
+    const cleanBase = String(baseCode || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    const cleanUnit = String(unitCode || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    if (!cleanBase) return '';
+    if (!shouldScope || !cleanUnit || cleanBase === cleanUnit || cleanBase.startsWith(`${cleanUnit}-`)) return cleanBase;
+    return `${cleanUnit}-${cleanBase}`.slice(0, 24);
+};
+
 const SyllabusView: React.FC<SyllabusViewProps> = ({
     syllabusDetails,
     onBack,
@@ -1326,7 +1334,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       if (!uploadFile) { alert('Please select a file first.'); return; }
       const packageName = newUploadPackageName.trim();
       const destinationCode = isTrainingPackagesTab && uploadMode === 'create'
-          ? getPackageCodeFromTitle(packageName)
+          ? getUnitScopedCollectionCode(getPackageCodeFromTitle(packageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit)
           : selectedCourseType;
       const destinationName = isTrainingPackagesTab && uploadMode === 'create'
           ? packageName
@@ -1527,7 +1535,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           : words.map(w => w[0].toUpperCase()).join('').slice(0, 8);
       // Academic Training: use full name as course identifier so it matches academicLmpType dropdown
       const isAcademic = newLMPCourseType === 'Academic Training';
-      const courseCode = isAcademic && !isTrainingPackagesTab ? newLMPName.trim() : shortCode;
+      const baseCourseCode = isAcademic && !isTrainingPackagesTab && !shouldScopeCreatedItemsToActiveUnit ? newLMPName.trim() : shortCode;
+      const courseCode = getUnitScopedCollectionCode(baseCourseCode, activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit);
       // Build a non-schedulable course/package shell so the collection exists
       // without creating a default event.
       const newItem: SyllabusItemDetail = {
@@ -1894,9 +1903,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     {newLMPName.trim() && (
                         <p style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>
                             Auto-generated code: <span style={{ color: '#38bdf8', fontWeight: 700 }}>
-                                {newLMPName.trim().split(/\s+/).length === 1
-                                    ? newLMPName.trim().toUpperCase().slice(0, 8)
-                                    : newLMPName.trim().split(/\s+/).map((w: string) => w[0].toUpperCase()).join('').slice(0, 8)}
+                                {getUnitScopedCollectionCode(
+                                    newLMPName.trim().split(/\s+/).length === 1
+                                        ? newLMPName.trim().toUpperCase().slice(0, 8)
+                                        : newLMPName.trim().split(/\s+/).map((w: string) => w[0].toUpperCase()).join('').slice(0, 8),
+                                    activeUnitNormalised,
+                                    shouldScopeCreatedItemsToActiveUnit,
+                                )}
                             </span>
                         </p>
                     )}
@@ -2134,7 +2147,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                                 />
                                 {newUploadPackageName.trim() && (
                                     <p style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
-                                        Package code: <strong style={{ color: '#d1d5db' }}>{getPackageCodeFromTitle(newUploadPackageName)}</strong>
+                                        Package code: <strong style={{ color: '#d1d5db' }}>
+                                            {getUnitScopedCollectionCode(getPackageCodeFromTitle(newUploadPackageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit)}
+                                        </strong>
                                     </p>
                                 )}
                             </div>

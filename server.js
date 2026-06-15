@@ -5752,6 +5752,14 @@ function getUploadPackageCodeFromTitle(title) {
     : words.map(word => word[0].toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 8);
 }
 
+function getUnitScopedUploadCollectionCode(baseCode, unitCode) {
+  const cleanBase = String(baseCode || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  const cleanUnit = String(unitCode || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  if (!cleanBase) return '';
+  if (!cleanUnit || cleanBase === cleanUnit || cleanBase.startsWith(`${cleanUnit}-`)) return cleanBase;
+  return `${cleanUnit}-${cleanBase}`.slice(0, 24);
+}
+
 function uploadRowHasContent(row) {
   return Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
 }
@@ -5774,8 +5782,10 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
     const packageName = String(req.body?.packageName || '').trim();
     const uploadMode = String(req.body?.uploadMode || 'update').trim();
     const lmpType = normaliseUploadLmpType(String(req.body?.lmpType || 'Master LMP').trim());
+    const locationCode = String(req.body?.locationCode || req.body?.location || '').trim();
+    const unitCode = String(req.body?.unitCode || req.body?.unit || '').trim();
     if (!selectedCourseCode && lmpType === 'Staff CAT' && uploadMode === 'create') {
-      selectedCourseCode = getUploadPackageCodeFromTitle(packageName);
+      selectedCourseCode = getUnitScopedUploadCollectionCode(getUploadPackageCodeFromTitle(packageName), unitCode);
     }
 
     if (!selectedCourseCode) {
@@ -5934,8 +5944,8 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
         prerequisites: getUploadList(row, ['prerequisites', 'Prerequisites']),
         prerequisitesGround: getUploadList(row, ['Pre-requisite Events (Ground School)', 'prerequisitesGround']),
         prerequisitesFlying: getUploadList(row, ['Pre-requisite Events (Sim/Flying)', 'prerequisitesFlying']),
-        location: String(req.body?.locationCode || req.body?.location || '').trim(),
-        unit: String(req.body?.unitCode || req.body?.unit || '').trim(),
+        location: locationCode,
+        unit: unitCode,
         lmpType,
         isActive: true,
       });

@@ -139,6 +139,14 @@ const getPackageCodeFromTitle = (title: string): string => {
     : words.map(word => word[0].toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 8);
 };
 
+const getUnitScopedCollectionCode = (baseCode: string, unitCode: string): string => {
+  const cleanBase = String(baseCode || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  const cleanUnit = String(unitCode || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  if (!cleanBase) return '';
+  if (!cleanUnit || cleanBase === cleanUnit || cleanBase.startsWith(`${cleanUnit}-`)) return cleanBase;
+  return `${cleanUnit}-${cleanBase}`.slice(0, 24);
+};
+
 const rowHasContent = (row: Record<string, any>): boolean =>
   Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
 
@@ -167,7 +175,7 @@ export async function POST(request: NextRequest) {
     const locationCode = String(formData.get('locationCode') || formData.get('location') || '').trim();
     const unitCode = String(formData.get('unitCode') || formData.get('unit') || '').trim();
     if (!selectedCourseCode && lmpType === 'Staff CAT' && uploadMode === 'create') {
-      selectedCourseCode = getPackageCodeFromTitle(packageName);
+      selectedCourseCode = getUnitScopedCollectionCode(getPackageCodeFromTitle(packageName), unitCode);
     }
 
     if (!selectedCourseCode) {

@@ -39427,6 +39427,13 @@ const getPackageCodeFromTitle = (title) => {
   if (words.length === 0) return "";
   return words.length === 1 ? words[0].toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) : words.map((word) => word[0].toUpperCase()).join("").replace(/[^A-Z0-9]/g, "").slice(0, 8);
 };
+const getUnitScopedCollectionCode = (baseCode, unitCode, shouldScope) => {
+  const cleanBase = String(baseCode || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  const cleanUnit = String(unitCode || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  if (!cleanBase) return "";
+  if (!shouldScope || !cleanUnit || cleanBase === cleanUnit || cleanBase.startsWith(`${cleanUnit}-`)) return cleanBase;
+  return `${cleanUnit}-${cleanBase}`.slice(0, 24);
+};
 const SyllabusView = ({
   syllabusDetails,
   onBack,
@@ -39850,7 +39857,7 @@ const SyllabusView = ({
       return;
     }
     const packageName = newUploadPackageName.trim();
-    const destinationCode = isTrainingPackagesTab && uploadMode === "create" ? getPackageCodeFromTitle(packageName) : selectedCourseType;
+    const destinationCode = isTrainingPackagesTab && uploadMode === "create" ? getUnitScopedCollectionCode(getPackageCodeFromTitle(packageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit) : selectedCourseType;
     const destinationName = isTrainingPackagesTab && uploadMode === "create" ? packageName : getCourseTitle(selectedCourseType);
     if (isTrainingPackagesTab && uploadMode === "create" && !packageName) {
       alert("Please enter a new package name.");
@@ -40039,7 +40046,8 @@ const SyllabusView = ({
     const words = newLMPName.trim().split(/\s+/);
     const shortCode = words.length === 1 ? newLMPName.trim().toUpperCase().slice(0, 8) : words.map((w) => w[0].toUpperCase()).join("").slice(0, 8);
     const isAcademic = newLMPCourseType === "Academic Training";
-    const courseCode = isAcademic && !isTrainingPackagesTab ? newLMPName.trim() : shortCode;
+    const baseCourseCode = isAcademic && !isTrainingPackagesTab && !shouldScopeCreatedItemsToActiveUnit ? newLMPName.trim() : shortCode;
+    const courseCode = getUnitScopedCollectionCode(baseCourseCode, activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit);
     const newItem = {
       id: `new-lmp-${Date.now()}`,
       code: courseCode,
@@ -40426,7 +40434,11 @@ const SyllabusView = ({
                 ),
                 newLMPName.trim() && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 10, color: "#6b7280", marginTop: 4 }, children: [
                   "Auto-generated code: ",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#38bdf8", fontWeight: 700 }, children: newLMPName.trim().split(/\s+/).length === 1 ? newLMPName.trim().toUpperCase().slice(0, 8) : newLMPName.trim().split(/\s+/).map((w) => w[0].toUpperCase()).join("").slice(0, 8) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#38bdf8", fontWeight: 700 }, children: getUnitScopedCollectionCode(
+                    newLMPName.trim().split(/\s+/).length === 1 ? newLMPName.trim().toUpperCase().slice(0, 8) : newLMPName.trim().split(/\s+/).map((w) => w[0].toUpperCase()).join("").slice(0, 8),
+                    activeUnitNormalised,
+                    shouldScopeCreatedItemsToActiveUnit
+                  ) })
                 ] })
               ] }),
               (!isTrainingPackagesTab || addPackageMode === "blank") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 24 }, children: [
@@ -40802,7 +40814,7 @@ const SyllabusView = ({
                   ),
                   newUploadPackageName.trim() && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginTop: 6 }, children: [
                     "Package code: ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: getPackageCodeFromTitle(newUploadPackageName) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: getUnitScopedCollectionCode(getPackageCodeFromTitle(newUploadPackageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit) })
                   ] })
                 ] })
               ] }),
@@ -79009,24 +79021,25 @@ const App = () => {
     const activeUnit = normaliseContextCode(unitCode || activeUnitCode);
     const activeLocation = normaliseContextCode(school);
     const activeModel = getOperationalModelForUnitCode(activeUnit);
-    const itemMatchesActiveUnitContext = (item) => {
+    const itemMatchesActiveUnitContext = (item, options = {}) => {
       const itemUnit = normaliseContextCode(item.unit);
       const itemLocation = normaliseContextCode(item.location);
       if (itemUnit) {
         return itemUnit.split("+").map((part) => part.trim()).filter(Boolean).includes(activeUnit);
       }
+      if (options.requireExplicitUnit) return false;
       return Boolean(itemLocation && activeLocation && itemLocation === activeLocation);
     };
     return items.filter((item) => {
       if (item.lmpType === "Staff CAT") {
         if (activeModel === "air_combat") return true;
-        if (activeModel !== "flight_school") return itemMatchesActiveUnitContext(item);
+        if (activeModel !== "flight_school") return itemMatchesActiveUnitContext(item, { requireExplicitUnit: true });
         return false;
       }
       const lmpCodes = getSyllabusMasterLmpCodes(item);
       if (lmpCodes.length === 0) return true;
       if (activeModel !== "flight_school" && activeModel !== "air_combat") {
-        return itemMatchesActiveUnitContext(item);
+        return itemMatchesActiveUnitContext(item, { requireExplicitUnit: true });
       }
       return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
     });
