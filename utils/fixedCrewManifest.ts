@@ -24,6 +24,7 @@ export type FixedCrewManifestPlanStatus =
 
 export interface FixedCrewManifestPlan {
   crewGroup?: string;
+  picStaffName?: string;
   picQualification?: string;
   status?: FixedCrewManifestPlanStatus;
   swapNotes?: string;
@@ -55,6 +56,7 @@ const decodeManifestPlan = (value: string): FixedCrewManifestPlan => {
     const parsed = JSON.parse(payload);
     return {
       crewGroup: String(parsed?.crewGroup || '').trim() || undefined,
+      picStaffName: String(parsed?.picStaffName || '').trim() || undefined,
       picQualification: String(parsed?.picQualification || '').trim() || undefined,
       status: normaliseFixedCrewManifestPlanStatus(parsed?.status),
       swapNotes: typeof parsed?.swapNotes === 'string' ? parsed.swapNotes : undefined,
@@ -98,6 +100,7 @@ export const withFixedCrewManifestPlan = (
 ): SyllabusItemDetail => {
   const cleanPlan: FixedCrewManifestPlan = {
     crewGroup: String(plan.crewGroup || '').trim() || undefined,
+    picStaffName: String(plan.picStaffName || '').trim() || undefined,
     picQualification: String(plan.picQualification || '').trim() || undefined,
     status: normaliseFixedCrewManifestPlanStatus(plan.status),
     swapNotes: typeof plan.swapNotes === 'string' ? plan.swapNotes : undefined,
@@ -105,6 +108,7 @@ export const withFixedCrewManifestPlan = (
   const visibleNotes = stripFixedCrewManifestNote(item.notes);
   const hasManifestData = Boolean(
     cleanPlan.crewGroup
+    || cleanPlan.picStaffName
     || cleanPlan.picQualification
     || String(cleanPlan.swapNotes || '').trim()
     || cleanPlan.status !== 'pending'

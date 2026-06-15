@@ -38755,6 +38755,7 @@ const decodeManifestPlan = (value) => {
     const parsed = JSON.parse(payload);
     return {
       crewGroup: String(parsed?.crewGroup || "").trim() || void 0,
+      picStaffName: String(parsed?.picStaffName || "").trim() || void 0,
       picQualification: String(parsed?.picQualification || "").trim() || void 0,
       status: normaliseFixedCrewManifestPlanStatus(parsed?.status),
       swapNotes: typeof parsed?.swapNotes === "string" ? parsed.swapNotes : void 0
@@ -38780,13 +38781,14 @@ const stripFixedCrewManifestNote = (notes) => String(notes || "").split(/\r?\n/)
 const withFixedCrewManifestPlan = (item, plan) => {
   const cleanPlan = {
     crewGroup: String(plan.crewGroup || "").trim() || void 0,
+    picStaffName: String(plan.picStaffName || "").trim() || void 0,
     picQualification: String(plan.picQualification || "").trim() || void 0,
     status: normaliseFixedCrewManifestPlanStatus(plan.status),
     swapNotes: typeof plan.swapNotes === "string" ? plan.swapNotes : void 0
   };
   const visibleNotes = stripFixedCrewManifestNote(item.notes);
   const hasManifestData = Boolean(
-    cleanPlan.crewGroup || cleanPlan.picQualification || String(cleanPlan.swapNotes || "").trim() || cleanPlan.status !== "pending"
+    cleanPlan.crewGroup || cleanPlan.picStaffName || cleanPlan.picQualification || String(cleanPlan.swapNotes || "").trim() || cleanPlan.status !== "pending"
   );
   const manifestLine = hasManifestData ? `[Fixed Crew Manifest: ${encodeManifestPlan(cleanPlan)}]` : "";
   const notes = [visibleNotes, manifestLine].filter(Boolean).join("\n").trim();
@@ -39159,6 +39161,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   const selectedPicQualification = fixedCrewQualificationOptions.find((qualification) => normaliseQualificationToken(qualification.id) === normaliseQualificationToken(fixedCrewPicLabel) || normaliseQualificationToken(qualification.code) === normaliseQualificationToken(fixedCrewPicLabel) || normaliseQualificationToken(qualification.name) === normaliseQualificationToken(fixedCrewPicLabel));
   const fixedCrewMembers = fixedCrewManifestPlan.crewGroup ? instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewManifestPlan.crewGroup || "").trim().toUpperCase()).filter((staff) => !staff.isAdminStaff).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" })) : [];
   const fixedCrewPicCandidates = selectedPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(selectedPicQualification.id)) : [];
+  const selectedFixedCrewPic = fixedCrewPicCandidates.find((member) => String(member.name || "").trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || "").trim().toUpperCase());
   const fixedCrewRoleCoverage = getCrewRequirementRoles(currentItem.crewRequirement, aircraftCrewComposition).map((role) => {
     const options = getCrewRequirementRoleOptions(role);
     const matchingMembers = fixedCrewMembers.filter((staff) => options.some((option) => crewPositionValuesMatch(option, staff.role, crewPositionTerminology)));
@@ -39508,7 +39511,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             "select",
             {
               value: fixedCrewManifestPlan.crewGroup || "",
-              onChange: (e) => updateFixedCrewManifestPlan({ crewGroup: e.target.value }),
+              onChange: (e) => updateFixedCrewManifestPlan({ crewGroup: e.target.value, picStaffName: void 0 }),
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
@@ -39524,7 +39527,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             "select",
             {
               value: fixedCrewManifestPlan.picQualification || fixedCrewPicLabel,
-              onChange: (e) => updateFixedCrewManifestPlan({ picQualification: e.target.value }),
+              onChange: (e) => updateFixedCrewManifestPlan({ picQualification: e.target.value, picStaffName: void 0 }),
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]",
               children: [
                 fixedCrewQualificationOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "PIC", children: "PIC" }),
@@ -39533,6 +39536,27 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
                   const label = qualification.code || qualification.name;
                   return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: label, children: label }, qualification.id);
                 })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "PIC" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: fixedCrewManifestPlan.picStaffName || "",
+              onChange: (e) => updateFixedCrewManifestPlan({ picStaffName: e.target.value }),
+              disabled: fixedCrewPicCandidates.length === 0,
+              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px] disabled:opacity-60",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
+                fixedCrewManifestPlan.picStaffName && !selectedFixedCrewPic && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: fixedCrewManifestPlan.picStaffName, children: fixedCrewManifestPlan.picStaffName }),
+                fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: member.name, children: [
+                  member.rank,
+                  " ",
+                  member.name
+                ] }, member.idNumber || member.name))
               ]
             }
           )
@@ -39615,11 +39639,18 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
               "No selected crew member has ",
               fixedCrewPicLabel,
               "."
-            ] }) : fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-800/70 px-2 py-1 text-[10px] text-gray-100", children: [
-              member.rank,
-              " ",
-              member.name
-            ] }, member.idNumber || member.name)) })
+            ] }) : fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: `rounded px-2 py-1 text-[10px] ${String(member.name || "").trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || "").trim().toUpperCase() ? "bg-emerald-900/60 text-emerald-100" : "bg-gray-800/70 text-gray-100"}`,
+                children: [
+                  member.rank,
+                  " ",
+                  member.name
+                ]
+              },
+              member.idNumber || member.name
+            )) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Role Coverage" }),
@@ -39653,6 +39684,13 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
           {
             label: "PIC Qualification",
             value: fixedCrewManifestPlan.picQualification || fixedCrewPicLabel
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: "PIC",
+            value: selectedFixedCrewPic ? `${selectedFixedCrewPic.rank} ${selectedFixedCrewPic.name}` : fixedCrewManifestPlan.picStaffName || "Not selected"
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -39710,11 +39748,18 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
               "No selected crew member has ",
               fixedCrewPicLabel,
               "."
-            ] }) : fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-800/70 px-2 py-1 text-[10px] text-gray-100", children: [
-              member.rank,
-              " ",
-              member.name
-            ] }, member.idNumber || member.name)) })
+            ] }) : fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: `rounded px-2 py-1 text-[10px] ${String(member.name || "").trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || "").trim().toUpperCase() ? "bg-emerald-900/60 text-emerald-100" : "bg-gray-800/70 text-gray-100"}`,
+                children: [
+                  member.rank,
+                  " ",
+                  member.name
+                ]
+              },
+              member.idNumber || member.name
+            )) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Role Coverage" }),

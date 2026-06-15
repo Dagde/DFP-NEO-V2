@@ -511,6 +511,9 @@ const DetailView: React.FC<{
     const fixedCrewPicCandidates = selectedPicQualification
         ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(selectedPicQualification.id))
         : [];
+    const selectedFixedCrewPic = fixedCrewPicCandidates.find(member => (
+        String(member.name || '').trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || '').trim().toUpperCase()
+    ));
     const fixedCrewRoleCoverage = getCrewRequirementRoles(currentItem.crewRequirement, aircraftCrewComposition).map(role => {
         const options = getCrewRequirementRoleOptions(role);
         const matchingMembers = fixedCrewMembers.filter(staff => options.some(option => crewPositionValuesMatch(option, staff.role, crewPositionTerminology)));
@@ -808,7 +811,7 @@ const DetailView: React.FC<{
                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Assigned Crew</label>
                             <select
                                 value={fixedCrewManifestPlan.crewGroup || ''}
-                                onChange={(e) => updateFixedCrewManifestPlan({ crewGroup: e.target.value })}
+                                onChange={(e) => updateFixedCrewManifestPlan({ crewGroup: e.target.value, picStaffName: undefined })}
                                 className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
                             >
                                 <option value="">Select crew</option>
@@ -824,7 +827,7 @@ const DetailView: React.FC<{
                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">PIC Qualification</label>
                             <select
                                 value={fixedCrewManifestPlan.picQualification || fixedCrewPicLabel}
-                                onChange={(e) => updateFixedCrewManifestPlan({ picQualification: e.target.value })}
+                                onChange={(e) => updateFixedCrewManifestPlan({ picQualification: e.target.value, picStaffName: undefined })}
                                 className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
                             >
                                 {fixedCrewQualificationOptions.length === 0 && <option value="PIC">PIC</option>}
@@ -835,6 +838,23 @@ const DetailView: React.FC<{
                                     const label = qualification.code || qualification.name;
                                     return <option key={qualification.id} value={label}>{label}</option>;
                                 })}
+                            </select>
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">PIC</label>
+                            <select
+                                value={fixedCrewManifestPlan.picStaffName || ''}
+                                onChange={(e) => updateFixedCrewManifestPlan({ picStaffName: e.target.value })}
+                                disabled={fixedCrewPicCandidates.length === 0}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px] disabled:opacity-60"
+                            >
+                                <option value="">Select PIC</option>
+                                {fixedCrewManifestPlan.picStaffName && !selectedFixedCrewPic && (
+                                    <option value={fixedCrewManifestPlan.picStaffName}>{fixedCrewManifestPlan.picStaffName}</option>
+                                )}
+                                {fixedCrewPicCandidates.map(member => (
+                                    <option key={member.idNumber || member.name} value={member.name}>{member.rank} {member.name}</option>
+                                ))}
                             </select>
                         </div>
                         <div className="bg-gray-700/50 p-1 rounded-lg">
@@ -899,7 +919,10 @@ const DetailView: React.FC<{
                                         {fixedCrewPicCandidates.length === 0 ? (
                                             <div className="text-[10px] text-gray-500">No selected crew member has {fixedCrewPicLabel}.</div>
                                         ) : fixedCrewPicCandidates.map(member => (
-                                            <div key={member.idNumber || member.name} className="rounded bg-gray-800/70 px-2 py-1 text-[10px] text-gray-100">
+                                            <div
+                                                key={member.idNumber || member.name}
+                                                className={`rounded px-2 py-1 text-[10px] ${String(member.name || '').trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || '').trim().toUpperCase() ? 'bg-emerald-900/60 text-emerald-100' : 'bg-gray-800/70 text-gray-100'}`}
+                                            >
                                                 {member.rank} {member.name}
                                             </div>
                                         ))}
@@ -938,6 +961,10 @@ const DetailView: React.FC<{
                         <DetailCard
                             label="PIC Qualification"
                             value={fixedCrewManifestPlan.picQualification || fixedCrewPicLabel}
+                        />
+                        <DetailCard
+                            label="PIC"
+                            value={selectedFixedCrewPic ? `${selectedFixedCrewPic.rank} ${selectedFixedCrewPic.name}` : fixedCrewManifestPlan.picStaffName || 'Not selected'}
                         />
                         <DetailCard
                             label="PIC Configured"
@@ -982,7 +1009,10 @@ const DetailView: React.FC<{
                                         {fixedCrewPicCandidates.length === 0 ? (
                                             <div className="text-[10px] text-gray-500">No selected crew member has {fixedCrewPicLabel}.</div>
                                         ) : fixedCrewPicCandidates.map(member => (
-                                            <div key={member.idNumber || member.name} className="rounded bg-gray-800/70 px-2 py-1 text-[10px] text-gray-100">
+                                            <div
+                                                key={member.idNumber || member.name}
+                                                className={`rounded px-2 py-1 text-[10px] ${String(member.name || '').trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || '').trim().toUpperCase() ? 'bg-emerald-900/60 text-emerald-100' : 'bg-gray-800/70 text-gray-100'}`}
+                                            >
                                                 {member.rank} {member.name}
                                             </div>
                                         ))}
