@@ -44,6 +44,10 @@ import {
   normaliseCrewPositionTerminology,
   type CrewPositionTerminologyEntry,
 } from '../utils/crewPositionTerminology';
+import {
+  normaliseStaffQualificationCatalogue,
+  type StaffQualificationDefinition,
+} from '../utils/staffQualifications';
 import { getAppApiBase } from '../utils/externalDataControls';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
@@ -1224,6 +1228,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const crewPositionTerminology = normaliseCrewPositionTerminology(
     primaryOrganisationSettings.crewPositionTerminology || null,
   );
+  const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(
+    primaryOrganisationSettings.staffQualificationCatalogue || null,
+  );
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || '').includes('+')
@@ -1469,6 +1476,49 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ? Array.from(new Set([...(crewPositionTerminology.deletedDefaultIds || []), entryId]))
       : crewPositionTerminology.deletedDefaultIds || [];
     updateCrewPositionTerminology(nextPositions, undefined, nextDeletedDefaultIds);
+  };
+
+  const updateStaffQualificationCatalogue = (qualifications: StaffQualificationDefinition[]) => {
+    setRankTerminologyDirty(true);
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications }),
+    }));
+  };
+
+  const updateStaffQualificationEntry = (
+    entryId: string,
+    changes: Partial<StaffQualificationDefinition>,
+  ) => {
+    const nextQualifications = staffQualificationCatalogue.qualifications.map((entry) => (
+      entry.id === entryId
+        ? { ...entry, ...changes }
+        : entry
+    ));
+    updateStaffQualificationCatalogue(nextQualifications);
+  };
+
+  const addStaffQualificationEntry = () => {
+    const name = `Qualification ${staffQualificationCatalogue.qualifications.length + 1}`;
+    updateStaffQualificationCatalogue([
+      ...staffQualificationCatalogue.qualifications,
+      {
+        id: createClientRecordId('staff-qualification'),
+        name,
+        code: name,
+        operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
+        roleRestrictions: [],
+        isPicQualification: false,
+        appliesToFlightAndSimulator: true,
+        status: 'ACTIVE',
+      },
+    ]);
+  };
+
+  const removeStaffQualificationEntry = (entryId: string) => {
+    const nextQualifications = staffQualificationCatalogue.qualifications.filter((entry) => entry.id !== entryId);
+    if (nextQualifications.length === staffQualificationCatalogue.qualifications.length) return;
+    updateStaffQualificationCatalogue(nextQualifications);
   };
 
   const updateTrainingReportTemplate = (
@@ -4685,6 +4735,121 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
                 );
               })}
+            </div>
+          </div>
+          <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-emerald-100">Staff Qualifications</h5>
+                <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
+                  Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Fixed Crew flights and simulator events will use PIC-capable qualifications when the scheduler selects the event captain.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addStaffQualificationEntry}
+                disabled={!canEditRankTerminology}
+                className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Add Qualification
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {staffQualificationCatalogue.qualifications.map((entry) => (
+                <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_minmax(160px,0.8fr)_auto]">
+                  <Field
+                    label="Qualification"
+                    value={entry.name}
+                    disabled={!canEditRankTerminology}
+                    onChange={(value) => updateStaffQualificationEntry(entry.id, { name: value })}
+                    info="The full qualification name shown in Staff Profile."
+                  />
+                  <Field
+                    label="Code"
+                    value={entry.code}
+                    disabled={!canEditRankTerminology}
+                    onChange={(value) => updateStaffQualificationEntry(entry.id, { code: value })}
+                    info="Short code accepted by bulk upload. Examples: PIC, Crew Commander."
+                  />
+                  <Field
+                    label="Role Restrictions"
+                    value={(entry.roleRestrictions || []).join(', ')}
+                    disabled={!canEditRankTerminology}
+                    onChange={(value) => updateStaffQualificationEntry(entry.id, {
+                      roleRestrictions: value.split(/[,;\n]/).map((item) => item.trim()).filter(Boolean),
+                    })}
+                    info="Optional comma-separated staff roles this qualification applies to. Leave blank for all roles."
+                  />
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Operational Models</label>
+                    <div className="grid gap-1 rounded border border-gray-700 bg-gray-900/70 p-2 sm:grid-cols-2">
+                      {OPERATIONAL_MODEL_OPTIONS.map((option) => {
+                        const selectedModels = entry.operationalModels?.length
+                          ? entry.operationalModels
+                          : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
+                        const isSelected = selectedModels.includes(option.value);
+                        return (
+                          <label
+                            key={option.value}
+                            className={`flex items-center gap-2 rounded px-2 py-1 text-[11px] font-semibold ${
+                              isSelected
+                                ? 'bg-emerald-500/10 text-emerald-100'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={!canEditRankTerminology || (isSelected && selectedModels.length <= 1)}
+                              onChange={(event) => {
+                                const nextModels = event.target.checked
+                                  ? Array.from(new Set([...selectedModels, option.value]))
+                                  : selectedModels.filter((model) => model !== option.value);
+                                updateStaffQualificationEntry(entry.id, { operationalModels: nextModels });
+                              }}
+                              className="h-3.5 w-3.5 rounded border-gray-500 accent-emerald-400"
+                            />
+                            <span>{option.label.replace(' Model', '')}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-2 pt-1">
+                    <label className="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/70 px-2 py-2 text-[11px] font-semibold text-emerald-100">
+                      <input
+                        type="checkbox"
+                        checked={entry.isPicQualification === true}
+                        disabled={!canEditRankTerminology}
+                        onChange={(event) => updateStaffQualificationEntry(entry.id, { isPicQualification: event.target.checked })}
+                        className="h-3.5 w-3.5 rounded border-gray-500 accent-emerald-400"
+                      />
+                      <span>PIC-capable</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/70 px-2 py-2 text-[11px] font-semibold text-emerald-100">
+                      <input
+                        type="checkbox"
+                        checked={entry.appliesToFlightAndSimulator !== false}
+                        disabled={!canEditRankTerminology}
+                        onChange={(event) => updateStaffQualificationEntry(entry.id, { appliesToFlightAndSimulator: event.target.checked })}
+                        className="h-3.5 w-3.5 rounded border-gray-500 accent-emerald-400"
+                      />
+                      <span>Flight/sim PIC</span>
+                    </label>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => removeStaffQualificationEntry(entry.id)}
+                      disabled={!canEditRankTerminology}
+                      className="w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Remove qualification"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">

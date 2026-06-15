@@ -6,6 +6,10 @@ import {
     findCrewPositionEntry,
     isPilotCrewPosition,
 } from '../utils/crewPositionTerminology';
+import {
+    normaliseAssignedQualificationIds,
+    type StaffQualificationCatalogue,
+} from '../utils/staffQualifications';
 
 declare var XLSX: any;
 
@@ -17,6 +21,7 @@ interface BulkUpdateFlyoutProps {
   isTraineeMode?: boolean; // Toggle between instructor and trainee mode
   onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
   crewPositionTerminology?: CrewPositionTerminology;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
 }
 
 interface RepoFile {
@@ -146,6 +151,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
   isTraineeMode = false,
   onBulkUpdateTrainees,
   crewPositionTerminology,
+  staffQualificationCatalogue,
 }) => {
     const [repoFiles, setRepoFiles] = useState<RepoFile[]>([]);
     const [selectedFileId, setSelectedFileId] = useState<string>('');
@@ -273,6 +279,14 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
 
                 const rolesStr = getStringFromRow(row, ['Roles', 'Qualifications and Roles', 'Qualifications & Roles', 'Qualifications']);
                 applyQualificationRoles(parsedData, rolesStr, crewPositionTerminology);
+                const importedQualificationIds = normaliseAssignedQualificationIds(rolesStr, staffQualificationCatalogue, false);
+                if (importedQualificationIds.length > 0) {
+                    parsedData.preferences = {
+                        ...(existingInstructor?.preferences || {}),
+                        ...(parsedData.preferences || {}),
+                        qualifications: importedQualificationIds,
+                    };
+                }
 
                 if (existingInstructor) {
                     const updatedInstructor = { ...existingInstructor, ...parsedData, idNumber };

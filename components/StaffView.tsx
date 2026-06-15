@@ -5,6 +5,7 @@ import InstructorScheduleView from './InstructorScheduleView';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 
 interface StaffViewProps {
   // Props for InstructorListView
@@ -43,6 +44,7 @@ interface StaffViewProps {
   instructorLabel?: string;
   operationalModel?: string;
   crewPositionTerminology?: CrewPositionTerminology;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
 
   // Props for InstructorScheduleView
   date: string;
@@ -151,6 +153,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             instructorLabel={props.instructorLabel}
             operationalModel={props.operationalModel}
             crewPositionTerminology={props.crewPositionTerminology}
+            staffQualificationCatalogue={props.staffQualificationCatalogue}
           />
         )}
         {activeTab === 'schedule' && (

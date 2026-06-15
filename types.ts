@@ -226,6 +226,7 @@ export interface AirCombatTrainingReport {
 export interface PersonnelPreferences {
   callsign?: string | null;
   secondaryCallsign?: string | null;
+  qualifications?: string[];
   airCombat?: {
     trainingAssignments?: AirCombatTrainingAssignments;
     trainingReports?: AirCombatTrainingReport[];

@@ -16,6 +16,7 @@ import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
+import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 
 // Helper to generate a unique random ID for new instructors
@@ -122,6 +123,7 @@ interface InstructorListViewProps {
   instructorLabel?: string;
   operationalModel?: string;
   crewPositionTerminology?: CrewPositionTerminology;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -162,6 +164,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     instructorLabel = 'QFI',
     operationalModel = 'flight_school',
     crewPositionTerminology,
+    staffQualificationCatalogue,
 }) => {
   // Track which prop changed to diagnose render loop
   const prevPropsRef = React.useRef<any>({});
@@ -800,6 +803,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     instructorLabel={instructorLabel}
                     operationalModel={operationalModel}
                     crewPositionTerminology={crewPositionTerminology}
+                    staffQualificationCatalogue={staffQualificationCatalogue}
                 />
         )}
 
@@ -825,6 +829,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             onBulkUpdateInstructors={onBulkUpdateInstructors}
             instructorsData={instructorsData}
             crewPositionTerminology={crewPositionTerminology}
+            staffQualificationCatalogue={staffQualificationCatalogue}
         />
       )}
       {instructorToArchive && (

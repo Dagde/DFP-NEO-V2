@@ -63,6 +63,7 @@ import {
     normaliseCrewPositionTerminology,
     type CrewPositionTerminology,
 } from './utils/crewPositionTerminology';
+import { normaliseStaffQualificationCatalogue } from './utils/staffQualifications';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
 import {
@@ -3229,6 +3230,10 @@ const normalisePersonnelRecord = (person: any): any => {
         callsign: person?.callsign || preferences.callsign || '',
         secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || '',
         crew: person?.crew || preferences.crew || '',
+        preferences: {
+            ...preferences,
+            qualifications: Array.isArray(preferences.qualifications) ? preferences.qualifications : [],
+        },
     };
 };
 
@@ -16929,6 +16934,12 @@ const App: React.FC = () => {
             String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
         )) || platformConfig?.organisations?.[0];
         return normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
+    }, [platformConfig]);
+    const activeStaffQualificationCatalogue = useMemo(() => {
+        const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
+            String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+        )) || platformConfig?.organisations?.[0];
+        return normaliseStaffQualificationCatalogue(activeOrganisation?.settings?.staffQualificationCatalogue || null);
     }, [platformConfig]);
 
     const activeLocationSolarProfile = useMemo(() => {
@@ -31805,6 +31816,7 @@ appliedUpdates.forEach(update => {
                             instructorLabel={instructorLabel}
                             operationalModel={activeOperationalModel}
                             crewPositionTerminology={activeCrewPositionTerminology}
+                            staffQualificationCatalogue={activeStaffQualificationCatalogue}
                         />;
             case 'Instructors':
                 return <InstructorListView
@@ -31932,6 +31944,7 @@ appliedUpdates.forEach(update => {
                             instructorLabel={instructorLabel}
                             operationalModel={activeOperationalModel}
                             crewPositionTerminology={activeCrewPositionTerminology}
+                            staffQualificationCatalogue={activeStaffQualificationCatalogue}
                         />;
                 case 'Trainees':
                     return <TraineeListView

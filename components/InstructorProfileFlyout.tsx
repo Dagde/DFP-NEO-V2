@@ -25,6 +25,14 @@ import {
   getCrewPositionOptions,
   type CrewPositionTerminology,
 } from '../utils/crewPositionTerminology';
+import {
+  getQualificationsForOperationalModel,
+  normaliseAssignedQualificationIds,
+  normaliseStaffQualificationCatalogue,
+  qualificationMatches,
+  type StaffQualificationCatalogue,
+  type StaffQualificationDefinition,
+} from '../utils/staffQualifications';
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -75,6 +83,7 @@ interface InstructorProfileFlyoutProps {
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
   operationalModel?: string;
   crewPositionTerminology?: CrewPositionTerminology;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -275,6 +284,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = 'flight_school',
   crewPositionTerminology,
+  staffQualificationCatalogue,
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -313,6 +323,21 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     });
     return Array.from(byValue.values());
   }, [crewPositionTerminology, instructorLabel, operationalModel, role]);
+  const normalisedQualificationCatalogue = useMemo(
+    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
+    [staffQualificationCatalogue],
+  );
+  const activeQualificationOptions = useMemo(() => (
+    getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel)
+      .filter((qualification) => {
+        const restrictions = qualification.roleRestrictions || [];
+        if (restrictions.length === 0) return true;
+        return restrictions.some((restriction) => String(restriction).trim().toLowerCase() === String(role || '').trim().toLowerCase());
+      })
+  ), [normalisedQualificationCatalogue, operationalModel, role]);
+  const getAssignedQualificationIds = useCallback((source: Instructor): string[] => (
+    normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue)
+  ), [normalisedQualificationCatalogue]);
   const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
   const [service, setService] = useState<'RAAF' | 'RAN' | 'ARA' | undefined>(instructor.service);
   const [category, setCategory] = useState<InstructorCategory>(instructor.category);
@@ -326,6 +351,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [phoneNumber, setPhoneNumber] = useState(instructor.phoneNumber || '');
   const [email, setEmail] = useState(instructor.email || '');
   const [permissions, setPermissions] = useState<string[]>(instructor.permissions || []);
+  const [assignedQualifications, setAssignedQualifications] = useState<string[]>(() => getAssignedQualificationIds(instructor));
   const [priorExperience, setPriorExperience] = useState<LogbookExperience>(instructor.priorExperience || initialExperience);
 
   const [isTestingOfficer, setIsTestingOfficer] = useState(instructor.isTestingOfficer);
@@ -564,6 +590,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     setCrew(instructor.crew || '');
     setPhoneNumber(instructor.phoneNumber || ''); setEmail(instructor.email || '');
     setPermissions(instructor.permissions || []); setPriorExperience(instructor.priorExperience || initialExperience);
+    setAssignedQualifications(getAssignedQualificationIds(instructor));
     setIsTestingOfficer(instructor.isTestingOfficer); setIsExecutive(instructor.isExecutive);
     setIsFlyingSupervisor(instructor.isFlyingSupervisor); setIsIRE(instructor.isIRE);
     setIsCommandingOfficer(instructor.isCommandingOfficer || false); setIsCFI(instructor.isCFI || false);
@@ -590,6 +617,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const handleEdit = () => setIsEditing(true);
   const handleCancel = () => { if (isCreating) onClose(); else { resetState(); setIsEditing(false); } };
   const handlePermissionChange = (permission: string, isChecked: boolean) => setPermissions(prev => isChecked ? [...prev, permission] : prev.filter(p => p !== permission));
+  const handleQualificationChange = (qualificationId: string, isChecked: boolean) => {
+    setAssignedQualifications(prev => (
+      isChecked
+        ? Array.from(new Set([...prev, qualificationId]))
+        : prev.filter(id => id !== qualificationId)
+    ));
+  };
   const handleExperienceChange = (section: keyof LogbookExperience, field: string | null, value: number) => {
     setPriorExperience(prev => field ? { ...prev, [section]: { ...(prev[section] as any), [field]: value } } : { ...prev, [section]: value });
   };
@@ -660,6 +694,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         ...(instructor.preferences || {}),
         secondaryCallsign: secondaryCallsign || null,
         crew: crew || null,
+        qualifications: assignedQualifications,
       },
       unavailability: unavailabilityPeriods, location, unit, flight, phoneNumber, email, permissions,
       priorExperience, isTestingOfficer, isExecutive, isFlyingSupervisor, isIRE,
@@ -680,6 +715,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       if (instructor.flight !== flight) changes.push(`Flight: ${instructor.flight || '(none)'} → ${flight || '(none)'}`);
       if ((instructor.secondaryCallsign || '') !== secondaryCallsign) changes.push(`Secondary Callsign: ${instructor.secondaryCallsign || '(none)'} → ${secondaryCallsign || '(none)'}`);
       if ((instructor.crew || '') !== crew) changes.push(`Crew: ${instructor.crew || '(none)'} → ${crew || '(none)'}`);
+      const previousQualifications = getAssignedQualificationIds(instructor);
+      if (JSON.stringify(previousQualifications) !== JSON.stringify(assignedQualifications)) {
+        const labelsFor = (ids: string[]) => ids.map(id => {
+          const match = normalisedQualificationCatalogue.qualifications.find(definition => qualificationMatches(id, definition));
+          return match?.code || match?.name || id;
+        }).join(', ') || '(none)';
+        changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(assignedQualifications)}`);
+      }
       if (instructor.location !== location) changes.push(`Location: ${instructor.location || '(none)'} → ${location || '(none)'}`);
       if (instructor.phoneNumber !== phoneNumber) changes.push(`Phone: ${instructor.phoneNumber || '(none)'} → ${phoneNumber || '(none)'}`);
       if (instructor.email !== email) changes.push(`Email: ${instructor.email || '(none)'} → ${email || '(none)'}`);
@@ -821,6 +864,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   if (isDeputyFlightCommander) roleBadges.push('DFC');
   if (isContractor) roleBadges.push('Contractor');
   if (isAdminStaff) roleBadges.push('Admin Staff');
+  const assignedQualificationLabels = assignedQualifications
+    .map(id => activeQualificationOptions.find(qualification => qualificationMatches(id, qualification)))
+    .filter((qualification): qualification is StaffQualificationDefinition => Boolean(qualification))
+    .map(qualification => qualification.code || qualification.name);
 
   // Trainee avatar icon
   const TraineeIcon = () => (
@@ -1637,6 +1684,28 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         ))}
                       </div>
                     </div>
+                    <div className="bg-gray-700/30 rounded p-3">
+                      <label className="block text-xs font-medium text-gray-400 mb-2">Configured Qualifications</label>
+                      {activeQualificationOptions.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {activeQualificationOptions.map(qualification => (
+                            <label key={qualification.id} className="flex items-center space-x-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={assignedQualifications.some(id => qualificationMatches(id, qualification))}
+                                onChange={e => handleQualificationChange(qualification.id, e.target.checked)}
+                                className="h-3 w-3 accent-emerald-500"
+                              />
+                              <span className="text-white text-xs truncate" title={qualification.name}>
+                                {qualification.code || qualification.name}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">No qualifications configured for this operational model and role.</p>
+                      )}
+                    </div>
                     {/* Permissions */}
                     <div className="bg-gray-700/30 rounded p-3">
                       <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
@@ -1677,6 +1746,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         {roleBadges.map(badge => (
                           <span key={badge} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-800 text-sky-200">{badge}</span>
                         ))}
+                        {assignedQualificationLabels.map(label => (
+                          <span key={label} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-800 text-emerald-100">{label}</span>
+                        ))}
                       </div>
                       <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
                         {/* Row 1 */}
@@ -1696,6 +1768,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         {/* Row 3 */}
                         <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
                         <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
+                        <div className="col-span-6"><span className="text-gray-400 block text-[10px]">Qualifications</span><span className="text-emerald-100 font-medium">{assignedQualificationLabels.join(', ') || '[None]'}</span></div>
                       </div>
                     </div>
 
