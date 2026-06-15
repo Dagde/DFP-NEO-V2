@@ -10,8 +10,7 @@ import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
-import { formatCrewRequirementSummary, getCrewRequirementRoleOptions, getCrewRequirementRoles } from '../utils/crewRequirements';
-import { crewPositionValuesMatch } from '../utils/crewPositionTerminology';
+import { formatCrewRequirementSummary } from '../utils/crewRequirements';
 import {
     ANY_AIRCRAFT_CONFIG,
     formatAircraftConfigurationSummary,
@@ -19,19 +18,11 @@ import {
     type AircraftConfigurationDefinition,
 } from '../utils/aircraftConfigurationSettings';
 import { normaliseOperationalModel } from '../utils/platformConfigService';
-import {
-    getQualificationsForOperationalModel,
-    normaliseAssignedQualificationIds,
-    normaliseQualificationToken,
-    type StaffQualificationCatalogue,
-} from '../utils/staffQualifications';
+import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import {
     formatFixedCrewManifestStatus,
-    formatFixedCrewManifestPlanStatus,
-    getFixedCrewManifestPlan,
     getFixedCrewManifestReadiness,
-    normaliseFixedCrewManifestPlanStatus,
-    withFixedCrewManifestPlan,
+    stripFixedCrewManifestNote,
 } from '../utils/fixedCrewManifest';
 import {
     getAirCombatAssignmentFromItem,
@@ -475,62 +466,11 @@ const DetailView: React.FC<{
     if (!currentItem) return null;
     const currentItemKey = currentItem.id || currentItem.code;
     const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
-    const fixedCrewManifestPlan = getFixedCrewManifestPlan(currentItem);
     const fixedCrewManifestReadiness = getFixedCrewManifestReadiness(currentItem, {
         operationalModel,
         aircraftCrewComposition,
         staffQualificationCatalogue,
     });
-    const activeUnitNormalised = String(activeUnitCode || '').trim().toUpperCase();
-    const fixedCrewGroups = Array.from(new Set(instructorsData
-        .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
-        .map(staff => String(staff.crew || '').trim())
-        .filter(Boolean)))
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    const fixedCrewQualificationOptions = getQualificationsForOperationalModel(staffQualificationCatalogue, 'fixed_crew')
-        .slice()
-        .sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code));
-    const fixedCrewPicOption = fixedCrewQualificationOptions.find(qualification => (
-        normaliseQualificationToken(qualification.id) === 'pic'
-        || normaliseQualificationToken(qualification.code) === 'pic'
-        || normaliseQualificationToken(qualification.name) === 'pic'
-    ));
-    const fixedCrewPicLabel = fixedCrewManifestPlan.picQualification || fixedCrewPicOption?.code || fixedCrewPicOption?.name || 'PIC';
-    const selectedPicQualification = fixedCrewQualificationOptions.find(qualification => (
-        normaliseQualificationToken(qualification.id) === normaliseQualificationToken(fixedCrewPicLabel)
-        || normaliseQualificationToken(qualification.code) === normaliseQualificationToken(fixedCrewPicLabel)
-        || normaliseQualificationToken(qualification.name) === normaliseQualificationToken(fixedCrewPicLabel)
-    ));
-    const fixedCrewMembers = fixedCrewManifestPlan.crewGroup
-        ? instructorsData
-            .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
-            .filter(staff => String(staff.crew || '').trim().toUpperCase() === String(fixedCrewManifestPlan.crewGroup || '').trim().toUpperCase())
-            .filter(staff => !staff.isAdminStaff)
-            .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }))
-        : [];
-    const fixedCrewPicCandidates = selectedPicQualification
-        ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(selectedPicQualification.id))
-        : [];
-    const selectedFixedCrewPic = fixedCrewPicCandidates.find(member => (
-        String(member.name || '').trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || '').trim().toUpperCase()
-    ));
-    const fixedCrewRoleCoverage = getCrewRequirementRoles(currentItem.crewRequirement, aircraftCrewComposition).map(role => {
-        const options = getCrewRequirementRoleOptions(role);
-        const matchingMembers = fixedCrewMembers.filter(staff => options.some(option => crewPositionValuesMatch(option, staff.role, crewPositionTerminology)));
-        return {
-            label: options.join(' or '),
-            required: role.count,
-            available: matchingMembers.length,
-            complete: matchingMembers.length >= role.count,
-        };
-    });
-    const updateFixedCrewManifestPlan = (changes: Parameters<typeof withFixedCrewManifestPlan>[1]) => {
-        const updated = withFixedCrewManifestPlan(currentItem, {
-            ...fixedCrewManifestPlan,
-            ...changes,
-        });
-        onItemChange(updated);
-    };
     const currentLinkedEventCode = Object.prototype.hasOwnProperty.call(linkedEventOverrides, currentItemKey)
         ? linkedEventOverrides[currentItemKey]
         : getAirCombatLinkedEventCode(currentItem);
@@ -804,239 +744,34 @@ const DetailView: React.FC<{
         </fieldset>
         {isFixedCrewModel && (
             <fieldset className="p-3 border border-emerald-700/70 rounded-lg bg-emerald-950/10">
-                <legend className="px-2 text-xs font-semibold text-emerald-300">Fixed Crew Manifest</legend>
-                {isEditing ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
-                        <div className="bg-gray-700/50 p-1 rounded-lg">
-                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Assigned Crew</label>
-                            <select
-                                value={fixedCrewManifestPlan.crewGroup || ''}
-                                onChange={(e) => updateFixedCrewManifestPlan({ crewGroup: e.target.value, picStaffName: undefined })}
-                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
-                            >
-                                <option value="">Select crew</option>
-                                {fixedCrewManifestPlan.crewGroup && !fixedCrewGroups.includes(fixedCrewManifestPlan.crewGroup) && (
-                                    <option value={fixedCrewManifestPlan.crewGroup}>{fixedCrewManifestPlan.crewGroup}</option>
-                                )}
-                                {fixedCrewGroups.map(crewGroup => (
-                                    <option key={crewGroup} value={crewGroup}>{crewGroup}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="bg-gray-700/50 p-1 rounded-lg">
-                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">PIC Qualification</label>
-                            <select
-                                value={fixedCrewManifestPlan.picQualification || fixedCrewPicLabel}
-                                onChange={(e) => updateFixedCrewManifestPlan({ picQualification: e.target.value, picStaffName: undefined })}
-                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
-                            >
-                                {fixedCrewQualificationOptions.length === 0 && <option value="PIC">PIC</option>}
-                                {fixedCrewManifestPlan.picQualification && !fixedCrewQualificationOptions.some(qualification => (qualification.code || qualification.name) === fixedCrewManifestPlan.picQualification) && (
-                                    <option value={fixedCrewManifestPlan.picQualification}>{fixedCrewManifestPlan.picQualification}</option>
-                                )}
-                                {fixedCrewQualificationOptions.map(qualification => {
-                                    const label = qualification.code || qualification.name;
-                                    return <option key={qualification.id} value={label}>{label}</option>;
-                                })}
-                            </select>
-                        </div>
-                        <div className="bg-gray-700/50 p-1 rounded-lg">
-                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">PIC</label>
-                            <select
-                                value={fixedCrewManifestPlan.picStaffName || ''}
-                                onChange={(e) => updateFixedCrewManifestPlan({ picStaffName: e.target.value })}
-                                disabled={fixedCrewPicCandidates.length === 0}
-                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px] disabled:opacity-60"
-                            >
-                                <option value="">Select PIC</option>
-                                {fixedCrewManifestPlan.picStaffName && !selectedFixedCrewPic && (
-                                    <option value={fixedCrewManifestPlan.picStaffName}>{fixedCrewManifestPlan.picStaffName}</option>
-                                )}
-                                {fixedCrewPicCandidates.map(member => (
-                                    <option key={member.idNumber || member.name} value={member.name}>{member.rank} {member.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="bg-gray-700/50 p-1 rounded-lg">
-                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Manifest Status</label>
-                            <select
-                                value={normaliseFixedCrewManifestPlanStatus(fixedCrewManifestPlan.status)}
-                                onChange={(e) => updateFixedCrewManifestPlan({ status: normaliseFixedCrewManifestPlanStatus(e.target.value) })}
-                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
-                            >
-                                <option value="pending">Pending</option>
-                                <option value="complete">Complete</option>
-                                <option value="partial">Partial</option>
-                                <option value="swapped">Swapped</option>
-                                <option value="invalid">Invalid</option>
-                            </select>
-                        </div>
-                        <DetailCard
-                            label="Required Crew"
-                            value={fixedCrewManifestReadiness.requiredCrewCount}
-                        />
-                        <DetailCard
-                            label="PIC Configured"
-                            value={fixedCrewManifestReadiness.picQualificationConfigured ? 'Yes' : 'No'}
-                        />
-                        <DetailCard
-                            label="Crew Event"
-                            value={fixedCrewManifestReadiness.isCrewedEvent ? 'Flight/sim' : 'No'}
-                        />
-                        <DetailCard
-                            className="md:col-span-2 lg:col-span-3"
-                            label="Required Roles"
-                            value={formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}
-                        />
-                        <div className="bg-gray-700/50 p-1 rounded-lg md:col-span-2 lg:col-span-3">
-                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Swap / Manifest Notes</label>
-                            <textarea
-                                value={fixedCrewManifestPlan.swapNotes || ''}
-                                onChange={(e) => updateFixedCrewManifestPlan({ swapNotes: e.target.value })}
-                                rows={2}
-                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
-                                placeholder="Optional notes for crew swaps or manual manifest decisions"
-                            />
-                        </div>
-                        <div className="bg-gray-900/50 border border-emerald-900/60 rounded-lg p-2 md:col-span-4 lg:col-span-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-                                <div>
-                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Crew Members</div>
-                                    <div className="mt-1 space-y-1">
-                                        {fixedCrewMembers.length === 0 ? (
-                                            <div className="text-[10px] text-gray-500">Select a crew with active staff.</div>
-                                        ) : fixedCrewMembers.map(member => (
-                                            <div key={member.idNumber || member.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]">
-                                                <span className="truncate text-gray-100">{member.rank} {member.name}</span>
-                                                <span className="shrink-0 text-emerald-200">{member.role || 'Role unset'}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">PIC Candidates</div>
-                                    <div className="mt-1 space-y-1">
-                                        {fixedCrewPicCandidates.length === 0 ? (
-                                            <div className="text-[10px] text-gray-500">No selected crew member has {fixedCrewPicLabel}.</div>
-                                        ) : fixedCrewPicCandidates.map(member => (
-                                            <div
-                                                key={member.idNumber || member.name}
-                                                className={`rounded px-2 py-1 text-[10px] ${String(member.name || '').trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || '').trim().toUpperCase() ? 'bg-emerald-900/60 text-emerald-100' : 'bg-gray-800/70 text-gray-100'}`}
-                                            >
-                                                {member.rank} {member.name}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Role Coverage</div>
-                                    <div className="mt-1 space-y-1">
-                                        {fixedCrewRoleCoverage.length === 0 ? (
-                                            <div className="text-[10px] text-gray-500">No role requirement configured.</div>
-                                        ) : fixedCrewRoleCoverage.map(row => (
-                                            <div key={row.label} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]">
-                                                <span className="truncate text-gray-100">{row.label}</span>
-                                                <span className={row.complete ? 'shrink-0 text-emerald-300' : 'shrink-0 text-amber-300'}>
-                                                    {row.available}/{row.required}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
-                        <DetailCard
-                            label="Status"
-                            value={fixedCrewManifestPlan.crewGroup || fixedCrewManifestPlan.status || fixedCrewManifestPlan.swapNotes
-                                ? formatFixedCrewManifestPlanStatus(fixedCrewManifestPlan.status)
-                                : formatFixedCrewManifestStatus(fixedCrewManifestReadiness.status)}
-                        />
-                        <DetailCard
-                            label="Assigned Crew"
-                            value={fixedCrewManifestPlan.crewGroup ? `CREW ${fixedCrewManifestPlan.crewGroup}` : 'Not assigned'}
-                        />
-                        <DetailCard
-                            label="PIC Qualification"
-                            value={fixedCrewManifestPlan.picQualification || fixedCrewPicLabel}
-                        />
-                        <DetailCard
-                            label="PIC"
-                            value={selectedFixedCrewPic ? `${selectedFixedCrewPic.rank} ${selectedFixedCrewPic.name}` : fixedCrewManifestPlan.picStaffName || 'Not selected'}
-                        />
-                        <DetailCard
-                            label="PIC Configured"
-                            value={fixedCrewManifestReadiness.picQualificationConfigured ? 'Yes' : 'No'}
-                        />
-                        <DetailCard
-                            label="Required Crew"
-                            value={fixedCrewManifestReadiness.requiredCrewCount}
-                        />
-                        <DetailCard
-                            label="Crew Event"
-                            value={fixedCrewManifestReadiness.isCrewedEvent ? 'Flight/sim' : 'No'}
-                        />
-                        <DetailCard
-                            className="md:col-span-2 lg:col-span-3"
-                            label="Required Roles"
-                            value={formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}
-                        />
-                        <DetailCard
-                            className="md:col-span-2 lg:col-span-3"
-                            label="Swap / Manifest Notes"
-                            value={fixedCrewManifestPlan.swapNotes || 'None'}
-                        />
-                        <div className="bg-gray-900/50 border border-emerald-900/60 rounded-lg p-2 md:col-span-4 lg:col-span-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-                                <div>
-                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Crew Members</div>
-                                    <div className="mt-1 space-y-1">
-                                        {fixedCrewMembers.length === 0 ? (
-                                            <div className="text-[10px] text-gray-500">No crew selected.</div>
-                                        ) : fixedCrewMembers.map(member => (
-                                            <div key={member.idNumber || member.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]">
-                                                <span className="truncate text-gray-100">{member.rank} {member.name}</span>
-                                                <span className="shrink-0 text-emerald-200">{member.role || 'Role unset'}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">PIC Candidates</div>
-                                    <div className="mt-1 space-y-1">
-                                        {fixedCrewPicCandidates.length === 0 ? (
-                                            <div className="text-[10px] text-gray-500">No selected crew member has {fixedCrewPicLabel}.</div>
-                                        ) : fixedCrewPicCandidates.map(member => (
-                                            <div
-                                                key={member.idNumber || member.name}
-                                                className={`rounded px-2 py-1 text-[10px] ${String(member.name || '').trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || '').trim().toUpperCase() ? 'bg-emerald-900/60 text-emerald-100' : 'bg-gray-800/70 text-gray-100'}`}
-                                            >
-                                                {member.rank} {member.name}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Role Coverage</div>
-                                    <div className="mt-1 space-y-1">
-                                        {fixedCrewRoleCoverage.length === 0 ? (
-                                            <div className="text-[10px] text-gray-500">No role requirement configured.</div>
-                                        ) : fixedCrewRoleCoverage.map(row => (
-                                            <div key={row.label} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]">
-                                                <span className="truncate text-gray-100">{row.label}</span>
-                                                <span className={row.complete ? 'shrink-0 text-emerald-300' : 'shrink-0 text-amber-300'}>
-                                                    {row.available}/{row.required}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <legend className="px-2 text-xs font-semibold text-emerald-300">Fixed Crew Requirements</legend>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
+                    <DetailCard
+                        label="Status"
+                        value={formatFixedCrewManifestStatus(fixedCrewManifestReadiness.status)}
+                    />
+                    <DetailCard
+                        label="Crew Event"
+                        value={fixedCrewManifestReadiness.isCrewedEvent ? 'Flight/sim' : 'No'}
+                    />
+                    <DetailCard
+                        label="PIC Required"
+                        value={fixedCrewManifestReadiness.picRequired ? 'PIC' : 'No'}
+                    />
+                    <DetailCard
+                        label="PIC Configured"
+                        value={fixedCrewManifestReadiness.picQualificationConfigured ? 'Yes' : 'No'}
+                    />
+                    <DetailCard
+                        label="Required Crew"
+                        value={fixedCrewManifestReadiness.requiredCrewCount}
+                    />
+                    <DetailCard
+                        className="md:col-span-2 lg:col-span-3"
+                        label="Required Roles"
+                        value={formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}
+                    />
+                </div>
             </fieldset>
         )}
            <fieldset className="p-4 border border-gray-700 rounded-lg">
@@ -1538,6 +1273,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               const itemToSave = {
                   ...editedItem,
                   acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(editedItem.acceptableAircraftConfigs, aircraftConfigurations),
+                  notes: stripFixedCrewManifestNote(editedItem.notes),
               };
               const isNew = itemToSave.id.startsWith('new-');
               let savedItem: SyllabusItemDetail;

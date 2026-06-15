@@ -38743,57 +38743,7 @@ async function retireSyllabusItem(id, changeReason) {
   clearSyllabusCache();
 }
 const FIXED_CREW_MANIFEST_NOTE_REGEX = /^\[Fixed Crew Manifest:\s*([A-Za-z0-9+/=]+)\]$/i;
-const encodeManifestPlan = (plan) => {
-  const payload = JSON.stringify(plan);
-  if (typeof btoa === "function") return btoa(unescape(encodeURIComponent(payload)));
-  if (typeof Buffer !== "undefined") return Buffer.from(payload, "utf8").toString("base64");
-  return "";
-};
-const decodeManifestPlan = (value) => {
-  try {
-    const payload = typeof atob === "function" ? decodeURIComponent(escape(atob(value))) : Buffer.from(value, "base64").toString("utf8");
-    const parsed = JSON.parse(payload);
-    return {
-      crewGroup: String(parsed?.crewGroup || "").trim() || void 0,
-      picStaffName: String(parsed?.picStaffName || "").trim() || void 0,
-      picQualification: String(parsed?.picQualification || "").trim() || void 0,
-      status: normaliseFixedCrewManifestPlanStatus(parsed?.status),
-      swapNotes: typeof parsed?.swapNotes === "string" ? parsed.swapNotes : void 0
-    };
-  } catch (_error) {
-    return {};
-  }
-};
-const normaliseFixedCrewManifestPlanStatus = (value) => {
-  const token = String(value || "").trim().toLowerCase();
-  if (token === "complete") return "complete";
-  if (token === "partial") return "partial";
-  if (token === "swapped") return "swapped";
-  if (token === "invalid") return "invalid";
-  return "pending";
-};
-const getFixedCrewManifestPlan = (item) => {
-  const manifestLine = String(item?.notes || "").split(/\r?\n/).map((line) => line.trim()).find((line) => FIXED_CREW_MANIFEST_NOTE_REGEX.test(line));
-  const match = manifestLine?.match(FIXED_CREW_MANIFEST_NOTE_REGEX);
-  return match?.[1] ? decodeManifestPlan(match[1]) : {};
-};
 const stripFixedCrewManifestNote = (notes) => String(notes || "").split(/\r?\n/).filter((line) => !FIXED_CREW_MANIFEST_NOTE_REGEX.test(line.trim())).join("\n").trim();
-const withFixedCrewManifestPlan = (item, plan) => {
-  const cleanPlan = {
-    crewGroup: String(plan.crewGroup || "").trim() || void 0,
-    picStaffName: String(plan.picStaffName || "").trim() || void 0,
-    picQualification: String(plan.picQualification || "").trim() || void 0,
-    status: normaliseFixedCrewManifestPlanStatus(plan.status),
-    swapNotes: typeof plan.swapNotes === "string" ? plan.swapNotes : void 0
-  };
-  const visibleNotes = stripFixedCrewManifestNote(item.notes);
-  const hasManifestData = Boolean(
-    cleanPlan.crewGroup || cleanPlan.picStaffName || cleanPlan.picQualification || String(cleanPlan.swapNotes || "").trim() || cleanPlan.status !== "pending"
-  );
-  const manifestLine = hasManifestData ? `[Fixed Crew Manifest: ${encodeManifestPlan(cleanPlan)}]` : "";
-  const notes = [visibleNotes, manifestLine].filter(Boolean).join("\n").trim();
-  return { ...item, notes: notes || void 0 };
-};
 const isFixedCrewFlightOrSimEvent = (item) => item?.type === "Flight" || item?.type === "FTD";
 const hasFixedCrewPicQualification = (catalogue) => getQualificationsForOperationalModel(catalogue, "fixed_crew").some((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic");
 const getFixedCrewManifestReadiness = (item, options = {}) => {
@@ -38833,22 +38783,7 @@ const formatFixedCrewManifestStatus = (status) => {
       return "Not Fixed Crew";
     case "pending_assignment":
     default:
-      return "Pending crew assignment";
-  }
-};
-const formatFixedCrewManifestPlanStatus = (status) => {
-  switch (normaliseFixedCrewManifestPlanStatus(status)) {
-    case "complete":
-      return "Complete";
-    case "partial":
-      return "Partial";
-    case "swapped":
-      return "Swapped";
-    case "invalid":
-      return "Invalid";
-    case "pending":
-    default:
-      return "Pending";
+      return "Requirements ready";
   }
 };
 const DetailCard = ({ label, value, className = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-700/50 p-1 rounded-lg ${className}`, children: [
@@ -39147,38 +39082,11 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   if (!currentItem) return null;
   const currentItemKey = currentItem.id || currentItem.code;
   const isFixedCrewModel = normaliseOperationalModel(operationalModel2) === "fixed_crew";
-  const fixedCrewManifestPlan = getFixedCrewManifestPlan(currentItem);
   const fixedCrewManifestReadiness = getFixedCrewManifestReadiness(currentItem, {
     operationalModel: operationalModel2,
     aircraftCrewComposition,
     staffQualificationCatalogue
   });
-  const activeUnitNormalised = String(activeUnitCode || "").trim().toUpperCase();
-  const fixedCrewGroups = Array.from(new Set(instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).map((staff) => String(staff.crew || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true }));
-  const fixedCrewQualificationOptions = getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").slice().sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code));
-  const fixedCrewPicOption = fixedCrewQualificationOptions.find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic");
-  const fixedCrewPicLabel = fixedCrewManifestPlan.picQualification || fixedCrewPicOption?.code || fixedCrewPicOption?.name || "PIC";
-  const selectedPicQualification = fixedCrewQualificationOptions.find((qualification) => normaliseQualificationToken(qualification.id) === normaliseQualificationToken(fixedCrewPicLabel) || normaliseQualificationToken(qualification.code) === normaliseQualificationToken(fixedCrewPicLabel) || normaliseQualificationToken(qualification.name) === normaliseQualificationToken(fixedCrewPicLabel));
-  const fixedCrewMembers = fixedCrewManifestPlan.crewGroup ? instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewManifestPlan.crewGroup || "").trim().toUpperCase()).filter((staff) => !staff.isAdminStaff).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" })) : [];
-  const fixedCrewPicCandidates = selectedPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(selectedPicQualification.id)) : [];
-  const selectedFixedCrewPic = fixedCrewPicCandidates.find((member) => String(member.name || "").trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || "").trim().toUpperCase());
-  const fixedCrewRoleCoverage = getCrewRequirementRoles(currentItem.crewRequirement, aircraftCrewComposition).map((role) => {
-    const options = getCrewRequirementRoleOptions(role);
-    const matchingMembers = fixedCrewMembers.filter((staff) => options.some((option) => crewPositionValuesMatch(option, staff.role, crewPositionTerminology)));
-    return {
-      label: options.join(" or "),
-      required: role.count,
-      available: matchingMembers.length,
-      complete: matchingMembers.length >= role.count
-    };
-  });
-  const updateFixedCrewManifestPlan = (changes) => {
-    const updated = withFixedCrewManifestPlan(currentItem, {
-      ...fixedCrewManifestPlan,
-      ...changes
-    });
-    onItemChange(updated);
-  };
   const currentLinkedEventCode = Object.prototype.hasOwnProperty.call(linkedEventOverrides, currentItemKey) ? linkedEventOverrides[currentItemKey] : getAirCombatLinkedEventCode$1(currentItem);
   const currentLinkedEventOptions = linkedEventOptions.filter((option) => (option.id || option.code) !== (currentItem.id || currentItem.code) && option.code !== currentItem.code);
   const hasSavedLinkedEventOption = currentLinkedEventOptions.some((option) => (option.code || option.id) === currentLinkedEventCode);
@@ -39503,194 +39411,27 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
       ] }) })
     ] }),
     isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-emerald-700/70 rounded-lg bg-emerald-950/10", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xs font-semibold text-emerald-300", children: "Fixed Crew Manifest" }),
-      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "Assigned Crew" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: fixedCrewManifestPlan.crewGroup || "",
-              onChange: (e) => updateFixedCrewManifestPlan({ crewGroup: e.target.value, picStaffName: void 0 }),
-              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                fixedCrewManifestPlan.crewGroup && !fixedCrewGroups.includes(fixedCrewManifestPlan.crewGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: fixedCrewManifestPlan.crewGroup, children: fixedCrewManifestPlan.crewGroup }),
-                fixedCrewGroups.map((crewGroup) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: crewGroup, children: crewGroup }, crewGroup))
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "PIC Qualification" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: fixedCrewManifestPlan.picQualification || fixedCrewPicLabel,
-              onChange: (e) => updateFixedCrewManifestPlan({ picQualification: e.target.value, picStaffName: void 0 }),
-              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]",
-              children: [
-                fixedCrewQualificationOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "PIC", children: "PIC" }),
-                fixedCrewManifestPlan.picQualification && !fixedCrewQualificationOptions.some((qualification) => (qualification.code || qualification.name) === fixedCrewManifestPlan.picQualification) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: fixedCrewManifestPlan.picQualification, children: fixedCrewManifestPlan.picQualification }),
-                fixedCrewQualificationOptions.map((qualification) => {
-                  const label = qualification.code || qualification.name;
-                  return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: label, children: label }, qualification.id);
-                })
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "PIC" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: fixedCrewManifestPlan.picStaffName || "",
-              onChange: (e) => updateFixedCrewManifestPlan({ picStaffName: e.target.value }),
-              disabled: fixedCrewPicCandidates.length === 0,
-              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px] disabled:opacity-60",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
-                fixedCrewManifestPlan.picStaffName && !selectedFixedCrewPic && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: fixedCrewManifestPlan.picStaffName, children: fixedCrewManifestPlan.picStaffName }),
-                fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: member.name, children: [
-                  member.rank,
-                  " ",
-                  member.name
-                ] }, member.idNumber || member.name))
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "Manifest Status" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: normaliseFixedCrewManifestPlanStatus(fixedCrewManifestPlan.status),
-              onChange: (e) => updateFixedCrewManifestPlan({ status: normaliseFixedCrewManifestPlanStatus(e.target.value) }),
-              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "pending", children: "Pending" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "complete", children: "Complete" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "partial", children: "Partial" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "swapped", children: "Swapped" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "invalid", children: "Invalid" })
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DetailCard,
-          {
-            label: "Required Crew",
-            value: fixedCrewManifestReadiness.requiredCrewCount
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DetailCard,
-          {
-            label: "PIC Configured",
-            value: fixedCrewManifestReadiness.picQualificationConfigured ? "Yes" : "No"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DetailCard,
-          {
-            label: "Crew Event",
-            value: fixedCrewManifestReadiness.isCrewedEvent ? "Flight/sim" : "No"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DetailCard,
-          {
-            className: "md:col-span-2 lg:col-span-3",
-            label: "Required Roles",
-            value: formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg md:col-span-2 lg:col-span-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "Swap / Manifest Notes" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "textarea",
-            {
-              value: fixedCrewManifestPlan.swapNotes || "",
-              onChange: (e) => updateFixedCrewManifestPlan({ swapNotes: e.target.value }),
-              rows: 2,
-              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]",
-              placeholder: "Optional notes for crew swaps or manual manifest decisions"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900/50 border border-emerald-900/60 rounded-lg p-2 md:col-span-4 lg:col-span-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Crew Members" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewMembers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-500", children: "Select a crew with active staff." }) : fixedCrewMembers.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate text-gray-100", children: [
-                member.rank,
-                " ",
-                member.name
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-emerald-200", children: member.role || "Role unset" })
-            ] }, member.idNumber || member.name)) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "PIC Candidates" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewPicCandidates.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] text-gray-500", children: [
-              "No selected crew member has ",
-              fixedCrewPicLabel,
-              "."
-            ] }) : fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "div",
-              {
-                className: `rounded px-2 py-1 text-[10px] ${String(member.name || "").trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || "").trim().toUpperCase() ? "bg-emerald-900/60 text-emerald-100" : "bg-gray-800/70 text-gray-100"}`,
-                children: [
-                  member.rank,
-                  " ",
-                  member.name
-                ]
-              },
-              member.idNumber || member.name
-            )) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Role Coverage" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewRoleCoverage.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-500", children: "No role requirement configured." }) : fixedCrewRoleCoverage.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-100", children: row.label }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: row.complete ? "shrink-0 text-emerald-300" : "shrink-0 text-amber-300", children: [
-                row.available,
-                "/",
-                row.required
-              ] })
-            ] }, row.label)) })
-          ] })
-        ] }) })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xs font-semibold text-emerald-300", children: "Fixed Crew Requirements" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           DetailCard,
           {
             label: "Status",
-            value: fixedCrewManifestPlan.crewGroup || fixedCrewManifestPlan.status || fixedCrewManifestPlan.swapNotes ? formatFixedCrewManifestPlanStatus(fixedCrewManifestPlan.status) : formatFixedCrewManifestStatus(fixedCrewManifestReadiness.status)
+            value: formatFixedCrewManifestStatus(fixedCrewManifestReadiness.status)
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           DetailCard,
           {
-            label: "Assigned Crew",
-            value: fixedCrewManifestPlan.crewGroup ? `CREW ${fixedCrewManifestPlan.crewGroup}` : "Not assigned"
+            label: "Crew Event",
+            value: fixedCrewManifestReadiness.isCrewedEvent ? "Flight/sim" : "No"
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           DetailCard,
           {
-            label: "PIC Qualification",
-            value: fixedCrewManifestPlan.picQualification || fixedCrewPicLabel
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DetailCard,
-          {
-            label: "PIC",
-            value: selectedFixedCrewPic ? `${selectedFixedCrewPic.rank} ${selectedFixedCrewPic.name}` : fixedCrewManifestPlan.picStaffName || "Not selected"
+            label: "PIC Required",
+            value: fixedCrewManifestReadiness.picRequired ? "PIC" : "No"
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -39710,69 +39451,11 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           DetailCard,
           {
-            label: "Crew Event",
-            value: fixedCrewManifestReadiness.isCrewedEvent ? "Flight/sim" : "No"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DetailCard,
-          {
             className: "md:col-span-2 lg:col-span-3",
             label: "Required Roles",
             value: formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)
           }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DetailCard,
-          {
-            className: "md:col-span-2 lg:col-span-3",
-            label: "Swap / Manifest Notes",
-            value: fixedCrewManifestPlan.swapNotes || "None"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900/50 border border-emerald-900/60 rounded-lg p-2 md:col-span-4 lg:col-span-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Crew Members" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewMembers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-500", children: "No crew selected." }) : fixedCrewMembers.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate text-gray-100", children: [
-                member.rank,
-                " ",
-                member.name
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-emerald-200", children: member.role || "Role unset" })
-            ] }, member.idNumber || member.name)) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "PIC Candidates" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewPicCandidates.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] text-gray-500", children: [
-              "No selected crew member has ",
-              fixedCrewPicLabel,
-              "."
-            ] }) : fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "div",
-              {
-                className: `rounded px-2 py-1 text-[10px] ${String(member.name || "").trim().toUpperCase() === String(fixedCrewManifestPlan.picStaffName || "").trim().toUpperCase() ? "bg-emerald-900/60 text-emerald-100" : "bg-gray-800/70 text-gray-100"}`,
-                children: [
-                  member.rank,
-                  " ",
-                  member.name
-                ]
-              },
-              member.idNumber || member.name
-            )) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Role Coverage" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewRoleCoverage.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-500", children: "No role requirement configured." }) : fixedCrewRoleCoverage.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-100", children: row.label }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: row.complete ? "shrink-0 text-emerald-300" : "shrink-0 text-amber-300", children: [
-                row.available,
-                "/",
-                row.required
-              ] })
-            ] }, row.label)) })
-          ] })
-        ] }) })
+        )
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
@@ -40171,7 +39854,8 @@ const SyllabusView = ({
       if (editedItem) {
         const itemToSave = {
           ...editedItem,
-          acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(editedItem.acceptableAircraftConfigs, aircraftConfigurations)
+          acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(editedItem.acceptableAircraftConfigs, aircraftConfigurations),
+          notes: stripFixedCrewManifestNote(editedItem.notes)
         };
         const isNew = itemToSave.id.startsWith("new-");
         let savedItem;
