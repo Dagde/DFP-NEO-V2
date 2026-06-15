@@ -39156,6 +39156,19 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   const fixedCrewQualificationOptions = getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").slice().sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code));
   const fixedCrewPicOption = fixedCrewQualificationOptions.find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic");
   const fixedCrewPicLabel = fixedCrewManifestPlan.picQualification || fixedCrewPicOption?.code || fixedCrewPicOption?.name || "PIC";
+  const selectedPicQualification = fixedCrewQualificationOptions.find((qualification) => normaliseQualificationToken(qualification.id) === normaliseQualificationToken(fixedCrewPicLabel) || normaliseQualificationToken(qualification.code) === normaliseQualificationToken(fixedCrewPicLabel) || normaliseQualificationToken(qualification.name) === normaliseQualificationToken(fixedCrewPicLabel));
+  const fixedCrewMembers = fixedCrewManifestPlan.crewGroup ? instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewManifestPlan.crewGroup || "").trim().toUpperCase()).filter((staff) => !staff.isAdminStaff).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" })) : [];
+  const fixedCrewPicCandidates = selectedPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(selectedPicQualification.id)) : [];
+  const fixedCrewRoleCoverage = getCrewRequirementRoles(currentItem.crewRequirement, aircraftCrewComposition).map((role) => {
+    const options = getCrewRequirementRoleOptions(role);
+    const matchingMembers = fixedCrewMembers.filter((staff) => options.some((option) => crewPositionValuesMatch(option, staff.role, crewPositionTerminology)));
+    return {
+      label: options.join(" or "),
+      required: role.count,
+      available: matchingMembers.length,
+      complete: matchingMembers.length >= role.count
+    };
+  });
   const updateFixedCrewManifestPlan = (changes) => {
     const updated = withFixedCrewManifestPlan(currentItem, {
       ...fixedCrewManifestPlan,
@@ -39583,7 +39596,43 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
               placeholder: "Optional notes for crew swaps or manual manifest decisions"
             }
           )
-        ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900/50 border border-emerald-900/60 rounded-lg p-2 md:col-span-4 lg:col-span-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Crew Members" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewMembers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-500", children: "Select a crew with active staff." }) : fixedCrewMembers.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate text-gray-100", children: [
+                member.rank,
+                " ",
+                member.name
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-emerald-200", children: member.role || "Role unset" })
+            ] }, member.idNumber || member.name)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "PIC Candidates" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewPicCandidates.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] text-gray-500", children: [
+              "No selected crew member has ",
+              fixedCrewPicLabel,
+              "."
+            ] }) : fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-800/70 px-2 py-1 text-[10px] text-gray-100", children: [
+              member.rank,
+              " ",
+              member.name
+            ] }, member.idNumber || member.name)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Role Coverage" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewRoleCoverage.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-500", children: "No role requirement configured." }) : fixedCrewRoleCoverage.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-100", children: row.label }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: row.complete ? "shrink-0 text-emerald-300" : "shrink-0 text-amber-300", children: [
+                row.available,
+                "/",
+                row.required
+              ] })
+            ] }, row.label)) })
+          ] })
+        ] }) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           DetailCard,
@@ -39642,7 +39691,43 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             label: "Swap / Manifest Notes",
             value: fixedCrewManifestPlan.swapNotes || "None"
           }
-        )
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900/50 border border-emerald-900/60 rounded-lg p-2 md:col-span-4 lg:col-span-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Crew Members" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewMembers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-500", children: "No crew selected." }) : fixedCrewMembers.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate text-gray-100", children: [
+                member.rank,
+                " ",
+                member.name
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-emerald-200", children: member.role || "Role unset" })
+            ] }, member.idNumber || member.name)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "PIC Candidates" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewPicCandidates.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] text-gray-500", children: [
+              "No selected crew member has ",
+              fixedCrewPicLabel,
+              "."
+            ] }) : fixedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-800/70 px-2 py-1 text-[10px] text-gray-100", children: [
+              member.rank,
+              " ",
+              member.name
+            ] }, member.idNumber || member.name)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold uppercase tracking-wider text-emerald-300", children: "Role Coverage" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: fixedCrewRoleCoverage.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-500", children: "No role requirement configured." }) : fixedCrewRoleCoverage.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-100", children: row.label }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: row.complete ? "shrink-0 text-emerald-300" : "shrink-0 text-amber-300", children: [
+                row.available,
+                "/",
+                row.required
+              ] })
+            ] }, row.label)) })
+          ] })
+        ] }) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [

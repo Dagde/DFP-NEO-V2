@@ -10,7 +10,8 @@ import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
-import { formatCrewRequirementSummary } from '../utils/crewRequirements';
+import { formatCrewRequirementSummary, getCrewRequirementRoleOptions, getCrewRequirementRoles } from '../utils/crewRequirements';
+import { crewPositionValuesMatch } from '../utils/crewPositionTerminology';
 import {
     ANY_AIRCRAFT_CONFIG,
     formatAircraftConfigurationSummary,
@@ -20,6 +21,7 @@ import {
 import { normaliseOperationalModel } from '../utils/platformConfigService';
 import {
     getQualificationsForOperationalModel,
+    normaliseAssignedQualificationIds,
     normaliseQualificationToken,
     type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
@@ -494,6 +496,31 @@ const DetailView: React.FC<{
         || normaliseQualificationToken(qualification.name) === 'pic'
     ));
     const fixedCrewPicLabel = fixedCrewManifestPlan.picQualification || fixedCrewPicOption?.code || fixedCrewPicOption?.name || 'PIC';
+    const selectedPicQualification = fixedCrewQualificationOptions.find(qualification => (
+        normaliseQualificationToken(qualification.id) === normaliseQualificationToken(fixedCrewPicLabel)
+        || normaliseQualificationToken(qualification.code) === normaliseQualificationToken(fixedCrewPicLabel)
+        || normaliseQualificationToken(qualification.name) === normaliseQualificationToken(fixedCrewPicLabel)
+    ));
+    const fixedCrewMembers = fixedCrewManifestPlan.crewGroup
+        ? instructorsData
+            .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
+            .filter(staff => String(staff.crew || '').trim().toUpperCase() === String(fixedCrewManifestPlan.crewGroup || '').trim().toUpperCase())
+            .filter(staff => !staff.isAdminStaff)
+            .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }))
+        : [];
+    const fixedCrewPicCandidates = selectedPicQualification
+        ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(selectedPicQualification.id))
+        : [];
+    const fixedCrewRoleCoverage = getCrewRequirementRoles(currentItem.crewRequirement, aircraftCrewComposition).map(role => {
+        const options = getCrewRequirementRoleOptions(role);
+        const matchingMembers = fixedCrewMembers.filter(staff => options.some(option => crewPositionValuesMatch(option, staff.role, crewPositionTerminology)));
+        return {
+            label: options.join(' or '),
+            required: role.count,
+            available: matchingMembers.length,
+            complete: matchingMembers.length >= role.count,
+        };
+    });
     const updateFixedCrewManifestPlan = (changes: Parameters<typeof withFixedCrewManifestPlan>[1]) => {
         const updated = withFixedCrewManifestPlan(currentItem, {
             ...fixedCrewManifestPlan,
@@ -851,6 +878,50 @@ const DetailView: React.FC<{
                                 placeholder="Optional notes for crew swaps or manual manifest decisions"
                             />
                         </div>
+                        <div className="bg-gray-900/50 border border-emerald-900/60 rounded-lg p-2 md:col-span-4 lg:col-span-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+                                <div>
+                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Crew Members</div>
+                                    <div className="mt-1 space-y-1">
+                                        {fixedCrewMembers.length === 0 ? (
+                                            <div className="text-[10px] text-gray-500">Select a crew with active staff.</div>
+                                        ) : fixedCrewMembers.map(member => (
+                                            <div key={member.idNumber || member.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]">
+                                                <span className="truncate text-gray-100">{member.rank} {member.name}</span>
+                                                <span className="shrink-0 text-emerald-200">{member.role || 'Role unset'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">PIC Candidates</div>
+                                    <div className="mt-1 space-y-1">
+                                        {fixedCrewPicCandidates.length === 0 ? (
+                                            <div className="text-[10px] text-gray-500">No selected crew member has {fixedCrewPicLabel}.</div>
+                                        ) : fixedCrewPicCandidates.map(member => (
+                                            <div key={member.idNumber || member.name} className="rounded bg-gray-800/70 px-2 py-1 text-[10px] text-gray-100">
+                                                {member.rank} {member.name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Role Coverage</div>
+                                    <div className="mt-1 space-y-1">
+                                        {fixedCrewRoleCoverage.length === 0 ? (
+                                            <div className="text-[10px] text-gray-500">No role requirement configured.</div>
+                                        ) : fixedCrewRoleCoverage.map(row => (
+                                            <div key={row.label} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]">
+                                                <span className="truncate text-gray-100">{row.label}</span>
+                                                <span className={row.complete ? 'shrink-0 text-emerald-300' : 'shrink-0 text-amber-300'}>
+                                                    {row.available}/{row.required}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
@@ -890,6 +961,50 @@ const DetailView: React.FC<{
                             label="Swap / Manifest Notes"
                             value={fixedCrewManifestPlan.swapNotes || 'None'}
                         />
+                        <div className="bg-gray-900/50 border border-emerald-900/60 rounded-lg p-2 md:col-span-4 lg:col-span-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+                                <div>
+                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Crew Members</div>
+                                    <div className="mt-1 space-y-1">
+                                        {fixedCrewMembers.length === 0 ? (
+                                            <div className="text-[10px] text-gray-500">No crew selected.</div>
+                                        ) : fixedCrewMembers.map(member => (
+                                            <div key={member.idNumber || member.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]">
+                                                <span className="truncate text-gray-100">{member.rank} {member.name}</span>
+                                                <span className="shrink-0 text-emerald-200">{member.role || 'Role unset'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">PIC Candidates</div>
+                                    <div className="mt-1 space-y-1">
+                                        {fixedCrewPicCandidates.length === 0 ? (
+                                            <div className="text-[10px] text-gray-500">No selected crew member has {fixedCrewPicLabel}.</div>
+                                        ) : fixedCrewPicCandidates.map(member => (
+                                            <div key={member.idNumber || member.name} className="rounded bg-gray-800/70 px-2 py-1 text-[10px] text-gray-100">
+                                                {member.rank} {member.name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-300">Role Coverage</div>
+                                    <div className="mt-1 space-y-1">
+                                        {fixedCrewRoleCoverage.length === 0 ? (
+                                            <div className="text-[10px] text-gray-500">No role requirement configured.</div>
+                                        ) : fixedCrewRoleCoverage.map(row => (
+                                            <div key={row.label} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1 text-[10px]">
+                                                <span className="truncate text-gray-100">{row.label}</span>
+                                                <span className={row.complete ? 'shrink-0 text-emerald-300' : 'shrink-0 text-amber-300'}>
+                                                    {row.available}/{row.required}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
             </fieldset>
