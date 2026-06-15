@@ -5626,11 +5626,7 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
 // ============================================================
 
 const BULK_UPLOAD_REQUIRED_COLUMNS = [
-  'Type',
   'Event description',
-  'Event Details - Sortie',
-  'Total Event Hours',
-  'Method/s of Delivery',
 ];
 
 function getUploadValue(row, aliases) {

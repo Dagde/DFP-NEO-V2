@@ -7,11 +7,7 @@ const prisma = new PrismaClient();
 const db = prisma as any;
 
 const REQUIRED_COLUMNS = [
-  'Type',
   'Event description',
-  'Event Details - Sortie',
-  'Total Event Hours',
-  'Method/s of Delivery',
 ];
 
 const getValue = (row: Record<string, any>, aliases: string[]): any => {
