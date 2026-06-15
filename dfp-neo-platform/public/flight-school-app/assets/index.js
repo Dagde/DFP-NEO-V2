@@ -53779,7 +53779,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 onClick: addAircraftType,
                 className: platformActionButtonClass,
                 title: "Add aircraft type",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[8px] leading-[0.95rem]", children: [
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[8px] leading-[0.7rem]", children: [
                   "Add",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   "Aircraft",

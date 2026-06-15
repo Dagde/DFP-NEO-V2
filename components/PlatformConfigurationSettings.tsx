@@ -3296,7 +3296,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     className={platformActionButtonClass}
                     title="Add aircraft type"
                   >
-                    <span className="text-[8px] leading-[0.95rem]">Add<br />Aircraft<br />Type</span>
+                    <span className="text-[8px] leading-[0.7rem]">Add<br />Aircraft<br />Type</span>
                   </button>
                   <button
                     type="button"
