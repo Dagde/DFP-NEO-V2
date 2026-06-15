@@ -329,12 +329,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   );
   const activeQualificationOptions = useMemo(() => (
     getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel)
-      .filter((qualification) => {
-        const restrictions = qualification.roleRestrictions || [];
-        if (restrictions.length === 0) return true;
-        return restrictions.some((restriction) => String(restriction).trim().toLowerCase() === String(role || '').trim().toLowerCase());
-      })
-  ), [normalisedQualificationCatalogue, operationalModel, role]);
+  ), [normalisedQualificationCatalogue, operationalModel]);
   const getAssignedQualificationIds = useCallback((source: Instructor): string[] => (
     normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue)
   ), [normalisedQualificationCatalogue]);

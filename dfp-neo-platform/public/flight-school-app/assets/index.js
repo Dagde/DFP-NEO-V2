@@ -35449,11 +35449,7 @@ const InstructorProfileFlyout = ({
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
     [staffQualificationCatalogue]
   );
-  const activeQualificationOptions = reactExports.useMemo(() => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel2).filter((qualification) => {
-    const restrictions = qualification.roleRestrictions || [];
-    if (restrictions.length === 0) return true;
-    return restrictions.some((restriction) => String(restriction).trim().toLowerCase() === String(role || "").trim().toLowerCase());
-  }), [normalisedQualificationCatalogue, operationalModel2, role]);
+  const activeQualificationOptions = reactExports.useMemo(() => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel2), [normalisedQualificationCatalogue, operationalModel2]);
   const getAssignedQualificationIds = reactExports.useCallback((source) => normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue), [normalisedQualificationCatalogue]);
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
   const [service, setService] = reactExports.useState(instructor.service);
