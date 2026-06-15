@@ -37558,6 +37558,7 @@ const InstructorListView = ({
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isFixedCrewModel = activeOperationalModel === "fixed_crew";
   const useRoleColours = isAirCombatModel || isFixedCrewModel;
+  const useOperationalStaffListBorder = isAirCombatModel || isFixedCrewModel;
   const qfis = reactExports.useMemo(() => {
     return instructorsData.filter((i) => {
       const isQFI = isQfiRole(i);
@@ -37850,8 +37851,8 @@ const InstructorListView = ({
       }
     )
   ] });
-  const renderInstructorUnitCard = (unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${isAirCombatModel ? "border-emerald-400/80 shadow-emerald-500/20" : "border-gray-700"}`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-3 border-b bg-gray-800/80 grid grid-cols-[minmax(0,6.75rem)_1fr_minmax(0,5rem)] gap-2 items-center rounded-t-lg backdrop-blur-sm ${isAirCombatModel ? "border-emerald-400/40" : "border-gray-700"}`, children: [
+  const renderInstructorUnitCard = (unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${useOperationalStaffListBorder ? "border-emerald-400/80 shadow-emerald-500/20" : "border-gray-700"}`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-3 border-b bg-gray-800/80 grid grid-cols-[minmax(0,6.75rem)_1fr_minmax(0,5rem)] gap-2 items-center rounded-t-lg backdrop-blur-sm ${useOperationalStaffListBorder ? "border-emerald-400/40" : "border-gray-700"}`, children: [
       renderStaffRoleFilterSelect(),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400 text-center truncate", children: unit }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "justify-self-end text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full whitespace-nowrap", children: [

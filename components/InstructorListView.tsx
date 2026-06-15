@@ -244,6 +244,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const isAirCombatModel = activeOperationalModel === 'air_combat';
   const isFixedCrewModel = activeOperationalModel === 'fixed_crew';
   const useRoleColours = isAirCombatModel || isFixedCrewModel;
+  const useOperationalStaffListBorder = isAirCombatModel || isFixedCrewModel;
 
   const qfis = useMemo(() => {
       return instructorsData
@@ -594,8 +595,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   );
 
   const renderInstructorUnitCard = (unit: string) => (
-    <div key={unit} className={`bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${isAirCombatModel ? 'border-emerald-400/80 shadow-emerald-500/20' : 'border-gray-700'}`}>
-        <div className={`p-3 border-b bg-gray-800/80 grid grid-cols-[minmax(0,6.75rem)_1fr_minmax(0,5rem)] gap-2 items-center rounded-t-lg backdrop-blur-sm ${isAirCombatModel ? 'border-emerald-400/40' : 'border-gray-700'}`}>
+    <div key={unit} className={`bg-gray-800 border rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh] ${useOperationalStaffListBorder ? 'border-emerald-400/80 shadow-emerald-500/20' : 'border-gray-700'}`}>
+        <div className={`p-3 border-b bg-gray-800/80 grid grid-cols-[minmax(0,6.75rem)_1fr_minmax(0,5rem)] gap-2 items-center rounded-t-lg backdrop-blur-sm ${useOperationalStaffListBorder ? 'border-emerald-400/40' : 'border-gray-700'}`}>
             {renderStaffRoleFilterSelect()}
             <h3 className="text-lg font-bold text-sky-400 text-center truncate">{unit}</h3>
             <span className="justify-self-end text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full whitespace-nowrap">{qfisByUnit[unit].length} Staff</span>
