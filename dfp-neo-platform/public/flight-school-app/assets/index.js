@@ -38742,6 +38742,48 @@ async function retireSyllabusItem(id, changeReason) {
   }
   clearSyllabusCache();
 }
+const isFixedCrewFlightOrSimEvent = (item) => item?.type === "Flight" || item?.type === "FTD";
+const hasFixedCrewPicQualification = (catalogue) => getQualificationsForOperationalModel(catalogue, "fixed_crew").some((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic");
+const getFixedCrewManifestReadiness = (item, options = {}) => {
+  const isFixedCrewModel = normaliseOperationalModel(options.operationalModel) === "fixed_crew";
+  const isCrewedEvent = isFixedCrewFlightOrSimEvent(item);
+  const picRequired = isFixedCrewModel && isCrewedEvent;
+  const picQualificationConfigured = hasFixedCrewPicQualification(options.staffQualificationCatalogue);
+  const requiredCrewCount = getCrewRequirementCount(item.crewRequirement, options.aircraftCrewComposition);
+  let status = "pending_assignment";
+  if (!isFixedCrewModel) {
+    status = "not_fixed_crew";
+  } else if (!isCrewedEvent) {
+    status = "not_required";
+  } else if (!picQualificationConfigured) {
+    status = "missing_pic_qualification";
+  } else if (requiredCrewCount <= 0) {
+    status = "missing_crew_requirement";
+  }
+  return {
+    status,
+    isFixedCrewModel,
+    isCrewedEvent,
+    picRequired,
+    picQualificationConfigured,
+    requiredCrewCount
+  };
+};
+const formatFixedCrewManifestStatus = (status) => {
+  switch (status) {
+    case "missing_pic_qualification":
+      return "PIC qualification missing";
+    case "missing_crew_requirement":
+      return "Crew requirement missing";
+    case "not_required":
+      return "Not required";
+    case "not_fixed_crew":
+      return "Not Fixed Crew";
+    case "pending_assignment":
+    default:
+      return "Pending crew assignment";
+  }
+};
 const DetailCard = ({ label, value, className = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-700/50 p-1 rounded-lg ${className}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[10px] font-semibold text-white", children: value })
@@ -39001,7 +39043,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, isAirCombatModel = false, operationalModel: operationalModel2 = "flight_school", scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, isAirCombatModel = false, operationalModel: operationalModel2 = "flight_school", staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -39037,6 +39079,12 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   const currentItem = isEditing ? editedItem : item;
   if (!currentItem) return null;
   const currentItemKey = currentItem.id || currentItem.code;
+  const isFixedCrewModel = normaliseOperationalModel(operationalModel2) === "fixed_crew";
+  const fixedCrewManifestReadiness = getFixedCrewManifestReadiness(currentItem, {
+    operationalModel: operationalModel2,
+    aircraftCrewComposition,
+    staffQualificationCatalogue
+  });
   const currentLinkedEventCode = Object.prototype.hasOwnProperty.call(linkedEventOverrides, currentItemKey) ? linkedEventOverrides[currentItemKey] : getAirCombatLinkedEventCode$1(currentItem);
   const currentLinkedEventOptions = linkedEventOptions.filter((option) => (option.id || option.code) !== (currentItem.id || currentItem.code) && option.code !== currentItem.code);
   const hasSavedLinkedEventOption = currentLinkedEventOptions.some((option) => (option.code || option.id) === currentLinkedEventCode);
@@ -39360,6 +39408,54 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
         ] })
       ] }) })
     ] }),
+    isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-emerald-700/70 rounded-lg bg-emerald-950/10", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xs font-semibold text-emerald-300", children: "Fixed Crew Manifest" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: "Status",
+            value: formatFixedCrewManifestStatus(fixedCrewManifestReadiness.status)
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: "Crew Event",
+            value: fixedCrewManifestReadiness.isCrewedEvent ? "Flight/sim" : "No"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: "PIC Required",
+            value: fixedCrewManifestReadiness.picRequired ? "PIC" : "No"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: "PIC Configured",
+            value: fixedCrewManifestReadiness.picQualificationConfigured ? "Yes" : "No"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: "Required Crew",
+            value: fixedCrewManifestReadiness.requiredCrewCount
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            className: "md:col-span-2 lg:col-span-3",
+            label: "Required Roles",
+            value: formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)
+          }
+        )
+      ] })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Event Description" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(EditableField, { label: "Event Description", value: currentItem.eventDescription, onChange: (val) => handleFieldChange("eventDescription", val) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 p-3 bg-gray-700/30 rounded-lg", children: item.eventDescription || "No description provided" }) })
@@ -39450,6 +39546,7 @@ const SyllabusView = ({
   instructorsData = [],
   onUpdateInstructor,
   operationalModel: operationalModel2 = "flight_school",
+  staffQualificationCatalogue,
   currentUserName,
   scoringMatrixPhraseBank,
   onAddScoringMatrixElement
@@ -40326,6 +40423,7 @@ const SyllabusView = ({
             crewPositionTerminology,
             isAirCombatModel,
             operationalModel: operationalModel2,
+            staffQualificationCatalogue,
             scoringMatrixElements,
             onAddScoringMatrixElement,
             linkedEventOptions: filteredSyllabusDetails,
@@ -91533,6 +91631,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             trainingPackageTemplates: trainingPackageTemplatesForActiveModel,
             instructorsData,
             operationalModel: activeOperationalModel,
+            staffQualificationCatalogue: activeStaffQualificationCatalogue,
             currentUserName,
             scoringMatrixPhraseBank: activeTrainingReportPhraseBank,
             onAddScoringMatrixElement: () => {

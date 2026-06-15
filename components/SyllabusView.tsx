@@ -18,6 +18,11 @@ import {
     type AircraftConfigurationDefinition,
 } from '../utils/aircraftConfigurationSettings';
 import { normaliseOperationalModel } from '../utils/platformConfigService';
+import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
+import {
+    formatFixedCrewManifestStatus,
+    getFixedCrewManifestReadiness,
+} from '../utils/fixedCrewManifest';
 import {
     getAirCombatAssignmentFromItem,
     getAuthoritativeSyllabusDuration,
@@ -42,6 +47,7 @@ interface SyllabusViewProps {
   instructorsData?: Instructor[];
   onUpdateInstructor?: (data: Instructor) => void | Promise<void>;
   operationalModel?: string;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
   currentUserName?: string;
   scoringMatrixPhraseBank?: PhraseBank;
   onAddScoringMatrixElement?: () => void;
@@ -406,12 +412,13 @@ const DetailView: React.FC<{
     crewPositionTerminology?: CrewPositionTerminology;
     isAirCombatModel?: boolean;
     operationalModel?: string;
+    staffQualificationCatalogue?: StaffQualificationCatalogue;
     scoringMatrixElements?: string[];
     onAddScoringMatrixElement?: () => void;
     linkedEventOptions?: SyllabusItemDetail[];
     linkedEventOverrides?: Record<string, string>;
     onLinkedEventChange?: (item: SyllabusItemDetail, linkedEventCode: string) => void | Promise<void>;
-}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, isAirCombatModel = false, operationalModel = 'flight_school', scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, isAirCombatModel = false, operationalModel = 'flight_school', staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -454,6 +461,12 @@ const DetailView: React.FC<{
     const currentItem = isEditing ? editedItem : item;
     if (!currentItem) return null;
     const currentItemKey = currentItem.id || currentItem.code;
+    const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
+    const fixedCrewManifestReadiness = getFixedCrewManifestReadiness(currentItem, {
+        operationalModel,
+        aircraftCrewComposition,
+        staffQualificationCatalogue,
+    });
     const currentLinkedEventCode = Object.prototype.hasOwnProperty.call(linkedEventOverrides, currentItemKey)
         ? linkedEventOverrides[currentItemKey]
         : getAirCombatLinkedEventCode(currentItem);
@@ -725,6 +738,38 @@ const DetailView: React.FC<{
                 )}
             </div>
         </fieldset>
+        {isFixedCrewModel && (
+            <fieldset className="p-3 border border-emerald-700/70 rounded-lg bg-emerald-950/10">
+                <legend className="px-2 text-xs font-semibold text-emerald-300">Fixed Crew Manifest</legend>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
+                    <DetailCard
+                        label="Status"
+                        value={formatFixedCrewManifestStatus(fixedCrewManifestReadiness.status)}
+                    />
+                    <DetailCard
+                        label="Crew Event"
+                        value={fixedCrewManifestReadiness.isCrewedEvent ? 'Flight/sim' : 'No'}
+                    />
+                    <DetailCard
+                        label="PIC Required"
+                        value={fixedCrewManifestReadiness.picRequired ? 'PIC' : 'No'}
+                    />
+                    <DetailCard
+                        label="PIC Configured"
+                        value={fixedCrewManifestReadiness.picQualificationConfigured ? 'Yes' : 'No'}
+                    />
+                    <DetailCard
+                        label="Required Crew"
+                        value={fixedCrewManifestReadiness.requiredCrewCount}
+                    />
+                    <DetailCard
+                        className="md:col-span-2 lg:col-span-3"
+                        label="Required Roles"
+                        value={formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}
+                    />
+                </div>
+            </fieldset>
+        )}
            <fieldset className="p-4 border border-gray-700 rounded-lg">
                <legend className="px-2 text-sm font-semibold text-gray-300">Event Description</legend>
                <div className="mt-2">
@@ -860,6 +905,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     instructorsData = [],
     onUpdateInstructor,
     operationalModel = 'flight_school',
+    staffQualificationCatalogue,
     currentUserName,
     scoringMatrixPhraseBank,
     onAddScoringMatrixElement,
@@ -1837,6 +1883,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         crewPositionTerminology={crewPositionTerminology}
 	                    isAirCombatModel={isAirCombatModel}
                         operationalModel={operationalModel}
+                        staffQualificationCatalogue={staffQualificationCatalogue}
                         scoringMatrixElements={scoringMatrixElements}
                         onAddScoringMatrixElement={onAddScoringMatrixElement}
 	                    linkedEventOptions={filteredSyllabusDetails}

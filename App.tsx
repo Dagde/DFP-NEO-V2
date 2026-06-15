@@ -32019,6 +32019,7 @@ appliedUpdates.forEach(update => {
                            trainingPackageTemplates={trainingPackageTemplatesForActiveModel}
                            instructorsData={instructorsData}
                            operationalModel={activeOperationalModel}
+                           staffQualificationCatalogue={activeStaffQualificationCatalogue}
                            currentUserName={currentUserName}
                            scoringMatrixPhraseBank={activeTrainingReportPhraseBank}
                            onAddScoringMatrixElement={() => {
