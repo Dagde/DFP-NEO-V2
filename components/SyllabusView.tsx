@@ -18,10 +18,18 @@ import {
     type AircraftConfigurationDefinition,
 } from '../utils/aircraftConfigurationSettings';
 import { normaliseOperationalModel } from '../utils/platformConfigService';
-import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
+import {
+    getQualificationsForOperationalModel,
+    normaliseQualificationToken,
+    type StaffQualificationCatalogue,
+} from '../utils/staffQualifications';
 import {
     formatFixedCrewManifestStatus,
+    formatFixedCrewManifestPlanStatus,
+    getFixedCrewManifestPlan,
     getFixedCrewManifestReadiness,
+    normaliseFixedCrewManifestPlanStatus,
+    withFixedCrewManifestPlan,
 } from '../utils/fixedCrewManifest';
 import {
     getAirCombatAssignmentFromItem,
@@ -410,6 +418,8 @@ const DetailView: React.FC<{
     aircraftConfigurations?: AircraftConfigurationDefinition[];
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
+    instructorsData?: Instructor[];
+    activeUnitCode?: string;
     isAirCombatModel?: boolean;
     operationalModel?: string;
     staffQualificationCatalogue?: StaffQualificationCatalogue;
@@ -418,7 +428,7 @@ const DetailView: React.FC<{
     linkedEventOptions?: SyllabusItemDetail[];
     linkedEventOverrides?: Record<string, string>;
     onLinkedEventChange?: (item: SyllabusItemDetail, linkedEventCode: string) => void | Promise<void>;
-}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, isAirCombatModel = false, operationalModel = 'flight_school', staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = '', isAirCombatModel = false, operationalModel = 'flight_school', staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -462,11 +472,34 @@ const DetailView: React.FC<{
     if (!currentItem) return null;
     const currentItemKey = currentItem.id || currentItem.code;
     const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
+    const fixedCrewManifestPlan = getFixedCrewManifestPlan(currentItem);
     const fixedCrewManifestReadiness = getFixedCrewManifestReadiness(currentItem, {
         operationalModel,
         aircraftCrewComposition,
         staffQualificationCatalogue,
     });
+    const activeUnitNormalised = String(activeUnitCode || '').trim().toUpperCase();
+    const fixedCrewGroups = Array.from(new Set(instructorsData
+        .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
+        .map(staff => String(staff.crew || '').trim())
+        .filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const fixedCrewQualificationOptions = getQualificationsForOperationalModel(staffQualificationCatalogue, 'fixed_crew')
+        .slice()
+        .sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code));
+    const fixedCrewPicOption = fixedCrewQualificationOptions.find(qualification => (
+        normaliseQualificationToken(qualification.id) === 'pic'
+        || normaliseQualificationToken(qualification.code) === 'pic'
+        || normaliseQualificationToken(qualification.name) === 'pic'
+    ));
+    const fixedCrewPicLabel = fixedCrewManifestPlan.picQualification || fixedCrewPicOption?.code || fixedCrewPicOption?.name || 'PIC';
+    const updateFixedCrewManifestPlan = (changes: Parameters<typeof withFixedCrewManifestPlan>[1]) => {
+        const updated = withFixedCrewManifestPlan(currentItem, {
+            ...fixedCrewManifestPlan,
+            ...changes,
+        });
+        onItemChange(updated);
+    };
     const currentLinkedEventCode = Object.prototype.hasOwnProperty.call(linkedEventOverrides, currentItemKey)
         ? linkedEventOverrides[currentItemKey]
         : getAirCombatLinkedEventCode(currentItem);
@@ -741,33 +774,123 @@ const DetailView: React.FC<{
         {isFixedCrewModel && (
             <fieldset className="p-3 border border-emerald-700/70 rounded-lg bg-emerald-950/10">
                 <legend className="px-2 text-xs font-semibold text-emerald-300">Fixed Crew Manifest</legend>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
-                    <DetailCard
-                        label="Status"
-                        value={formatFixedCrewManifestStatus(fixedCrewManifestReadiness.status)}
-                    />
-                    <DetailCard
-                        label="Crew Event"
-                        value={fixedCrewManifestReadiness.isCrewedEvent ? 'Flight/sim' : 'No'}
-                    />
-                    <DetailCard
-                        label="PIC Required"
-                        value={fixedCrewManifestReadiness.picRequired ? 'PIC' : 'No'}
-                    />
-                    <DetailCard
-                        label="PIC Configured"
-                        value={fixedCrewManifestReadiness.picQualificationConfigured ? 'Yes' : 'No'}
-                    />
-                    <DetailCard
-                        label="Required Crew"
-                        value={fixedCrewManifestReadiness.requiredCrewCount}
-                    />
-                    <DetailCard
-                        className="md:col-span-2 lg:col-span-3"
-                        label="Required Roles"
-                        value={formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}
-                    />
-                </div>
+                {isEditing ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Assigned Crew</label>
+                            <select
+                                value={fixedCrewManifestPlan.crewGroup || ''}
+                                onChange={(e) => updateFixedCrewManifestPlan({ crewGroup: e.target.value })}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
+                            >
+                                <option value="">Select crew</option>
+                                {fixedCrewManifestPlan.crewGroup && !fixedCrewGroups.includes(fixedCrewManifestPlan.crewGroup) && (
+                                    <option value={fixedCrewManifestPlan.crewGroup}>{fixedCrewManifestPlan.crewGroup}</option>
+                                )}
+                                {fixedCrewGroups.map(crewGroup => (
+                                    <option key={crewGroup} value={crewGroup}>{crewGroup}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">PIC Qualification</label>
+                            <select
+                                value={fixedCrewManifestPlan.picQualification || fixedCrewPicLabel}
+                                onChange={(e) => updateFixedCrewManifestPlan({ picQualification: e.target.value })}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
+                            >
+                                {fixedCrewQualificationOptions.length === 0 && <option value="PIC">PIC</option>}
+                                {fixedCrewManifestPlan.picQualification && !fixedCrewQualificationOptions.some(qualification => (qualification.code || qualification.name) === fixedCrewManifestPlan.picQualification) && (
+                                    <option value={fixedCrewManifestPlan.picQualification}>{fixedCrewManifestPlan.picQualification}</option>
+                                )}
+                                {fixedCrewQualificationOptions.map(qualification => {
+                                    const label = qualification.code || qualification.name;
+                                    return <option key={qualification.id} value={label}>{label}</option>;
+                                })}
+                            </select>
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Manifest Status</label>
+                            <select
+                                value={normaliseFixedCrewManifestPlanStatus(fixedCrewManifestPlan.status)}
+                                onChange={(e) => updateFixedCrewManifestPlan({ status: normaliseFixedCrewManifestPlanStatus(e.target.value) })}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
+                            >
+                                <option value="pending">Pending</option>
+                                <option value="complete">Complete</option>
+                                <option value="partial">Partial</option>
+                                <option value="swapped">Swapped</option>
+                                <option value="invalid">Invalid</option>
+                            </select>
+                        </div>
+                        <DetailCard
+                            label="Required Crew"
+                            value={fixedCrewManifestReadiness.requiredCrewCount}
+                        />
+                        <DetailCard
+                            label="PIC Configured"
+                            value={fixedCrewManifestReadiness.picQualificationConfigured ? 'Yes' : 'No'}
+                        />
+                        <DetailCard
+                            label="Crew Event"
+                            value={fixedCrewManifestReadiness.isCrewedEvent ? 'Flight/sim' : 'No'}
+                        />
+                        <DetailCard
+                            className="md:col-span-2 lg:col-span-3"
+                            label="Required Roles"
+                            value={formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}
+                        />
+                        <div className="bg-gray-700/50 p-1 rounded-lg md:col-span-2 lg:col-span-3">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Swap / Manifest Notes</label>
+                            <textarea
+                                value={fixedCrewManifestPlan.swapNotes || ''}
+                                onChange={(e) => updateFixedCrewManifestPlan({ swapNotes: e.target.value })}
+                                rows={2}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-[10px]"
+                                placeholder="Optional notes for crew swaps or manual manifest decisions"
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
+                        <DetailCard
+                            label="Status"
+                            value={fixedCrewManifestPlan.crewGroup || fixedCrewManifestPlan.status || fixedCrewManifestPlan.swapNotes
+                                ? formatFixedCrewManifestPlanStatus(fixedCrewManifestPlan.status)
+                                : formatFixedCrewManifestStatus(fixedCrewManifestReadiness.status)}
+                        />
+                        <DetailCard
+                            label="Assigned Crew"
+                            value={fixedCrewManifestPlan.crewGroup ? `CREW ${fixedCrewManifestPlan.crewGroup}` : 'Not assigned'}
+                        />
+                        <DetailCard
+                            label="PIC Qualification"
+                            value={fixedCrewManifestPlan.picQualification || fixedCrewPicLabel}
+                        />
+                        <DetailCard
+                            label="PIC Configured"
+                            value={fixedCrewManifestReadiness.picQualificationConfigured ? 'Yes' : 'No'}
+                        />
+                        <DetailCard
+                            label="Required Crew"
+                            value={fixedCrewManifestReadiness.requiredCrewCount}
+                        />
+                        <DetailCard
+                            label="Crew Event"
+                            value={fixedCrewManifestReadiness.isCrewedEvent ? 'Flight/sim' : 'No'}
+                        />
+                        <DetailCard
+                            className="md:col-span-2 lg:col-span-3"
+                            label="Required Roles"
+                            value={formatCrewRequirementSummary(currentItem.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}
+                        />
+                        <DetailCard
+                            className="md:col-span-2 lg:col-span-3"
+                            label="Swap / Manifest Notes"
+                            value={fixedCrewManifestPlan.swapNotes || 'None'}
+                        />
+                    </div>
+                )}
             </fieldset>
         )}
            <fieldset className="p-4 border border-gray-700 rounded-lg">
@@ -1881,6 +2004,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 	                    aircraftConfigurations={aircraftConfigurations}
                         aircraftCrewComposition={aircraftCrewComposition}
                         crewPositionTerminology={crewPositionTerminology}
+                        instructorsData={instructorsData}
+                        activeUnitCode={activeUnitCode}
 	                    isAirCombatModel={isAirCombatModel}
                         operationalModel={operationalModel}
                         staffQualificationCatalogue={staffQualificationCatalogue}
