@@ -8,7 +8,25 @@ const db = prisma as any;
 
 const REQUIRED_COLUMNS = [
   'Event description',
+  'Type',
 ];
+
+const UPLOAD_TYPE_LABELS = new Set([
+  'flight',
+  'flying',
+  'ftd',
+  'sim',
+  'simulator',
+  'academics',
+  'academic',
+  'ground',
+  'ground school',
+  'cpt',
+  'tut',
+  'tutorial',
+  'brief',
+  'mass brief',
+]);
 
 const getValue = (row: Record<string, any>, aliases: string[]): any => {
   for (const alias of aliases) {
@@ -46,11 +64,31 @@ const getList = (row: Record<string, any>, aliases: string[]): string[] => {
 
 const normaliseType = (value: string): string => {
   const cleanValue = value.trim().toLowerCase();
-  if (cleanValue === 'flight') return 'Flight';
-  if (cleanValue === 'ftd') return 'FTD';
+  if (cleanValue === 'flight' || cleanValue === 'flying') return 'Flight';
+  if (cleanValue === 'ftd' || cleanValue === 'sim' || cleanValue === 'simulator') return 'FTD';
   if (cleanValue === 'academics' || cleanValue === 'academic') return 'Academics';
-  if (cleanValue === 'ground' || cleanValue === 'ground school' || cleanValue === 'cpt') return 'Ground School';
+  if (cleanValue === 'ground' || cleanValue === 'ground school' || cleanValue === 'cpt' || cleanValue === 'tut' || cleanValue === 'tutorial' || cleanValue === 'brief' || cleanValue === 'mass brief') return 'Ground School';
   return value || 'Ground School';
+};
+
+const getRequiredUploadDataErrors = (row: Record<string, any>): string[] => {
+  const errors: string[] = [];
+  const missingColumns = REQUIRED_COLUMNS.filter(column => !getString(row, [column]));
+  if (missingColumns.length > 0) errors.push(`Missing required fields: ${missingColumns.join(', ')}`);
+
+  const typeValue = getString(row, ['Type']);
+  if (typeValue && !UPLOAD_TYPE_LABELS.has(typeValue.trim().toLowerCase())) {
+    errors.push(`Type must be one of: Flight, FTD, Academics, Ground School, CPT`);
+  }
+
+  const flightOrSimHours = getNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
+  const totalEventHours = getNumber(row, ['Total Event Hours', 'totalEventHours']);
+  const duration = flightOrSimHours ?? totalEventHours;
+  if (!(Number.isFinite(duration) && Number(duration) > 0)) {
+    errors.push('Missing required duration: enter a positive value in Flight or Sim Hours or Total Event Hours');
+  }
+
+  return errors;
 };
 
 const normaliseDayNight = (value: string): 'Day' | 'Night' | 'Day/Night' => {
@@ -172,9 +210,9 @@ export async function POST(request: NextRequest) {
         if (!rowHasContent(row)) continue;
         contentRows += 1;
 
-        const missingColumns = REQUIRED_COLUMNS.filter(column => !getString(row, [column]));
-        if (missingColumns.length > 0) {
-          preflightErrors.push({ row: rowNumber, error: `Missing required fields: ${missingColumns.join(', ')}` });
+        const requiredDataErrors = getRequiredUploadDataErrors(row);
+        if (requiredDataErrors.length > 0) {
+          requiredDataErrors.forEach(error => preflightErrors.push({ row: rowNumber, error }));
           continue;
         }
 
@@ -251,9 +289,9 @@ export async function POST(request: NextRequest) {
       const rowNumber = index + 2;
       if (!rowHasContent(row)) continue;
 
-      const missingColumns = REQUIRED_COLUMNS.filter(column => !getString(row, [column]));
-      if (missingColumns.length > 0) {
-        errors.push({ row: rowNumber, error: `Missing required fields: ${missingColumns.join(', ')}` });
+      const requiredDataErrors = getRequiredUploadDataErrors(row);
+      if (requiredDataErrors.length > 0) {
+        requiredDataErrors.forEach(error => errors.push({ row: rowNumber, error }));
         skipped += 1;
         continue;
       }

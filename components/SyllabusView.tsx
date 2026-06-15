@@ -2087,7 +2087,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     {isTrainingPackagesTab ? ' These rows will be saved to Training Packages, not Master LMP.' : ''}
                 </p>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
-                    Preferred sheet name: <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong>. If that sheet is not present, the first worksheet is used. Mandatory column: Event description. Optional columns: Code, Course, Type, Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Event Details - Sortie, Total Event Hours, Flight or Sim Hours, Method/s of Delivery, Method/s of Assessment, Resources Required (physical), Resources Required (Human), Resource Number, CONFIG. Blank Code cells are generated from the selected {activeCollectionNoun}.
+                    Preferred sheet name: <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong>. If that sheet is not present, the first worksheet is used. Mandatory data: Event description, Type, and a positive duration in either Flight or Sim Hours or Total Event Hours. Optional columns: Code, Course, Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Event Details - Sortie, Method/s of Delivery, Method/s of Assessment, Resources Required (physical), Resources Required (Human), Resource Number, CONFIG. Blank Code cells are generated from the selected {activeCollectionNoun}.
                 </p>
 
                 {isTrainingPackagesTab && !uploadResult && (

@@ -5627,7 +5627,25 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
 
 const BULK_UPLOAD_REQUIRED_COLUMNS = [
   'Event description',
+  'Type',
 ];
+
+const BULK_UPLOAD_TYPE_LABELS = new Set([
+  'flight',
+  'flying',
+  'ftd',
+  'sim',
+  'simulator',
+  'academics',
+  'academic',
+  'ground',
+  'ground school',
+  'cpt',
+  'tut',
+  'tutorial',
+  'brief',
+  'mass brief',
+]);
 
 function getUploadValue(row, aliases) {
   for (const alias of aliases) {
@@ -5665,11 +5683,31 @@ function getUploadList(row, aliases) {
 
 function normaliseUploadType(value) {
   const cleanValue = String(value || '').trim().toLowerCase();
-  if (cleanValue === 'flight') return 'Flight';
-  if (cleanValue === 'ftd') return 'FTD';
+  if (cleanValue === 'flight' || cleanValue === 'flying') return 'Flight';
+  if (cleanValue === 'ftd' || cleanValue === 'sim' || cleanValue === 'simulator') return 'FTD';
   if (cleanValue === 'academics' || cleanValue === 'academic') return 'Academics';
-  if (cleanValue === 'ground' || cleanValue === 'ground school' || cleanValue === 'cpt') return 'Ground School';
+  if (cleanValue === 'ground' || cleanValue === 'ground school' || cleanValue === 'cpt' || cleanValue === 'tut' || cleanValue === 'tutorial' || cleanValue === 'brief' || cleanValue === 'mass brief') return 'Ground School';
   return value || 'Ground School';
+}
+
+function getRequiredUploadDataErrors(row) {
+  const errors = [];
+  const missingColumns = BULK_UPLOAD_REQUIRED_COLUMNS.filter(column => !getUploadString(row, [column]));
+  if (missingColumns.length > 0) errors.push(`Missing required fields: ${missingColumns.join(', ')}`);
+
+  const typeValue = getUploadString(row, ['Type']);
+  if (typeValue && !BULK_UPLOAD_TYPE_LABELS.has(typeValue.trim().toLowerCase())) {
+    errors.push('Type must be one of: Flight, FTD, Academics, Ground School, CPT');
+  }
+
+  const flightOrSimHours = getUploadNumber(row, ['Flight or Sim Hours', 'flightOrSimHours']);
+  const totalEventHours = getUploadNumber(row, ['Total Event Hours', 'totalEventHours']);
+  const duration = flightOrSimHours ?? totalEventHours;
+  if (!(Number.isFinite(duration) && Number(duration) > 0)) {
+    errors.push('Missing required duration: enter a positive value in Flight or Sim Hours or Total Event Hours');
+  }
+
+  return errors;
 }
 
 function normaliseUploadDayNight(value) {
@@ -5770,9 +5808,9 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
         if (!uploadRowHasContent(row)) continue;
         contentRows += 1;
 
-        const missingColumns = BULK_UPLOAD_REQUIRED_COLUMNS.filter(column => !getUploadString(row, [column]));
-        if (missingColumns.length > 0) {
-          preflightErrors.push({ row: rowNumber, error: `Missing required fields: ${missingColumns.join(', ')}` });
+        const requiredDataErrors = getRequiredUploadDataErrors(row);
+        if (requiredDataErrors.length > 0) {
+          requiredDataErrors.forEach(error => preflightErrors.push({ row: rowNumber, error }));
           continue;
         }
 
@@ -5844,9 +5882,9 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
       const rowNumber = index + 2;
       if (!uploadRowHasContent(row)) continue;
 
-      const missingColumns = BULK_UPLOAD_REQUIRED_COLUMNS.filter(column => !getUploadString(row, [column]));
-      if (missingColumns.length > 0) {
-        errors.push({ row: rowNumber, error: `Missing required fields: ${missingColumns.join(', ')}` });
+      const requiredDataErrors = getRequiredUploadDataErrors(row);
+      if (requiredDataErrors.length > 0) {
+        requiredDataErrors.forEach(error => errors.push({ row: rowNumber, error }));
         skipped += 1;
         continue;
       }
