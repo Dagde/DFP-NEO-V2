@@ -417,8 +417,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
   // ────────────────────────────────────────────────────────────────────────────
 
-  const allPermissions = useMemo(() => ['Trainee', 'Staff', 'Ops', 'Scheduler', 'Course Supervisor', 'Admin', 'Super Admin'], []);
-
   const { primaryTrainees, secondaryTrainees } = useMemo(() => {
     if (!traineesData) return { primaryTrainees: [], secondaryTrainees: [] };
     const primary = traineesData.filter(t => {
@@ -616,7 +614,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   const handleEdit = () => setIsEditing(true);
   const handleCancel = () => { if (isCreating) onClose(); else { resetState(); setIsEditing(false); } };
-  const handlePermissionChange = (permission: string, isChecked: boolean) => setPermissions(prev => isChecked ? [...prev, permission] : prev.filter(p => p !== permission));
   const handleQualificationChange = (qualificationId: string, isChecked: boolean) => {
     setAssignedQualifications(prev => (
       isChecked
@@ -1661,66 +1658,51 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
                     </div>
-                    {/* Role checkboxes */}
+                    {/* Qualification checkboxes */}
                     <div className="bg-gray-700/30 rounded p-3">
-                      <label className="block text-xs font-medium text-gray-400 mb-2">Roles & Qualifications</label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[['isCommandingOfficer', 'CO', isCommandingOfficer, setIsCommandingOfficer],
-                          ['isCFI', 'CFI', isCFI, setIsCFI],
-                          ['isExecutive', 'Executive', isExecutive, setIsExecutive],
-                          ['isFlyingSupervisor', 'Flying Supervisor', isFlyingSupervisor, setIsFlyingSupervisor],
-                          ['isTestingOfficer', 'Testing Officer', isTestingOfficer, setIsTestingOfficer],
-                          ['isIRE', 'IRE', isIRE, setIsIRE],
-                          ['isQFI', instructorLabel, isQFI, setIsQFI],
-                          ['isOFI', 'OFI', isOFI, setIsOFI],
-                          ['isDeputyFlightCommander', 'DFC', isDeputyFlightCommander, setIsDeputyFlightCommander],
-                          ['isContractor', 'Contractor', isContractor, setIsContractor],
-                          ['isAdminStaff', 'Admin Staff', isAdminStaff, setIsAdminStaff],
-                        ].map(([key, label, val, setter]: any) => (
-                          <label key={key} className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={val} onChange={e => setter(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">{label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="bg-gray-700/30 rounded p-3">
-                      <label className="block text-xs font-medium text-gray-400 mb-2">Configured Qualifications</label>
-                      {activeQualificationOptions.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {activeQualificationOptions.map(qualification => (
-                            <label key={qualification.id} className="flex items-center space-x-1 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={assignedQualifications.some(id => qualificationMatches(id, qualification))}
-                                onChange={e => handleQualificationChange(qualification.id, e.target.checked)}
-                                className="h-3 w-3 accent-emerald-500"
-                              />
-                              <span className="text-white text-xs truncate" title={qualification.name}>
-                                {qualification.code || qualification.name}
-                              </span>
+                      <label className="block text-xs font-medium text-gray-400 mb-2">Qualifications</label>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-4 gap-2">
+                          {[['isCommandingOfficer', 'CO', isCommandingOfficer, setIsCommandingOfficer],
+                            ['isCFI', 'CFI', isCFI, setIsCFI],
+                            ['isExecutive', 'Executive', isExecutive, setIsExecutive],
+                            ['isFlyingSupervisor', 'Flying Supervisor', isFlyingSupervisor, setIsFlyingSupervisor],
+                            ['isTestingOfficer', 'Testing Officer', isTestingOfficer, setIsTestingOfficer],
+                            ['isIRE', 'IRE', isIRE, setIsIRE],
+                            ['isQFI', instructorLabel, isQFI, setIsQFI],
+                            ['isOFI', 'OFI', isOFI, setIsOFI],
+                            ['isDeputyFlightCommander', 'DFC', isDeputyFlightCommander, setIsDeputyFlightCommander],
+                            ['isContractor', 'Contractor', isContractor, setIsContractor],
+                            ['isAdminStaff', 'Admin Staff', isAdminStaff, setIsAdminStaff],
+                          ].map(([key, label, val, setter]: any) => (
+                            <label key={key} className="flex items-center space-x-1 cursor-pointer">
+                              <input type="checkbox" checked={val} onChange={e => setter(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                              <span className="text-white text-xs">{label}</span>
                             </label>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-xs text-gray-500">No qualifications configured for this operational model and role.</p>
-                      )}
-                    </div>
-                    {/* Permissions */}
-                    <div className="bg-gray-700/30 rounded p-3">
-                      <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {allPermissions.map(perm => (
-                          <label key={perm} className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={permissions.includes(perm)} onChange={e => handlePermissionChange(perm, e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">{perm}</span>
-                          </label>
-                        ))}
+                        {activeQualificationOptions.length > 0 && (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border-t border-gray-600/60 pt-3">
+                            {activeQualificationOptions.map(qualification => (
+                              <label key={qualification.id} className="flex items-center space-x-1 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={assignedQualifications.some(id => qualificationMatches(id, qualification))}
+                                  onChange={e => handleQualificationChange(qualification.id, e.target.checked)}
+                                  className="h-3 w-3 accent-emerald-500"
+                                />
+                                <span className="text-white text-xs truncate" title={qualification.name}>
+                                  {qualification.code || qualification.name}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  /* VIEW MODE: avatar + data grid + permissions panel */
+                  /* VIEW MODE: avatar + data grid + qualifications panel */
                   <div className="flex gap-4">
                     {/* Profile photo — static display only in view mode */}
                     <div className="flex-shrink-0">

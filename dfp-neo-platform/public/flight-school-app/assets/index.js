@@ -35520,7 +35520,6 @@ const InstructorProfileFlyout = ({
     setPhotoError(null);
     if (photoInputRef.current) photoInputRef.current.value = "";
   };
-  const allPermissions = reactExports.useMemo(() => ["Trainee", "Staff", "Ops", "Scheduler", "Course Supervisor", "Admin", "Super Admin"], []);
   const { primaryTrainees, secondaryTrainees } = reactExports.useMemo(() => {
     if (!traineesData) return { primaryTrainees: [], secondaryTrainees: [] };
     const primary = traineesData.filter((t) => {
@@ -35699,7 +35698,6 @@ const InstructorProfileFlyout = ({
       setIsEditing(false);
     }
   };
-  const handlePermissionChange = (permission, isChecked) => setPermissions((prev) => isChecked ? [...prev, permission] : prev.filter((p) => p !== permission));
   const handleQualificationChange = (qualificationId, isChecked) => {
     setAssignedQualifications((prev) => isChecked ? Array.from(/* @__PURE__ */ new Set([...prev, qualificationId])) : prev.filter((id) => id !== qualificationId));
   };
@@ -36710,48 +36708,40 @@ const InstructorProfileFlyout = ({
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-2", children: "Roles & Qualifications" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-4 gap-2", children: [
-                ["isCommandingOfficer", "CO", isCommandingOfficer, setIsCommandingOfficer],
-                ["isCFI", "CFI", isCFI, setIsCFI],
-                ["isExecutive", "Executive", isExecutive, setIsExecutive],
-                ["isFlyingSupervisor", "Flying Supervisor", isFlyingSupervisor, setIsFlyingSupervisor],
-                ["isTestingOfficer", "Testing Officer", isTestingOfficer, setIsTestingOfficer],
-                ["isIRE", "IRE", isIRE, setIsIRE],
-                ["isQFI", instructorLabel, isQFI, setIsQFI],
-                ["isOFI", "OFI", isOFI, setIsOFI],
-                ["isDeputyFlightCommander", "DFC", isDeputyFlightCommander, setIsDeputyFlightCommander],
-                ["isContractor", "Contractor", isContractor, setIsContractor],
-                ["isAdminStaff", "Admin Staff", isAdminStaff, setIsAdminStaff]
-              ].map(([key, label, val, setter]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: val, onChange: (e) => setter(e.target.checked), className: "h-3 w-3 accent-sky-500" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs", children: label })
-              ] }, key)) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-2", children: "Configured Qualifications" }),
-              activeQualificationOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-2", children: activeQualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "checkbox",
-                    checked: assignedQualifications.some((id) => qualificationMatches(id, qualification)),
-                    onChange: (e) => handleQualificationChange(qualification.id, e.target.checked),
-                    className: "h-3 w-3 accent-emerald-500"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs truncate", title: qualification.name, children: qualification.code || qualification.name })
-              ] }, qualification.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "No qualifications configured for this operational model and role." })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-2", children: "Permissions" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-4 gap-2", children: allPermissions.map((perm) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: permissions.includes(perm), onChange: (e) => handlePermissionChange(perm, e.target.checked), className: "h-3 w-3 accent-sky-500" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs", children: perm })
-              ] }, perm)) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-2", children: "Qualifications" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-4 gap-2", children: [
+                  ["isCommandingOfficer", "CO", isCommandingOfficer, setIsCommandingOfficer],
+                  ["isCFI", "CFI", isCFI, setIsCFI],
+                  ["isExecutive", "Executive", isExecutive, setIsExecutive],
+                  ["isFlyingSupervisor", "Flying Supervisor", isFlyingSupervisor, setIsFlyingSupervisor],
+                  ["isTestingOfficer", "Testing Officer", isTestingOfficer, setIsTestingOfficer],
+                  ["isIRE", "IRE", isIRE, setIsIRE],
+                  ["isQFI", instructorLabel, isQFI, setIsQFI],
+                  ["isOFI", "OFI", isOFI, setIsOFI],
+                  ["isDeputyFlightCommander", "DFC", isDeputyFlightCommander, setIsDeputyFlightCommander],
+                  ["isContractor", "Contractor", isContractor, setIsContractor],
+                  ["isAdminStaff", "Admin Staff", isAdminStaff, setIsAdminStaff]
+                ].map(([key, label, val, setter]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: val, onChange: (e) => setter(e.target.checked), className: "h-3 w-3 accent-sky-500" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs", children: label })
+                ] }, key)) }),
+                activeQualificationOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-2 border-t border-gray-600/60 pt-3", children: activeQualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked: assignedQualifications.some((id) => qualificationMatches(id, qualification)),
+                      onChange: (e) => handleQualificationChange(qualification.id, e.target.checked),
+                      className: "h-3 w-3 accent-emerald-500"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs truncate", title: qualification.name, children: qualification.code || qualification.name })
+                ] }, qualification.id)) })
+              ] })
             ] })
           ] }) : (
-            /* VIEW MODE: avatar + data grid + permissions panel */
+            /* VIEW MODE: avatar + data grid + qualifications panel */
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative w-20 h-24 bg-gray-700 rounded border border-gray-500 flex items-center justify-center overflow-hidden", children: photoUrl ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: photoUrl, alt: instructor.name, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-bold text-gray-300 leading-none select-none", children: instructor.name.split(" ").filter((w) => /^[A-Z]/.test(w)).slice(-2).map((w) => w[0]).join("") }),
