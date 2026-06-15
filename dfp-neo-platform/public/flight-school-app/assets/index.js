@@ -40000,6 +40000,11 @@ const SyllabusView = ({
       `${targetPackageCode}-${item.code}`.replace(/[^A-Z0-9-]/gi, "").slice(0, 48)
     ]));
     const remapList = (values) => (values || []).map((value) => codeMap.get(value) || value);
+    const prefixImportedEventName = (value) => {
+      const cleanName = String(value || "").trim();
+      if (!cleanName) return activeUnitNormalised;
+      return cleanName.toUpperCase().startsWith(`${activeUnitNormalised} `) ? cleanName : `${activeUnitNormalised} ${cleanName}`;
+    };
     setIsCopyingPackage(true);
     try {
       const savedItems = [];
@@ -40010,6 +40015,7 @@ const SyllabusView = ({
           code: codeMap.get(sourceItem.code) || `${targetPackageCode}-${sourceItem.code}`,
           courses: [targetPackageCode],
           module: source.title,
+          eventDescription: prefixImportedEventName(sourceItem.eventDescription || sourceItem.code),
           location: activeLocationNormalised,
           unit: activeUnitNormalised,
           lmpType: "Staff CAT",

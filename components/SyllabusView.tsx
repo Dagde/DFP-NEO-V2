@@ -1484,6 +1484,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           `${targetPackageCode}-${item.code}`.replace(/[^A-Z0-9-]/gi, '').slice(0, 48),
       ]));
       const remapList = (values?: string[]) => (values || []).map(value => codeMap.get(value) || value);
+      const prefixImportedEventName = (value?: string | null): string => {
+          const cleanName = String(value || '').trim();
+          if (!cleanName) return activeUnitNormalised;
+          return cleanName.toUpperCase().startsWith(`${activeUnitNormalised} `)
+              ? cleanName
+              : `${activeUnitNormalised} ${cleanName}`;
+      };
 
       setIsCopyingPackage(true);
       try {
@@ -1495,6 +1502,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                   code: codeMap.get(sourceItem.code) || `${targetPackageCode}-${sourceItem.code}`,
                   courses: [targetPackageCode],
                   module: source.title,
+                  eventDescription: prefixImportedEventName(sourceItem.eventDescription || sourceItem.code),
                   location: activeLocationNormalised,
                   unit: activeUnitNormalised,
                   lmpType: 'Staff CAT',
