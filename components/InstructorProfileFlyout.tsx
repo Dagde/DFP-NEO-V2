@@ -1768,18 +1768,19 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         {/* Row 3 */}
                         <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
                         <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
-                        <div className="col-span-6"><span className="text-gray-400 block text-[10px]">Qualifications</span><span className="text-emerald-100 font-medium">{assignedQualificationLabels.join(', ') || '[None]'}</span></div>
                       </div>
                     </div>
 
-                    {/* Permissions panel */}
-                    <div className="flex-shrink-0 w-36">
+                    {/* Qualifications panel */}
+                    <div className="flex-shrink-0 w-44">
                       <div className={card3d + " p-2 h-full"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
+                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Qualifications</div>
                         <div className="space-y-1">
-                          {(instructor.permissions || []).length > 0
-                            ? (instructor.permissions || []).map(p => (
-                                <div key={p} className="text-white text-[10px]">• {p}</div>
+                          {assignedQualificationLabels.length > 0
+                            ? assignedQualificationLabels.map(label => (
+                                <div key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold">
+                                  {label}
+                                </div>
                               ))
                             : <div className="text-gray-500 text-[10px] italic">None</div>
                           }

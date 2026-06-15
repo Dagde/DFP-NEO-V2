@@ -36820,19 +36820,12 @@ const InstructorProfileFlyout = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Email" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.email || "N/A" })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-6", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Qualifications" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-emerald-100 font-medium", children: assignedQualificationLabels.join(", ") || "[None]" })
                   ] })
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 w-36", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2 h-full", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Permissions" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: (instructor.permissions || []).length > 0 ? (instructor.permissions || []).map((p) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-white text-[10px]", children: [
-                  "• ",
-                  p
-                ] }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 w-44", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2 h-full", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Qualifications" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
               ] }) })
             ] })
           ) }),
