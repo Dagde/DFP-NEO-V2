@@ -38757,7 +38757,7 @@ const decodeManifestPlan = (value) => {
       crewGroup: String(parsed?.crewGroup || "").trim() || void 0,
       picQualification: String(parsed?.picQualification || "").trim() || void 0,
       status: normaliseFixedCrewManifestPlanStatus(parsed?.status),
-      swapNotes: String(parsed?.swapNotes || "").trim() || void 0
+      swapNotes: typeof parsed?.swapNotes === "string" ? parsed.swapNotes : void 0
     };
   } catch (_error) {
     return {};
@@ -38782,11 +38782,11 @@ const withFixedCrewManifestPlan = (item, plan) => {
     crewGroup: String(plan.crewGroup || "").trim() || void 0,
     picQualification: String(plan.picQualification || "").trim() || void 0,
     status: normaliseFixedCrewManifestPlanStatus(plan.status),
-    swapNotes: String(plan.swapNotes || "").trim() || void 0
+    swapNotes: typeof plan.swapNotes === "string" ? plan.swapNotes : void 0
   };
   const visibleNotes = stripFixedCrewManifestNote(item.notes);
   const hasManifestData = Boolean(
-    cleanPlan.crewGroup || cleanPlan.picQualification || cleanPlan.swapNotes || cleanPlan.status !== "pending"
+    cleanPlan.crewGroup || cleanPlan.picQualification || String(cleanPlan.swapNotes || "").trim() || cleanPlan.status !== "pending"
   );
   const manifestLine = hasManifestData ? `[Fixed Crew Manifest: ${encodeManifestPlan(cleanPlan)}]` : "";
   const notes = [visibleNotes, manifestLine].filter(Boolean).join("\n").trim();
