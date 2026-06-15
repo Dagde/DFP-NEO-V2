@@ -1479,30 +1479,51 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           suffix += 1;
       }
       const sortedSourceItems = [...source.items].sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }));
-      const codeMap = new Map(sortedSourceItems.map(item => [
-          item.code,
-          `${targetPackageCode}-${item.code}`.replace(/[^A-Z0-9-]/gi, '').slice(0, 48),
-      ]));
-      const remapList = (values?: string[]) => (values || []).map(value => codeMap.get(value) || value);
       const prefixImportedEventName = (value?: string | null): string => {
-          const cleanName = String(value || '').trim();
+          const cleanName = String(value || '').replace(/\s+/g, ' ').trim();
           if (!cleanName) return activeUnitNormalised;
           return cleanName.toUpperCase().startsWith(`${activeUnitNormalised} `)
               ? cleanName
               : `${activeUnitNormalised} ${cleanName}`;
       };
+      const existingCodes = new Set(
+          syllabusDetails
+              .map(item => String(item.code || item.id || '').trim().toUpperCase())
+              .filter(Boolean)
+      );
+      const copiedCodes = new Set<string>();
+      const getUniqueCopiedEventCode = (value?: string | null): string => {
+          const baseCode = prefixImportedEventName(value || 'Event');
+          let candidate = baseCode;
+          let duplicateSuffix = 2;
+          while (existingCodes.has(candidate.toUpperCase()) || copiedCodes.has(candidate.toUpperCase())) {
+              candidate = `${baseCode} ${duplicateSuffix}`;
+              duplicateSuffix += 1;
+          }
+          copiedCodes.add(candidate.toUpperCase());
+          return candidate;
+      };
+      const codeMap = new Map<string, string>();
+      sortedSourceItems.forEach(item => {
+          const sourceCode = String(item.code || '').trim();
+          if (sourceCode) {
+              codeMap.set(sourceCode, getUniqueCopiedEventCode(sourceCode));
+          }
+      });
+      const remapList = (values?: string[]) => (values || []).map(value => codeMap.get(String(value || '').trim()) || value);
 
       setIsCopyingPackage(true);
       try {
           const savedItems: SyllabusItemDetail[] = [];
           for (const sourceItem of sortedSourceItems) {
               const { id: _id, completedAt: _completedAt, masterEventId: _masterEventId, lmpSource: _lmpSource, ...copyBase } = sourceItem as any;
+              const copiedEventCode = codeMap.get(String(sourceItem.code || '').trim()) || getUniqueCopiedEventCode(sourceItem.code || sourceItem.eventDescription);
               const copiedItem: Partial<SyllabusItemDetail> = {
                   ...copyBase,
-                  code: codeMap.get(sourceItem.code) || `${targetPackageCode}-${sourceItem.code}`,
+                  code: copiedEventCode,
                   courses: [targetPackageCode],
                   module: source.title,
-                  eventDescription: prefixImportedEventName(sourceItem.eventDescription || sourceItem.code),
+                  eventDescription: copiedEventCode,
                   location: activeLocationNormalised,
                   unit: activeUnitNormalised,
                   lmpType: 'Staff CAT',
