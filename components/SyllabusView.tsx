@@ -885,8 +885,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const activeCollectionSelectLabel = isTrainingPackagesTab ? 'Package:' : 'Course:';
   const activeOperationalModel = normaliseOperationalModel(operationalModel);
   const isAirCombatModel = activeOperationalModel === 'air_combat';
+  const isFixedCrewModel = activeOperationalModel === 'fixed_crew';
   const usesPackageTab = activeOperationalModel === 'air_combat' || activeOperationalModel === 'fixed_crew';
   const shouldScopeCreatedItemsToActiveUnit = isTrainingPackagesTab || activeOperationalModel !== 'flight_school';
+  const packageFoundationLabel = isFixedCrewModel ? 'Fixed Crew' : isAirCombatModel ? 'Air Combat' : 'Staff';
+  const packageFoundationDescription = isFixedCrewModel
+      ? 'Fixed Crew staff progression packages are scoped to the selected unit. They start as package shells until events are uploaded or added.'
+      : 'Air Combat staff training packages are scoped to the selected unit. They start as package shells until events are uploaded or added.';
   const availableTabs = useMemo(() => {
       const tabs: Array<{ id: LmpDetailsTab; label: string }> = [
           { id: 'master', label: 'Master LMP' },
@@ -1021,22 +1026,23 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   ), [filteredSyllabusDetails, selectedItem]);
 
   const activeTrainingAssignment = useMemo(() => {
-      if (!activeTrainingAssignmentItem || !selectedCourseType) return null;
+      if (!isAirCombatModel || !activeTrainingAssignmentItem || !selectedCourseType) return null;
       return getAirCombatAssignmentFromItem(
           { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
           activeLocationCode,
           activeUnitCode,
           currentUserName,
       );
-  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode, currentUserName, selectedCourseType]);
+  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
 
   const assignableAirCombatStaff = useMemo(() => {
+      if (!isAirCombatModel) return [];
       const targetUnit = String(activeUnitCode || '').trim().toUpperCase();
       return instructorsData
           .filter(staff => staff && staff.name && !staff.isAdminStaff)
           .filter(staff => !targetUnit || String(staff.unit || '').trim().toUpperCase() === targetUnit)
           .sort((a, b) => a.name.localeCompare(b.name));
-  }, [activeUnitCode, instructorsData]);
+  }, [activeUnitCode, instructorsData, isAirCombatModel]);
 
   const openAssignTraining = () => {
       if (!activeTrainingAssignment) return;
@@ -1834,7 +1840,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 </h2>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20 }}>
                     {isTrainingPackagesTab
-                        ? `Packages created here are assigned to ${activeLocationNormalised || 'the selected location'} / ${activeUnitNormalised || 'the selected unit'} and start with no events.`
+                        ? `${packageFoundationDescription} Destination: ${activeLocationNormalised || 'the selected location'} / ${activeUnitNormalised || 'the selected unit'}.`
                         : `A ${activeCollectionNoun} code will be auto-generated from the title. No event is created until you upload or add one.`}
                 </p>
 
@@ -1842,7 +1848,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     <div style={{ marginBottom: 16, padding: 10, border: '1px solid #374151', borderRadius: 8, backgroundColor: '#111827' }}>
                         {[
                             { id: 'blank' as const, label: 'Create blank package' },
-                            { id: 'copy' as const, label: 'Copy package from another unit' },
+                            { id: 'copy' as const, label: `Copy ${packageFoundationLabel} package from another unit` },
                         ].map(option => (
                             <label key={option.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: option.id === 'blank' ? 8 : 0, cursor: 'pointer' }}>
                                 <input
@@ -1878,7 +1884,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             ))}
                         </select>
                         <p style={{ fontSize: 10, color: '#6b7280', marginTop: 6 }}>
-                            The copied package will become a separate {activeUnitNormalised || 'unit'} package.
+                            The copied package will become a separate {packageFoundationLabel} package for {activeUnitNormalised || 'the selected unit'}.
                         </p>
                     </div>
                 )}
@@ -1894,7 +1900,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         value={newLMPName}
                         onChange={e => setNewLMPName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAddLMPSave()}
-                        placeholder={isTrainingPackagesTab ? 'e.g. Staff Category' : 'e.g. Basic Flying Course'}
+                        placeholder={isTrainingPackagesTab
+                            ? isFixedCrewModel ? 'e.g. Conversion Crew Package' : 'e.g. Staff Category'
+                            : 'e.g. Basic Flying Course'}
                         autoFocus
                         style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
                             borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13,
@@ -2099,7 +2107,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     Bulk Upload {isTrainingPackagesTab ? 'Training Package' : 'Master LMP'} Events
                 </h2>
                 <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4, lineHeight: 1.6 }}>
-                    Upload an Excel (.xlsx) file to populate <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> with {isTrainingPackagesTab ? 'training package' : 'Master LMP'} events.
+                    Upload an Excel (.xlsx) file to populate <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> with {isTrainingPackagesTab ? `${packageFoundationLabel} training package` : 'Master LMP'} events.
                     {isTrainingPackagesTab ? ' These rows will be saved to Training Packages, not Master LMP.' : ''}
                 </p>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
@@ -2141,7 +2149,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                                     type="text"
                                     value={newUploadPackageName}
                                     onChange={e => setNewUploadPackageName(e.target.value)}
-                                    placeholder="e.g. Air Combat"
+                                    placeholder={isFixedCrewModel ? 'e.g. Conversion Crew Package' : 'e.g. Air Combat'}
                                     style={{ width: '100%', fontSize: 13, color: '#f9fafb', backgroundColor: '#0f172a',
                                         border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}
                                 />

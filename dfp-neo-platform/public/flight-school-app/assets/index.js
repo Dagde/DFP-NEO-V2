@@ -39475,8 +39475,11 @@ const SyllabusView = ({
   const activeCollectionSelectLabel = isTrainingPackagesTab ? "Package:" : "Course:";
   const activeOperationalModel = normaliseOperationalModel(operationalModel2);
   const isAirCombatModel = activeOperationalModel === "air_combat";
+  const isFixedCrewModel = activeOperationalModel === "fixed_crew";
   const usesPackageTab = activeOperationalModel === "air_combat" || activeOperationalModel === "fixed_crew";
   const shouldScopeCreatedItemsToActiveUnit = isTrainingPackagesTab || activeOperationalModel !== "flight_school";
+  const packageFoundationLabel = isFixedCrewModel ? "Fixed Crew" : isAirCombatModel ? "Air Combat" : "Staff";
+  const packageFoundationDescription = isFixedCrewModel ? "Fixed Crew staff progression packages are scoped to the selected unit. They start as package shells until events are uploaded or added." : "Air Combat staff training packages are scoped to the selected unit. They start as package shells until events are uploaded or added.";
   const availableTabs = reactExports.useMemo(() => {
     const tabs = [
       { id: "master", label: "Master LMP" }
@@ -39580,18 +39583,19 @@ const SyllabusView = ({
   }, [activeTab, syllabusDetails, selectedCourseType]);
   const activeTrainingAssignmentItem = reactExports.useMemo(() => filteredSyllabusDetails[0] || selectedItem || null, [filteredSyllabusDetails, selectedItem]);
   const activeTrainingAssignment = reactExports.useMemo(() => {
-    if (!activeTrainingAssignmentItem || !selectedCourseType) return null;
+    if (!isAirCombatModel || !activeTrainingAssignmentItem || !selectedCourseType) return null;
     return getAirCombatAssignmentFromItem(
       { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
       activeLocationCode,
       activeUnitCode,
       currentUserName
     );
-  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode, currentUserName, selectedCourseType]);
+  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
   const assignableAirCombatStaff = reactExports.useMemo(() => {
+    if (!isAirCombatModel) return [];
     const targetUnit = String(activeUnitCode || "").trim().toUpperCase();
     return instructorsData.filter((staff) => staff && staff.name && !staff.isAdminStaff).filter((staff) => !targetUnit || String(staff.unit || "").trim().toUpperCase() === targetUnit).sort((a, b) => a.name.localeCompare(b.name));
-  }, [activeUnitCode, instructorsData]);
+  }, [activeUnitCode, instructorsData, isAirCombatModel]);
   const openAssignTraining = () => {
     if (!activeTrainingAssignment) return;
     setAssignTrainingSelection(new Set(
@@ -40335,10 +40339,10 @@ const SyllabusView = ({
                 "Add ",
                 isTrainingPackagesTab ? "Package" : "Course"
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20 }, children: isTrainingPackagesTab ? `Packages created here are assigned to ${activeLocationNormalised || "the selected location"} / ${activeUnitNormalised || "the selected unit"} and start with no events.` : `A ${activeCollectionNoun} code will be auto-generated from the title. No event is created until you upload or add one.` }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20 }, children: isTrainingPackagesTab ? `${packageFoundationDescription} Destination: ${activeLocationNormalised || "the selected location"} / ${activeUnitNormalised || "the selected unit"}.` : `A ${activeCollectionNoun} code will be auto-generated from the title. No event is created until you upload or add one.` }),
               isTrainingPackagesTab && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginBottom: 16, padding: 10, border: "1px solid #374151", borderRadius: 8, backgroundColor: "#111827" }, children: [
                 { id: "blank", label: "Create blank package" },
-                { id: "copy", label: "Copy package from another unit" }
+                { id: "copy", label: `Copy ${packageFoundationLabel} package from another unit` }
               ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { style: { display: "flex", gap: 8, alignItems: "center", marginBottom: option.id === "blank" ? 8 : 0, cursor: "pointer" }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
@@ -40393,8 +40397,10 @@ const SyllabusView = ({
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 10, color: "#6b7280", marginTop: 6 }, children: [
                   "The copied package will become a separate ",
-                  activeUnitNormalised || "unit",
-                  " package."
+                  packageFoundationLabel,
+                  " package for ",
+                  activeUnitNormalised || "the selected unit",
+                  "."
                 ] })
               ] }),
               (!isTrainingPackagesTab || addPackageMode === "blank") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
@@ -40417,7 +40423,7 @@ const SyllabusView = ({
                     value: newLMPName,
                     onChange: (e) => setNewLMPName(e.target.value),
                     onKeyDown: (e) => e.key === "Enter" && handleAddLMPSave(),
-                    placeholder: isTrainingPackagesTab ? "e.g. Staff Category" : "e.g. Basic Flying Course",
+                    placeholder: isTrainingPackagesTab ? isFixedCrewModel ? "e.g. Conversion Crew Package" : "e.g. Staff Category" : "e.g. Basic Flying Course",
                     autoFocus: true,
                     style: {
                       width: "100%",
@@ -40750,7 +40756,7 @@ const SyllabusView = ({
                 "Upload an Excel (.xlsx) file to populate ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: getCourseTitle(selectedCourseType) }),
                 " with ",
-                isTrainingPackagesTab ? "training package" : "Master LMP",
+                isTrainingPackagesTab ? `${packageFoundationLabel} training package` : "Master LMP",
                 " events.",
                 isTrainingPackagesTab ? " These rows will be saved to Training Packages, not Master LMP." : ""
               ] }),
@@ -40800,7 +40806,7 @@ const SyllabusView = ({
                       type: "text",
                       value: newUploadPackageName,
                       onChange: (e) => setNewUploadPackageName(e.target.value),
-                      placeholder: "e.g. Air Combat",
+                      placeholder: isFixedCrewModel ? "e.g. Conversion Crew Package" : "e.g. Air Combat",
                       style: {
                         width: "100%",
                         fontSize: 13,
