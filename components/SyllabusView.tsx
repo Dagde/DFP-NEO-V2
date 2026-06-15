@@ -38,6 +38,7 @@ import {
     setAirCombatTrainingAssignment,
 } from '../utils/airCombatTraining';
 import { SYLLABUS_COURSE_SHELL_NOTE, isSyllabusCourseShell } from '../utils/syllabusCourseShell';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface SyllabusViewProps {
   syllabusDetails: SyllabusItemDetail[];
@@ -1838,7 +1839,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   return (
     <>
-    <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
+    <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden" onKeyDownCapture={stopEditableKeyPropagation}>
       {/* Header */}
       <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-start border-b border-gray-700 gap-4">
         <div>
