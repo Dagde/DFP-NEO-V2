@@ -45,6 +45,7 @@ import {
   type CrewPositionTerminologyEntry,
 } from '../utils/crewPositionTerminology';
 import {
+  DEFAULT_STAFF_QUALIFICATIONS,
   normaliseStaffQualificationCatalogue,
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
@@ -1478,11 +1479,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateCrewPositionTerminology(nextPositions, undefined, nextDeletedDefaultIds);
   };
 
-  const updateStaffQualificationCatalogue = (qualifications: StaffQualificationDefinition[]) => {
+  const defaultStaffQualificationIds = new Set(DEFAULT_STAFF_QUALIFICATIONS.qualifications.map((entry) => entry.id));
+
+  const updateStaffQualificationCatalogue = (
+    qualifications: StaffQualificationDefinition[],
+    deletedDefaultIds = staffQualificationCatalogue.deletedDefaultIds || [],
+  ) => {
     setRankTerminologyDirty(true);
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
-      staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications }),
+      staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications, deletedDefaultIds }),
     }));
   };
 
@@ -1516,7 +1522,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const removeStaffQualificationEntry = (entryId: string) => {
     const nextQualifications = staffQualificationCatalogue.qualifications.filter((entry) => entry.id !== entryId);
     if (nextQualifications.length === staffQualificationCatalogue.qualifications.length) return;
-    updateStaffQualificationCatalogue(nextQualifications);
+    const nextDeletedDefaultIds = defaultStaffQualificationIds.has(entryId)
+      ? Array.from(new Set([...(staffQualificationCatalogue.deletedDefaultIds || []), entryId]))
+      : staffQualificationCatalogue.deletedDefaultIds || [];
+    updateStaffQualificationCatalogue(nextQualifications, nextDeletedDefaultIds);
   };
 
   const updateTrainingReportTemplate = (

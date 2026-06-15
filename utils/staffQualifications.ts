@@ -16,16 +16,107 @@ export interface StaffQualificationDefinition {
 
 export interface StaffQualificationCatalogue {
   qualifications: StaffQualificationDefinition[];
+  deletedDefaultIds?: string[];
 }
+
+const ALL_OPERATIONAL_MODEL_CODES: OperationalModelCode[] = OPERATIONAL_MODEL_OPTIONS.map(option => option.value);
 
 export const DEFAULT_STAFF_QUALIFICATIONS: StaffQualificationCatalogue = {
   qualifications: [
+    {
+      id: 'admin-staff',
+      name: 'Admin Staff',
+      code: 'Admin Staff',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'cfi',
+      name: 'CFI',
+      code: 'CFI',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'co',
+      name: 'CO',
+      code: 'CO',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'contractor',
+      name: 'Contractor',
+      code: 'Contractor',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'dfc',
+      name: 'DFC',
+      code: 'DFC',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'executive',
+      name: 'Executive',
+      code: 'Executive',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'flying-supervisor',
+      name: 'Flying Supervisor',
+      code: 'Flying Supervisor',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'ire',
+      name: 'IRE',
+      code: 'IRE',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'ofi',
+      name: 'OFI',
+      code: 'OFI',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
     {
       id: 'pic',
       name: 'PIC',
       code: 'PIC',
       operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'air_mobility'],
       roleRestrictions: ['Pilot'],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'qfi',
+      name: 'QFI',
+      code: 'QFI',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: 'ACTIVE',
+    },
+    {
+      id: 'testing-officer',
+      name: 'Testing Officer',
+      code: 'Testing Officer',
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
       status: 'ACTIVE',
     },
     {
@@ -76,9 +167,13 @@ const normaliseQualification = (entry: any, index: number): StaffQualificationDe
   const name = String(entry?.name || entry?.label || entry?.code || '').trim();
   const code = String(entry?.code || entry?.abbreviation || name).trim();
   if (!name && !code) return null;
-  const displayName = name || code;
+  const id = String(entry?.id || makeQualificationId(code || name, index)).trim() || makeQualificationId(name || code, index);
+  const isLegacyPicLabel = id === 'pic'
+    && normaliseQualificationToken(code) === 'pic'
+    && normaliseQualificationToken(name) === 'pilotincommand';
+  const displayName = isLegacyPicLabel ? 'PIC' : name || code;
   return {
-    id: String(entry?.id || makeQualificationId(code || displayName, index)).trim() || makeQualificationId(displayName, index),
+    id,
     name: displayName,
     code: code || displayName,
     operationalModels: normaliseOperationalModels(entry?.operationalModels || entry?.models),
@@ -88,20 +183,21 @@ const normaliseQualification = (entry: any, index: number): StaffQualificationDe
 };
 
 export const normaliseStaffQualificationCatalogue = (source?: any): StaffQualificationCatalogue => {
-  const configured = Array.isArray(source?.qualifications)
-    ? source.qualifications
-    : DEFAULT_STAFF_QUALIFICATIONS.qualifications;
+  const deletedDefaultIds = normaliseStringList(source?.deletedDefaultIds);
+  const configured = Array.isArray(source?.qualifications) ? source.qualifications : [];
+  const defaultQualifications = DEFAULT_STAFF_QUALIFICATIONS.qualifications
+    .filter(entry => !deletedDefaultIds.includes(entry.id));
   const configuredDefinitions = configured
     .map(normaliseQualification)
     .filter((entry): entry is StaffQualificationDefinition => Boolean(entry));
   const byKey = new Map<string, StaffQualificationDefinition>();
-  configuredDefinitions.forEach((entry, index) => {
+  [...defaultQualifications, ...configuredDefinitions].forEach((entry, index) => {
     const normalised = normaliseQualification(entry, index);
     if (!normalised) return;
     const key = normaliseQualificationToken(normalised.id || normalised.code || normalised.name);
     byKey.set(key, normalised);
   });
-  return { qualifications: Array.from(byKey.values()) };
+  return { qualifications: Array.from(byKey.values()), deletedDefaultIds };
 };
 
 export const normaliseQualificationToken = (value: unknown): string => (

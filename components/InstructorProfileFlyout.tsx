@@ -34,6 +34,22 @@ import {
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
 
+type LegacyQualificationField = 'isCommandingOfficer' | 'isCFI' | 'isExecutive' | 'isFlyingSupervisor' | 'isTestingOfficer' | 'isIRE' | 'isQFI' | 'isOFI' | 'isDeputyFlightCommander' | 'isContractor' | 'isAdminStaff';
+
+const LEGACY_QUALIFICATION_FIELD_BY_ID: Record<string, LegacyQualificationField> = {
+  co: 'isCommandingOfficer',
+  cfi: 'isCFI',
+  executive: 'isExecutive',
+  'flying-supervisor': 'isFlyingSupervisor',
+  'testing-officer': 'isTestingOfficer',
+  ire: 'isIRE',
+  qfi: 'isQFI',
+  ofi: 'isOFI',
+  dfc: 'isDeputyFlightCommander',
+  contractor: 'isContractor',
+  'admin-staff': 'isAdminStaff',
+};
+
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
   onClose: () => void;
@@ -331,9 +347,16 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel)
       .sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, undefined, { sensitivity: 'base' }))
   ), [normalisedQualificationCatalogue, operationalModel]);
-  const getAssignedQualificationIds = useCallback((source: Instructor): string[] => (
-    normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue)
-  ), [normalisedQualificationCatalogue]);
+  const getAssignedQualificationIds = useCallback((source: Instructor): string[] => {
+    const assigned = normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue);
+    normalisedQualificationCatalogue.qualifications.forEach((qualification) => {
+      const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID[qualification.id];
+      if (legacyField && source[legacyField] === true && !assigned.includes(qualification.id)) {
+        assigned.push(qualification.id);
+      }
+    });
+    return assigned;
+  }, [normalisedQualificationCatalogue]);
   const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
   const [service, setService] = useState<'RAAF' | 'RAN' | 'ARA' | undefined>(instructor.service);
   const [category, setCategory] = useState<InstructorCategory>(instructor.category);
@@ -616,6 +639,18 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         ? Array.from(new Set([...prev, qualificationId]))
         : prev.filter(id => id !== qualificationId)
     ));
+    const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID[qualificationId];
+    if (legacyField === 'isCommandingOfficer') setIsCommandingOfficer(isChecked);
+    if (legacyField === 'isCFI') setIsCFI(isChecked);
+    if (legacyField === 'isExecutive') setIsExecutive(isChecked);
+    if (legacyField === 'isFlyingSupervisor') setIsFlyingSupervisor(isChecked);
+    if (legacyField === 'isTestingOfficer') setIsTestingOfficer(isChecked);
+    if (legacyField === 'isIRE') setIsIRE(isChecked);
+    if (legacyField === 'isQFI') setIsQFI(isChecked);
+    if (legacyField === 'isOFI') setIsOFI(isChecked);
+    if (legacyField === 'isDeputyFlightCommander') setIsDeputyFlightCommander(isChecked);
+    if (legacyField === 'isContractor') setIsContractor(isChecked);
+    if (legacyField === 'isAdminStaff') setIsAdminStaff(isChecked);
   };
   const handleExperienceChange = (section: keyof LogbookExperience, field: string | null, value: number) => {
     setPriorExperience(prev => field ? { ...prev, [section]: { ...(prev[section] as any), [field]: value } } : { ...prev, [section]: value });

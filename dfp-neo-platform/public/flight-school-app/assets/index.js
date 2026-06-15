@@ -2715,12 +2715,12 @@ const DEFAULT_CREW_POSITION_TERMINOLOGY = {
     { id: "crew", genericName: "Crew", label: "Crew", operationalModels: ["flight_school", "air_combat", "fixed_crew", "air_mobility"] }
   ]
 };
-const ALL_OPERATIONAL_MODEL_CODES = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
+const ALL_OPERATIONAL_MODEL_CODES$1 = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
 const makeCrewPositionId = (genericName, index) => {
   const slug = String(genericName || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || `crew-position-${index + 1}`;
 };
-const normaliseOperationalModelList = (source, fallback = ALL_OPERATIONAL_MODEL_CODES) => {
+const normaliseOperationalModelList = (source, fallback = ALL_OPERATIONAL_MODEL_CODES$1) => {
   const rawValues = Array.isArray(source) ? source : [];
   const models = rawValues.map((value) => normaliseOperationalModel(value)).filter((model, index, list) => list.indexOf(model) === index);
   return models.length > 0 ? models : [...fallback];
@@ -2740,7 +2740,7 @@ const normaliseEntry = (entry, index) => {
   const label = rawLabel.trim() ? rawLabel : genericName;
   const operationalModels = normaliseOperationalModelList(
     entry.operationalModels || entry.models || entry.modelCodes,
-    fallback?.operationalModels || ALL_OPERATIONAL_MODEL_CODES
+    fallback?.operationalModels || ALL_OPERATIONAL_MODEL_CODES$1
   );
   return {
     id: String(entry.id || makeCrewPositionId(genericName, index)).trim() || makeCrewPositionId(genericName, index),
@@ -2796,7 +2796,7 @@ const getCrewPositionOptions = (terminology, extraValues = [], operationalModel2
 const isCrewPositionAvailableForOperationalModel = (entry, operationalModel2) => {
   if (!operationalModel2) return true;
   const model = normaliseOperationalModel(operationalModel2 || DEFAULT_OPERATIONAL_MODEL);
-  const models = normaliseOperationalModelList(entry.operationalModels, ALL_OPERATIONAL_MODEL_CODES);
+  const models = normaliseOperationalModelList(entry.operationalModels, ALL_OPERATIONAL_MODEL_CODES$1);
   return models.includes(model);
 };
 const normaliseCrewPositionToken = (value) => String(value || "").trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "");
@@ -3540,14 +3540,103 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
   return JSON.parse(JSON.stringify(source));
 };
+const ALL_OPERATIONAL_MODEL_CODES = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
 const DEFAULT_STAFF_QUALIFICATIONS = {
   qualifications: [
+    {
+      id: "admin-staff",
+      name: "Admin Staff",
+      code: "Admin Staff",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "cfi",
+      name: "CFI",
+      code: "CFI",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "co",
+      name: "CO",
+      code: "CO",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "contractor",
+      name: "Contractor",
+      code: "Contractor",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "dfc",
+      name: "DFC",
+      code: "DFC",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "executive",
+      name: "Executive",
+      code: "Executive",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "flying-supervisor",
+      name: "Flying Supervisor",
+      code: "Flying Supervisor",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "ire",
+      name: "IRE",
+      code: "IRE",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "ofi",
+      name: "OFI",
+      code: "OFI",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
     {
       id: "pic",
       name: "PIC",
       code: "PIC",
       operationalModels: ["flight_school", "air_combat", "fixed_crew", "air_mobility"],
       roleRestrictions: ["Pilot"],
+      status: "ACTIVE"
+    },
+    {
+      id: "qfi",
+      name: "QFI",
+      code: "QFI",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "testing-officer",
+      name: "Testing Officer",
+      code: "Testing Officer",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
+      roleRestrictions: [],
       status: "ACTIVE"
     },
     {
@@ -3587,9 +3676,11 @@ const normaliseQualification = (entry, index) => {
   const name = String(entry?.name || entry?.label || entry?.code || "").trim();
   const code = String(entry?.code || entry?.abbreviation || name).trim();
   if (!name && !code) return null;
-  const displayName = name || code;
+  const id = String(entry?.id || makeQualificationId(code || name, index)).trim() || makeQualificationId(name || code, index);
+  const isLegacyPicLabel = id === "pic" && normaliseQualificationToken(code) === "pic" && normaliseQualificationToken(name) === "pilotincommand";
+  const displayName = isLegacyPicLabel ? "PIC" : name || code;
   return {
-    id: String(entry?.id || makeQualificationId(code || displayName, index)).trim() || makeQualificationId(displayName, index),
+    id,
     name: displayName,
     code: code || displayName,
     operationalModels: normaliseOperationalModels(entry?.operationalModels || entry?.models),
@@ -3598,16 +3689,18 @@ const normaliseQualification = (entry, index) => {
   };
 };
 const normaliseStaffQualificationCatalogue = (source) => {
-  const configured = Array.isArray(source?.qualifications) ? source.qualifications : DEFAULT_STAFF_QUALIFICATIONS.qualifications;
+  const deletedDefaultIds = normaliseStringList(source?.deletedDefaultIds);
+  const configured = Array.isArray(source?.qualifications) ? source.qualifications : [];
+  const defaultQualifications = DEFAULT_STAFF_QUALIFICATIONS.qualifications.filter((entry) => !deletedDefaultIds.includes(entry.id));
   const configuredDefinitions = configured.map(normaliseQualification).filter((entry) => Boolean(entry));
   const byKey = /* @__PURE__ */ new Map();
-  configuredDefinitions.forEach((entry, index) => {
+  [...defaultQualifications, ...configuredDefinitions].forEach((entry, index) => {
     const normalised = normaliseQualification(entry, index);
     if (!normalised) return;
     const key = normaliseQualificationToken(normalised.id || normalised.code || normalised.name);
     byKey.set(key, normalised);
   });
-  return { qualifications: Array.from(byKey.values()) };
+  return { qualifications: Array.from(byKey.values()), deletedDefaultIds };
 };
 const normaliseQualificationToken = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 const qualificationMatches = (assignedValue, definition) => {
@@ -35235,6 +35328,19 @@ const SuccessNotification = ({ message, onClose }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl font-semibold text-white", children: message })
   ] }) }) });
 };
+const LEGACY_QUALIFICATION_FIELD_BY_ID = {
+  co: "isCommandingOfficer",
+  cfi: "isCFI",
+  executive: "isExecutive",
+  "flying-supervisor": "isFlyingSupervisor",
+  "testing-officer": "isTestingOfficer",
+  ire: "isIRE",
+  qfi: "isQFI",
+  ofi: "isOFI",
+  dfc: "isDeputyFlightCommander",
+  contractor: "isContractor",
+  "admin-staff": "isAdminStaff"
+};
 const InputField = ({ label, value, onChange, readOnly, type = "text" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-1", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -35442,7 +35548,16 @@ const InstructorProfileFlyout = ({
     [staffQualificationCatalogue]
   );
   const activeQualificationOptions = reactExports.useMemo(() => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel2).sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })), [normalisedQualificationCatalogue, operationalModel2]);
-  const getAssignedQualificationIds = reactExports.useCallback((source) => normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue), [normalisedQualificationCatalogue]);
+  const getAssignedQualificationIds = reactExports.useCallback((source) => {
+    const assigned = normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue);
+    normalisedQualificationCatalogue.qualifications.forEach((qualification) => {
+      const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID[qualification.id];
+      if (legacyField && source[legacyField] === true && !assigned.includes(qualification.id)) {
+        assigned.push(qualification.id);
+      }
+    });
+    return assigned;
+  }, [normalisedQualificationCatalogue]);
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
   const [service, setService] = reactExports.useState(instructor.service);
   const [category, setCategory] = reactExports.useState(instructor.category);
@@ -35688,6 +35803,18 @@ const InstructorProfileFlyout = ({
   };
   const handleQualificationChange = (qualificationId, isChecked) => {
     setAssignedQualifications((prev) => isChecked ? Array.from(/* @__PURE__ */ new Set([...prev, qualificationId])) : prev.filter((id) => id !== qualificationId));
+    const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID[qualificationId];
+    if (legacyField === "isCommandingOfficer") setIsCommandingOfficer(isChecked);
+    if (legacyField === "isCFI") setIsCFI(isChecked);
+    if (legacyField === "isExecutive") setIsExecutive(isChecked);
+    if (legacyField === "isFlyingSupervisor") setIsFlyingSupervisor(isChecked);
+    if (legacyField === "isTestingOfficer") setIsTestingOfficer(isChecked);
+    if (legacyField === "isIRE") setIsIRE(isChecked);
+    if (legacyField === "isQFI") setIsQFI(isChecked);
+    if (legacyField === "isOFI") setIsOFI(isChecked);
+    if (legacyField === "isDeputyFlightCommander") setIsDeputyFlightCommander(isChecked);
+    if (legacyField === "isContractor") setIsContractor(isChecked);
+    if (legacyField === "isAdminStaff") setIsAdminStaff(isChecked);
   };
   const handleExperienceChange = (section, field, value) => {
     setPriorExperience((prev) => field ? { ...prev, [section]: { ...prev[section], [field]: value } } : { ...prev, [section]: value });
@@ -52105,11 +52232,12 @@ const PlatformConfigurationSettings = ({
     const nextDeletedDefaultIds = defaultCrewPositionIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...crewPositionTerminology.deletedDefaultIds || [], entryId])) : crewPositionTerminology.deletedDefaultIds || [];
     updateCrewPositionTerminology(nextPositions, void 0, nextDeletedDefaultIds);
   };
-  const updateStaffQualificationCatalogue = (qualifications) => {
+  const defaultStaffQualificationIds = new Set(DEFAULT_STAFF_QUALIFICATIONS.qualifications.map((entry) => entry.id));
+  const updateStaffQualificationCatalogue = (qualifications, deletedDefaultIds = staffQualificationCatalogue.deletedDefaultIds || []) => {
     setRankTerminologyDirty(true);
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
-      staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications })
+      staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications, deletedDefaultIds })
     }));
   };
   const updateStaffQualificationEntry = (entryId, changes) => {
@@ -52133,7 +52261,8 @@ const PlatformConfigurationSettings = ({
   const removeStaffQualificationEntry = (entryId) => {
     const nextQualifications = staffQualificationCatalogue.qualifications.filter((entry) => entry.id !== entryId);
     if (nextQualifications.length === staffQualificationCatalogue.qualifications.length) return;
-    updateStaffQualificationCatalogue(nextQualifications);
+    const nextDeletedDefaultIds = defaultStaffQualificationIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...staffQualificationCatalogue.deletedDefaultIds || [], entryId])) : staffQualificationCatalogue.deletedDefaultIds || [];
+    updateStaffQualificationCatalogue(nextQualifications, nextDeletedDefaultIds);
   };
   const updateTrainingReportTemplate = (updater) => {
     if (activeTrainingReportUnitIndex < 0) return;
