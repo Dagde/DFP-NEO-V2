@@ -991,6 +991,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
+  const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = useState('');
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = useState('');
   const locationRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingLocationScrollIdRef = useRef<string | null>(null);
@@ -1015,6 +1016,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       resourcePools: loadedConfigRef.current.resourcePools,
     })
   ), [config.aircraftTypes, config.resourcePools]);
+  const resourcePoolDeleteOptions = useMemo(() => (
+    config.resourcePools.map((pool, index) => {
+      const key = String(pool.id || pool.code || `resource-pool-${index}`);
+      const name = String(pool.name || '').trim() || 'Unnamed Resource Pool';
+      return { key, name };
+    })
+  ), [config.resourcePools]);
+  const selectedResourcePoolDeleteOption = resourcePoolDeleteOptions.find((option) => option.key === selectedResourcePoolDeleteKey);
 
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
@@ -2545,6 +2554,53 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
   };
 
+  const deleteSelectedResourcePool = async () => {
+    if (!canEditResourcePools) return;
+    if (!selectedResourcePoolDeleteOption) {
+      await showDarkAlert('Select a resource pool to delete.', 'Delete Resource Pool', 'warning');
+      return;
+    }
+
+    const confirmed = await showDarkConfirm(
+      `Delete resource pool "${selectedResourcePoolDeleteOption.name}"?\n\nThis removes it from the Aircraft & Resource Pools draft. Click Save afterwards to write the deletion to the database.`,
+      'Delete Resource Pool?',
+      'warning',
+    );
+    if (!confirmed) return;
+
+    const password = await showDarkPrompt({
+      title: 'Confirm Resource Pool Deletion',
+      message: `Enter your password to delete "${selectedResourcePoolDeleteOption.name}".`,
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
+    if (!password) return;
+
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert('The password was not accepted. The resource pool was not deleted.', 'Password Required', 'warning');
+        return;
+      }
+    } catch {
+      await showDarkAlert('The app could not verify your password. The resource pool was not deleted.', 'Password Check Failed', 'error');
+      return;
+    }
+
+    setConfig((prev) => ({
+      ...prev,
+      resourcePools: prev.resourcePools.filter((pool, index) => (
+        String(pool.id || pool.code || `resource-pool-${index}`) !== selectedResourcePoolDeleteOption.key
+      )),
+    }));
+    setSelectedResourcePoolDeleteKey('');
+    onShowSuccess(`Resource pool "${selectedResourcePoolDeleteOption.name}" removed. Click Save to apply the deletion.`);
+  };
+
   const save = async (configOverride?: PlatformConfig, restoreSection?: string) => {
     const configToSave = configOverride && Array.isArray(configOverride.locations)
       ? configOverride
@@ -3428,6 +3484,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Resource Pools</h4>
               <p className="mt-1 text-xs text-gray-500">Map resources to units, labels, aircraft numbering and live DFP rows.</p>
+            </div>
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+              <div className="mb-3">
+                <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete Resource Pool Entered In Error</div>
+                <div className="mt-1 text-[11px] leading-relaxed text-red-100/70">
+                  Select by resource pool name only. Deletion requires your password and is not applied to the database until this section is saved.
+                </div>
+              </div>
+              <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                <SelectField
+                  label="Resource Pool"
+                  value={selectedResourcePoolDeleteKey}
+                  disabled={!canEditResourcePools || resourcePoolDeleteOptions.length === 0}
+                  options={['', ...resourcePoolDeleteOptions.map((option) => option.key)]}
+                  optionLabels={Object.fromEntries(resourcePoolDeleteOptions.map((option) => [option.key, option.name]))}
+                  emptyLabel="Select resource pool"
+                  onChange={setSelectedResourcePoolDeleteKey}
+                />
+                <button
+                  type="button"
+                  disabled={!canEditResourcePools || !selectedResourcePoolDeleteKey}
+                  onClick={deleteSelectedResourcePool}
+                  className="h-[38px] rounded-md border border-red-300/50 bg-red-500/20 px-4 text-sm font-black text-red-100 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Delete Selected Pool
+                </button>
+              </div>
             </div>
             {config.resourcePools.map((pool, index) => {
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
