@@ -3544,12 +3544,10 @@ const DEFAULT_STAFF_QUALIFICATIONS = {
   qualifications: [
     {
       id: "pic",
-      name: "Pilot in Command",
+      name: "PIC",
       code: "PIC",
       operationalModels: ["flight_school", "air_combat", "fixed_crew", "air_mobility"],
       roleRestrictions: ["Pilot"],
-      isPicQualification: true,
-      appliesToFlightAndSimulator: true,
       status: "ACTIVE"
     },
     {
@@ -3558,8 +3556,6 @@ const DEFAULT_STAFF_QUALIFICATIONS = {
       code: "Crew Commander",
       operationalModels: ["fixed_crew", "air_mobility"],
       roleRestrictions: ["Pilot"],
-      isPicQualification: true,
-      appliesToFlightAndSimulator: true,
       status: "ACTIVE"
     },
     {
@@ -3568,8 +3564,6 @@ const DEFAULT_STAFF_QUALIFICATIONS = {
       code: "Operational Captain",
       operationalModels: ["fixed_crew", "air_mobility"],
       roleRestrictions: ["Pilot"],
-      isPicQualification: true,
-      appliesToFlightAndSimulator: true,
       status: "ACTIVE"
     }
   ]
@@ -3600,8 +3594,6 @@ const normaliseQualification = (entry, index) => {
     code: code || displayName,
     operationalModels: normaliseOperationalModels(entry?.operationalModels || entry?.models),
     roleRestrictions: normaliseStringList(entry?.roleRestrictions || entry?.roles),
-    isPicQualification: entry?.isPicQualification === true || entry?.pic === true,
-    appliesToFlightAndSimulator: entry?.appliesToFlightAndSimulator !== false,
     status: String(entry?.status || "ACTIVE").toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
   };
 };
@@ -35449,7 +35441,7 @@ const InstructorProfileFlyout = ({
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
     [staffQualificationCatalogue]
   );
-  const activeQualificationOptions = reactExports.useMemo(() => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel2), [normalisedQualificationCatalogue, operationalModel2]);
+  const activeQualificationOptions = reactExports.useMemo(() => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel2).sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })), [normalisedQualificationCatalogue, operationalModel2]);
   const getAssignedQualificationIds = reactExports.useCallback((source) => normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue), [normalisedQualificationCatalogue]);
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
   const [service, setService] = reactExports.useState(instructor.service);
@@ -35914,18 +35906,6 @@ const InstructorProfileFlyout = ({
     });
   };
   const exp = priorExperience;
-  const roleBadges = [];
-  if (isCommandingOfficer) roleBadges.push("CO");
-  if (isCFI) roleBadges.push("CFI");
-  if (isExecutive) roleBadges.push("Exec");
-  if (isFlyingSupervisor) roleBadges.push("Fly Sup");
-  if (isTestingOfficer) roleBadges.push("TO");
-  if (isIRE) roleBadges.push("IRE");
-  if (isQFI) roleBadges.push(instructorLabel);
-  if (isOFI) roleBadges.push("OFI");
-  if (isDeputyFlightCommander) roleBadges.push("DFC");
-  if (isContractor) roleBadges.push("Contractor");
-  if (isAdminStaff) roleBadges.push("Admin Staff");
   const assignedQualificationLabels = assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map((qualification) => qualification.code || qualification.name);
   const TraineeIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -36705,36 +36685,18 @@ const InstructorProfileFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-2", children: "Qualifications" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-4 gap-2", children: [
-                  ["isCommandingOfficer", "CO", isCommandingOfficer, setIsCommandingOfficer],
-                  ["isCFI", "CFI", isCFI, setIsCFI],
-                  ["isExecutive", "Executive", isExecutive, setIsExecutive],
-                  ["isFlyingSupervisor", "Flying Supervisor", isFlyingSupervisor, setIsFlyingSupervisor],
-                  ["isTestingOfficer", "Testing Officer", isTestingOfficer, setIsTestingOfficer],
-                  ["isIRE", "IRE", isIRE, setIsIRE],
-                  ["isQFI", instructorLabel, isQFI, setIsQFI],
-                  ["isOFI", "OFI", isOFI, setIsOFI],
-                  ["isDeputyFlightCommander", "DFC", isDeputyFlightCommander, setIsDeputyFlightCommander],
-                  ["isContractor", "Contractor", isContractor, setIsContractor],
-                  ["isAdminStaff", "Admin Staff", isAdminStaff, setIsAdminStaff]
-                ].map(([key, label, val, setter]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: val, onChange: (e) => setter(e.target.checked), className: "h-3 w-3 accent-sky-500" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs", children: label })
-                ] }, key)) }),
-                activeQualificationOptions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-2 border-t border-gray-600/60 pt-3", children: activeQualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: assignedQualifications.some((id) => qualificationMatches(id, qualification)),
-                      onChange: (e) => handleQualificationChange(qualification.id, e.target.checked),
-                      className: "h-3 w-3 accent-emerald-500"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs truncate", title: qualification.name, children: qualification.code || qualification.name })
-                ] }, qualification.id)) })
-              ] })
+              activeQualificationOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-2", children: activeQualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: assignedQualifications.some((id) => qualificationMatches(id, qualification)),
+                    onChange: (e) => handleQualificationChange(qualification.id, e.target.checked),
+                    className: "h-3 w-3 accent-emerald-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs truncate", title: qualification.name, children: qualification.code || qualification.name })
+              ] }, qualification.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "No qualifications configured for this operational model." })
             ] })
           ] }) : (
             /* VIEW MODE: avatar + data grid + qualifications panel */
@@ -36747,7 +36709,6 @@ const InstructorProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-2 flex-wrap", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white", children: instructor.name }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white", children: "Active" }),
-                  roleBadges.map((badge) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-800 text-sky-200", children: badge }, badge)),
                   assignedQualificationLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-800 text-emerald-100", children: label }, label))
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-6 gap-x-4 gap-y-2 text-xs", children: [
@@ -52165,8 +52126,6 @@ const PlatformConfigurationSettings = ({
         code: name,
         operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
         roleRestrictions: [],
-        isPicQualification: false,
-        appliesToFlightAndSimulator: true,
         status: "ACTIVE"
       }
     ]);
@@ -55131,7 +55090,7 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-emerald-100", children: "Staff Qualifications" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Fixed Crew flights and simulator events will use PIC-capable qualifications when the scheduler selects the event captain." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff Profile qualification options are drawn from this list." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -55144,7 +55103,7 @@ const PlatformConfigurationSettings = ({
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: staffQualificationCatalogue.qualifications.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_minmax(160px,0.8fr)_auto]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: [...staffQualificationCatalogue.qualifications].sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, void 0, { sensitivity: "base" })).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Field,
               {
@@ -55206,34 +55165,6 @@ const PlatformConfigurationSettings = ({
                   option.value
                 );
               }) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 pt-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded border border-gray-700 bg-gray-900/70 px-2 py-2 text-[11px] font-semibold text-emerald-100", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "checkbox",
-                    checked: entry.isPicQualification === true,
-                    disabled: !canEditRankTerminology,
-                    onChange: (event) => updateStaffQualificationEntry(entry.id, { isPicQualification: event.target.checked }),
-                    className: "h-3.5 w-3.5 rounded border-gray-500 accent-emerald-400"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "PIC-capable" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded border border-gray-700 bg-gray-900/70 px-2 py-2 text-[11px] font-semibold text-emerald-100", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "checkbox",
-                    checked: entry.appliesToFlightAndSimulator !== false,
-                    disabled: !canEditRankTerminology,
-                    onChange: (event) => updateStaffQualificationEntry(entry.id, { appliesToFlightAndSimulator: event.target.checked }),
-                    className: "h-3.5 w-3.5 rounded border-gray-500 accent-emerald-400"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Flight/sim PIC" })
-              ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",

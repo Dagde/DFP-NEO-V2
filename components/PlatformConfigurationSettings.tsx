@@ -1508,8 +1508,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         code: name,
         operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
         roleRestrictions: [],
-        isPicQualification: false,
-        appliesToFlightAndSimulator: true,
         status: 'ACTIVE',
       },
     ]);
@@ -4742,7 +4740,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <h5 className="text-sm font-bold text-emerald-100">Staff Qualifications</h5>
                 <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
-                  Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Fixed Crew flights and simulator events will use PIC-capable qualifications when the scheduler selects the event captain.
+                  Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff Profile qualification options are drawn from this list.
                 </p>
               </div>
               <button
@@ -4755,8 +4753,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </button>
             </div>
             <div className="mt-4 space-y-3">
-              {staffQualificationCatalogue.qualifications.map((entry) => (
-                <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_minmax(160px,0.8fr)_auto]">
+              {[...staffQualificationCatalogue.qualifications]
+                .sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, undefined, { sensitivity: 'base' }))
+                .map((entry) => (
+                <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto]">
                   <Field
                     label="Qualification"
                     value={entry.name}
@@ -4814,28 +4814,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         );
                       })}
                     </div>
-                  </div>
-                  <div className="space-y-2 pt-1">
-                    <label className="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/70 px-2 py-2 text-[11px] font-semibold text-emerald-100">
-                      <input
-                        type="checkbox"
-                        checked={entry.isPicQualification === true}
-                        disabled={!canEditRankTerminology}
-                        onChange={(event) => updateStaffQualificationEntry(entry.id, { isPicQualification: event.target.checked })}
-                        className="h-3.5 w-3.5 rounded border-gray-500 accent-emerald-400"
-                      />
-                      <span>PIC-capable</span>
-                    </label>
-                    <label className="flex items-center gap-2 rounded border border-gray-700 bg-gray-900/70 px-2 py-2 text-[11px] font-semibold text-emerald-100">
-                      <input
-                        type="checkbox"
-                        checked={entry.appliesToFlightAndSimulator !== false}
-                        disabled={!canEditRankTerminology}
-                        onChange={(event) => updateStaffQualificationEntry(entry.id, { appliesToFlightAndSimulator: event.target.checked })}
-                        className="h-3.5 w-3.5 rounded border-gray-500 accent-emerald-400"
-                      />
-                      <span>Flight/sim PIC</span>
-                    </label>
                   </div>
                   <div className="flex items-end">
                     <button

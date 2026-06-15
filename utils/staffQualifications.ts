@@ -11,8 +11,6 @@ export interface StaffQualificationDefinition {
   code: string;
   operationalModels: OperationalModelCode[];
   roleRestrictions?: string[];
-  isPicQualification?: boolean;
-  appliesToFlightAndSimulator?: boolean;
   status?: 'ACTIVE' | 'INACTIVE';
 }
 
@@ -24,12 +22,10 @@ export const DEFAULT_STAFF_QUALIFICATIONS: StaffQualificationCatalogue = {
   qualifications: [
     {
       id: 'pic',
-      name: 'Pilot in Command',
+      name: 'PIC',
       code: 'PIC',
       operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'air_mobility'],
       roleRestrictions: ['Pilot'],
-      isPicQualification: true,
-      appliesToFlightAndSimulator: true,
       status: 'ACTIVE',
     },
     {
@@ -38,8 +34,6 @@ export const DEFAULT_STAFF_QUALIFICATIONS: StaffQualificationCatalogue = {
       code: 'Crew Commander',
       operationalModels: ['fixed_crew', 'air_mobility'],
       roleRestrictions: ['Pilot'],
-      isPicQualification: true,
-      appliesToFlightAndSimulator: true,
       status: 'ACTIVE',
     },
     {
@@ -48,8 +42,6 @@ export const DEFAULT_STAFF_QUALIFICATIONS: StaffQualificationCatalogue = {
       code: 'Operational Captain',
       operationalModels: ['fixed_crew', 'air_mobility'],
       roleRestrictions: ['Pilot'],
-      isPicQualification: true,
-      appliesToFlightAndSimulator: true,
       status: 'ACTIVE',
     },
   ],
@@ -91,8 +83,6 @@ const normaliseQualification = (entry: any, index: number): StaffQualificationDe
     code: code || displayName,
     operationalModels: normaliseOperationalModels(entry?.operationalModels || entry?.models),
     roleRestrictions: normaliseStringList(entry?.roleRestrictions || entry?.roles),
-    isPicQualification: entry?.isPicQualification === true || entry?.pic === true,
-    appliesToFlightAndSimulator: entry?.appliesToFlightAndSimulator !== false,
     status: String(entry?.status || 'ACTIVE').toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
   };
 };

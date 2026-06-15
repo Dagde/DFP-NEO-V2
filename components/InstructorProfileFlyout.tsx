@@ -329,6 +329,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   );
   const activeQualificationOptions = useMemo(() => (
     getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel)
+      .sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, undefined, { sensitivity: 'base' }))
   ), [normalisedQualificationCatalogue, operationalModel]);
   const getAssignedQualificationIds = useCallback((source: Instructor): string[] => (
     normaliseAssignedQualificationIds(source.preferences?.qualifications || [], normalisedQualificationCatalogue)
@@ -843,19 +844,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
   const exp = priorExperience;
 
-  // Build role badges
-  const roleBadges: string[] = [];
-  if (isCommandingOfficer) roleBadges.push('CO');
-  if (isCFI) roleBadges.push('CFI');
-  if (isExecutive) roleBadges.push('Exec');
-  if (isFlyingSupervisor) roleBadges.push('Fly Sup');
-  if (isTestingOfficer) roleBadges.push('TO');
-  if (isIRE) roleBadges.push('IRE');
-  if (isQFI) roleBadges.push(instructorLabel);
-  if (isOFI) roleBadges.push('OFI');
-  if (isDeputyFlightCommander) roleBadges.push('DFC');
-  if (isContractor) roleBadges.push('Contractor');
-  if (isAdminStaff) roleBadges.push('Admin Staff');
   const assignedQualificationLabels = assignedQualifications
     .map(id => activeQualificationOptions.find(qualification => qualificationMatches(id, qualification)))
     .filter((qualification): qualification is StaffQualificationDefinition => Boolean(qualification))
@@ -1656,44 +1644,25 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     {/* Qualification checkboxes */}
                     <div className="bg-gray-700/30 rounded p-3">
                       <label className="block text-xs font-medium text-gray-400 mb-2">Qualifications</label>
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-4 gap-2">
-                          {[['isCommandingOfficer', 'CO', isCommandingOfficer, setIsCommandingOfficer],
-                            ['isCFI', 'CFI', isCFI, setIsCFI],
-                            ['isExecutive', 'Executive', isExecutive, setIsExecutive],
-                            ['isFlyingSupervisor', 'Flying Supervisor', isFlyingSupervisor, setIsFlyingSupervisor],
-                            ['isTestingOfficer', 'Testing Officer', isTestingOfficer, setIsTestingOfficer],
-                            ['isIRE', 'IRE', isIRE, setIsIRE],
-                            ['isQFI', instructorLabel, isQFI, setIsQFI],
-                            ['isOFI', 'OFI', isOFI, setIsOFI],
-                            ['isDeputyFlightCommander', 'DFC', isDeputyFlightCommander, setIsDeputyFlightCommander],
-                            ['isContractor', 'Contractor', isContractor, setIsContractor],
-                            ['isAdminStaff', 'Admin Staff', isAdminStaff, setIsAdminStaff],
-                          ].map(([key, label, val, setter]: any) => (
-                            <label key={key} className="flex items-center space-x-1 cursor-pointer">
-                              <input type="checkbox" checked={val} onChange={e => setter(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                              <span className="text-white text-xs">{label}</span>
+                      {activeQualificationOptions.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {activeQualificationOptions.map(qualification => (
+                            <label key={qualification.id} className="flex items-center space-x-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={assignedQualifications.some(id => qualificationMatches(id, qualification))}
+                                onChange={e => handleQualificationChange(qualification.id, e.target.checked)}
+                                className="h-3 w-3 accent-emerald-500"
+                              />
+                              <span className="text-white text-xs truncate" title={qualification.name}>
+                                {qualification.code || qualification.name}
+                              </span>
                             </label>
                           ))}
                         </div>
-                        {activeQualificationOptions.length > 0 && (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border-t border-gray-600/60 pt-3">
-                            {activeQualificationOptions.map(qualification => (
-                              <label key={qualification.id} className="flex items-center space-x-1 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={assignedQualifications.some(id => qualificationMatches(id, qualification))}
-                                  onChange={e => handleQualificationChange(qualification.id, e.target.checked)}
-                                  className="h-3 w-3 accent-emerald-500"
-                                />
-                                <span className="text-white text-xs truncate" title={qualification.name}>
-                                  {qualification.code || qualification.name}
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">No qualifications configured for this operational model.</p>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -1720,9 +1689,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="text-xl font-bold text-white">{instructor.name}</h3>
                         <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white">Active</span>
-                        {roleBadges.map(badge => (
-                          <span key={badge} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-800 text-sky-200">{badge}</span>
-                        ))}
                         {assignedQualificationLabels.map(label => (
                           <span key={label} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-800 text-emerald-100">{label}</span>
                         ))}
