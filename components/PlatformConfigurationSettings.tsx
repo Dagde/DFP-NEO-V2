@@ -991,6 +991,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
+  const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = useState('');
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = useState('');
   const locationRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -3275,16 +3276,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             ? 'Editing is active. Click Save to write aircraft type and resource pool changes to the database, then return this section to read-only mode.'
             : 'Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources. Click Edit before making changes.'}
           action={canEdit ? (
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-[1px]">
               {resourcePoolsUnlocked ? (
                 <>
-                  <button type="button" onClick={addAircraftType} className="rounded-md border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Aircraft Type</button>
-                  <button type="button" onClick={addResourcePool} className="rounded-md border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowResourcePoolDeletePanel((current) => !current);
+                      setResourcePoolActiveTab('resourcePools');
+                    }}
+                    className={platformActionButtonClass}
+                    title="Show or hide resource pool deletion controls"
+                  >
+                    <span className="text-[9px] leading-tight">Delete<br />Pool</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addAircraftType}
+                    className={platformActionButtonClass}
+                    title="Add aircraft type"
+                  >
+                    <span className="text-[8px] leading-[0.95rem]">Add<br />Aircraft<br />Type</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addResourcePool}
+                    className={platformActionButtonClass}
+                    title="Add resource pool"
+                  >
+                    <span className="text-[9px] leading-tight">Add<br />Pool</span>
+                  </button>
                   <button
                     type="button"
                     onClick={saveResourcePoolsAndExitEdit}
                     disabled={saving || applyingChanges}
-                    className="rounded-md border border-cyan-300 bg-cyan-400 px-4 py-2 text-sm font-black text-cyan-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={platformActionButtonClass}
                   >
                     Save
                   </button>
@@ -3292,7 +3318,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     onClick={exitResourcePoolsEditMode}
                     disabled={saving || applyingChanges}
-                    className="rounded-md border border-gray-500 bg-gray-800 px-4 py-2 text-sm font-bold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={platformActionButtonClass}
                   >
                     Exit
                   </button>
@@ -3301,7 +3327,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <button
                   type="button"
                   onClick={() => setResourcePoolsUnlocked(true)}
-                  className="rounded-md border border-cyan-300 bg-cyan-400 px-4 py-2 text-sm font-black text-cyan-950 hover:bg-cyan-300"
+                  className={platformActionButtonClass}
                 >
                   Edit
                 </button>
@@ -3485,33 +3511,35 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Resource Pools</h4>
               <p className="mt-1 text-xs text-gray-500">Map resources to units, labels, aircraft numbering and live DFP rows.</p>
             </div>
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-              <div className="mb-3">
-                <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete Resource Pool Entered In Error</div>
-                <div className="mt-1 text-[11px] leading-relaxed text-red-100/70">
-                  Select by resource pool name only. Deletion requires your password and is not applied to the database until this section is saved.
+            {showResourcePoolDeletePanel && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                <div className="mb-3">
+                  <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete Resource Pool Entered In Error</div>
+                  <div className="mt-1 text-[11px] leading-relaxed text-red-100/70">
+                    Select by resource pool name only. Deletion requires your password and is not applied to the database until this section is saved.
+                  </div>
+                </div>
+                <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                  <SelectField
+                    label="Resource Pool"
+                    value={selectedResourcePoolDeleteKey}
+                    disabled={!canEditResourcePools || resourcePoolDeleteOptions.length === 0}
+                    options={['', ...resourcePoolDeleteOptions.map((option) => option.key)]}
+                    optionLabels={Object.fromEntries(resourcePoolDeleteOptions.map((option) => [option.key, option.name]))}
+                    emptyLabel="Select resource pool"
+                    onChange={setSelectedResourcePoolDeleteKey}
+                  />
+                  <button
+                    type="button"
+                    disabled={!canEditResourcePools || !selectedResourcePoolDeleteKey}
+                    onClick={deleteSelectedResourcePool}
+                    className="h-[38px] rounded-md border border-red-300/50 bg-red-500/20 px-4 text-sm font-black text-red-100 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Delete Selected Pool
+                  </button>
                 </div>
               </div>
-              <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-                <SelectField
-                  label="Resource Pool"
-                  value={selectedResourcePoolDeleteKey}
-                  disabled={!canEditResourcePools || resourcePoolDeleteOptions.length === 0}
-                  options={['', ...resourcePoolDeleteOptions.map((option) => option.key)]}
-                  optionLabels={Object.fromEntries(resourcePoolDeleteOptions.map((option) => [option.key, option.name]))}
-                  emptyLabel="Select resource pool"
-                  onChange={setSelectedResourcePoolDeleteKey}
-                />
-                <button
-                  type="button"
-                  disabled={!canEditResourcePools || !selectedResourcePoolDeleteKey}
-                  onClick={deleteSelectedResourcePool}
-                  className="h-[38px] rounded-md border border-red-300/50 bg-red-500/20 px-4 text-sm font-black text-red-100 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Delete Selected Pool
-                </button>
-              </div>
-            </div>
+            )}
             {config.resourcePools.map((pool, index) => {
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
               const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);

@@ -51835,6 +51835,7 @@ const PlatformConfigurationSettings = ({
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = reactExports.useState("aircraftTypes");
+  const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = reactExports.useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = reactExports.useState("");
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = reactExports.useState("");
   const locationRowRefs = reactExports.useRef({});
@@ -53753,16 +53754,61 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         {
           title: "Aircraft Types & Resource Pools",
           subtitle: resourcePoolsUnlocked ? "Editing is active. Click Save to write aircraft type and resource pool changes to the database, then return this section to read-only mode." : "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources. Click Edit before making changes.",
-          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-2", children: resourcePoolsUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addAircraftType, className: "rounded-md border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Aircraft Type" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded-md border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }),
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: resourcePoolsUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  setShowResourcePoolDeletePanel((current) => !current);
+                  setResourcePoolActiveTab("resourcePools");
+                },
+                className: platformActionButtonClass,
+                title: "Show or hide resource pool deletion controls",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  "Delete",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Pool"
+                ] })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: addAircraftType,
+                className: platformActionButtonClass,
+                title: "Add aircraft type",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[8px] leading-[0.95rem]", children: [
+                  "Add",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Aircraft",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Type"
+                ] })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: addResourcePool,
+                className: platformActionButtonClass,
+                title: "Add resource pool",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  "Add",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Pool"
+                ] })
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: saveResourcePoolsAndExitEdit,
                 disabled: saving || applyingChanges,
-                className: "rounded-md border border-cyan-300 bg-cyan-400 px-4 py-2 text-sm font-black text-cyan-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50",
+                className: platformActionButtonClass,
                 children: "Save"
               }
             ),
@@ -53772,7 +53818,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 type: "button",
                 onClick: exitResourcePoolsEditMode,
                 disabled: saving || applyingChanges,
-                className: "rounded-md border border-gray-500 bg-gray-800 px-4 py-2 text-sm font-bold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50",
+                className: platformActionButtonClass,
                 children: "Exit"
               }
             )
@@ -53781,7 +53827,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             {
               type: "button",
               onClick: () => setResourcePoolsUnlocked(true),
-              className: "rounded-md border border-cyan-300 bg-cyan-400 px-4 py-2 text-sm font-black text-cyan-950 hover:bg-cyan-300",
+              className: platformActionButtonClass,
               children: "Edit"
             }
           ) }) : null
@@ -53949,7 +53995,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Resource Pools" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Map resources to units, labels, aircraft numbering and live DFP rows." })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
+          showResourcePoolDeletePanel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-red-100", children: "Delete Resource Pool Entered In Error" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-red-100/70", children: "Select by resource pool name only. Deletion requires your password and is not applied to the database until this section is saved." })
