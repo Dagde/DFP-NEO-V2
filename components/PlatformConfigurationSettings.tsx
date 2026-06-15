@@ -996,6 +996,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const pendingLocationScrollIdRef = useRef<string | null>(null);
   const unitRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingUnitScrollIdRef = useRef<string | null>(null);
+  const resourcePoolRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const pendingResourcePoolScrollIdRef = useRef<string | null>(null);
+  const resourcePoolExitPromptOpenRef = useRef(false);
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
@@ -1003,6 +1006,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
+  const resourcePoolsDirty = useMemo(() => (
+    JSON.stringify({
+      aircraftTypes: config.aircraftTypes,
+      resourcePools: config.resourcePools,
+    }) !== JSON.stringify({
+      aircraftTypes: loadedConfigRef.current.aircraftTypes,
+      resourcePools: loadedConfigRef.current.resourcePools,
+    })
+  ), [config.aircraftTypes, config.resourcePools]);
 
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
@@ -1169,6 +1181,27 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 40);
   }, [config.units.length]);
+
+  useEffect(() => {
+    const pendingPoolId = pendingResourcePoolScrollIdRef.current;
+    if (!pendingPoolId) return;
+    const target = resourcePoolRowRefs.current[pendingPoolId];
+    if (!target) return;
+    pendingResourcePoolScrollIdRef.current = null;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 40);
+  }, [config.resourcePools.length]);
+
+  useEffect(() => {
+    if (!resourcePoolsUnlocked || !resourcePoolsDirty) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [resourcePoolsDirty, resourcePoolsUnlocked]);
 
   useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
@@ -2180,6 +2213,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const defaultLocation = selectedUnit?.locationCode || config.locations[0]?.code || 'ESL';
     const defaultUnitCode = selectedUnit?.code || '';
     const newPoolId = createClientRecordId('pool');
+    pendingResourcePoolScrollIdRef.current = newPoolId;
+    setResourcePoolActiveTab('resourcePools');
     setConfig((prev) => ({
       ...prev,
       resourcePools: [
@@ -2589,6 +2624,46 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const saved = await save(undefined, 'platform-resource-pools');
     if (saved) setResourcePoolsUnlocked(false);
   };
+
+  const exitResourcePoolsEditMode = async () => {
+    if (!resourcePoolsDirty) {
+      setResourcePoolsUnlocked(false);
+      return;
+    }
+    if (resourcePoolExitPromptOpenRef.current) return;
+    resourcePoolExitPromptOpenRef.current = true;
+    const shouldSave = await showDarkConfirm(
+      'You have unsaved Aircraft & Resource Pools changes.\n\nSelect OK to save and apply the changes now. Select Cancel to continue without saving and exit Aircraft & Resource Pools edit mode.',
+      'Unsaved Resource Pool Changes',
+      'warning',
+    );
+    resourcePoolExitPromptOpenRef.current = false;
+    if (shouldSave) {
+      await saveResourcePoolsAndExitEdit();
+      return;
+    }
+    setConfig(prev => ({
+      ...prev,
+      aircraftTypes: loadedConfigRef.current.aircraftTypes,
+      resourcePools: loadedConfigRef.current.resourcePools,
+    }));
+    setResourcePoolsUnlocked(false);
+  };
+
+  useEffect(() => {
+    if (!resourcePoolsUnlocked || !resourcePoolsDirty) return;
+    const handleOutsideResourcePoolClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest('#platform-resource-pools')) return;
+      if (target.closest('.fixed.inset-0')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void exitResourcePoolsEditMode();
+    };
+    document.addEventListener('click', handleOutsideResourcePoolClick, true);
+    return () => document.removeEventListener('click', handleOutsideResourcePoolClick, true);
+  }, [resourcePoolsDirty, resourcePoolsUnlocked]);
 
   const refreshLicenseStatus = async () => {
     const res = await fetch(`${getApiBase()}/platform-license/status`);
@@ -3157,6 +3232,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   >
                     Save
                   </button>
+                  <button
+                    type="button"
+                    onClick={exitResourcePoolsEditMode}
+                    disabled={saving || applyingChanges}
+                    className="rounded-md border border-gray-500 bg-gray-800 px-4 py-2 text-sm font-bold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Exit
+                  </button>
                 </>
               ) : (
                 <button
@@ -3351,7 +3434,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
               const runtimeEnabled = pool.settings?.applyToV2Runtime === true;
               return (
-                <div key={pool.id || `platform-resource-pool-${index}`} className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900">
+                <div
+                  key={pool.id || `platform-resource-pool-${index}`}
+                  ref={(node) => {
+                    const rowKey = pool.id || `platform-resource-pool-${index}`;
+                    resourcePoolRowRefs.current[rowKey] = node;
+                  }}
+                  className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 bg-gray-950/65 px-3 py-2">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

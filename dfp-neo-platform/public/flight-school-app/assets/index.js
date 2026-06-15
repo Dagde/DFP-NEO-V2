@@ -51840,12 +51840,22 @@ const PlatformConfigurationSettings = ({
   const pendingLocationScrollIdRef = reactExports.useRef(null);
   const unitRowRefs = reactExports.useRef({});
   const pendingUnitScrollIdRef = reactExports.useRef(null);
+  const resourcePoolRowRefs = reactExports.useRef({});
+  const pendingResourcePoolScrollIdRef = reactExports.useRef(null);
+  const resourcePoolExitPromptOpenRef = reactExports.useRef(false);
   const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.("settings.rankTerminology.edit") ?? canEdit;
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
+  const resourcePoolsDirty = reactExports.useMemo(() => JSON.stringify({
+    aircraftTypes: config.aircraftTypes,
+    resourcePools: config.resourcePools
+  }) !== JSON.stringify({
+    aircraftTypes: loadedConfigRef.current.aircraftTypes,
+    resourcePools: loadedConfigRef.current.resourcePools
+  }), [config.aircraftTypes, config.resourcePools]);
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
     const password = await showDarkPrompt({
@@ -51999,6 +52009,25 @@ const PlatformConfigurationSettings = ({
       target.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 40);
   }, [config.units.length]);
+  reactExports.useEffect(() => {
+    const pendingPoolId = pendingResourcePoolScrollIdRef.current;
+    if (!pendingPoolId) return;
+    const target = resourcePoolRowRefs.current[pendingPoolId];
+    if (!target) return;
+    pendingResourcePoolScrollIdRef.current = null;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 40);
+  }, [config.resourcePools.length]);
+  reactExports.useEffect(() => {
+    if (!resourcePoolsUnlocked || !resourcePoolsDirty) return;
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [resourcePoolsDirty, resourcePoolsUnlocked]);
   reactExports.useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
     const frame = window.requestAnimationFrame(() => {
@@ -52805,6 +52834,8 @@ const PlatformConfigurationSettings = ({
     const defaultLocation = selectedUnit?.locationCode || config.locations[0]?.code || "ESL";
     const defaultUnitCode = selectedUnit?.code || "";
     const newPoolId = createClientRecordId("pool");
+    pendingResourcePoolScrollIdRef.current = newPoolId;
+    setResourcePoolActiveTab("resourcePools");
     setConfig((prev) => ({
       ...prev,
       resourcePools: [
@@ -53146,6 +53177,44 @@ const PlatformConfigurationSettings = ({
     const saved = await save(void 0, "platform-resource-pools");
     if (saved) setResourcePoolsUnlocked(false);
   };
+  const exitResourcePoolsEditMode = async () => {
+    if (!resourcePoolsDirty) {
+      setResourcePoolsUnlocked(false);
+      return;
+    }
+    if (resourcePoolExitPromptOpenRef.current) return;
+    resourcePoolExitPromptOpenRef.current = true;
+    const shouldSave = await showDarkConfirm(
+      "You have unsaved Aircraft & Resource Pools changes.\n\nSelect OK to save and apply the changes now. Select Cancel to continue without saving and exit Aircraft & Resource Pools edit mode.",
+      "Unsaved Resource Pool Changes",
+      "warning"
+    );
+    resourcePoolExitPromptOpenRef.current = false;
+    if (shouldSave) {
+      await saveResourcePoolsAndExitEdit();
+      return;
+    }
+    setConfig((prev) => ({
+      ...prev,
+      aircraftTypes: loadedConfigRef.current.aircraftTypes,
+      resourcePools: loadedConfigRef.current.resourcePools
+    }));
+    setResourcePoolsUnlocked(false);
+  };
+  reactExports.useEffect(() => {
+    if (!resourcePoolsUnlocked || !resourcePoolsDirty) return;
+    const handleOutsideResourcePoolClick = (event) => {
+      const target = event.target;
+      if (!target) return;
+      if (target.closest("#platform-resource-pools")) return;
+      if (target.closest(".fixed.inset-0")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void exitResourcePoolsEditMode();
+    };
+    document.addEventListener("click", handleOutsideResourcePoolClick, true);
+    return () => document.removeEventListener("click", handleOutsideResourcePoolClick, true);
+  }, [resourcePoolsDirty, resourcePoolsUnlocked]);
   const refreshLicenseStatus = async () => {
     const res = await fetch(`${getApiBase()}/platform-license/status`);
     if (!res.ok) throw new Error(`Licence status failed (${res.status})`);
@@ -53647,6 +53716,16 @@ const PlatformConfigurationSettings = ({
                 className: "rounded-md border border-cyan-300 bg-cyan-400 px-4 py-2 text-sm font-black text-cyan-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50",
                 children: "Save"
               }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: exitResourcePoolsEditMode,
+                disabled: saving || applyingChanges,
+                className: "rounded-md border border-gray-500 bg-gray-800 px-4 py-2 text-sm font-bold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50",
+                children: "Exit"
+              }
             )
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -53825,188 +53904,199 @@ const PlatformConfigurationSettings = ({
             const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
             const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
             const runtimeEnabled = pool.settings?.applyToV2Runtime === true;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 bg-gray-950/65 px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-md border border-cyan-400/35 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: pool.code || "NEW" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-white", children: pool.name || "Unnamed resource pool" })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: [
-                    pool.poolType || "Dedicated",
-                    " pool ",
-                    pool.unitCode ? `for ${pool.unitCode}` : ""
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-md border px-2 py-1 text-right ${runtimeEnabled ? "border-emerald-400/40 bg-emerald-500/10" : "border-gray-700 bg-gray-900"}`, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-black uppercase tracking-wide text-gray-500", children: "V2 Runtime" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-sm font-black ${runtimeEnabled ? "text-emerald-200" : "text-gray-300"}`, children: runtimeEnabled ? "On" : "Off" })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Pool Identity" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "The owning unit, aircraft type and sharing model for this pool." })
-                  ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Code", value: pool.code, disabled: !canEditResourcePools, onChange: (value) => updateRow("resourcePools", index, { code: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Name", value: pool.name, disabled: !canEditResourcePools, onChange: (value) => updateRow("resourcePools", index, { name: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEditResourcePools, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEditResourcePools, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEditResourcePools, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEditResourcePools, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) })
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Display Names" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Terminology shown on the DFP while stable internal resource keys remain unchanged." })
-                  ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft", value: pool.settings?.aircraftLabel || "PC-21", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Simulator", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Procedural Trainer", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelTitleClass, children: [
-                        pool.settings?.aircraftLabel || "Aircraft",
-                        " Numbering"
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                ref: (node) => {
+                  const rowKey = pool.id || `platform-resource-pool-${index}`;
+                  resourcePoolRowRefs.current[rowKey] = node;
+                },
+                className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-900",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 bg-gray-950/65 px-3 py-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-md border border-cyan-400/35 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: pool.code || "NEW" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-white", children: pool.name || "Unnamed resource pool" })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Controls how tail numbers are saved to completion records and logbooks." })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: [
+                        pool.poolType || "Dedicated",
+                        " pool ",
+                        pool.unitCode ? `for ${pool.unitCode}` : ""
+                      ] })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      ToggleField,
-                      {
-                        label: "Use prefix",
-                        checked: aircraftNumberSettings.usePrefix,
-                        disabled: !canEditResourcePools,
-                        onChange: (checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })
-                      }
-                    )
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-md border px-2 py-1 text-right ${runtimeEnabled ? "border-emerald-400/40 bg-emerald-500/10" : "border-gray-700 bg-gray-900"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-black uppercase tracking-wide text-gray-500", children: "V2 Runtime" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-sm font-black ${runtimeEnabled ? "text-emerald-200" : "text-gray-300"}`, children: runtimeEnabled ? "On" : "Off" })
+                    ] })
                   ] }),
-                  aircraftNumberSettings.usePrefix ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      SelectField,
-                      {
-                        label: "Default Prefix",
-                        value: aircraftNumberSettings.defaultPrefix,
-                        disabled: !canEditResourcePools,
-                        options: aircraftNumberSettings.prefixes,
-                        onChange: (value) => updateResourcePoolSettings(index, { aircraftNumberDefaultPrefix: value })
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
-                      aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Pool Identity" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "The owning unit, aircraft type and sharing model for this pool." })
+                      ] }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Code", value: pool.code, disabled: !canEditResourcePools, onChange: (value) => updateRow("resourcePools", index, { code: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Name", value: pool.name, disabled: !canEditResourcePools, onChange: (value) => updateRow("resourcePools", index, { name: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEditResourcePools, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEditResourcePools, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEditResourcePools, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEditResourcePools, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Display Names" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Terminology shown on the DFP while stable internal resource keys remain unchanged." })
+                      ] }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft", value: pool.settings?.aircraftLabel || "PC-21", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Simulator", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Procedural Trainer", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelTitleClass, children: [
+                            pool.settings?.aircraftLabel || "Aircraft",
+                            " Numbering"
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Controls how tail numbers are saved to completion records and logbooks." })
+                        ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          Field,
+                          ToggleField,
                           {
-                            label: `Prefix ${prefixIndex + 1}`,
-                            value: prefix,
+                            label: "Use prefix",
+                            checked: aircraftNumberSettings.usePrefix,
                             disabled: !canEditResourcePools,
-                            onChange: (value) => updateAircraftNumberPrefix(index, prefixIndex, value)
+                            onChange: (checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })
+                          }
+                        )
+                      ] }),
+                      aircraftNumberSettings.usePrefix ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          SelectField,
+                          {
+                            label: "Default Prefix",
+                            value: aircraftNumberSettings.defaultPrefix,
+                            disabled: !canEditResourcePools,
+                            options: aircraftNumberSettings.prefixes,
+                            onChange: (value) => updateResourcePoolSettings(index, { aircraftNumberDefaultPrefix: value })
                           }
                         ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
+                          aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              Field,
+                              {
+                                label: `Prefix ${prefixIndex + 1}`,
+                                value: prefix,
+                                disabled: !canEditResourcePools,
+                                onChange: (value) => updateAircraftNumberPrefix(index, prefixIndex, value)
+                              }
+                            ),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "button",
+                              {
+                                type: "button",
+                                disabled: !canEditResourcePools || aircraftNumberSettings.prefixes.length <= 1,
+                                onClick: () => removeAircraftNumberPrefix(index, prefixIndex),
+                                className: "h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
+                                children: "Delete"
+                              }
+                            )
+                          ] }, `aircraft-number-prefix-${prefixIndex}`)),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              disabled: !canEditResourcePools,
+                              onClick: () => addAircraftNumberPrefix(index),
+                              className: "w-fit rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                              children: "Add Prefix"
+                            }
+                          )
+                        ] })
+                      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400", children: "Prefixes are off. Aircraft numbers will be entered as plain numbers." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelTitleClass, children: [
+                            pool.settings?.aircraftLabel || "Aircraft",
+                            " Configurations"
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Aircraft fit states that LMP events may require. Events default to ANY when configuration does not matter." })
+                        ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "button",
                           {
                             type: "button",
-                            disabled: !canEditResourcePools || aircraftNumberSettings.prefixes.length <= 1,
-                            onClick: () => removeAircraftNumberPrefix(index, prefixIndex),
-                            className: "h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
-                            children: "Delete"
+                            disabled: !canEditResourcePools,
+                            onClick: () => addAircraftConfiguration(index),
+                            className: "rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                            children: "Add Config"
                           }
                         )
-                      ] }, `aircraft-number-prefix-${prefixIndex}`)),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
-                        {
-                          type: "button",
-                          disabled: !canEditResourcePools,
-                          onClick: () => addAircraftNumberPrefix(index),
-                          className: "w-fit rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
-                          children: "Add Prefix"
-                        }
-                      )
-                    ] })
-                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400", children: "Prefixes are off. Aircraft numbers will be entered as plain numbers." })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelTitleClass, children: [
-                        pool.settings?.aircraftLabel || "Aircraft",
-                        " Configurations"
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Aircraft fit states that LMP events may require. Events default to ANY when configuration does not matter." })
+                      aircraftConfigurations.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400", children: "No configured aircraft states. LMP events will show ANY only." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: aircraftConfigurations.map((aircraftConfig, configIndex) => {
+                        const isBaseConfig = aircraftConfig.id === "CONFIG-0";
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-black text-cyan-100", children: aircraftConfig.label }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            Field,
+                            {
+                              label: "Definition",
+                              value: aircraftConfig.definition,
+                              disabled: !canEditResourcePools || isBaseConfig,
+                              onChange: (value) => updateAircraftConfiguration(index, configIndex, value)
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              disabled: !canEditResourcePools || isBaseConfig,
+                              onClick: () => removeAircraftConfiguration(index, configIndex),
+                              className: "h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
+                              children: isBaseConfig ? "Base" : "Delete"
+                            }
+                          )
+                        ] }, aircraftConfig.id || configIndex);
+                      }) })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        type: "button",
-                        disabled: !canEditResourcePools,
-                        onClick: () => addAircraftConfiguration(index),
-                        className: "rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
-                        children: "Add Config"
-                      }
-                    )
-                  ] }),
-                  aircraftConfigurations.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400", children: "No configured aircraft states. LMP events will show ANY only." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: aircraftConfigurations.map((aircraftConfig, configIndex) => {
-                    const isBaseConfig = aircraftConfig.id === "CONFIG-0";
-                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-black text-cyan-100", children: aircraftConfig.label }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        Field,
-                        {
-                          label: "Definition",
-                          value: aircraftConfig.definition,
-                          disabled: !canEditResourcePools || isBaseConfig,
-                          onChange: (value) => updateAircraftConfiguration(index, configIndex, value)
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
-                        {
-                          type: "button",
-                          disabled: !canEditResourcePools || isBaseConfig,
-                          onClick: () => removeAircraftConfiguration(index, configIndex),
-                          className: "h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
-                          children: isBaseConfig ? "Base" : "Delete"
-                        }
-                      )
-                    ] }, aircraftConfig.id || configIndex);
-                  }) })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Live DFP Rows" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Turn runtime on when these row counts should drive the active DFP." })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      ToggleField,
-                      {
-                        label: "Apply to V2 runtime",
-                        info: "Turn this on when you want the DFP to use this pool's aircraft, simulator, trainer, standby and ground row numbers. Leave it off if you are only setting up the pool and do not want it to affect the live schedule yet.",
-                        checked: runtimeEnabled,
-                        disabled: !canEditResourcePools,
-                        onChange: (checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-5", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: pool.settings?.aircraft ?? 24, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: pool.settings?.ftd ?? 5, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: pool.settings?.cpt ?? 4, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Live DFP Rows" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Turn runtime on when these row counts should drive the active DFP." })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          ToggleField,
+                          {
+                            label: "Apply to V2 runtime",
+                            info: "Turn this on when you want the DFP to use this pool's aircraft, simulator, trainer, standby and ground row numbers. Leave it off if you are only setting up the pool and do not want it to affect the live schedule yet.",
+                            checked: runtimeEnabled,
+                            disabled: !canEditResourcePools,
+                            onChange: (checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })
+                          }
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-5", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: pool.settings?.aircraft ?? 24, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: pool.settings?.ftd ?? 5, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: pool.settings?.cpt ?? 4, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+                      ] })
+                    ] })
                   ] })
-                ] })
-              ] })
-            ] }, pool.id || `platform-resource-pool-${index}`);
+                ]
+              },
+              pool.id || `platform-resource-pool-${index}`
+            );
           })
         ] })
       ] })
