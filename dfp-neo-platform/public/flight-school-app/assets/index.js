@@ -57659,7 +57659,7 @@ const SettingsViewWithMenu = (props) => {
         activeSection === "organisation" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           OrganisationSettings,
           {
-            units: props.units,
+            units: props.platformUnits && props.platformUnits.length > 0 ? props.platformUnits : props.units,
             currentAircraftAvailable: props.currentAircraftAvailable,
             totalAircraft: props.totalAircraft,
             savedSettings: props.organisationSettings,
@@ -80321,6 +80321,9 @@ const App = () => {
     () => (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE"),
     [platformConfig]
   );
+  const platformUnitCodes = reactExports.useMemo(() => Array.from(new Set(
+    (platformConfig?.units || []).filter((unit) => String(unit.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((unit) => String(unit.code || "").trim()).filter(Boolean)
+  )).sort((left, right) => left.localeCompare(right, void 0, { numeric: true, sensitivity: "base" })), [platformConfig]);
   const getCourseUnitCodes = reactExports.useCallback((course) => {
     const rawUnit = String(course.unit || "").trim();
     if (!rawUnit) return [];
@@ -91326,6 +91329,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             serviceDefinitions,
             onUpdateServiceDefinitions: setServiceDefinitions,
             units,
+            platformUnits: platformUnitCodes,
             onUpdateUnits: setUnits,
             unitLocations,
             onUpdateUnitLocations: setUnitLocations,

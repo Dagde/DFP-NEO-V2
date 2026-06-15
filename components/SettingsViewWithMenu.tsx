@@ -32,6 +32,7 @@ interface SettingsViewWithMenuProps {
     serviceDefinitions?: Array<{ longName: string; shortName: string }>;
     onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
     units: string[];
+    platformUnits?: string[];
     onUpdateUnits: (units: string[]) => void;
     unitLocations: Record<string, string>;
     onUpdateUnitLocations: (locations: Record<string, string>) => void;
@@ -1788,7 +1789,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     )}
                     {activeSection === 'organisation' && (
                         <OrganisationSettings
-                            units={props.units}
+                            units={(props.platformUnits && props.platformUnits.length > 0) ? props.platformUnits : props.units}
                             currentAircraftAvailable={props.currentAircraftAvailable}
                             totalAircraft={props.totalAircraft}
                             savedSettings={props.organisationSettings}

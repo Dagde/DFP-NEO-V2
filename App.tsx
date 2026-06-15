@@ -18530,6 +18530,14 @@ const App: React.FC = () => {
         () => (platformConfig?.units || []).some((unit: any) => unit.status !== 'INACTIVE'),
         [platformConfig],
     );
+    const platformUnitCodes = useMemo(() => (
+        Array.from(new Set(
+            (platformConfig?.units || [])
+                .filter((unit: any) => String(unit.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+                .map((unit: any) => String(unit.code || '').trim())
+                .filter(Boolean)
+        )).sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }))
+    ), [platformConfig]);
 
     const getCourseUnitCodes = useCallback((course: Course): string[] => {
         const rawUnit = String(course.unit || '').trim();
@@ -32052,6 +32060,7 @@ appliedUpdates.forEach(update => {
                     serviceDefinitions={serviceDefinitions}
                     onUpdateServiceDefinitions={setServiceDefinitions}
                     units={units}
+                    platformUnits={platformUnitCodes}
                     onUpdateUnits={setUnits}
                     unitLocations={unitLocations}
                     onUpdateUnitLocations={setUnitLocations}
