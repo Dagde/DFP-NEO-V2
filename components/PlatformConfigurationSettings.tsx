@@ -2176,7 +2176,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addResourcePool = () => {
-    const defaultLocation = config.locations[0]?.code || 'ESL';
+    const selectedUnit = config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))];
+    const defaultLocation = selectedUnit?.locationCode || config.locations[0]?.code || 'ESL';
+    const defaultUnitCode = selectedUnit?.code || '';
     const newPoolId = createClientRecordId('pool');
     setConfig((prev) => ({
       ...prev,
@@ -2188,7 +2190,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           name: 'New Resource Pool',
           organisationCode: prev.organisations[0]?.code || 'DEFAULT',
           locationCode: defaultLocation,
-          unitCode: '',
+          unitCode: defaultUnitCode,
           aircraftTypeCode: prev.aircraftTypes[0]?.code || 'PC-21',
           poolType: 'Dedicated',
           status: 'ACTIVE',
