@@ -730,10 +730,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                             {sortedUnits.map(renderInstructorUnitCard)}
                         </div>
                         <div className="flex-1 space-y-6 min-w-0">
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {sortedFlightGroups.map(renderFlightCard)}
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {renderSupportStaffCards()}
                             </div>
                         </div>
@@ -744,10 +744,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                             {sortedUnits.map(renderInstructorUnitCard)}
                         </div>
                         <div className="flex-1 space-y-6 min-w-0">
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {sortedFixedCrewGroups.map(renderFixedCrewCard)}
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {renderSupportStaffCards()}
                             </div>
                         </div>
