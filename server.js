@@ -5630,6 +5630,8 @@ const BULK_UPLOAD_REQUIRED_COLUMNS = [
   'Type',
 ];
 
+const SYLLABUS_COURSE_SHELL_NOTE = '[DFP_COURSE_SHELL]';
+
 const BULK_UPLOAD_TYPE_LABELS = new Set([
   'flight',
   'flying',
@@ -5757,6 +5759,10 @@ function uploadRowHasContent(row) {
 function uploadItemBelongsToDestination(item, courseCode, lmpType) {
   const courses = Array.isArray(item?.courses) ? item.courses : [];
   return normaliseUploadLmpType(item?.lmpType) === lmpType && courses.includes(courseCode);
+}
+
+function isUploadCourseShellRow(item) {
+  return String(item?.notes || '').includes(SYLLABUS_COURSE_SHELL_NOTE);
 }
 
 // POST /api/syllabus/bulk-upload - Import/update syllabus events from workbook
@@ -5957,7 +5963,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
               "preFlightTime" = $21, "postFlightTime" = $22,
               "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
               "prerequisitesFlying" = $25::text[], "location" = $26, "unit" = $27, "lmpType" = $28,
-              "isActive" = $29::boolean, "version" = "version" + 1, "updatedAt" = NOW()
+              "isActive" = $29::boolean, "notes" = $30, "version" = "version" + 1, "updatedAt" = NOW()
           WHERE "id" = $1
         `,
           existing.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
@@ -5965,7 +5971,8 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
           itemData.resourcesPhysical, itemData.resourceNumber, itemData.acceptableAircraftConfigs, itemData.resourcesHuman,
           itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
           itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
-          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive
+          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive,
+          isUploadCourseShellRow(existing) ? null : existing.notes
         );
         updated.push({ code });
         continue;
@@ -5984,7 +5991,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
               "preFlightTime" = $21, "postFlightTime" = $22,
               "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
               "prerequisitesFlying" = $25::text[], "location" = $26, "unit" = $27, "lmpType" = $28,
-              "isActive" = $29::boolean, "version" = "version" + 1, "updatedAt" = NOW()
+              "isActive" = $29::boolean, "notes" = $30, "version" = "version" + 1, "updatedAt" = NOW()
           WHERE "id" = $1
         `,
           reusablePackagePlaceholder.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
@@ -5992,7 +5999,8 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
           itemData.resourcesPhysical, itemData.resourceNumber, itemData.acceptableAircraftConfigs, itemData.resourcesHuman,
           itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
           itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
-          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive
+          itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive,
+          isUploadCourseShellRow(reusablePackagePlaceholder) ? null : reusablePackagePlaceholder.notes
         );
         generatedPlaceholderUsed = true;
         updated.push({ code });

@@ -84,6 +84,7 @@ import {
     type AirCombatSchedulingWeights,
     type AirCombatTrainingStreamWeight,
 } from './utils/airCombatTraining';
+import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
@@ -375,6 +376,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('details');
     const filteredEventOptions = useMemo(() => (
         syllabusDetails
+            .filter(item => !isSyllabusCourseShell(item))
             .filter(item => ['Flight', 'FTD', 'Academics'].includes(item.type))
             .slice(0, 160)
     ), [syllabusDetails]);
@@ -478,11 +480,11 @@ const DfpSidePanelTimeline: React.FC<{
     const [showWizardConfigEditor, setShowWizardConfigEditor] = useState(false);
 
     const courseEventOptions = useMemo(() => (
-        fullAssistEventOptions.filter(item => item.lmpType !== 'Staff CAT')
+        fullAssistEventOptions.filter(item => item.lmpType !== 'Staff CAT' && !isSyllabusCourseShell(item))
     ), [fullAssistEventOptions]);
 
     const packageEventOptions = useMemo(() => (
-        fullAssistEventOptions.filter(item => item.lmpType === 'Staff CAT')
+        fullAssistEventOptions.filter(item => item.lmpType === 'Staff CAT' && !isSyllabusCourseShell(item))
     ), [fullAssistEventOptions]);
 
     const activeSyllabusOptions = activeAssistSection === 'packages'
@@ -2052,6 +2054,7 @@ const DfpSidePanelTimeline: React.FC<{
         ].map(normaliseAssistTrainingCode).filter(Boolean));
         return fullAssistEventOptions
             .filter(item => item.isActive !== false)
+            .filter(item => !isSyllabusCourseShell(item))
             .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
             .filter(item => {
                 const values = [
@@ -9534,7 +9537,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length,
             nonMandatoryTaskingEvents: taskingPriorityEvents.length - airCombatMandatoryTaskingEvents.length,
             syllabusItems: syllabusDetails.length,
-            activeSyllabusItems: syllabusDetails.filter(item => item.isActive !== false).length,
+            activeSyllabusItems: syllabusDetails.filter(item => item.isActive !== false && !isSyllabusCourseShell(item)).length,
             generatedEventsAtAirCombatStart: generatedEvents.length,
             windows: {
                 flyingStartTime,
@@ -10488,6 +10491,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     cacheKey,
                     syllabusDetails
                         .filter(item => item.isActive !== false)
+                        .filter(item => !isSyllabusCourseShell(item))
                         .filter(trainingItemMatchesScheduleMode)
                         .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
                         .filter(item => (item.courses || []).includes(code))
@@ -12424,6 +12428,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const getItemsForAssignment = (kind: 'course' | 'training_package', code: string): SyllabusItemDetail[] => sortItems(
             syllabusDetails
                 .filter(item => item.isActive !== false)
+                .filter(item => !isSyllabusCourseShell(item))
                 .filter(item => (kind === 'training_package' ? item.lmpType === 'Staff CAT' : item.lmpType !== 'Staff CAT'))
                 .filter(item => (item.courses || []).includes(code))
         );
@@ -31971,7 +31976,7 @@ appliedUpdates.forEach(update => {
                            crewPositionTerminology={activeCrewPositionTerminology}
                            activeLocationCode={school}
                            activeUnitCode={activeUnitCode}
-                           trainingPackageTemplates={syllabusDetails.filter(item => item.lmpType === 'Staff CAT' && item.isActive !== false)}
+                           trainingPackageTemplates={syllabusDetails.filter(item => item.lmpType === 'Staff CAT' && item.isActive !== false && !isSyllabusCourseShell(item))}
                            instructorsData={instructorsData}
                            operationalModel={activeOperationalModel}
                            currentUserName={currentUserName}

@@ -24,6 +24,7 @@ import {
     staffHasAirCombatAssignment,
     setAirCombatTrainingAssignment,
 } from '../utils/airCombatTraining';
+import { SYLLABUS_COURSE_SHELL_NOTE, isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 
 interface SyllabusViewProps {
   syllabusDetails: SyllabusItemDetail[];
@@ -997,6 +998,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const filteredSyllabusDetails = useMemo(() => {
       return syllabusDetails.filter(item => {
           if (item.isActive === false) return false;
+          if (isSyllabusCourseShell(item)) return false;
           if (getItemLmpDetailsTab(item) !== activeTab) return false;
           // If no courses array defined, assume it belongs to BPC+IPC (legacy behavior)
           if (!item.courses || item.courses.length === 0) {
@@ -1526,7 +1528,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       // Academic Training: use full name as course identifier so it matches academicLmpType dropdown
       const isAcademic = newLMPCourseType === 'Academic Training';
       const courseCode = isAcademic && !isTrainingPackagesTab ? newLMPName.trim() : shortCode;
-      // Build the new course/LMP item with basics filled in
+      // Build a non-schedulable course/package shell so the collection exists
+      // without creating a default event.
       const newItem: SyllabusItemDetail = {
           id: `new-lmp-${Date.now()}`,
           code: courseCode,
@@ -1541,7 +1544,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           eventDetailsSortie: [],
           totalEventHours: 0,
           flightOrSimHours: 0,
-          duration: 1,
+          duration: 0,
           preFlightTime: 0,
           postFlightTime: 0,
           type: isAcademic ? 'Academics' : 'Ground School',
@@ -1555,20 +1558,20 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : undefined,
           courses: [courseCode],
           lmpType: activeLmpType,
+          notes: SYLLABUS_COURSE_SHELL_NOTE,
       };
       setShowAddLMPModal(false);
       try {
-          // Persist the new course/LMP skeleton to the database
+          // Persist the collection shell to the database
           const { id: _tmpId, ...itemWithoutTmpId } = newItem;
           const savedItem = await createSyllabusItem(itemWithoutTmpId, `New ${activeCollectionNoun} created: ${newLMPName.trim()}`);
           if (onAddItem) onAddItem(savedItem);
-          // Switch to the new course and immediately enter edit mode
-          // Use the actual course/package value returned by server when available.
           const actualCode = savedItem.courses?.[0] || savedItem.code || courseCode;
           setSelectedCourseType(actualCode);
-          setSelectedItem(savedItem);
-          setEditedItem(JSON.parse(JSON.stringify(savedItem)));
-          setIsEditing(true);
+          setSelectedItem(null);
+          setHoveredItem(null);
+          setEditedItem(null);
+          setIsEditing(false);
           logAudit({ action: 'Create', description: `Created new ${activeCollectionNoun}: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: 'LMP/Event Details' });
       } catch (err: any) {
           alert(`❌ Failed to create ${activeCollectionNoun}: ${err.message}`);
@@ -1822,8 +1825,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 </h2>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20 }}>
                     {isTrainingPackagesTab
-                        ? `Packages created here are assigned to ${activeLocationNormalised || 'the selected location'} / ${activeUnitNormalised || 'the selected unit'}.`
-                        : `A ${activeCollectionNoun} code will be auto-generated from the title.`}
+                        ? `Packages created here are assigned to ${activeLocationNormalised || 'the selected location'} / ${activeUnitNormalised || 'the selected unit'} and start with no events.`
+                        : `A ${activeCollectionNoun} code will be auto-generated from the title. No event is created until you upload or add one.`}
                 </p>
 
                 {isTrainingPackagesTab && (

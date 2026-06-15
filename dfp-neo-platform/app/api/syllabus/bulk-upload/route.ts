@@ -11,6 +11,8 @@ const REQUIRED_COLUMNS = [
   'Type',
 ];
 
+const SYLLABUS_COURSE_SHELL_NOTE = '[DFP_COURSE_SHELL]';
+
 const UPLOAD_TYPE_LABELS = new Set([
   'flight',
   'flying',
@@ -144,6 +146,10 @@ const belongsToDestination = (item: any, courseCode: string, lmpType: 'Staff CAT
   const courses = Array.isArray(item?.courses) ? item.courses : [];
   return getNormalisedLmpType(item?.lmpType) === lmpType && courses.includes(courseCode);
 };
+
+const isCourseShellRow = (item: any): boolean => (
+  String(item?.notes || '').includes(SYLLABUS_COURSE_SHELL_NOTE)
+);
 
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
@@ -355,7 +361,7 @@ export async function POST(request: NextRequest) {
 
         const updatedItem = await db.syllabusItem.update({
           where: { id: existing.id },
-          data: { ...itemData, version: { increment: 1 }, updatedAt: new Date() },
+          data: { ...itemData, notes: isCourseShellRow(existing) ? null : existing.notes, version: { increment: 1 }, updatedAt: new Date() },
         });
 
         await db.syllabusHistory.create({
@@ -376,7 +382,7 @@ export async function POST(request: NextRequest) {
       if (!explicitCode && reusablePackagePlaceholder && !generatedPlaceholderUsed) {
         const updatedItem = await db.syllabusItem.update({
           where: { id: reusablePackagePlaceholder.id },
-          data: { ...itemData, version: { increment: 1 }, updatedAt: new Date() },
+          data: { ...itemData, notes: isCourseShellRow(reusablePackagePlaceholder) ? null : reusablePackagePlaceholder.notes, version: { increment: 1 }, updatedAt: new Date() },
         });
 
         await db.syllabusHistory.create({

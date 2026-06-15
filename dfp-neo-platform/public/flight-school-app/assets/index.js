@@ -3848,6 +3848,8 @@ const normaliseAirCombatSchedulingWeights = (value) => {
     trainingPackages: 100 - Math.round(courses / total * 100)
   };
 };
+const SYLLABUS_COURSE_SHELL_NOTE = "[DFP_COURSE_SHELL]";
+const isSyllabusCourseShell = (item) => String(item?.notes || "").includes(SYLLABUS_COURSE_SHELL_NOTE);
 const pendingAudits = /* @__PURE__ */ new Map();
 const debouncedAuditLog = (key, params, logFunction) => {
   const existing = pendingAudits.get(key);
@@ -39328,6 +39330,7 @@ const SyllabusView = ({
   const filteredSyllabusDetails = reactExports.useMemo(() => {
     return syllabusDetails.filter((item) => {
       if (item.isActive === false) return false;
+      if (isSyllabusCourseShell(item)) return false;
       if (getItemLmpDetailsTab(item) !== activeTab) return false;
       if (!item.courses || item.courses.length === 0) {
         return activeTab === "master" && selectedCourseType === "BPC+IPC";
@@ -39818,7 +39821,7 @@ const SyllabusView = ({
       eventDetailsSortie: [],
       totalEventHours: 0,
       flightOrSimHours: 0,
-      duration: 1,
+      duration: 0,
       preFlightTime: 0,
       postFlightTime: 0,
       type: isAcademic ? "Academics" : "Ground School",
@@ -39831,7 +39834,8 @@ const SyllabusView = ({
       location: shouldScopeCreatedItemsToActiveUnit ? activeLocationNormalised : "",
       unit: shouldScopeCreatedItemsToActiveUnit ? activeUnitNormalised : void 0,
       courses: [courseCode],
-      lmpType: activeLmpType
+      lmpType: activeLmpType,
+      notes: SYLLABUS_COURSE_SHELL_NOTE
     };
     setShowAddLMPModal(false);
     try {
@@ -39840,9 +39844,10 @@ const SyllabusView = ({
       if (onAddItem) onAddItem(savedItem);
       const actualCode = savedItem.courses?.[0] || savedItem.code || courseCode;
       setSelectedCourseType(actualCode);
-      setSelectedItem(savedItem);
-      setEditedItem(JSON.parse(JSON.stringify(savedItem)));
-      setIsEditing(true);
+      setSelectedItem(null);
+      setHoveredItem(null);
+      setEditedItem(null);
+      setIsEditing(false);
       logAudit({ action: "Create", description: `Created new ${activeCollectionNoun}: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: "LMP/Event Details" });
     } catch (err) {
       alert(`❌ Failed to create ${activeCollectionNoun}: ${err.message}`);
@@ -40089,7 +40094,7 @@ const SyllabusView = ({
                 "Add ",
                 isTrainingPackagesTab ? "Package" : "Course"
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20 }, children: isTrainingPackagesTab ? `Packages created here are assigned to ${activeLocationNormalised || "the selected location"} / ${activeUnitNormalised || "the selected unit"}.` : `A ${activeCollectionNoun} code will be auto-generated from the title.` }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20 }, children: isTrainingPackagesTab ? `Packages created here are assigned to ${activeLocationNormalised || "the selected location"} / ${activeUnitNormalised || "the selected unit"} and start with no events.` : `A ${activeCollectionNoun} code will be auto-generated from the title. No event is created until you upload or add one.` }),
               isTrainingPackagesTab && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginBottom: 16, padding: 10, border: "1px solid #374151", borderRadius: 8, backgroundColor: "#111827" }, children: [
                 { id: "blank", label: "Create blank package" },
                 { id: "copy", label: "Copy package from another unit" }
@@ -65281,7 +65286,7 @@ const DfpSidePanelTimeline = ({
   const wizardRepeatRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
   const [activeAssistSection, setActiveAssistSection] = reactExports.useState("details");
-  const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
+  const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => !isSyllabusCourseShell(item)).filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
   const fullAssistEventOptions = reactExports.useMemo(() => syllabusDetails, [syllabusDetails]);
   const [selectedEventCode, setSelectedEventCode] = reactExports.useState("");
   const [selectedTaskProfile, setSelectedTaskProfile] = reactExports.useState("");
@@ -65352,8 +65357,8 @@ const DfpSidePanelTimeline = ({
   const [wizardExclusionEnd, setWizardExclusionEnd] = reactExports.useState(Math.min(23.75, flyingStartTime + 0.5));
   const [wizardExclusionRestriction, setWizardExclusionRestriction] = reactExports.useState("both");
   const [showWizardConfigEditor, setShowWizardConfigEditor] = reactExports.useState(false);
-  const courseEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType !== "Staff CAT"), [fullAssistEventOptions]);
-  const packageEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType === "Staff CAT"), [fullAssistEventOptions]);
+  const courseEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType !== "Staff CAT" && !isSyllabusCourseShell(item)), [fullAssistEventOptions]);
+  const packageEventOptions = reactExports.useMemo(() => fullAssistEventOptions.filter((item) => item.lmpType === "Staff CAT" && !isSyllabusCourseShell(item)), [fullAssistEventOptions]);
   const activeSyllabusOptions = activeAssistSection === "packages" ? packageEventOptions : activeAssistSection === "course" ? courseEventOptions : filteredEventOptions;
   const selectedSyllabusItem = reactExports.useMemo(() => activeSyllabusOptions.find((item) => item.code === selectedEventCode) || filteredEventOptions.find((item) => item.code === selectedEventCode) || activeSyllabusOptions[0] || filteredEventOptions[0] || null, [activeSyllabusOptions, filteredEventOptions, selectedEventCode]);
   reactExports.useEffect(() => {
@@ -66708,7 +66713,7 @@ const DfpSidePanelTimeline = ({
       assignment.title,
       assignment.trainingKey
     ].map(normaliseAssistTrainingCode).filter(Boolean));
-    return fullAssistEventOptions.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => {
+    return fullAssistEventOptions.filter((item) => item.isActive !== false).filter((item) => !isSyllabusCourseShell(item)).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => {
       const values = [
         ...item.courses || [],
         item.phase,
@@ -72491,7 +72496,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       mandatoryTaskingEvents: airCombatMandatoryTaskingEvents.length,
       nonMandatoryTaskingEvents: taskingPriorityEvents.length - airCombatMandatoryTaskingEvents.length,
       syllabusItems: syllabusDetails.length,
-      activeSyllabusItems: syllabusDetails.filter((item) => item.isActive !== false).length,
+      activeSyllabusItems: syllabusDetails.filter((item) => item.isActive !== false && !isSyllabusCourseShell(item)).length,
       generatedEventsAtAirCombatStart: generatedEvents.length,
       windows: {
         flyingStartTime,
@@ -73386,7 +73391,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (!sortedTrainingItemsCache.has(cacheKey)) {
         sortedTrainingItemsCache.set(
           cacheKey,
-          syllabusDetails.filter((item) => item.isActive !== false).filter(trainingItemMatchesScheduleMode).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
+          syllabusDetails.filter((item) => item.isActive !== false).filter((item) => !isSyllabusCourseShell(item)).filter(trainingItemMatchesScheduleMode).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code)).sort(
             (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
           )
         );
@@ -75117,7 +75122,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.orderKey || "").localeCompare(right.orderKey || "") || left.code.localeCompare(right.code)
     );
     const getItemsForAssignment = (kind, code) => sortItems(
-      syllabusDetails.filter((item) => item.isActive !== false).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code))
+      syllabusDetails.filter((item) => item.isActive !== false).filter((item) => !isSyllabusCourseShell(item)).filter((item) => kind === "training_package" ? item.lmpType === "Staff CAT" : item.lmpType !== "Staff CAT").filter((item) => (item.courses || []).includes(code))
     );
     const rows = [];
     instructors.filter(isAirCombatCrewPositionStaff).forEach((staff) => {
@@ -90871,7 +90876,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             crewPositionTerminology: activeCrewPositionTerminology,
             activeLocationCode: school,
             activeUnitCode,
-            trainingPackageTemplates: syllabusDetails.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false),
+            trainingPackageTemplates: syllabusDetails.filter((item) => item.lmpType === "Staff CAT" && item.isActive !== false && !isSyllabusCourseShell(item)),
             instructorsData,
             operationalModel: activeOperationalModel,
             currentUserName,
