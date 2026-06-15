@@ -22012,7 +22012,7 @@ const App: React.FC = () => {
     const canRunNeoBuild = canUsePlatformPermission('neo.run');
     const isNeoCapableOperationalModel = activeOperationalModel === 'flight_school' || activeOperationalModel === 'air_combat';
     const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
-    const modelUnavailableLeftViews = activeOperationalModel === 'air_combat' ? ['Trainee'] : [];
+    const modelUnavailableLeftViews = activeOperationalModel === 'air_combat' || activeOperationalModel === 'fixed_crew' ? ['Trainee'] : [];
     const modelUnavailableRightViews = activeOperationalModel === 'air_combat' ? ['NextDayTraineeSchedule'] : [];
     const canViewOwnTraineeProfile = canUsePlatformPermission('trainee.profile.own');
     const canViewOtherTraineeProfiles = canUsePlatformPermission('trainee.profile.others');

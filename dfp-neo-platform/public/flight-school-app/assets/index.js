@@ -5798,7 +5798,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
             onClick: () => navigateIfAllowed("Trainee"),
             disabled: !canOpen("Trainee"),
             "aria-disabled": isModelUnavailable("Trainee") || !canOpen("Trainee"),
-            title: isModelUnavailable("Trainee") ? "Trainee functions are not used by the Air Combat Model." : void 0,
+            title: isModelUnavailable("Trainee") ? "Trainee functions are not used by this operational model." : void 0,
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Trainee" ? "active" : ""} ${accessButtonClass("Trainee")}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Trainee" })
           }
@@ -82671,7 +82671,7 @@ ${"=".repeat(60)}`);
   const canRunNeoBuild = canUsePlatformPermission("neo.run");
   const isNeoCapableOperationalModel = activeOperationalModel === "flight_school" || activeOperationalModel === "air_combat";
   const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
-  const modelUnavailableLeftViews = activeOperationalModel === "air_combat" ? ["Trainee"] : [];
+  const modelUnavailableLeftViews = activeOperationalModel === "air_combat" || activeOperationalModel === "fixed_crew" ? ["Trainee"] : [];
   const modelUnavailableRightViews = activeOperationalModel === "air_combat" ? ["NextDayTraineeSchedule"] : [];
   const canViewOwnTraineeProfile = canUsePlatformPermission("trainee.profile.own");
   const canViewOtherTraineeProfiles = canUsePlatformPermission("trainee.profile.others");

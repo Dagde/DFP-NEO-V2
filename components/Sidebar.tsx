@@ -182,7 +182,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             onClick={() => navigateIfAllowed('Trainee')}
             disabled={!canOpen('Trainee')}
             aria-disabled={isModelUnavailable('Trainee') || !canOpen('Trainee')}
-            title={isModelUnavailable('Trainee') ? 'Trainee functions are not used by the Air Combat Model.' : undefined}
+            title={isModelUnavailable('Trainee') ? 'Trainee functions are not used by this operational model.' : undefined}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Trainee' ? 'active' : ''} ${accessButtonClass('Trainee')}`}
           >
             <span>Trainee</span>
