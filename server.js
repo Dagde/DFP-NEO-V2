@@ -5764,9 +5764,31 @@ function uploadRowHasContent(row) {
   return Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
 }
 
-function uploadItemBelongsToDestination(item, courseCode, lmpType) {
+function normaliseUploadContextCode(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function uploadStaffCatItemMatchesContext(item, operationalModel, locationCode, unitCode) {
+  if (normaliseUploadLmpType(item?.lmpType) !== 'Staff CAT') return true;
+  const model = normaliseUploadContextCode(operationalModel);
+  const itemLocation = normaliseUploadContextCode(item?.location);
+  const itemUnit = normaliseUploadContextCode(item?.unit);
+  const targetLocation = normaliseUploadContextCode(locationCode);
+  const targetUnit = normaliseUploadContextCode(unitCode);
+  if (model === 'FIXED_CREW') {
+    return Boolean(targetUnit) && itemUnit === targetUnit && (!targetLocation || !itemLocation || itemLocation === targetLocation);
+  }
+  if (model === 'AIR_COMBAT') {
+    return (!targetUnit || !itemUnit || itemUnit === targetUnit) && (!targetLocation || !itemLocation || itemLocation === targetLocation);
+  }
+  return true;
+}
+
+function uploadItemBelongsToDestination(item, courseCode, lmpType, operationalModel = '', locationCode = '', unitCode = '') {
   const courses = Array.isArray(item?.courses) ? item.courses : [];
-  return normaliseUploadLmpType(item?.lmpType) === lmpType && courses.includes(courseCode);
+  return normaliseUploadLmpType(item?.lmpType) === lmpType
+    && courses.includes(courseCode)
+    && (lmpType !== 'Staff CAT' || uploadStaffCatItemMatchesContext(item, operationalModel, locationCode, unitCode));
 }
 
 function isUploadCourseShellRow(item) {
@@ -5782,6 +5804,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
     const packageName = String(req.body?.packageName || '').trim();
     const uploadMode = String(req.body?.uploadMode || 'update').trim();
     const lmpType = normaliseUploadLmpType(String(req.body?.lmpType || 'Master LMP').trim());
+    const operationalModel = String(req.body?.operationalModel || '').trim();
     const locationCode = String(req.body?.locationCode || req.body?.location || '').trim();
     const unitCode = String(req.body?.unitCode || req.body?.unit || '').trim();
     if (!selectedCourseCode && lmpType === 'Staff CAT' && uploadMode === 'create') {
@@ -5840,7 +5863,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
         const explicitCode = getUploadString(row, ['Code']);
         const code = explicitCode || getGeneratedUploadCode(courseCode, preflightSequence++);
         const existing = (await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "code" = $1 LIMIT 1`, code))[0];
-        if (existing && !uploadItemBelongsToDestination(existing, courseCode, lmpType)) {
+        if (existing && !uploadItemBelongsToDestination(existing, courseCode, lmpType, operationalModel, locationCode, unitCode)) {
           preflightErrors.push({
             row: rowNumber,
             error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
@@ -5864,10 +5887,15 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
     }
 
     if (lmpType === 'Staff CAT' && uploadMode === 'create') {
+      const fixedCrewUnitFilter = normaliseUploadContextCode(operationalModel) === 'FIXED_CREW' && unitCode
+        ? ` AND "unit" = $3`
+        : '';
+      const existingPackageParams = fixedCrewUnitFilter
+        ? [lmpType, selectedCourseCode, unitCode]
+        : [lmpType, selectedCourseCode];
       const existingPackageRows = await db.$queryRawUnsafe(
-        `SELECT "id" FROM "SyllabusItem" WHERE "lmpType" = $1 AND "isActive" = true AND $2 = ANY("courses") LIMIT 1`,
-        lmpType,
-        selectedCourseCode
+        `SELECT "id" FROM "SyllabusItem" WHERE "lmpType" = $1 AND "isActive" = true AND $2 = ANY("courses")${fixedCrewUnitFilter} LIMIT 1`,
+        ...existingPackageParams
       );
       if (existingPackageRows.length > 0) {
         return res.status(409).json({ error: `Training package "${selectedCourseCode}" already exists. Select it and use update or replace.` });
@@ -5875,10 +5903,15 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
     }
 
     if (lmpType === 'Staff CAT' && uploadMode === 'replace') {
+      const fixedCrewUnitFilter = normaliseUploadContextCode(operationalModel) === 'FIXED_CREW' && unitCode
+        ? ` AND "unit" = $3`
+        : '';
+      const replaceParams = fixedCrewUnitFilter
+        ? [lmpType, selectedCourseCode, unitCode]
+        : [lmpType, selectedCourseCode];
       await db.$executeRawUnsafe(
-        `DELETE FROM "SyllabusItem" WHERE "lmpType" = $1 AND $2 = ANY("courses")`,
-        lmpType,
-        selectedCourseCode
+        `DELETE FROM "SyllabusItem" WHERE "lmpType" = $1 AND $2 = ANY("courses")${fixedCrewUnitFilter}`,
+        ...replaceParams
       );
     }
 
@@ -5886,11 +5919,18 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
     let nextSortOrder = Number(maxOrderRows?.[0]?.maxSortOrder || 0) + 1;
 
     const reusablePackagePlaceholder = selectedCourseCode && lmpType === 'Staff CAT' && uploadMode !== 'replace'
-      ? (await db.$queryRawUnsafe(
-          `SELECT * FROM "SyllabusItem" WHERE "code" = $1 AND "lmpType" = $2 AND "isActive" = true AND $1 = ANY("courses") LIMIT 1`,
-          selectedCourseCode,
-          lmpType
-        ))[0]
+      ? await (() => {
+          const fixedCrewUnitFilter = normaliseUploadContextCode(operationalModel) === 'FIXED_CREW' && unitCode
+            ? ` AND "unit" = $3`
+            : '';
+          const placeholderParams = fixedCrewUnitFilter
+            ? [selectedCourseCode, lmpType, unitCode]
+            : [selectedCourseCode, lmpType];
+          return db.$queryRawUnsafe(
+            `SELECT * FROM "SyllabusItem" WHERE "code" = $1 AND "lmpType" = $2 AND "isActive" = true AND $1 = ANY("courses")${fixedCrewUnitFilter} LIMIT 1`,
+            ...placeholderParams
+          ).then(rows => rows[0]);
+        })()
       : null;
 
     for (let index = 0; index < rows.length; index++) {
@@ -5952,7 +5992,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
 
       const existing = (await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "code" = $1 LIMIT 1`, code))[0];
       if (existing) {
-        if (!uploadItemBelongsToDestination(existing, courseCode, lmpType)) {
+        if (!uploadItemBelongsToDestination(existing, courseCode, lmpType, operationalModel, locationCode, unitCode)) {
           errors.push({
             row: rowNumber,
             error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,

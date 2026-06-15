@@ -150,9 +150,42 @@ const getUnitScopedCollectionCode = (baseCode: string, unitCode: string): string
 const rowHasContent = (row: Record<string, any>): boolean =>
   Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
 
-const belongsToDestination = (item: any, courseCode: string, lmpType: 'Staff CAT' | 'Master LMP'): boolean => {
+const normaliseContextCode = (value: unknown): string => String(value || '').trim().toUpperCase();
+const lmpTypeIsNotStaffCat = (value: unknown): boolean => getNormalisedLmpType(String(value || '')) !== 'Staff CAT';
+
+const staffCatItemMatchesUploadContext = (
+  item: any,
+  operationalModel: string,
+  locationCode: string,
+  unitCode: string,
+): boolean => {
+  if (lmpTypeIsNotStaffCat(item?.lmpType)) return true;
+  const model = normaliseContextCode(operationalModel);
+  const itemLocation = normaliseContextCode(item?.location);
+  const itemUnit = normaliseContextCode(item?.unit);
+  const targetLocation = normaliseContextCode(locationCode);
+  const targetUnit = normaliseContextCode(unitCode);
+  if (model === 'FIXED_CREW') {
+    return Boolean(targetUnit) && itemUnit === targetUnit && (!targetLocation || !itemLocation || itemLocation === targetLocation);
+  }
+  if (model === 'AIR_COMBAT') {
+    return (!targetUnit || !itemUnit || itemUnit === targetUnit) && (!targetLocation || !itemLocation || itemLocation === targetLocation);
+  }
+  return true;
+};
+
+const belongsToDestination = (
+  item: any,
+  courseCode: string,
+  lmpType: 'Staff CAT' | 'Master LMP',
+  operationalModel = '',
+  locationCode = '',
+  unitCode = '',
+): boolean => {
   const courses = Array.isArray(item?.courses) ? item.courses : [];
-  return getNormalisedLmpType(item?.lmpType) === lmpType && courses.includes(courseCode);
+  return getNormalisedLmpType(item?.lmpType) === lmpType
+    && courses.includes(courseCode)
+    && (lmpType !== 'Staff CAT' || staffCatItemMatchesUploadContext(item, operationalModel, locationCode, unitCode));
 };
 
 const isCourseShellRow = (item: any): boolean => (
@@ -172,6 +205,7 @@ export async function POST(request: NextRequest) {
     const uploadMode = String(formData.get('uploadMode') || 'update').trim();
     const requestedLmpType = String(formData.get('lmpType') || 'Master LMP').trim();
     const lmpType = requestedLmpType === 'Staff CAT' ? 'Staff CAT' : 'Master LMP';
+    const operationalModel = String(formData.get('operationalModel') || '').trim();
     const locationCode = String(formData.get('locationCode') || formData.get('location') || '').trim();
     const unitCode = String(formData.get('unitCode') || formData.get('unit') || '').trim();
     if (!selectedCourseCode && lmpType === 'Staff CAT' && uploadMode === 'create') {
@@ -240,7 +274,7 @@ export async function POST(request: NextRequest) {
         const explicitCode = getString(row, ['Code']);
         const code = explicitCode || getGeneratedEventCode(courseCode, preflightSequence++);
         const existing = await db.syllabusItem.findUnique({ where: { code } });
-        if (existing && !belongsToDestination(existing, courseCode, lmpType)) {
+        if (existing && !belongsToDestination(existing, courseCode, lmpType, operationalModel, locationCode, unitCode)) {
           preflightErrors.push({
             row: rowNumber,
             error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
@@ -268,7 +302,12 @@ export async function POST(request: NextRequest) {
 
     if (lmpType === 'Staff CAT' && uploadMode === 'create') {
       const existingPackageCount = await db.syllabusItem.count({
-        where: { lmpType, isActive: true, courses: { has: selectedCourseCode } },
+        where: {
+          lmpType,
+          isActive: true,
+          courses: { has: selectedCourseCode },
+          ...(normaliseContextCode(operationalModel) === 'FIXED_CREW' && unitCode ? { unit: unitCode } : {}),
+        },
       });
       if (existingPackageCount > 0) {
         return NextResponse.json(
@@ -280,7 +319,11 @@ export async function POST(request: NextRequest) {
 
     if (lmpType === 'Staff CAT' && uploadMode === 'replace') {
       await db.syllabusItem.deleteMany({
-        where: { lmpType, courses: { has: selectedCourseCode } },
+        where: {
+          lmpType,
+          courses: { has: selectedCourseCode },
+          ...(normaliseContextCode(operationalModel) === 'FIXED_CREW' && unitCode ? { unit: unitCode } : {}),
+        },
       });
     }
 
@@ -294,6 +337,7 @@ export async function POST(request: NextRequest) {
             lmpType,
             isActive: true,
             courses: { has: selectedCourseCode },
+            ...(normaliseContextCode(operationalModel) === 'FIXED_CREW' && unitCode ? { unit: unitCode } : {}),
           },
         })
       : null;
@@ -358,7 +402,7 @@ export async function POST(request: NextRequest) {
 
       const existing = await db.syllabusItem.findUnique({ where: { code } });
       if (existing) {
-        if (!belongsToDestination(existing, courseCode, lmpType)) {
+        if (!belongsToDestination(existing, courseCode, lmpType, operationalModel, locationCode, unitCode)) {
           errors.push({
             row: rowNumber,
             error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,

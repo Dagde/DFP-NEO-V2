@@ -39884,6 +39884,7 @@ const SyllabusView = ({
       formData.append("packageName", destinationName);
       formData.append("uploadMode", isTrainingPackagesTab ? uploadMode : "update");
       formData.append("lmpType", activeLmpType);
+      formData.append("operationalModel", activeOperationalModel);
       if (shouldScopeCreatedItemsToActiveUnit) {
         formData.append("locationCode", activeLocationNormalised);
         formData.append("unitCode", activeUnitNormalised);
