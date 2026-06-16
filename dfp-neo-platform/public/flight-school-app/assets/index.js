@@ -71585,11 +71585,52 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const normaliseCrewKey = (value) => normaliseCrewValue(value).toUpperCase();
     const staffCatalogue = config.staffQualificationCatalogue || normaliseStaffQualificationCatalogue(null);
     const picQualification = getQualificationsForOperationalModel(staffCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic");
+    const getFixedCrewRoleMatchTokens = (value) => {
+      const raw = String(value || "").trim();
+      const crewPosition = findCrewPositionEntry(raw, buildCrewPositionTerminology);
+      const sourceValues = [
+        raw,
+        crewPosition?.id,
+        crewPosition?.genericName,
+        crewPosition?.label
+      ];
+      const tokens = /* @__PURE__ */ new Set();
+      sourceValues.forEach((source) => {
+        const text = String(source || "").trim();
+        if (!text) return;
+        const compact = text.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "");
+        if (compact) tokens.add(compact);
+        if (/^[A-Z0-9]{2,8}$/.test(text.replace(/\s+/g, ""))) {
+          tokens.add(text.replace(/\s+/g, "").toLowerCase().split("").sort().join(""));
+        }
+        const words = text.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+        if (words.length > 1) {
+          const acronym = words.map((word) => word[0]).join("").toLowerCase();
+          tokens.add(acronym);
+          tokens.add(acronym.split("").sort().join(""));
+        }
+      });
+      return Array.from(tokens).filter(Boolean);
+    };
+    const fixedCrewRoleTokensOverlap = (left, right) => {
+      const leftTokens = getFixedCrewRoleMatchTokens(left);
+      const rightTokens = new Set(getFixedCrewRoleMatchTokens(right));
+      return leftTokens.some((token) => rightTokens.has(token));
+    };
+    const isGenericFixedCrewRoleRequirement = (requiredRole) => {
+      const roleText = String(requiredRole || "").trim();
+      const crewPosition = findCrewPositionEntry(roleText, buildCrewPositionTerminology);
+      const genericName = String(crewPosition?.genericName || roleText).trim();
+      return genericName.toLowerCase() === "crew";
+    };
     const roleMatchesStaff = (staff, requiredRole) => {
+      if (isGenericFixedCrewRoleRequirement(requiredRole)) {
+        return Boolean(staff.name) && !staff.isAdminStaff;
+      }
       if (isPilotCrewPosition(requiredRole, buildCrewPositionTerminology)) {
         return isPilotCrewPosition(staff.role, buildCrewPositionTerminology) || String(staff.role || "").trim().toLowerCase() === "pilot";
       }
-      return crewPositionValuesMatch(requiredRole, staff.role, buildCrewPositionTerminology);
+      return crewPositionValuesMatch(requiredRole, staff.role, buildCrewPositionTerminology) || fixedCrewRoleTokensOverlap(requiredRole, staff.role);
     };
     const staffHasPicQualification = (staff) => {
       if (!picQualification) return false;
