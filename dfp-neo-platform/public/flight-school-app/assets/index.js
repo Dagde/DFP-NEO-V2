@@ -36389,14 +36389,19 @@ const InstructorProfileFlyout = ({
     setShowAirCombatGenerateReportModal(true);
   }, [selectedAirCombatTraining, selectedAirCombatTrainingItem]);
   const callsignData = reactExports.useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
+  const suppressProfileCallsign = reactExports.useMemo(() => {
+    const unitCode = String(unit || instructor.unit || "").trim().toUpperCase();
+    return unitCode === "11SQN" || unitCode === "12SQN";
+  }, [instructor.unit, unit]);
   const displayCallsign = reactExports.useMemo(() => {
+    if (suppressProfileCallsign) return "";
     if (callsignData?.callsign) return callsignData.callsign;
     if (instructor.callsign) return instructor.callsign;
     if (callsignData && (callsignData.callsignNumber || instructor.callsignNumber)) {
       return `${callsignData.callsignPrefix || ""}${callsignData.callsignNumber || instructor.callsignNumber || ""}`;
     }
     return "";
-  }, [callsignData, instructor.callsign, instructor.callsignNumber]);
+  }, [callsignData, instructor.callsign, instructor.callsignNumber, suppressProfileCallsign]);
   const resetState = () => {
     setIdNumber(instructor.idNumber);
     setName(instructor.name);
@@ -36532,16 +36537,17 @@ const InstructorProfileFlyout = ({
       name,
       rank,
       role: savedRole,
-      callsignNumber,
-      callsign: displayCallsign,
-      secondaryCallsign,
+      callsignNumber: suppressProfileCallsign ? null : callsignNumber,
+      callsign: suppressProfileCallsign ? "" : displayCallsign,
+      secondaryCallsign: suppressProfileCallsign ? "" : secondaryCallsign,
       service,
       category,
       seatConfig,
       crew,
       preferences: {
         ...instructor.preferences || {},
-        secondaryCallsign: secondaryCallsign || null,
+        callsign: suppressProfileCallsign ? null : displayCallsign || null,
+        secondaryCallsign: suppressProfileCallsign ? null : secondaryCallsign || null,
         crew: crew || null,
         qualifications: assignedQualifications
       },
@@ -37427,9 +37433,9 @@ const InstructorProfileFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: staffRoleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-6 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Callsign", value: displayCallsign || "Auto assigned", onChange: () => {
+              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Callsign", value: suppressProfileCallsign ? "" : displayCallsign || "Auto assigned", onChange: () => {
               }, readOnly: true }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Secondary Callsign", value: secondaryCallsign, onChange: (e) => setSecondaryCallsign(e.target.value) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Secondary Callsign", value: suppressProfileCallsign ? "" : secondaryCallsign, onChange: (e) => setSecondaryCallsign(e.target.value), readOnly: suppressProfileCallsign }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Crew", value: crew, onChange: (e) => setCrew(e.target.value) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Service", value: service || "", onChange: (e) => setService(e.target.value), children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
@@ -37508,7 +37514,7 @@ const InstructorProfileFlyout = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Secondary Callsign" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: instructor.secondaryCallsign || "[None]" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: suppressProfileCallsign ? "[None]" : instructor.secondaryCallsign || "[None]" })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Crew" }),
