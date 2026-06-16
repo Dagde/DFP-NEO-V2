@@ -33374,6 +33374,8 @@ appliedUpdates.forEach(update => {
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                     aircraftCrewComposition={activeAircraftCrewComposition}
                     operationalModel={activeOperationalModel}
+                    activeUnitCode={activeUnitCode}
+                    staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     personnelDisplaySettings={personnelDisplaySettings}
                 />
             )}

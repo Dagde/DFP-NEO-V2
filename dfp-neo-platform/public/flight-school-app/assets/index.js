@@ -20749,6 +20749,9 @@ const AddFlightTileModal = ({
   aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
   aircraftConfigurationDefinitions = [],
   aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
+  operationalModel: operationalModel2,
+  activeUnitCode = "",
+  staffQualificationCatalogue,
   personnelDisplaySettings
 }) => {
   const resolvedAircraftCrewComposition = reactExports.useMemo(
@@ -20776,6 +20779,10 @@ const AddFlightTileModal = ({
   const [callsign, setCallsign] = reactExports.useState("");
   const [callsignOptions, setCallsignOptions] = reactExports.useState([]);
   const [notes, setNotes] = reactExports.useState("");
+  const [fixedCrewGroup, setFixedCrewGroup] = reactExports.useState("");
+  const [fixedCrewPic, setFixedCrewPic] = reactExports.useState("");
+  const [fixedCrewManifestStatus, setFixedCrewManifestStatus] = reactExports.useState("pending");
+  const [fixedCrewManifestNotes, setFixedCrewManifestNotes] = reactExports.useState("");
   const [errors, setErrors] = reactExports.useState([]);
   const [isDeploy, setIsDeploy] = reactExports.useState(false);
   const [deploymentStartDate, setDeploymentStartDate] = reactExports.useState(date);
@@ -20788,6 +20795,13 @@ const AddFlightTileModal = ({
     const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
     return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
   }, [aircraftConfigurationDefinitions]);
+  const isFixedCrewModel = normaliseOperationalModel(operationalModel2) === "fixed_crew";
+  const activeUnitNormalised = String(activeUnitCode || "").trim().toUpperCase();
+  const fixedCrewStaff = reactExports.useMemo(() => instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).filter((staff) => !staff.isAdminStaff), [activeUnitNormalised, instructorsData]);
+  const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(fixedCrewStaff.map((staff) => String(staff.crew || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [fixedCrewStaff]);
+  const fixedCrewMembers = reactExports.useMemo(() => fixedCrewGroup ? fixedCrewStaff.filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewGroup || "").trim().toUpperCase()).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")) : [], [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
+  const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
+  const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
   const LAYOUT_ELEM_KEYS = ["startTime", "picName", "coPilot", "duration", "event", "area", "aircraft", "callsign"];
   const MODAL_DEFAULT_POSITIONS = {
     startTime: { x: 14, y: 7 },
@@ -21018,6 +21032,18 @@ const AddFlightTileModal = ({
     grouped.forEach((items, c) => grouped.set(c, items.sort((a, b) => natSort(a.code || a.id || "", b.code || b.id || ""))));
     return grouped;
   }, [syllabusDetails]);
+  const fixedCrewEventOptions = reactExports.useMemo(() => {
+    const isCrewedFixedCrewType = (item) => {
+      const type = String(item.type || "").trim().toLowerCase();
+      return type === "flight" || type === "ftd";
+    };
+    const items = syllabusDetails.filter(isCrewedFixedCrewType);
+    return items.sort((a, b) => {
+      const phaseCompare = String(a.phase || "").localeCompare(String(b.phase || ""), void 0, { numeric: true });
+      if (phaseCompare !== 0) return phaseCompare;
+      return String(a.code || a.id || "").localeCompare(String(b.code || b.id || ""), void 0, { numeric: true });
+    });
+  }, [syllabusDetails]);
   const courseOptions = reactExports.useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
     return ["SCT", ...courses.filter((c) => c !== "SCT")];
@@ -21091,13 +21117,29 @@ const AddFlightTileModal = ({
     setCallsign("");
     setCallsignOptions([]);
     setNotes("");
+    setFixedCrewGroup("");
+    setFixedCrewPic("");
+    setFixedCrewManifestStatus("pending");
+    setFixedCrewManifestNotes("");
     setErrors([]);
     setGuidedStep("startTime");
   }, [eventCategory]);
   reactExports.useEffect(() => {
+    if (isFixedCrewModel) {
+      setFlightType("Dual");
+      return;
+    }
     if (isSingleSeatAircraft || eventCategory === "sct" || eventCategory === "twr_di") setFlightType("Solo");
     else setFlightType("Dual");
-  }, [eventCategory, isSingleSeatAircraft]);
+  }, [eventCategory, isSingleSeatAircraft, isFixedCrewModel]);
+  reactExports.useEffect(() => {
+    if (!isFixedCrewModel) return;
+    setStudentName(fixedCrewGroup ? `CREW ${fixedCrewGroup}` : "");
+  }, [fixedCrewGroup, isFixedCrewModel]);
+  reactExports.useEffect(() => {
+    if (!isFixedCrewModel) return;
+    setPicName(fixedCrewPic);
+  }, [fixedCrewPic, isFixedCrewModel]);
   reactExports.useEffect(() => {
     if (!isSingleSeatAircraft) return;
     setFlightType("Solo");
@@ -21140,10 +21182,25 @@ const AddFlightTileModal = ({
     if (lmpDuration) setDuration(lmpDuration);
     setGuidedStep("area");
   };
+  const handleFixedCrewEventChange = (code) => {
+    const selectedItem = fixedCrewEventOptions.find((item) => (item.code || item.id) === code || item.id === code);
+    setFlightNumber(code);
+    if (selectedItem) {
+      const resolvedDuration = Number(selectedItem.duration || selectedItem.flightOrSimHours);
+      if (Number.isFinite(resolvedDuration) && resolvedDuration > 0) setDuration(resolvedDuration);
+      if (selectedItem.type === "FTD" || selectedItem.type === "ftd") {
+        setArea("-");
+      } else if (!area || area === "-") {
+        setArea(opAreas[0] || "-");
+      }
+    }
+    setGuidedStep("area");
+  };
   const handlePicNameChange = (name) => {
     setPicName(name);
     setGuidedStep("event");
   };
+  const selectedFixedCrewEvent = fixedCrewEventOptions.find((item) => item.code === flightNumber || item.id === flightNumber);
   const updateFormationCrew = (index, updates) => {
     setFormationCrew((prev) => prev.map((crewMember, crewIndex) => crewIndex === index ? { ...crewMember, ...updates } : crewMember));
   };
@@ -21152,6 +21209,12 @@ const AddFlightTileModal = ({
     if (isDeploy) {
       if (!deploymentStartDate || !deploymentStartTime || !deploymentEndDate || !deploymentEndTime)
         errs.push("Deployment start/end date and time are required.");
+    } else if (isFixedCrewModel) {
+      if (!flightNumber) errs.push("LMP event is required.");
+      if (!fixedCrewGroup) errs.push("Crew is required.");
+      if (!fixedCrewPic) errs.push("PIC is required.");
+      if (locationType === "Land Away" && (!origin || !destination)) errs.push("Origin and destination are required for land away flights.");
+      if (!duration || duration <= 0) errs.push("Duration must be greater than 0.");
     } else {
       if (!flightNumber && eventCategory !== "twr_di") errs.push("Syllabus event is required.");
       if (flightType === "Dual" && !picName) errs.push("Instructor / PIC is required for Dual flights.");
@@ -21172,6 +21235,44 @@ const AddFlightTileModal = ({
     }
     const eventsToSave = [];
     if (!isDeploy) {
+      if (isFixedCrewModel) {
+        const eventType = String(selectedFixedCrewEvent?.type || "").trim().toLowerCase() === "ftd" ? "ftd" : "flight";
+        eventsToSave.push({
+          id: v4(),
+          date,
+          type: eventType,
+          eventCategory,
+          flightType: "Dual",
+          flightNumber,
+          instructor: fixedCrewPic,
+          student: "",
+          pilot: fixedCrewPic,
+          startTime,
+          duration,
+          area: eventType === "flight" ? area : "-",
+          aircraftNumber: eventType === "flight" ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : void 0,
+          aircraftConfigId: eventType === "flight" ? aircraftConfigId : void 0,
+          acceptableAircraftConfigs: eventType === "flight" ? [aircraftConfigId] : void 0,
+          callsign,
+          locationType,
+          color: "bg-emerald-500",
+          resourceId: "",
+          notes,
+          group: `CREW ${fixedCrewGroup}`,
+          groupTraineeIds: [],
+          attendees: fixedCrewMembers.map((staff) => staff.name),
+          origin: locationType === "Local" ? school : origin,
+          destination: locationType === "Local" ? school : destination,
+          fixedCrewGroup,
+          fixedCrewPic,
+          fixedCrewManifestStatus,
+          fixedCrewManifestNotes,
+          formationId: void 0
+        });
+        onSave(eventsToSave);
+        onClose();
+        return;
+      }
       const isFormation = flightNumber === "SCT FORM";
       const crewDrafts = isFormation ? [
         { flightType, picName, studentName, callsign: formationType ? `${formationType}1` : callsign },
@@ -21322,6 +21423,113 @@ const AddFlightTileModal = ({
                   key
                 )) })
               ] }),
+              isFixedCrewModel && !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-500/35 bg-emerald-950/20 p-4 space-y-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-emerald-100", children: "Fixed Crew Scheduled Tile" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-emerald-200/75", children: "Select an LMP event, crew group, and PIC for this scheduled event." })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] uppercase tracking-wider text-emerald-300/80", children: "Manual creation" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "LMP Event" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: flightNumber,
+                        onChange: (e) => handleFixedCrewEventChange(e.target.value),
+                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Fixed Crew event" }),
+                          fixedCrewEventOptions.map((item) => {
+                            const code = item.code || item.id || "";
+                            const label = [code, item.title || item.eventDescription || item.description].filter(Boolean).join(" - ");
+                            return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: code, children: label }, item.id || code);
+                          })
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Crew" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: fixedCrewGroup,
+                        onChange: (e) => {
+                          setFixedCrewGroup(e.target.value);
+                          setFixedCrewPic("");
+                        },
+                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
+                          fixedCrewGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group, children: [
+                            "CREW ",
+                            group
+                          ] }, group))
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "PIC" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: fixedCrewPic,
+                        onChange: (e) => setFixedCrewPic(e.target.value),
+                        disabled: !fixedCrewGroup || fixedCrewPicCandidates.length === 0,
+                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: fixedCrewGroup ? "Select PIC" : "Select crew first" }),
+                          fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: [staff.rank, staff.name].filter(Boolean).join(" ") }, staff.id || staff.name))
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Manifest Status" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: fixedCrewManifestStatus || "pending",
+                        onChange: (e) => setFixedCrewManifestStatus(e.target.value),
+                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "pending", children: "Pending" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "complete", children: "Complete" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "partial", children: "Partial" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "swapped", children: "Swapped" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "invalid", children: "Invalid" })
+                        ]
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/45 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400", children: "Crew Members" }),
+                    fixedCrewMembers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: fixedCrewMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-gray-100", children: [staff.rank, staff.name].filter(Boolean).join(" ") }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-shrink-0 text-xs font-semibold text-emerald-300", children: staff.role || "Staff" })
+                    ] }, staff.id || staff.name)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm italic text-gray-500", children: "Select a crew to preview its members." })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Swap / Manifest Notes" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "textarea",
+                      {
+                        value: fixedCrewManifestNotes,
+                        onChange: (e) => setFixedCrewManifestNotes(e.target.value),
+                        rows: 5,
+                        placeholder: "Optional swap reason or manifest notes...",
+                        className: "w-full h-full min-h-[132px] bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 resize-none"
+                      }
+                    )
+                  ] })
+                ] })
+              ] }),
               !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "Flight Tile" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "0 2px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -21330,7 +21538,7 @@ const AddFlightTileModal = ({
                     flightType,
                     startTime,
                     picName,
-                    studentName,
+                    studentName: isFixedCrewModel && fixedCrewGroup ? `CREW ${fixedCrewGroup}` : studentName,
                     duration,
                     flightNumber,
                     area,
@@ -21385,10 +21593,7 @@ const AddFlightTileModal = ({
                     onCallsignChange: setCallsign
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500 mt-2", children: [
-                  "Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.",
-                  isSingleSeatAircraft ? " This aircraft type is configured as single-seat, so new flights are Solo." : " Click SOLO badge to switch to Dual."
-                ] })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2", children: isFixedCrewModel ? "Use the Fixed Crew controls above to select the LMP event, crew and PIC. The tile preview reflects that scheduled assignment." : `Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.${isSingleSeatAircraft ? " This aircraft type is configured as single-seat, so new flights are Solo." : " Click SOLO badge to switch to Dual."}` })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer py-2 mb-3", children: [
@@ -21474,7 +21679,7 @@ const AddFlightTileModal = ({
                   ] })
                 ] }),
                 !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mb-4", children: [
+                  !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mb-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Flight Type" }),
                       isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-100", children: "Solo - single-seat aircraft" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
@@ -93024,6 +93229,8 @@ Do you want to replace the existing entry?`,
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
           aircraftCrewComposition: activeAircraftCrewComposition,
           operationalModel: activeOperationalModel,
+          activeUnitCode,
+          staffQualificationCatalogue: activeStaffQualificationCatalogue,
           personnelDisplaySettings
         }
       ),

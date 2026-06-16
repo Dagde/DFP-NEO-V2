@@ -11,6 +11,13 @@ import {
 } from '../utils/aircraftNumberFormat';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, normaliseAircraftCrewComposition, type AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import { normaliseOperationalModel } from '../utils/platformConfigService';
+import {
+  getQualificationsForOperationalModel,
+  normaliseAssignedQualificationIds,
+  normaliseQualificationToken,
+  type StaffQualificationCatalogue,
+} from '../utils/staffQualifications';
 
 interface AddFlightTileModalProps {
   onClose: () => void;
@@ -31,6 +38,9 @@ interface AddFlightTileModalProps {
   aircraftNumberSettings?: AircraftNumberSettings;
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
   aircraftCrewComposition?: AircraftCrewComposition;
+  operationalModel?: string;
+  activeUnitCode?: string;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
   personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
@@ -1027,6 +1037,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
   aircraftConfigurationDefinitions = [],
   aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
+  operationalModel,
+  activeUnitCode = '',
+  staffQualificationCatalogue,
   personnelDisplaySettings,
 }) => {
   const resolvedAircraftCrewComposition = useMemo(
@@ -1054,6 +1067,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [callsign,      setCallsign]      = useState('');
   const [callsignOptions, setCallsignOptions] = useState<string[]>([]);
   const [notes,         setNotes]         = useState('');
+  const [fixedCrewGroup, setFixedCrewGroup] = useState('');
+  const [fixedCrewPic, setFixedCrewPic] = useState('');
+  const [fixedCrewManifestStatus, setFixedCrewManifestStatus] = useState<ScheduleEvent['fixedCrewManifestStatus']>('pending');
+  const [fixedCrewManifestNotes, setFixedCrewManifestNotes] = useState('');
   const [errors,        setErrors]        = useState<string[]>([]);
   const [isDeploy,      setIsDeploy]      = useState(false);
   const [deploymentStartDate,  setDeploymentStartDate]  = useState(date);
@@ -1070,6 +1087,29 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       ? definitions
       : [BASE_AIRCRAFT_CONFIG, ...definitions];
   }, [aircraftConfigurationDefinitions]);
+  const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
+  const activeUnitNormalised = String(activeUnitCode || '').trim().toUpperCase();
+  const fixedCrewStaff = useMemo(() => instructorsData
+    .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
+    .filter(staff => !staff.isAdminStaff), [activeUnitNormalised, instructorsData]);
+  const fixedCrewGroups = useMemo(() => Array.from(new Set(fixedCrewStaff
+    .map(staff => String(staff.crew || '').trim())
+    .filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [fixedCrewStaff]);
+  const fixedCrewMembers = useMemo(() => fixedCrewGroup
+    ? fixedCrewStaff
+      .filter(staff => String(staff.crew || '').trim().toUpperCase() === String(fixedCrewGroup || '').trim().toUpperCase())
+      .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
+    : [], [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
+  const fixedCrewPicQualification = useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, 'fixed_crew')
+    .find(qualification => (
+      normaliseQualificationToken(qualification.id) === 'pic'
+      || normaliseQualificationToken(qualification.code) === 'pic'
+      || normaliseQualificationToken(qualification.name) === 'pic'
+    )), [staffQualificationCatalogue]);
+  const fixedCrewPicCandidates = useMemo(() => fixedCrewPicQualification
+    ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id))
+    : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
 
   // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
@@ -1355,6 +1395,19 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return grouped;
   }, [syllabusDetails]);
 
+  const fixedCrewEventOptions = useMemo(() => {
+    const isCrewedFixedCrewType = (item: SyllabusItemDetail) => {
+      const type = String(item.type || '').trim().toLowerCase();
+      return type === 'flight' || type === 'ftd';
+    };
+    const items = syllabusDetails.filter(isCrewedFixedCrewType);
+    return items.sort((a, b) => {
+      const phaseCompare = String(a.phase || '').localeCompare(String(b.phase || ''), undefined, { numeric: true });
+      if (phaseCompare !== 0) return phaseCompare;
+      return String(a.code || a.id || '').localeCompare(String(b.code || b.id || ''), undefined, { numeric: true });
+    });
+  }, [syllabusDetails]);
+
   const courseOptions = useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
     return ['SCT', ...courses.filter(c => c !== 'SCT')];
@@ -1440,14 +1493,30 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setArea(opAreas[0] || '-'); setAircraftNumber('001');
     setOrigin(school); setDestination(school);
     setAircraftCount(1); setFormationCrew([]);
-    setCallsign(''); setCallsignOptions([]); setNotes(''); setErrors([]);
+    setCallsign(''); setCallsignOptions([]); setNotes('');
+    setFixedCrewGroup(''); setFixedCrewPic(''); setFixedCrewManifestStatus('pending'); setFixedCrewManifestNotes('');
+    setErrors([]);
     setGuidedStep('startTime');
   }, [eventCategory]);
 
   useEffect(() => {
+    if (isFixedCrewModel) {
+      setFlightType('Dual');
+      return;
+    }
     if (isSingleSeatAircraft || eventCategory === 'sct' || eventCategory === 'twr_di') setFlightType('Solo');
     else setFlightType('Dual');
-  }, [eventCategory, isSingleSeatAircraft]);
+  }, [eventCategory, isSingleSeatAircraft, isFixedCrewModel]);
+
+  useEffect(() => {
+    if (!isFixedCrewModel) return;
+    setStudentName(fixedCrewGroup ? `CREW ${fixedCrewGroup}` : '');
+  }, [fixedCrewGroup, isFixedCrewModel]);
+
+  useEffect(() => {
+    if (!isFixedCrewModel) return;
+    setPicName(fixedCrewPic);
+  }, [fixedCrewPic, isFixedCrewModel]);
 
   useEffect(() => {
     if (!isSingleSeatAircraft) return;
@@ -1504,10 +1573,29 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setGuidedStep('area');
   };
 
+  const handleFixedCrewEventChange = (code: string) => {
+    const selectedItem = fixedCrewEventOptions.find(item => (item.code || item.id) === code || item.id === code);
+    setFlightNumber(code);
+    if (selectedItem) {
+      const resolvedDuration = Number(selectedItem.duration || selectedItem.flightOrSimHours);
+      if (Number.isFinite(resolvedDuration) && resolvedDuration > 0) setDuration(resolvedDuration);
+      if (selectedItem.type === 'FTD' || selectedItem.type === 'ftd') {
+        setArea('-');
+      } else if (!area || area === '-') {
+        setArea(opAreas[0] || '-');
+      }
+    }
+    setGuidedStep('area');
+  };
+
   const handlePicNameChange = (name: string) => {
     setPicName(name);
     setGuidedStep('event');
   };
+
+  const selectedFixedCrewEvent = fixedCrewEventOptions.find(item => (
+    item.code === flightNumber || item.id === flightNumber
+  ));
 
   const updateFormationCrew = (index: number, updates: Partial<FormationCrewDraft>) => {
     setFormationCrew(prev => prev.map((crewMember, crewIndex) => (
@@ -1520,6 +1608,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (isDeploy) {
       if (!deploymentStartDate || !deploymentStartTime || !deploymentEndDate || !deploymentEndTime)
         errs.push('Deployment start/end date and time are required.');
+    } else if (isFixedCrewModel) {
+      if (!flightNumber) errs.push('LMP event is required.');
+      if (!fixedCrewGroup) errs.push('Crew is required.');
+      if (!fixedCrewPic) errs.push('PIC is required.');
+      if (locationType === 'Land Away' && (!origin || !destination)) errs.push('Origin and destination are required for land away flights.');
+      if (!duration || duration <= 0) errs.push('Duration must be greater than 0.');
     } else {
       if (!flightNumber && eventCategory !== 'twr_di') errs.push('Syllabus event is required.');
       if (flightType === 'Dual' && !picName) errs.push('Instructor / PIC is required for Dual flights.');
@@ -1539,6 +1633,45 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const eventsToSave: ScheduleEvent[] = [];
 
     if (!isDeploy) {
+      if (isFixedCrewModel) {
+        const eventType = String(selectedFixedCrewEvent?.type || '').trim().toLowerCase() === 'ftd' ? 'ftd' : 'flight';
+        eventsToSave.push({
+          id: uuidv4(),
+          date,
+          type: eventType,
+          eventCategory,
+          flightType: 'Dual',
+          flightNumber,
+          instructor: fixedCrewPic,
+          student: '',
+          pilot: fixedCrewPic,
+          startTime,
+          duration,
+          area: eventType === 'flight' ? area : '-',
+          aircraftNumber: eventType === 'flight' ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : undefined,
+          aircraftConfigId: eventType === 'flight' ? aircraftConfigId : undefined,
+          acceptableAircraftConfigs: eventType === 'flight' ? [aircraftConfigId] : undefined,
+          callsign,
+          locationType,
+          color: 'bg-emerald-500',
+          resourceId: '',
+          notes,
+          group: `CREW ${fixedCrewGroup}`,
+          groupTraineeIds: [],
+          attendees: fixedCrewMembers.map(staff => staff.name),
+          origin: locationType === 'Local' ? school : origin,
+          destination: locationType === 'Local' ? school : destination,
+          fixedCrewGroup,
+          fixedCrewPic,
+          fixedCrewManifestStatus,
+          fixedCrewManifestNotes,
+          formationId: undefined,
+        } as any);
+        onSave(eventsToSave);
+        onClose();
+        return;
+      }
+
       const isFormation = flightNumber === 'SCT FORM';
       const crewDrafts: FormationCrewDraft[] = isFormation
         ? [
@@ -1696,6 +1829,106 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             </div>
           )}
 
+          {isFixedCrewModel && !isDeploy && (
+            <div className="rounded-lg border border-emerald-500/35 bg-emerald-950/20 p-4 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-emerald-100">Fixed Crew Scheduled Tile</h3>
+                  <p className="text-xs text-emerald-200/75">Select an LMP event, crew group, and PIC for this scheduled event.</p>
+                </div>
+                <span className="text-[11px] uppercase tracking-wider text-emerald-300/80">Manual creation</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">LMP Event</label>
+                  <select
+                    value={flightNumber}
+                    onChange={e => handleFixedCrewEventChange(e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                  >
+                    <option value="">Select Fixed Crew event</option>
+                    {fixedCrewEventOptions.map(item => {
+                      const code = item.code || item.id || '';
+                      const label = [code, item.title || item.eventDescription || item.description].filter(Boolean).join(' - ');
+                      return <option key={item.id || code} value={code}>{label}</option>;
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
+                  <select
+                    value={fixedCrewGroup}
+                    onChange={e => {
+                      setFixedCrewGroup(e.target.value);
+                      setFixedCrewPic('');
+                    }}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                  >
+                    <option value="">Select crew</option>
+                    {fixedCrewGroups.map(group => <option key={group} value={group}>CREW {group}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">PIC</label>
+                  <select
+                    value={fixedCrewPic}
+                    onChange={e => setFixedCrewPic(e.target.value)}
+                    disabled={!fixedCrewGroup || fixedCrewPicCandidates.length === 0}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{fixedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
+                    {fixedCrewPicCandidates.map(staff => (
+                      <option key={staff.id || staff.name} value={staff.name}>
+                        {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Manifest Status</label>
+                  <select
+                    value={fixedCrewManifestStatus || 'pending'}
+                    onChange={e => setFixedCrewManifestStatus(e.target.value as ScheduleEvent['fixedCrewManifestStatus'])}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="complete">Complete</option>
+                    <option value="partial">Partial</option>
+                    <option value="swapped">Swapped</option>
+                    <option value="invalid">Invalid</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-md border border-gray-700 bg-gray-900/45 p-3">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Crew Members</div>
+                  {fixedCrewMembers.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-2">
+                      {fixedCrewMembers.map(staff => (
+                        <div key={staff.id || staff.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm">
+                          <span className="min-w-0 truncate text-gray-100">{[staff.rank, staff.name].filter(Boolean).join(' ')}</span>
+                          <span className="flex-shrink-0 text-xs font-semibold text-emerald-300">{staff.role || 'Staff'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm italic text-gray-500">Select a crew to preview its members.</div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Swap / Manifest Notes</label>
+                  <textarea
+                    value={fixedCrewManifestNotes}
+                    onChange={e => setFixedCrewManifestNotes(e.target.value)}
+                    rows={5}
+                    placeholder="Optional swap reason or manifest notes..."
+                    className="w-full h-full min-h-[132px] bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Large Flight Tile */}
           {!isDeploy && (
             <div>
@@ -1705,7 +1938,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   flightType={flightType}
                   startTime={startTime}
                   picName={picName}
-                  studentName={studentName}
+                  studentName={isFixedCrewModel && fixedCrewGroup ? `CREW ${fixedCrewGroup}` : studentName}
                   duration={duration}
                   flightNumber={flightNumber}
                   area={area}
@@ -1761,7 +1994,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.{isSingleSeatAircraft ? ' This aircraft type is configured as single-seat, so new flights are Solo.' : ' Click SOLO badge to switch to Dual.'}
+                {isFixedCrewModel
+                  ? 'Use the Fixed Crew controls above to select the LMP event, crew and PIC. The tile preview reflects that scheduled assignment.'
+                  : `Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.${isSingleSeatAircraft ? ' This aircraft type is configured as single-seat, so new flights are Solo.' : ' Click SOLO badge to switch to Dual.'}`}
               </p>
             </div>
           )}
@@ -1815,7 +2050,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             {/* Flight type toggle + Location + Date + Notes — hidden when deploying */}
             {!isDeploy && (
               <>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                {!isFixedCrewModel && <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Flight Type</label>
                     {isSingleSeatAircraft ? (
@@ -1856,7 +2091,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       ))}
                     </select>
                   </div>
-                </div>
+                </div>}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
