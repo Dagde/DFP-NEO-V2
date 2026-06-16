@@ -40419,6 +40419,27 @@ const SyllabusView = ({
     });
     return Array.from(grouped.values()).filter((option) => option.unit !== activeUnitNormalised || !activeUnitNormalised).sort((a, b) => `${a.title} ${a.unit}`.localeCompare(`${b.title} ${b.unit}`));
   }, [activeUnitNormalised, trainingPackageTemplates]);
+  const duplicateUploadSource = reactExports.useMemo(() => {
+    const sources = (uploadResult?.errors || []).map((error) => error?.duplicateSource).filter((source2) => source2?.sourceCourse && source2?.sourceLmpType);
+    if (sources.length === 0) return null;
+    const byKey = /* @__PURE__ */ new Map();
+    sources.forEach((source2) => {
+      const key = [
+        normaliseContextCode(source2.sourceLocation),
+        normaliseContextCode(source2.sourceUnit),
+        source2.sourceCourse,
+        source2.sourceLmpType
+      ].join("|");
+      if (!byKey.has(key)) byKey.set(key, source2);
+    });
+    if (byKey.size !== 1) return null;
+    const source = Array.from(byKey.values())[0];
+    if (source.sourceLmpType !== activeLmpType) return null;
+    return source;
+  }, [activeLmpType, uploadResult?.errors]);
+  const canCrossLoadDuplicateCourse = Boolean(
+    duplicateUploadSource && selectedCourseType && activeUnitNormalised && normaliseContextCode(duplicateUploadSource.sourceUnit) !== activeUnitNormalised
+  );
   const [showAddLMPModal, setShowAddLMPModal] = reactExports.useState(false);
   const [newLMPName, setNewLMPName] = reactExports.useState("");
   const [newLMPCourseType, setNewLMPCourseType] = reactExports.useState("Flight Training");
@@ -40434,6 +40455,7 @@ const SyllabusView = ({
   const [uploadMode, setUploadMode] = reactExports.useState("update");
   const [newUploadPackageName, setNewUploadPackageName] = reactExports.useState("");
   const [uploadResult, setUploadResult] = reactExports.useState(null);
+  const [isCrossLoadingDuplicateCourse, setIsCrossLoadingDuplicateCourse] = reactExports.useState(false);
   const [showDeleteEventModal, setShowDeleteEventModal] = reactExports.useState(false);
   const [deleteEventItem, setDeleteEventItem] = reactExports.useState(null);
   const [deleteEventPassword, setDeleteEventPassword] = reactExports.useState("");
@@ -40773,6 +40795,10 @@ const SyllabusView = ({
         const preview = responseText.replace(/\s+/g, " ").trim().slice(0, 180);
         throw new Error(`Upload endpoint returned a non-JSON response (${resp.status} ${resp.statusText})${preview ? `: ${preview}` : ""}`);
       }
+      if (!resp.ok && Array.isArray(data.errors)) {
+        setUploadResult(data);
+        return;
+      }
       if (!resp.ok) throw new Error(data.error || data.message || `Upload failed (${resp.status} ${resp.statusText})`);
       setUploadResult(data);
       if ((data.created || 0) > 0 || (data.updated || 0) > 0) {
@@ -40785,6 +40811,102 @@ const SyllabusView = ({
       alert(`Upload failed: ${err.message}`);
     } finally {
       setIsUploading(false);
+    }
+  };
+  const handleCrossLoadDuplicateCourse = async () => {
+    if (!duplicateUploadSource || !selectedCourseType || !activeUnitNormalised) return;
+    setIsCrossLoadingDuplicateCourse(true);
+    try {
+      const sourceCourse = String(duplicateUploadSource.sourceCourse || "").trim();
+      const sourceUnit = normaliseContextCode(duplicateUploadSource.sourceUnit);
+      const sourceLocation = normaliseContextCode(duplicateUploadSource.sourceLocation);
+      const sourceResp = await fetch(`/api/syllabus?course=${encodeURIComponent(sourceCourse)}&includeInactive=false`, {
+        credentials: "include",
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!sourceResp.ok) throw new Error(`Could not load source course ${sourceCourse}`);
+      const sourceData = await sourceResp.json();
+      const sourceItems = (sourceData.syllabus || sourceData.syllabusItems || []).filter((item) => item.isActive !== false).filter((item) => (item.courses || []).includes(sourceCourse)).filter((item) => (item.lmpType || "Master LMP") === activeLmpType).filter((item) => !sourceUnit || normaliseContextCode(item.unit) === sourceUnit).filter((item) => !sourceLocation || !normaliseContextCode(item.location) || normaliseContextCode(item.location) === sourceLocation).filter((item) => !isSyllabusCourseShell(item)).sort(
+        (left, right) => Number(left.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.sortOrder ?? Number.MAX_SAFE_INTEGER) || String(left.code || "").localeCompare(String(right.code || ""), void 0, { numeric: true })
+      );
+      if (sourceItems.length === 0) throw new Error(`No source events were found for ${sourceUnit || "the source unit"} / ${sourceCourse}`);
+      const allResp = await fetch("/api/syllabus?includeInactive=false", {
+        credentials: "include",
+        headers: { "Content-Type": "application/json" }
+      });
+      const allData = allResp.ok ? await allResp.json() : {};
+      const existingCodes = new Set(
+        (allData.syllabus || allData.syllabusItems || syllabusDetails).map((item) => String(item.code || item.id || "").trim().toUpperCase()).filter(Boolean)
+      );
+      const copiedCodes = /* @__PURE__ */ new Set();
+      const prefixImportedValue = (value) => {
+        const clean = String(value || "").replace(/\s+/g, " ").trim();
+        if (!clean) return activeUnitNormalised;
+        return clean.toUpperCase().startsWith(`${activeUnitNormalised} `) ? clean : `${activeUnitNormalised} ${clean}`;
+      };
+      const getUniqueCopiedCode = (value) => {
+        const baseCode = prefixImportedValue(value || "Event");
+        let candidate = baseCode;
+        let suffix = 2;
+        while (existingCodes.has(candidate.toUpperCase()) || copiedCodes.has(candidate.toUpperCase())) {
+          candidate = `${baseCode} ${suffix}`;
+          suffix += 1;
+        }
+        copiedCodes.add(candidate.toUpperCase());
+        return candidate;
+      };
+      const codeMap = /* @__PURE__ */ new Map();
+      sourceItems.forEach((item) => {
+        const sourceCode = String(item.code || "").trim();
+        if (sourceCode) codeMap.set(sourceCode, getUniqueCopiedCode(sourceCode));
+      });
+      const remapList = (values) => (values || []).map((value) => codeMap.get(String(value || "").trim()) || value);
+      const targetTitle = getCourseTitle(selectedCourseType);
+      const savedItems = [];
+      for (const sourceItem of sourceItems) {
+        const { id: _id, completedAt: _completedAt, masterEventId: _masterEventId, lmpSource: _lmpSource, ...copyBase } = sourceItem;
+        const copiedCode = codeMap.get(String(sourceItem.code || "").trim()) || getUniqueCopiedCode(sourceItem.code || sourceItem.eventDescription);
+        const copiedItem = {
+          ...copyBase,
+          code: copiedCode,
+          eventDescription: prefixImportedValue(sourceItem.eventDescription || sourceItem.code),
+          courses: [selectedCourseType],
+          phase: selectedCourseType,
+          module: targetTitle,
+          location: activeLocationNormalised,
+          unit: activeUnitNormalised,
+          lmpType: activeLmpType,
+          prerequisites: remapList(sourceItem.prerequisites),
+          prerequisitesGround: remapList(sourceItem.prerequisitesGround),
+          prerequisitesFlying: remapList(sourceItem.prerequisitesFlying),
+          isActive: true
+        };
+        const saved = await createSyllabusItem$1(copiedItem, `Cross-loaded ${activeCollectionNoun} from ${sourceUnit || "another unit"} into ${activeUnitNormalised}`);
+        savedItems.push(saved);
+        if (onAddItem) onAddItem(saved);
+      }
+      clearSyllabusCache();
+      setSelectedItem(savedItems[0] || null);
+      setEditedItem(savedItems[0] ? JSON.parse(JSON.stringify(savedItems[0])) : null);
+      setUploadResult({
+        created: savedItems.length,
+        updated: 0,
+        imported: savedItems.length,
+        skipped: 0,
+        errors: [],
+        message: `${savedItems.length} row${savedItems.length === 1 ? "" : "s"} cross-loaded from ${sourceUnit || "another unit"} into ${activeUnitNormalised} ${getCourseTitle(selectedCourseType)}`
+      });
+      logAudit({
+        action: "Create",
+        description: `Cross-loaded ${activeCollectionNoun} ${sourceCourse} into ${activeUnitNormalised}`,
+        changes: `${savedItems.length} events copied from ${sourceUnit || "source unit"} to ${selectedCourseType}`,
+        page: "LMP/Event Details"
+      });
+      setTimeout(() => window.location.reload(), 1600);
+    } catch (err) {
+      alert(`Cross-load failed: ${err.message}`);
+    } finally {
+      setIsCrossLoadingDuplicateCourse(false);
     }
   };
   const handleDeleteEventRequest = (item) => {
@@ -41785,6 +41907,40 @@ const SyllabusView = ({
                     "  |  Errors: ",
                     uploadResult.errors.length
                   ] })
+                ] }),
+                duplicateUploadSource && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: 10, padding: 10, border: "1px solid #0e7490", borderRadius: 8, backgroundColor: "#082f49" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { style: { fontSize: 12, fontWeight: 700, color: "#bae6fd", marginBottom: 4 }, children: "This looks like a course already loaded for another unit." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#d1d5db", lineHeight: 1.45, marginBottom: 8 }, children: [
+                    "The upload file contains event codes that already exist in ",
+                    duplicateUploadSource.sourceUnit || "another unit",
+                    duplicateUploadSource.sourceCourse ? ` under ${duplicateUploadSource.sourceCourse}` : "",
+                    ". Event codes must stay unique, so the app cannot import the same spreadsheet directly into ",
+                    activeUnitNormalised || "this unit",
+                    ". You can cross-load it instead; the app will copy the source events into ",
+                    getCourseTitle(selectedCourseType),
+                    " and prefix the copied event codes with ",
+                    activeUnitNormalised || "the importing unit",
+                    "."
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: handleCrossLoadDuplicateCourse,
+                      disabled: !canCrossLoadDuplicateCourse || isCrossLoadingDuplicateCourse,
+                      style: {
+                        padding: "7px 12px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        borderRadius: 6,
+                        backgroundColor: canCrossLoadDuplicateCourse && !isCrossLoadingDuplicateCourse ? "#0284c7" : "#334155",
+                        color: "#fff",
+                        border: "none",
+                        cursor: canCrossLoadDuplicateCourse && !isCrossLoadingDuplicateCourse ? "pointer" : "not-allowed"
+                      },
+                      children: isCrossLoadingDuplicateCourse ? "Cross-loading…" : `Cross-load from ${duplicateUploadSource.sourceUnit || "source unit"}`
+                    }
+                  )
                 ] }),
                 uploadResult.errors.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { marginTop: 8, maxHeight: 100, overflowY: "auto" }, children: uploadResult.errors.map((e, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 10, color: "#f87171" }, children: [
                   "Row ",

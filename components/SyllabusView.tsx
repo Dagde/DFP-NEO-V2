@@ -1027,6 +1027,34 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           .sort((a, b) => `${a.title} ${a.unit}`.localeCompare(`${b.title} ${b.unit}`));
   }, [activeUnitNormalised, trainingPackageTemplates]);
 
+  const duplicateUploadSource = useMemo(() => {
+      const sources = (uploadResult?.errors || [])
+          .map((error: any) => error?.duplicateSource)
+          .filter((source: any) => source?.sourceCourse && source?.sourceLmpType);
+      if (sources.length === 0) return null;
+      const byKey = new Map<string, any>();
+      sources.forEach((source: any) => {
+          const key = [
+              normaliseContextCode(source.sourceLocation),
+              normaliseContextCode(source.sourceUnit),
+              source.sourceCourse,
+              source.sourceLmpType,
+          ].join('|');
+          if (!byKey.has(key)) byKey.set(key, source);
+      });
+      if (byKey.size !== 1) return null;
+      const source = Array.from(byKey.values())[0];
+      if (source.sourceLmpType !== activeLmpType) return null;
+      return source;
+  }, [activeLmpType, uploadResult?.errors]);
+
+  const canCrossLoadDuplicateCourse = Boolean(
+      duplicateUploadSource
+      && selectedCourseType
+      && activeUnitNormalised
+      && normaliseContextCode(duplicateUploadSource.sourceUnit) !== activeUnitNormalised
+  );
+
   // Add Course modal state
   const [showAddLMPModal, setShowAddLMPModal] = useState(false);
   const [newLMPName, setNewLMPName] = useState('');       // full course title e.g. "Basic Flying Course"
@@ -1047,6 +1075,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const [uploadMode, setUploadMode] = useState<'update' | 'replace' | 'create'>('update');
   const [newUploadPackageName, setNewUploadPackageName] = useState('');
   const [uploadResult, setUploadResult] = useState<{ created: number; updated?: number; imported?: number; skipped: number; errors: any[]; message: string } | null>(null);
+  const [isCrossLoadingDuplicateCourse, setIsCrossLoadingDuplicateCourse] = useState(false);
 
   // Delete Event modal state
   const [showDeleteEventModal, setShowDeleteEventModal] = useState(false);
@@ -1431,6 +1460,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               const preview = responseText.replace(/\s+/g, ' ').trim().slice(0, 180);
               throw new Error(`Upload endpoint returned a non-JSON response (${resp.status} ${resp.statusText})${preview ? `: ${preview}` : ''}`);
           }
+          if (!resp.ok && Array.isArray(data.errors)) {
+              setUploadResult(data);
+              return;
+          }
           if (!resp.ok) throw new Error(data.error || data.message || `Upload failed (${resp.status} ${resp.statusText})`);
           setUploadResult(data);
           // Reload syllabus data by triggering a page reload after short delay
@@ -1444,6 +1477,116 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           alert(`Upload failed: ${err.message}`);
       } finally {
           setIsUploading(false);
+      }
+  };
+
+  const handleCrossLoadDuplicateCourse = async () => {
+      if (!duplicateUploadSource || !selectedCourseType || !activeUnitNormalised) return;
+      setIsCrossLoadingDuplicateCourse(true);
+      try {
+          const sourceCourse = String(duplicateUploadSource.sourceCourse || '').trim();
+          const sourceUnit = normaliseContextCode(duplicateUploadSource.sourceUnit);
+          const sourceLocation = normaliseContextCode(duplicateUploadSource.sourceLocation);
+          const sourceResp = await fetch(`/api/syllabus?course=${encodeURIComponent(sourceCourse)}&includeInactive=false`, {
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+          });
+          if (!sourceResp.ok) throw new Error(`Could not load source course ${sourceCourse}`);
+          const sourceData = await sourceResp.json();
+          const sourceItems = ((sourceData.syllabus || sourceData.syllabusItems || []) as SyllabusItemDetail[])
+              .filter(item => item.isActive !== false)
+              .filter(item => (item.courses || []).includes(sourceCourse))
+              .filter(item => (item.lmpType || 'Master LMP') === activeLmpType)
+              .filter(item => !sourceUnit || normaliseContextCode(item.unit) === sourceUnit)
+              .filter(item => !sourceLocation || !normaliseContextCode(item.location) || normaliseContextCode(item.location) === sourceLocation)
+              .filter(item => !isSyllabusCourseShell(item))
+              .sort((left, right) =>
+                  Number((left as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
+                  String(left.code || '').localeCompare(String(right.code || ''), undefined, { numeric: true })
+              );
+          if (sourceItems.length === 0) throw new Error(`No source events were found for ${sourceUnit || 'the source unit'} / ${sourceCourse}`);
+
+          const allResp = await fetch('/api/syllabus?includeInactive=false', {
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+          });
+          const allData = allResp.ok ? await allResp.json() : {};
+          const existingCodes = new Set(
+              ((allData.syllabus || allData.syllabusItems || syllabusDetails) as SyllabusItemDetail[])
+                  .map(item => String(item.code || item.id || '').trim().toUpperCase())
+                  .filter(Boolean)
+          );
+          const copiedCodes = new Set<string>();
+          const prefixImportedValue = (value?: string | null): string => {
+              const clean = String(value || '').replace(/\s+/g, ' ').trim();
+              if (!clean) return activeUnitNormalised;
+              return clean.toUpperCase().startsWith(`${activeUnitNormalised} `)
+                  ? clean
+                  : `${activeUnitNormalised} ${clean}`;
+          };
+          const getUniqueCopiedCode = (value?: string | null): string => {
+              const baseCode = prefixImportedValue(value || 'Event');
+              let candidate = baseCode;
+              let suffix = 2;
+              while (existingCodes.has(candidate.toUpperCase()) || copiedCodes.has(candidate.toUpperCase())) {
+                  candidate = `${baseCode} ${suffix}`;
+                  suffix += 1;
+              }
+              copiedCodes.add(candidate.toUpperCase());
+              return candidate;
+          };
+          const codeMap = new Map<string, string>();
+          sourceItems.forEach(item => {
+              const sourceCode = String(item.code || '').trim();
+              if (sourceCode) codeMap.set(sourceCode, getUniqueCopiedCode(sourceCode));
+          });
+          const remapList = (values?: string[]) => (values || []).map(value => codeMap.get(String(value || '').trim()) || value);
+          const targetTitle = getCourseTitle(selectedCourseType);
+          const savedItems: SyllabusItemDetail[] = [];
+          for (const sourceItem of sourceItems) {
+              const { id: _id, completedAt: _completedAt, masterEventId: _masterEventId, lmpSource: _lmpSource, ...copyBase } = sourceItem as any;
+              const copiedCode = codeMap.get(String(sourceItem.code || '').trim()) || getUniqueCopiedCode(sourceItem.code || sourceItem.eventDescription);
+              const copiedItem: Partial<SyllabusItemDetail> = {
+                  ...copyBase,
+                  code: copiedCode,
+                  eventDescription: prefixImportedValue(sourceItem.eventDescription || sourceItem.code),
+                  courses: [selectedCourseType],
+                  phase: selectedCourseType,
+                  module: targetTitle,
+                  location: activeLocationNormalised,
+                  unit: activeUnitNormalised,
+                  lmpType: activeLmpType,
+                  prerequisites: remapList(sourceItem.prerequisites),
+                  prerequisitesGround: remapList(sourceItem.prerequisitesGround),
+                  prerequisitesFlying: remapList(sourceItem.prerequisitesFlying),
+                  isActive: true,
+              };
+              const saved = await createSyllabusItem(copiedItem, `Cross-loaded ${activeCollectionNoun} from ${sourceUnit || 'another unit'} into ${activeUnitNormalised}`);
+              savedItems.push(saved);
+              if (onAddItem) onAddItem(saved);
+          }
+          clearSyllabusCache();
+          setSelectedItem(savedItems[0] || null);
+          setEditedItem(savedItems[0] ? JSON.parse(JSON.stringify(savedItems[0])) : null);
+          setUploadResult({
+              created: savedItems.length,
+              updated: 0,
+              imported: savedItems.length,
+              skipped: 0,
+              errors: [],
+              message: `${savedItems.length} row${savedItems.length === 1 ? '' : 's'} cross-loaded from ${sourceUnit || 'another unit'} into ${activeUnitNormalised} ${getCourseTitle(selectedCourseType)}`,
+          });
+          logAudit({
+              action: 'Create',
+              description: `Cross-loaded ${activeCollectionNoun} ${sourceCourse} into ${activeUnitNormalised}`,
+              changes: `${savedItems.length} events copied from ${sourceUnit || 'source unit'} to ${selectedCourseType}`,
+              page: 'LMP/Event Details',
+          });
+          setTimeout(() => window.location.reload(), 1600);
+      } catch (err: any) {
+          alert(`Cross-load failed: ${err.message}`);
+      } finally {
+          setIsCrossLoadingDuplicateCourse(false);
       }
   };
 
@@ -2279,6 +2422,37 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                             Imported rows: {uploadResult.imported ?? ((uploadResult.created || 0) + (uploadResult.updated || 0))} &nbsp;|&nbsp; Created: {uploadResult.created} &nbsp;|&nbsp; Updated: {uploadResult.updated || 0} &nbsp;|&nbsp; Skipped: {uploadResult.skipped}
                             {uploadResult.errors.length > 0 && <span style={{ color: '#f87171' }}> &nbsp;|&nbsp; Errors: {uploadResult.errors.length}</span>}
                         </p>
+                        {duplicateUploadSource && (
+                            <div style={{ marginTop: 10, padding: 10, border: '1px solid #0e7490', borderRadius: 8, backgroundColor: '#082f49' }}>
+                                <p style={{ fontSize: 12, fontWeight: 700, color: '#bae6fd', marginBottom: 4 }}>
+                                    This looks like a course already loaded for another unit.
+                                </p>
+                                <p style={{ fontSize: 11, color: '#d1d5db', lineHeight: 1.45, marginBottom: 8 }}>
+                                    The upload file contains event codes that already exist in {duplicateUploadSource.sourceUnit || 'another unit'}
+                                    {duplicateUploadSource.sourceCourse ? ` under ${duplicateUploadSource.sourceCourse}` : ''}. Event codes must stay unique, so the app cannot import the same spreadsheet directly into {activeUnitNormalised || 'this unit'}.
+                                    You can cross-load it instead; the app will copy the source events into {getCourseTitle(selectedCourseType)} and prefix the copied event codes with {activeUnitNormalised || 'the importing unit'}.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={handleCrossLoadDuplicateCourse}
+                                    disabled={!canCrossLoadDuplicateCourse || isCrossLoadingDuplicateCourse}
+                                    style={{
+                                        padding: '7px 12px',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        borderRadius: 6,
+                                        backgroundColor: canCrossLoadDuplicateCourse && !isCrossLoadingDuplicateCourse ? '#0284c7' : '#334155',
+                                        color: '#fff',
+                                        border: 'none',
+                                        cursor: canCrossLoadDuplicateCourse && !isCrossLoadingDuplicateCourse ? 'pointer' : 'not-allowed',
+                                    }}
+                                >
+                                    {isCrossLoadingDuplicateCourse
+                                        ? 'Cross-loading…'
+                                        : `Cross-load from ${duplicateUploadSource.sourceUnit || 'source unit'}`}
+                                </button>
+                            </div>
+                        )}
                         {uploadResult.errors.length > 0 && (
                             <div style={{ marginTop: 8, maxHeight: 100, overflowY: 'auto' }}>
                                 {uploadResult.errors.map((e: any, i: number) => (

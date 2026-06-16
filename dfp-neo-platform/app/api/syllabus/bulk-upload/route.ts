@@ -192,6 +192,16 @@ const isCourseShellRow = (item: any): boolean => (
   String(item?.notes || '').includes(SYLLABUS_COURSE_SHELL_NOTE)
 );
 
+const getDuplicateSourceDetails = (item: any) => ({
+  code: item?.code || '',
+  sourceCourses: Array.isArray(item?.courses) ? item.courses.filter(Boolean) : [],
+  sourceCourse: Array.isArray(item?.courses) ? item.courses.filter(Boolean)[0] || '' : '',
+  sourceUnit: normaliseContextCode(item?.unit),
+  sourceLocation: normaliseContextCode(item?.location),
+  sourceLmpType: getNormalisedLmpType(item?.lmpType),
+  sourceTitle: String(item?.module || item?.phase || '').trim(),
+});
+
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
@@ -243,13 +253,13 @@ export async function POST(request: NextRequest) {
     const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
     const created: any[] = [];
     const updated: any[] = [];
-    const errors: Array<{ row: number; error: string }> = [];
+    const errors: Array<{ row: number; error: string; duplicateSource?: any }> = [];
     let skipped = 0;
     let generatedCodeSequence = 1;
     let generatedPlaceholderUsed = false;
 
     if (uploadMode === 'replace') {
-      const preflightErrors: Array<{ row: number; error: string }> = [];
+      const preflightErrors: Array<{ row: number; error: string; duplicateSource?: any }> = [];
       let preflightSequence = 1;
       let contentRows = 0;
       for (let index = 0; index < rows.length; index++) {
@@ -278,6 +288,7 @@ export async function POST(request: NextRequest) {
           preflightErrors.push({
             row: rowNumber,
             error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
+            duplicateSource: getDuplicateSourceDetails(existing),
           });
         }
       }
@@ -406,6 +417,7 @@ export async function POST(request: NextRequest) {
           errors.push({
             row: rowNumber,
             error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
+            duplicateSource: getDuplicateSourceDetails(existing),
           });
           skipped += 1;
           continue;

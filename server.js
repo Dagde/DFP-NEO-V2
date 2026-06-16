@@ -5795,6 +5795,19 @@ function isUploadCourseShellRow(item) {
   return String(item?.notes || '').includes(SYLLABUS_COURSE_SHELL_NOTE);
 }
 
+function getUploadDuplicateSourceDetails(item) {
+  const sourceCourses = Array.isArray(item?.courses) ? item.courses.filter(Boolean) : [];
+  return {
+    code: item?.code || '',
+    sourceCourses,
+    sourceCourse: sourceCourses[0] || '',
+    sourceUnit: normaliseUploadContextCode(item?.unit),
+    sourceLocation: normaliseUploadContextCode(item?.location),
+    sourceLmpType: normaliseUploadLmpType(item?.lmpType),
+    sourceTitle: String(item?.module || item?.phase || '').trim(),
+  };
+}
+
 // POST /api/syllabus/bulk-upload - Import/update syllabus events from workbook
 app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) => {
   try {
@@ -5867,6 +5880,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
           preflightErrors.push({
             row: rowNumber,
             error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
+            duplicateSource: getUploadDuplicateSourceDetails(existing),
           });
         }
       }
@@ -5996,6 +6010,7 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
           errors.push({
             row: rowNumber,
             error: `Event code "${code}" already exists outside selected ${lmpType === 'Staff CAT' ? 'training package' : 'Master LMP'}`,
+            duplicateSource: getUploadDuplicateSourceDetails(existing),
           });
           skipped += 1;
           continue;
