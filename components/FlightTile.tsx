@@ -371,6 +371,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
   const isAirCombatCrewEvent = (event as any)._source === 'air-combat-priority-formation'
       || (event.type === 'flight' && !!event.pilot && !!event.crew && !event.student && !event.instructor);
+  const isFixedCrewCrewEvent = !!(event as any).fixedCrewGroup;
   const isTwrDiEvent = event.eventCategory === 'twr_di';
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
   const aircraftNumberDisplay = event.aircraftNumber
@@ -379,8 +380,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   
   
   
-  const picName = isTaskingEvent || isAirCombatCrewEvent ? event.pilot : (isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor));
-  const studentName = isTaskingEvent || isAirCombatCrewEvent
+  const picName = isTaskingEvent || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : (isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor));
+  const studentName = isTaskingEvent || isAirCombatCrewEvent || isFixedCrewCrewEvent
       ? (event.flightType === 'Solo' ? '' : event.crew || event.student || '')
       : event.flightType === 'Solo'
           ? ''
@@ -468,7 +469,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
           return event.student.split(' – ')[0];
       }
 
-      if ((isTaskingEvent || isAirCombatCrewEvent) && event.flightType === 'Dual' && event.crew) {
+      if ((isTaskingEvent || isAirCombatCrewEvent || isFixedCrewCrewEvent) && event.flightType === 'Dual' && event.crew) {
           return event.crew.split(' – ')[0];
       }
 

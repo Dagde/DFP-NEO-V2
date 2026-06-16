@@ -6912,11 +6912,12 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isSctEvent = event.eventCategory === "sct";
   const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
+  const isFixedCrewCrewEvent = !!event.fixedCrewGroup;
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
-  const picName = isTaskingEvent2 || isAirCombatCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
-  const studentName = isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
+  const picName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
+  const studentName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
   let displayPicNameForRender = picName;
   let displayStudentNameForRender = studentName;
   if (isStbyEvent) {
@@ -6969,7 +6970,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if (isSctEvent && event.flightType === "Dual" && event.student) {
       return event.student.split(" – ")[0];
     }
-    if ((isTaskingEvent2 || isAirCombatCrewEvent) && event.flightType === "Dual" && event.crew) {
+    if ((isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent) && event.flightType === "Dual" && event.crew) {
       return event.crew.split(" – ")[0];
     }
     if (event.pilot && event.student && event.pilot === event.student) {
@@ -20802,6 +20803,21 @@ const AddFlightTileModal = ({
   const fixedCrewMembers = reactExports.useMemo(() => fixedCrewGroup ? fixedCrewStaff.filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewGroup || "").trim().toUpperCase()).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")) : [], [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
   const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
   const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+  const fixedCrewCallsignOptions = reactExports.useMemo(() => {
+    if (!isFixedCrewModel) return [];
+    const activeUnit = String(activeUnitCode || "").trim().toUpperCase();
+    const activeLocationCode = String(school || "").trim().toUpperCase();
+    return (formationCallsigns || []).filter((row) => {
+      const rowUnit = String(row.unit || "").trim().toUpperCase();
+      const rowLocationCode = String(row.locationCode || "").trim().toUpperCase();
+      const unitMatches = !activeUnit || !rowUnit || rowUnit === activeUnit;
+      const locationMatches = !activeLocationCode || !rowLocationCode || rowLocationCode === activeLocationCode;
+      return unitMatches && locationMatches;
+    }).map((row) => ({
+      value: String(row.code || row.name || "").trim(),
+      label: [row.name, row.code && row.code !== row.name ? `(${row.code})` : ""].filter(Boolean).join(" ")
+    })).filter((option) => option.value);
+  }, [activeUnitCode, formationCallsigns, isFixedCrewModel, school]);
   const LAYOUT_ELEM_KEYS = ["startTime", "picName", "coPilot", "duration", "event", "area", "aircraft", "callsign"];
   const MODAL_DEFAULT_POSITIONS = {
     startTime: { x: 14, y: 7 },
@@ -21070,6 +21086,7 @@ const AddFlightTileModal = ({
     return `${prefix}${num}`;
   };
   reactExports.useEffect(() => {
+    if (isFixedCrewModel) return;
     if (!picName) {
       setCallsign("");
       setCallsignOptions([]);
@@ -21101,7 +21118,7 @@ const AddFlightTileModal = ({
     }
     setCallsign("");
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, school]);
+  }, [picName, instructorsData, traineesData, formationCallsigns, school, isFixedCrewModel]);
   reactExports.useEffect(() => {
     setPicName("");
     setStudentName("");
@@ -21140,6 +21157,17 @@ const AddFlightTileModal = ({
     if (!isFixedCrewModel) return;
     setPicName(fixedCrewPic);
   }, [fixedCrewPic, isFixedCrewModel]);
+  reactExports.useEffect(() => {
+    if (!isFixedCrewModel) return;
+    if (fixedCrewCallsignOptions.length === 0) {
+      setCallsign("");
+      setCallsignOptions([]);
+      return;
+    }
+    const values = fixedCrewCallsignOptions.map((option) => option.value);
+    setCallsignOptions(values);
+    setCallsign((current) => values.includes(current) ? current : values[0]);
+  }, [fixedCrewCallsignOptions, isFixedCrewModel]);
   reactExports.useEffect(() => {
     if (!isSingleSeatAircraft) return;
     setFlightType("Solo");
@@ -21247,6 +21275,7 @@ const AddFlightTileModal = ({
           instructor: fixedCrewPic,
           student: "",
           pilot: fixedCrewPic,
+          crew: `CREW ${fixedCrewGroup}`,
           startTime,
           duration,
           area: eventType === "flight" ? area : "-",
@@ -21503,6 +21532,19 @@ const AddFlightTileModal = ({
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "swapped", children: "Swapped" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "invalid", children: "Invalid" })
                         ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Callsign" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "select",
+                      {
+                        value: callsign,
+                        onChange: (e) => setCallsign(e.target.value),
+                        disabled: fixedCrewCallsignOptions.length === 0,
+                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                        children: fixedCrewCallsignOptions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No configured callsigns" }) : fixedCrewCallsignOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label || option.value }, option.value))
                       }
                     )
                   ] })

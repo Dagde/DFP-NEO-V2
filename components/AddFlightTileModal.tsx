@@ -1110,6 +1110,24 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const fixedCrewPicCandidates = useMemo(() => fixedCrewPicQualification
     ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id))
     : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+  const fixedCrewCallsignOptions = useMemo(() => {
+    if (!isFixedCrewModel) return [];
+    const activeUnit = String(activeUnitCode || '').trim().toUpperCase();
+    const activeLocationCode = String(school || '').trim().toUpperCase();
+    return (formationCallsigns || [])
+      .filter(row => {
+        const rowUnit = String(row.unit || '').trim().toUpperCase();
+        const rowLocationCode = String(row.locationCode || '').trim().toUpperCase();
+        const unitMatches = !activeUnit || !rowUnit || rowUnit === activeUnit;
+        const locationMatches = !activeLocationCode || !rowLocationCode || rowLocationCode === activeLocationCode;
+        return unitMatches && locationMatches;
+      })
+      .map(row => ({
+        value: String(row.code || row.name || '').trim(),
+        label: [row.name, row.code && row.code !== row.name ? `(${row.code})` : ''].filter(Boolean).join(' '),
+      }))
+      .filter(option => option.value);
+  }, [activeUnitCode, formationCallsigns, isFixedCrewModel, school]);
 
   // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
@@ -1444,6 +1462,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   };
 
   useEffect(() => {
+    if (isFixedCrewModel) return;
     if (!picName) { setCallsign(''); setCallsignOptions([]); return; }
 
     // Determine PIC's unit (for filtering formation callsigns)
@@ -1481,7 +1500,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, school]);
+  }, [picName, instructorsData, traineesData, formationCallsigns, school, isFixedCrewModel]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
@@ -1517,6 +1536,18 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (!isFixedCrewModel) return;
     setPicName(fixedCrewPic);
   }, [fixedCrewPic, isFixedCrewModel]);
+
+  useEffect(() => {
+    if (!isFixedCrewModel) return;
+    if (fixedCrewCallsignOptions.length === 0) {
+      setCallsign('');
+      setCallsignOptions([]);
+      return;
+    }
+    const values = fixedCrewCallsignOptions.map(option => option.value);
+    setCallsignOptions(values);
+    setCallsign(current => values.includes(current) ? current : values[0]);
+  }, [fixedCrewCallsignOptions, isFixedCrewModel]);
 
   useEffect(() => {
     if (!isSingleSeatAircraft) return;
@@ -1645,6 +1676,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           instructor: fixedCrewPic,
           student: '',
           pilot: fixedCrewPic,
+          crew: `CREW ${fixedCrewGroup}`,
           startTime,
           duration,
           area: eventType === 'flight' ? area : '-',
@@ -1896,6 +1928,23 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     <option value="partial">Partial</option>
                     <option value="swapped">Swapped</option>
                     <option value="invalid">Invalid</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
+                  <select
+                    value={callsign}
+                    onChange={e => setCallsign(e.target.value)}
+                    disabled={fixedCrewCallsignOptions.length === 0}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                  >
+                    {fixedCrewCallsignOptions.length === 0 ? (
+                      <option value="">No configured callsigns</option>
+                    ) : (
+                      fixedCrewCallsignOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label || option.value}</option>
+                      ))
+                    )}
                   </select>
                 </div>
               </div>
