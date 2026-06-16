@@ -71328,7 +71328,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         generatedEventsAtBuildStart: generatedEvents.length
       },
       crewGroups: [],
+      queueSourceAudit: null,
       queue: [],
+      minuteTimeline: [],
       attempts: [],
       placements: [],
       rejectionReasons: {},
@@ -71426,6 +71428,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             staffPriorityTable: [],
             scheduleDecisionTable: []
           }
+        } : void 0,
+        fixedCrewPriority: neoBuildDiag.fixedCrewPriority ? {
+          ...neoBuildDiag.fixedCrewPriority,
+          queue: (neoBuildDiag.fixedCrewPriority.queue || []).slice(-160),
+          minuteTimeline: (neoBuildDiag.fixedCrewPriority.minuteTimeline || []).slice(0, 1500),
+          attempts: (neoBuildDiag.fixedCrewPriority.attempts || []).slice(-1200),
+          placements: (neoBuildDiag.fixedCrewPriority.placements || []).slice(-500)
         } : void 0
       };
       try {
@@ -71714,6 +71723,106 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return acc;
       }, {});
     };
+    const formatFixedCrewMinute = (time) => {
+      const totalMinutes = Math.round(time * 60);
+      const hours = Math.floor(totalMinutes / 60) % 24;
+      const minutes = totalMinutes % 60;
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    };
+    const eventActiveAtMinute = (event, minuteTime) => {
+      const endTime = event.startTime + event.duration;
+      return event.startTime <= minuteTime && endTime > minuteTime;
+    };
+    const buildFixedCrewMinuteTimeline = (fixedCrewQueue2) => {
+      const windowStart = Math.min(flyingStartTime, ftdStartTime);
+      const windowEnd = Math.max(flyingEndTime, ftdEndTime);
+      const startMinute = Math.max(0, Math.floor(windowStart * 60));
+      const endMinute = Math.min(30 * 60, Math.ceil(windowEnd * 60));
+      const attemptsByMinute = /* @__PURE__ */ new Map();
+      const placementsByMinute = /* @__PURE__ */ new Map();
+      (diag.attempts || []).forEach((attempt) => {
+        if (!Number.isFinite(Number(attempt.startTime))) return;
+        const minute = Math.round(Number(attempt.startTime) * 60);
+        if (!attemptsByMinute.has(minute)) attemptsByMinute.set(minute, []);
+        attemptsByMinute.get(minute).push(attempt);
+      });
+      (diag.placements || []).forEach((placement) => {
+        if (!Number.isFinite(Number(placement.startTime))) return;
+        const minute = Math.round(Number(placement.startTime) * 60);
+        if (!placementsByMinute.has(minute)) placementsByMinute.set(minute, []);
+        placementsByMinute.get(minute).push(placement);
+      });
+      const resourceAvailabilityAtMinute = (minuteTime, eventType) => {
+        const sampleEvent = fixedCrewQueue2.find((item) => item.event.type === eventType)?.event;
+        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `PC-21 ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : [];
+        const busyResources = new Set(generatedEvents.filter((event) => event.type === eventType && eventActiveAtMinute(event, minuteTime)).map((event) => event.resourceId).filter(Boolean));
+        const freeResources = resourceOptions.filter((resourceId) => !busyResources.has(resourceId));
+        return {
+          total: resourceOptions.length,
+          free: freeResources.length,
+          busy: busyResources.size,
+          freeResources: freeResources.slice(0, 12)
+        };
+      };
+      const crewReadinessAtMinute = (minuteTime) => Array.from(crewGroups.entries()).sort(([left], [right]) => left.localeCompare(right, void 0, { numeric: true })).map(([crew, members]) => {
+        const pic = members.find(staffHasPicQualification);
+        const unavailableMembers = members.filter(
+          (staff) => isPersonStaticallyUnavailable(staff, minuteTime, minuteTime + 1 / 60, buildDate, "flight")
+        );
+        const conflictingMembers = members.filter(
+          (staff) => generatedEvents.some((event) => eventActiveAtMinute(event, minuteTime) && eventHasPerson(event, staff.name))
+        );
+        const status = !pic ? "NO_PIC" : unavailableMembers.length > 0 ? "UNAVAILABLE" : conflictingMembers.length > 0 ? "BUSY" : "READY";
+        return {
+          crew,
+          status,
+          pic: pic?.name || null,
+          unavailableMembers: unavailableMembers.map((staff) => staff.name),
+          conflictingMembers: conflictingMembers.map((staff) => staff.name)
+        };
+      });
+      const timeline = [];
+      for (let minute = startMinute; minute <= endMinute; minute++) {
+        const minuteTime = Number((minute / 60).toFixed(4));
+        const eligibleQueueItems = fixedCrewQueue2.filter((item) => {
+          const window2 = getFixedCrewWindow(item.event.type);
+          const duration = getFixedCrewDuration(item.event);
+          if (Number.isFinite(item.fixedStartTime)) return Math.round(Number(item.fixedStartTime) * 60) === minute;
+          return minuteTime >= window2.start && minuteTime + duration <= window2.end;
+        }).slice(0, 20).map((item) => ({
+          source: item.source,
+          event: item.event.flightNumber,
+          type: item.event.type,
+          duration: item.event.duration,
+          fixedStartTime: item.fixedStartTime ?? null
+        }));
+        const activeEvents = generatedEvents.filter((event) => eventActiveAtMinute(event, minuteTime)).slice(0, 24).map((event) => ({
+          event: event.flightNumber,
+          source: event._source || null,
+          resourceId: event.resourceId,
+          crew: event.fixedCrewGroup ? `CREW ${event.fixedCrewGroup}` : event.crew || null,
+          pic: event.fixedCrewPic || event.pilot || event.instructor || null
+        }));
+        timeline.push({
+          minute,
+          time: formatFixedCrewMinute(minuteTime),
+          decimalTime: minuteTime,
+          inFlightWindow: minuteTime >= flyingStartTime && minuteTime <= flyingEndTime,
+          inSimWindow: minuteTime >= ftdStartTime && minuteTime <= ftdEndTime,
+          queueItemsAbleToStart: eligibleQueueItems,
+          resources: {
+            flight: resourceAvailabilityAtMinute(minuteTime, "flight"),
+            ftd: resourceAvailabilityAtMinute(minuteTime, "ftd"),
+            cpt: resourceAvailabilityAtMinute(minuteTime, "cpt")
+          },
+          crewReadiness: crewReadinessAtMinute(minuteTime),
+          attemptsAtMinute: (attemptsByMinute.get(minute) || []).slice(0, 40),
+          placementsAtMinute: (placementsByMinute.get(minute) || []).slice(0, 20),
+          activeEvents
+        });
+      }
+      diag.minuteTimeline = timeline;
+    };
     const selectFixedCrewForEvent = (event) => {
       const eventTypeForAvailability = event.type === "ground" ? "ground" : event.type;
       const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
@@ -71851,13 +71960,38 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return generatedEvents;
     }
     const fixedCrewPriorityQueue = highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate)).filter((event) => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed).map((event) => ({ source: isTaskingPriorityEvent(event) ? "fixed-crew-tasking" : isCurrencyPriorityEvent(event) ? "fixed-crew-currency" : "fixed-crew-priority", event: buildFixedCrewEventFromPriority(event), fixedStartTime: event.isTimeFixed ? event.startTime : void 0 })).filter((item) => Boolean(item.event));
-    const activeUnitPackageItems = syllabusDetails.filter((item) => item.isActive !== false && !isSyllabusCourseShell(item)).filter((item) => item.lmpType === "Staff CAT").filter((item) => !fixedCrewUnit || String(item.unit || "").trim().toUpperCase() === fixedCrewUnit).map((item) => ({ item, event: buildFixedCrewEventFromSyllabus(item) })).filter((item) => Boolean(item.event)).sort(
+    const activeFixedCrewPackageSyllabusItems = syllabusDetails.filter((item) => item.isActive !== false && !isSyllabusCourseShell(item)).filter((item) => item.lmpType === "Staff CAT").filter((item) => !fixedCrewUnit || String(item.unit || "").trim().toUpperCase() === fixedCrewUnit);
+    const activeUnitPackageItems = activeFixedCrewPackageSyllabusItems.map((item) => ({ item, event: buildFixedCrewEventFromSyllabus(item) })).filter((item) => Boolean(item.event)).sort(
       (left, right) => Number(left.item.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.item.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.item.orderKey || "").localeCompare(right.item.orderKey || "") || left.item.code.localeCompare(right.item.code)
     ).slice(0, Math.max(1, crewGroups.size * 2));
     const fixedCrewQueue = [
       ...fixedCrewPriorityQueue,
       ...activeUnitPackageItems.map(({ event }) => ({ source: "fixed-crew-package", event }))
     ];
+    diag.queueSourceAudit = {
+      buildDate,
+      activeUnit: fixedCrewUnit,
+      priorityInputs: {
+        totalHighestPriorityEvents: highestPriorityEvents.length,
+        matchingDate: highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate)).length,
+        tasking: highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate) && isTaskingPriorityEvent(event)).length,
+        currency: highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate) && isCurrencyPriorityEvent(event)).length,
+        timeFixed: highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate) && event.isTimeFixed).length,
+        schedulable: fixedCrewPriorityQueue.length
+      },
+      packageInputs: {
+        activeUnitStaffCatItems: activeFixedCrewPackageSyllabusItems.length,
+        schedulableFlightOrSimItems: activeUnitPackageItems.length,
+        ignoredBecauseTypeUnsupported: activeFixedCrewPackageSyllabusItems.filter((item) => !buildFixedCrewEventFromSyllabus(item)).slice(0, 80).map((item) => ({
+          code: item.code,
+          type: item.type,
+          module: item.module,
+          phase: item.phase,
+          unit: item.unit
+        }))
+      },
+      finalQueueCount: fixedCrewQueue.length
+    };
     diag.queue = fixedCrewQueue.map((item) => ({
       source: item.source,
       event: item.event.flightNumber,
@@ -71870,6 +72004,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     fixedCrewQueue.forEach((item) => {
       tryPlaceFixedCrewEvent(item.event, item.source, item.fixedStartTime);
     });
+    buildFixedCrewMinuteTimeline(fixedCrewQueue);
     const sortedFixedCrewEvents = [...generatedEvents].sort(
       (left, right) => left.resourceId.localeCompare(right.resourceId, void 0, { numeric: true }) || left.startTime - right.startTime
     );
