@@ -26945,16 +26945,15 @@ const App: React.FC = () => {
             publishedEventsForBuildDate: (buildPublishedSchedules[buildDfpDate] || []).length,
         });
         markNeoBuildTiming(timingReport, 'runBuildAlgorithm:start');
-        const shouldDownloadAirCombatDiagnostic = activeOperationalModel === 'air_combat';
-        let airCombatDiagnosticDownloaded = false;
-        const downloadAirCombatDiagnosticReport = (source: string) => {
-            if (!shouldDownloadAirCombatDiagnostic || airCombatDiagnosticDownloaded) return;
+        let neoBuildDiagnosticDownloaded = false;
+        const downloadNeoBuildDiagnosticAfterRun = (source: string) => {
+            if (neoBuildDiagnosticDownloaded) return;
             markNeoBuildTiming(timingReport, `diagnostic-export:${source}:start`);
             const filename = downloadNeoBuildDiagnosticReport(source);
             if (filename) {
-                airCombatDiagnosticDownloaded = true;
+                neoBuildDiagnosticDownloaded = true;
                 markNeoBuildTiming(timingReport, `diagnostic-export:${source}:downloaded`, { filename });
-                setShowInfoNotification(`Air Combat NEO Build diagnostic downloaded: ${filename}`);
+                setShowInfoNotification(`${activeOperationalModelLabel} NEO Build diagnostic downloaded: ${filename}`);
             } else {
                 markNeoBuildTiming(timingReport, `diagnostic-export:${source}:unavailable`);
             }
@@ -27319,7 +27318,7 @@ const App: React.FC = () => {
                     setUnavailabilityNotifications(notifications);
                 }
                 markNeoBuildTiming(timingReport, 'notifications:complete', { notifications: notifications.length });
-                downloadAirCombatDiagnosticReport('build-complete');
+                downloadNeoBuildDiagnosticAfterRun('build-complete');
 
             } catch (error) {
                 const runtimeErrorReport = {
@@ -27422,7 +27421,7 @@ const App: React.FC = () => {
                 console.error("🚀 [NEO-Build] DFP Build Failed:", error);
                 console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
                 setDfpBuildProgress({ message: 'Error during build!', percentage: 100 });
-                downloadAirCombatDiagnosticReport('build-error');
+                downloadNeoBuildDiagnosticAfterRun('build-error');
             } finally {
                 markNeoBuildTiming(timingReport, 'navigation:setTimeout-queued', { delayMs: 1000 });
                 setTimeout(() => {
