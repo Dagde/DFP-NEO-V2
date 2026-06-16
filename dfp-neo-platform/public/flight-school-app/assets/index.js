@@ -17670,7 +17670,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const isOracleContext = !!oracleContextForModal;
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
   const isFixedCrewModel = normaliseOperationalModel(operationalModel2) === "fixed_crew";
-  const isFixedCrewCrewedEvent = isFixedCrewModel && (eventType === "flight" || eventType === "ftd");
+  const normalisedEventType = String(eventType || "").trim().toLowerCase();
+  const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === "flight" || normalisedEventType === "ftd");
   const activeUnitNormalised = String(activeUnitCode || "").trim().toUpperCase();
   const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).map((staff) => String(staff.crew || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [activeUnitNormalised, instructorsData]);
   const fixedCrewMembers = reactExports.useMemo(() => fixedCrewGroup ? instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewGroup || "").trim().toUpperCase()).filter((staff) => !staff.isAdminStaff).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" })) : [], [activeUnitNormalised, fixedCrewGroup, instructorsData]);
@@ -17728,6 +17729,28 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     }
     return options;
   }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber]);
+  const fixedCrewEventOptions = reactExports.useMemo(() => {
+    if (!isFixedCrewModel) return [];
+    return syllabusDetails.filter((item) => {
+      const itemType = String(item.type || "").trim().toLowerCase();
+      return itemType === "flight" || itemType === "ftd" || itemType === "sim" || itemType === "simulator";
+    }).sort((a, b) => {
+      const groupA = String(a.module || a.phase || (Array.isArray(a.courses) ? a.courses[0] : "") || "").toUpperCase();
+      const groupB = String(b.module || b.phase || (Array.isArray(b.courses) ? b.courses[0] : "") || "").toUpperCase();
+      if (groupA !== groupB) return groupA.localeCompare(groupB, void 0, { numeric: true });
+      return String(a.code || a.id || "").localeCompare(String(b.code || b.id || ""), void 0, { numeric: true });
+    });
+  }, [isFixedCrewModel, syllabusDetails]);
+  const fixedCrewGroupedEventOptions = reactExports.useMemo(() => {
+    const grouped = /* @__PURE__ */ new Map();
+    fixedCrewEventOptions.forEach((item) => {
+      const itemType = String(item.lmpType || "").trim().toLowerCase() === "staff cat" ? "Package" : "Course";
+      const itemGroup = String(item.module || item.phase || (Array.isArray(item.courses) ? item.courses[0] : "") || "Unassigned").trim();
+      const label = `${itemType}: ${itemGroup}`;
+      grouped.set(label, [...grouped.get(label) || [], item]);
+    });
+    return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b, void 0, { numeric: true }));
+  }, [fixedCrewEventOptions]);
   const staffInstructorsByUnit = reactExports.useMemo(() => {
     const traineeNames = new Set(traineesData.map((t) => t.fullName));
     const staffOnly = instructorList.filter((name) => !traineeNames.has(name));
@@ -18286,12 +18309,21 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     newCrew[index] = { ...member, groupTraineeIds: newIds, group: displayString };
     setCrew(newCrew);
   };
-  const handleFlightNumberChange = (e) => {
-    const newFlightNumber = e.target.value;
+  const applyFlightNumberSelection = (newFlightNumber) => {
     setFlightNumber(newFlightNumber);
     const detail = getSyllabusItemForOption(newFlightNumber);
     if (detail) {
       setDuration(detail.duration);
+      const detailType = String(detail.type || "").trim().toLowerCase();
+      if (isFixedCrewModel && (detailType === "flight" || detailType === "ftd" || detailType === "sim" || detailType === "simulator")) {
+        setEventType(detailType === "flight" ? "flight" : "ftd");
+        if (detail.crewRequirement) {
+          setCrewRequirement(detail.crewRequirement);
+        }
+        if (detail.acceptableAircraftConfigs?.length) {
+          setAircraftConfigId(detail.acceptableAircraftConfigs[0]);
+        }
+      }
     }
     console.log("Flight number changed to:", newFlightNumber);
     if (newFlightNumber === "SCT FORM" && !formationType) {
@@ -18306,6 +18338,45 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     } else if (newFlightNumber !== "SCT FORM") {
       setAircraftCount(1);
     }
+  };
+  const handleFixedCrewGroupChange = (nextGroup) => {
+    setFixedCrewGroup(nextGroup);
+    setFixedCrewPic("");
+    setCrew((prevCrew) => {
+      const nextCrew = prevCrew.length > 0 ? [...prevCrew] : [{
+        instructor: "",
+        student: "",
+        pilot: "",
+        flightType: "Dual"
+      }];
+      nextCrew[0] = {
+        ...nextCrew[0],
+        instructor: "",
+        pilot: "",
+        student: "",
+        group: nextGroup ? `CREW ${nextGroup}` : ""
+      };
+      return nextCrew;
+    });
+  };
+  const handleFixedCrewPicChange = (nextPic) => {
+    setFixedCrewPic(nextPic);
+    setCrew((prevCrew) => {
+      const nextCrew = prevCrew.length > 0 ? [...prevCrew] : [{
+        instructor: "",
+        student: "",
+        pilot: "",
+        flightType: "Dual"
+      }];
+      nextCrew[0] = {
+        ...nextCrew[0],
+        instructor: nextPic,
+        pilot: nextPic,
+        student: "",
+        group: fixedCrewGroup ? `CREW ${fixedCrewGroup}` : nextCrew[0].group
+      };
+      return nextCrew;
+    });
   };
   const parseTimeStringToHours = (timeString) => {
     if (!timeString) return 0;
@@ -18372,6 +18443,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       if (flightNumber === "SCT FORM" && crew.length > 1) {
         resourceId = "";
       }
+      const fixedCrewDisplayGroup = fixedCrewGroup ? `CREW ${fixedCrewGroup}` : c.group;
+      const fixedCrewDisplayPic = fixedCrewPic || c.pilot || c.instructor;
       const savedEvent = {
         ...event,
         id: eventId,
@@ -18388,10 +18461,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         crewRequirement: eventType === "flight" ? crewRequirement : event.crewRequirement,
         color: eventColor,
         flightType: c.flightType,
-        instructor: c.instructor,
-        student: c.student,
-        pilot: c.pilot,
-        group: c.group,
+        instructor: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : c.instructor,
+        student: isFixedCrewCrewedEvent ? "" : c.student,
+        pilot: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : c.pilot,
+        group: isFixedCrewCrewedEvent ? fixedCrewDisplayGroup : c.group,
         groupTraineeIds: c.groupTraineeIds,
         locationType,
         origin: locationType === "Local" ? school : origin,
@@ -18994,14 +19067,22 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 "select",
                 {
                   value: flightNumber,
-                  onChange: handleFlightNumberChange,
+                  onChange: (e) => applyFlightNumberSelection(e.target.value),
                   onFocus: handleSyllabusFocus,
-                  disabled: isDeploy || isOracleContext && filteredSyllabusOptions.length === 0,
+                  disabled: isDeploy || isOracleContext && filteredSyllabusOptions.length === 0 || isFixedCrewCrewedEvent && fixedCrewEventOptions.length === 0,
                   className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed`,
                   children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: isOracleContext ? "Select a crew member first" : "Select an item" }),
-                    isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SCT FORM", children: "SCT FORM" }),
-                    filteredSyllabusOptions.filter((item) => item !== "SCT FORM").map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item, children: formatSyllabusOptionLabel(item) }, item))
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: isFixedCrewCrewedEvent ? "Select assigned course/package event" : isOracleContext ? "Select a crew member first" : "Select an item" }),
+                    isFixedCrewCrewedEvent ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      flightNumber && !fixedCrewEventOptions.some((item) => item.id === flightNumber || item.code === flightNumber) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: flightNumber, children: flightNumber }),
+                      fixedCrewGroupedEventOptions.map(([groupLabel, items]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: groupLabel, children: items.map((item) => {
+                        const optionValue = item.code || item.id || "";
+                        return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: optionValue, children: formatSyllabusOptionLabel(optionValue) }, item.id || item.code);
+                      }) }, groupLabel))
+                    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SCT FORM", children: "SCT FORM" }),
+                      filteredSyllabusOptions.filter((item) => item !== "SCT FORM").map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item, children: formatSyllabusOptionLabel(item) }, item))
+                    ] })
                   ]
                 }
               ),
@@ -19101,7 +19182,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 onChange: setCrewRequirement
               }
             ) }),
-            flightNumber !== "SCT FORM" && (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            flightNumber !== "SCT FORM" && !isFixedCrewCrewedEvent && (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Callsign" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
@@ -19264,10 +19345,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   "select",
                   {
                     value: fixedCrewGroup,
-                    onChange: (e) => {
-                      setFixedCrewGroup(e.target.value);
-                      setFixedCrewPic("");
-                    },
+                    onChange: (e) => handleFixedCrewGroupChange(e.target.value),
                     className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
@@ -19285,7 +19363,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   "select",
                   {
                     value: fixedCrewPic,
-                    onChange: (e) => setFixedCrewPic(e.target.value),
+                    onChange: (e) => handleFixedCrewPicChange(e.target.value),
                     disabled: !fixedCrewGroup || fixedCrewPicCandidates.length === 0,
                     className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
                     children: [
@@ -19295,6 +19373,39 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                     ]
                   }
                 )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Callsign" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-[minmax(0,1fr)_6rem] gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "select",
+                    {
+                      value: unitCallsignBase || defaultUnitCallsign,
+                      onChange: (e) => {
+                        setUnitCallsignBase(e.target.value);
+                        setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                      },
+                      disabled: isDeploy || unitCallsignEntries.length === 0,
+                      className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                      children: unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Configure unit callsigns in Settings" }) : unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: entry.callsign }, entry.id))
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "select",
+                    {
+                      value: unitCallsignNumber,
+                      onChange: (e) => {
+                        const nextNumber = Number(e.target.value);
+                        setUnitCallsignNumber(nextNumber);
+                        setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
+                      },
+                      disabled: isDeploy || unitCallsignEntries.length === 0,
+                      className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                      children: callsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `fixed-crew-callsign-number-${option.value}`))
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] font-semibold text-emerald-200/80", children: unitCallsignEntries.length > 0 ? buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber) : "No unit callsigns configured" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Manifest Status" }),

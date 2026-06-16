@@ -638,7 +638,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const isOracleContext = !!oracleContextForModal;
     const instructorList = oracleContextForModal?.availableInstructors || instructors;
     const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
-    const isFixedCrewCrewedEvent = isFixedCrewModel && (eventType === 'flight' || eventType === 'ftd');
+    const normalisedEventType = String(eventType || '').trim().toLowerCase();
+    const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === 'flight' || normalisedEventType === 'ftd');
     const activeUnitNormalised = String(activeUnitCode || '').trim().toUpperCase();
     const fixedCrewGroups = useMemo(() => Array.from(new Set(instructorsData
         .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
@@ -734,6 +735,32 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         
         return options;
     }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber]);
+
+    const fixedCrewEventOptions = useMemo(() => {
+        if (!isFixedCrewModel) return [] as SyllabusItemDetail[];
+        return syllabusDetails
+            .filter(item => {
+                const itemType = String(item.type || '').trim().toLowerCase();
+                return itemType === 'flight' || itemType === 'ftd' || itemType === 'sim' || itemType === 'simulator';
+            })
+            .sort((a, b) => {
+                const groupA = String((a as any).module || a.phase || (Array.isArray(a.courses) ? a.courses[0] : '') || '').toUpperCase();
+                const groupB = String((b as any).module || b.phase || (Array.isArray(b.courses) ? b.courses[0] : '') || '').toUpperCase();
+                if (groupA !== groupB) return groupA.localeCompare(groupB, undefined, { numeric: true });
+                return String(a.code || a.id || '').localeCompare(String(b.code || b.id || ''), undefined, { numeric: true });
+            });
+    }, [isFixedCrewModel, syllabusDetails]);
+
+    const fixedCrewGroupedEventOptions = useMemo(() => {
+        const grouped = new Map<string, SyllabusItemDetail[]>();
+        fixedCrewEventOptions.forEach(item => {
+            const itemType = String(item.lmpType || '').trim().toLowerCase() === 'staff cat' ? 'Package' : 'Course';
+            const itemGroup = String((item as any).module || item.phase || (Array.isArray(item.courses) ? item.courses[0] : '') || 'Unassigned').trim();
+            const label = `${itemType}: ${itemGroup}`;
+            grouped.set(label, [...(grouped.get(label) || []), item]);
+        });
+        return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+    }, [fixedCrewEventOptions]);
 
     // Get staff-only instructors (exclude trainees) grouped by unit
     const staffInstructorsByUnit = useMemo(() => {
@@ -1492,14 +1519,22 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setCrew(newCrew);
     };
 
-    const handleFlightNumberChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newFlightNumber = e.target.value;
-        const oldFlightNumber = flightNumber;
+    const applyFlightNumberSelection = (newFlightNumber: string) => {
         setFlightNumber(newFlightNumber);
 
         const detail = getSyllabusItemForOption(newFlightNumber);
         if (detail) {
             setDuration(detail.duration);
+            const detailType = String(detail.type || '').trim().toLowerCase();
+            if (isFixedCrewModel && (detailType === 'flight' || detailType === 'ftd' || detailType === 'sim' || detailType === 'simulator')) {
+                setEventType(detailType === 'flight' ? 'flight' : 'ftd');
+                if (detail.crewRequirement) {
+                    setCrewRequirement(detail.crewRequirement);
+                }
+                if (detail.acceptableAircraftConfigs?.length) {
+                    setAircraftConfigId(detail.acceptableAircraftConfigs[0]);
+                }
+            }
         }
 
         console.log('Flight number changed to:', newFlightNumber);
@@ -1519,6 +1554,47 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
            } else if (newFlightNumber !== 'SCT FORM') {
                setAircraftCount(1);
            }
+    };
+
+    const handleFixedCrewGroupChange = (nextGroup: string) => {
+        setFixedCrewGroup(nextGroup);
+        setFixedCrewPic('');
+        setCrew(prevCrew => {
+            const nextCrew = prevCrew.length > 0 ? [...prevCrew] : [{
+                instructor: '',
+                student: '',
+                pilot: '',
+                flightType: 'Dual' as const,
+            }];
+            nextCrew[0] = {
+                ...nextCrew[0],
+                instructor: '',
+                pilot: '',
+                student: '',
+                group: nextGroup ? `CREW ${nextGroup}` : '',
+            };
+            return nextCrew;
+        });
+    };
+
+    const handleFixedCrewPicChange = (nextPic: string) => {
+        setFixedCrewPic(nextPic);
+        setCrew(prevCrew => {
+            const nextCrew = prevCrew.length > 0 ? [...prevCrew] : [{
+                instructor: '',
+                student: '',
+                pilot: '',
+                flightType: 'Dual' as const,
+            }];
+            nextCrew[0] = {
+                ...nextCrew[0],
+                instructor: nextPic,
+                pilot: nextPic,
+                student: '',
+                group: fixedCrewGroup ? `CREW ${fixedCrewGroup}` : nextCrew[0].group,
+            };
+            return nextCrew;
+        });
     };
     const handleAircraftCountChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newCount = parseInt(e.target.value);
@@ -1619,6 +1695,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 resourceId = '';
             }
             
+            const fixedCrewDisplayGroup = fixedCrewGroup ? `CREW ${fixedCrewGroup}` : c.group;
+            const fixedCrewDisplayPic = fixedCrewPic || c.pilot || c.instructor;
+
             const savedEvent = {
                 ...event,
                 id: eventId,
@@ -1634,10 +1713,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 crewRequirement: eventType === 'flight' ? crewRequirement : event.crewRequirement,
                 color: eventColor,
                 flightType: c.flightType,
-                instructor: c.instructor,
-                student: c.student,
-                pilot: c.pilot,
-                group: c.group,
+                instructor: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : c.instructor,
+                student: isFixedCrewCrewedEvent ? '' : c.student,
+                pilot: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : c.pilot,
+                group: isFixedCrewCrewedEvent ? fixedCrewDisplayGroup : c.group,
                 groupTraineeIds: c.groupTraineeIds,
                 locationType,
                 origin: locationType === 'Local' ? school : origin,
@@ -2363,18 +2442,40 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Syllabus Item</label>
                                             <select
                                                 value={flightNumber}
-                                                onChange={handleFlightNumberChange}
+                                                onChange={e => applyFlightNumberSelection(e.target.value)}
                                                 onFocus={handleSyllabusFocus}
-                                                disabled={isDeploy || (isOracleContext && filteredSyllabusOptions.length === 0)}
+                                                disabled={isDeploy || (isOracleContext && filteredSyllabusOptions.length === 0) || (isFixedCrewCrewedEvent && fixedCrewEventOptions.length === 0)}
                                                 className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed`}
                                             >
                                                 <option value="" disabled>
-                                                    {isOracleContext ? 'Select a crew member first' : 'Select an item'}
+                                                    {isFixedCrewCrewedEvent ? 'Select assigned course/package event' : isOracleContext ? 'Select a crew member first' : 'Select an item'}
                                                 </option>
-                                                {isAddingTile && <option value="SCT FORM">SCT FORM</option>}
-                                                {filteredSyllabusOptions.filter(item => item !== 'SCT FORM').map(item => (
-                                                    <option key={item} value={item}>{formatSyllabusOptionLabel(item)}</option>
-                                                ))}
+                                                {isFixedCrewCrewedEvent ? (
+                                                    <>
+                                                        {flightNumber && !fixedCrewEventOptions.some(item => item.id === flightNumber || item.code === flightNumber) && (
+                                                            <option value={flightNumber}>{flightNumber}</option>
+                                                        )}
+                                                        {fixedCrewGroupedEventOptions.map(([groupLabel, items]) => (
+                                                            <optgroup key={groupLabel} label={groupLabel}>
+                                                                {items.map(item => {
+                                                                    const optionValue = item.code || item.id || '';
+                                                                    return (
+                                                                        <option key={item.id || item.code} value={optionValue}>
+                                                                            {formatSyllabusOptionLabel(optionValue)}
+                                                                        </option>
+                                                                    );
+                                                                })}
+                                                            </optgroup>
+                                                        ))}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {isAddingTile && <option value="SCT FORM">SCT FORM</option>}
+                                                        {filteredSyllabusOptions.filter(item => item !== 'SCT FORM').map(item => (
+                                                            <option key={item} value={item}>{formatSyllabusOptionLabel(item)}</option>
+                                                        ))}
+                                                    </>
+                                                )}
                                             </select>
                                             {syllabusSelectionError && (
                                                 <div className="absolute -bottom-6 left-0 text-xs text-red-400 animate-fade-in">Select a crew member first.</div>
@@ -2476,7 +2577,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     onChange={setCrewRequirement}
                                                 />
                                             </div>
-                                            {flightNumber !== 'SCT FORM' && (
+                                            {flightNumber !== 'SCT FORM' && !isFixedCrewCrewedEvent && (
                                                 selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 ? (
                                                     <div>
                                                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
@@ -2649,10 +2750,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
                                                     <select
                                                         value={fixedCrewGroup}
-                                                        onChange={e => {
-                                                            setFixedCrewGroup(e.target.value);
-                                                            setFixedCrewPic('');
-                                                        }}
+                                                        onChange={e => handleFixedCrewGroupChange(e.target.value)}
                                                         className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                                                     >
                                                         <option value="">Select crew</option>
@@ -2665,7 +2763,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">PIC</label>
                                                     <select
                                                         value={fixedCrewPic}
-                                                        onChange={e => setFixedCrewPic(e.target.value)}
+                                                        onChange={e => handleFixedCrewPicChange(e.target.value)}
                                                         disabled={!fixedCrewGroup || fixedCrewPicCandidates.length === 0}
                                                         className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
                                                     >
@@ -2679,6 +2777,43 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                             </option>
                                                         ))}
                                                     </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
+                                                    <div className="mt-1 grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+                                                        <select
+                                                            value={unitCallsignBase || defaultUnitCallsign}
+                                                            onChange={e => {
+                                                                setUnitCallsignBase(e.target.value);
+                                                                setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                                                            }}
+                                                            disabled={isDeploy || unitCallsignEntries.length === 0}
+                                                            className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {unitCallsignEntries.length === 0 ? (
+                                                                <option value="">Configure unit callsigns in Settings</option>
+                                                            ) : unitCallsignEntries.map(entry => (
+                                                                <option key={entry.id} value={entry.callsign}>{entry.callsign}</option>
+                                                            ))}
+                                                        </select>
+                                                        <select
+                                                            value={unitCallsignNumber}
+                                                            onChange={e => {
+                                                                const nextNumber = Number(e.target.value);
+                                                                setUnitCallsignNumber(nextNumber);
+                                                                setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
+                                                            }}
+                                                            disabled={isDeploy || unitCallsignEntries.length === 0}
+                                                            className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {callsignNumberOptions.map(option => (
+                                                                <option key={`fixed-crew-callsign-number-${option.value}`} value={option.value}>{option.label}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="mt-1 text-[11px] font-semibold text-emerald-200/80">
+                                                        {unitCallsignEntries.length > 0 ? buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber) : 'No unit callsigns configured'}
+                                                    </div>
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Manifest Status</label>
