@@ -76,6 +76,7 @@ import {
     getStaffCallsignAssignments,
     getStaffCallsignKey,
 } from './utils/staffCallsigns';
+import { normaliseUnitCallsignSettings } from './utils/unitCallsigns';
 import {
     getAirCombatAssignmentFromItem,
     getAirCombatTrainingKey,
@@ -16943,6 +16944,13 @@ const App: React.FC = () => {
         return normaliseStaffQualificationCatalogue(activeOrganisation?.settings?.staffQualificationCatalogue || null);
     }, [platformConfig]);
 
+    const activeUnitCallsignSettings = useMemo(() => {
+        const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
+            String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+        )) || platformConfig?.organisations?.[0];
+        return normaliseUnitCallsignSettings(activeOrganisation?.settings?.unitCallsignSettings || null);
+    }, [platformConfig]);
+
     const activeLocationSolarProfile = useMemo(() => {
         const normalisedSchool = String(school || '').trim().toUpperCase();
         const configuredLocation = (platformConfig?.locations || []).find((location: any) => (
@@ -31292,6 +31300,7 @@ appliedUpdates.forEach(update => {
                     aircraftCrewComposition={activeAircraftCrewComposition}
                     crewPositionTerminology={activeCrewPositionTerminology}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
+                    unitCallsignSettings={activeUnitCallsignSettings}
                     onAddPriorityEvents={(eventsToAdd) => {
                         setHighestPriorityEvents(prev => {
                             const incomingIds = new Set(eventsToAdd.map(event => event.id));
@@ -33376,6 +33385,7 @@ appliedUpdates.forEach(update => {
                     operationalModel={activeOperationalModel}
                     activeUnitCode={activeUnitCode}
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
+                    unitCallsignSettings={activeUnitCallsignSettings}
                     personnelDisplaySettings={personnelDisplaySettings}
                 />
             )}
@@ -33546,6 +33556,7 @@ appliedUpdates.forEach(update => {
                     operationalModel={activeOperationalModel}
                     activeUnitCode={activeUnitCode}
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
+                    unitCallsignSettings={activeUnitCallsignSettings}
                 />
             )}
 

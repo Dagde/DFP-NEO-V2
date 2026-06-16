@@ -18,6 +18,13 @@ import {
   normaliseQualificationToken,
   type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
+import {
+  buildUnitEventCallsign,
+  formatUnitCallsignNumber,
+  getDefaultUnitCallsign,
+  getUnitCallsignEntries,
+  type UnitCallsignSettings,
+} from '../utils/unitCallsigns';
 
 interface AddFlightTileModalProps {
   onClose: () => void;
@@ -40,6 +47,7 @@ interface AddFlightTileModalProps {
   aircraftCrewComposition?: AircraftCrewComposition;
   operationalModel?: string;
   activeUnitCode?: string;
+  unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   personnelDisplaySettings?: PersonnelDisplaySettings;
 }
@@ -1039,6 +1047,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
   operationalModel,
   activeUnitCode = '',
+  unitCallsignSettings,
   staffQualificationCatalogue,
   personnelDisplaySettings,
 }) => {
@@ -1066,6 +1075,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [formationCrew, setFormationCrew] = useState<FormationCrewDraft[]>([]);
   const [callsign,      setCallsign]      = useState('');
   const [callsignOptions, setCallsignOptions] = useState<string[]>([]);
+  const [unitCallsignBase, setUnitCallsignBase] = useState('');
+  const [unitCallsignNumber, setUnitCallsignNumber] = useState(0);
   const [notes,         setNotes]         = useState('');
   const [fixedCrewGroup, setFixedCrewGroup] = useState('');
   const [fixedCrewPic, setFixedCrewPic] = useState('');
@@ -1110,24 +1121,20 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const fixedCrewPicCandidates = useMemo(() => fixedCrewPicQualification
     ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id))
     : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
-  const fixedCrewCallsignOptions = useMemo(() => {
-    if (!isFixedCrewModel) return [];
-    const activeUnit = String(activeUnitCode || '').trim().toUpperCase();
-    const activeLocationCode = String(school || '').trim().toUpperCase();
-    return (formationCallsigns || [])
-      .filter(row => {
-        const rowUnit = String(row.unit || '').trim().toUpperCase();
-        const rowLocationCode = String(row.locationCode || '').trim().toUpperCase();
-        const unitMatches = !activeUnit || !rowUnit || rowUnit === activeUnit;
-        const locationMatches = !activeLocationCode || !rowLocationCode || rowLocationCode === activeLocationCode;
-        return unitMatches && locationMatches;
-      })
-      .map(row => ({
-        value: String(row.code || row.name || '').trim(),
-        label: [row.name, row.code && row.code !== row.name ? `(${row.code})` : ''].filter(Boolean).join(' '),
-      }))
-      .filter(option => option.value);
-  }, [activeUnitCode, formationCallsigns, isFixedCrewModel, school]);
+  const unitCallsignEntries = useMemo(
+    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode),
+    [activeUnitCode, unitCallsignSettings],
+  );
+  const defaultUnitCallsign = useMemo(
+    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode),
+    [activeUnitCode, unitCallsignSettings],
+  );
+  const selectedPicHasIndividualCallsign = useMemo(() => {
+    const instructor = instructorsData.find(staff => staff.name === picName);
+    if (instructor && String(instructor.callsign || '').trim()) return true;
+    const trainee = traineesData.find(traineeRecord => (traineeRecord.fullName || traineeRecord.name) === picName);
+    return Boolean(trainee && String(trainee.traineeCallsign || '').trim());
+  }, [instructorsData, picName, traineesData]);
 
   // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
@@ -1304,6 +1311,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return opts;
   }, []);
 
+  const callsignNumberOptions = useMemo(() => Array.from({ length: 101 }, (_, value) => ({
+    value,
+    label: formatUnitCallsignNumber(value),
+  })), []);
+
   // ── All units ─────────────────────────────────────────────────────────────
   const allUnits = useMemo(() => {
     const s = new Set<string>();
@@ -1478,9 +1490,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       const personal  = [primary, secondary].filter(Boolean);
       // Add formation callsigns that belong to the same unit as the PIC
       const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
-      const allOpts   = [...new Set([...personal, ...formation])];
+      const unitOptions = selectedPicHasIndividualCallsign ? [] : unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
+      const unitDefaultCallsign = buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber);
+      const allOpts   = [...new Set([...personal, ...(selectedPicHasIndividualCallsign ? formation : []), ...unitOptions])];
       setCallsignOptions(allOpts);
-      setCallsign(primary || (allOpts[0] || ''));
+      setCallsign(primary || unitDefaultCallsign || (allOpts[0] || ''));
       return;
     }
 
@@ -1492,15 +1506,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       const personal = cs ? [cs] : [];
       // Add formation callsigns that belong to the same unit as the PIC
       const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
-      const allOpts   = [...new Set([...personal, ...formation])];
+      const unitOptions = selectedPicHasIndividualCallsign ? [] : unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
+      const unitDefaultCallsign = buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber);
+      const allOpts   = [...new Set([...personal, ...(selectedPicHasIndividualCallsign ? formation : []), ...unitOptions])];
       setCallsignOptions(allOpts);
-      setCallsign(cs || (allOpts[0] || ''));
+      setCallsign(cs || unitDefaultCallsign || (allOpts[0] || ''));
       return;
     }
 
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, school, isFixedCrewModel]);
+  }, [picName, instructorsData, traineesData, formationCallsigns, school, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
@@ -1513,10 +1529,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setOrigin(school); setDestination(school);
     setAircraftCount(1); setFormationCrew([]);
     setCallsign(''); setCallsignOptions([]); setNotes('');
+    setUnitCallsignBase(defaultUnitCallsign); setUnitCallsignNumber(0);
     setFixedCrewGroup(''); setFixedCrewPic(''); setFixedCrewManifestStatus('pending'); setFixedCrewManifestNotes('');
     setErrors([]);
     setGuidedStep('startTime');
-  }, [eventCategory]);
+  }, [eventCategory, defaultUnitCallsign]);
 
   useEffect(() => {
     if (isFixedCrewModel) {
@@ -1538,16 +1555,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [fixedCrewPic, isFixedCrewModel]);
 
   useEffect(() => {
-    if (!isFixedCrewModel) return;
-    if (fixedCrewCallsignOptions.length === 0) {
-      setCallsign('');
+    if (selectedPicHasIndividualCallsign) return;
+    if (!defaultUnitCallsign) {
       setCallsignOptions([]);
       return;
     }
-    const values = fixedCrewCallsignOptions.map(option => option.value);
+    const base = unitCallsignBase || defaultUnitCallsign;
+    const values = unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
     setCallsignOptions(values);
-    setCallsign(current => values.includes(current) ? current : values[0]);
-  }, [fixedCrewCallsignOptions, isFixedCrewModel]);
+    setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
+  }, [defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
 
   useEffect(() => {
     if (!isSingleSeatAircraft) return;
@@ -1932,20 +1949,40 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
-                  <select
-                    value={callsign}
-                    onChange={e => setCallsign(e.target.value)}
-                    disabled={fixedCrewCallsignOptions.length === 0}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-                  >
-                    {fixedCrewCallsignOptions.length === 0 ? (
-                      <option value="">No configured callsigns</option>
-                    ) : (
-                      fixedCrewCallsignOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label || option.value}</option>
-                      ))
-                    )}
-                  </select>
+                  <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
+                    <select
+                      value={unitCallsignBase}
+                      onChange={e => {
+                        setUnitCallsignBase(e.target.value);
+                        setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                      }}
+                      disabled={unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                    >
+                      {unitCallsignEntries.length === 0 ? (
+                        <option value="">No unit callsigns</option>
+                      ) : (
+                        unitCallsignEntries.map(entry => (
+                          <option key={entry.id} value={entry.callsign}>{entry.callsign}{entry.isDefault ? ' (default)' : ''}</option>
+                        ))
+                      )}
+                    </select>
+                    <select
+                      value={unitCallsignNumber}
+                      onChange={e => {
+                        const nextNumber = parseInt(e.target.value, 10) || 0;
+                        setUnitCallsignNumber(nextNumber);
+                        setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
+                      }}
+                      disabled={unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-2 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                    >
+                      {callsignNumberOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </div>
+                  {selectedPicHasIndividualCallsign && (
+                    <div className="mt-1 text-[11px] text-gray-500">Using the PIC profile callsign.</div>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2141,6 +2178,36 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     </select>
                   </div>
                 </div>}
+                {!isFixedCrewModel && !selectedPicHasIndividualCallsign && unitCallsignEntries.length > 0 && (
+                  <div className="mb-4 rounded-lg border border-sky-500/25 bg-sky-950/20 p-3">
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Unit Callsign</label>
+                    <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-3">
+                      <select
+                        value={unitCallsignBase}
+                        onChange={e => {
+                          setUnitCallsignBase(e.target.value);
+                          setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                        }}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
+                      >
+                        {unitCallsignEntries.map(entry => (
+                          <option key={entry.id} value={entry.callsign}>{entry.callsign}{entry.isDefault ? ' (default)' : ''}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={unitCallsignNumber}
+                        onChange={e => {
+                          const nextNumber = parseInt(e.target.value, 10) || 0;
+                          setUnitCallsignNumber(nextNumber);
+                          setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
+                        }}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
+                      >
+                        {callsignNumberOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>

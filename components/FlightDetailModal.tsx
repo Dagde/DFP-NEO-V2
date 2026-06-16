@@ -29,6 +29,13 @@ import {
     normaliseQualificationToken,
     type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
+import {
+    buildUnitEventCallsign,
+    formatUnitCallsignNumber,
+    getDefaultUnitCallsign,
+    getUnitCallsignEntries,
+    type UnitCallsignSettings,
+} from '../utils/unitCallsigns';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -406,6 +413,7 @@ interface EventDetailModalProps {
     operationalModel?: string;
     activeUnitCode?: string;
     staffQualificationCatalogue?: StaffQualificationCatalogue;
+    unitCallsignSettings?: UnitCallsignSettings;
     personnelDisplaySettings?: PersonnelDisplaySettings;
     isReadOnly?: boolean;
 }
@@ -453,7 +461,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, personnelDisplaySettings, isReadOnly = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, isReadOnly = false }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -596,6 +604,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [destination, setDestination] = useState(event.destination || school);
     const [formationType, setFormationType] = useState(event.formationType || '');
     const [callsign, setCallsign] = useState(event.callsign || '');
+    const [unitCallsignBase, setUnitCallsignBase] = useState('');
+    const [unitCallsignNumber, setUnitCallsignNumber] = useState(0);
     const [notes, setNotes] = useState(event.notes || '');
     const [fixedCrewGroup, setFixedCrewGroup] = useState(event.fixedCrewGroup || '');
     const [fixedCrewPic, setFixedCrewPic] = useState(event.fixedCrewPic || '');
@@ -1123,6 +1133,25 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }
         return school === 'ESL' ? ['MERL', 'VANG'] : ['COBR', 'HAWK'];
     }, [filteredCallsigns, school]);
+    const unitCallsignEntries = useMemo(
+        () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode || school),
+        [activeUnitCode, school, unitCallsignSettings],
+    );
+    const defaultUnitCallsign = useMemo(
+        () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode || school),
+        [activeUnitCode, school, unitCallsignSettings],
+    );
+    const callsignNumberOptions = useMemo(
+        () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
+        [],
+    );
+    const selectedPicForCallsign = fixedCrewPic || crew[0]?.pilot || crew[0]?.instructor || event.pilot || event.instructor || '';
+    const selectedPicHasIndividualCallsign = useMemo(() => {
+        const instructor = instructorsData.find(staff => staff.name === selectedPicForCallsign);
+        if (instructor && String(instructor.callsign || '').trim()) return true;
+        const trainee = traineesData.find(traineeRecord => (traineeRecord.fullName || traineeRecord.name) === selectedPicForCallsign);
+        return Boolean(trainee && String(trainee.traineeCallsign || '').trim());
+    }, [instructorsData, selectedPicForCallsign, traineesData]);
     const areas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
     const courses = useMemo(() => Object.keys(courseColors).sort(), [courseColors]);
@@ -1175,6 +1204,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setDestination(event.destination || school);
         setFormationType(event.formationType || formationTypes[0]);
         setCallsign(event.callsign || '');
+        setUnitCallsignBase(defaultUnitCallsign);
+        setUnitCallsignNumber(0);
         setNotes(event.notes || '');
         setFixedCrewGroup(event.fixedCrewGroup || '');
         setFixedCrewPic(event.fixedCrewPic || '');
@@ -1188,7 +1219,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setDeploymentEndDate(event.deploymentEndDate || event.date); 
         setDeploymentEndTime(event.deploymentEndTime || '');
 
-    }, [event, isEditingDefault, highlightedField, school, isReadOnly]);
+    }, [event, isEditingDefault, highlightedField, school, isReadOnly, defaultUnitCallsign, formationTypes]);
+
+    useEffect(() => {
+        if (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 || !defaultUnitCallsign) return;
+        const base = unitCallsignBase || defaultUnitCallsign;
+        setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
+    }, [defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries.length, unitCallsignNumber]);
     
     useEffect(() => {
         if (locationType === 'Local') {
@@ -2440,17 +2477,53 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 />
                                             </div>
                                             {flightNumber !== 'SCT FORM' && (
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
-                                                    <input
-                                                        type="text"
-                                                        value={callsign}
-                                                        onChange={e => setCallsign(e.target.value.toUpperCase())}
-                                                        disabled={isDeploy}
-                                                        placeholder="Optional callsign"
-                                                        className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-                                                    />
-                                                </div>
+                                                selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 ? (
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
+                                                        <input
+                                                            type="text"
+                                                            value={callsign}
+                                                            onChange={e => setCallsign(e.target.value.toUpperCase())}
+                                                            disabled={isDeploy}
+                                                            placeholder={unitCallsignEntries.length === 0 ? 'Configure unit callsigns in Settings' : 'Optional callsign'}
+                                                            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Unit Callsign</label>
+                                                        <div className="mt-1 grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+                                                            <select
+                                                                value={unitCallsignBase || defaultUnitCallsign}
+                                                                onChange={e => {
+                                                                    setUnitCallsignBase(e.target.value);
+                                                                    setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                                                                }}
+                                                                disabled={isDeploy}
+                                                                className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                            >
+                                                                {unitCallsignEntries.map(entry => (
+                                                                    <option key={entry.id} value={entry.callsign}>{entry.callsign}</option>
+                                                                ))}
+                                                            </select>
+                                                            <select
+                                                                value={unitCallsignNumber}
+                                                                onChange={e => {
+                                                                    const nextNumber = Number(e.target.value);
+                                                                    setUnitCallsignNumber(nextNumber);
+                                                                    setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
+                                                                }}
+                                                                disabled={isDeploy}
+                                                                className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                            >
+                                                                {callsignNumberOptions.map(option => (
+                                                                    <option key={`flight-detail-callsign-number-${option.value}`} value={option.value}>{option.label}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div className="mt-1 text-[11px] font-semibold text-sky-200/80">{buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber)}</div>
+                                                    </div>
+                                                )
                                             )}
                                         </div>
                                     )}

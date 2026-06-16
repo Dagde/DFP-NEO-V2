@@ -3826,6 +3826,58 @@ const getStaffCallsignAssignments = (instructors, settings) => {
   return assignments;
 };
 const getStaffCallsignKey = personKey;
+const makeUnitCallsignId = (unitCode, callsign, index) => {
+  const token = `${unitCode}-${callsign}`.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return token ? `unit-callsign-${token}` : `unit-callsign-${index + 1}`;
+};
+const normaliseUnitCallsignSettings = (source) => {
+  const rawEntries = Array.isArray(source?.entries) ? source.entries : Array.isArray(source) ? source : [];
+  const entries = rawEntries.map((entry, index) => {
+    const unitCode = String(entry?.unitCode || entry?.unit || "").trim().toUpperCase();
+    const callsign = String(entry?.callsign || entry?.name || entry?.code || "").trim();
+    if (!unitCode || !callsign) return null;
+    return {
+      id: String(entry?.id || makeUnitCallsignId(unitCode, callsign, index)),
+      unitCode,
+      callsign,
+      isDefault: entry?.isDefault === true
+    };
+  }).filter(Boolean);
+  const seen = /* @__PURE__ */ new Set();
+  const uniqueEntries = entries.filter((entry) => {
+    const key = `${entry.unitCode}::${entry.callsign.toUpperCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const defaultsByUnit = /* @__PURE__ */ new Set();
+  return {
+    entries: uniqueEntries.map((entry) => {
+      if (!entry.isDefault) return entry;
+      if (defaultsByUnit.has(entry.unitCode)) return { ...entry, isDefault: false };
+      defaultsByUnit.add(entry.unitCode);
+      return entry;
+    })
+  };
+};
+const getUnitCallsignEntries = (settings, unitCode) => {
+  const unit = String(unitCode || "").trim().toUpperCase();
+  if (!unit) return [];
+  return normaliseUnitCallsignSettings(settings).entries.filter((entry) => entry.unitCode === unit).sort((left, right) => left.callsign.localeCompare(right.callsign, void 0, { sensitivity: "base" }));
+};
+const getDefaultUnitCallsign = (settings, unitCode) => {
+  const entries = getUnitCallsignEntries(settings, unitCode);
+  return entries.find((entry) => entry.isDefault)?.callsign || entries[0]?.callsign || "";
+};
+const formatUnitCallsignNumber = (value) => {
+  const number = Math.min(100, Math.max(0, Math.floor(Number(value) || 0)));
+  return String(number).padStart(3, "0");
+};
+const buildUnitEventCallsign = (base, number) => {
+  const callsign = String(base || "").trim();
+  if (!callsign) return "";
+  return `${callsign} ${formatUnitCallsignNumber(number)}`;
+};
 const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
   courses: 60,
   trainingPackages: 40
@@ -17473,7 +17525,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel: operationalModel2, activeUnitCode = "", staffQualificationCatalogue, personnelDisplaySettings, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel: operationalModel2, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -17588,6 +17640,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [destination, setDestination] = reactExports.useState(event.destination || school);
   const [formationType, setFormationType] = reactExports.useState(event.formationType || "");
   const [callsign, setCallsign] = reactExports.useState(event.callsign || "");
+  const [unitCallsignBase, setUnitCallsignBase] = reactExports.useState("");
+  const [unitCallsignNumber, setUnitCallsignNumber] = reactExports.useState(0);
   const [notes, setNotes] = reactExports.useState(event.notes || "");
   const [fixedCrewGroup, setFixedCrewGroup] = reactExports.useState(event.fixedCrewGroup || "");
   const [fixedCrewPic, setFixedCrewPic] = reactExports.useState(event.fixedCrewPic || "");
@@ -17954,6 +18008,25 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     }
     return school === "ESL" ? ["MERL", "VANG"] : ["COBR", "HAWK"];
   }, [filteredCallsigns, school]);
+  const unitCallsignEntries = reactExports.useMemo(
+    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode || school),
+    [activeUnitCode, school, unitCallsignSettings]
+  );
+  const defaultUnitCallsign = reactExports.useMemo(
+    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode || school),
+    [activeUnitCode, school, unitCallsignSettings]
+  );
+  const callsignNumberOptions = reactExports.useMemo(
+    () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
+    []
+  );
+  const selectedPicForCallsign = fixedCrewPic || crew[0]?.pilot || crew[0]?.instructor || event.pilot || event.instructor || "";
+  const selectedPicHasIndividualCallsign = reactExports.useMemo(() => {
+    const instructor = instructorsData.find((staff) => staff.name === selectedPicForCallsign);
+    if (instructor && String(instructor.callsign || "").trim()) return true;
+    const trainee = traineesData.find((traineeRecord) => (traineeRecord.fullName || traineeRecord.name) === selectedPicForCallsign);
+    return Boolean(trainee && String(trainee.traineeCallsign || "").trim());
+  }, [instructorsData, selectedPicForCallsign, traineesData]);
   const areas = ["A", "B", "C", "D", "E", "F", "G", "H", "S", "T", "U", "V", "W", "X", "Y", "Z"];
   const courses = reactExports.useMemo(() => Object.keys(courseColors).sort(), [courseColors]);
   const coursesStruct = reactExports.useMemo(() => {
@@ -17998,6 +18071,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     setDestination(event.destination || school);
     setFormationType(event.formationType || formationTypes[0]);
     setCallsign(event.callsign || "");
+    setUnitCallsignBase(defaultUnitCallsign);
+    setUnitCallsignNumber(0);
     setNotes(event.notes || "");
     setFixedCrewGroup(event.fixedCrewGroup || "");
     setFixedCrewPic(event.fixedCrewPic || "");
@@ -18008,7 +18083,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     setDeploymentStartTime(event.deploymentStartTime || "");
     setDeploymentEndDate(event.deploymentEndDate || event.date);
     setDeploymentEndTime(event.deploymentEndTime || "");
-  }, [event, isEditingDefault, highlightedField, school, isReadOnly]);
+  }, [event, isEditingDefault, highlightedField, school, isReadOnly, defaultUnitCallsign, formationTypes]);
+  reactExports.useEffect(() => {
+    if (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 || !defaultUnitCallsign) return;
+    const base = unitCallsignBase || defaultUnitCallsign;
+    setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
+  }, [defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries.length, unitCallsignNumber]);
   reactExports.useEffect(() => {
     if (locationType === "Local") {
       setOrigin(school);
@@ -19017,7 +19097,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 onChange: setCrewRequirement
               }
             ) }),
-            flightNumber !== "SCT FORM" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            flightNumber !== "SCT FORM" && (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Callsign" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
@@ -19026,11 +19106,43 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   value: callsign,
                   onChange: (e) => setCallsign(e.target.value.toUpperCase()),
                   disabled: isDeploy,
-                  placeholder: "Optional callsign",
+                  placeholder: unitCallsignEntries.length === 0 ? "Configure unit callsigns in Settings" : "Optional callsign",
                   className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
                 }
               )
-            ] })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Unit Callsign" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-[minmax(0,1fr)_6rem] gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "select",
+                  {
+                    value: unitCallsignBase || defaultUnitCallsign,
+                    onChange: (e) => {
+                      setUnitCallsignBase(e.target.value);
+                      setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                    },
+                    disabled: isDeploy,
+                    className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                    children: unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: entry.callsign }, entry.id))
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "select",
+                  {
+                    value: unitCallsignNumber,
+                    onChange: (e) => {
+                      const nextNumber = Number(e.target.value);
+                      setUnitCallsignNumber(nextNumber);
+                      setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
+                    },
+                    disabled: isDeploy,
+                    className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                    children: callsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `flight-detail-callsign-number-${option.value}`))
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] font-semibold text-sky-200/80", children: buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber) })
+            ] }))
           ] }),
           eventType === "flight" && locationType === "Land Away" && !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
@@ -20752,6 +20864,7 @@ const AddFlightTileModal = ({
   aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
   operationalModel: operationalModel2,
   activeUnitCode = "",
+  unitCallsignSettings,
   staffQualificationCatalogue,
   personnelDisplaySettings
 }) => {
@@ -20779,6 +20892,8 @@ const AddFlightTileModal = ({
   const [formationCrew, setFormationCrew] = reactExports.useState([]);
   const [callsign, setCallsign] = reactExports.useState("");
   const [callsignOptions, setCallsignOptions] = reactExports.useState([]);
+  const [unitCallsignBase, setUnitCallsignBase] = reactExports.useState("");
+  const [unitCallsignNumber, setUnitCallsignNumber] = reactExports.useState(0);
   const [notes, setNotes] = reactExports.useState("");
   const [fixedCrewGroup, setFixedCrewGroup] = reactExports.useState("");
   const [fixedCrewPic, setFixedCrewPic] = reactExports.useState("");
@@ -20803,21 +20918,20 @@ const AddFlightTileModal = ({
   const fixedCrewMembers = reactExports.useMemo(() => fixedCrewGroup ? fixedCrewStaff.filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewGroup || "").trim().toUpperCase()).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")) : [], [fixedCrewGroup, fixedCrewStaff, personnelDisplaySettings]);
   const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
   const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
-  const fixedCrewCallsignOptions = reactExports.useMemo(() => {
-    if (!isFixedCrewModel) return [];
-    const activeUnit = String(activeUnitCode || "").trim().toUpperCase();
-    const activeLocationCode = String(school || "").trim().toUpperCase();
-    return (formationCallsigns || []).filter((row) => {
-      const rowUnit = String(row.unit || "").trim().toUpperCase();
-      const rowLocationCode = String(row.locationCode || "").trim().toUpperCase();
-      const unitMatches = !activeUnit || !rowUnit || rowUnit === activeUnit;
-      const locationMatches = !activeLocationCode || !rowLocationCode || rowLocationCode === activeLocationCode;
-      return unitMatches && locationMatches;
-    }).map((row) => ({
-      value: String(row.code || row.name || "").trim(),
-      label: [row.name, row.code && row.code !== row.name ? `(${row.code})` : ""].filter(Boolean).join(" ")
-    })).filter((option) => option.value);
-  }, [activeUnitCode, formationCallsigns, isFixedCrewModel, school]);
+  const unitCallsignEntries = reactExports.useMemo(
+    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode),
+    [activeUnitCode, unitCallsignSettings]
+  );
+  const defaultUnitCallsign = reactExports.useMemo(
+    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode),
+    [activeUnitCode, unitCallsignSettings]
+  );
+  const selectedPicHasIndividualCallsign = reactExports.useMemo(() => {
+    const instructor = instructorsData.find((staff) => staff.name === picName);
+    if (instructor && String(instructor.callsign || "").trim()) return true;
+    const trainee = traineesData.find((traineeRecord) => (traineeRecord.fullName || traineeRecord.name) === picName);
+    return Boolean(trainee && String(trainee.traineeCallsign || "").trim());
+  }, [instructorsData, picName, traineesData]);
   const LAYOUT_ELEM_KEYS = ["startTime", "picName", "coPilot", "duration", "event", "area", "aircraft", "callsign"];
   const MODAL_DEFAULT_POSITIONS = {
     startTime: { x: 14, y: 7 },
@@ -20952,6 +21066,10 @@ const AddFlightTileModal = ({
     }
     return opts;
   }, []);
+  const callsignNumberOptions = reactExports.useMemo(() => Array.from({ length: 101 }, (_, value) => ({
+    value,
+    label: formatUnitCallsignNumber(value)
+  })), []);
   const allUnits = reactExports.useMemo(() => {
     const s = /* @__PURE__ */ new Set();
     instructorsData.forEach((i) => s.add(i.unit || "Unassigned"));
@@ -21100,9 +21218,11 @@ const AddFlightTileModal = ({
       const secondary = inst.secondaryCallsign || "";
       const personal = [primary, secondary].filter(Boolean);
       const formation = (formationCallsigns || []).filter((fc) => fc.unit && picUnit && fc.unit === picUnit).map((fc) => fc.name || fc.code).filter(Boolean);
-      const allOpts = [.../* @__PURE__ */ new Set([...personal, ...formation])];
+      const unitOptions = selectedPicHasIndividualCallsign ? [] : unitCallsignEntries.map((entry) => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
+      const unitDefaultCallsign = buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber);
+      const allOpts = [.../* @__PURE__ */ new Set([...personal, ...selectedPicHasIndividualCallsign ? formation : [], ...unitOptions])];
       setCallsignOptions(allOpts);
-      setCallsign(primary || (allOpts[0] || ""));
+      setCallsign(primary || unitDefaultCallsign || (allOpts[0] || ""));
       return;
     }
     const trainee = traineesData.find((t) => (t.fullName || t.name) === picName);
@@ -21111,14 +21231,16 @@ const AddFlightTileModal = ({
       const cs = trainee.traineeCallsign || buildCallsignFromNumber(trainee.callsignNumber) || "";
       const personal = cs ? [cs] : [];
       const formation = (formationCallsigns || []).filter((fc) => fc.unit && picUnit && fc.unit === picUnit).map((fc) => fc.name || fc.code).filter(Boolean);
-      const allOpts = [.../* @__PURE__ */ new Set([...personal, ...formation])];
+      const unitOptions = selectedPicHasIndividualCallsign ? [] : unitCallsignEntries.map((entry) => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
+      const unitDefaultCallsign = buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber);
+      const allOpts = [.../* @__PURE__ */ new Set([...personal, ...selectedPicHasIndividualCallsign ? formation : [], ...unitOptions])];
       setCallsignOptions(allOpts);
-      setCallsign(cs || (allOpts[0] || ""));
+      setCallsign(cs || unitDefaultCallsign || (allOpts[0] || ""));
       return;
     }
     setCallsign("");
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, school, isFixedCrewModel]);
+  }, [picName, instructorsData, traineesData, formationCallsigns, school, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
   reactExports.useEffect(() => {
     setPicName("");
     setStudentName("");
@@ -21134,13 +21256,15 @@ const AddFlightTileModal = ({
     setCallsign("");
     setCallsignOptions([]);
     setNotes("");
+    setUnitCallsignBase(defaultUnitCallsign);
+    setUnitCallsignNumber(0);
     setFixedCrewGroup("");
     setFixedCrewPic("");
     setFixedCrewManifestStatus("pending");
     setFixedCrewManifestNotes("");
     setErrors([]);
     setGuidedStep("startTime");
-  }, [eventCategory]);
+  }, [eventCategory, defaultUnitCallsign]);
   reactExports.useEffect(() => {
     if (isFixedCrewModel) {
       setFlightType("Dual");
@@ -21158,16 +21282,16 @@ const AddFlightTileModal = ({
     setPicName(fixedCrewPic);
   }, [fixedCrewPic, isFixedCrewModel]);
   reactExports.useEffect(() => {
-    if (!isFixedCrewModel) return;
-    if (fixedCrewCallsignOptions.length === 0) {
-      setCallsign("");
+    if (selectedPicHasIndividualCallsign) return;
+    if (!defaultUnitCallsign) {
       setCallsignOptions([]);
       return;
     }
-    const values = fixedCrewCallsignOptions.map((option) => option.value);
+    const base = unitCallsignBase || defaultUnitCallsign;
+    const values = unitCallsignEntries.map((entry) => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
     setCallsignOptions(values);
-    setCallsign((current) => values.includes(current) ? current : values[0]);
-  }, [fixedCrewCallsignOptions, isFixedCrewModel]);
+    setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
+  }, [defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
   reactExports.useEffect(() => {
     if (!isSingleSeatAircraft) return;
     setFlightType("Solo");
@@ -21537,16 +21661,39 @@ const AddFlightTileModal = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Callsign" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "select",
-                      {
-                        value: callsign,
-                        onChange: (e) => setCallsign(e.target.value),
-                        disabled: fixedCrewCallsignOptions.length === 0,
-                        className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
-                        children: fixedCrewCallsignOptions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No configured callsigns" }) : fixedCrewCallsignOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label || option.value }, option.value))
-                      }
-                    )
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_88px] gap-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "select",
+                        {
+                          value: unitCallsignBase,
+                          onChange: (e) => {
+                            setUnitCallsignBase(e.target.value);
+                            setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                          },
+                          disabled: unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign,
+                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                          children: unitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No unit callsigns" }) : unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: entry.callsign, children: [
+                            entry.callsign,
+                            entry.isDefault ? " (default)" : ""
+                          ] }, entry.id))
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "select",
+                        {
+                          value: unitCallsignNumber,
+                          onChange: (e) => {
+                            const nextNumber = parseInt(e.target.value, 10) || 0;
+                            setUnitCallsignNumber(nextNumber);
+                            setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
+                          },
+                          disabled: unitCallsignEntries.length === 0 || selectedPicHasIndividualCallsign,
+                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-2 text-white text-sm focus:outline-none focus:ring-emerald-500 disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                          children: callsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
+                        }
+                      )
+                    ] }),
+                    selectedPicHasIndividualCallsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] text-gray-500", children: "Using the PIC profile callsign." })
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
@@ -21755,6 +21902,39 @@ const AddFlightTileModal = ({
                           className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
                           title: aircraftConfigOptions.find((definition) => definition.id === aircraftConfigId)?.definition || BASE_AIRCRAFT_CONFIG.definition,
                           children: aircraftConfigOptions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id))
+                        }
+                      )
+                    ] })
+                  ] }),
+                  !isFixedCrewModel && !selectedPicHasIndividualCallsign && unitCallsignEntries.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-sky-500/25 bg-sky-950/20 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Unit Callsign" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_96px] gap-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "select",
+                        {
+                          value: unitCallsignBase,
+                          onChange: (e) => {
+                            setUnitCallsignBase(e.target.value);
+                            setCallsign(buildUnitEventCallsign(e.target.value, unitCallsignNumber));
+                          },
+                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
+                          children: unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: entry.callsign, children: [
+                            entry.callsign,
+                            entry.isDefault ? " (default)" : ""
+                          ] }, entry.id))
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "select",
+                        {
+                          value: unitCallsignNumber,
+                          onChange: (e) => {
+                            const nextNumber = parseInt(e.target.value, 10) || 0;
+                            setUnitCallsignNumber(nextNumber);
+                            setCallsign(buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, nextNumber));
+                          },
+                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-2 text-white text-sm focus:outline-none focus:ring-sky-500",
+                          children: callsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
                         }
                       )
                     ] })
@@ -25420,6 +25600,8 @@ const TaskingRequestTable = ({
   isSingleSeatAircraft,
   aircraftCrewComposition,
   crewPositionTerminology,
+  unitCallsignEntries,
+  callsignNumberOptions,
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
@@ -25495,7 +25677,7 @@ const TaskingRequestTable = ({
           }
         ) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,0.56fr)_minmax(0,0.84fr)_minmax(0,0.93fr)_minmax(0,0.82fr)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.52fr)_minmax(0,0.8fr)_minmax(0,0.94fr)_minmax(0,0.78fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Route", hint: `${request.depPoint || "Departure"} -> ${request.arrivalPoint || "Arrival"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600", children: "Dep" }),
@@ -25520,6 +25702,46 @@ const TaskingRequestTable = ({
             )
           ] })
         ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Callsign", hint: request.callsign || "Unit callsign", children: unitCallsignEntries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              value: request.callsignBase || unitCallsignEntries[0]?.callsign || "",
+              onChange: (event) => {
+                const callsignBase = event.target.value;
+                const callsignNumber = Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0;
+                onUpdateTaskingRequest(request.id, {
+                  callsignBase,
+                  callsignNumber,
+                  callsign: buildUnitEventCallsign(callsignBase, callsignNumber),
+                  submitted: false,
+                  saved: false
+                });
+              },
+              className: taskingControlClass,
+              children: unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: entry.callsign }, entry.id))
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              value: Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0,
+              onChange: (event) => {
+                const callsignNumber = Number(event.target.value);
+                const callsignBase = request.callsignBase || unitCallsignEntries[0]?.callsign || "";
+                onUpdateTaskingRequest(request.id, {
+                  callsignBase,
+                  callsignNumber,
+                  callsign: buildUnitEventCallsign(callsignBase, callsignNumber),
+                  submitted: false,
+                  saved: false
+                });
+              },
+              className: taskingControlClass,
+              children: callsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `tasking-callsign-number-${option.value}`))
+            }
+          )
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-10 items-center rounded-md border border-amber-400/30 bg-amber-500/10 px-3 text-xs font-semibold text-amber-100", children: "Configure unit callsigns in Settings." }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           TaskingFieldPanel,
           {
@@ -25708,7 +25930,8 @@ const PrioritiesView = ({
   onUpdateAirCombatSchedulingWeights,
   isSingleSeatAircraft = false,
   aircraftCrewComposition,
-  crewPositionTerminology
+  crewPositionTerminology,
+  unitCallsignSettings
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -25738,6 +25961,18 @@ const PrioritiesView = ({
     const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
   }, [activeUnitCode, activeUnitCodes]);
+  const unitCallsignEntries = reactExports.useMemo(
+    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode || school),
+    [activeUnitCode, school, unitCallsignSettings]
+  );
+  const defaultUnitCallsign = reactExports.useMemo(
+    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode || school),
+    [activeUnitCode, school, unitCallsignSettings]
+  );
+  const callsignNumberOptions = reactExports.useMemo(
+    () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
+    []
+  );
   const airCombatTrainingStreams = reactExports.useMemo(() => {
     if (!isAirCombatModel) return [];
     const streams = /* @__PURE__ */ new Map();
@@ -26118,6 +26353,9 @@ const PrioritiesView = ({
     aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || "1"), 10) || 1),
     aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
     crewRequirement: request.crewRequirement || { mode: "aircraft_default" },
+    callsignBase: request.callsignBase || defaultUnitCallsign || "",
+    callsignNumber: Number.isFinite(Number(request.callsignNumber)) ? Math.max(0, Math.min(100, Math.floor(Number(request.callsignNumber)))) : 0,
+    callsign: request.callsign || (request.callsignBase || defaultUnitCallsign ? buildUnitEventCallsign(request.callsignBase || defaultUnitCallsign, request.callsignNumber || 0) : ""),
     isMandatory: request.isMandatory !== false,
     saved: Boolean(request.saved || request.submitted),
     submitted: Boolean(request.submitted),
@@ -26235,6 +26473,9 @@ const PrioritiesView = ({
       aircraftCount: 1,
       aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
       crewRequirement: isSingleSeatAircraft ? { mode: "custom", roles: [{ role: "Pilot", count: 1 }] } : { mode: "aircraft_default" },
+      callsignBase: defaultUnitCallsign,
+      callsignNumber: 0,
+      callsign: defaultUnitCallsign ? buildUnitEventCallsign(defaultUnitCallsign, 0) : "",
       isMandatory: true,
       saved: false,
       submitted: false,
@@ -26282,6 +26523,9 @@ const PrioritiesView = ({
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
     const aircraftConfigId = request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+    const callsignBase = request.callsignBase || defaultUnitCallsign;
+    const callsignNumber = Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0;
+    const eventCallsign = request.callsign || (callsignBase ? buildUnitEventCallsign(callsignBase, callsignNumber) : "");
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
     const flightType = isSingleSeatAircraft || request.flightType === "Solo" ? "Solo" : "Dual";
     const notes = [
@@ -26304,6 +26548,7 @@ const PrioritiesView = ({
       pilot: "",
       group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : "Tasking",
       flightNumber: taskingDisplayLabel,
+      callsign: eventCallsign,
       duration: Math.max(0.1, Number(request.duration) || 0.1),
       startTime,
       resourceId: "",
@@ -27373,6 +27618,8 @@ const PrioritiesView = ({
             isSingleSeatAircraft,
             aircraftCrewComposition,
             crewPositionTerminology,
+            unitCallsignEntries,
+            callsignNumberOptions,
             onAddTaskingRequest: addTaskingRequest,
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,
@@ -52625,6 +52872,9 @@ const PlatformConfigurationSettings = ({
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(
     primaryOrganisationSettings.staffQualificationCatalogue || null
   );
+  const unitCallsignSettings = normaliseUnitCallsignSettings(
+    primaryOrganisationSettings.unitCallsignSettings || null
+  );
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0]?.trim() : String(activeUnitCode || "").trim();
@@ -52847,6 +53097,39 @@ const PlatformConfigurationSettings = ({
     if (nextQualifications.length === staffQualificationCatalogue.qualifications.length) return;
     const nextDeletedDefaultIds = defaultStaffQualificationIds.has(entryId) ? Array.from(/* @__PURE__ */ new Set([...staffQualificationCatalogue.deletedDefaultIds || [], entryId])) : staffQualificationCatalogue.deletedDefaultIds || [];
     updateStaffQualificationCatalogue(nextQualifications, nextDeletedDefaultIds);
+  };
+  const updateUnitCallsignSettings = (entries) => {
+    setRankTerminologyDirty(true);
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      unitCallsignSettings: normaliseUnitCallsignSettings({ entries })
+    }));
+  };
+  const updateUnitCallsignEntry = (entryId, changes) => {
+    updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry));
+  };
+  const addUnitCallsignEntry = () => {
+    const defaultUnit = config.units.find(isActiveRecord)?.code || config.units[0]?.code || "";
+    updateUnitCallsignSettings([
+      ...unitCallsignSettings.entries,
+      {
+        id: createClientRecordId("unit-callsign"),
+        unitCode: String(defaultUnit || "").trim().toUpperCase(),
+        callsign: `Callsign ${unitCallsignSettings.entries.length + 1}`,
+        isDefault: !unitCallsignSettings.entries.some((entry) => entry.unitCode === String(defaultUnit || "").trim().toUpperCase())
+      }
+    ]);
+  };
+  const removeUnitCallsignEntry = (entryId) => {
+    updateUnitCallsignSettings(unitCallsignSettings.entries.filter((entry) => entry.id !== entryId));
+  };
+  const setDefaultUnitCallsignEntry = (entryId) => {
+    const selected = unitCallsignSettings.entries.find((entry) => entry.id === entryId);
+    if (!selected) return;
+    updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => ({
+      ...entry,
+      isDefault: entry.unitCode === selected.unitCode ? entry.id === entryId : entry.isDefault
+    })));
   };
   const updateTrainingReportTemplate = (updater) => {
     if (activeTrainingReportUnitIndex < 0) return;
@@ -56071,6 +56354,69 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               }
             ) })
           ] }, entry.id)) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-sky-400/25 bg-sky-500/10 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-sky-100", children: "Unit Callsigns" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-sky-100/75", children: "Define unit callsign bases for manual scheduling. When a PIC has no individual profile callsign, the unit default is offered with a selectable sortie number." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: addUnitCallsignEntry,
+                disabled: !canEditRankTerminology || config.units.length === 0,
+                className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                children: "Add Callsign"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
+            unitCallsignSettings.entries.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400", children: "No unit callsigns configured." }),
+            [...unitCallsignSettings.entries].sort((left, right) => left.unitCode.localeCompare(right.unitCode, void 0, { sensitivity: "base" }) || left.callsign.localeCompare(right.callsign, void 0, { sensitivity: "base" })).map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(140px,0.7fr)_minmax(180px,1fr)_auto_auto]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectField,
+                {
+                  label: "Unit",
+                  value: entry.unitCode,
+                  disabled: !canEditRankTerminology,
+                  options: config.units.map((unit) => unit.code),
+                  onChange: (value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Callsign",
+                  value: entry.callsign,
+                  disabled: !canEditRankTerminology,
+                  onChange: (value) => updateUnitCallsignEntry(entry.id, { callsign: value }),
+                  info: "Callsign base only. The sortie number is selected when creating or editing an event."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setDefaultUnitCallsignEntry(entry.id),
+                  disabled: !canEditRankTerminology,
+                  className: `w-full rounded border px-3 py-2 text-xs font-bold ${entry.isDefault ? "border-green-400/50 bg-green-500/20 text-green-100" : "border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700"} disabled:cursor-not-allowed disabled:opacity-40`,
+                  children: entry.isDefault ? "Default" : "Set Default"
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => removeUnitCallsignEntry(entry.id),
+                  disabled: !canEditRankTerminology,
+                  className: "w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40",
+                  children: "Delete"
+                }
+              ) })
+            ] }, entry.id))
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -79830,6 +80176,10 @@ const App = () => {
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
     return normaliseStaffQualificationCatalogue(activeOrganisation?.settings?.staffQualificationCatalogue || null);
   }, [platformConfig]);
+  const activeUnitCallsignSettings = reactExports.useMemo(() => {
+    const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+    return normaliseUnitCallsignSettings(activeOrganisation?.settings?.unitCallsignSettings || null);
+  }, [platformConfig]);
   const activeLocationSolarProfile = reactExports.useMemo(() => {
     const normalisedSchool = String(school || "").trim().toUpperCase();
     const configuredLocation = (platformConfig?.locations || []).find((location) => getLocationSelectorAliases(location).includes(normalisedSchool));
@@ -91337,6 +91687,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftCrewComposition: activeAircraftCrewComposition,
             crewPositionTerminology: activeCrewPositionTerminology,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
+            unitCallsignSettings: activeUnitCallsignSettings,
             onAddPriorityEvents: (eventsToAdd) => {
               setHighestPriorityEvents((prev) => {
                 const incomingIds = new Set(eventsToAdd.map((event) => event.id));
@@ -93273,6 +93624,7 @@ Do you want to replace the existing entry?`,
           operationalModel: activeOperationalModel,
           activeUnitCode,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
+          unitCallsignSettings: activeUnitCallsignSettings,
           personnelDisplaySettings
         }
       ),
@@ -93422,7 +93774,8 @@ Do you want to replace the existing entry?`,
           crewPositionTerminology: activeCrewPositionTerminology,
           operationalModel: activeOperationalModel,
           activeUnitCode,
-          staffQualificationCatalogue: activeStaffQualificationCatalogue
+          staffQualificationCatalogue: activeStaffQualificationCatalogue,
+          unitCallsignSettings: activeUnitCallsignSettings
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),

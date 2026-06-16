@@ -20,6 +20,14 @@ import {
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { formatCrewRequirementSummary } from '../utils/crewRequirements';
+import {
+  buildUnitEventCallsign,
+  formatUnitCallsignNumber,
+  getDefaultUnitCallsign,
+  getUnitCallsignEntries,
+  type UnitCallsignEntry,
+  type UnitCallsignSettings,
+} from '../utils/unitCallsigns';
 
 interface PrioritiesViewProps {
   school?: string;
@@ -89,6 +97,7 @@ interface PrioritiesViewProps {
   isSingleSeatAircraft?: boolean;
   aircraftCrewComposition?: AircraftCrewComposition;
   crewPositionTerminology?: CrewPositionTerminology;
+  unitCallsignSettings?: UnitCallsignSettings;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
 
@@ -166,6 +175,9 @@ interface TaskingRequest {
   aircraftCount: number;
   aircraftConfigId: string;
   crewRequirement?: CrewRequirement;
+  callsignBase?: string;
+  callsignNumber?: number;
+  callsign?: string;
   isMandatory: boolean;
   saved: boolean;
   submitted: boolean;
@@ -454,6 +466,8 @@ interface TaskingRequestTableProps {
   isSingleSeatAircraft: boolean;
   aircraftCrewComposition?: AircraftCrewComposition;
   crewPositionTerminology?: CrewPositionTerminology;
+  unitCallsignEntries: UnitCallsignEntry[];
+  callsignNumberOptions: Array<{ value: number; label: string }>;
   onAddTaskingRequest: () => void;
   onUpdateTaskingRequest: (id: string, updates: Partial<TaskingRequest>) => void;
   onRemoveTaskingRequest: (id: string) => void;
@@ -494,6 +508,8 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   isSingleSeatAircraft,
   aircraftCrewComposition,
   crewPositionTerminology,
+  unitCallsignEntries,
+  callsignNumberOptions,
   onAddTaskingRequest,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
@@ -579,7 +595,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             </TaskingFieldPanel>
           </div>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.96fr)_minmax(0,0.56fr)_minmax(0,0.84fr)_minmax(0,0.93fr)_minmax(0,0.82fr)]">
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.52fr)_minmax(0,0.8fr)_minmax(0,0.94fr)_minmax(0,0.78fr)]">
             <TaskingFieldPanel label="Route" hint={`${request.depPoint || 'Departure'} -> ${request.arrivalPoint || 'Arrival'}`}>
               <div className="grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]">
                 <div className="min-w-0">
@@ -599,6 +615,54 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                   />
                 </div>
               </div>
+            </TaskingFieldPanel>
+            <TaskingFieldPanel label="Callsign" hint={request.callsign || 'Unit callsign'}>
+              {unitCallsignEntries.length > 0 ? (
+                <div className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
+                  <select
+                    value={request.callsignBase || unitCallsignEntries[0]?.callsign || ''}
+                    onChange={(event) => {
+                      const callsignBase = event.target.value;
+                      const callsignNumber = Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0;
+                      onUpdateTaskingRequest(request.id, {
+                        callsignBase,
+                        callsignNumber,
+                        callsign: buildUnitEventCallsign(callsignBase, callsignNumber),
+                        submitted: false,
+                        saved: false,
+                      });
+                    }}
+                    className={taskingControlClass}
+                  >
+                    {unitCallsignEntries.map(entry => (
+                      <option key={entry.id} value={entry.callsign}>{entry.callsign}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0}
+                    onChange={(event) => {
+                      const callsignNumber = Number(event.target.value);
+                      const callsignBase = request.callsignBase || unitCallsignEntries[0]?.callsign || '';
+                      onUpdateTaskingRequest(request.id, {
+                        callsignBase,
+                        callsignNumber,
+                        callsign: buildUnitEventCallsign(callsignBase, callsignNumber),
+                        submitted: false,
+                        saved: false,
+                      });
+                    }}
+                    className={taskingControlClass}
+                  >
+                    {callsignNumberOptions.map(option => (
+                      <option key={`tasking-callsign-number-${option.value}`} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="flex h-10 items-center rounded-md border border-amber-400/30 bg-amber-500/10 px-3 text-xs font-semibold text-amber-100">
+                  Configure unit callsigns in Settings.
+                </div>
+              )}
             </TaskingFieldPanel>
             <TaskingFieldPanel
               label="Aircraft"
@@ -774,6 +838,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   isSingleSeatAircraft = false,
   aircraftCrewComposition,
   crewPositionTerminology,
+  unitCallsignSettings,
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -814,6 +879,18 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || '').split('+');
     return new Set(codes.map(code => String(code || '').trim().toUpperCase()).filter(Boolean));
   }, [activeUnitCode, activeUnitCodes]);
+  const unitCallsignEntries = useMemo(
+    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode || school),
+    [activeUnitCode, school, unitCallsignSettings],
+  );
+  const defaultUnitCallsign = useMemo(
+    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode || school),
+    [activeUnitCode, school, unitCallsignSettings],
+  );
+  const callsignNumberOptions = useMemo(
+    () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
+    [],
+  );
   const airCombatTrainingStreams = useMemo(() => {
     if (!isAirCombatModel) return [];
     const streams = new Map<string, AirCombatTrainingStreamWeight>();
@@ -1261,6 +1338,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || '1'), 10) || 1),
     aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
     crewRequirement: request.crewRequirement || { mode: 'aircraft_default' },
+    callsignBase: request.callsignBase || defaultUnitCallsign || '',
+    callsignNumber: Number.isFinite(Number(request.callsignNumber)) ? Math.max(0, Math.min(100, Math.floor(Number(request.callsignNumber)))) : 0,
+    callsign: request.callsign || (request.callsignBase || defaultUnitCallsign ? buildUnitEventCallsign(request.callsignBase || defaultUnitCallsign, request.callsignNumber || 0) : ''),
     isMandatory: request.isMandatory !== false,
     saved: Boolean(request.saved || request.submitted),
     submitted: Boolean(request.submitted),
@@ -1426,6 +1506,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       crewRequirement: isSingleSeatAircraft
         ? { mode: 'custom', roles: [{ role: 'Pilot', count: 1 }] }
         : { mode: 'aircraft_default' },
+      callsignBase: defaultUnitCallsign,
+      callsignNumber: 0,
+      callsign: defaultUnitCallsign ? buildUnitEventCallsign(defaultUnitCallsign, 0) : '',
       isMandatory: true,
       saved: false,
       submitted: false,
@@ -1506,6 +1589,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
     const aircraftConfigId = request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+    const callsignBase = request.callsignBase || defaultUnitCallsign;
+    const callsignNumber = Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0;
+    const eventCallsign = request.callsign || (callsignBase ? buildUnitEventCallsign(callsignBase, callsignNumber) : '');
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
     const flightType = isSingleSeatAircraft || request.flightType === 'Solo' ? 'Solo' : 'Dual';
     const notes = [
@@ -1529,6 +1615,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       pilot: '',
       group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : 'Tasking',
       flightNumber: taskingDisplayLabel,
+      callsign: eventCallsign,
       duration: Math.max(0.1, Number(request.duration) || 0.1),
       startTime,
       resourceId: '',
@@ -2709,6 +2796,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               isSingleSeatAircraft={isSingleSeatAircraft}
               aircraftCrewComposition={aircraftCrewComposition}
               crewPositionTerminology={crewPositionTerminology}
+              unitCallsignEntries={unitCallsignEntries}
+              callsignNumberOptions={callsignNumberOptions}
               onAddTaskingRequest={addTaskingRequest}
               onUpdateTaskingRequest={updateTaskingRequest}
               onRemoveTaskingRequest={removeTaskingRequest}

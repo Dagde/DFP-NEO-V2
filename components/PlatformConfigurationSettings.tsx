@@ -49,6 +49,10 @@ import {
   normaliseStaffQualificationCatalogue,
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
+import {
+  normaliseUnitCallsignSettings,
+  type UnitCallsignEntry,
+} from '../utils/unitCallsigns';
 import { getAppApiBase } from '../utils/externalDataControls';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
@@ -1275,6 +1279,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(
     primaryOrganisationSettings.staffQualificationCatalogue || null,
   );
+  const unitCallsignSettings = normaliseUnitCallsignSettings(
+    primaryOrganisationSettings.unitCallsignSettings || null,
+  );
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || '').includes('+')
@@ -1569,6 +1576,46 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ? Array.from(new Set([...(staffQualificationCatalogue.deletedDefaultIds || []), entryId]))
       : staffQualificationCatalogue.deletedDefaultIds || [];
     updateStaffQualificationCatalogue(nextQualifications, nextDeletedDefaultIds);
+  };
+
+  const updateUnitCallsignSettings = (entries: UnitCallsignEntry[]) => {
+    setRankTerminologyDirty(true);
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      unitCallsignSettings: normaliseUnitCallsignSettings({ entries }),
+    }));
+  };
+
+  const updateUnitCallsignEntry = (entryId: string, changes: Partial<UnitCallsignEntry>) => {
+    updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => (
+      entry.id === entryId ? { ...entry, ...changes } : entry
+    )));
+  };
+
+  const addUnitCallsignEntry = () => {
+    const defaultUnit = config.units.find(isActiveRecord)?.code || config.units[0]?.code || '';
+    updateUnitCallsignSettings([
+      ...unitCallsignSettings.entries,
+      {
+        id: createClientRecordId('unit-callsign'),
+        unitCode: String(defaultUnit || '').trim().toUpperCase(),
+        callsign: `Callsign ${unitCallsignSettings.entries.length + 1}`,
+        isDefault: !unitCallsignSettings.entries.some(entry => entry.unitCode === String(defaultUnit || '').trim().toUpperCase()),
+      },
+    ]);
+  };
+
+  const removeUnitCallsignEntry = (entryId: string) => {
+    updateUnitCallsignSettings(unitCallsignSettings.entries.filter((entry) => entry.id !== entryId));
+  };
+
+  const setDefaultUnitCallsignEntry = (entryId: string) => {
+    const selected = unitCallsignSettings.entries.find(entry => entry.id === entryId);
+    if (!selected) return;
+    updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => ({
+      ...entry,
+      isDefault: entry.unitCode === selected.unitCode ? entry.id === entryId : entry.isDefault,
+    })));
   };
 
   const updateTrainingReportTemplate = (
@@ -5040,6 +5087,78 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+          <div className="rounded-lg border border-sky-400/25 bg-sky-500/10 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-sky-100">Unit Callsigns</h5>
+                <p className="mt-1 text-xs leading-relaxed text-sky-100/75">
+                  Define unit callsign bases for manual scheduling. When a PIC has no individual profile callsign, the unit default is offered with a selectable sortie number.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addUnitCallsignEntry}
+                disabled={!canEditRankTerminology || config.units.length === 0}
+                className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Add Callsign
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {unitCallsignSettings.entries.length === 0 && (
+                <div className="rounded border border-gray-700 bg-gray-950 px-3 py-4 text-sm text-gray-400">
+                  No unit callsigns configured.
+                </div>
+              )}
+              {[...unitCallsignSettings.entries]
+                .sort((left, right) => (
+                  left.unitCode.localeCompare(right.unitCode, undefined, { sensitivity: 'base' })
+                  || left.callsign.localeCompare(right.callsign, undefined, { sensitivity: 'base' })
+                ))
+                .map((entry) => (
+                  <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-[minmax(140px,0.7fr)_minmax(180px,1fr)_auto_auto]">
+                    <SelectField
+                      label="Unit"
+                      value={entry.unitCode}
+                      disabled={!canEditRankTerminology}
+                      options={config.units.map((unit) => unit.code)}
+                      onChange={(value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })}
+                    />
+                    <Field
+                      label="Callsign"
+                      value={entry.callsign}
+                      disabled={!canEditRankTerminology}
+                      onChange={(value) => updateUnitCallsignEntry(entry.id, { callsign: value })}
+                      info="Callsign base only. The sortie number is selected when creating or editing an event."
+                    />
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => setDefaultUnitCallsignEntry(entry.id)}
+                        disabled={!canEditRankTerminology}
+                        className={`w-full rounded border px-3 py-2 text-xs font-bold ${
+                          entry.isDefault
+                            ? 'border-green-400/50 bg-green-500/20 text-green-100'
+                            : 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700'
+                        } disabled:cursor-not-allowed disabled:opacity-40`}
+                      >
+                        {entry.isDefault ? 'Default' : 'Set Default'}
+                      </button>
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => removeUnitCallsignEntry(entry.id)}
+                        disabled={!canEditRankTerminology}
+                        className="w-full rounded border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">

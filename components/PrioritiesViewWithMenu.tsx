@@ -8,6 +8,7 @@ import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigura
 import type { AirCombatSchedulingWeights } from '../utils/airCombatTraining';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import type { UnitCallsignSettings } from '../utils/unitCallsigns';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface PrioritiesViewWithMenuProps {
@@ -75,6 +76,7 @@ interface PrioritiesViewWithMenuProps {
   isSingleSeatAircraft?: boolean;
   aircraftCrewComposition?: AircraftCrewComposition;
   crewPositionTerminology?: CrewPositionTerminology;
+  unitCallsignSettings?: UnitCallsignSettings;
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
