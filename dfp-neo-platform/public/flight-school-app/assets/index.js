@@ -6404,6 +6404,7 @@ const Header = ({
   const contextSelectorRef = reactExports.useRef(null);
   const isSuperAdmin = authUser?.role === "SUPER_ADMIN" || authUser?.role === "ADMIN";
   const disabledActionClass = "opacity-45 cursor-not-allowed grayscale";
+  const isNeoTileModelUnavailable = /fixed\s*crew/i.test(activeModelLabel || "");
   const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}`;
   const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
   const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || contextOptions[0];
@@ -6617,14 +6618,18 @@ const Header = ({
             ] })
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
-            onClick: onToggleOracleMode,
-            disabled: !canRunNeoBuild,
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? "active" : ""} ${!canRunNeoBuild ? disabledActionClass : ""}`,
-            title: canRunNeoBuild ? "NEO - Tile" : "Access denied: NEO Build permission required",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-center leading-tight ${isOracleMode ? "animate-pulse-neo-text" : ""}`, style: { color: "#fb923c" }, children: "NEO - Tile" })
+            onClick: isNeoTileModelUnavailable ? void 0 : onToggleOracleMode,
+            disabled: !canRunNeoBuild && !isNeoTileModelUnavailable,
+            "aria-disabled": isNeoTileModelUnavailable || !canRunNeoBuild,
+            className: `relative w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode && !isNeoTileModelUnavailable ? "active" : ""} ${isNeoTileModelUnavailable ? "cursor-not-allowed" : !canRunNeoBuild ? disabledActionClass : ""}`,
+            title: isNeoTileModelUnavailable ? "NEO - Tile is not available for the Fixed Crew Model yet." : canRunNeoBuild ? "NEO - Tile" : "Access denied: NEO Build permission required",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-center leading-tight ${isOracleMode && !isNeoTileModelUnavailable ? "animate-pulse-neo-text" : ""}`, style: { color: "#fb923c" }, children: "NEO - Tile" }),
+              isNeoTileModelUnavailable && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full border border-red-500/80 text-red-400", "aria-hidden": "true", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-[1px] w-3 rotate-[-38deg] bg-red-400" }) })
+            ]
           }
         ),
         authUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: userButtonRef, className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
