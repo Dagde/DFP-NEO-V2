@@ -63,7 +63,13 @@ import {
     normaliseCrewPositionTerminology,
     type CrewPositionTerminology,
 } from './utils/crewPositionTerminology';
-import { normaliseStaffQualificationCatalogue } from './utils/staffQualifications';
+import {
+    getQualificationsForOperationalModel,
+    normaliseAssignedQualificationIds,
+    normaliseQualificationToken,
+    normaliseStaffQualificationCatalogue,
+    type StaffQualificationCatalogue,
+} from './utils/staffQualifications';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
 import {
@@ -76,7 +82,14 @@ import {
     getStaffCallsignAssignments,
     getStaffCallsignKey,
 } from './utils/staffCallsigns';
-import { normaliseUnitCallsignSettings } from './utils/unitCallsigns';
+import {
+    buildUnitEventCallsign,
+    formatUnitCallsignNumber,
+    getDefaultUnitCallsign,
+    getUnitCallsignEntries,
+    normaliseUnitCallsignSettings,
+    type UnitCallsignSettings,
+} from './utils/unitCallsigns';
 import {
     getAirCombatAssignmentFromItem,
     getAirCombatTrainingKey,
@@ -305,6 +318,9 @@ const DfpSidePanelTimeline: React.FC<{
     staffListNames: string[];
     formatResourceLabel: (resourceId: string) => string;
     operationalModel?: string;
+    activeUnitCode?: string;
+    staffQualificationCatalogue?: StaffQualificationCatalogue;
+    unitCallsignSettings?: UnitCallsignSettings;
     scheduleZoomLevel?: number;
     onRunNeoBuild?: () => void;
 }> = ({
@@ -361,6 +377,9 @@ const DfpSidePanelTimeline: React.FC<{
     staffListNames,
     formatResourceLabel,
     operationalModel,
+    activeUnitCode,
+    staffQualificationCatalogue,
+    unitCallsignSettings,
     scheduleZoomLevel = 1,
     onRunNeoBuild,
 }) => {
@@ -392,6 +411,10 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedResourceNumber, setSelectedResourceNumber] = useState(1);
     const [selectedAircraftNumber, setSelectedAircraftNumber] = useState('TBA');
     const [assistCallsign, setAssistCallsign] = useState('');
+    const [assistUnitCallsignBase, setAssistUnitCallsignBase] = useState('');
+    const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = useState(0);
+    const [selectedFixedCrewGroup, setSelectedFixedCrewGroup] = useState('');
+    const [selectedFixedCrewPic, setSelectedFixedCrewPic] = useState('');
     const [selectedAssignedArea, setSelectedAssignedArea] = useState('TBA');
     const [crewSourceMode, setCrewSourceMode] = useState<'priority' | 'staff'>('priority');
     const [selectedCourseEventCode, setSelectedCourseEventCode] = useState('');
@@ -681,7 +704,9 @@ const DfpSidePanelTimeline: React.FC<{
     const assistFormationSize = selectedResourceKind === 'flight'
         ? Math.max(1, Math.floor(Number(selectedResourceNumber) || 1))
         : 1;
-    const isAirCombatNeoAssist = normaliseOperationalModel(operationalModel) === 'air_combat';
+    const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel);
+    const isAirCombatNeoAssist = normalisedAssistOperationalModel === 'air_combat';
+    const isFixedCrewNeoAssist = normalisedAssistOperationalModel === 'fixed_crew';
     const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === 'tile';
     const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === 'wizard';
     const isSingleSeatFlightResource = selectedResourceKind === 'flight' && aircraftCrewComposition.crewCount === 1;
@@ -750,11 +775,64 @@ const DfpSidePanelTimeline: React.FC<{
         setSelectedCrewName('');
         setSelectedCrewNames([]);
     };
+    const activeAssistUnitCode = String(activeUnitCode || '').trim().toUpperCase();
+    const assistUnitCallsignEntries = useMemo(
+        () => getUnitCallsignEntries(unitCallsignSettings, activeAssistUnitCode),
+        [activeAssistUnitCode, unitCallsignSettings],
+    );
+    const defaultAssistUnitCallsign = useMemo(
+        () => getDefaultUnitCallsign(unitCallsignSettings, activeAssistUnitCode),
+        [activeAssistUnitCode, unitCallsignSettings],
+    );
+    const assistCallsignNumberOptions = useMemo(
+        () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
+        [],
+    );
+    const fixedCrewAssistCallsign = buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, assistUnitCallsignNumber);
+    const fixedCrewAssistGroups = useMemo(() => Array.from(new Set(instructors
+        .filter(staff => !activeAssistUnitCode || String(staff.unit || '').trim().toUpperCase() === activeAssistUnitCode)
+        .map(staff => String(staff.crew || '').trim())
+        .filter(Boolean)))
+        .sort((left, right) => left.localeCompare(right, undefined, { numeric: true })), [activeAssistUnitCode, instructors]);
+    const fixedCrewAssistMembers = useMemo(() => selectedFixedCrewGroup
+        ? instructors
+            .filter(staff => !activeAssistUnitCode || String(staff.unit || '').trim().toUpperCase() === activeAssistUnitCode)
+            .filter(staff => String(staff.crew || '').trim().toUpperCase() === String(selectedFixedCrewGroup || '').trim().toUpperCase())
+            .filter(staff => !staff.isAdminStaff)
+            .sort((left, right) => String(left.name || '').localeCompare(String(right.name || ''), undefined, { sensitivity: 'base' }))
+        : [], [activeAssistUnitCode, instructors, selectedFixedCrewGroup]);
+    const fixedCrewPicQualification = useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, 'fixed_crew')
+        .find(qualification => (
+            normaliseQualificationToken(qualification.id) === 'pic'
+            || normaliseQualificationToken(qualification.code) === 'pic'
+            || normaliseQualificationToken(qualification.name) === 'pic'
+        )), [staffQualificationCatalogue]);
+    const fixedCrewPicCandidates = useMemo(() => fixedCrewPicQualification
+        ? fixedCrewAssistMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id))
+        : [], [fixedCrewAssistMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+    const handleFixedCrewAssistGroupChange = (group: string) => {
+        setSelectedFixedCrewGroup(group);
+        setSelectedFixedCrewPic('');
+        setSelectedCrewName('');
+        setSelectedCrewNames([]);
+    };
+    const handleFixedCrewAssistPicChange = (pic: string) => {
+        setSelectedFixedCrewPic(pic);
+        setSelectedCrewName(pic);
+        setSelectedCrewNames(pic ? [pic] : []);
+    };
     useEffect(() => {
         if (!isSingleSeatFlightResource) return;
         setAssistTaskFlightType('Solo');
         setAssistCurrencyFlightType('Solo');
     }, [isSingleSeatFlightResource]);
+    useEffect(() => {
+        if (!isFixedCrewNeoAssist) return;
+        if (defaultAssistUnitCallsign && !assistUnitCallsignBase) {
+            setAssistUnitCallsignBase(defaultAssistUnitCallsign);
+            setAssistCallsign(buildUnitEventCallsign(defaultAssistUnitCallsign, assistUnitCallsignNumber));
+        }
+    }, [assistUnitCallsignBase, assistUnitCallsignNumber, defaultAssistUnitCallsign, isFixedCrewNeoAssist]);
     useEffect(() => {
         setSelectedCrewNames(prev => {
             const next = canSelectFormationCrew
@@ -826,8 +904,12 @@ const DfpSidePanelTimeline: React.FC<{
             .map(name => instructors.find(instructor => instructor.name === name))
             .filter((staff): staff is Instructor => Boolean(staff))
     ), [instructors, selectedCrewNames]);
-    const selectedPilotCrewName = selectedCrewRecords.find(isStaffPilotCrewPosition)?.name || selectedCrewName || '';
-    const selectedSupportCrewName = selectedCrewRecords.find(staff => staff.name !== selectedPilotCrewName)?.name || '';
+    const selectedPilotCrewName = isFixedCrewNeoAssist
+        ? selectedFixedCrewPic
+        : selectedCrewRecords.find(isStaffPilotCrewPosition)?.name || selectedCrewName || '';
+    const selectedSupportCrewName = isFixedCrewNeoAssist
+        ? ''
+        : selectedCrewRecords.find(staff => staff.name !== selectedPilotCrewName)?.name || '';
     const getAssistTileDisplayColor = (color?: string) => {
         if (!color) return '#047857';
         if (color === 'bg-emerald-500/70') return 'rgba(16,185,129,0.42)';
@@ -846,6 +928,7 @@ const DfpSidePanelTimeline: React.FC<{
         pilot: selectedPilotCrewName || 'Bloggs, Joe',
         instructor: selectedPilotCrewName || 'Bloggs, Joe',
         crew: selectedSupportCrewName,
+        group: isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : undefined,
         flightNumber: assistEventLabel,
         eventCode: selectedSyllabusItem?.code,
         taskingName: activeAssistSection === 'taskings' ? selectedTaskProfile : undefined,
@@ -861,13 +944,16 @@ const DfpSidePanelTimeline: React.FC<{
         locationType: assistOrigin !== assistDestination ? 'Land Away' : 'Local',
         origin: assistOrigin,
         destination: assistDestination,
-        callsign: getAssistFormationCallsign(1),
+        callsign: isFixedCrewNeoAssist ? fixedCrewAssistCallsign : getAssistFormationCallsign(1),
         aircraftNumber: selectedResourceKind === 'flight' ? (selectedAircraftNumber.trim() || 'TBA') : undefined,
         area: selectedAssignedArea && selectedAssignedArea !== 'TBA' ? selectedAssignedArea : undefined,
         formationType: assistFormationSize > 1 ? 'NEO Assist Formation' : undefined,
         formationPosition: assistFormationSize > 1 ? 1 : undefined,
         formationSize: assistFormationSize > 1 ? assistFormationSize : undefined,
         crewSelectionOrder: selectedCrewNames,
+        fixedCrewGroup: isFixedCrewNeoAssist ? selectedFixedCrewGroup || undefined : undefined,
+        fixedCrewPic: isFixedCrewNeoAssist ? selectedFixedCrewPic || undefined : undefined,
+        fixedCrewManifestStatus: isFixedCrewNeoAssist && selectedFixedCrewGroup && selectedFixedCrewPic ? 'complete' : isFixedCrewNeoAssist ? 'pending' : undefined,
         aircraftConfigId: assistConfigId,
         acceptableAircraftConfigs: assistConfigId ? [assistConfigId] : undefined,
         crewRequirement: selectedSyllabusItem?.crewRequirement || { mode: 'aircraft_default' },
@@ -888,8 +974,12 @@ const DfpSidePanelTimeline: React.FC<{
         assistTaskDate,
         assistFormationSize,
         date,
+        fixedCrewAssistCallsign,
+        isFixedCrewNeoAssist,
         selectedCurrencyName,
         selectedCrewName,
+        selectedFixedCrewGroup,
+        selectedFixedCrewPic,
         selectedPilotCrewName,
         selectedSupportCrewName,
         selectedCrewNames,
@@ -997,7 +1087,9 @@ const DfpSidePanelTimeline: React.FC<{
             aircraft.style.color = 'rgba(255,255,255,0.82)';
 
             const flightType = document.createElement('span');
-            flightType.textContent = assistDraftEvent.flightType.toUpperCase();
+            flightType.textContent = isFixedCrewNeoAssist && selectedFixedCrewGroup
+                ? `CREW ${selectedFixedCrewGroup}`
+                : assistDraftEvent.flightType.toUpperCase();
             flightType.style.justifySelf = 'start';
             flightType.style.borderRadius = '3px';
             flightType.style.background = 'rgba(132,204,22,0.62)';
@@ -1307,8 +1399,12 @@ const DfpSidePanelTimeline: React.FC<{
         .filter(([, count]) => Number(count) > 0)
         .map(([configId, count]) => `${configId}: ${count}`)
         .join(', ') || 'No CONFIG split set';
-    const previewCrewName = selectedCrewName || 'Bloggs, Joe';
-    const previewCallsign = assistCallsign.trim() || 'CSIGN';
+    const previewCrewName = isFixedCrewNeoAssist
+        ? (selectedFixedCrewPic || 'Select PIC')
+        : selectedCrewName || 'Bloggs, Joe';
+    const previewCallsign = isFixedCrewNeoAssist
+        ? (fixedCrewAssistCallsign || 'CSIGN')
+        : assistCallsign.trim() || 'CSIGN';
     const previewAircraftNumber = selectedResourceKind === 'flight'
         ? (selectedAircraftNumber.trim() || 'TBA')
         : 'TBA';
@@ -2144,19 +2240,59 @@ const DfpSidePanelTimeline: React.FC<{
                                     placeholder="TBA"
                                 />
                             </label>
-                            <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                Callsign
-                                <input
-                                    list="neo-assist-callsign-options"
-                                    value={assistCallsign}
-                                    onChange={event => setAssistCallsign(event.target.value)}
-                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                                    placeholder="CSIGN"
-                                />
-                                <datalist id="neo-assist-callsign-options">
-                                    {callsignOptions.map(callsign => <option key={callsign} value={callsign} />)}
-                                </datalist>
-                            </label>
+                            {isFixedCrewNeoAssist ? (
+                                <div className="col-span-2">
+                                    <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Callsign</span>
+                                    <div className="mt-1 grid grid-cols-[minmax(0,1fr)_72px] gap-2">
+                                        <select
+                                            value={assistUnitCallsignBase || defaultAssistUnitCallsign}
+                                            onChange={event => {
+                                                setAssistUnitCallsignBase(event.target.value);
+                                                setAssistCallsign(buildUnitEventCallsign(event.target.value, assistUnitCallsignNumber));
+                                            }}
+                                            className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                            disabled={assistUnitCallsignEntries.length === 0}
+                                        >
+                                            {assistUnitCallsignEntries.length === 0 ? (
+                                                <option value="">Configure unit callsigns in Settings</option>
+                                            ) : assistUnitCallsignEntries.map(entry => (
+                                                <option key={entry.id} value={entry.callsign}>{entry.callsign}</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            value={assistUnitCallsignNumber}
+                                            onChange={event => {
+                                                const nextNumber = Number(event.target.value);
+                                                setAssistUnitCallsignNumber(nextNumber);
+                                                setAssistCallsign(buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, nextNumber));
+                                            }}
+                                            className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                            disabled={assistUnitCallsignEntries.length === 0}
+                                        >
+                                            {assistCallsignNumberOptions.map(option => (
+                                                <option key={`neo-assist-fixed-callsign-${option.value}`} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <span className="mt-1 block text-[9px] font-semibold normal-case tracking-normal text-cyan-100/80">
+                                        {fixedCrewAssistCallsign || 'No unit callsign configured'}
+                                    </span>
+                                </div>
+                            ) : (
+                                <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                    Callsign
+                                    <input
+                                        list="neo-assist-callsign-options"
+                                        value={assistCallsign}
+                                        onChange={event => setAssistCallsign(event.target.value)}
+                                        className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                        placeholder="CSIGN"
+                                    />
+                                    <datalist id="neo-assist-callsign-options">
+                                        {callsignOptions.map(callsign => <option key={callsign} value={callsign} />)}
+                                    </datalist>
+                                </label>
+                            )}
                             <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                                 Assigned Area
                                 <select
@@ -2757,6 +2893,64 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (activeAssistSection === 'crew') {
+            if (isFixedCrewNeoAssist) {
+                return (
+                    <div className="space-y-3 text-[10px] text-slate-200">
+                        <label className="block font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            Crew
+                            <select
+                                value={selectedFixedCrewGroup}
+                                onChange={event => handleFixedCrewAssistGroupChange(event.target.value)}
+                                className={fieldClass}
+                            >
+                                <option value="">Select crew</option>
+                                {fixedCrewAssistGroups.map(group => (
+                                    <option key={group} value={group}>CREW {group}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="block font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            PIC
+                            <select
+                                value={selectedFixedCrewPic}
+                                onChange={event => handleFixedCrewAssistPicChange(event.target.value)}
+                                className={fieldClass}
+                                disabled={!selectedFixedCrewGroup || fixedCrewPicCandidates.length === 0}
+                            >
+                                <option value="">{selectedFixedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
+                                {selectedFixedCrewPic && !fixedCrewPicCandidates.some(staff => staff.name === selectedFixedCrewPic) && (
+                                    <option value={selectedFixedCrewPic}>{selectedFixedCrewPic}</option>
+                                )}
+                                {fixedCrewPicCandidates.map(staff => (
+                                    <option key={staff.id || staff.name} value={staff.name}>
+                                        {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <div className="rounded border border-emerald-400/25 bg-emerald-500/10 p-2">
+                            <p className="mb-2 font-semibold text-emerald-100">Crew Members</p>
+                            {fixedCrewAssistMembers.length === 0 ? (
+                                <p className="text-slate-500">Select a crew to preview its members.</p>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-1">
+                                    {fixedCrewAssistMembers.map(staff => (
+                                        <div key={staff.id || staff.name} className="flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
+                                            <span className="min-w-0 truncate text-slate-100">{[staff.rank, staff.name].filter(Boolean).join(' ')}</span>
+                                            <span className="flex-shrink-0 text-[9px] font-semibold text-emerald-200">{staff.role || 'Staff'}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {selectedFixedCrewGroup && fixedCrewPicCandidates.length === 0 && (
+                            <p className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-2 text-amber-100">
+                                No PIC-qualified crew members found for CREW {selectedFixedCrewGroup}.
+                            </p>
+                        )}
+                    </div>
+                );
+            }
             return (
                 <div className="space-y-2">
                     <div className="flex gap-3 text-[10px] text-slate-300">
@@ -2822,6 +3016,56 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (activeAssistSection === 'course' || activeAssistSection === 'packages') {
             const isPackageSection = activeAssistSection === 'packages';
+            if (isFixedCrewNeoAssist) {
+                const sourceOptions = (isPackageSection ? packageEventOptions : courseEventOptions)
+                    .filter(item => ['flight', 'ftd', 'sim', 'simulator'].includes(String(item.type || '').trim().toLowerCase()))
+                    .sort((left, right) => {
+                        const groupLeft = String((left as any).module || left.phase || (Array.isArray(left.courses) ? left.courses[0] : '') || '').toUpperCase();
+                        const groupRight = String((right as any).module || right.phase || (Array.isArray(right.courses) ? right.courses[0] : '') || '').toUpperCase();
+                        if (groupLeft !== groupRight) return groupLeft.localeCompare(groupRight, undefined, { numeric: true });
+                        return String(left.code || '').localeCompare(String(right.code || ''), undefined, { numeric: true });
+                    });
+                const groupedOptions = sourceOptions.reduce((groups, item) => {
+                    const label = String((item as any).module || item.phase || (Array.isArray(item.courses) ? item.courses[0] : '') || 'Unassigned').trim();
+                    groups.set(label, [...(groups.get(label) || []), item]);
+                    return groups;
+                }, new Map<string, SyllabusItemDetail[]>());
+                const selectedCode = isPackageSection ? selectedPackageEventCode : selectedCourseEventCode;
+                return (
+                    <div className="space-y-2 text-[10px] text-slate-200">
+                        <label className="block font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            {isPackageSection ? 'Package Event' : 'Course Event'}
+                            <select
+                                value={selectedCode}
+                                onChange={event => selectAssistTrainingEvent(activeAssistSection, event.target.value)}
+                                className={fieldClass}
+                            >
+                                <option value="">Select {isPackageSection ? 'package' : 'course'} event</option>
+                                {Array.from(groupedOptions.entries()).map(([group, items]) => (
+                                    <optgroup key={group} label={group}>
+                                        {items.map(item => (
+                                            <option key={item.id || item.code} value={item.code}>
+                                                {item.code} - {item.eventDescription || item.module || item.phase || item.code}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </select>
+                        </label>
+                        {sourceOptions.length === 0 && (
+                            <p className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-2 text-amber-100">
+                                No Fixed Crew {isPackageSection ? 'package' : 'course'} events found for this unit.
+                            </p>
+                        )}
+                        {selectedSyllabusItem && selectedCode && (
+                            <div className="rounded border border-cyan-400/25 bg-cyan-500/10 px-2 py-2">
+                                <p className="font-mono text-cyan-50">{selectedSyllabusItem.code}</p>
+                                <p className="mt-1 text-slate-200">{selectedSyllabusItem.eventDescription || selectedSyllabusItem.module || selectedSyllabusItem.phase}</p>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
             const assignedOptions = isPackageSection ? selectedCrewPackageOptions : selectedCrewCourseOptions;
             const selectedGroupName = isPackageSection ? selectedPackageName : selectedCourseName;
             const eventOptions = selectedCrewName
@@ -33254,6 +33498,9 @@ appliedUpdates.forEach(update => {
                                     staffListNames={neoAssistStaffListNames}
                                     formatResourceLabel={formatResourceDisplayLabel}
                                     operationalModel={activeOperationalModel}
+                                    activeUnitCode={activeUnitCode}
+                                    staffQualificationCatalogue={activeStaffQualificationCatalogue}
+                                    unitCallsignSettings={activeUnitCallsignSettings}
                                     scheduleZoomLevel={zoomLevel}
                                     onRunNeoBuild={handleBuildDfp}
                                     onOpenPrioritiesExclusions={() => {
