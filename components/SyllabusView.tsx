@@ -1027,6 +1027,28 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           .sort((a, b) => `${a.title} ${a.unit}`.localeCompare(`${b.title} ${b.unit}`));
   }, [activeUnitNormalised, trainingPackageTemplates]);
 
+  // Add Course modal state
+  const [showAddLMPModal, setShowAddLMPModal] = useState(false);
+  const [newLMPName, setNewLMPName] = useState('');       // full course title e.g. "Basic Flying Course"
+  const [newLMPCourseType, setNewLMPCourseType] = useState<'Flight Training' | 'Academic Training'>('Flight Training');
+  const [addPackageMode, setAddPackageMode] = useState<'blank' | 'copy'>('blank');
+  const [copyPackageSourceKey, setCopyPackageSourceKey] = useState('');
+  const [isCopyingPackage, setIsCopyingPackage] = useState(false);
+
+  // Delete Course modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+
+  // Bulk Upload modal state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'update' | 'replace' | 'create'>('update');
+  const [newUploadPackageName, setNewUploadPackageName] = useState('');
+  const [uploadResult, setUploadResult] = useState<{ created: number; updated?: number; imported?: number; skipped: number; errors: any[]; message: string } | null>(null);
+  const [isCrossLoadingDuplicateCourse, setIsCrossLoadingDuplicateCourse] = useState(false);
+
   const duplicateUploadSource = useMemo(() => {
       const sources = (uploadResult?.errors || [])
           .map((error: any) => error?.duplicateSource)
@@ -1054,28 +1076,6 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       && activeUnitNormalised
       && normaliseContextCode(duplicateUploadSource.sourceUnit) !== activeUnitNormalised
   );
-
-  // Add Course modal state
-  const [showAddLMPModal, setShowAddLMPModal] = useState(false);
-  const [newLMPName, setNewLMPName] = useState('');       // full course title e.g. "Basic Flying Course"
-  const [newLMPCourseType, setNewLMPCourseType] = useState<'Flight Training' | 'Academic Training'>('Flight Training');
-  const [addPackageMode, setAddPackageMode] = useState<'blank' | 'copy'>('blank');
-  const [copyPackageSourceKey, setCopyPackageSourceKey] = useState('');
-  const [isCopyingPackage, setIsCopyingPackage] = useState(false);
-
-  // Delete Course modal state
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [deleteError, setDeleteError] = useState('');
-
-  // Bulk Upload modal state
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadMode, setUploadMode] = useState<'update' | 'replace' | 'create'>('update');
-  const [newUploadPackageName, setNewUploadPackageName] = useState('');
-  const [uploadResult, setUploadResult] = useState<{ created: number; updated?: number; imported?: number; skipped: number; errors: any[]; message: string } | null>(null);
-  const [isCrossLoadingDuplicateCourse, setIsCrossLoadingDuplicateCourse] = useState(false);
 
   // Delete Event modal state
   const [showDeleteEventModal, setShowDeleteEventModal] = useState(false);

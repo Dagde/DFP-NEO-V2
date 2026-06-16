@@ -40419,6 +40419,22 @@ const SyllabusView = ({
     });
     return Array.from(grouped.values()).filter((option) => option.unit !== activeUnitNormalised || !activeUnitNormalised).sort((a, b) => `${a.title} ${a.unit}`.localeCompare(`${b.title} ${b.unit}`));
   }, [activeUnitNormalised, trainingPackageTemplates]);
+  const [showAddLMPModal, setShowAddLMPModal] = reactExports.useState(false);
+  const [newLMPName, setNewLMPName] = reactExports.useState("");
+  const [newLMPCourseType, setNewLMPCourseType] = reactExports.useState("Flight Training");
+  const [addPackageMode, setAddPackageMode] = reactExports.useState("blank");
+  const [copyPackageSourceKey, setCopyPackageSourceKey] = reactExports.useState("");
+  const [isCopyingPackage, setIsCopyingPackage] = reactExports.useState(false);
+  const [showDeleteModal, setShowDeleteModal] = reactExports.useState(false);
+  const [deletePassword, setDeletePassword] = reactExports.useState("");
+  const [deleteError, setDeleteError] = reactExports.useState("");
+  const [showUploadModal, setShowUploadModal] = reactExports.useState(false);
+  const [uploadFile, setUploadFile] = reactExports.useState(null);
+  const [isUploading, setIsUploading] = reactExports.useState(false);
+  const [uploadMode, setUploadMode] = reactExports.useState("update");
+  const [newUploadPackageName, setNewUploadPackageName] = reactExports.useState("");
+  const [uploadResult, setUploadResult] = reactExports.useState(null);
+  const [isCrossLoadingDuplicateCourse, setIsCrossLoadingDuplicateCourse] = reactExports.useState(false);
   const duplicateUploadSource = reactExports.useMemo(() => {
     const sources = (uploadResult?.errors || []).map((error) => error?.duplicateSource).filter((source2) => source2?.sourceCourse && source2?.sourceLmpType);
     if (sources.length === 0) return null;
@@ -40440,22 +40456,6 @@ const SyllabusView = ({
   const canCrossLoadDuplicateCourse = Boolean(
     duplicateUploadSource && selectedCourseType && activeUnitNormalised && normaliseContextCode(duplicateUploadSource.sourceUnit) !== activeUnitNormalised
   );
-  const [showAddLMPModal, setShowAddLMPModal] = reactExports.useState(false);
-  const [newLMPName, setNewLMPName] = reactExports.useState("");
-  const [newLMPCourseType, setNewLMPCourseType] = reactExports.useState("Flight Training");
-  const [addPackageMode, setAddPackageMode] = reactExports.useState("blank");
-  const [copyPackageSourceKey, setCopyPackageSourceKey] = reactExports.useState("");
-  const [isCopyingPackage, setIsCopyingPackage] = reactExports.useState(false);
-  const [showDeleteModal, setShowDeleteModal] = reactExports.useState(false);
-  const [deletePassword, setDeletePassword] = reactExports.useState("");
-  const [deleteError, setDeleteError] = reactExports.useState("");
-  const [showUploadModal, setShowUploadModal] = reactExports.useState(false);
-  const [uploadFile, setUploadFile] = reactExports.useState(null);
-  const [isUploading, setIsUploading] = reactExports.useState(false);
-  const [uploadMode, setUploadMode] = reactExports.useState("update");
-  const [newUploadPackageName, setNewUploadPackageName] = reactExports.useState("");
-  const [uploadResult, setUploadResult] = reactExports.useState(null);
-  const [isCrossLoadingDuplicateCourse, setIsCrossLoadingDuplicateCourse] = reactExports.useState(false);
   const [showDeleteEventModal, setShowDeleteEventModal] = reactExports.useState(false);
   const [deleteEventItem, setDeleteEventItem] = reactExports.useState(null);
   const [deleteEventPassword, setDeleteEventPassword] = reactExports.useState("");
