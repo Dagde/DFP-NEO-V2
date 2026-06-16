@@ -381,7 +381,12 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   
   
   const picName = isTaskingEvent || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : (isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor));
-  const studentName = isTaskingEvent || isAirCombatCrewEvent || isFixedCrewCrewEvent
+  const fixedCrewDisplay = isFixedCrewCrewEvent
+      ? `CREW ${String((event as any).fixedCrewGroup || '').replace(/^CREW\s+/i, '').trim()}`
+      : '';
+  const studentName = isFixedCrewCrewEvent
+      ? fixedCrewDisplay
+      : isTaskingEvent || isAirCombatCrewEvent
       ? (event.flightType === 'Solo' ? '' : event.crew || event.student || '')
       : event.flightType === 'Solo'
           ? ''
@@ -445,6 +450,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       }
 
         
+
+        if (isFixedCrewCrewEvent && fixedCrewDisplay) {
+            return fixedCrewDisplay;
+        }
 
         // Check for SOLO flights - applies to ALL event types
         if (event.flightType === 'Solo') {

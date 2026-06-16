@@ -6973,7 +6973,8 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
   const picName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
-  const studentName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
+  const fixedCrewDisplay = isFixedCrewCrewEvent ? `CREW ${String(event.fixedCrewGroup || "").replace(/^CREW\s+/i, "").trim()}` : "";
+  const studentName = isFixedCrewCrewEvent ? fixedCrewDisplay : isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
   let displayPicNameForRender = picName;
   let displayStudentNameForRender = studentName;
   if (isStbyEvent) {
@@ -7016,6 +7017,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const getStudentDisplay = () => {
     if (isPreview) {
       return studentName;
+    }
+    if (isFixedCrewCrewEvent && fixedCrewDisplay) {
+      return fixedCrewDisplay;
     }
     if (event.flightType === "Solo") {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" });
@@ -67249,7 +67253,7 @@ const DfpSidePanelTimeline = ({
     type: selectedResourceKind === "ftd" ? "ftd" : selectedResourceKind === "cpt" ? "cpt" : "flight",
     pilot: selectedPilotCrewName || "Bloggs, Joe",
     instructor: selectedPilotCrewName || "Bloggs, Joe",
-    crew: selectedSupportCrewName,
+    crew: isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : selectedSupportCrewName,
     group: isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : void 0,
     flightNumber: assistEventLabel,
     eventCode: selectedSyllabusItem?.code,
@@ -67261,8 +67265,8 @@ const DfpSidePanelTimeline = ({
     startTime: assistStartTime,
     resourceId: assistResourceId,
     color: activeAssistSection === "taskings" ? "#0891b2" : activeAssistSection === "currency" ? "#7c3aed" : selectedResourceKind === "flight" ? "bg-emerald-500/70" : "#0369a1",
-    flightType: assistFlightType,
-    soloOrDual: assistFlightType,
+    flightType: isFixedCrewNeoAssist && selectedFixedCrewGroup ? "Dual" : assistFlightType,
+    soloOrDual: isFixedCrewNeoAssist && selectedFixedCrewGroup ? "Dual" : assistFlightType,
     locationType: assistOrigin !== assistDestination ? "Land Away" : "Local",
     origin: assistOrigin,
     destination: assistDestination,
