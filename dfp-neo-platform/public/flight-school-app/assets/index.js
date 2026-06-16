@@ -3785,6 +3785,10 @@ const norm = (value) => String(value || "").trim().toUpperCase();
 const personKey = (person) => String(person.id || person.idNumber || person.name || "").trim();
 const isQfiStaff = (person) => person.role === "QFI" || person.isQFI === true || person.role === "INSTRUCTOR";
 const isSimIp = (person) => person.role === "SIM IP";
+const isLegacyFlightSchoolCallsignUnit = (person) => {
+  const unit = norm(person.unit);
+  return unit.startsWith("1FTS") || unit.startsWith("CFS") || unit.startsWith("2FTS");
+};
 const isEastSale = (person) => {
   const location = norm(person.location);
   const unit = norm(person.unit);
@@ -3812,7 +3816,7 @@ const assignSequence = (assignments, people, prefix, startingNumber = 1) => {
 };
 const getStaffCallsignAssignments = (instructors, settings) => {
   const assignments = /* @__PURE__ */ new Map();
-  const activeStaff = instructors.filter((person) => person.name && person.isActive !== false);
+  const activeStaff = instructors.filter((person) => person.name && person.isActive !== false && isLegacyFlightSchoolCallsignUnit(person));
   const oneFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("1FTS")), settings);
   const cfs = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("CFS")), settings);
   const twoFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("2FTS")), settings);
@@ -69274,11 +69278,13 @@ const DfpSidePanelTimeline = ({
 const normalisePersonnelRecord = (person) => {
   const preferences = person?.preferences && typeof person.preferences === "object" && !Array.isArray(person.preferences) ? person.preferences : {};
   const unitCode = String(person?.unit || "").trim().toUpperCase();
+  const suppressLegacyProfileCallsign = unitCode === "11SQN" || unitCode === "12SQN";
   return {
     ...person,
     role: unitCode === "77SQN" ? "Pilot" : person?.role,
-    callsign: person?.callsign || preferences.callsign || "",
-    secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || "",
+    callsign: suppressLegacyProfileCallsign ? "" : person?.callsign || preferences.callsign || "",
+    secondaryCallsign: suppressLegacyProfileCallsign ? "" : person?.secondaryCallsign || preferences.secondaryCallsign || "",
+    callsignNumber: suppressLegacyProfileCallsign ? null : person?.callsignNumber,
     crew: person?.crew || preferences.crew || "",
     preferences: {
       ...preferences,

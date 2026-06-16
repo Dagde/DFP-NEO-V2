@@ -16,6 +16,11 @@ const isQfiStaff = (person: Instructor): boolean =>
 
 const isSimIp = (person: Instructor): boolean => person.role === 'SIM IP';
 
+const isLegacyFlightSchoolCallsignUnit = (person: Instructor): boolean => {
+  const unit = norm(person.unit);
+  return unit.startsWith('1FTS') || unit.startsWith('CFS') || unit.startsWith('2FTS');
+};
+
 const isEastSale = (person: Instructor): boolean => {
   const location = norm(person.location);
   const unit = norm(person.unit);
@@ -59,7 +64,11 @@ export const getStaffCallsignAssignments = (
   settings?: PersonnelDisplaySettings,
 ): Map<string, StaffCallsignInfo> => {
   const assignments = new Map<string, StaffCallsignInfo>();
-  const activeStaff = instructors.filter((person) => person.name && (person as any).isActive !== false);
+  const activeStaff = instructors.filter((person) => (
+    person.name
+    && (person as any).isActive !== false
+    && isLegacyFlightSchoolCallsignUnit(person)
+  ));
 
   const oneFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith('1FTS')), settings);
   const cfs = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith('CFS')), settings);
