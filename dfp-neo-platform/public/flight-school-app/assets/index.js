@@ -69556,7 +69556,7 @@ const DfpSidePanelTimeline = ({
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: assistDraftEvent.flightType.toUpperCase() }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : assistDraftEvent.flightType.toUpperCase() }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
                 ] })
               ]

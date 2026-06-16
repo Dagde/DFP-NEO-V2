@@ -3364,7 +3364,9 @@ const DfpSidePanelTimeline: React.FC<{
                         </div>
                         <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
                             <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
-                            <span className="justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">{assistDraftEvent.flightType.toUpperCase()}</span>
+                            <span className="justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">
+                                {isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : assistDraftEvent.flightType.toUpperCase()}
+                            </span>
                             <span className="truncate text-right font-mono text-cyan-50">
                                 {previewAreaCallsign}
                             </span>
