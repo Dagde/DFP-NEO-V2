@@ -22,6 +22,13 @@ import {
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { normaliseOperationalModel } from '../utils/platformConfigService';
+import {
+    getQualificationsForOperationalModel,
+    normaliseAssignedQualificationIds,
+    normaliseQualificationToken,
+    type StaffQualificationCatalogue,
+} from '../utils/staffQualifications';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -397,6 +404,8 @@ interface EventDetailModalProps {
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
     operationalModel?: string;
+    activeUnitCode?: string;
+    staffQualificationCatalogue?: StaffQualificationCatalogue;
     personnelDisplaySettings?: PersonnelDisplaySettings;
     isReadOnly?: boolean;
 }
@@ -444,7 +453,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, personnelDisplaySettings, isReadOnly = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, personnelDisplaySettings, isReadOnly = false }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -588,6 +597,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [formationType, setFormationType] = useState(event.formationType || '');
     const [callsign, setCallsign] = useState(event.callsign || '');
     const [notes, setNotes] = useState(event.notes || '');
+    const [fixedCrewGroup, setFixedCrewGroup] = useState(event.fixedCrewGroup || '');
+    const [fixedCrewPic, setFixedCrewPic] = useState(event.fixedCrewPic || '');
+    const [fixedCrewManifestStatus, setFixedCrewManifestStatus] = useState<ScheduleEvent['fixedCrewManifestStatus']>(event.fixedCrewManifestStatus || 'pending');
+    const [fixedCrewManifestNotes, setFixedCrewManifestNotes] = useState(event.fixedCrewManifestNotes || '');
     const [isDeploy, setIsDeploy] = useState(event.isDeploy || false);
     
     // Deployment Selection State
@@ -614,6 +627,45 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [alertUserNote, setAlertUserNote] = useState('');
     const isOracleContext = !!oracleContextForModal;
     const instructorList = oracleContextForModal?.availableInstructors || instructors;
+    const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
+    const isFixedCrewCrewedEvent = isFixedCrewModel && (eventType === 'flight' || eventType === 'ftd');
+    const activeUnitNormalised = String(activeUnitCode || '').trim().toUpperCase();
+    const fixedCrewGroups = useMemo(() => Array.from(new Set(instructorsData
+        .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
+        .map(staff => String(staff.crew || '').trim())
+        .filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [activeUnitNormalised, instructorsData]);
+    const fixedCrewMembers = useMemo(() => fixedCrewGroup
+        ? instructorsData
+            .filter(staff => !activeUnitNormalised || String(staff.unit || '').trim().toUpperCase() === activeUnitNormalised)
+            .filter(staff => String(staff.crew || '').trim().toUpperCase() === String(fixedCrewGroup || '').trim().toUpperCase())
+            .filter(staff => !staff.isAdminStaff)
+            .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }))
+        : [], [activeUnitNormalised, fixedCrewGroup, instructorsData]);
+    const fixedCrewPicQualification = useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, 'fixed_crew')
+        .find(qualification => (
+            normaliseQualificationToken(qualification.id) === 'pic'
+            || normaliseQualificationToken(qualification.code) === 'pic'
+            || normaliseQualificationToken(qualification.name) === 'pic'
+        )), [staffQualificationCatalogue]);
+    const fixedCrewPicCandidates = useMemo(() => fixedCrewPicQualification
+        ? fixedCrewMembers.filter(staff => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id))
+        : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+    const formatFixedCrewAssignmentStatus = (status?: ScheduleEvent['fixedCrewManifestStatus']): string => {
+        switch (status) {
+            case 'complete':
+                return 'Complete';
+            case 'partial':
+                return 'Partial';
+            case 'swapped':
+                return 'Swapped';
+            case 'invalid':
+                return 'Invalid';
+            case 'pending':
+            default:
+                return 'Pending';
+        }
+    };
     const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map(t => t.trainee.fullName) : trainees;
     const [dynamicSyllabusOptions, setDynamicSyllabusOptions] = useState<string[]>(isOracleContext ? [] : syllabus);
 
@@ -1124,6 +1176,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setFormationType(event.formationType || formationTypes[0]);
         setCallsign(event.callsign || '');
         setNotes(event.notes || '');
+        setFixedCrewGroup(event.fixedCrewGroup || '');
+        setFixedCrewPic(event.fixedCrewPic || '');
+        setFixedCrewManifestStatus(event.fixedCrewManifestStatus || 'pending');
+        setFixedCrewManifestNotes(event.fixedCrewManifestNotes || '');
         setIsDeploy(event.isDeploy || false);
         
         setDeploymentStartDate(event.deploymentStartDate || event.date);
@@ -1554,6 +1610,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 callsign: flightNumber === 'SCT FORM' ? `${formationType}${index + 1}` : callsign,
                 formationId: undefined,
                 notes,
+                fixedCrewGroup: isFixedCrewCrewedEvent ? fixedCrewGroup || undefined : undefined,
+                fixedCrewPic: isFixedCrewCrewedEvent ? fixedCrewPic || undefined : undefined,
+                fixedCrewManifestStatus: isFixedCrewCrewedEvent ? fixedCrewManifestStatus || 'pending' : undefined,
+                fixedCrewManifestNotes: isFixedCrewCrewedEvent ? fixedCrewManifestNotes || undefined : undefined,
                 isDeploy: eventType === 'flight' && locationType === 'Land Away' ? isDeploy : undefined,
                 
                 // Explicit Deployment Period
@@ -2505,6 +2565,113 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 resize-none"
                                         />
                                     </div>
+                                    {isFixedCrewCrewedEvent && (
+                                        <div className="p-4 bg-emerald-950/20 border border-emerald-500/30 rounded-lg space-y-4">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <h3 className="font-semibold text-emerald-200">Fixed Crew Manifest</h3>
+                                                <span className="text-[11px] uppercase tracking-wider text-emerald-300/80">Scheduled event assignment</span>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
+                                                    <select
+                                                        value={fixedCrewGroup}
+                                                        onChange={e => {
+                                                            setFixedCrewGroup(e.target.value);
+                                                            setFixedCrewPic('');
+                                                        }}
+                                                        className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                                    >
+                                                        <option value="">Select crew</option>
+                                                        {fixedCrewGroups.map(group => (
+                                                            <option key={group} value={group}>CREW {group}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">PIC</label>
+                                                    <select
+                                                        value={fixedCrewPic}
+                                                        onChange={e => setFixedCrewPic(e.target.value)}
+                                                        disabled={!fixedCrewGroup || fixedCrewPicCandidates.length === 0}
+                                                        className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <option value="">{fixedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
+                                                        {fixedCrewPic && !fixedCrewPicCandidates.some(staff => staff.name === fixedCrewPic) && (
+                                                            <option value={fixedCrewPic}>{fixedCrewPic}</option>
+                                                        )}
+                                                        {fixedCrewPicCandidates.map(staff => (
+                                                            <option key={staff.id || staff.name} value={staff.name}>
+                                                                {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Manifest Status</label>
+                                                    <select
+                                                        value={fixedCrewManifestStatus || 'pending'}
+                                                        onChange={e => setFixedCrewManifestStatus(e.target.value as ScheduleEvent['fixedCrewManifestStatus'])}
+                                                        className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                                                    >
+                                                        <option value="pending">Pending</option>
+                                                        <option value="complete">Complete</option>
+                                                        <option value="partial">Partial</option>
+                                                        <option value="swapped">Swapped</option>
+                                                        <option value="invalid">Invalid</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                                <div className="bg-gray-900/50 border border-gray-700 rounded-md p-3">
+                                                    <div className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Crew Members</div>
+                                                    {fixedCrewMembers.length > 0 ? (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                            {fixedCrewMembers.map(staff => (
+                                                                <div key={staff.id || staff.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm">
+                                                                    <span className="min-w-0 truncate text-gray-100">{[staff.rank, staff.name].filter(Boolean).join(' ')}</span>
+                                                                    <span className="flex-shrink-0 text-xs font-semibold text-emerald-300">{staff.role || 'Staff'}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-sm text-gray-500 italic">Select a crew to preview its members.</div>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="bg-gray-900/50 border border-gray-700 rounded-md p-3">
+                                                        <div className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">PIC Candidates</div>
+                                                        {fixedCrewPicCandidates.length > 0 ? (
+                                                            <div className="space-y-2">
+                                                                {fixedCrewPicCandidates.map(staff => (
+                                                                    <div
+                                                                        key={staff.id || staff.name}
+                                                                        className={`rounded px-2 py-1.5 text-sm ${staff.name === fixedCrewPic ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/40' : 'bg-gray-800/70 text-gray-100 border border-transparent'}`}
+                                                                    >
+                                                                        {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-sm text-gray-500 italic">
+                                                                {fixedCrewGroup ? 'No PIC-qualified crew members found for this crew.' : 'Select a crew to show PIC candidates.'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Swap / Manifest Notes</label>
+                                                        <textarea
+                                                            value={fixedCrewManifestNotes}
+                                                            onChange={e => setFixedCrewManifestNotes(e.target.value)}
+                                                            rows={3}
+                                                            placeholder="Optional swap reason or manifest notes..."
+                                                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 resize-none"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="space-y-4">{crew.map(renderCrewFields)}</div>
                                     
                                     {/* Add to Deployment Section */}
@@ -2551,6 +2718,32 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     {event.type === 'flight' && event.area && <p><strong>Area:</strong> {event.area}</p>}
                                     {event.type === 'flight' && (
                                         <p><strong>CONFIG:</strong> {aircraftConfigOptions.find(definition => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label}</p>
+                                    )}
+                                    {isFixedCrewCrewedEvent && (
+                                        <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <strong className="text-emerald-200">Fixed Crew Manifest</strong>
+                                                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-300">
+                                                    {formatFixedCrewAssignmentStatus(event.fixedCrewManifestStatus)}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                                                <div className="rounded bg-gray-900/50 px-3 py-2">
+                                                    <span className="block text-xs uppercase tracking-wider text-gray-500">Crew</span>
+                                                    <span className="text-gray-100">{event.fixedCrewGroup ? `CREW ${event.fixedCrewGroup}` : 'Not assigned'}</span>
+                                                </div>
+                                                <div className="rounded bg-gray-900/50 px-3 py-2 sm:col-span-2">
+                                                    <span className="block text-xs uppercase tracking-wider text-gray-500">PIC</span>
+                                                    <span className="text-gray-100">{event.fixedCrewPic || 'Not selected'}</span>
+                                                </div>
+                                            </div>
+                                            {event.fixedCrewManifestNotes && (
+                                                <div className="rounded bg-gray-900/50 px-3 py-2 text-sm">
+                                                    <span className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Swap / Manifest Notes</span>
+                                                    <span className="whitespace-pre-wrap text-gray-200">{event.fixedCrewManifestNotes}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                     <p><strong>Dual/Solo:</strong> <span className="font-semibold">{event.flightType}</span></p>
                                     {event.flightType === 'Dual' ? (

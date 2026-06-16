@@ -17472,7 +17472,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel: operationalModel2, personnelDisplaySettings, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel: operationalModel2, activeUnitCode = "", staffQualificationCatalogue, personnelDisplaySettings, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -17588,6 +17588,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [formationType, setFormationType] = reactExports.useState(event.formationType || "");
   const [callsign, setCallsign] = reactExports.useState(event.callsign || "");
   const [notes, setNotes] = reactExports.useState(event.notes || "");
+  const [fixedCrewGroup, setFixedCrewGroup] = reactExports.useState(event.fixedCrewGroup || "");
+  const [fixedCrewPic, setFixedCrewPic] = reactExports.useState(event.fixedCrewPic || "");
+  const [fixedCrewManifestStatus, setFixedCrewManifestStatus] = reactExports.useState(event.fixedCrewManifestStatus || "pending");
+  const [fixedCrewManifestNotes, setFixedCrewManifestNotes] = reactExports.useState(event.fixedCrewManifestNotes || "");
   const [isDeploy, setIsDeploy] = reactExports.useState(event.isDeploy || false);
   const [selectedDeploymentId, setSelectedDeploymentId] = reactExports.useState("");
   const [deploymentStartDate, setDeploymentStartDate] = reactExports.useState(event.deploymentStartDate || event.date);
@@ -17606,6 +17610,28 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [alertUserNote, setAlertUserNote] = reactExports.useState("");
   const isOracleContext = !!oracleContextForModal;
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
+  const isFixedCrewModel = normaliseOperationalModel(operationalModel2) === "fixed_crew";
+  const isFixedCrewCrewedEvent = isFixedCrewModel && (eventType === "flight" || eventType === "ftd");
+  const activeUnitNormalised = String(activeUnitCode || "").trim().toUpperCase();
+  const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).map((staff) => String(staff.crew || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [activeUnitNormalised, instructorsData]);
+  const fixedCrewMembers = reactExports.useMemo(() => fixedCrewGroup ? instructorsData.filter((staff) => !activeUnitNormalised || String(staff.unit || "").trim().toUpperCase() === activeUnitNormalised).filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(fixedCrewGroup || "").trim().toUpperCase()).filter((staff) => !staff.isAdminStaff).sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), void 0, { sensitivity: "base" })) : [], [activeUnitNormalised, fixedCrewGroup, instructorsData]);
+  const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
+  const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
+  const formatFixedCrewAssignmentStatus = (status) => {
+    switch (status) {
+      case "complete":
+        return "Complete";
+      case "partial":
+        return "Partial";
+      case "swapped":
+        return "Swapped";
+      case "invalid":
+        return "Invalid";
+      case "pending":
+      default:
+        return "Pending";
+    }
+  };
   const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map((t) => t.trainee.fullName) : trainees;
   const [dynamicSyllabusOptions, setDynamicSyllabusOptions] = reactExports.useState(isOracleContext ? [] : syllabus);
   const selectedTraineeNameForLmp = crew[0]?.student || crew[0]?.pilot || event.student || event.pilot || "";
@@ -17972,6 +17998,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     setFormationType(event.formationType || formationTypes[0]);
     setCallsign(event.callsign || "");
     setNotes(event.notes || "");
+    setFixedCrewGroup(event.fixedCrewGroup || "");
+    setFixedCrewPic(event.fixedCrewPic || "");
+    setFixedCrewManifestStatus(event.fixedCrewManifestStatus || "pending");
+    setFixedCrewManifestNotes(event.fixedCrewManifestNotes || "");
     setIsDeploy(event.isDeploy || false);
     setDeploymentStartDate(event.deploymentStartDate || event.date);
     setDeploymentStartTime(event.deploymentStartTime || "");
@@ -18286,6 +18316,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         callsign: flightNumber === "SCT FORM" ? `${formationType}${index + 1}` : callsign,
         formationId: void 0,
         notes,
+        fixedCrewGroup: isFixedCrewCrewedEvent ? fixedCrewGroup || void 0 : void 0,
+        fixedCrewPic: isFixedCrewCrewedEvent ? fixedCrewPic || void 0 : void 0,
+        fixedCrewManifestStatus: isFixedCrewCrewedEvent ? fixedCrewManifestStatus || "pending" : void 0,
+        fixedCrewManifestNotes: isFixedCrewCrewedEvent ? fixedCrewManifestNotes || void 0 : void 0,
         isDeploy: eventType === "flight" && locationType === "Land Away" ? isDeploy : void 0,
         // Explicit Deployment Period
         deploymentStartDate: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentStartDate : void 0,
@@ -19101,6 +19135,105 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               }
             )
           ] }),
+          isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 bg-emerald-950/20 border border-emerald-500/30 rounded-lg space-y-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-emerald-200", children: "Fixed Crew Manifest" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] uppercase tracking-wider text-emerald-300/80", children: "Scheduled event assignment" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Crew" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: fixedCrewGroup,
+                    onChange: (e) => {
+                      setFixedCrewGroup(e.target.value);
+                      setFixedCrewPic("");
+                    },
+                    className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
+                      fixedCrewGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group, children: [
+                        "CREW ",
+                        group
+                      ] }, group))
+                    ]
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "PIC" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: fixedCrewPic,
+                    onChange: (e) => setFixedCrewPic(e.target.value),
+                    disabled: !fixedCrewGroup || fixedCrewPicCandidates.length === 0,
+                    className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: fixedCrewGroup ? "Select PIC" : "Select crew first" }),
+                      fixedCrewPic && !fixedCrewPicCandidates.some((staff) => staff.name === fixedCrewPic) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: fixedCrewPic, children: fixedCrewPic }),
+                      fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: [staff.rank, staff.name].filter(Boolean).join(" ") }, staff.id || staff.name))
+                    ]
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Manifest Status" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: fixedCrewManifestStatus || "pending",
+                    onChange: (e) => setFixedCrewManifestStatus(e.target.value),
+                    className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "pending", children: "Pending" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "complete", children: "Complete" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "partial", children: "Partial" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "swapped", children: "Swapped" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "invalid", children: "Invalid" })
+                    ]
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/50 border border-gray-700 rounded-md p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2", children: "Crew Members" }),
+                fixedCrewMembers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-2", children: fixedCrewMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-gray-100", children: [staff.rank, staff.name].filter(Boolean).join(" ") }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-shrink-0 text-xs font-semibold text-emerald-300", children: staff.role || "Staff" })
+                ] }, staff.id || staff.name)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "Select a crew to preview its members." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/50 border border-gray-700 rounded-md p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2", children: "PIC Candidates" }),
+                  fixedCrewPicCandidates.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      className: `rounded px-2 py-1.5 text-sm ${staff.name === fixedCrewPic ? "bg-emerald-500/20 text-emerald-100 border border-emerald-400/40" : "bg-gray-800/70 text-gray-100 border border-transparent"}`,
+                      children: [staff.rank, staff.name].filter(Boolean).join(" ")
+                    },
+                    staff.id || staff.name
+                  )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: fixedCrewGroup ? "No PIC-qualified crew members found for this crew." : "Select a crew to show PIC candidates." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Swap / Manifest Notes" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "textarea",
+                    {
+                      value: fixedCrewManifestNotes,
+                      onChange: (e) => setFixedCrewManifestNotes(e.target.value),
+                      rows: 3,
+                      placeholder: "Optional swap reason or manifest notes...",
+                      className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 resize-none"
+                    }
+                  )
+                ] })
+              ] })
+            ] })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: crew.map(renderCrewFields) }),
           (eventType === "flight" || eventType === "ftd" || eventType === "cpt") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-600 pt-6 mt-6", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white mb-4", children: "Add to Deployment" }),
@@ -19150,6 +19283,26 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "CONFIG:" }),
             " ",
             aircraftConfigOptions.find((definition) => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label
+          ] }),
+          isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-emerald-200", children: "Fixed Crew Manifest" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wider text-emerald-300", children: formatFixedCrewAssignmentStatus(event.fixedCrewManifestStatus) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Crew" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.fixedCrewGroup ? `CREW ${event.fixedCrewGroup}` : "Not assigned" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2 sm:col-span-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "PIC" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.fixedCrewPic || "Not selected" })
+              ] })
+            ] }),
+            event.fixedCrewManifestNotes && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2 text-sm", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500 mb-1", children: "Swap / Manifest Notes" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-wrap text-gray-200", children: event.fixedCrewManifestNotes })
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Dual/Solo:" }),
@@ -93018,7 +93171,9 @@ Do you want to replace the existing entry?`,
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
           aircraftCrewComposition: activeAircraftCrewComposition,
           crewPositionTerminology: activeCrewPositionTerminology,
-          operationalModel: activeOperationalModel
+          operationalModel: activeOperationalModel,
+          activeUnitCode,
+          staffQualificationCatalogue: activeStaffQualificationCatalogue
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),

@@ -319,8 +319,12 @@ export interface ScheduleEvent {
       traineeId?: number;
       eventCode?: string;
       aircraftConfigId?: string;
-  acceptableAircraftConfigs?: string[];
-  crewRequirement?: CrewRequirement;
+      acceptableAircraftConfigs?: string[];
+      crewRequirement?: CrewRequirement;
+      fixedCrewGroup?: string;
+      fixedCrewPic?: string;
+      fixedCrewManifestStatus?: 'pending' | 'complete' | 'partial' | 'swapped' | 'invalid';
+      fixedCrewManifestNotes?: string;
       
       // Cancellation fields
       isCancelled?: boolean;

@@ -33542,6 +33542,8 @@ appliedUpdates.forEach(update => {
                     aircraftCrewComposition={activeAircraftCrewComposition}
                     crewPositionTerminology={activeCrewPositionTerminology}
                     operationalModel={activeOperationalModel}
+                    activeUnitCode={activeUnitCode}
+                    staffQualificationCatalogue={activeStaffQualificationCatalogue}
                 />
             )}
 
