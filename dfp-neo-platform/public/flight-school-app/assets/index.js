@@ -67270,6 +67270,7 @@ const DfpSidePanelTimeline = ({
   const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel2);
   const isAirCombatNeoAssist = normalisedAssistOperationalModel === "air_combat";
   const isFixedCrewNeoAssist = normalisedAssistOperationalModel === "fixed_crew";
+  const usesNeoAssistModeHeader = isAirCombatNeoAssist || isFixedCrewNeoAssist;
   const isAirCombatTileMode = isAirCombatNeoAssist && airCombatAssistMode === "tile";
   const isAirCombatWizardMode = isAirCombatNeoAssist && airCombatAssistMode === "wizard";
   const isSingleSeatFlightResource = selectedResourceKind === "flight" && aircraftCrewComposition.crewCount === 1;
@@ -69505,13 +69506,15 @@ const DfpSidePanelTimeline = ({
     ] });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-400/15 bg-slate-950/72 p-4", children: [
-    isAirCombatNeoAssist ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3", children: [
+    usesNeoAssistModeHeader ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
-          onClick: () => setAirCombatAssistMode("tile"),
-          className: `justify-self-start rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === "tile" ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
+          onClick: () => {
+            if (isAirCombatNeoAssist) setAirCombatAssistMode("tile");
+          },
+          className: `justify-self-start rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === "tile" || isFixedCrewNeoAssist ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
           children: "NEO - Tile"
         }
       ),
@@ -69523,8 +69526,12 @@ const DfpSidePanelTimeline = ({
         "button",
         {
           type: "button",
-          onClick: () => setAirCombatAssistMode("wizard"),
-          className: `justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${airCombatAssistMode === "wizard" ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"}`,
+          onClick: () => {
+            if (isAirCombatNeoAssist) setAirCombatAssistMode("wizard");
+          },
+          "aria-disabled": isFixedCrewNeoAssist,
+          title: isFixedCrewNeoAssist ? "NEO - Wizard is not available for the Fixed Crew Model yet." : "NEO - Wizard",
+          className: `justify-self-end rounded-md border px-3 py-1.5 text-[11px] font-semibold shadow-[0_0_14px_rgba(251,146,60,0.22)] transition hover:border-orange-200 hover:bg-orange-500/18 ${isAirCombatNeoAssist && airCombatAssistMode === "wizard" ? "border-orange-300 bg-orange-500/20 text-orange-50" : "border-orange-400/55 bg-orange-500/10 text-orange-100/80"} ${isFixedCrewNeoAssist ? "cursor-not-allowed" : ""}`,
           children: "NEO - Wizard"
         }
       )
