@@ -4316,6 +4316,7 @@ interface DfpConfig {
   aircraftCrewComposition?: AircraftCrewComposition;
   runtimeResourceContext?: Record<string, any>;
   crewPositionTerminology?: CrewPositionTerminology;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
   remedialPrioritySyncTrace?: any[];
   remedialDataMovementTrace?: any[];
   taskProvenancePreBuild?: any;
@@ -5922,6 +5923,30 @@ function generateDfpInternal(
             skipReasons: [],
             placements: [],
         },
+        fixedCrewPriority: {
+            enabled: buildOperationalModel === 'fixed_crew',
+            model: buildOperationalModel,
+            context: {
+                locationCode: school,
+                unitCode: buildActiveUnitCode,
+                buildDate,
+            },
+            inputs: {
+                staffTotal: originalInstructors.length,
+                syllabusItems: syllabusDetails.length,
+                highestPriorityEvents: highestPriorityEvents.length,
+                generatedEventsAtBuildStart: generatedEvents.length,
+            },
+            crewGroups: [] as any[],
+            queue: [] as any[],
+            attempts: [] as any[],
+            placements: [] as any[],
+            rejectionReasons: {},
+            summary: null,
+            conclusion: buildOperationalModel === 'fixed_crew'
+                ? ['Build report was saved before the Fixed Crew scheduler stage completed. Check attempts and rejectionReasons for the earlier failure point.']
+                : [`Fixed Crew scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`],
+        },
         final: null,
     };
 
@@ -6204,6 +6229,393 @@ function generateDfpInternal(
         event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-')
     );
 
+    const runFixedCrewBuild = (): Omit<ScheduleEvent, 'date'>[] => {
+        const diag = neoBuildDiag.fixedCrewPriority;
+        const fixedCrewUnit = buildActiveUnitCode;
+        const normaliseCrewValue = (value?: string | null): string => String(value || '').trim();
+        const normaliseCrewKey = (value?: string | null): string => normaliseCrewValue(value).toUpperCase();
+        const staffCatalogue = config.staffQualificationCatalogue || normaliseStaffQualificationCatalogue(null);
+        const picQualification = getQualificationsForOperationalModel(staffCatalogue, 'fixed_crew')
+            .find(qualification => (
+                normaliseQualificationToken(qualification.id) === 'pic'
+                || normaliseQualificationToken(qualification.code) === 'pic'
+                || normaliseQualificationToken(qualification.name) === 'pic'
+            ));
+        const roleMatchesStaff = (staff: Instructor, requiredRole: string): boolean => {
+            if (isPilotCrewPosition(requiredRole, buildCrewPositionTerminology)) {
+                return isPilotCrewPosition(staff.role, buildCrewPositionTerminology)
+                    || String(staff.role || '').trim().toLowerCase() === 'pilot';
+            }
+            return crewPositionValuesMatch(requiredRole, staff.role, buildCrewPositionTerminology);
+        };
+        const staffHasPicQualification = (staff: Instructor): boolean => {
+            if (!picQualification) return false;
+            return normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffCatalogue, false)
+                .includes(picQualification.id);
+        };
+        const isActiveFixedCrewStaff = (staff: Instructor): boolean => {
+            const staffUnit = String(staff.unit || '').trim().toUpperCase();
+            return Boolean(staff.name) && !staff.isAdminStaff && (!fixedCrewUnit || !staffUnit || staffUnit === fixedCrewUnit);
+        };
+        const crewGroups = new Map<string, Instructor[]>();
+        originalInstructors
+            .filter(isActiveFixedCrewStaff)
+            .forEach(staff => {
+                const crewKey = normaliseCrewKey(staff.crew);
+                if (!crewKey) return;
+                if (!crewGroups.has(crewKey)) crewGroups.set(crewKey, []);
+                crewGroups.get(crewKey)!.push(staff);
+            });
+        const fixedCrewUsage = new Map<string, number>();
+        const crewGroupSummaries = Array.from(crewGroups.entries())
+            .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }))
+            .map(([crew, members]) => {
+                const picMembers = members.filter(staffHasPicQualification);
+                fixedCrewUsage.set(crew, 0);
+                return {
+                    crew,
+                    members: members.map(staff => ({ name: staff.name, rank: staff.rank, role: staff.role })),
+                    memberCount: members.length,
+                    picCandidates: picMembers.map(staff => staff.name),
+                    roleInventory: members.reduce((counts: Record<string, number>, staff) => {
+                        const role = String(staff.role || 'Unspecified').trim() || 'Unspecified';
+                        counts[role] = (counts[role] || 0) + 1;
+                        return counts;
+                    }, {}),
+                };
+            });
+        diag.crewGroups = crewGroupSummaries;
+
+        const incrementFixedCrewRejection = (reason: string) => {
+            diag.rejectionReasons[reason] = (diag.rejectionReasons[reason] || 0) + 1;
+        };
+        const pushFixedCrewAttempt = (entry: Record<string, any>) => {
+            if (diag.attempts.length < 800) {
+                diag.attempts.push({
+                    sequence: diag.attempts.length + 1,
+                    timestamp: new Date().toISOString(),
+                    ...entry,
+                });
+            }
+        };
+        const pushFixedCrewPlacement = (entry: Record<string, any>) => {
+            if (diag.placements.length < 400) {
+                diag.placements.push({
+                    sequence: diag.placements.length + 1,
+                    timestamp: new Date().toISOString(),
+                    ...entry,
+                });
+            }
+        };
+        const getFixedCrewEventType = (item: Partial<SyllabusItemDetail> & Partial<ScheduleEvent>): ScheduleEvent['type'] | null => {
+            const rawType = String(item.type || '').trim().toLowerCase();
+            if (rawType === 'flight') return 'flight';
+            if (rawType === 'ftd' || rawType === 'sim') return 'ftd';
+            if (rawType === 'cpt') return 'cpt';
+            return null;
+        };
+        const getFixedCrewDuration = (item: Partial<SyllabusItemDetail> & Partial<ScheduleEvent>): number => {
+            const duration = Number((item as any).duration ?? (item as any).totalEventHours ?? (item as any).flightOrSimHours);
+            return Number.isFinite(duration) && duration > 0 ? duration : 1;
+        };
+        const getFixedCrewWindow = (eventType: ScheduleEvent['type']): { start: number; end: number } => {
+            if (eventType === 'ftd') return { start: ftdStartTime, end: ftdEndTime };
+            if (eventType === 'cpt') return { start: ftdStartTime, end: ftdEndTime };
+            return { start: flyingStartTime, end: flyingEndTime };
+        };
+        const buildFixedCrewEventFromPriority = (event: ScheduleEvent): Omit<ScheduleEvent, 'date'> | null => {
+            const eventType = getFixedCrewEventType(event);
+            if (!eventType) return null;
+            const { date: _date, ...rest } = event;
+            return {
+                ...rest,
+                type: eventType,
+                duration: getFixedCrewDuration(event),
+                flightType: 'Dual',
+                soloOrDual: 'Dual',
+                locationType: event.locationType || 'Local',
+                origin: event.origin || school,
+                destination: event.destination || school,
+                color: event.color || 'bg-emerald-500',
+            };
+        };
+        const buildFixedCrewEventFromSyllabus = (item: SyllabusItemDetail): Omit<ScheduleEvent, 'date'> | null => {
+            const eventType = getFixedCrewEventType(item);
+            if (!eventType) return null;
+            return {
+                id: uuidv4(),
+                type: eventType,
+                flightNumber: item.code || item.id,
+                duration: getFixedCrewDuration(item),
+                startTime: 0,
+                resourceId: '',
+                color: 'bg-emerald-500',
+                flightType: 'Dual',
+                soloOrDual: 'Dual',
+                locationType: 'Local',
+                origin: school,
+                destination: school,
+                eventCategory: 'staff_cat',
+                crewRequirement: item.crewRequirement || undefined,
+                aircraftConfigId: item.aircraftConfigId,
+                acceptableAircraftConfigs: item.acceptableAircraftConfigs,
+            };
+        };
+        const getFixedCrewResourceOptions = (event: Omit<ScheduleEvent, 'date'>): string[] => {
+            const prefix = event.type === 'flight' ? 'PC-21 ' : event.type === 'ftd' ? 'FTD ' : event.type === 'cpt' ? 'CPT ' : 'Ground ';
+            const count = event.type === 'flight' ? availableAircraftCount : event.type === 'ftd' ? ftdCount : event.type === 'cpt' ? cptCount : 6;
+            const options = Array.from({ length: Math.max(0, count) }, (_, index) => `${prefix}${index + 1}`);
+            if (event.type !== 'flight') return options;
+            return options.filter(resourceId => eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)));
+        };
+        const getFixedCrewRoleShortfalls = (members: Instructor[], event: Omit<ScheduleEvent, 'date'>): any[] => (
+            getCrewRequirementRoles(event.crewRequirement, buildAircraftCrewComposition)
+                .map(role => {
+                    const eligibleRoles = getCrewRequirementRoleOptions(role);
+                    const matchingMembers = members.filter(staff => eligibleRoles.some(requiredRole => roleMatchesStaff(staff, requiredRole)));
+                    const requiredCount = Math.max(0, Number(role.count) || 0);
+                    return matchingMembers.length >= requiredCount ? null : {
+                        role: role.role,
+                        eligibleRoles,
+                        required: requiredCount,
+                        available: matchingMembers.length,
+                    };
+                })
+                .filter(Boolean)
+        );
+        const getFixedCrewSwapCandidates = (shortfalls: any[], crewMembers: Instructor[], window: { start: number; end: number }): Record<string, string[]> => {
+            const crewNames = new Set(crewMembers.map(staff => staff.name));
+            return shortfalls.reduce((acc: Record<string, string[]>, shortfall: any) => {
+                acc[shortfall.role] = originalInstructors
+                    .filter(isActiveFixedCrewStaff)
+                    .filter(staff => !crewNames.has(staff.name))
+                    .filter(staff => shortfall.eligibleRoles.some((requiredRole: string) => roleMatchesStaff(staff, requiredRole)))
+                    .filter(staff => !isPersonStaticallyUnavailable(staff, window.start, window.end, buildDate, 'flight'))
+                    .map(staff => staff.name)
+                    .slice(0, 12);
+                return acc;
+            }, {});
+        };
+        const selectFixedCrewForEvent = (event: Omit<ScheduleEvent, 'date'>): { crew: string; members: Instructor[]; pic: Instructor } | null => {
+            const eventTypeForAvailability = event.type === 'ground' ? 'ground' : event.type;
+            const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
+            const candidates = Array.from(crewGroups.entries())
+                .sort(([leftCrew], [rightCrew]) =>
+                    (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0)
+                    || leftCrew.localeCompare(rightCrew, undefined, { numeric: true })
+                );
+            for (const [crew, members] of candidates) {
+                const pic = members.find(staffHasPicQualification);
+                const shortfalls = getFixedCrewRoleShortfalls(members, event);
+                const unavailableMembers = members.filter(staff =>
+                    isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, eventTypeForAvailability as any)
+                );
+                const hasExistingConflict = members.some(staff =>
+                    generatedEvents.some(existing => eventHasPerson(existing, staff.name) && priorityPersonnelConflict(event, existing))
+                );
+                const attempt = {
+                    event: event.flightNumber,
+                    crew,
+                    startTime: event.startTime,
+                    resourceId: event.resourceId || null,
+                    pic: pic?.name || null,
+                    shortfalls,
+                    unavailableMembers: unavailableMembers.map(staff => staff.name),
+                    swapCandidates: shortfalls.length > 0 ? getFixedCrewSwapCandidates(shortfalls, members, bookingWindow) : {},
+                    hasExistingConflict,
+                };
+                if (!pic) {
+                    incrementFixedCrewRejection('NO_PIC_IN_CREW');
+                    pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason: 'NO_PIC_IN_CREW' });
+                    continue;
+                }
+                if (shortfalls.length > 0) {
+                    incrementFixedCrewRejection('CREW_ROLE_SHORTFALL');
+                    pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason: 'CREW_ROLE_SHORTFALL' });
+                    continue;
+                }
+                if (unavailableMembers.length > 0) {
+                    incrementFixedCrewRejection('CREW_MEMBER_UNAVAILABLE');
+                    pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason: 'CREW_MEMBER_UNAVAILABLE' });
+                    continue;
+                }
+                if (hasExistingConflict) {
+                    incrementFixedCrewRejection('CREW_MEMBER_CONFLICT');
+                    pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason: 'CREW_MEMBER_CONFLICT' });
+                    continue;
+                }
+                pushFixedCrewAttempt({ ...attempt, outcome: 'accepted' });
+                return { crew, members, pic };
+            }
+            return null;
+        };
+        const tryPlaceFixedCrewEvent = (sourceEvent: Omit<ScheduleEvent, 'date'>, source: string, fixedStartTime?: number): boolean => {
+            const resourceOptions = getFixedCrewResourceOptions(sourceEvent);
+            if (resourceOptions.length === 0) {
+                incrementFixedCrewRejection('NO_RESOURCE_OPTIONS');
+                pushFixedCrewAttempt({ event: sourceEvent.flightNumber, source, outcome: 'rejected', reason: 'NO_RESOURCE_OPTIONS' });
+                return false;
+            }
+            const window = getFixedCrewWindow(sourceEvent.type);
+            const duration = getFixedCrewDuration(sourceEvent);
+            const starts = Number.isFinite(fixedStartTime)
+                ? [Number(fixedStartTime)]
+                : Array.from({ length: Math.max(0, Math.floor(((window.end - window.start - duration) / 0.25) + 1)) }, (_, index) => Number((window.start + index * 0.25).toFixed(2)));
+            for (const startTime of starts) {
+                if (startTime < window.start || startTime + duration > window.end) {
+                    incrementFixedCrewRejection('OUTSIDE_BUILD_WINDOW');
+                    continue;
+                }
+                for (const resourceId of resourceOptions) {
+                    const candidate = ensurePriorityResourceConfigCompatibility({
+                        ...sourceEvent,
+                        id: sourceEvent.id || uuidv4(),
+                        startTime,
+                        duration,
+                        resourceId,
+                    });
+                    if (candidate.type === 'flight') {
+                        const dispatchViolation = getAirCombatHourlyDispatchLimitViolation(candidate.startTime);
+                        if (dispatchViolation) {
+                            incrementFixedCrewRejection('HOURLY_DISPATCH_LIMIT');
+                            pushFixedCrewAttempt({ event: candidate.flightNumber, source, startTime, resourceId, outcome: 'rejected', ...dispatchViolation });
+                            continue;
+                        }
+                    }
+                    const resourceConflict = generatedEvents.find(existing => priorityResourceConflict(candidate, existing));
+                    if (resourceConflict) {
+                        incrementFixedCrewRejection('RESOURCE_CONFLICT');
+                        pushFixedCrewAttempt({ event: candidate.flightNumber, source, startTime, resourceId, outcome: 'rejected', reason: 'RESOURCE_CONFLICT', conflictingEvent: resourceConflict.flightNumber });
+                        continue;
+                    }
+                    const assignment = selectFixedCrewForEvent(candidate);
+                    if (!assignment) continue;
+                    const placed: Omit<ScheduleEvent, 'date'> & { _source?: string } = {
+                        ...candidate,
+                        instructor: assignment.pic.name,
+                        pilot: assignment.pic.name,
+                        student: `CREW ${assignment.crew}`,
+                        crew: `CREW ${assignment.crew}`,
+                        group: `CREW ${assignment.crew}`,
+                        attendees: assignment.members.map(staff => staff.name),
+                        fixedCrewGroup: assignment.crew,
+                        fixedCrewPic: assignment.pic.name,
+                        fixedCrewManifestStatus: 'complete',
+                        fixedCrewManifestNotes: `NEO Build assigned whole crew group ${assignment.crew}.`,
+                        flightType: 'Dual',
+                        soloOrDual: 'Dual',
+                        _source: source,
+                    };
+                    generatedEvents.push(placed);
+                    fixedCrewUsage.set(assignment.crew, (fixedCrewUsage.get(assignment.crew) || 0) + 1);
+                    pushFixedCrewPlacement({
+                        event: placed.flightNumber,
+                        source,
+                        startTime,
+                        resourceId,
+                        crew: assignment.crew,
+                        pic: assignment.pic.name,
+                        attendees: placed.attendees,
+                    });
+                    return true;
+                }
+            }
+            incrementFixedCrewRejection('NO_VALID_PLACEMENT');
+            pushFixedCrewAttempt({ event: sourceEvent.flightNumber, source, outcome: 'rejected', reason: 'NO_VALID_PLACEMENT' });
+            return false;
+        };
+
+        if (!picQualification) {
+            diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
+            diag.conclusion = ['Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings - Staff Qualifications.'];
+            saveNeoBuildDiag('final');
+            return generatedEvents;
+        }
+        if (crewGroups.size === 0) {
+            diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
+            diag.conclusion = ['Fixed Crew NEO Build found no staff with a crew group in the active unit.'];
+            saveNeoBuildDiag('final');
+            return generatedEvents;
+        }
+
+        const fixedCrewPriorityQueue = highestPriorityEvents
+            .filter(event => priorityEventMatchesBuildDate(event, buildDate))
+            .filter(event => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed)
+            .map(event => ({ source: isTaskingPriorityEvent(event) ? 'fixed-crew-tasking' : isCurrencyPriorityEvent(event) ? 'fixed-crew-currency' : 'fixed-crew-priority', event: buildFixedCrewEventFromPriority(event), fixedStartTime: event.isTimeFixed ? event.startTime : undefined }))
+            .filter((item): item is { source: string; event: Omit<ScheduleEvent, 'date'>; fixedStartTime?: number } => Boolean(item.event));
+        const activeUnitPackageItems = syllabusDetails
+            .filter(item => item.isActive !== false && !isSyllabusCourseShell(item))
+            .filter(item => item.lmpType === 'Staff CAT')
+            .filter(item => !fixedCrewUnit || String(item.unit || '').trim().toUpperCase() === fixedCrewUnit)
+            .map(item => ({ item, event: buildFixedCrewEventFromSyllabus(item) }))
+            .filter((item): item is { item: SyllabusItemDetail; event: Omit<ScheduleEvent, 'date'> } => Boolean(item.event))
+            .sort((left, right) =>
+                Number((left.item as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right.item as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
+                (left.item.orderKey || '').localeCompare(right.item.orderKey || '') ||
+                left.item.code.localeCompare(right.item.code)
+            )
+            .slice(0, Math.max(1, crewGroups.size * 2));
+        const fixedCrewQueue = [
+            ...fixedCrewPriorityQueue,
+            ...activeUnitPackageItems.map(({ event }) => ({ source: 'fixed-crew-package', event })),
+        ];
+        diag.queue = fixedCrewQueue.map(item => ({
+            source: item.source,
+            event: item.event.flightNumber,
+            type: item.event.type,
+            duration: item.event.duration,
+            fixedStartTime: item.fixedStartTime ?? null,
+            crewRequirement: item.event.crewRequirement || null,
+        }));
+        recordProgress({ message: 'Scheduling Fixed Crew events...', percentage: 55 });
+        fixedCrewQueue.forEach(item => {
+            tryPlaceFixedCrewEvent(item.event, item.source, item.fixedStartTime);
+        });
+
+        const sortedFixedCrewEvents = [...generatedEvents].sort((left, right) =>
+            left.resourceId.localeCompare(right.resourceId, undefined, { numeric: true }) ||
+            left.startTime - right.startTime
+        );
+        diag.summary = {
+            placementCount: diag.placements.length,
+            queueCount: fixedCrewQueue.length,
+            crewGroups: crewGroups.size,
+            rejectionReasons: diag.rejectionReasons,
+        };
+        diag.conclusion = diag.placements.length > 0
+            ? [`Fixed Crew NEO Build placed ${diag.placements.length} event(s) using whole crew groups. Swaps are diagnostic-only in this phase and are not auto-applied.`]
+            : ['Fixed Crew scheduler ran but did not place any events. Inspect fixedCrewPriority.attempts and rejectionReasons.'];
+        neoBuildDiag.final = {
+            totalEvents: sortedFixedCrewEvents.length,
+            byType: sortedFixedCrewEvents.reduce<Record<string, number>>((acc, event) => {
+                acc[event.type] = (acc[event.type] || 0) + 1;
+                return acc;
+            }, {}),
+            bySource: sortedFixedCrewEvents.reduce<Record<string, number>>((acc, event: any) => {
+                const sourceKey = event._source || 'unknown';
+                acc[sourceKey] = (acc[sourceKey] || 0) + 1;
+                return acc;
+            }, {}),
+            firstEvents: sortedFixedCrewEvents.slice(0, 80).map(event => ({
+                id: event.id,
+                flightNumber: event.flightNumber,
+                type: event.type,
+                resourceId: event.resourceId,
+                startTime: event.startTime,
+                duration: event.duration,
+                pilot: event.pilot,
+                crew: event.crew,
+                fixedCrewGroup: event.fixedCrewGroup,
+                fixedCrewPic: event.fixedCrewPic,
+                attendees: event.attendees,
+                source: (event as any)._source,
+            })),
+        };
+        saveNeoBuildDiag('final');
+        recordProgress({ message: 'Build complete!', percentage: 100 });
+        return sortedFixedCrewEvents;
+    };
+
     const countAirCombatDispatchesInWindow = (windowStart: number, windowEnd: number): number =>
         generatedEvents.filter(event =>
             event.type === 'flight' &&
@@ -6265,6 +6677,10 @@ function generateDfpInternal(
 
         return null;
     };
+
+    if (buildOperationalModel === 'fixed_crew') {
+        return runFixedCrewBuild();
+    }
 
     const remedialInstructorOverrideKey = (traineeName?: string, eventCode?: string): string =>
         `${normalizeBuildPersonnelName(traineeName)}::${normalizeLmpEventId(eventCode || '')}`;
@@ -22311,7 +22727,7 @@ const App: React.FC = () => {
     const canRunValidation = canUsePlatformPermission('dfp.validation');
     const canPublishDfp = canUsePlatformPermission('dfp.publish');
     const canRunNeoBuild = canUsePlatformPermission('neo.run');
-    const isNeoCapableOperationalModel = activeOperationalModel === 'flight_school' || activeOperationalModel === 'air_combat';
+    const isNeoCapableOperationalModel = activeOperationalModel === 'flight_school' || activeOperationalModel === 'air_combat' || activeOperationalModel === 'fixed_crew';
     const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
     const modelUnavailableLeftViews = activeOperationalModel === 'air_combat' || activeOperationalModel === 'fixed_crew' ? ['Trainee'] : [];
     const modelUnavailableRightViews = activeOperationalModel === 'air_combat' ? ['NextDayTraineeSchedule'] : [];
@@ -26609,6 +27025,7 @@ const App: React.FC = () => {
                 runtimeAircraftCrewComposition: activeAircraftCrewComposition,
             },
             crewPositionTerminology: activeCrewPositionTerminology,
+            staffQualificationCatalogue: activeStaffQualificationCatalogue,
             remedialPrioritySyncTrace: (window as any).__lastRemedialPrioritySyncTrace || [],
             remedialDataMovementTrace: (window as any).__lastRemedialDataMovementTrace || [],
             taskProvenancePreBuild: (window as any).__lastTaskingProvenancePreBuild || null,
