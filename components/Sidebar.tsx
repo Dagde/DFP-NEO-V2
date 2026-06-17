@@ -20,6 +20,7 @@ interface SidebarProps {
     allTraineesData?: any[];
     canAccessView?: (view: string) => boolean;
     modelUnavailableViews?: string[];
+    colourKeyItems?: Array<{ key: string; label: string; color: string }>;
 }
 
 const formatCourseName = (name: string): string => {
@@ -29,7 +30,7 @@ const formatCourseName = (name: string): string => {
   return name.replace(/^CSE\s*/i, 'ADF').replace(' ', '');
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [] }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [] }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
 
@@ -129,6 +130,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
   }, [allTraineesData, courseColors]);
 
   const allCourses = filteredCourses;
+  const keyItems = colourKeyItems.length > 0
+    ? colourKeyItems.slice(0, 12)
+    : allCourses.map(([courseName, color]) => ({
+        key: `course:${courseName}`,
+        label: formatCourseName(courseName),
+        color,
+      }));
 
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
@@ -228,21 +236,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
         {/* BOTTOM FIXED CONTAINER */}
         <div className="flex-shrink-0 border-t border-gray-700">
-          {/* Courses Legend */}
+          {/* Colour Key */}
           <div data-sidebar-course-legend="true" className="border-t border-gray-700 flex-shrink-0">
             <div className="px-4 pt-4 mb-2">
-              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Courses</span>
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Key</span>
             </div>
             <div className="px-4 pb-2 flex justify-center">
               <div className="flex-1 min-w-0">
-                {allCourses.map(([courseName, color]) => (
-                  <div key={courseName} className="py-1 flex items-center justify-center">
+                {keyItems.map(item => (
+                  <div key={item.key} className="py-1 flex items-center justify-center">
                     <span
                       data-course-color="true"
-                      className={`h-3 w-3 rounded-full ${(color || '').startsWith('#') ? '' : color} mr-2 flex-shrink-0`}
-                      style={(color || '').startsWith('#') ? { backgroundColor: darkenHexColor(color) } : {}}
+                      className={`h-3 w-3 rounded-full ${(item.color || '').startsWith('#') ? '' : item.color} mr-2 flex-shrink-0`}
+                      style={(item.color || '').startsWith('#') ? { backgroundColor: darkenHexColor(item.color) } : {}}
                     ></span>
-                    <span className="text-[9px] text-gray-300">{formatCourseName(courseName)}</span>
+                    <span className="text-[9px] text-gray-300">{item.label}</span>
                   </div>
                 ))}
               </div>

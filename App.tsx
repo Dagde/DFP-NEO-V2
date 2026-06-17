@@ -106,6 +106,15 @@ import {
     normaliseFixedCrewTrainingPriorityWeights,
     type FixedCrewTrainingStreamPriority,
 } from './utils/fixedCrewTraining';
+import {
+    applyFixedCrewTileColour,
+    buildFixedCrewTileColourKey,
+    getFixedCrewTileColourModeForUnit,
+    normaliseFixedCrewTileColourMode,
+    normaliseFixedCrewTileColourModeByUnit,
+    resolveFixedCrewTileColour,
+    type FixedCrewTileColourMode,
+} from './utils/fixedCrewTileColours';
 import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
@@ -4282,6 +4291,7 @@ interface DfpConfig {
   activeUnitCode?: string;
   airCombatSchedulingWeights?: any;
   fixedCrewTrainingPriorities?: FixedCrewTrainingStreamPriority[];
+  fixedCrewTileColourMode?: FixedCrewTileColourMode;
   instructors: Instructor[];
   trainees: Trainee[];
   syllabus: SyllabusItemDetail[];
@@ -6249,6 +6259,7 @@ function generateDfpInternal(
     const runFixedCrewBuild = (): Omit<ScheduleEvent, 'date'>[] => {
         const diag = neoBuildDiag.fixedCrewPriority;
         const fixedCrewUnit = buildActiveUnitCode;
+        const fixedCrewTileColourMode = normaliseFixedCrewTileColourMode(config.fixedCrewTileColourMode);
         const normaliseCrewValue = (value?: string | null): string => String(value || '').trim();
         const normaliseCrewKey = (value?: string | null): string => normaliseCrewValue(value).toUpperCase();
         const staffCatalogue = config.staffQualificationCatalogue || normaliseStaffQualificationCatalogue(null);
@@ -6737,6 +6748,14 @@ function generateDfpInternal(
                     }
                     const placed: Omit<ScheduleEvent, 'date'> & { _source?: string } = {
                         ...candidate,
+                        color: resolveFixedCrewTileColour({
+                            ...candidate,
+                            crew: `CREW ${assignment.crew}`,
+                            group: `CREW ${assignment.crew}`,
+                            student: `CREW ${assignment.crew}`,
+                            fixedCrewGroup: assignment.crew,
+                            _source: source,
+                        } as any, fixedCrewTileColourMode),
                         instructor: assignment.pic.name,
                         pilot: assignment.pic.name,
                         student: `CREW ${assignment.crew}`,
@@ -17340,6 +17359,7 @@ const App: React.FC = () => {
     }, [showDepartureDensityOverlay]);
 
     const [tileStatusSettings, setTileStatusSettings] = useState<TileStatusSettings>(() => readTileStatusSettingsFromLocalStorage());
+    const [fixedCrewTileColourModeByUnit, setFixedCrewTileColourModeByUnit] = useState<Record<string, FixedCrewTileColourMode>>({});
 
     useEffect(() => {
         writeTileStatusSettingsToLocalStorage(tileStatusSettings);
@@ -17924,6 +17944,19 @@ const App: React.FC = () => {
 
     const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel('flight_school');
     const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
+    const activeFixedCrewTileColourUnitKey = useMemo(() => (
+        String(activeContextUnitCodes[0] || activeUnitCode || 'DEFAULT').trim().toUpperCase() || 'DEFAULT'
+    ), [activeContextUnitCodes, activeUnitCode]);
+    const activeFixedCrewTileColourMode = useMemo(() => (
+        getFixedCrewTileColourModeForUnit(fixedCrewTileColourModeByUnit, activeFixedCrewTileColourUnitKey)
+    ), [fixedCrewTileColourModeByUnit, activeFixedCrewTileColourUnitKey]);
+    const handleUpdateFixedCrewTileColourMode = useCallback((mode: FixedCrewTileColourMode) => {
+        const nextMode = normaliseFixedCrewTileColourMode(mode);
+        setFixedCrewTileColourModeByUnit(prev => ({
+            ...prev,
+            [activeFixedCrewTileColourUnitKey]: nextMode,
+        }));
+    }, [activeFixedCrewTileColourUnitKey]);
     const activeTaskProfiles = useMemo(
         () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
         [activeOperationalModel, platformConfig],
@@ -21179,6 +21212,9 @@ const App: React.FC = () => {
                 if (Array.isArray((saved as any).fixedCrewTrainingPriorities)) {
                     setFixedCrewTrainingPriorities(normaliseFixedCrewTrainingPriorityWeights((saved as any).fixedCrewTrainingPriorities));
                 }
+                if ((saved as any).fixedCrewTileColourModeByUnit) {
+                    setFixedCrewTileColourModeByUnit(normaliseFixedCrewTileColourModeByUnit((saved as any).fixedCrewTileColourModeByUnit));
+                }
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
                 if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
                 // Merge DB currencies with initial defaults — ensures new fields/currencies are always present
@@ -21319,6 +21355,7 @@ const App: React.FC = () => {
             coursePriorities,
             coursePercentages: Object.fromEntries(coursePercentages),
             fixedCrewTrainingPriorities,
+            fixedCrewTileColourModeByUnit,
         });
 
         saveSettingsToDB(snapshot, sessionUser?.userId);
@@ -21337,7 +21374,7 @@ const App: React.FC = () => {
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements, unitCurrencyDefinitions,
         organisationSettings,
-        coursePriorities, coursePercentages, fixedCrewTrainingPriorities,
+        coursePriorities, coursePercentages, fixedCrewTrainingPriorities, fixedCrewTileColourModeByUnit,
     ]);
 
     // Baseline schedule state
@@ -21664,6 +21701,23 @@ const App: React.FC = () => {
     const eventsForStaffTraineeSchedule = useMemo(() => {
         return eventsForDate.filter(e => !e.resourceId.startsWith('STBY'));
     }, [eventsForDate]);
+
+    const fixedCrewTileColourKeyItems = useMemo(() => {
+        if (activeOperationalModel !== 'fixed_crew') return [];
+        if (activeFixedCrewTileColourMode !== 'crew') {
+            return buildFixedCrewTileColourKey(eventsForDate, activeFixedCrewTileColourMode);
+        }
+        const activeUnits = activeContextUnitCodeSet.size > 0
+            ? activeContextUnitCodeSet
+            : new Set([String(activeUnitCode || '').trim().toUpperCase()].filter(Boolean));
+        const crewReferenceEvents = instructorsData
+            .filter(staff => {
+                const staffUnit = String(staff.unit || '').trim().toUpperCase();
+                return !staff.isAdminStaff && String(staff.crew || '').trim() && (activeUnits.size === 0 || activeUnits.has(staffUnit));
+            })
+            .map(staff => ({ fixedCrewGroup: staff.crew } as Partial<ScheduleEvent>));
+        return buildFixedCrewTileColourKey(crewReferenceEvents.length > 0 ? crewReferenceEvents : eventsForDate, activeFixedCrewTileColourMode);
+    }, [activeContextUnitCodeSet, activeFixedCrewTileColourMode, activeOperationalModel, activeUnitCode, eventsForDate, instructorsData]);
 
     const nextDayEventsForStaffTraineeSchedule = useMemo(() => {
         // Include ALL events including STBY in the staff/trainee schedule view.
@@ -22188,8 +22242,12 @@ const App: React.FC = () => {
                 else if (startsBeforeToday) segmentType = 'end';
                 else if (endsAfterToday) segmentType = 'start';
 
+                const displayEvent = activeOperationalModel === 'fixed_crew'
+                    ? applyFixedCrewTileColour(event, activeFixedCrewTileColourMode)
+                    : event;
+
                 segments.push({
-                    ...event,
+                    ...displayEvent,
                     segmentStartTime: segmentStartTimeInHours,
                     segmentDuration: segmentDurationInHours,
                     segmentType
@@ -22197,7 +22255,7 @@ const App: React.FC = () => {
             }
         }
         return segments;
-    }, [date, publishedSchedules]);
+    }, [activeFixedCrewTileColourMode, activeOperationalModel, date, publishedSchedules]);
 
     const staffAvailabilityDiagnosticEventIds = useMemo(() => {
         if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
@@ -27430,6 +27488,7 @@ const App: React.FC = () => {
             activeUnitCode,
             airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
             fixedCrewTrainingPriorities,
+            fixedCrewTileColourMode: activeFixedCrewTileColourMode,
             instructors: instructorsInBuild,
             trainees: traineesInBuild,
             syllabus: syllabusDetails,
@@ -33303,8 +33362,11 @@ appliedUpdates.forEach(update => {
                        resourceDisplayNames={resourceDisplayNames}
                        personnelDisplaySettings={personnelDisplaySettings}
                        instructorLabel={instructorLabel}
-                    canUsePlatformPermission={canUsePlatformPermission}
-                    activeUnitCode={activeTrainingReportUnitCode}
+                       canUsePlatformPermission={canUsePlatformPermission}
+                       activeUnitCode={activeTrainingReportUnitCode}
+                       activeOperationalModel={activeOperationalModel}
+                       fixedCrewTileColourMode={activeFixedCrewTileColourMode}
+                       onUpdateFixedCrewTileColourMode={handleUpdateFixedCrewTileColourMode}
 
                 />;
             case 'CurrencyBuilder':
@@ -34147,6 +34209,7 @@ appliedUpdates.forEach(update => {
                 allTraineesData={traineesData}
                 canAccessView={canAccessView}
                 modelUnavailableViews={modelUnavailableLeftViews}
+                colourKeyItems={fixedCrewTileColourKeyItems}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header

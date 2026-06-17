@@ -1,8 +1,22 @@
 import React from 'react';
 import { useTheme, AppTheme } from '../context/ThemeContext';
+import type { FixedCrewTileColourMode } from '../utils/fixedCrewTileColours';
 
-const AppearanceSettings: React.FC = () => {
+interface AppearanceSettingsProps {
+    activeOperationalModel?: string;
+    activeUnitCode?: string;
+    fixedCrewTileColourMode?: FixedCrewTileColourMode;
+    onUpdateFixedCrewTileColourMode?: (mode: FixedCrewTileColourMode) => void;
+}
+
+const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
+    activeOperationalModel,
+    activeUnitCode,
+    fixedCrewTileColourMode = 'event_type',
+    onUpdateFixedCrewTileColourMode,
+}) => {
     const { theme, setTheme } = useTheme();
+    const isFixedCrewModel = activeOperationalModel === 'fixed_crew';
 
     const options: { value: AppTheme; label: string; description: string; tags: string[] }[] = [
         {
@@ -183,6 +197,68 @@ const AppearanceSettings: React.FC = () => {
                     })}
                 </div>
             </div>
+
+            {isFixedCrewModel && (
+                <div className="max-w-5xl rounded-lg border border-gray-700 bg-gray-900/40 p-5">
+                    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h3 className="text-base font-bold text-white">Fixed Crew DFP Tile Colours</h3>
+                            <p className="mt-1 text-sm text-gray-400">
+                                Unit scope: <span className="font-semibold text-gray-200">{activeUnitCode || 'Active unit'}</span>
+                            </p>
+                        </div>
+                        <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-100">
+                            Fixed Crew
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {[
+                            {
+                                value: 'event_type' as const,
+                                label: 'Event Type',
+                                description: 'Courses, packages, taskings, currency, and other event types each use their own colour.',
+                                swatches: ['bg-cyan-500/70', 'bg-violet-500/70', 'bg-sky-500/70', 'bg-green-500/70'],
+                            },
+                            {
+                                value: 'crew' as const,
+                                label: 'Crew Group',
+                                description: 'Each crew group uses a different colour so whole-crew tasking is easier to scan.',
+                                swatches: ['bg-sky-500/70', 'bg-green-500/70', 'bg-violet-500/70', 'bg-amber-500/70'],
+                            },
+                        ].map(option => {
+                            const isSelected = fixedCrewTileColourMode === option.value;
+                            return (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => onUpdateFixedCrewTileColourMode?.(option.value)}
+                                    className={`rounded-lg border p-4 text-left transition ${
+                                        isSelected
+                                            ? 'border-cyan-400 bg-cyan-500/10 shadow-lg shadow-cyan-950/30'
+                                            : 'border-gray-700 bg-gray-800/70 hover:border-gray-500 hover:bg-gray-800'
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <span className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 ${isSelected ? 'border-cyan-400' : 'border-gray-500'}`}>
+                                            {isSelected && <span className="h-2 w-2 rounded-full bg-cyan-400" />}
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block text-sm font-semibold text-white">{option.label}</span>
+                                            <span className="mt-1 block text-xs leading-snug text-gray-400">{option.description}</span>
+                                        </span>
+                                    </div>
+                                    <div className="mt-4 grid grid-cols-4 gap-2">
+                                        {option.swatches.map((swatch, index) => (
+                                            <span key={`${option.value}-${index}`} className={`h-7 rounded border border-white/15 ${swatch}`} />
+                                        ))}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Current status */}
             <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-700/30 border border-gray-700 rounded-lg px-3 py-2 max-w-5xl">

@@ -22,6 +22,7 @@ import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TileStatusSettings } from '../utils/tileStatusSettings';
+import type { FixedCrewTileColourMode } from '../utils/fixedCrewTileColours';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 interface SettingsViewWithMenuProps {
@@ -93,6 +94,9 @@ interface SettingsViewWithMenuProps {
     instructorLabel?: string;
     canUsePlatformPermission?: (permissionId: string) => boolean;
     activeUnitCode?: string;
+    activeOperationalModel?: string;
+    fixedCrewTileColourMode?: FixedCrewTileColourMode;
+    onUpdateFixedCrewTileColourMode?: (mode: FixedCrewTileColourMode) => void;
     settingsLoaded?: boolean;
     organisationSettings?: {
         staffSharingEnabled: boolean;
@@ -1810,7 +1814,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     )}
                     {activeSection === 'appearance' && (
                         <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
-                            <AppearanceSettings />
+                            <AppearanceSettings
+                                activeOperationalModel={props.activeOperationalModel}
+                                activeUnitCode={props.activeUnitCode}
+                                fixedCrewTileColourMode={props.fixedCrewTileColourMode}
+                                onUpdateFixedCrewTileColourMode={props.onUpdateFixedCrewTileColourMode}
+                            />
                         </div>
                     )}
                     {activeSection === 'people-profile' && (

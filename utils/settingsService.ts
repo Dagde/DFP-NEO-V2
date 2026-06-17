@@ -6,6 +6,7 @@
 
 import { getAppApiBase } from './externalDataControls';
 import { DEFAULT_TILE_STATUS_SETTINGS, normaliseTileStatusSettings, type TileStatusSettings } from './tileStatusSettings';
+import { normaliseFixedCrewTileColourModeByUnit, type FixedCrewTileColourMode } from './fixedCrewTileColours';
 import type { FlyingWindowExclusionPeriod } from '../types';
 
 export interface ServiceDefinition {
@@ -79,6 +80,7 @@ export interface AppSettingsData {
   coursePriorities: string[];
   coursePercentages: Record<string, number>;
   fixedCrewTrainingPriorities?: any[];
+  fixedCrewTileColourModeByUnit?: Record<string, FixedCrewTileColourMode>;
   /** NEO Build aircraft capacity. Separate from live DFP aircraft availability. */
   neoAvailableAircraftCount?: number;
   /** NEO Build aircraft capacity by configuration id. Empty strings mean unset. */
@@ -330,6 +332,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     coursePriorities: state.coursePriorities || [],
     coursePercentages: state.coursePercentages || {},
     fixedCrewTrainingPriorities: Array.isArray(state.fixedCrewTrainingPriorities) ? state.fixedCrewTrainingPriorities : [],
+    fixedCrewTileColourModeByUnit: normaliseFixedCrewTileColourModeByUnit(state.fixedCrewTileColourModeByUnit),
     neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
     neoAircraftConfigCapacities: state.neoAircraftConfigCapacities || {},
     neoAircraftCapacityByUnit: state.neoAircraftCapacityByUnit || {},

@@ -1468,6 +1468,92 @@ const writeTileStatusSettingsToLocalStorage = (settings) => {
   } catch {
   }
 };
+const DEFAULT_FIXED_CREW_TILE_COLOUR_MODE = "event_type";
+const EVENT_TYPE_COLOURS = {
+  task: { key: "task", label: "Task", color: "bg-cyan-500/70" },
+  currency: { key: "currency", label: "Currency", color: "bg-violet-500/70" },
+  course: { key: "course", label: "Course", color: "bg-sky-500/70" },
+  package: { key: "package", label: "Package", color: "bg-green-500/70" },
+  other: { key: "other", label: "Other", color: "bg-gray-500/70" }
+};
+const EVENT_TYPE_ORDER = ["task", "currency", "course", "package", "other"];
+const CREW_COLOURS = [
+  "bg-sky-500/70",
+  "bg-green-500/70",
+  "bg-violet-500/70",
+  "bg-amber-500/70",
+  "bg-cyan-500/70",
+  "bg-fuchsia-500/70",
+  "bg-teal-500/70",
+  "bg-orange-500/70",
+  "bg-blue-500/70",
+  "bg-rose-500/70",
+  "bg-lime-500/70",
+  "bg-purple-500/70"
+];
+const normaliseFixedCrewTileColourMode = (value) => value === "crew" ? "crew" : DEFAULT_FIXED_CREW_TILE_COLOUR_MODE;
+const normaliseFixedCrewTileColourModeByUnit = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).map(([unitCode, mode]) => [
+      String(unitCode || "").trim().toUpperCase(),
+      normaliseFixedCrewTileColourMode(mode)
+    ]).filter(([unitCode]) => Boolean(unitCode))
+  );
+};
+const getFixedCrewTileColourModeForUnit = (modesByUnit, unitCode) => {
+  const key = String(unitCode || "").trim().toUpperCase() || "DEFAULT";
+  return normaliseFixedCrewTileColourMode(modesByUnit?.[key] || modesByUnit?.DEFAULT);
+};
+const normaliseCrewValue = (value) => String(value || "").trim().replace(/^CREW\s*/i, "").trim();
+const getFixedCrewGroupForTileColour = (event) => {
+  const explicit = normaliseCrewValue(event.fixedCrewGroup);
+  if (explicit) return explicit;
+  return normaliseCrewValue(event.crew || event.group || event.student);
+};
+const isFixedCrewScheduleEvent = (event) => {
+  const source = String(event._source || "").trim().toLowerCase();
+  return Boolean(
+    getFixedCrewGroupForTileColour(event) || source.startsWith("fixed-crew") || source.includes("fixed-crew")
+  );
+};
+const getFixedCrewEventTypeColourKey = (event) => {
+  const source = String(event._source || "").trim().toLowerCase();
+  const category = String(event.eventCategory || "").trim().toLowerCase();
+  const flightNumber = String(event.flightNumber || "").trim().toUpperCase();
+  if (event.isTaskingRequest || event.taskingRequestId || event.taskingName || source.includes("task")) return "task";
+  if (event.currencyDraftId || event.currency || category === "currency" || category === "lmp_currency" || source.includes("currency") || flightNumber === "CURR") return "currency";
+  if (source === "fixed-crew-course" || category === "lmp_event") return "course";
+  if (source === "fixed-crew-package" || category === "staff_cat") return "package";
+  return "other";
+};
+const getCrewColour = (crew) => {
+  const numeric = Number(String(crew).match(/\d+/)?.[0]);
+  if (Number.isFinite(numeric) && numeric > 0) return CREW_COLOURS[(numeric - 1) % CREW_COLOURS.length];
+  const hash = String(crew || "").split("").reduce((total, char) => total + char.charCodeAt(0), 0);
+  return CREW_COLOURS[Math.abs(hash) % CREW_COLOURS.length];
+};
+const resolveFixedCrewTileColour = (event, mode) => {
+  if (mode === "crew") {
+    const crew = getFixedCrewGroupForTileColour(event);
+    return crew ? getCrewColour(crew) : EVENT_TYPE_COLOURS.other.color;
+  }
+  return EVENT_TYPE_COLOURS[getFixedCrewEventTypeColourKey(event)]?.color || EVENT_TYPE_COLOURS.other.color;
+};
+const applyFixedCrewTileColour = (event, mode) => isFixedCrewScheduleEvent(event) ? { ...event, color: resolveFixedCrewTileColour(event, mode) } : event;
+const buildFixedCrewTileColourKey = (events, mode) => {
+  const fixedCrewEvents = events.filter(isFixedCrewScheduleEvent);
+  if (mode === "crew") {
+    const crews = Array.from(new Set(fixedCrewEvents.map(getFixedCrewGroupForTileColour).filter(Boolean))).sort((left, right) => left.localeCompare(right, void 0, { numeric: true, sensitivity: "base" }));
+    return crews.map((crew) => ({
+      key: `crew:${crew}`,
+      label: `Crew ${crew}`,
+      color: getCrewColour(crew)
+    }));
+  }
+  const presentTypes = new Set(fixedCrewEvents.map(getFixedCrewEventTypeColourKey));
+  return EVENT_TYPE_ORDER.filter((key) => key !== "other" || presentTypes.has("other")).filter((key) => key === "other" ? presentTypes.has("other") : true).map((key) => EVENT_TYPE_COLOURS[key]);
+};
 const SETTINGS_VERSION = "1.0";
 const ORG_ID = "default";
 let saveDebounceTimer = null;
@@ -1611,6 +1697,7 @@ const buildSettingsSnapshot = (state) => {
     coursePriorities: state.coursePriorities || [],
     coursePercentages: state.coursePercentages || {},
     fixedCrewTrainingPriorities: Array.isArray(state.fixedCrewTrainingPriorities) ? state.fixedCrewTrainingPriorities : [],
+    fixedCrewTileColourModeByUnit: normaliseFixedCrewTileColourModeByUnit(state.fixedCrewTileColourModeByUnit),
     neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
     neoAircraftConfigCapacities: state.neoAircraftConfigCapacities || {},
     neoAircraftCapacityByUnit: state.neoAircraftCapacityByUnit || {},
@@ -6011,7 +6098,7 @@ const formatCourseName = (name) => {
   }
   return name.replace(/^CSE\s*/i, "ADF").replace(" ", "");
 };
-const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [] }) => {
+const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [] }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = reactExports.useState(false);
   const [showUserSelector, setShowUserSelector] = reactExports.useState(false);
@@ -6078,6 +6165,11 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     );
   }, [allTraineesData, courseColors]);
   const allCourses = filteredCourses;
+  const keyItems = colourKeyItems.length > 0 ? colourKeyItems.slice(0, 12) : allCourses.map(([courseName, color]) => ({
+    key: `course:${courseName}`,
+    label: formatCourseName(courseName),
+    color
+  }));
   const dashboardViews = ["MyDashboard", "SupervisorDashboard"];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
   const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
@@ -6173,18 +6265,18 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 border-t border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-sidebar-course-legend": "true", className: "border-t border-gray-700 flex-shrink-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pt-4 mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-semibold text-gray-500 uppercase tracking-wider", children: "Courses" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pb-2 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-w-0", children: allCourses.map(([courseName, color]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-1 flex items-center justify-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pt-4 mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-semibold text-gray-500 uppercase tracking-wider", children: "Key" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pb-2 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-w-0", children: keyItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-1 flex items-center justify-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "span",
               {
                 "data-course-color": "true",
-                className: `h-3 w-3 rounded-full ${(color || "").startsWith("#") ? "" : color} mr-2 flex-shrink-0`,
-                style: (color || "").startsWith("#") ? { backgroundColor: darkenHexColor(color) } : {}
+                className: `h-3 w-3 rounded-full ${(item.color || "").startsWith("#") ? "" : item.color} mr-2 flex-shrink-0`,
+                style: (item.color || "").startsWith("#") ? { backgroundColor: darkenHexColor(item.color) } : {}
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: formatCourseName(courseName) })
-          ] }, courseName)) }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: item.label })
+          ] }, item.key)) }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-sidebar-user-footer": "true", className: "p-2 border-t border-gray-700 flex-shrink-0 flex justify-center items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] text-gray-500 font-light", children: [
           currentUserRank,
@@ -52499,8 +52591,14 @@ const OrganisationSettings = ({
     ] })
   ] });
 };
-const AppearanceSettings = () => {
+const AppearanceSettings = ({
+  activeOperationalModel,
+  activeUnitCode,
+  fixedCrewTileColourMode = "event_type",
+  onUpdateFixedCrewTileColourMode
+}) => {
   const { theme, setTheme } = useTheme();
+  const isFixedCrewModel = activeOperationalModel === "fixed_crew";
   const options = [
     {
       value: "dark",
@@ -52653,6 +52751,53 @@ const AppearanceSettings = () => {
         opt.value
       );
     }) }) }),
+    isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-5xl rounded-lg border border-gray-700 bg-gray-900/40 p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-bold text-white", children: "Fixed Crew DFP Tile Colours" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-gray-400", children: [
+            "Unit scope: ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-200", children: activeUnitCode || "Active unit" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-100", children: "Fixed Crew" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2", children: [
+        {
+          value: "event_type",
+          label: "Event Type",
+          description: "Courses, packages, taskings, currency, and other event types each use their own colour.",
+          swatches: ["bg-cyan-500/70", "bg-violet-500/70", "bg-sky-500/70", "bg-green-500/70"]
+        },
+        {
+          value: "crew",
+          label: "Crew Group",
+          description: "Each crew group uses a different colour so whole-crew tasking is easier to scan.",
+          swatches: ["bg-sky-500/70", "bg-green-500/70", "bg-violet-500/70", "bg-amber-500/70"]
+        }
+      ].map((option) => {
+        const isSelected = fixedCrewTileColourMode === option.value;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => onUpdateFixedCrewTileColourMode?.(option.value),
+            className: `rounded-lg border p-4 text-left transition ${isSelected ? "border-cyan-400 bg-cyan-500/10 shadow-lg shadow-cyan-950/30" : "border-gray-700 bg-gray-800/70 hover:border-gray-500 hover:bg-gray-800"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 ${isSelected ? "border-cyan-400" : "border-gray-500"}`, children: isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-2 rounded-full bg-cyan-400" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-white", children: option.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-snug text-gray-400", children: option.description })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid grid-cols-4 gap-2", children: option.swatches.map((swatch, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-7 rounded border border-white/15 ${swatch}` }, `${option.value}-${index}`)) })
+            ]
+          },
+          option.value
+        );
+      }) })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 text-xs text-gray-400 bg-gray-700/30 border border-gray-700 rounded-lg px-3 py-2 max-w-5xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-sky-400 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 1.5, d: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -59533,7 +59678,15 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank
           }
         ),
-        activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppearanceSettings, {}) }),
+        activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          AppearanceSettings,
+          {
+            activeOperationalModel: props.activeOperationalModel,
+            activeUnitCode: props.activeUnitCode,
+            fixedCrewTileColourMode: props.fixedCrewTileColourMode,
+            onUpdateFixedCrewTileColourMode: props.onUpdateFixedCrewTileColourMode
+          }
+        ) }),
         activeSection === "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           PeopleProfilePage,
           {
@@ -72053,8 +72206,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const runFixedCrewBuild = () => {
     const diag = neoBuildDiag.fixedCrewPriority;
     const fixedCrewUnit = buildActiveUnitCode;
-    const normaliseCrewValue = (value) => String(value || "").trim();
-    const normaliseCrewKey = (value) => normaliseCrewValue(value).toUpperCase();
+    const fixedCrewTileColourMode = normaliseFixedCrewTileColourMode(config.fixedCrewTileColourMode);
+    const normaliseCrewValue2 = (value) => String(value || "").trim();
+    const normaliseCrewKey = (value) => normaliseCrewValue2(value).toUpperCase();
     const staffCatalogue = config.staffQualificationCatalogue || normaliseStaffQualificationCatalogue(null);
     const picQualification = getQualificationsForOperationalModel(staffCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic");
     const getFixedCrewRoleMatchTokens = (value) => {
@@ -72473,6 +72627,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           const placed = {
             ...candidate,
+            color: resolveFixedCrewTileColour({
+              ...candidate,
+              crew: `CREW ${assignment.crew}`,
+              group: `CREW ${assignment.crew}`,
+              student: `CREW ${assignment.crew}`,
+              fixedCrewGroup: assignment.crew,
+              _source: source
+            }, fixedCrewTileColourMode),
             instructor: assignment.pic.name,
             pilot: assignment.pic.name,
             student: `CREW ${assignment.crew}`,
@@ -81277,6 +81439,7 @@ const App = () => {
     localStorage.setItem("showDepartureDensityOverlay", JSON.stringify(showDepartureDensityOverlay));
   }, [showDepartureDensityOverlay]);
   const [tileStatusSettings, setTileStatusSettings] = reactExports.useState(() => readTileStatusSettingsFromLocalStorage());
+  const [fixedCrewTileColourModeByUnit, setFixedCrewTileColourModeByUnit] = reactExports.useState({});
   reactExports.useEffect(() => {
     writeTileStatusSettingsToLocalStorage(tileStatusSettings);
   }, [tileStatusSettings]);
@@ -81759,6 +81922,15 @@ const App = () => {
   const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
   const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
   const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
+  const activeFixedCrewTileColourUnitKey = reactExports.useMemo(() => String(activeContextUnitCodes[0] || activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeContextUnitCodes, activeUnitCode]);
+  const activeFixedCrewTileColourMode = reactExports.useMemo(() => getFixedCrewTileColourModeForUnit(fixedCrewTileColourModeByUnit, activeFixedCrewTileColourUnitKey), [fixedCrewTileColourModeByUnit, activeFixedCrewTileColourUnitKey]);
+  const handleUpdateFixedCrewTileColourMode = reactExports.useCallback((mode) => {
+    const nextMode = normaliseFixedCrewTileColourMode(mode);
+    setFixedCrewTileColourModeByUnit((prev) => ({
+      ...prev,
+      [activeFixedCrewTileColourUnitKey]: nextMode
+    }));
+  }, [activeFixedCrewTileColourUnitKey]);
   const activeTaskProfiles = reactExports.useMemo(
     () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
     [activeOperationalModel, platformConfig]
@@ -84363,6 +84535,9 @@ ${"=".repeat(60)}`);
         if (Array.isArray(saved.fixedCrewTrainingPriorities)) {
           setFixedCrewTrainingPriorities(normaliseFixedCrewTrainingPriorityWeights(saved.fixedCrewTrainingPriorities));
         }
+        if (saved.fixedCrewTileColourModeByUnit) {
+          setFixedCrewTileColourModeByUnit(normaliseFixedCrewTileColourModeByUnit(saved.fixedCrewTileColourModeByUnit));
+        }
         if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
         if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
         {
@@ -84492,7 +84667,8 @@ ${"=".repeat(60)}`);
       organisationSettings,
       coursePriorities,
       coursePercentages: Object.fromEntries(coursePercentages),
-      fixedCrewTrainingPriorities
+      fixedCrewTrainingPriorities,
+      fixedCrewTileColourModeByUnit
     });
     saveSettingsToDB(snapshot, sessionUser?.userId);
   }, [
@@ -84541,7 +84717,8 @@ ${"=".repeat(60)}`);
     organisationSettings,
     coursePriorities,
     coursePercentages,
-    fixedCrewTrainingPriorities
+    fixedCrewTrainingPriorities,
+    fixedCrewTileColourModeByUnit
   ]);
   const [baselineSchedules, setBaselineSchedules] = reactExports.useState({});
   const activeBaselineKey = getDailySnapshotKey(date);
@@ -84765,6 +84942,18 @@ ${"=".repeat(60)}`);
   const eventsForStaffTraineeSchedule = reactExports.useMemo(() => {
     return eventsForDate.filter((e) => !e.resourceId.startsWith("STBY"));
   }, [eventsForDate]);
+  const fixedCrewTileColourKeyItems = reactExports.useMemo(() => {
+    if (activeOperationalModel !== "fixed_crew") return [];
+    if (activeFixedCrewTileColourMode !== "crew") {
+      return buildFixedCrewTileColourKey(eventsForDate, activeFixedCrewTileColourMode);
+    }
+    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
+    const crewReferenceEvents = instructorsData.filter((staff) => {
+      const staffUnit = String(staff.unit || "").trim().toUpperCase();
+      return !staff.isAdminStaff && String(staff.crew || "").trim() && (activeUnits.size === 0 || activeUnits.has(staffUnit));
+    }).map((staff) => ({ fixedCrewGroup: staff.crew }));
+    return buildFixedCrewTileColourKey(crewReferenceEvents.length > 0 ? crewReferenceEvents : eventsForDate, activeFixedCrewTileColourMode);
+  }, [activeContextUnitCodeSet, activeFixedCrewTileColourMode, activeOperationalModel, activeUnitCode, eventsForDate, instructorsData]);
   const nextDayEventsForStaffTraineeSchedule = reactExports.useMemo(() => {
     return nextDayBuildEvents;
   }, [nextDayBuildEvents]);
@@ -85161,8 +85350,9 @@ ${"=".repeat(60)}`);
         if (startsBeforeToday && endsAfterToday) segmentType = "middle";
         else if (startsBeforeToday) segmentType = "end";
         else if (endsAfterToday) segmentType = "start";
+        const displayEvent = activeOperationalModel === "fixed_crew" ? applyFixedCrewTileColour(event, activeFixedCrewTileColourMode) : event;
         segments.push({
-          ...event,
+          ...displayEvent,
           segmentStartTime: segmentStartTimeInHours,
           segmentDuration: segmentDurationInHours,
           segmentType
@@ -85170,7 +85360,7 @@ ${"=".repeat(60)}`);
       }
     }
     return segments;
-  }, [date, publishedSchedules]);
+  }, [activeFixedCrewTileColourMode, activeOperationalModel, date, publishedSchedules]);
   const staffAvailabilityDiagnosticEventIds = reactExports.useMemo(() => {
     if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
       return /* @__PURE__ */ new Set();
@@ -89333,6 +89523,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       activeUnitCode,
       airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
       fixedCrewTrainingPriorities,
+      fixedCrewTileColourMode: activeFixedCrewTileColourMode,
       instructors: instructorsInBuild,
       trainees: traineesInBuild,
       syllabus: syllabusDetails,
@@ -94234,7 +94425,10 @@ ${error instanceof Error ? error.message : String(error)}`,
             personnelDisplaySettings,
             instructorLabel,
             canUsePlatformPermission,
-            activeUnitCode: activeTrainingReportUnitCode
+            activeUnitCode: activeTrainingReportUnitCode,
+            activeOperationalModel,
+            fixedCrewTileColourMode: activeFixedCrewTileColourMode,
+            onUpdateFixedCrewTileColourMode: handleUpdateFixedCrewTileColourMode
           }
         );
       case "CurrencyBuilder":
@@ -94948,7 +95142,8 @@ Do you want to replace the existing entry?`,
           school,
           allTraineesData: traineesData,
           canAccessView,
-          modelUnavailableViews: modelUnavailableLeftViews
+          modelUnavailableViews: modelUnavailableLeftViews,
+          colourKeyItems: fixedCrewTileColourKeyItems
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden", children: [
