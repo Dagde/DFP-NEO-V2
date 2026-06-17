@@ -72,6 +72,16 @@ const safe = (n: number | undefined | null, d = 2): string => {
   return Number(n).toFixed(d);
 };
 
+const formatFixedCrewDisplayGroup = (crew?: string | null): string => {
+  const cleaned = String(crew || '').replace(/^CREW\s*/i, '').trim();
+  if (!cleaned) return '';
+  const parts = cleaned.split('::');
+  if (parts.length < 2) return `CREW ${cleaned}`;
+  const unit = parts[0].trim();
+  const crewLabel = parts.slice(1).join('::').trim();
+  return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
+};
+
 const gradeColor = (v: number): string => {
   if (v >= 4.5) return 'text-emerald-400';
   if (v >= 3.5) return 'text-green-400';
@@ -1571,7 +1581,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 instructor: '',
                 pilot: '',
                 student: '',
-                group: nextGroup ? `CREW ${nextGroup}` : '',
+                group: nextGroup ? formatFixedCrewDisplayGroup(nextGroup) : '',
             };
             return nextCrew;
         });
@@ -1591,7 +1601,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 instructor: nextPic,
                 pilot: nextPic,
                 student: '',
-                group: fixedCrewGroup ? `CREW ${fixedCrewGroup}` : nextCrew[0].group,
+                group: fixedCrewGroup ? formatFixedCrewDisplayGroup(fixedCrewGroup) : nextCrew[0].group,
             };
             return nextCrew;
         });
@@ -1695,7 +1705,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 resourceId = '';
             }
             
-            const fixedCrewDisplayGroup = fixedCrewGroup ? `CREW ${fixedCrewGroup}` : c.group;
+            const fixedCrewDisplayGroup = fixedCrewGroup ? formatFixedCrewDisplayGroup(fixedCrewGroup) : c.group;
             const fixedCrewDisplayPic = fixedCrewPic || c.pilot || c.instructor;
 
             const savedEvent = {
@@ -2755,7 +2765,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     >
                                                         <option value="">Select crew</option>
                                                         {fixedCrewGroups.map(group => (
-                                                            <option key={group} value={group}>CREW {group}</option>
+                                                            <option key={group} value={group}>{formatFixedCrewDisplayGroup(group)}</option>
                                                         ))}
                                                     </select>
                                                 </div>
@@ -2938,7 +2948,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                                                 <div className="rounded bg-gray-900/50 px-3 py-2">
                                                     <span className="block text-xs uppercase tracking-wider text-gray-500">Crew</span>
-                                                    <span className="text-gray-100">{event.fixedCrewGroup ? `CREW ${event.fixedCrewGroup}` : 'Not assigned'}</span>
+                                                    <span className="text-gray-100">{event.fixedCrewGroup ? formatFixedCrewDisplayGroup(event.fixedCrewGroup) : 'Not assigned'}</span>
                                                 </div>
                                                 <div className="rounded bg-gray-900/50 px-3 py-2 sm:col-span-2">
                                                     <span className="block text-xs uppercase tracking-wider text-gray-500">PIC</span>

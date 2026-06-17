@@ -74,6 +74,16 @@ const formatDeploymentLabel = (event: ScheduleEvent | EventSegment): string => {
     return `DEPLOYMENT ${startTime}${startDate ? ` ${startDate}` : ''} - ${endTime}${endDate ? ` ${endDate}` : ''}`;
 };
 
+const formatFixedCrewDisplayGroup = (crew?: string | null): string => {
+    const cleaned = String(crew || '').replace(/^CREW\s*/i, '').trim();
+    if (!cleaned) return '';
+    const parts = cleaned.split('::');
+    if (parts.length < 2) return `CREW ${cleaned}`;
+    const unit = parts[0].trim();
+    const crewLabel = parts.slice(1).join('::').trim();
+    return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
+};
+
 // Helper to get local date string from timezone-adjusted currentTime
 // IMPORTANT: Use this instead of new Date().toISOString() to ensure consistent timezone handling
 const getLocalDateStringFromAdjustedTime = (date: Date): string => {
@@ -382,7 +392,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   
   const picName = isTaskingEvent || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : (isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor));
   const fixedCrewDisplay = isFixedCrewCrewEvent
-      ? `CREW ${String((event as any).fixedCrewGroup || '').replace(/^CREW\s+/i, '').trim()}`
+      ? formatFixedCrewDisplayGroup((event as any).fixedCrewGroup)
       : '';
   const studentName = isFixedCrewCrewEvent
       ? fixedCrewDisplay

@@ -66,6 +66,16 @@ const formatDate = (dateStr: string): string => {
   return `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
 };
 
+const formatFixedCrewDisplayGroup = (crew?: string | null): string => {
+  const cleaned = String(crew || '').replace(/^CREW\s*/i, '').trim();
+  if (!cleaned) return '';
+  const parts = cleaned.split('::');
+  if (parts.length < 2) return `CREW ${cleaned}`;
+  const unit = parts[0].trim();
+  const crewLabel = parts.slice(1).join('::').trim();
+  return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
+};
+
 type GuideStep = 'startTime' | 'trainee' | 'instructor' | 'event' | 'area' | 'aircraft' | 'done';
 type FormationCrewDraft = {
   flightType: 'Dual' | 'Solo';
@@ -1546,7 +1556,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   useEffect(() => {
     if (!isFixedCrewModel) return;
-    setStudentName(fixedCrewGroup ? `CREW ${fixedCrewGroup}` : '');
+    setStudentName(fixedCrewGroup ? formatFixedCrewDisplayGroup(fixedCrewGroup) : '');
   }, [fixedCrewGroup, isFixedCrewModel]);
 
   useEffect(() => {
@@ -1693,7 +1703,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           instructor: fixedCrewPic,
           student: '',
           pilot: fixedCrewPic,
-          crew: `CREW ${fixedCrewGroup}`,
+          crew: formatFixedCrewDisplayGroup(fixedCrewGroup),
           startTime,
           duration,
           area: eventType === 'flight' ? area : '-',
@@ -1705,7 +1715,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           color: 'bg-emerald-500',
           resourceId: '',
           notes,
-          group: `CREW ${fixedCrewGroup}`,
+          group: formatFixedCrewDisplayGroup(fixedCrewGroup),
           groupTraineeIds: [],
           attendees: fixedCrewMembers.map(staff => staff.name),
           origin: locationType === 'Local' ? school : origin,
@@ -1914,7 +1924,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
                   >
                     <option value="">Select crew</option>
-                    {fixedCrewGroups.map(group => <option key={group} value={group}>CREW {group}</option>)}
+                    {fixedCrewGroups.map(group => <option key={group} value={group}>{formatFixedCrewDisplayGroup(group)}</option>)}
                   </select>
                 </div>
                 <div>
@@ -2024,7 +2034,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   flightType={flightType}
                   startTime={startTime}
                   picName={picName}
-                  studentName={isFixedCrewModel && fixedCrewGroup ? `CREW ${fixedCrewGroup}` : studentName}
+                  studentName={isFixedCrewModel && fixedCrewGroup ? formatFixedCrewDisplayGroup(fixedCrewGroup) : studentName}
                   duration={duration}
                   flightNumber={flightNumber}
                   area={area}

@@ -123,6 +123,16 @@ import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
 
+const formatFixedCrewDisplayGroup = (crew?: string | null): string => {
+    const cleaned = String(crew || '').replace(/^CREW\s*/i, '').trim();
+    if (!cleaned) return '';
+    const parts = cleaned.split('::');
+    if (parts.length < 2) return `CREW ${cleaned}`;
+    const unit = parts[0].trim();
+    const crewLabel = parts.slice(1).join('::').trim();
+    return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
+};
+
 const getDiagnosticTimestamp = (timestamp?: string): string =>
     (timestamp || new Date().toISOString()).replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
 
@@ -946,8 +956,8 @@ const DfpSidePanelTimeline: React.FC<{
         type: selectedResourceKind === 'ftd' ? 'ftd' : selectedResourceKind === 'cpt' ? 'cpt' : 'flight',
         pilot: selectedPilotCrewName || 'Bloggs, Joe',
         instructor: selectedPilotCrewName || 'Bloggs, Joe',
-        crew: isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : selectedSupportCrewName,
-        group: isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : undefined,
+        crew: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : selectedSupportCrewName,
+        group: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : undefined,
         flightNumber: assistEventLabel,
         eventCode: selectedSyllabusItem?.code,
         taskingName: activeAssistSection === 'taskings' ? selectedTaskProfile : undefined,
@@ -1107,7 +1117,7 @@ const DfpSidePanelTimeline: React.FC<{
 
             const flightType = document.createElement('span');
             flightType.textContent = isFixedCrewNeoAssist && selectedFixedCrewGroup
-                ? `CREW ${selectedFixedCrewGroup}`
+                ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup)
                 : assistDraftEvent.flightType.toUpperCase();
             flightType.style.justifySelf = 'start';
             flightType.style.borderRadius = '3px';
@@ -2924,7 +2934,7 @@ const DfpSidePanelTimeline: React.FC<{
                             >
                                 <option value="">Select crew</option>
                                 {fixedCrewAssistGroups.map(group => (
-                                    <option key={group} value={group}>CREW {group}</option>
+                                    <option key={group} value={group}>{formatFixedCrewDisplayGroup(group)}</option>
                                 ))}
                             </select>
                         </label>
@@ -2964,7 +2974,7 @@ const DfpSidePanelTimeline: React.FC<{
                         </div>
                         {selectedFixedCrewGroup && fixedCrewPicCandidates.length === 0 && (
                             <p className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-2 text-amber-100">
-                                No PIC-qualified crew members found for CREW {selectedFixedCrewGroup}.
+                                No PIC-qualified crew members found for {formatFixedCrewDisplayGroup(selectedFixedCrewGroup)}.
                             </p>
                         )}
                     </div>
@@ -3390,7 +3400,7 @@ const DfpSidePanelTimeline: React.FC<{
                         <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
                             <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
                             <span className="justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">
-                                {isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : assistDraftEvent.flightType.toUpperCase()}
+                                {isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase()}
                             </span>
                             <span className="truncate text-right font-mono text-cyan-50">
                                 {previewAreaCallsign}
@@ -6353,7 +6363,11 @@ function generateDfpInternal(
             const parts = String(crew || '').split('::');
             return parts.length > 1 ? parts[0] : '';
         };
-        const getFixedCrewDisplayCrew = (crew: string): string => `CREW ${getFixedCrewCrewLabel(crew)}`;
+        const getFixedCrewDisplayCrew = (crew: string): string => {
+            const crewLabel = getFixedCrewCrewLabel(crew);
+            const crewUnit = getFixedCrewCrewUnit(crew);
+            return crewUnit ? `CREW ${crewLabel}/${crewUnit}` : `CREW ${crewLabel}`;
+        };
         const staffCatalogue = config.staffQualificationCatalogue || normaliseStaffQualificationCatalogue(null);
         const picQualification = getQualificationsForOperationalModel(staffCatalogue, 'fixed_crew')
             .find(qualification => (

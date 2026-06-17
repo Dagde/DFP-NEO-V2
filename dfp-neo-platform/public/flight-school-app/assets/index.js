@@ -6970,6 +6970,15 @@ const formatDeploymentLabel = (event) => {
   const endTime = formatDeploymentClock(event.deploymentEndTime, event.startTime + event.duration);
   return `DEPLOYMENT ${startTime}${startDate ? ` ${startDate}` : ""} - ${endTime}${endDate ? ` ${endDate}` : ""}`;
 };
+const formatFixedCrewDisplayGroup$3 = (crew) => {
+  const cleaned = String(crew || "").replace(/^CREW\s*/i, "").trim();
+  if (!cleaned) return "";
+  const parts = cleaned.split("::");
+  if (parts.length < 2) return `CREW ${cleaned}`;
+  const unit = parts[0].trim();
+  const crewLabel = parts.slice(1).join("::").trim();
+  return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
+};
 const getLocalDateStringFromAdjustedTime = (date) => {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -7181,7 +7190,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
   const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
   const picName = isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent ? event.pilot : isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
-  const fixedCrewDisplay = isFixedCrewCrewEvent ? `CREW ${String(event.fixedCrewGroup || "").replace(/^CREW\s+/i, "").trim()}` : "";
+  const fixedCrewDisplay = isFixedCrewCrewEvent ? formatFixedCrewDisplayGroup$3(event.fixedCrewGroup) : "";
   const studentName = isFixedCrewCrewEvent ? fixedCrewDisplay : isTaskingEvent2 || isAirCombatCrewEvent ? event.flightType === "Solo" ? "" : event.crew || event.student || "" : event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
   let displayPicNameForRender = picName;
   let displayStudentNameForRender = studentName;
@@ -17432,6 +17441,15 @@ const parseProgressionFull$1 = (raw) => {
     labels: filtered.map((x) => x.label)
   };
 };
+const formatFixedCrewDisplayGroup$2 = (crew) => {
+  const cleaned = String(crew || "").replace(/^CREW\s*/i, "").trim();
+  if (!cleaned) return "";
+  const parts = cleaned.split("::");
+  if (parts.length < 2) return `CREW ${cleaned}`;
+  const unit = parts[0].trim();
+  const crewLabel = parts.slice(1).join("::").trim();
+  return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
+};
 const gradeColor$1 = (v) => {
   if (v >= 4.5) return "text-emerald-400";
   if (v >= 3.5) return "text-green-400";
@@ -18566,7 +18584,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         instructor: "",
         pilot: "",
         student: "",
-        group: nextGroup ? `CREW ${nextGroup}` : ""
+        group: nextGroup ? formatFixedCrewDisplayGroup$2(nextGroup) : ""
       };
       return nextCrew;
     });
@@ -18585,7 +18603,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         instructor: nextPic,
         pilot: nextPic,
         student: "",
-        group: fixedCrewGroup ? `CREW ${fixedCrewGroup}` : nextCrew[0].group
+        group: fixedCrewGroup ? formatFixedCrewDisplayGroup$2(fixedCrewGroup) : nextCrew[0].group
       };
       return nextCrew;
     });
@@ -18655,7 +18673,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       if (flightNumber === "SCT FORM" && crew.length > 1) {
         resourceId = "";
       }
-      const fixedCrewDisplayGroup = fixedCrewGroup ? `CREW ${fixedCrewGroup}` : c.group;
+      const fixedCrewDisplayGroup = fixedCrewGroup ? formatFixedCrewDisplayGroup$2(fixedCrewGroup) : c.group;
       const fixedCrewDisplayPic = fixedCrewPic || c.pilot || c.instructor;
       const savedEvent = {
         ...event,
@@ -19561,10 +19579,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                     className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                      fixedCrewGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group, children: [
-                        "CREW ",
-                        group
-                      ] }, group))
+                      fixedCrewGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group, children: formatFixedCrewDisplayGroup$2(group) }, group))
                     ]
                   }
                 )
@@ -19732,7 +19747,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Crew" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.fixedCrewGroup ? `CREW ${event.fixedCrewGroup}` : "Not assigned" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.fixedCrewGroup ? formatFixedCrewDisplayGroup$2(event.fixedCrewGroup) : "Not assigned" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2 sm:col-span-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "PIC" }),
@@ -20342,6 +20357,15 @@ const formatDate$3 = (dateStr) => {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
   return `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
+};
+const formatFixedCrewDisplayGroup$1 = (crew) => {
+  const cleaned = String(crew || "").replace(/^CREW\s*/i, "").trim();
+  if (!cleaned) return "";
+  const parts = cleaned.split("::");
+  if (parts.length < 2) return `CREW ${cleaned}`;
+  const unit = parts[0].trim();
+  const crewLabel = parts.slice(1).join("::").trim();
+  return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
 };
 const twClassToRgba = (cls) => {
   const TAILWIND_COLORS = {
@@ -21602,7 +21626,7 @@ const AddFlightTileModal = ({
   }, [eventCategory, isSingleSeatAircraft, isFixedCrewModel]);
   reactExports.useEffect(() => {
     if (!isFixedCrewModel) return;
-    setStudentName(fixedCrewGroup ? `CREW ${fixedCrewGroup}` : "");
+    setStudentName(fixedCrewGroup ? formatFixedCrewDisplayGroup$1(fixedCrewGroup) : "");
   }, [fixedCrewGroup, isFixedCrewModel]);
   reactExports.useEffect(() => {
     if (!isFixedCrewModel) return;
@@ -21726,7 +21750,7 @@ const AddFlightTileModal = ({
           instructor: fixedCrewPic,
           student: "",
           pilot: fixedCrewPic,
-          crew: `CREW ${fixedCrewGroup}`,
+          crew: formatFixedCrewDisplayGroup$1(fixedCrewGroup),
           startTime,
           duration,
           area: eventType === "flight" ? area : "-",
@@ -21738,7 +21762,7 @@ const AddFlightTileModal = ({
           color: "bg-emerald-500",
           resourceId: "",
           notes,
-          group: `CREW ${fixedCrewGroup}`,
+          group: formatFixedCrewDisplayGroup$1(fixedCrewGroup),
           groupTraineeIds: [],
           attendees: fixedCrewMembers.map((staff) => staff.name),
           origin: locationType === "Local" ? school : origin,
@@ -21944,10 +21968,7 @@ const AddFlightTileModal = ({
                         className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                          fixedCrewGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group, children: [
-                            "CREW ",
-                            group
-                          ] }, group))
+                          fixedCrewGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group, children: formatFixedCrewDisplayGroup$1(group) }, group))
                         ]
                       }
                     )
@@ -22054,7 +22075,7 @@ const AddFlightTileModal = ({
                     flightType,
                     startTime,
                     picName,
-                    studentName: isFixedCrewModel && fixedCrewGroup ? `CREW ${fixedCrewGroup}` : studentName,
+                    studentName: isFixedCrewModel && fixedCrewGroup ? formatFixedCrewDisplayGroup$1(fixedCrewGroup) : studentName,
                     duration,
                     flightNumber,
                     area,
@@ -67652,6 +67673,15 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
 };
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
+const formatFixedCrewDisplayGroup = (crew) => {
+  const cleaned = String(crew || "").replace(/^CREW\s*/i, "").trim();
+  if (!cleaned) return "";
+  const parts = cleaned.split("::");
+  if (parts.length < 2) return `CREW ${cleaned}`;
+  const unit = parts[0].trim();
+  const crewLabel = parts.slice(1).join("::").trim();
+  return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
+};
 const getDiagnosticTimestamp = (timestamp) => (timestamp || (/* @__PURE__ */ new Date()).toISOString()).replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
 const downloadJsonDiagnosticFile = (filename, report) => {
   if (typeof document === "undefined" || typeof URL === "undefined") return false;
@@ -68159,8 +68189,8 @@ const DfpSidePanelTimeline = ({
     type: selectedResourceKind === "ftd" ? "ftd" : selectedResourceKind === "cpt" ? "cpt" : "flight",
     pilot: selectedPilotCrewName || "Bloggs, Joe",
     instructor: selectedPilotCrewName || "Bloggs, Joe",
-    crew: isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : selectedSupportCrewName,
-    group: isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : void 0,
+    crew: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : selectedSupportCrewName,
+    group: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : void 0,
     flightNumber: assistEventLabel,
     eventCode: selectedSyllabusItem?.code,
     taskingName: activeAssistSection === "taskings" ? selectedTaskProfile : void 0,
@@ -68307,7 +68337,7 @@ const DfpSidePanelTimeline = ({
       aircraft.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
       aircraft.style.color = "rgba(255,255,255,0.82)";
       const flightType = document.createElement("span");
-      flightType.textContent = isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : assistDraftEvent.flightType.toUpperCase();
+      flightType.textContent = isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase();
       flightType.style.justifySelf = "start";
       flightType.style.borderRadius = "3px";
       flightType.style.background = "rgba(132,204,22,0.62)";
@@ -69997,10 +70027,7 @@ const DfpSidePanelTimeline = ({
                 className: fieldClass2,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                  fixedCrewAssistGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: group, children: [
-                    "CREW ",
-                    group
-                  ] }, group))
+                  fixedCrewAssistGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group, children: formatFixedCrewDisplayGroup(group) }, group))
                 ]
               }
             )
@@ -70030,8 +70057,8 @@ const DfpSidePanelTimeline = ({
             ] }, staff.id || staff.name)) })
           ] }),
           selectedFixedCrewGroup && fixedCrewPicCandidates.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-2 text-amber-100", children: [
-            "No PIC-qualified crew members found for CREW ",
-            selectedFixedCrewGroup,
+            "No PIC-qualified crew members found for ",
+            formatFixedCrewDisplayGroup(selectedFixedCrewGroup),
             "."
           ] })
         ] });
@@ -70468,7 +70495,7 @@ const DfpSidePanelTimeline = ({
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? `CREW ${selectedFixedCrewGroup}` : assistDraftEvent.flightType.toUpperCase() }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase() }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
                 ] })
               ]
@@ -72405,7 +72432,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const parts = String(crew || "").split("::");
       return parts.length > 1 ? parts[0] : "";
     };
-    const getFixedCrewDisplayCrew = (crew) => `CREW ${getFixedCrewCrewLabel(crew)}`;
+    const getFixedCrewDisplayCrew = (crew) => {
+      const crewLabel = getFixedCrewCrewLabel(crew);
+      const crewUnit = getFixedCrewCrewUnit(crew);
+      return crewUnit ? `CREW ${crewLabel}/${crewUnit}` : `CREW ${crewLabel}`;
+    };
     const staffCatalogue = config.staffQualificationCatalogue || normaliseStaffQualificationCatalogue(null);
     const picQualification = getQualificationsForOperationalModel(staffCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic");
     const getFixedCrewRoleMatchTokens = (value) => {
