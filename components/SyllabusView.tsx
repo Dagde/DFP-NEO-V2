@@ -30,6 +30,10 @@ import {
     staffHasAirCombatAssignment,
     setAirCombatTrainingAssignment,
 } from '../utils/airCombatTraining';
+import {
+    getFixedCrewCoursePackageBriefingTimes,
+    withFixedCrewCoursePackageBriefingTimes,
+} from '../utils/fixedCrewTraining';
 import { SYLLABUS_COURSE_SHELL_NOTE, isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
@@ -466,6 +470,13 @@ const DetailView: React.FC<{
     if (!currentItem) return null;
     const currentItemKey = currentItem.id || currentItem.code;
     const isFixedCrewModel = normaliseOperationalModel(operationalModel) === 'fixed_crew';
+    const fixedCrewBriefingTimes = getFixedCrewCoursePackageBriefingTimes();
+    const currentBriefingTimes = isFixedCrewModel
+        ? fixedCrewBriefingTimes
+        : { preFlightTime: currentItem.preFlightTime, postFlightTime: currentItem.postFlightTime };
+    const itemBriefingTimes = isFixedCrewModel
+        ? fixedCrewBriefingTimes
+        : { preFlightTime: item.preFlightTime, postFlightTime: item.postFlightTime };
     const fixedCrewManifestReadiness = getFixedCrewManifestReadiness(currentItem, {
         operationalModel,
         aircraftCrewComposition,
@@ -619,9 +630,11 @@ const DetailView: React.FC<{
                             <input
                                 type="number"
                                 step="1"
-                                value={Math.round(currentItem.preFlightTime * 60)}
+                                value={Math.round(currentBriefingTimes.preFlightTime * 60)}
+                                disabled={isFixedCrewModel}
+                                title={isFixedCrewModel ? 'Fixed Crew course and package events use 90 minutes pre-flight.' : undefined}
                                 onChange={(e) => handleFieldChange('preFlightTime', Number(e.target.value) / 60)}
-                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px] disabled:cursor-not-allowed disabled:opacity-70"
                             />
                         </div>
                         <div className="bg-gray-700/50 p-1 rounded-lg">
@@ -629,9 +642,11 @@ const DetailView: React.FC<{
                             <input
                                 type="number"
                                 step="1"
-                                value={Math.round(currentItem.postFlightTime * 60)}
+                                value={Math.round(currentBriefingTimes.postFlightTime * 60)}
+                                disabled={isFixedCrewModel}
+                                title={isFixedCrewModel ? 'Fixed Crew course and package events use 60 minutes post-flight.' : undefined}
                                 onChange={(e) => handleFieldChange('postFlightTime', Number(e.target.value) / 60)}
-                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px] disabled:cursor-not-allowed disabled:opacity-70"
                             />
                         </div>
                         <div className="bg-gray-700/50 p-1 rounded-lg">
@@ -711,8 +726,8 @@ const DetailView: React.FC<{
                             label="Crew Required"
                             value={formatCrewRequirementSummary(item.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}
                         />
-                        <DetailCard label="Pre-Flight" value={<>{Math.round(item.preFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
-                        <DetailCard label="Post-Flight" value={<>{Math.round(item.postFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
+                        <DetailCard label="Pre-Flight" value={<>{Math.round(itemBriefingTimes.preFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
+                        <DetailCard label="Post-Flight" value={<>{Math.round(itemBriefingTimes.postFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
                         <DetailCard label="Code" value={item.code} />
                         <DetailCard label="Course" value={(item.courses || []).join(", ") || "None"} />
                         <DetailCard label="Phase" value={item.phase} />
@@ -1299,11 +1314,14 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       try {
           // Save the selected event item if one is being edited
           if (editedItem) {
-              const itemToSave = {
+              const itemToSaveBase = {
                   ...editedItem,
                   acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(editedItem.acceptableAircraftConfigs, aircraftConfigurations),
                   notes: stripFixedCrewManifestNote(editedItem.notes),
               };
+              const itemToSave = isFixedCrewModel
+                  ? withFixedCrewCoursePackageBriefingTimes(itemToSaveBase)
+                  : itemToSaveBase;
               const isNew = itemToSave.id.startsWith('new-');
               let savedItem: SyllabusItemDetail;
               if (isNew) {

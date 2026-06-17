@@ -282,6 +282,7 @@ export interface ScheduleEvent {
   dualAuthSignedAnnotation?: string;
   preStart?: number;
   postEnd?: number;
+  bookingOffsetsAreDuration?: boolean;
   landTime?: number;
   isTimeFixed?: boolean;
   isDeploy?: boolean;

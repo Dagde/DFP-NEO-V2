@@ -13,7 +13,23 @@ export interface FixedCrewTrainingStreamPriority {
   enabled: boolean;
 }
 
+export const FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS = 1.5;
+export const FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS = 1;
+
 const normaliseCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+
+export const getFixedCrewCoursePackageBriefingTimes = (): { preFlightTime: number; postFlightTime: number } => ({
+  preFlightTime: FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS,
+  postFlightTime: FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS,
+});
+
+export const withFixedCrewCoursePackageBriefingTimes = <T extends Pick<SyllabusItemDetail, 'preFlightTime' | 'postFlightTime'>>(
+  item: T,
+): T => ({
+  ...item,
+  preFlightTime: FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS,
+  postFlightTime: FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS,
+});
 
 export const getFixedCrewTrainingKindForLmpType = (lmpType?: string | null): FixedCrewTrainingKind => (
   lmpType === 'Staff CAT' ? 'training_package' : 'course'

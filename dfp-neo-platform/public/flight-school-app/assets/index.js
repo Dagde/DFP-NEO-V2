@@ -4205,7 +4205,18 @@ const normaliseAirCombatSchedulingWeights = (value) => {
     trainingPackages: 100 - Math.round(courses / total * 100)
   };
 };
+const FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS = 1.5;
+const FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS = 1;
 const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
+const getFixedCrewCoursePackageBriefingTimes = () => ({
+  preFlightTime: FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS,
+  postFlightTime: FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS
+});
+const withFixedCrewCoursePackageBriefingTimes = (item) => ({
+  ...item,
+  preFlightTime: FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS,
+  postFlightTime: FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS
+});
 const getFixedCrewTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getFixedCrewTrainingKey = (kind, code, locationCode, unitCode) => [
   "fixed_crew",
@@ -6266,16 +6277,16 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 border-t border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-sidebar-course-legend": "true", className: "border-t border-gray-700 flex-shrink-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pt-4 mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-semibold text-gray-500 uppercase tracking-wider", children: "Key" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pb-2 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-w-0", children: keyItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-1 flex items-center justify-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full min-w-0", children: keyItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-1 flex items-center justify-start gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "span",
               {
                 "data-course-color": "true",
-                className: `h-3 w-3 rounded-full ${(item.color || "").startsWith("#") ? "" : item.color} mr-2 flex-shrink-0`,
+                className: `h-3 w-3 rounded-full ${(item.color || "").startsWith("#") ? "" : item.color} flex-shrink-0`,
                 style: (item.color || "").startsWith("#") ? { backgroundColor: darkenHexColor(item.color) } : {}
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: item.label })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-left text-[9px] text-gray-300", children: item.label })
           ] }, item.key)) }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-sidebar-user-footer": "true", className: "p-2 border-t border-gray-700 flex-shrink-0 flex justify-center items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] text-gray-500 font-light", children: [
@@ -40423,6 +40434,9 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   if (!currentItem) return null;
   const currentItemKey = currentItem.id || currentItem.code;
   const isFixedCrewModel = normaliseOperationalModel(operationalModel2) === "fixed_crew";
+  const fixedCrewBriefingTimes = getFixedCrewCoursePackageBriefingTimes();
+  const currentBriefingTimes = isFixedCrewModel ? fixedCrewBriefingTimes : { preFlightTime: currentItem.preFlightTime, postFlightTime: currentItem.postFlightTime };
+  const itemBriefingTimes = isFixedCrewModel ? fixedCrewBriefingTimes : { preFlightTime: item.preFlightTime, postFlightTime: item.postFlightTime };
   const fixedCrewManifestReadiness = getFixedCrewManifestReadiness(currentItem, {
     operationalModel: operationalModel2,
     aircraftCrewComposition,
@@ -40591,9 +40605,11 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             {
               type: "number",
               step: "1",
-              value: Math.round(currentItem.preFlightTime * 60),
+              value: Math.round(currentBriefingTimes.preFlightTime * 60),
+              disabled: isFixedCrewModel,
+              title: isFixedCrewModel ? "Fixed Crew course and package events use 90 minutes pre-flight." : void 0,
               onChange: (e) => handleFieldChange("preFlightTime", Number(e.target.value) / 60),
-              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px] disabled:cursor-not-allowed disabled:opacity-70"
             }
           )
         ] }),
@@ -40604,9 +40620,11 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             {
               type: "number",
               step: "1",
-              value: Math.round(currentItem.postFlightTime * 60),
+              value: Math.round(currentBriefingTimes.postFlightTime * 60),
+              disabled: isFixedCrewModel,
+              title: isFixedCrewModel ? "Fixed Crew course and package events use 60 minutes post-flight." : void 0,
               onChange: (e) => handleFieldChange("postFlightTime", Number(e.target.value) / 60),
-              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px] disabled:cursor-not-allowed disabled:opacity-70"
             }
           )
         ] }),
@@ -40715,12 +40733,12 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Pre-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          Math.round(item.preFlightTime * 60),
+          Math.round(itemBriefingTimes.preFlightTime * 60),
           " ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-normal", children: "min" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Post-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          Math.round(item.postFlightTime * 60),
+          Math.round(itemBriefingTimes.postFlightTime * 60),
           " ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-normal", children: "min" })
         ] }) }),
@@ -41215,11 +41233,12 @@ const SyllabusView = ({
     setIsSaving(true);
     try {
       if (editedItem) {
-        const itemToSave = {
+        const itemToSaveBase = {
           ...editedItem,
           acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(editedItem.acceptableAircraftConfigs, aircraftConfigurations),
           notes: stripFixedCrewManifestNote(editedItem.notes)
         };
+        const itemToSave = isFixedCrewModel ? withFixedCrewCoursePackageBriefingTimes(itemToSaveBase) : itemToSaveBase;
         const isNew = itemToSave.id.startsWith("new-");
         let savedItem;
         if (isNew) {
@@ -70562,6 +70581,14 @@ const getScheduleEventBookingOffsets = (event, syllabusItem) => {
   const syllabusPost = getNonNegativeFiniteNumber(syllabusItem?.postFlightTime);
   let preOffset = syllabusPre === null ? 0 : normaliseBookingDurationHours(syllabusPre);
   let postOffset = syllabusPost === null ? 0 : normaliseBookingDurationHours(syllabusPost);
+  if (event.bookingOffsetsAreDuration === true) {
+    const rawPre = getNonNegativeFiniteNumber(event.preStart);
+    const rawPost = getNonNegativeFiniteNumber(event.postEnd);
+    return {
+      preOffset: rawPre === null ? preOffset : normaliseBookingDurationHours(rawPre),
+      postOffset: rawPost === null ? postOffset : normaliseBookingDurationHours(rawPost)
+    };
+  }
   if (syllabusPre === null) {
     const rawPre = getNonNegativeFiniteNumber(event.preStart);
     if (rawPre !== null) {
@@ -72348,12 +72375,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const buildFixedCrewEventFromSyllabus = (item) => {
       const eventType = getFixedCrewEventType(item);
       if (!eventType) return null;
+      const briefingTimes = getFixedCrewCoursePackageBriefingTimes();
       return {
         id: v4(),
         type: eventType,
         flightNumber: item.code || item.id,
         duration: getFixedCrewDuration(item),
         startTime: 0,
+        preStart: briefingTimes.preFlightTime,
+        postEnd: briefingTimes.postFlightTime,
+        bookingOffsetsAreDuration: true,
         resourceId: "",
         color: "bg-emerald-500",
         flightType: "Dual",
@@ -72873,6 +72904,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       event: item.event.flightNumber,
       type: item.event.type,
       duration: item.event.duration,
+      preFlightTime: item.event.preStart ?? null,
+      postFlightTime: item.event.postEnd ?? null,
       fixedStartTime: item.fixedStartTime ?? null,
       crewRequirement: item.event.crewRequirement || null
     }));

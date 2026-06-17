@@ -1,12 +1,19 @@
 import React from 'react';
 import { SyllabusItemDetail } from '../types';
+import { getFixedCrewCoursePackageBriefingTimes } from '../utils/fixedCrewTraining';
 
 interface SyllabusDetailViewProps {
     item: SyllabusItemDetail;
     onBack: () => void;
+    operationalModel?: string;
 }
 
-const SyllabusDetailView: React.FC<SyllabusDetailViewProps> = ({ item, onBack }) => {
+const SyllabusDetailView: React.FC<SyllabusDetailViewProps> = ({ item, onBack, operationalModel }) => {
+    const fixedCrewBriefingTimes = getFixedCrewCoursePackageBriefingTimes();
+    const isFixedCrewModel = operationalModel === 'fixed_crew';
+    const preFlightTime = isFixedCrewModel ? fixedCrewBriefingTimes.preFlightTime : item.preFlightTime;
+    const postFlightTime = isFixedCrewModel ? fixedCrewBriefingTimes.postFlightTime : item.postFlightTime;
+
     return (
         <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
             {/* Header */}
@@ -43,11 +50,11 @@ const SyllabusDetailView: React.FC<SyllabusDetailViewProps> = ({ item, onBack })
                         </div>
                          <div className="bg-gray-700/50 p-4 rounded-lg text-center">
                             <label className="block text-xs font-medium text-gray-400 uppercase">Pre-Flight</label>
-                            <p className="text-lg font-semibold text-white">{item.preFlightTime * 60} mins</p>
+                            <p className="text-lg font-semibold text-white">{Math.round(preFlightTime * 60)} mins</p>
                         </div>
                          <div className="bg-gray-700/50 p-4 rounded-lg text-center">
                             <label className="block text-xs font-medium text-gray-400 uppercase">Post-Flight</label>
-                            <p className="text-lg font-semibold text-white">{item.postFlightTime * 60} mins</p>
+                            <p className="text-lg font-semibold text-white">{Math.round(postFlightTime * 60)} mins</p>
                         </div>
                     </div>
 

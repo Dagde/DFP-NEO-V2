@@ -241,16 +241,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             <div className="px-4 pt-4 mb-2">
               <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Key</span>
             </div>
-            <div className="px-4 pb-2 flex justify-center">
-              <div className="flex-1 min-w-0">
+            <div className="px-4 pb-2">
+              <div className="w-full min-w-0">
                 {keyItems.map(item => (
-                  <div key={item.key} className="py-1 flex items-center justify-center">
+                  <div key={item.key} className="py-1 flex items-center justify-start gap-2">
                     <span
                       data-course-color="true"
-                      className={`h-3 w-3 rounded-full ${(item.color || '').startsWith('#') ? '' : item.color} mr-2 flex-shrink-0`}
+                      className={`h-3 w-3 rounded-full ${(item.color || '').startsWith('#') ? '' : item.color} flex-shrink-0`}
                       style={(item.color || '').startsWith('#') ? { backgroundColor: darkenHexColor(item.color) } : {}}
                     ></span>
-                    <span className="text-[9px] text-gray-300">{item.label}</span>
+                    <span className="min-w-0 truncate text-left text-[9px] text-gray-300">{item.label}</span>
                   </div>
                 ))}
               </div>

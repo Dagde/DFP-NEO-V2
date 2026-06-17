@@ -100,6 +100,7 @@ import {
     type AirCombatTrainingStreamWeight,
 } from './utils/airCombatTraining';
 import {
+    getFixedCrewCoursePackageBriefingTimes,
     getFixedCrewTrainingCodeFromItem,
     getFixedCrewTrainingKey,
     getFixedCrewTrainingKindForLmpType,
@@ -3795,6 +3796,15 @@ const getScheduleEventBookingOffsets = (
     let preOffset = syllabusPre === null ? 0 : normaliseBookingDurationHours(syllabusPre);
     let postOffset = syllabusPost === null ? 0 : normaliseBookingDurationHours(syllabusPost);
 
+    if ((event as any).bookingOffsetsAreDuration === true) {
+        const rawPre = getNonNegativeFiniteNumber(event.preStart);
+        const rawPost = getNonNegativeFiniteNumber(event.postEnd);
+        return {
+            preOffset: rawPre === null ? preOffset : normaliseBookingDurationHours(rawPre),
+            postOffset: rawPost === null ? postOffset : normaliseBookingDurationHours(rawPost),
+        };
+    }
+
     if (syllabusPre === null) {
         const rawPre = getNonNegativeFiniteNumber(event.preStart);
         if (rawPre !== null) {
@@ -6414,12 +6424,16 @@ function generateDfpInternal(
         const buildFixedCrewEventFromSyllabus = (item: SyllabusItemDetail): Omit<ScheduleEvent, 'date'> | null => {
             const eventType = getFixedCrewEventType(item);
             if (!eventType) return null;
+            const briefingTimes = getFixedCrewCoursePackageBriefingTimes();
             return {
                 id: uuidv4(),
                 type: eventType,
                 flightNumber: item.code || item.id,
                 duration: getFixedCrewDuration(item),
                 startTime: 0,
+                preStart: briefingTimes.preFlightTime,
+                postEnd: briefingTimes.postFlightTime,
+                bookingOffsetsAreDuration: true,
                 resourceId: '',
                 color: 'bg-emerald-500',
                 flightType: 'Dual',
@@ -7035,6 +7049,8 @@ function generateDfpInternal(
             event: item.event.flightNumber,
             type: item.event.type,
             duration: item.event.duration,
+            preFlightTime: item.event.preStart ?? null,
+            postFlightTime: item.event.postEnd ?? null,
             fixedStartTime: item.fixedStartTime ?? null,
             crewRequirement: item.event.crewRequirement || null,
         }));
