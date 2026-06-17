@@ -6317,6 +6317,11 @@ function generateDfpInternal(
                 staticAvailabilityCacheHits: 0,
                 staticAvailabilityCacheMisses: 0,
                 staffDailyCountCacheClears: 0,
+                crewPreFilterEvaluations: 0,
+                crewPreFilterEligible: 0,
+                crewPreFilterNoPic: 0,
+                crewPreFilterRoleShortfall: 0,
+                crewPreFilterStaffLimit: 0,
                 placements: 0,
             },
             timingsMs: {} as Record<string, number>,
@@ -6726,7 +6731,119 @@ function generateDfpInternal(
             fixedCrewStaticAvailabilityCache.set(key, unavailable);
             return unavailable;
         };
-        const selectFixedCrewForEvent = (event: Omit<ScheduleEvent, 'date'>): { crew: string; members: Instructor[]; pic: Instructor } | null => {
+        const getFixedCrewEventOwnerUnit = (event: Partial<ScheduleEvent>): string => (
+            normaliseFixedCrewUnitCode((event as any).fixedCrewUnit || event.unit)
+        );
+        const crewMatchesFixedCrewEventOwnerUnit = (crew: string, eventOwnerUnit: string): boolean => {
+            if (!fixedCrewUsesSharedUnitContext || !eventOwnerUnit) return true;
+            return getFixedCrewCrewUnit(crew) === eventOwnerUnit;
+        };
+        const isFixedCrewFlightEvent = (eventToCheck: Partial<ScheduleEvent>): boolean => eventToCheck.type === 'flight';
+        const isFixedCrewSimulatorEvent = (eventToCheck: Partial<ScheduleEvent>): boolean => eventToCheck.type === 'ftd' || eventToCheck.type === 'cpt';
+        const getFixedCrewStaffDailyCounts = (staff: Instructor): { flights: number; simulators: number; flightSim: number } => {
+            const cacheKey = getFixedCrewStaffCacheKey(staff);
+            const cached = fixedCrewStaffDailyCountCache.get(cacheKey);
+            if (cached) {
+                fixedCrewPerf.counters.staffDailyCountCacheHits += 1;
+                return cached;
+            }
+            fixedCrewPerf.counters.staffDailyCountCacheMisses += 1;
+            const counts = { flights: 0, simulators: 0, flightSim: 0 };
+            generatedEvents
+                .filter(existing => eventHasPerson(existing, staff.name))
+                .forEach(existing => {
+                    if (isFixedCrewFlightEvent(existing)) {
+                        counts.flights += 1;
+                        counts.flightSim += 1;
+                    } else if (isFixedCrewSimulatorEvent(existing)) {
+                        counts.simulators += 1;
+                        counts.flightSim += 1;
+                    }
+                });
+            fixedCrewStaffDailyCountCache.set(cacheKey, counts);
+            return counts;
+        };
+        const getFixedCrewStaffLimitViolations = (members: Instructor[], eventToCheck: Omit<ScheduleEvent, 'date'>): any[] => {
+            const isFlight = isFixedCrewFlightEvent(eventToCheck);
+            const isSimulator = isFixedCrewSimulatorEvent(eventToCheck);
+            if (!isFlight && !isSimulator) return [];
+            return members
+                .map(staff => {
+                    const counts = getFixedCrewStaffDailyCounts(staff);
+                    if (isFlight && counts.flights >= fixedCrewStaffLimits.maxFlights) {
+                        return { staff: staff.name, reason: 'STAFF_MAX_FLIGHTS_PER_DAY', counts, limits: fixedCrewStaffLimits };
+                    }
+                    if (isSimulator && counts.simulators >= fixedCrewStaffLimits.maxSimulators) {
+                        return { staff: staff.name, reason: 'STAFF_MAX_SIMULATORS_PER_DAY', counts, limits: fixedCrewStaffLimits };
+                    }
+                    if (counts.flightSim >= fixedCrewStaffLimits.maxFlightSim) {
+                        return { staff: staff.name, reason: 'STAFF_MAX_FLIGHT_SIM_PER_DAY', counts, limits: fixedCrewStaffLimits };
+                    }
+                    return null;
+                })
+                .filter(Boolean);
+        };
+        const getFixedCrewCandidateEntries = (event: Partial<ScheduleEvent>): Array<[string, Instructor[]]> => {
+            const eventOwnerUnit = getFixedCrewEventOwnerUnit(event);
+            const candidates = Array.from(crewGroups.entries())
+                .filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit))
+                .sort(([leftCrew], [rightCrew]) =>
+                    (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0)
+                    || leftCrew.localeCompare(rightCrew, undefined, { numeric: true })
+                );
+            if (fixedCrewUsesSharedUnitContext && eventOwnerUnit) {
+                fixedCrewPerf.counters.ownerUnitRestrictedCrewSelections += 1;
+                fixedCrewPerf.counters.ownerUnitFilteredCrewCandidates += Math.max(0, crewGroups.size - candidates.length);
+            }
+            return candidates;
+        };
+        const prefilterFixedCrewCandidateEntries = (
+            event: Omit<ScheduleEvent, 'date'>,
+            eventPerf?: Record<string, any>
+        ): Array<[string, Instructor[]]> => {
+            const candidates = getFixedCrewCandidateEntries(event);
+            const eligible: Array<[string, Instructor[]]> = [];
+            const prefilter = {
+                candidates: candidates.length,
+                eligible: 0,
+                noPic: 0,
+                roleShortfall: 0,
+                staffLimit: 0,
+            };
+            candidates.forEach(([crew, members]) => {
+                fixedCrewPerf.counters.crewPreFilterEvaluations += 1;
+                const pic = members.find(staffHasPicQualification);
+                if (!pic) {
+                    prefilter.noPic += 1;
+                    fixedCrewPerf.counters.crewPreFilterNoPic += 1;
+                    return;
+                }
+                fixedCrewPerf.counters.roleShortfallChecks += 1;
+                const shortfalls = getFixedCrewRoleShortfalls(members, event);
+                if (shortfalls.length > 0) {
+                    prefilter.roleShortfall += 1;
+                    fixedCrewPerf.counters.crewPreFilterRoleShortfall += 1;
+                    return;
+                }
+                fixedCrewPerf.counters.staffLimitChecks += members.length;
+                const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
+                if (staffLimitViolations.length > 0) {
+                    prefilter.staffLimit += 1;
+                    fixedCrewPerf.counters.crewPreFilterStaffLimit += 1;
+                    return;
+                }
+                eligible.push([crew, members]);
+                prefilter.eligible += 1;
+                fixedCrewPerf.counters.crewPreFilterEligible += 1;
+            });
+            if (eventPerf) eventPerf.preFilter = prefilter;
+            return eligible;
+        };
+        const selectFixedCrewForEvent = (
+            event: Omit<ScheduleEvent, 'date'>,
+            candidateCrewEntries?: Array<[string, Instructor[]]>,
+            prevalidatedCrewEligibility: boolean = false
+        ): { crew: string; members: Instructor[]; pic: Instructor } | null => {
             const eventTypeForAvailability = event.type === 'ground' ? 'ground' : event.type;
             const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
             const getExistingFixedCrewGroup = (existing: Partial<ScheduleEvent>): string => {
@@ -6743,66 +6860,7 @@ function generateDfpInternal(
                         && bookingWindow.start < existingBookingWindow.end;
                 })
             );
-            const isFixedCrewFlightEvent = (eventToCheck: Partial<ScheduleEvent>): boolean => eventToCheck.type === 'flight';
-            const isFixedCrewSimulatorEvent = (eventToCheck: Partial<ScheduleEvent>): boolean => eventToCheck.type === 'ftd' || eventToCheck.type === 'cpt';
-            const eventOwnerUnit = normaliseFixedCrewUnitCode((event as any).fixedCrewUnit || event.unit);
-            const crewMatchesEventOwnerUnit = (crew: string): boolean => {
-                if (!fixedCrewUsesSharedUnitContext || !eventOwnerUnit) return true;
-                return getFixedCrewCrewUnit(crew) === eventOwnerUnit;
-            };
-            const getFixedCrewStaffDailyCounts = (staff: Instructor): { flights: number; simulators: number; flightSim: number } => {
-                const cacheKey = getFixedCrewStaffCacheKey(staff);
-                const cached = fixedCrewStaffDailyCountCache.get(cacheKey);
-                if (cached) {
-                    fixedCrewPerf.counters.staffDailyCountCacheHits += 1;
-                    return cached;
-                }
-                fixedCrewPerf.counters.staffDailyCountCacheMisses += 1;
-                const counts = { flights: 0, simulators: 0, flightSim: 0 };
-                generatedEvents
-                    .filter(existing => eventHasPerson(existing, staff.name))
-                    .forEach(existing => {
-                        if (isFixedCrewFlightEvent(existing)) {
-                            counts.flights += 1;
-                            counts.flightSim += 1;
-                        } else if (isFixedCrewSimulatorEvent(existing)) {
-                            counts.simulators += 1;
-                            counts.flightSim += 1;
-                        }
-                    });
-                fixedCrewStaffDailyCountCache.set(cacheKey, counts);
-                return counts;
-            };
-            const getFixedCrewStaffLimitViolations = (members: Instructor[], eventToCheck: Omit<ScheduleEvent, 'date'>): any[] => {
-                const isFlight = isFixedCrewFlightEvent(eventToCheck);
-                const isSimulator = isFixedCrewSimulatorEvent(eventToCheck);
-                if (!isFlight && !isSimulator) return [];
-                return members
-                    .map(staff => {
-                        const counts = getFixedCrewStaffDailyCounts(staff);
-                        if (isFlight && counts.flights >= fixedCrewStaffLimits.maxFlights) {
-                            return { staff: staff.name, reason: 'STAFF_MAX_FLIGHTS_PER_DAY', counts, limits: fixedCrewStaffLimits };
-                        }
-                        if (isSimulator && counts.simulators >= fixedCrewStaffLimits.maxSimulators) {
-                            return { staff: staff.name, reason: 'STAFF_MAX_SIMULATORS_PER_DAY', counts, limits: fixedCrewStaffLimits };
-                        }
-                        if (counts.flightSim >= fixedCrewStaffLimits.maxFlightSim) {
-                            return { staff: staff.name, reason: 'STAFF_MAX_FLIGHT_SIM_PER_DAY', counts, limits: fixedCrewStaffLimits };
-                        }
-                        return null;
-                    })
-                    .filter(Boolean);
-            };
-            const candidates = Array.from(crewGroups.entries())
-                .filter(([crew]) => crewMatchesEventOwnerUnit(crew))
-                .sort(([leftCrew], [rightCrew]) =>
-                    (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0)
-                    || leftCrew.localeCompare(rightCrew, undefined, { numeric: true })
-                );
-            if (fixedCrewUsesSharedUnitContext && eventOwnerUnit) {
-                fixedCrewPerf.counters.ownerUnitRestrictedCrewSelections += 1;
-                fixedCrewPerf.counters.ownerUnitFilteredCrewCandidates += Math.max(0, crewGroups.size - candidates.length);
-            }
+            const candidates = candidateCrewEntries || getFixedCrewCandidateEntries(event);
             for (const [crew, members] of candidates) {
                 fixedCrewPerf.counters.crewCandidateEvaluations += 1;
                 const pic = members.find(staffHasPicQualification);
@@ -6821,10 +6879,10 @@ function generateDfpInternal(
                     pushFixedCrewAttempt({ ...attemptBase, outcome: 'rejected', reason: 'NO_PIC_IN_CREW' });
                     continue;
                 }
-                fixedCrewPerf.counters.roleShortfallChecks += 1;
-                const shortfalls = getFixedCrewRoleShortfalls(members, event);
-                fixedCrewPerf.counters.staffLimitChecks += members.length;
-                const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
+                fixedCrewPerf.counters.roleShortfallChecks += prevalidatedCrewEligibility ? 0 : 1;
+                const shortfalls = prevalidatedCrewEligibility ? [] : getFixedCrewRoleShortfalls(members, event);
+                fixedCrewPerf.counters.staffLimitChecks += prevalidatedCrewEligibility ? 0 : members.length;
+                const staffLimitViolations = prevalidatedCrewEligibility ? [] : getFixedCrewStaffLimitViolations(members, event);
                 const attemptWithLimits = {
                     ...attemptBase,
                     shortfalls,
@@ -6914,6 +6972,17 @@ function generateDfpInternal(
             const starts = Number.isFinite(fixedStartTime)
                 ? [Number(fixedStartTime)]
                 : Array.from({ length: Math.max(0, Math.floor(((window.end - window.start - duration) / 0.25) + 1)) }, (_, index) => Number((window.start + index * 0.25).toFixed(2)));
+            const eligibleCrewEntries = prefilterFixedCrewCandidateEntries(sourceEvent, eventPerf);
+            if (eligibleCrewEntries.length === 0) {
+                incrementFixedCrewRejection('NO_ELIGIBLE_CREW_AFTER_PREFILTER');
+                pushFixedCrewAttempt({ event: sourceEvent.flightNumber, source, outcome: 'rejected', reason: 'NO_ELIGIBLE_CREW_AFTER_PREFILTER', preFilter: (eventPerf as any).preFilter || null });
+                eventPerf.outcome = 'rejected';
+                eventPerf.reason = 'NO_ELIGIBLE_CREW_AFTER_PREFILTER';
+                eventPerf.elapsedMs = Math.round((fixedCrewPerfNow() - eventPerfStart) * 100) / 100;
+                (eventPerf as any).crewCandidateEvaluations = 0;
+                if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
+                return false;
+            }
             const getPlacedFixedCrewGroup = (event: Partial<ScheduleEvent>): string => {
                 const explicitGroup = normaliseCrewKey(event.fixedCrewGroup);
                 if (explicitGroup) return explicitGroup;
@@ -6962,7 +7031,7 @@ function generateDfpInternal(
                         continue;
                     }
                     const selectCrewStart = fixedCrewPerfNow();
-                    const assignment = selectFixedCrewForEvent(candidate);
+                    const assignment = selectFixedCrewForEvent(candidate, eligibleCrewEntries, true);
                     addFixedCrewPerfTiming('selectCrew', selectCrewStart);
                     if (!assignment) continue;
                     const candidateBookingWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
