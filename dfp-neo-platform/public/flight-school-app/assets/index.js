@@ -2801,12 +2801,17 @@ const isCrewPositionAvailableForOperationalModel = (entry, operationalModel2) =>
 };
 const normaliseCrewPositionToken = (value) => String(value || "").trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "");
 const getAcronymToken = (value) => String(value || "").trim().split(/[^a-zA-Z0-9]+/).filter(Boolean).map((part) => part[0]).join("").toLowerCase();
+const getSortedToken = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "").split("").sort().join("");
 const getCrewPositionMatchTokens = (entry) => [
   normaliseCrewPositionToken(entry.id),
   normaliseCrewPositionToken(entry.genericName),
   normaliseCrewPositionToken(entry.label),
   getAcronymToken(entry.genericName),
-  getAcronymToken(entry.label)
+  getAcronymToken(entry.label),
+  getSortedToken(getAcronymToken(entry.genericName)),
+  getSortedToken(getAcronymToken(entry.label)),
+  getSortedToken(entry.id),
+  getSortedToken(entry.label)
 ].filter(Boolean);
 const findCrewPositionEntry = (value, terminology) => {
   const token = normaliseCrewPositionToken(value);
@@ -2821,7 +2826,24 @@ const crewPositionValuesMatch = (requiredPosition, staffPosition, terminology) =
   const requiredEntry = findCrewPositionEntry(requiredPosition, terminology);
   const staffEntry = findCrewPositionEntry(staffPosition, terminology);
   if (requiredEntry && staffEntry) return requiredEntry.genericName.trim().toUpperCase() === staffEntry.genericName.trim().toUpperCase();
-  return normaliseCrewPositionToken(requiredPosition) === normaliseCrewPositionToken(staffPosition);
+  const requiredToken = normaliseCrewPositionToken(requiredPosition);
+  const staffToken = normaliseCrewPositionToken(staffPosition);
+  if (requiredToken === staffToken) return true;
+  const requiredAcronym = getAcronymToken(requiredPosition);
+  const staffAcronym = getAcronymToken(staffPosition);
+  const requiredTokens = [
+    requiredToken,
+    requiredAcronym,
+    getSortedToken(requiredAcronym),
+    getSortedToken(requiredPosition)
+  ].filter(Boolean);
+  const staffTokens = new Set([
+    staffToken,
+    staffAcronym,
+    getSortedToken(staffAcronym),
+    getSortedToken(staffPosition)
+  ].filter(Boolean));
+  return requiredTokens.some((token) => staffTokens.has(token));
 };
 const isPilotCrewPosition = (value, terminology) => {
   const entry = findCrewPositionEntry(value, terminology);

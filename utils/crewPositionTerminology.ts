@@ -166,12 +166,26 @@ const getAcronymToken = (value: unknown): string => (
     .toLowerCase()
 );
 
+const getSortedToken = (value: unknown): string => (
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .split('')
+    .sort()
+    .join('')
+);
+
 const getCrewPositionMatchTokens = (entry: CrewPositionTerminologyEntry): string[] => ([
   normaliseCrewPositionToken(entry.id),
   normaliseCrewPositionToken(entry.genericName),
   normaliseCrewPositionToken(entry.label),
   getAcronymToken(entry.genericName),
   getAcronymToken(entry.label),
+  getSortedToken(getAcronymToken(entry.genericName)),
+  getSortedToken(getAcronymToken(entry.label)),
+  getSortedToken(entry.id),
+  getSortedToken(entry.label),
 ].filter(Boolean));
 
 export const findCrewPositionEntry = (
@@ -196,7 +210,24 @@ export const crewPositionValuesMatch = (
   const requiredEntry = findCrewPositionEntry(requiredPosition, terminology);
   const staffEntry = findCrewPositionEntry(staffPosition, terminology);
   if (requiredEntry && staffEntry) return requiredEntry.genericName.trim().toUpperCase() === staffEntry.genericName.trim().toUpperCase();
-  return normaliseCrewPositionToken(requiredPosition) === normaliseCrewPositionToken(staffPosition);
+  const requiredToken = normaliseCrewPositionToken(requiredPosition);
+  const staffToken = normaliseCrewPositionToken(staffPosition);
+  if (requiredToken === staffToken) return true;
+  const requiredAcronym = getAcronymToken(requiredPosition);
+  const staffAcronym = getAcronymToken(staffPosition);
+  const requiredTokens = [
+    requiredToken,
+    requiredAcronym,
+    getSortedToken(requiredAcronym),
+    getSortedToken(requiredPosition),
+  ].filter(Boolean);
+  const staffTokens = new Set([
+    staffToken,
+    staffAcronym,
+    getSortedToken(staffAcronym),
+    getSortedToken(staffPosition),
+  ].filter(Boolean));
+  return requiredTokens.some(token => staffTokens.has(token));
 };
 
 export const isPilotCrewPosition = (
