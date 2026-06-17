@@ -99,6 +99,13 @@ import {
     type AirCombatSchedulingWeights,
     type AirCombatTrainingStreamWeight,
 } from './utils/airCombatTraining';
+import {
+    getFixedCrewTrainingCodeFromItem,
+    getFixedCrewTrainingKey,
+    getFixedCrewTrainingKindForLmpType,
+    normaliseFixedCrewTrainingPriorities,
+    type FixedCrewTrainingStreamPriority,
+} from './utils/fixedCrewTraining';
 import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
@@ -4274,6 +4281,7 @@ interface DfpConfig {
   operationalModel?: string;
   activeUnitCode?: string;
   airCombatSchedulingWeights?: any;
+  fixedCrewTrainingPriorities?: FixedCrewTrainingStreamPriority[];
   instructors: Instructor[];
   trainees: Trainee[];
   syllabus: SyllabusItemDetail[];
@@ -6776,14 +6784,38 @@ function generateDfpInternal(
             .filter(event => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed)
             .map(event => ({ source: isTaskingPriorityEvent(event) ? 'fixed-crew-tasking' : isCurrencyPriorityEvent(event) ? 'fixed-crew-currency' : 'fixed-crew-priority', event: buildFixedCrewEventFromPriority(event), fixedStartTime: event.isTimeFixed ? event.startTime : undefined }))
             .filter((item): item is { source: string; event: Omit<ScheduleEvent, 'date'>; fixedStartTime?: number } => Boolean(item.event));
-        const activeFixedCrewPackageSyllabusItems = syllabusDetails
+        const configuredFixedCrewTrainingPriorities = normaliseFixedCrewTrainingPriorities(config.fixedCrewTrainingPriorities);
+        const fixedCrewTrainingPriorityByKey = new Map(configuredFixedCrewTrainingPriorities.map(stream => [stream.key, stream]));
+        const hasConfiguredFixedCrewTrainingPriorities = configuredFixedCrewTrainingPriorities.length > 0;
+        const getFixedCrewTrainingStreamForItem = (item: SyllabusItemDetail): FixedCrewTrainingStreamPriority | null => {
+            const kind = getFixedCrewTrainingKindForLmpType(item.lmpType);
+            const code = getFixedCrewTrainingCodeFromItem(item);
+            if (!code) return null;
+            const itemUnit = String(item.unit || fixedCrewUnit || '').trim().toUpperCase();
+            const key = getFixedCrewTrainingKey(kind, code, item.location || school, itemUnit || fixedCrewUnit);
+            return fixedCrewTrainingPriorityByKey.get(key) || {
+                key,
+                kind,
+                code,
+                title: item.module || code,
+                locationCode: String(item.location || school || '').trim().toUpperCase(),
+                unitCode: itemUnit,
+                weight: 10,
+                enabled: true,
+            };
+        };
+        const activeFixedCrewTrainingSyllabusItems = syllabusDetails
             .filter(item => item.isActive !== false && !isSyllabusCourseShell(item))
-            .filter(item => item.lmpType === 'Staff CAT')
-            .filter(item => !fixedCrewUnit || String(item.unit || '').trim().toUpperCase() === fixedCrewUnit);
-        const activeUnitPackageItems = activeFixedCrewPackageSyllabusItems
-            .map(item => ({ item, event: buildFixedCrewEventFromSyllabus(item) }))
-            .filter((item): item is { item: SyllabusItemDetail; event: Omit<ScheduleEvent, 'date'> } => Boolean(item.event))
+            .filter(item => !fixedCrewUnit || String(item.unit || '').trim().toUpperCase() === fixedCrewUnit)
+            .map(item => ({ item, stream: getFixedCrewTrainingStreamForItem(item) }))
+            .filter((entry): entry is { item: SyllabusItemDetail; stream: FixedCrewTrainingStreamPriority } => Boolean(entry.stream))
+            .filter(entry => entry.stream.enabled && entry.stream.weight > 0);
+        const activeUnitTrainingItems = activeFixedCrewTrainingSyllabusItems
+            .map(({ item, stream }) => ({ item, stream, event: buildFixedCrewEventFromSyllabus(item) }))
+            .filter((item): item is { item: SyllabusItemDetail; stream: FixedCrewTrainingStreamPriority; event: Omit<ScheduleEvent, 'date'> } => Boolean(item.event))
             .sort((left, right) =>
+                right.stream.weight - left.stream.weight ||
+                left.stream.kind.localeCompare(right.stream.kind) ||
                 Number((left.item as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right.item as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
                 (left.item.orderKey || '').localeCompare(right.item.orderKey || '') ||
                 left.item.code.localeCompare(right.item.code)
@@ -6791,7 +6823,7 @@ function generateDfpInternal(
             .slice(0, Math.max(1, crewGroups.size * 2));
         const fixedCrewQueue = [
             ...fixedCrewPriorityQueue,
-            ...activeUnitPackageItems.map(({ event }) => ({ source: 'fixed-crew-package', event })),
+            ...activeUnitTrainingItems.map(({ event, stream }) => ({ source: stream.kind === 'course' ? 'fixed-crew-course' : 'fixed-crew-package', event })),
         ];
         diag.queueSourceAudit = {
             buildDate,
@@ -6805,18 +6837,26 @@ function generateDfpInternal(
                 schedulable: fixedCrewPriorityQueue.length,
             },
             packageInputs: {
-                activeUnitStaffCatItems: activeFixedCrewPackageSyllabusItems.length,
-                schedulableFlightOrSimItems: activeUnitPackageItems.length,
-                ignoredBecauseTypeUnsupported: activeFixedCrewPackageSyllabusItems
-                    .filter(item => !buildFixedCrewEventFromSyllabus(item))
+                activeUnitStaffCatItems: activeFixedCrewTrainingSyllabusItems.filter(entry => entry.stream.kind === 'training_package').length,
+                activeUnitCourseItems: activeFixedCrewTrainingSyllabusItems.filter(entry => entry.stream.kind === 'course').length,
+                configuredTrainingStreams: configuredFixedCrewTrainingPriorities.length,
+                enabledTrainingStreams: configuredFixedCrewTrainingPriorities.filter(stream => stream.enabled && stream.weight > 0).length,
+                schedulableFlightOrSimItems: activeUnitTrainingItems.length,
+                ignoredBecauseTypeUnsupported: activeFixedCrewTrainingSyllabusItems
+                    .filter(({ item }) => !buildFixedCrewEventFromSyllabus(item))
                     .slice(0, 80)
-                    .map(item => ({
+                    .map(({ item, stream }) => ({
                         code: item.code,
+                        stream: stream.code,
+                        kind: stream.kind,
                         type: item.type,
                         module: item.module,
                         phase: item.phase,
                         unit: item.unit,
                     })),
+                disabledOrZeroWeightStreams: configuredFixedCrewTrainingPriorities
+                    .filter(stream => !stream.enabled || stream.weight <= 0)
+                    .map(stream => ({ code: stream.code, kind: stream.kind, weight: stream.weight, enabled: stream.enabled })),
             },
             finalQueueCount: fixedCrewQueue.length,
         };
@@ -19483,6 +19523,7 @@ const App: React.FC = () => {
     const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
     const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
     const [packagePriorities, setPackagePriorities] = useState<string[]>([]);
+    const [fixedCrewTrainingPriorities, setFixedCrewTrainingPriorities] = useState<FixedCrewTrainingStreamPriority[]>([]);
     const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
 
     const hasConfiguredCourseUnitScope = useMemo(
@@ -20983,6 +21024,9 @@ const App: React.FC = () => {
                     });
                     setCoursePriorities(localityCourses);
                 }
+                if (Array.isArray((saved as any).fixedCrewTrainingPriorities)) {
+                    setFixedCrewTrainingPriorities(normaliseFixedCrewTrainingPriorities((saved as any).fixedCrewTrainingPriorities));
+                }
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
                 if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
                 // Merge DB currencies with initial defaults — ensures new fields/currencies are always present
@@ -21122,6 +21166,7 @@ const App: React.FC = () => {
             organisationSettings,
             coursePriorities,
             coursePercentages: Object.fromEntries(coursePercentages),
+            fixedCrewTrainingPriorities,
         });
 
         saveSettingsToDB(snapshot, sessionUser?.userId);
@@ -21140,7 +21185,7 @@ const App: React.FC = () => {
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements, unitCurrencyDefinitions,
         organisationSettings,
-        coursePriorities, coursePercentages,
+        coursePriorities, coursePercentages, fixedCrewTrainingPriorities,
     ]);
 
     // Baseline schedule state
@@ -27232,6 +27277,7 @@ const App: React.FC = () => {
             operationalModel: activeOperationalModel,
             activeUnitCode,
             airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
+            fixedCrewTrainingPriorities,
             instructors: instructorsInBuild,
             trainees: traineesInBuild,
             syllabus: syllabusDetails,
@@ -32422,6 +32468,8 @@ appliedUpdates.forEach(update => {
                     activeUnitCodes={activeContextUnitCodes}
                     airCombatSchedulingWeights={airCombatSchedulingWeights}
                     onUpdateAirCombatSchedulingWeights={handleUpdateAirCombatSchedulingWeights}
+                    fixedCrewTrainingPriorities={fixedCrewTrainingPriorities}
+                    onUpdateFixedCrewTrainingPriorities={setFixedCrewTrainingPriorities}
                 />;
             case 'CourseProgress':
                 return <CourseProgressView
@@ -34157,6 +34205,8 @@ appliedUpdates.forEach(update => {
                                     currencyNames={currencyNames}
                                     airCombatSchedulingWeights={airCombatSchedulingWeights}
                                     onUpdateAirCombatSchedulingWeights={handleUpdateAirCombatSchedulingWeights}
+                                    fixedCrewTrainingPriorities={fixedCrewTrainingPriorities}
+                                    onUpdateFixedCrewTrainingPriorities={setFixedCrewTrainingPriorities}
                                     highestPriorityEvents={highestPriorityEvents}
                                     onAddPriorityEvents={(eventsToAdd) => {
                                         setHighestPriorityEvents(prev => {

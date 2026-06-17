@@ -78,6 +78,7 @@ export interface AppSettingsData {
   // Course Priorities & Percentages
   coursePriorities: string[];
   coursePercentages: Record<string, number>;
+  fixedCrewTrainingPriorities?: any[];
   /** NEO Build aircraft capacity. Separate from live DFP aircraft availability. */
   neoAvailableAircraftCount?: number;
   /** NEO Build aircraft capacity by configuration id. Empty strings mean unset. */
@@ -328,6 +329,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     courseColors: state.courseColors || {},
     coursePriorities: state.coursePriorities || [],
     coursePercentages: state.coursePercentages || {},
+    fixedCrewTrainingPriorities: Array.isArray(state.fixedCrewTrainingPriorities) ? state.fixedCrewTrainingPriorities : [],
     neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
     neoAircraftConfigCapacities: state.neoAircraftConfigCapacities || {},
     neoAircraftCapacityByUnit: state.neoAircraftCapacityByUnit || {},

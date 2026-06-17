@@ -17,6 +17,15 @@ import {
   type AirCombatTrainingStreamWeight,
   type AirCombatSchedulingWeights,
 } from '../utils/airCombatTraining';
+import {
+  getFixedCrewTrainingCodeFromItem,
+  getFixedCrewTrainingKey,
+  getFixedCrewTrainingKindForLmpType,
+  getFixedCrewTrainingTitleFromItem,
+  normaliseFixedCrewTrainingPriorities,
+  type FixedCrewTrainingStreamPriority,
+} from '../utils/fixedCrewTraining';
+import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { formatCrewRequirementSummary } from '../utils/crewRequirements';
@@ -94,6 +103,8 @@ interface PrioritiesViewProps {
   activeUnitCodes?: string[];
   airCombatSchedulingWeights?: AirCombatSchedulingWeights;
   onUpdateAirCombatSchedulingWeights?: (weights: AirCombatSchedulingWeights) => void;
+  fixedCrewTrainingPriorities?: FixedCrewTrainingStreamPriority[];
+  onUpdateFixedCrewTrainingPriorities?: (priorities: FixedCrewTrainingStreamPriority[]) => void;
   isSingleSeatAircraft?: boolean;
   aircraftCrewComposition?: AircraftCrewComposition;
   crewPositionTerminology?: CrewPositionTerminology;
@@ -835,6 +846,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   activeUnitCodes = [],
   airCombatSchedulingWeights,
   onUpdateAirCombatSchedulingWeights,
+  fixedCrewTrainingPriorities = [],
+  onUpdateFixedCrewTrainingPriorities,
   isSingleSeatAircraft = false,
   aircraftCrewComposition,
   crewPositionTerminology,
@@ -871,6 +884,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [dutyPeriodTimestamp, setDutyPeriodTimestamp] = useState(new Date().toLocaleString());
   const [turnaroundTimestamp, setTurnaroundTimestamp] = useState(new Date().toLocaleString());
   const isAirCombatModel = String(operationalModel || '').trim().toLowerCase() === 'air_combat';
+  const isFixedCrewModel = String(operationalModel || '').trim().toLowerCase() === 'fixed_crew';
   const normalisedAirCombatWeights = useMemo(
     () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
     [airCombatSchedulingWeights],
@@ -932,6 +946,62 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     }));
     return normaliseAirCombatSchedulingWeights({ trainingStreams: weighted }).trainingStreams || weighted;
   }, [activeUnitCodeSet, instructorsData, isAirCombatModel, normalisedAirCombatWeights.trainingStreams, school]);
+  const fixedCrewTrainingStreams = useMemo(() => {
+    if (!isFixedCrewModel) return [];
+    const saved = new Map(normaliseFixedCrewTrainingPriorities(fixedCrewTrainingPriorities).map(stream => [stream.key, stream]));
+    const grouped = new Map<string, FixedCrewTrainingStreamPriority & { eventCount: number }>();
+    syllabusDetails
+      .filter(item => item.isActive !== false)
+      .filter(item => !isSyllabusCourseShell(item))
+      .forEach(item => {
+        const itemUnit = String((item as any).unit || '').trim().toUpperCase();
+        if (activeUnitCodeSet.size > 0 && itemUnit && !activeUnitCodeSet.has(itemUnit)) return;
+        if (activeUnitCodeSet.size > 0 && !itemUnit) return;
+        const kind = getFixedCrewTrainingKindForLmpType(item.lmpType);
+        const code = getFixedCrewTrainingCodeFromItem(item);
+        if (!code) return;
+        const key = getFixedCrewTrainingKey(kind, code, item.location || school, itemUnit || activeUnitCode || school);
+        const existing = grouped.get(key);
+        if (existing) {
+          existing.eventCount += 1;
+          return;
+        }
+        const savedStream = saved.get(key);
+        grouped.set(key, {
+          key,
+          kind,
+          code,
+          title: getFixedCrewTrainingTitleFromItem(item),
+          locationCode: String(item.location || school || '').trim().toUpperCase(),
+          unitCode: itemUnit || String(activeUnitCode || '').trim().toUpperCase(),
+          weight: savedStream?.weight ?? 10,
+          enabled: savedStream?.enabled ?? true,
+          eventCount: 1,
+        });
+      });
+    return Array.from(grouped.values()).sort((left, right) =>
+      right.enabled === left.enabled ? (
+        right.weight - left.weight ||
+        left.kind.localeCompare(right.kind) ||
+        left.code.localeCompare(right.code, undefined, { numeric: true })
+      ) : Number(right.enabled) - Number(left.enabled)
+    );
+  }, [activeUnitCode, activeUnitCodeSet, fixedCrewTrainingPriorities, isFixedCrewModel, school, syllabusDetails]);
+
+  useEffect(() => {
+    if (!isFixedCrewModel || fixedCrewTrainingStreams.length === 0) return;
+    const savedKeys = new Set(normaliseFixedCrewTrainingPriorities(fixedCrewTrainingPriorities).map(stream => stream.key));
+    const missingStreams = fixedCrewTrainingStreams
+      .filter(stream => !savedKeys.has(stream.key))
+      .map(({ eventCount: _eventCount, ...stream }) => stream);
+    if (missingStreams.length === 0) return;
+    onUpdateFixedCrewTrainingPriorities?.(
+      normaliseFixedCrewTrainingPriorities([
+        ...fixedCrewTrainingPriorities,
+        ...missingStreams,
+      ]),
+    );
+  }, [fixedCrewTrainingPriorities.length, fixedCrewTrainingStreams, isFixedCrewModel, onUpdateFixedCrewTrainingPriorities]);
 
 
   useEffect(() => {
@@ -1008,6 +1078,31 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const currentStreams = airCombatTrainingStreams.length > 0 ? airCombatTrainingStreams : (normalisedAirCombatWeights.trainingStreams || []);
     if (currentStreams.length === 0) return;
     updateAirCombatStreamWeights(currentStreams.map(stream => ({ ...stream, weight: 1 })), 'Equalised all active Air Combat course/package streams');
+  };
+  const updateFixedCrewStreams = (streams: FixedCrewTrainingStreamPriority[], auditLabel: string) => {
+    logAudit('Priorities', 'Edit', 'Updated Fixed Crew course/package priorities', auditLabel);
+    onUpdateFixedCrewTrainingPriorities?.(normaliseFixedCrewTrainingPriorities(streams));
+  };
+
+  const handleFixedCrewStreamToggle = (streamKey: string) => {
+    const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
+    const next = current.map(stream => stream.key === streamKey ? { ...stream, enabled: !stream.enabled } : stream);
+    const target = next.find(stream => stream.key === streamKey);
+    updateFixedCrewStreams(next, `${target?.code || streamKey} ${target?.enabled ? 'enabled' : 'disabled'}`);
+  };
+
+  const handleFixedCrewStreamWeightChange = (streamKey: string, direction: 'increase' | 'decrease') => {
+    const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
+    const next = current.map(stream => stream.key === streamKey ? { ...stream, weight: Math.max(0, Math.min(100, stream.weight + (direction === 'increase' ? 5 : -5))) } : stream);
+    const before = current.find(stream => stream.key === streamKey);
+    const after = next.find(stream => stream.key === streamKey);
+    updateFixedCrewStreams(next, `${after?.code || streamKey} ${before?.weight ?? 0}% → ${after?.weight ?? 0}%`);
+  };
+
+  const handleEqualiseFixedCrewStreams = () => {
+    const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
+    if (current.length === 0) return;
+    updateFixedCrewStreams(current.map(stream => ({ ...stream, weight: 10, enabled: true })), 'Enabled and equalised all active Fixed Crew streams');
   };
 
   const nonCleanConfigCapacityTotal = useMemo(() => (
@@ -2287,7 +2382,75 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                             )}
                         </div>
                     )}
-                    {isAirCombatModel ? null : coursePriorities.length === 0 ? (
+                    {isFixedCrewModel && (
+                        <div className="mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
+                            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-sm font-bold text-emerald-100">Fixed Crew Course & Package Priority</h3>
+                                    <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
+                                        Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleEqualiseFixedCrewStreams}
+                                    disabled={fixedCrewTrainingStreams.length < 2}
+                                    className="rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    Enable All
+                                </button>
+                            </div>
+                            {fixedCrewTrainingStreams.length === 0 ? (
+                                <div className="rounded border border-slate-700/70 bg-slate-950/60 p-3 text-sm text-slate-300">
+                                    No Fixed Crew course or training package events were found for {activeUnitCode || school}. Add visible Master LMP courses or Training Packages for this unit and they will appear here.
+                                </div>
+                            ) : (
+                                <ul className="space-y-2">
+                                    {fixedCrewTrainingStreams.map((stream: FixedCrewTrainingStreamPriority & { eventCount?: number }, index) => (
+                                        <li
+                                            key={stream.key}
+                                            className={`grid items-center gap-3 rounded-md border p-3 text-white md:grid-cols-[42px_84px_94px_1fr_74px_86px_34px] ${
+                                                stream.enabled
+                                                    ? 'border-slate-700 bg-slate-950/70'
+                                                    : 'border-slate-800 bg-slate-950/35 opacity-65'
+                                            }`}
+                                        >
+                                            <span className="font-mono text-sm text-slate-500">{index + 1}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleFixedCrewStreamToggle(stream.key)}
+                                                className={`rounded px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${
+                                                    stream.enabled
+                                                        ? 'border border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                                                        : 'border border-slate-600 bg-slate-900 text-slate-400'
+                                                }`}
+                                            >
+                                                {stream.enabled ? 'Enabled' : 'Off'}
+                                            </button>
+                                            <span className={`rounded px-2 py-1 text-center text-[11px] font-bold uppercase tracking-wide ${
+                                                stream.kind === 'course'
+                                                    ? 'border border-sky-400/30 bg-sky-500/10 text-sky-100'
+                                                    : 'border border-violet-400/30 bg-violet-500/10 text-violet-100'
+                                            }`}>
+                                                {stream.kind === 'course' ? 'Course' : 'Package'}
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-slate-100">{stream.title || stream.code}</p>
+                                                <p className="truncate text-xs text-slate-400">{stream.code}{stream.unitCode ? ` • ${stream.unitCode}` : ''} • {stream.eventCount || 0} event{stream.eventCount === 1 ? '' : 's'}</p>
+                                            </div>
+                                            <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.weight}</span>
+                                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Priority</span>
+                                            <div className="flex flex-col">
+                                                <ArrowButton direction="up" onClick={() => handleFixedCrewStreamWeightChange(stream.key, 'increase')} disabled={!stream.enabled || stream.weight >= 100} />
+                                                <ArrowButton direction="down" onClick={() => handleFixedCrewStreamWeightChange(stream.key, 'decrease')} disabled={!stream.enabled || stream.weight <= 0} />
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+                    {isAirCombatModel || isFixedCrewModel ? null : coursePriorities.length === 0 ? (
                         <div className="py-8 text-center text-gray-500">
                             <p className="text-sm font-medium">No courses found for {locationDisplayName}</p>
                             <p className="text-xs mt-1">Courses will appear here once trainees are loaded for this locality.</p>

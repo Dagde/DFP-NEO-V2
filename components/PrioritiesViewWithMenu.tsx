@@ -6,6 +6,7 @@ import { InstructorPriorityConfig } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import type { AirCombatSchedulingWeights } from '../utils/airCombatTraining';
+import type { FixedCrewTrainingStreamPriority } from '../utils/fixedCrewTraining';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import type { UnitCallsignSettings } from '../utils/unitCallsigns';
@@ -73,6 +74,8 @@ interface PrioritiesViewWithMenuProps {
   operationalModelLabel?: string;
   airCombatSchedulingWeights?: AirCombatSchedulingWeights;
   onUpdateAirCombatSchedulingWeights?: (weights: AirCombatSchedulingWeights) => void;
+  fixedCrewTrainingPriorities?: FixedCrewTrainingStreamPriority[];
+  onUpdateFixedCrewTrainingPriorities?: (priorities: FixedCrewTrainingStreamPriority[]) => void;
   isSingleSeatAircraft?: boolean;
   aircraftCrewComposition?: AircraftCrewComposition;
   crewPositionTerminology?: CrewPositionTerminology;
