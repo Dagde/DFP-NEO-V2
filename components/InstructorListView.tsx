@@ -612,12 +612,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const renderFlightCard = (flight: string) => (
     <div key={`flight-${flight}`} className="bg-gray-800 border border-cyan-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-        <div className="p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
-            <div>
-                <h3 className="text-lg font-bold text-cyan-400">{flight} Flight</h3>
-                <p className="text-xs text-gray-400">Flight staff</p>
-            </div>
-            <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByFlight[flight].length}</span>
+        <div className="p-3 border-b border-cyan-900/50 bg-gray-800/80 grid grid-cols-[3.5rem_1fr_3.5rem] items-center rounded-t-lg backdrop-blur-sm">
+            <span aria-hidden="true" />
+            <h3 className="text-lg font-bold text-cyan-400 text-center truncate">{flight} Flight</h3>
+            <span className="justify-self-end text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByFlight[flight].length}</span>
         </div>
         <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
             {renderInstructorList(qfisByFlight[flight])}
@@ -627,12 +625,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const renderFixedCrewCard = (crewName: string) => (
     <div key={`fixed-crew-${crewName}`} className="bg-gray-800 border border-sky-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-        <div className="p-3 border-b border-sky-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
-            <div>
-                <h3 className="text-lg font-bold text-sky-400">{crewName}</h3>
-                <p className="text-xs text-gray-400">Fixed crew group</p>
-            </div>
-            <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{fixedCrewGroups[crewName].length}</span>
+        <div className="p-3 border-b border-sky-900/50 bg-gray-800/80 grid grid-cols-[3.5rem_1fr_3.5rem] items-center rounded-t-lg backdrop-blur-sm">
+            <span aria-hidden="true" />
+            <h3 className="text-lg font-bold text-sky-400 text-center truncate">Crew {crewName}</h3>
+            <span className="justify-self-end text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{fixedCrewGroups[crewName].length}</span>
         </div>
         <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
             {renderInstructorList(fixedCrewGroups[crewName])}

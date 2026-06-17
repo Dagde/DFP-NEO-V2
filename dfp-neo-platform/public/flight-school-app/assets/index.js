@@ -38891,25 +38891,24 @@ const InstructorListView = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(qfisByUnit[unit]) })
   ] }, unit);
   const renderFlightCard = (flight) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-cyan-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-cyan-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-bold text-cyan-400", children: [
-          flight,
-          " Flight"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Flight staff" })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-cyan-900/50 bg-gray-800/80 grid grid-cols-[3.5rem_1fr_3.5rem] items-center rounded-t-lg backdrop-blur-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-bold text-cyan-400 text-center truncate", children: [
+        flight,
+        " Flight"
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: qfisByFlight[flight].length })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-end text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: qfisByFlight[flight].length })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(qfisByFlight[flight]) })
   ] }, `flight-${flight}`);
   const renderFixedCrewCard = (crewName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-sky-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-sky-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400", children: crewName }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Fixed crew group" })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-sky-900/50 bg-gray-800/80 grid grid-cols-[3.5rem_1fr_3.5rem] items-center rounded-t-lg backdrop-blur-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-bold text-sky-400 text-center truncate", children: [
+        "Crew ",
+        crewName
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: fixedCrewGroups[crewName].length })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-end text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: fixedCrewGroups[crewName].length })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 overflow-y-auto flex-1 custom-scrollbar", children: renderInstructorList(fixedCrewGroups[crewName]) })
   ] }, `fixed-crew-${crewName}`);
