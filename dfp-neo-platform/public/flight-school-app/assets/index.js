@@ -72544,7 +72544,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       Array.from(new Map(activeFixedCrewTrainingSyllabusItems.map(({ stream }) => [stream.key, stream])).values())
     );
     const activeTrainingWeightByKey = new Map(activeTrainingStreams.map((stream) => [stream.key, stream.weight]));
-    const schedulableTrainingItems = activeFixedCrewTrainingSyllabusItems.map(({ item, stream }) => ({ item, stream, event: buildFixedCrewEventFromSyllabus(item) })).filter((item) => Boolean(item.event));
+    const schedulableTrainingItems = activeFixedCrewTrainingSyllabusItems.map(({ item, stream }) => {
+      const event = buildFixedCrewEventFromSyllabus(item);
+      return {
+        item,
+        stream,
+        event: event ? {
+          ...event,
+          eventCategory: stream.kind === "course" ? "lmp_event" : "staff_cat"
+        } : null
+      };
+    }).filter((item) => Boolean(item.event));
     const trainingItemLimit = Math.max(1, crewGroups.size * 2);
     const itemsByTrainingStream = /* @__PURE__ */ new Map();
     schedulableTrainingItems.sort(
@@ -72708,6 +72718,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         crew: event.crew,
         fixedCrewGroup: event.fixedCrewGroup,
         fixedCrewPic: event.fixedCrewPic,
+        eventCategory: event.eventCategory,
         attendees: event.attendees,
         source: event._source
       }))
