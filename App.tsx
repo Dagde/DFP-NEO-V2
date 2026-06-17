@@ -18017,6 +18017,11 @@ const App: React.FC = () => {
 
     const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel('flight_school');
     const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
+    const fixedCrewSharedResourceUnitTabs = useMemo(() => (
+        activeOperationalModel === 'fixed_crew' && organisationSettings.fleetSharingEnabled && activeContextUnitCodes.length > 1
+            ? activeContextUnitCodes
+            : []
+    ), [activeContextUnitCodes, activeOperationalModel, organisationSettings.fleetSharingEnabled]);
     const activeFixedCrewTileColourUnitKey = useMemo(() => (
         String(activeContextUnitCodes[0] || activeUnitCode || 'DEFAULT').trim().toUpperCase() || 'DEFAULT'
     ), [activeContextUnitCodes, activeUnitCode]);
@@ -18746,15 +18751,28 @@ const App: React.FC = () => {
     const visibleSyllabusDetails = useMemo(() => {
         const normaliseContextCode = (value?: string | null) => String(value || '').trim().toUpperCase();
         const activeUnit = normaliseContextCode(activeUnitCode);
-        return filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', activeUnitCode)
+        const activeUnits = activeOperationalModel === 'fixed_crew' && activeContextUnitCodes.length > 1
+            ? new Set(activeContextUnitCodes.map(normaliseContextCode))
+            : new Set([activeUnit]);
+        const baseVisibleItems = activeOperationalModel === 'fixed_crew' && activeContextUnitCodes.length > 1
+            ? activeContextUnitCodes.flatMap(unitCode => filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', unitCode))
+            : filterSyllabusForMasterLmpAccess(syllabusDetails, 'View', activeUnitCode);
+        const seen = new Set<string>();
+        return baseVisibleItems
+            .filter(item => {
+                const key = item.id || `${item.code}|${item.unit || ''}|${item.lmpType || ''}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            })
             .filter((item) => {
                 if (item.lmpType !== 'Staff CAT') return true;
                 const packageUnit = normaliseContextCode((item as any).unit);
-                if (activeOperationalModel === 'fixed_crew') return packageUnit === activeUnit;
+                if (activeOperationalModel === 'fixed_crew') return activeUnits.has(packageUnit);
                 if (activeOperationalModel !== 'air_combat') return false;
                 return !packageUnit || packageUnit === activeUnit;
             });
-    }, [activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+    }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
     const trainingPackageTemplatesForActiveModel = useMemo(() => {
         const normaliseContextCode = (value?: string | null) => String(value || '').trim().toUpperCase();
         const activeUnit = normaliseContextCode(activeUnitCode);
@@ -33130,6 +33148,8 @@ appliedUpdates.forEach(update => {
                             operationalModel={activeOperationalModel}
                             crewPositionTerminology={activeCrewPositionTerminology}
                             staffQualificationCatalogue={activeStaffQualificationCatalogue}
+                            sharedUnitTabs={fixedCrewSharedResourceUnitTabs}
+                            activeUnitCode={activeUnitCode}
                         />;
             case 'Instructors':
                 return <InstructorListView
@@ -33302,6 +33322,7 @@ appliedUpdates.forEach(update => {
                            crewPositionTerminology={activeCrewPositionTerminology}
                            activeLocationCode={school}
                            activeUnitCode={activeUnitCode}
+                           sharedUnitTabs={fixedCrewSharedResourceUnitTabs}
                            trainingPackageTemplates={trainingPackageTemplatesForActiveModel}
                            instructorsData={instructorsData}
                            operationalModel={activeOperationalModel}

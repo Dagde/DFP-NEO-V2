@@ -1,5 +1,5 @@
 import { useSystemFreeze } from "../hooks/useSystemFreeze";
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import InstructorListView from './InstructorListView';
 import InstructorScheduleView from './InstructorScheduleView';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -45,6 +45,8 @@ interface StaffViewProps {
   operationalModel?: string;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  sharedUnitTabs?: string[];
+  activeUnitCode?: string;
 
   // Props for InstructorScheduleView
   date: string;
@@ -64,11 +66,29 @@ interface StaffViewProps {
 
 const StaffView: React.FC<StaffViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
+  const normaliseUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+  const sharedUnitTabs = useMemo(() => (
+    Array.from(new Set((props.sharedUnitTabs || []).map(normaliseUnitCode).filter(Boolean)))
+  ), [props.sharedUnitTabs]);
+  const [activeUnitTab, setActiveUnitTab] = useState<string>(() => sharedUnitTabs[0] || normaliseUnitCode(props.activeUnitCode));
+  useEffect(() => {
+    if (sharedUnitTabs.length === 0) return;
+    if (!sharedUnitTabs.includes(activeUnitTab)) {
+      setActiveUnitTab(sharedUnitTabs[0]);
+    }
+  }, [activeUnitTab, sharedUnitTabs]);
   const { isFrozen } = useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
+  const shouldShowUnitTabs = String(props.operationalModel || '').trim().toLowerCase() === 'fixed_crew' && sharedUnitTabs.length > 1;
+  const scopedInstructorsData = shouldShowUnitTabs
+    ? props.instructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
+    : props.instructorsData;
+  const scopedArchivedInstructorsData = shouldShowUnitTabs
+    ? props.archivedInstructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
+    : props.archivedInstructorsData;
 
   // App already provides the active location/unit scoped staff list.
-  const locationFilteredInstructorsForSchedule = props.instructorsData
+  const locationFilteredInstructorsForSchedule = scopedInstructorsData
     .sort((a, b) => {
       // First sort by Role - flying staff before SIM IPs
       const roleA = a.role === 'QFI' || a.role === 'Pilot' ? 0 : 1;
@@ -89,6 +109,24 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
     <div className="flex flex-col h-full bg-gray-900">
       {/* Tab Header - More obvious tabs */}
       <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 pt-3">
+        {shouldShowUnitTabs && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {sharedUnitTabs.map(unitCode => (
+              <button
+                key={unitCode}
+                type="button"
+                onClick={() => setActiveUnitTab(unitCode)}
+                className={`h-8 rounded-md border px-4 text-xs font-semibold transition ${
+                  activeUnitTab === unitCode
+                    ? 'border-emerald-400/80 bg-emerald-900/50 text-white'
+                    : 'border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
+                }`}
+              >
+                {unitCode}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex space-x-2">
           <button
             onClick={() => setActiveTab('profile')}
@@ -120,8 +158,8 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onClose={props.onClose}
             events={props.events}
             traineesData={props.traineesData}
-            instructorsData={props.instructorsData}
-            archivedInstructorsData={props.archivedInstructorsData}
+            instructorsData={scopedInstructorsData}
+            archivedInstructorsData={scopedArchivedInstructorsData}
             scheduleHistoryEvents={props.scheduleHistoryEvents}
             syllabusDetails={props.syllabusDetails}
             insertEventTypes={props.insertEventTypes}

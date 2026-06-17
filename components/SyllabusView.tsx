@@ -53,6 +53,7 @@ interface SyllabusViewProps {
   instructorsData?: Instructor[];
   onUpdateInstructor?: (data: Instructor) => void | Promise<void>;
   operationalModel?: string;
+  sharedUnitTabs?: string[];
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   currentUserName?: string;
   scoringMatrixPhraseBank?: PhraseBank;
@@ -924,6 +925,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     instructorsData = [],
     onUpdateInstructor,
     operationalModel = 'flight_school',
+    sharedUnitTabs = [],
     staffQualificationCatalogue,
     currentUserName,
     scoringMatrixPhraseBank,
@@ -952,6 +954,19 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const isAirCombatModel = activeOperationalModel === 'air_combat';
   const isFixedCrewModel = activeOperationalModel === 'fixed_crew';
   const usesPackageTab = activeOperationalModel === 'air_combat' || activeOperationalModel === 'fixed_crew';
+  const normaliseUnitTabCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+  const fixedCrewUnitTabs = useMemo(() => (
+      Array.from(new Set(sharedUnitTabs.map(normaliseUnitTabCode).filter(Boolean)))
+  ), [sharedUnitTabs]);
+  const [activeUnitTab, setActiveUnitTab] = useState<string>(() => fixedCrewUnitTabs[0] || normaliseUnitTabCode(activeUnitCode));
+  useEffect(() => {
+      if (!isFixedCrewModel || fixedCrewUnitTabs.length === 0) return;
+      if (!fixedCrewUnitTabs.includes(activeUnitTab)) {
+          setActiveUnitTab(fixedCrewUnitTabs[0]);
+      }
+  }, [activeUnitTab, fixedCrewUnitTabs, isFixedCrewModel]);
+  const shouldShowUnitTabs = isFixedCrewModel && fixedCrewUnitTabs.length > 1;
+  const effectiveActiveUnitCode = shouldShowUnitTabs ? activeUnitTab : activeUnitCode;
   const shouldScopeCreatedItemsToActiveUnit = isTrainingPackagesTab || activeOperationalModel !== 'flight_school';
   const packageFoundationLabel = isFixedCrewModel ? 'Fixed Crew' : isAirCombatModel ? 'Air Combat' : 'Staff';
   const packageFoundationDescription = isFixedCrewModel
@@ -970,6 +985,14 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           () => getScoringMatrixElementOptions(scoringMatrixPhraseBank),
           [scoringMatrixPhraseBank]
       );
+  const unitScopedSyllabusDetails = useMemo(() => {
+      if (!isFixedCrewModel || !effectiveActiveUnitCode) return syllabusDetails;
+      const activeUnit = normaliseUnitTabCode(effectiveActiveUnitCode);
+      return syllabusDetails.filter(item => {
+          const itemUnit = normaliseUnitTabCode((item as any).unit);
+          return !itemUnit || itemUnit === activeUnit;
+      });
+  }, [effectiveActiveUnitCode, isFixedCrewModel, syllabusDetails]);
 	  const [showAssignTrainingModal, setShowAssignTrainingModal] = useState(false);
   const [assignTrainingSelection, setAssignTrainingSelection] = useState<Set<number>>(new Set());
   const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = useState(false);
@@ -978,17 +1001,17 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   // App-level unit access filtering happens before this view is rendered.
   const courseLMPs = useMemo(() => {
     const fromSyllabus = new Set<string>();
-    syllabusDetails.filter(item => item.isActive !== false).forEach(item => {
+    unitScopedSyllabusDetails.filter(item => item.isActive !== false).forEach(item => {
       if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach(c => { if (c) fromSyllabus.add(c); });
     });
     return Array.from(fromSyllabus).sort();
-  }, [activeTab, syllabusDetails]);
+  }, [activeTab, unitScopedSyllabusDetails]);
 
   // Map from course code → full display title (uses module field of first item in that course)
   const courseTitleMap = useMemo(() => {
     const map: Record<string, string> = {};
-    syllabusDetails.filter(item => item.isActive !== false).forEach(item => {
+    unitScopedSyllabusDetails.filter(item => item.isActive !== false).forEach(item => {
       if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach(c => {
         if (c && !map[c] && item.module && item.module !== c) {
@@ -997,12 +1020,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       });
     });
     return map;
-  }, [activeTab, syllabusDetails]);
+  }, [activeTab, unitScopedSyllabusDetails]);
 
   // Helper: get display title for a course code
   const getCourseTitle = (code: string) => courseTitleMap[code] || code;
   const normaliseContextCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
-  const activeUnitNormalised = normaliseContextCode(activeUnitCode);
+  const activeUnitNormalised = normaliseContextCode(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
   const getPackageSourceKey = (item: SyllabusItemDetail): string => {
       const packageCode = (item.courses || [])[0] || item.code;
@@ -1103,7 +1126,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   // Filter items based on selected course type (exclude inactive/deleted items)
   const filteredSyllabusDetails = useMemo(() => {
-      return syllabusDetails.filter(item => {
+      return unitScopedSyllabusDetails.filter(item => {
           if (item.isActive === false) return false;
           if (isSyllabusCourseShell(item)) return false;
           if (getItemLmpDetailsTab(item) !== activeTab) return false;
@@ -1113,7 +1136,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           }
           return item.courses.includes(selectedCourseType);
       });
-  }, [activeTab, syllabusDetails, selectedCourseType]);
+  }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
 
   const activeTrainingAssignmentItem = useMemo(() => (
       filteredSyllabusDetails[0] || selectedItem || null
@@ -1124,19 +1147,19 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       return getAirCombatAssignmentFromItem(
           { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
           activeLocationCode,
-          activeUnitCode,
+          effectiveActiveUnitCode,
           currentUserName,
       );
-  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
+  }, [activeTrainingAssignmentItem, activeLocationCode, effectiveActiveUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
 
   const assignableAirCombatStaff = useMemo(() => {
       if (!isAirCombatModel) return [];
-      const targetUnit = String(activeUnitCode || '').trim().toUpperCase();
+      const targetUnit = String(effectiveActiveUnitCode || '').trim().toUpperCase();
       return instructorsData
           .filter(staff => staff && staff.name && !staff.isAdminStaff)
           .filter(staff => !targetUnit || String(staff.unit || '').trim().toUpperCase() === targetUnit)
           .sort((a, b) => a.name.localeCompare(b.name));
-  }, [activeUnitCode, instructorsData, isAirCombatModel]);
+  }, [effectiveActiveUnitCode, instructorsData, isAirCombatModel]);
 
   const openAssignTraining = () => {
       if (!activeTrainingAssignment) return;
@@ -1265,7 +1288,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   // Select first item by default when syllabusDetails or selectedCourseType changes
   useEffect(() => {
     if (initialSelectedId) {
-      const itemToSelect = syllabusDetails.find(item => item.code === initialSelectedId);
+      const itemToSelect = unitScopedSyllabusDetails.find(item => item.code === initialSelectedId);
       if (itemToSelect) {
           const itemTab = getItemLmpDetailsTab(itemToSelect);
           if (itemTab !== activeTab) {
@@ -1285,10 +1308,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
             setSelectedItem(filteredSyllabusDetails[0]);
         } else if (selectedItem) {
              const updated = syllabusDetails.find(item => item.code === selectedItem.code);
-             if (updated && getItemLmpDetailsTab(updated) === activeTab) setSelectedItem(updated);
+             if (updated && unitScopedSyllabusDetails.some(item => item.id === updated.id) && getItemLmpDetailsTab(updated) === activeTab) setSelectedItem(updated);
         }
     }
-  }, [activeTab, initialSelectedId, syllabusDetails, selectedItem, selectedCourseType, filteredSyllabusDetails]);
+  }, [activeTab, initialSelectedId, selectedItem, selectedCourseType, filteredSyllabusDetails, unitScopedSyllabusDetails, syllabusDetails]);
 
   // Reset selection when course type changes (select first item of new course)
   useEffect(() => {
@@ -1349,7 +1372,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           const currentTitle = getCourseTitle(selectedCourseType);
           const newTitle = editingCourseTitle.trim();
           if (newTitle && newTitle !== currentTitle) {
-              const courseItems = syllabusDetails.filter(item =>
+              const courseItems = unitScopedSyllabusDetails.filter(item =>
                   item.isActive !== false &&
                   getItemLmpDetailsTab(item) === activeTab &&
                   (item.courses || []).includes(selectedCourseType)
@@ -1405,7 +1428,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           }
           // Permanently delete all items for this course/package.
           // Include any item that belongs to this course (even if it also belongs to others)
-          const itemsToDelete = syllabusDetails.filter(item =>
+          const itemsToDelete = unitScopedSyllabusDetails.filter(item =>
               getItemLmpDetailsTab(item) === activeTab &&
               (item.courses || []).includes(selectedCourseType)
           );
@@ -1898,6 +1921,31 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               <span className="text-sky-400">{getCourseTitle(selectedCourseType)}</span>
           )}</h1>
           <p className="text-sm text-gray-400">{isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle}</p>
+          {shouldShowUnitTabs && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                  {fixedCrewUnitTabs.map(unitCode => (
+                      <button
+                          key={unitCode}
+                          type="button"
+                          onClick={() => {
+                              if (unitCode === activeUnitTab) return;
+                              setActiveUnitTab(unitCode);
+                              setSelectedItem(null);
+                              setHoveredItem(null);
+                              setIsEditing(false);
+                              setEditedItem(null);
+                          }}
+                          className={`h-8 rounded-md border px-4 text-xs font-semibold transition ${
+                              activeUnitTab === unitCode
+                                  ? 'border-emerald-400/80 bg-emerald-900/50 text-white'
+                                  : 'border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
+                          }`}
+                      >
+                          {unitCode}
+                      </button>
+                  ))}
+              </div>
+          )}
           <div className="mt-3 inline-flex rounded-md border border-gray-700 bg-gray-950/70 p-1">
             {availableTabs.map(tab => (
               <button
@@ -2048,7 +2096,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         aircraftCrewComposition={aircraftCrewComposition}
                         crewPositionTerminology={crewPositionTerminology}
                         instructorsData={instructorsData}
-                        activeUnitCode={activeUnitCode}
+                        activeUnitCode={effectiveActiveUnitCode}
 	                    isAirCombatModel={isAirCombatModel}
                         operationalModel={operationalModel}
                         staffQualificationCatalogue={staffQualificationCatalogue}

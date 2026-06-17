@@ -39642,9 +39642,21 @@ const InstructorListView = ({
 };
 const StaffView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("profile");
+  const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
+  const sharedUnitTabs = reactExports.useMemo(() => Array.from(new Set((props.sharedUnitTabs || []).map(normaliseUnitCode).filter(Boolean))), [props.sharedUnitTabs]);
+  const [activeUnitTab, setActiveUnitTab] = reactExports.useState(() => sharedUnitTabs[0] || normaliseUnitCode(props.activeUnitCode));
+  reactExports.useEffect(() => {
+    if (sharedUnitTabs.length === 0) return;
+    if (!sharedUnitTabs.includes(activeUnitTab)) {
+      setActiveUnitTab(sharedUnitTabs[0]);
+    }
+  }, [activeUnitTab, sharedUnitTabs]);
   useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
-  const locationFilteredInstructorsForSchedule = props.instructorsData.sort((a, b) => {
+  const shouldShowUnitTabs = String(props.operationalModel || "").trim().toLowerCase() === "fixed_crew" && sharedUnitTabs.length > 1;
+  const scopedInstructorsData = shouldShowUnitTabs ? props.instructorsData.filter((instructor) => normaliseUnitCode(instructor.unit) === activeUnitTab) : props.instructorsData;
+  const scopedArchivedInstructorsData = shouldShowUnitTabs ? props.archivedInstructorsData.filter((instructor) => normaliseUnitCode(instructor.unit) === activeUnitTab) : props.archivedInstructorsData;
+  const locationFilteredInstructorsForSchedule = scopedInstructorsData.sort((a, b) => {
     const roleA = a.role === "QFI" || a.role === "Pilot" ? 0 : 1;
     const roleB = b.role === "QFI" || b.role === "Pilot" ? 0 : 1;
     if (roleA !== roleB) {
@@ -39656,24 +39668,36 @@ const StaffView = (props) => {
     return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "staff");
   });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-gray-900", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 pt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 pt-3", children: [
+      shouldShowUnitTabs && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 flex flex-wrap gap-2", children: sharedUnitTabs.map((unitCode) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => setActiveTab("profile"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
-          children: "Staff Profile"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setActiveTab("schedule"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
-          children: "Staff Schedule"
-        }
-      )
-    ] }) }),
+          type: "button",
+          onClick: () => setActiveUnitTab(unitCode),
+          className: `h-8 rounded-md border px-4 text-xs font-semibold transition ${activeUnitTab === unitCode ? "border-emerald-400/80 bg-emerald-900/50 text-white" : "border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white"}`,
+          children: unitCode
+        },
+        unitCode
+      )) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setActiveTab("profile"),
+            className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+            children: "Staff Profile"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setActiveTab("schedule"),
+            className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+            children: "Staff Schedule"
+          }
+        )
+      ] })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden", children: [
       activeTab === "profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(
         InstructorListView,
@@ -39681,8 +39705,8 @@ const StaffView = (props) => {
           onClose: props.onClose,
           events: props.events,
           traineesData: props.traineesData,
-          instructorsData: props.instructorsData,
-          archivedInstructorsData: props.archivedInstructorsData,
+          instructorsData: scopedInstructorsData,
+          archivedInstructorsData: scopedArchivedInstructorsData,
           scheduleHistoryEvents: props.scheduleHistoryEvents,
           syllabusDetails: props.syllabusDetails,
           insertEventTypes: props.insertEventTypes,
@@ -40907,6 +40931,7 @@ const SyllabusView = ({
   instructorsData = [],
   onUpdateInstructor,
   operationalModel: operationalModel2 = "flight_school",
+  sharedUnitTabs = [],
   staffQualificationCatalogue,
   currentUserName,
   scoringMatrixPhraseBank,
@@ -40935,6 +40960,17 @@ const SyllabusView = ({
   const isAirCombatModel = activeOperationalModel === "air_combat";
   const isFixedCrewModel = activeOperationalModel === "fixed_crew";
   const usesPackageTab = activeOperationalModel === "air_combat" || activeOperationalModel === "fixed_crew";
+  const normaliseUnitTabCode = (value) => String(value || "").trim().toUpperCase();
+  const fixedCrewUnitTabs = reactExports.useMemo(() => Array.from(new Set(sharedUnitTabs.map(normaliseUnitTabCode).filter(Boolean))), [sharedUnitTabs]);
+  const [activeUnitTab, setActiveUnitTab] = reactExports.useState(() => fixedCrewUnitTabs[0] || normaliseUnitTabCode(activeUnitCode));
+  reactExports.useEffect(() => {
+    if (!isFixedCrewModel || fixedCrewUnitTabs.length === 0) return;
+    if (!fixedCrewUnitTabs.includes(activeUnitTab)) {
+      setActiveUnitTab(fixedCrewUnitTabs[0]);
+    }
+  }, [activeUnitTab, fixedCrewUnitTabs, isFixedCrewModel]);
+  const shouldShowUnitTabs = isFixedCrewModel && fixedCrewUnitTabs.length > 1;
+  const effectiveActiveUnitCode = shouldShowUnitTabs ? activeUnitTab : activeUnitCode;
   const shouldScopeCreatedItemsToActiveUnit = isTrainingPackagesTab || activeOperationalModel !== "flight_school";
   const packageFoundationLabel = isFixedCrewModel ? "Fixed Crew" : isAirCombatModel ? "Air Combat" : "Staff";
   const packageFoundationDescription = isFixedCrewModel ? "Fixed Crew staff progression packages are scoped to the selected unit. They start as package shells until events are uploaded or added." : "Air Combat staff training packages are scoped to the selected unit. They start as package shells until events are uploaded or added.";
@@ -40951,22 +40987,30 @@ const SyllabusView = ({
     () => getScoringMatrixElementOptions(scoringMatrixPhraseBank),
     [scoringMatrixPhraseBank]
   );
+  const unitScopedSyllabusDetails = reactExports.useMemo(() => {
+    if (!isFixedCrewModel || !effectiveActiveUnitCode) return syllabusDetails;
+    const activeUnit = normaliseUnitTabCode(effectiveActiveUnitCode);
+    return syllabusDetails.filter((item) => {
+      const itemUnit = normaliseUnitTabCode(item.unit);
+      return !itemUnit || itemUnit === activeUnit;
+    });
+  }, [effectiveActiveUnitCode, isFixedCrewModel, syllabusDetails]);
   const [showAssignTrainingModal, setShowAssignTrainingModal] = reactExports.useState(false);
   const [assignTrainingSelection, setAssignTrainingSelection] = reactExports.useState(/* @__PURE__ */ new Set());
   const [isSavingTrainingAssignments, setIsSavingTrainingAssignments] = reactExports.useState(false);
   const courseLMPs = reactExports.useMemo(() => {
     const fromSyllabus = /* @__PURE__ */ new Set();
-    syllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
+    unitScopedSyllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
       if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach((c) => {
         if (c) fromSyllabus.add(c);
       });
     });
     return Array.from(fromSyllabus).sort();
-  }, [activeTab, syllabusDetails]);
+  }, [activeTab, unitScopedSyllabusDetails]);
   const courseTitleMap = reactExports.useMemo(() => {
     const map = {};
-    syllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
+    unitScopedSyllabusDetails.filter((item) => item.isActive !== false).forEach((item) => {
       if (getItemLmpDetailsTab(item) !== activeTab) return;
       (item.courses || []).forEach((c) => {
         if (c && !map[c] && item.module && item.module !== c) {
@@ -40975,10 +41019,10 @@ const SyllabusView = ({
       });
     });
     return map;
-  }, [activeTab, syllabusDetails]);
+  }, [activeTab, unitScopedSyllabusDetails]);
   const getCourseTitle = (code) => courseTitleMap[code] || code;
   const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-  const activeUnitNormalised = normaliseContextCode(activeUnitCode);
+  const activeUnitNormalised = normaliseContextCode(effectiveActiveUnitCode);
   const activeLocationNormalised = normaliseContextCode(activeLocationCode);
   const getPackageSourceKey = (item) => {
     const packageCode = (item.courses || [])[0] || item.code;
@@ -41051,7 +41095,7 @@ const SyllabusView = ({
   const [isDeleting, setIsDeleting] = reactExports.useState(false);
   const [isSaving2, setIsSaving] = reactExports.useState(false);
   const filteredSyllabusDetails = reactExports.useMemo(() => {
-    return syllabusDetails.filter((item) => {
+    return unitScopedSyllabusDetails.filter((item) => {
       if (item.isActive === false) return false;
       if (isSyllabusCourseShell(item)) return false;
       if (getItemLmpDetailsTab(item) !== activeTab) return false;
@@ -41060,22 +41104,22 @@ const SyllabusView = ({
       }
       return item.courses.includes(selectedCourseType);
     });
-  }, [activeTab, syllabusDetails, selectedCourseType]);
+  }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
   const activeTrainingAssignmentItem = reactExports.useMemo(() => filteredSyllabusDetails[0] || selectedItem || null, [filteredSyllabusDetails, selectedItem]);
   const activeTrainingAssignment = reactExports.useMemo(() => {
     if (!isAirCombatModel || !activeTrainingAssignmentItem || !selectedCourseType) return null;
     return getAirCombatAssignmentFromItem(
       { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
       activeLocationCode,
-      activeUnitCode,
+      effectiveActiveUnitCode,
       currentUserName
     );
-  }, [activeTrainingAssignmentItem, activeLocationCode, activeUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
+  }, [activeTrainingAssignmentItem, activeLocationCode, effectiveActiveUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
   const assignableAirCombatStaff = reactExports.useMemo(() => {
     if (!isAirCombatModel) return [];
-    const targetUnit = String(activeUnitCode || "").trim().toUpperCase();
+    const targetUnit = String(effectiveActiveUnitCode || "").trim().toUpperCase();
     return instructorsData.filter((staff) => staff && staff.name && !staff.isAdminStaff).filter((staff) => !targetUnit || String(staff.unit || "").trim().toUpperCase() === targetUnit).sort((a, b) => a.name.localeCompare(b.name));
-  }, [activeUnitCode, instructorsData, isAirCombatModel]);
+  }, [effectiveActiveUnitCode, instructorsData, isAirCombatModel]);
   const openAssignTraining = () => {
     if (!activeTrainingAssignment) return;
     setAssignTrainingSelection(new Set(
@@ -41191,7 +41235,7 @@ const SyllabusView = ({
   }, [activeTab, selectedCourseType]);
   reactExports.useEffect(() => {
     if (initialSelectedId) {
-      const itemToSelect = syllabusDetails.find((item) => item.code === initialSelectedId);
+      const itemToSelect = unitScopedSyllabusDetails.find((item) => item.code === initialSelectedId);
       if (itemToSelect) {
         const itemTab = getItemLmpDetailsTab(itemToSelect);
         if (itemTab !== activeTab) {
@@ -41209,10 +41253,10 @@ const SyllabusView = ({
         setSelectedItem(filteredSyllabusDetails[0]);
       } else if (selectedItem) {
         const updated = syllabusDetails.find((item) => item.code === selectedItem.code);
-        if (updated && getItemLmpDetailsTab(updated) === activeTab) setSelectedItem(updated);
+        if (updated && unitScopedSyllabusDetails.some((item) => item.id === updated.id) && getItemLmpDetailsTab(updated) === activeTab) setSelectedItem(updated);
       }
     }
-  }, [activeTab, initialSelectedId, syllabusDetails, selectedItem, selectedCourseType, filteredSyllabusDetails]);
+  }, [activeTab, initialSelectedId, selectedItem, selectedCourseType, filteredSyllabusDetails, unitScopedSyllabusDetails, syllabusDetails]);
   reactExports.useEffect(() => {
     if (filteredSyllabusDetails.length > 0) {
       setSelectedItem(filteredSyllabusDetails[0]);
@@ -41263,7 +41307,7 @@ const SyllabusView = ({
       const currentTitle = getCourseTitle(selectedCourseType);
       const newTitle = editingCourseTitle.trim();
       if (newTitle && newTitle !== currentTitle) {
-        const courseItems = syllabusDetails.filter(
+        const courseItems = unitScopedSyllabusDetails.filter(
           (item) => item.isActive !== false && getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
         );
         await Promise.all(courseItems.map(
@@ -41313,7 +41357,7 @@ const SyllabusView = ({
         setIsDeleting(false);
         return;
       }
-      const itemsToDelete = syllabusDetails.filter(
+      const itemsToDelete = unitScopedSyllabusDetails.filter(
         (item) => getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
       );
       console.log(`🗑️ Deleting ${itemsToDelete.length} items for ${activeCollectionNoun}: ${selectedCourseType}`, itemsToDelete.map((i) => i.id));
@@ -41766,6 +41810,23 @@ const SyllabusView = ({
             ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: getCourseTitle(selectedCourseType) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle }),
+          shouldShowUnitTabs && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex flex-wrap gap-2", children: fixedCrewUnitTabs.map((unitCode) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                if (unitCode === activeUnitTab) return;
+                setActiveUnitTab(unitCode);
+                setSelectedItem(null);
+                setHoveredItem(null);
+                setIsEditing(false);
+                setEditedItem(null);
+              },
+              className: `h-8 rounded-md border px-4 text-xs font-semibold transition ${activeUnitTab === unitCode ? "border-emerald-400/80 bg-emerald-900/50 text-white" : "border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white"}`,
+              children: unitCode
+            },
+            unitCode
+          )) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 inline-flex rounded-md border border-gray-700 bg-gray-950/70 p-1", children: availableTabs.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -41907,7 +41968,7 @@ const SyllabusView = ({
             aircraftCrewComposition,
             crewPositionTerminology,
             instructorsData,
-            activeUnitCode,
+            activeUnitCode: effectiveActiveUnitCode,
             isAirCombatModel,
             operationalModel: operationalModel2,
             staffQualificationCatalogue,
@@ -82036,6 +82097,7 @@ const App = () => {
   const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
   const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
   const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
+  const fixedCrewSharedResourceUnitTabs = reactExports.useMemo(() => activeOperationalModel === "fixed_crew" && organisationSettings.fleetSharingEnabled && activeContextUnitCodes.length > 1 ? activeContextUnitCodes : [], [activeContextUnitCodes, activeOperationalModel, organisationSettings.fleetSharingEnabled]);
   const activeFixedCrewTileColourUnitKey = reactExports.useMemo(() => String(activeContextUnitCodes[0] || activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeContextUnitCodes, activeUnitCode]);
   const activeFixedCrewTileColourMode = reactExports.useMemo(() => getFixedCrewTileColourModeForUnit(fixedCrewTileColourModeByUnit, activeFixedCrewTileColourUnitKey), [fixedCrewTileColourModeByUnit, activeFixedCrewTileColourUnitKey]);
   const handleUpdateFixedCrewTileColourMode = reactExports.useCallback((mode) => {
@@ -82563,14 +82625,22 @@ const App = () => {
   const visibleSyllabusDetails = reactExports.useMemo(() => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnit = normaliseContextCode(activeUnitCode);
-    return filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode).filter((item) => {
+    const activeUnits = activeOperationalModel === "fixed_crew" && activeContextUnitCodes.length > 1 ? new Set(activeContextUnitCodes.map(normaliseContextCode)) : /* @__PURE__ */ new Set([activeUnit]);
+    const baseVisibleItems = activeOperationalModel === "fixed_crew" && activeContextUnitCodes.length > 1 ? activeContextUnitCodes.flatMap((unitCode) => filterSyllabusForMasterLmpAccess(syllabusDetails, "View", unitCode)) : filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode);
+    const seen = /* @__PURE__ */ new Set();
+    return baseVisibleItems.filter((item) => {
+      const key = item.id || `${item.code}|${item.unit || ""}|${item.lmpType || ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).filter((item) => {
       if (item.lmpType !== "Staff CAT") return true;
       const packageUnit = normaliseContextCode(item.unit);
-      if (activeOperationalModel === "fixed_crew") return packageUnit === activeUnit;
+      if (activeOperationalModel === "fixed_crew") return activeUnits.has(packageUnit);
       if (activeOperationalModel !== "air_combat") return false;
       return !packageUnit || packageUnit === activeUnit;
     });
-  }, [activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
   const trainingPackageTemplatesForActiveModel = reactExports.useMemo(() => {
     const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
     const activeUnit = normaliseContextCode(activeUnitCode);
@@ -94233,7 +94303,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             instructorLabel,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
-            staffQualificationCatalogue: activeStaffQualificationCatalogue
+            staffQualificationCatalogue: activeStaffQualificationCatalogue,
+            sharedUnitTabs: fixedCrewSharedResourceUnitTabs,
+            activeUnitCode
           }
         );
       case "Instructors":
@@ -94405,6 +94477,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             crewPositionTerminology: activeCrewPositionTerminology,
             activeLocationCode: school,
             activeUnitCode,
+            sharedUnitTabs: fixedCrewSharedResourceUnitTabs,
             trainingPackageTemplates: trainingPackageTemplatesForActiveModel,
             instructorsData,
             operationalModel: activeOperationalModel,
