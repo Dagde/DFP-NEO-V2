@@ -28,7 +28,7 @@ export interface AppSettingsData {
   // Event Limits
   eventLimits: {
     exec: { maxFlightFtd: number; maxDutySup: number; maxTotal: number };
-    instructor: { maxFlightFtd: number; maxDutySup: number; maxTotal: number };
+    instructor: { maxFlightFtd: number; maxFlights?: number; maxSimulators?: number; maxFlightSim?: number; maxDutySup: number; maxTotal: number };
     trainee: { maxFlightFtd: number; maxTotal: number };
     simIp: { maxFtd: number; maxTotal: number };
   };
@@ -301,7 +301,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     locationOpAreas: state.locationOpAreas || {},
     eventLimits: state.eventLimits || {
       exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
-      instructor: { maxFlightFtd: 2, maxDutySup: 2, maxTotal: 3 },
+      instructor: { maxFlightFtd: 2, maxFlights: 1, maxSimulators: 2, maxFlightSim: 2, maxDutySup: 2, maxTotal: 3 },
       trainee: { maxFlightFtd: 1, maxTotal: 2 },
       simIp: { maxFtd: 2, maxTotal: 2 },
     },

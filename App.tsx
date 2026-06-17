@@ -6612,6 +6612,11 @@ function generateDfpInternal(
             }
             diag.minuteTimeline = timeline;
         };
+        const fixedCrewStaffLimits = {
+            maxFlights: Math.max(1, Math.floor(Number(eventLimits.instructor.maxFlights ?? 1) || 1)),
+            maxSimulators: Math.max(1, Math.floor(Number(eventLimits.instructor.maxSimulators ?? 2) || 2)),
+            maxFlightSim: Math.max(1, Math.floor(Number(eventLimits.instructor.maxFlightSim ?? eventLimits.instructor.maxFlightFtd ?? 2) || 2)),
+        };
         const selectFixedCrewForEvent = (event: Omit<ScheduleEvent, 'date'>): { crew: string; members: Instructor[]; pic: Instructor } | null => {
             const eventTypeForAvailability = event.type === 'ground' ? 'ground' : event.type;
             const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
@@ -6629,6 +6634,43 @@ function generateDfpInternal(
                         && bookingWindow.start < existingBookingWindow.end;
                 })
             );
+            const isFixedCrewFlightEvent = (eventToCheck: Partial<ScheduleEvent>): boolean => eventToCheck.type === 'flight';
+            const isFixedCrewSimulatorEvent = (eventToCheck: Partial<ScheduleEvent>): boolean => eventToCheck.type === 'ftd' || eventToCheck.type === 'cpt';
+            const getFixedCrewStaffDailyCounts = (staff: Instructor): { flights: number; simulators: number; flightSim: number } => {
+                const counts = { flights: 0, simulators: 0, flightSim: 0 };
+                generatedEvents
+                    .filter(existing => eventHasPerson(existing, staff.name))
+                    .forEach(existing => {
+                        if (isFixedCrewFlightEvent(existing)) {
+                            counts.flights += 1;
+                            counts.flightSim += 1;
+                        } else if (isFixedCrewSimulatorEvent(existing)) {
+                            counts.simulators += 1;
+                            counts.flightSim += 1;
+                        }
+                    });
+                return counts;
+            };
+            const getFixedCrewStaffLimitViolations = (members: Instructor[], eventToCheck: Omit<ScheduleEvent, 'date'>): any[] => {
+                const isFlight = isFixedCrewFlightEvent(eventToCheck);
+                const isSimulator = isFixedCrewSimulatorEvent(eventToCheck);
+                if (!isFlight && !isSimulator) return [];
+                return members
+                    .map(staff => {
+                        const counts = getFixedCrewStaffDailyCounts(staff);
+                        if (isFlight && counts.flights >= fixedCrewStaffLimits.maxFlights) {
+                            return { staff: staff.name, reason: 'STAFF_MAX_FLIGHTS_PER_DAY', counts, limits: fixedCrewStaffLimits };
+                        }
+                        if (isSimulator && counts.simulators >= fixedCrewStaffLimits.maxSimulators) {
+                            return { staff: staff.name, reason: 'STAFF_MAX_SIMULATORS_PER_DAY', counts, limits: fixedCrewStaffLimits };
+                        }
+                        if (counts.flightSim >= fixedCrewStaffLimits.maxFlightSim) {
+                            return { staff: staff.name, reason: 'STAFF_MAX_FLIGHT_SIM_PER_DAY', counts, limits: fixedCrewStaffLimits };
+                        }
+                        return null;
+                    })
+                    .filter(Boolean);
+            };
             const candidates = Array.from(crewGroups.entries())
                 .sort(([leftCrew], [rightCrew]) =>
                     (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0)
@@ -6644,6 +6686,7 @@ function generateDfpInternal(
                     generatedEvents.some(existing => eventHasPerson(existing, staff.name) && priorityPersonnelConflict(event, existing))
                 );
                 const fixedCrewGroupConflict = findFixedCrewGroupConflict(crew);
+                const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
                 const attempt = {
                     event: event.flightNumber,
                     crew,
@@ -6652,6 +6695,7 @@ function generateDfpInternal(
                     pic: pic?.name || null,
                     shortfalls,
                     unavailableMembers: unavailableMembers.map(staff => staff.name),
+                    staffLimitViolations,
                     swapCandidates: shortfalls.length > 0 ? getFixedCrewSwapCandidates(shortfalls, members, bookingWindow) : {},
                     hasExistingConflict,
                     fixedCrewGroupConflict: fixedCrewGroupConflict ? {
@@ -6669,6 +6713,12 @@ function generateDfpInternal(
                 if (shortfalls.length > 0) {
                     incrementFixedCrewRejection('CREW_ROLE_SHORTFALL');
                     pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason: 'CREW_ROLE_SHORTFALL' });
+                    continue;
+                }
+                if (staffLimitViolations.length > 0) {
+                    const reason = staffLimitViolations[0]?.reason || 'STAFF_EVENT_LIMIT';
+                    incrementFixedCrewRejection(reason);
+                    pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason });
                     continue;
                 }
                 if (unavailableMembers.length > 0) {
@@ -6991,6 +7041,7 @@ function generateDfpInternal(
         diag.queueSourceAudit = {
             buildDate,
             activeUnit: fixedCrewUnit,
+            staffEventLimits: fixedCrewStaffLimits,
             priorityInputs: {
                 totalHighestPriorityEvents: highestPriorityEvents.length,
                 matchingDate: highestPriorityEvents.filter(event => priorityEventMatchesBuildDate(event, buildDate)).length,
@@ -19872,6 +19923,10 @@ const App: React.FC = () => {
         if (numericValue > 12) return fallback;
         return numericValue;
     };
+    const normalisePositiveIntegerLimit = (value: unknown, fallback: number): number => {
+        const numericValue = Math.floor(Number(value));
+        return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : fallback;
+    };
     const normaliseEventLimitsForDutySupSessions = (limits: EventLimits): EventLimits => ({
         ...limits,
         exec: {
@@ -19880,12 +19935,20 @@ const App: React.FC = () => {
         },
         instructor: {
             ...limits.instructor,
+            maxFlightFtd: normalisePositiveIntegerLimit(limits.instructor?.maxFlightFtd, 2),
+            maxFlights: normalisePositiveIntegerLimit(limits.instructor?.maxFlights, 1),
+            maxSimulators: normalisePositiveIntegerLimit(limits.instructor?.maxSimulators, 2),
+            maxFlightSim: normalisePositiveIntegerLimit(
+                limits.instructor?.maxFlightSim,
+                normalisePositiveIntegerLimit(limits.instructor?.maxFlightFtd, 2)
+            ),
+            maxTotal: normalisePositiveIntegerLimit(limits.instructor?.maxTotal, 3),
             maxDutySup: normaliseDutySupSessionLimit(limits.instructor?.maxDutySup, 2),
         },
     });
     const [eventLimits, setEventLimits] = useState<EventLimits>({
         exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
-        instructor: { maxFlightFtd: 2, maxDutySup: 2, maxTotal: 3 },
+        instructor: { maxFlightFtd: 2, maxFlights: 1, maxSimulators: 2, maxFlightSim: 2, maxDutySup: 2, maxTotal: 3 },
         trainee: { maxFlightFtd: 1, maxTotal: 2 },
         simIp: { maxFtd: 2, maxTotal: 2 }
     });

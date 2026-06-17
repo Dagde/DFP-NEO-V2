@@ -87,6 +87,7 @@ interface SettingsViewProps {
     scoringMatrixActiveTab?: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
     scoringMatrixReadOnly?: boolean;
     onScoringMatrixElementAdded?: (elementName: string) => void;
+    activeOperationalModel?: string;
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
     tileStatusSettings?: TileStatusSettings;
@@ -492,6 +493,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     scoringMatrixActiveTab,
     scoringMatrixReadOnly = false,
     onScoringMatrixElementAdded,
+    activeOperationalModel,
     maxDispatchPerHour,
     onUpdateMaxDispatchPerHour,
     tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
@@ -516,6 +518,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     
     // Permission Check - Only Super Admin, Admin, and Scheduler can edit Settings
     const canEditSettings = ['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission);
+    const isFixedCrewModel = String(activeOperationalModel || '').trim().toLowerCase() === 'fixed_crew';
     const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     const handleTileStatusMinutesChange = (key: keyof TileStatusSettings, value: number) => {
         if (!onUpdateTileStatusSettings) return;
@@ -2677,90 +2680,124 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             )}
                         </div>
                         <div className="p-4 space-y-4">
-                            {/* Execs */}
-                            <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Execs</legend>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.exec.maxFlightFtd} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">1</span>}
+                            {isFixedCrewModel ? (
+                                <fieldset className="p-3 border border-gray-600 rounded-lg">
+                                    <legend className="px-2 text-sm font-semibold text-gray-300">Staff</legend>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center gap-3">
+                                            <span className="text-sm text-gray-400">Max flights per day:</span>
+                                            {isEditingLimits ? (
+                                                <input type="number" min="1" value={tempLimits.instructor.maxFlights || 1} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxFlights: parseInt(e.target.value) || 1}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                            ) : <span className="text-white font-mono">{eventLimits.instructor.maxFlights || 1}</span>}
+                                        </div>
+                                        <div className="flex justify-between items-center gap-3">
+                                            <span className="text-sm text-gray-400">Max simulator per day:</span>
+                                            {isEditingLimits ? (
+                                                <input type="number" min="1" value={tempLimits.instructor.maxSimulators || 2} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxSimulators: parseInt(e.target.value) || 1}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                            ) : <span className="text-white font-mono">{eventLimits.instructor.maxSimulators || 2}</span>}
+                                        </div>
+                                        <div className="flex justify-between items-center gap-3">
+                                            <span className="text-sm text-gray-400">Max flight + sim per day:</span>
+                                            {isEditingLimits ? (
+                                                <input type="number" min="1" value={tempLimits.instructor.maxFlightSim || tempLimits.instructor.maxFlightFtd || 2} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxFlightSim: parseInt(e.target.value) || 1, maxFlightFtd: parseInt(e.target.value) || 1}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                            ) : <span className="text-white font-mono">{eventLimits.instructor.maxFlightSim || eventLimits.instructor.maxFlightFtd || 2}</span>}
+                                        </div>
+                                        <div className="flex justify-between items-center gap-3">
+                                            <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Sup session (hrs):</span>
+                                            {isEditingLimits ? (
+                                                <input type="number" min="0.25" step="0.25" value={tempLimits.instructor.maxDutySup} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                            ) : <span className="text-white font-mono">{eventLimits.instructor.maxDutySup}</span>}
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max Duty Sup session (hrs):</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" min="0.25" step="0.25" value={tempLimits.exec.maxDutySup} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">{eventLimits.exec.maxDutySup}</span>}
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max total all events:</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.exec.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">2</span>}
-                                    </div>
-                                </div>
-                            </fieldset>
-                            {/* Staff */}
-                            <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Staff</legend>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.instructor.maxFlightFtd || 2} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">2</span>}
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Sup session (hrs):</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" min="0.25" step="0.25" value={tempLimits.instructor.maxDutySup} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">{eventLimits.instructor.maxDutySup}</span>}
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max total all events:</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.instructor.maxTotal || 3} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">3</span>}
-                                    </div>
-                                </div>
-                            </fieldset>
-                            {/* Trainees */}
-                            <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Trainees</legend>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.trainee.maxFlightFtd || 1} onChange={e => setTempLimits({...tempLimits, trainee: {...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">1</span>}
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max total all events:</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.trainee.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, trainee: {maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">2</span>}
-                                    </div>
-                                </div>
-                            </fieldset>
-                            {/* SIM IPs */}
-                            <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">SIM IPs</legend>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max {resourceDisplayNames.ftd}:</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.simIp.maxFtd || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">2</span>}
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max total all events:</span>
-                                        {isEditingLimits ? (
-                                            <input type="number" value={tempLimits.simIp.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, simIp: {maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        ) : <span className="text-white font-mono">2</span>}
-                                    </div>
-                                </div>
-                            </fieldset>
+                                </fieldset>
+                            ) : (
+                                <>
+                                    {/* Execs */}
+                                    <fieldset className="p-3 border border-gray-600 rounded-lg">
+                                        <legend className="px-2 text-sm font-semibold text-gray-300">Execs</legend>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" value={tempLimits.exec.maxFlightFtd} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.exec.maxFlightFtd}</span>}
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-400">Max Duty Sup session (hrs):</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" min="0.25" step="0.25" value={tempLimits.exec.maxDutySup} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.exec.maxDutySup}</span>}
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-400">Max total all events:</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" value={tempLimits.exec.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.exec.maxTotal}</span>}
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    {/* Staff */}
+                                    <fieldset className="p-3 border border-gray-600 rounded-lg">
+                                        <legend className="px-2 text-sm font-semibold text-gray-300">Staff</legend>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" value={tempLimits.instructor.maxFlightFtd || 2} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0, maxFlightSim: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.instructor.maxFlightFtd}</span>}
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Sup session (hrs):</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" min="0.25" step="0.25" value={tempLimits.instructor.maxDutySup} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.instructor.maxDutySup}</span>}
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-400">Max total all events:</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" value={tempLimits.instructor.maxTotal || 3} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.instructor.maxTotal}</span>}
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    {/* Trainees */}
+                                    <fieldset className="p-3 border border-gray-600 rounded-lg">
+                                        <legend className="px-2 text-sm font-semibold text-gray-300">Trainees</legend>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" value={tempLimits.trainee.maxFlightFtd || 1} onChange={e => setTempLimits({...tempLimits, trainee: {...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.trainee.maxFlightFtd}</span>}
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-400">Max total all events:</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" value={tempLimits.trainee.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, trainee: {...tempLimits.trainee, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.trainee.maxTotal}</span>}
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    {/* SIM IPs */}
+                                    <fieldset className="p-3 border border-gray-600 rounded-lg">
+                                        <legend className="px-2 text-sm font-semibold text-gray-300">SIM IPs</legend>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-400">Max {resourceDisplayNames.ftd}:</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" value={tempLimits.simIp.maxFtd || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.simIp.maxFtd}</span>}
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-400">Max total all events:</span>
+                                                {isEditingLimits ? (
+                                                    <input type="number" value={tempLimits.simIp.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                                ) : <span className="text-white font-mono">{eventLimits.simIp.maxTotal}</span>}
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </>
+                            )}
                         </div>
                     </div>
 

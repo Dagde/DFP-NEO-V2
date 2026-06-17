@@ -1666,7 +1666,7 @@ const buildSettingsSnapshot = (state) => {
     locationOpAreas: state.locationOpAreas || {},
     eventLimits: state.eventLimits || {
       exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
-      instructor: { maxFlightFtd: 2, maxDutySup: 2, maxTotal: 3 },
+      instructor: { maxFlightFtd: 2, maxFlights: 1, maxSimulators: 2, maxFlightSim: 2, maxDutySup: 2, maxTotal: 3 },
       trainee: { maxFlightFtd: 1, maxTotal: 2 },
       simIp: { maxFtd: 2, maxTotal: 2 }
     },
@@ -46428,6 +46428,7 @@ const SettingsView = ({
   scoringMatrixActiveTab,
   scoringMatrixReadOnly = false,
   onScoringMatrixElementAdded,
+  activeOperationalModel,
   maxDispatchPerHour,
   onUpdateMaxDispatchPerHour,
   tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
@@ -46448,6 +46449,7 @@ const SettingsView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
+  const isFixedCrewModel = String(activeOperationalModel || "").trim().toLowerCase() === "fixed_crew";
   const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
   const handleTileStatusMinutesChange = (key, value) => {
     if (!onUpdateTileStatusSettings) return;
@@ -48122,7 +48124,27 @@ const SettingsView = ({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Staff" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max flights per day:" }),
+              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxFlights || 1, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlights: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlights || 1 })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max simulator per day:" }),
+              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxSimulators || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxSimulators: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxSimulators || 2 })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max flight + sim per day:" }),
+              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxFlightSim || tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightSim: parseInt(e.target.value) || 1, maxFlightFtd: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlightSim || eventLimits.instructor.maxFlightFtd || 2 })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor role assigned) - Max Duty Sup session (hrs):" }),
+              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.instructor.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxDutySup })
+            ] })
+          ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Execs" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
@@ -48132,7 +48154,7 @@ const SettingsView = ({
                   resourceDisplayNames.ftd,
                   ":"
                 ] }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxFlightFtd, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "1" })
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxFlightFtd, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxFlightFtd })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max Duty Sup session (hrs):" }),
@@ -48140,7 +48162,7 @@ const SettingsView = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total all events:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxTotal })
               ] })
             ] })
           ] }),
@@ -48153,7 +48175,7 @@ const SettingsView = ({
                   resourceDisplayNames.ftd,
                   ":"
                 ] }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0, maxFlightSim: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlightFtd })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor role assigned) - Max Duty Sup session (hrs):" }),
@@ -48161,7 +48183,7 @@ const SettingsView = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total all events:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxTotal || 3, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "3" })
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxTotal || 3, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxTotal })
               ] })
             ] })
           ] }),
@@ -48174,11 +48196,11 @@ const SettingsView = ({
                   resourceDisplayNames.ftd,
                   ":"
                 ] }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxFlightFtd || 1, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "1" })
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxFlightFtd || 1, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxFlightFtd })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total all events:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxTotal })
               ] })
             ] })
           ] }),
@@ -48191,15 +48213,15 @@ const SettingsView = ({
                   resourceDisplayNames.ftd,
                   ":"
                 ] }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.simIp.maxFtd })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total all events:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.simIp.maxTotal })
               ] })
             ] })
           ] })
-        ] })
+        ] }) })
       ] }),
       shouldShowSection("permissions") && /* @__PURE__ */ jsxRuntimeExports.jsx(
         PermissionsManagerWindow,
@@ -72524,6 +72546,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       diag.minuteTimeline = timeline;
     };
+    const fixedCrewStaffLimits = {
+      maxFlights: Math.max(1, Math.floor(Number(eventLimits.instructor.maxFlights ?? 1) || 1)),
+      maxSimulators: Math.max(1, Math.floor(Number(eventLimits.instructor.maxSimulators ?? 2) || 2)),
+      maxFlightSim: Math.max(1, Math.floor(Number(eventLimits.instructor.maxFlightSim ?? eventLimits.instructor.maxFlightFtd ?? 2) || 2))
+    };
     const selectFixedCrewForEvent = (event) => {
       const eventTypeForAvailability = event.type === "ground" ? "ground" : event.type;
       const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
@@ -72538,6 +72565,39 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const existingBookingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
         return existingBookingWindow.start < bookingWindow.end && bookingWindow.start < existingBookingWindow.end;
       });
+      const isFixedCrewFlightEvent = (eventToCheck) => eventToCheck.type === "flight";
+      const isFixedCrewSimulatorEvent = (eventToCheck) => eventToCheck.type === "ftd" || eventToCheck.type === "cpt";
+      const getFixedCrewStaffDailyCounts = (staff) => {
+        const counts = { flights: 0, simulators: 0, flightSim: 0 };
+        generatedEvents.filter((existing) => eventHasPerson(existing, staff.name)).forEach((existing) => {
+          if (isFixedCrewFlightEvent(existing)) {
+            counts.flights += 1;
+            counts.flightSim += 1;
+          } else if (isFixedCrewSimulatorEvent(existing)) {
+            counts.simulators += 1;
+            counts.flightSim += 1;
+          }
+        });
+        return counts;
+      };
+      const getFixedCrewStaffLimitViolations = (members, eventToCheck) => {
+        const isFlight = isFixedCrewFlightEvent(eventToCheck);
+        const isSimulator = isFixedCrewSimulatorEvent(eventToCheck);
+        if (!isFlight && !isSimulator) return [];
+        return members.map((staff) => {
+          const counts = getFixedCrewStaffDailyCounts(staff);
+          if (isFlight && counts.flights >= fixedCrewStaffLimits.maxFlights) {
+            return { staff: staff.name, reason: "STAFF_MAX_FLIGHTS_PER_DAY", counts, limits: fixedCrewStaffLimits };
+          }
+          if (isSimulator && counts.simulators >= fixedCrewStaffLimits.maxSimulators) {
+            return { staff: staff.name, reason: "STAFF_MAX_SIMULATORS_PER_DAY", counts, limits: fixedCrewStaffLimits };
+          }
+          if (counts.flightSim >= fixedCrewStaffLimits.maxFlightSim) {
+            return { staff: staff.name, reason: "STAFF_MAX_FLIGHT_SIM_PER_DAY", counts, limits: fixedCrewStaffLimits };
+          }
+          return null;
+        }).filter(Boolean);
+      };
       const candidates = Array.from(crewGroups.entries()).sort(
         ([leftCrew], [rightCrew]) => (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0) || leftCrew.localeCompare(rightCrew, void 0, { numeric: true })
       );
@@ -72551,6 +72611,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           (staff) => generatedEvents.some((existing) => eventHasPerson(existing, staff.name) && priorityPersonnelConflict(event, existing))
         );
         const fixedCrewGroupConflict = findFixedCrewGroupConflict(crew);
+        const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
         const attempt = {
           event: event.flightNumber,
           crew,
@@ -72559,6 +72620,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           pic: pic?.name || null,
           shortfalls,
           unavailableMembers: unavailableMembers.map((staff) => staff.name),
+          staffLimitViolations,
           swapCandidates: shortfalls.length > 0 ? getFixedCrewSwapCandidates(shortfalls, members, bookingWindow) : {},
           hasExistingConflict,
           fixedCrewGroupConflict: fixedCrewGroupConflict ? {
@@ -72576,6 +72638,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (shortfalls.length > 0) {
           incrementFixedCrewRejection("CREW_ROLE_SHORTFALL");
           pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason: "CREW_ROLE_SHORTFALL" });
+          continue;
+        }
+        if (staffLimitViolations.length > 0) {
+          const reason = staffLimitViolations[0]?.reason || "STAFF_EVENT_LIMIT";
+          incrementFixedCrewRejection(reason);
+          pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason });
           continue;
         }
         if (unavailableMembers.length > 0) {
@@ -72857,6 +72925,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     diag.queueSourceAudit = {
       buildDate,
       activeUnit: fixedCrewUnit,
+      staffEventLimits: fixedCrewStaffLimits,
       priorityInputs: {
         totalHighestPriorityEvents: highestPriorityEvents.length,
         matchingDate: highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate)).length,
@@ -83446,6 +83515,10 @@ const App = () => {
     if (numericValue > 12) return fallback;
     return numericValue;
   };
+  const normalisePositiveIntegerLimit = (value, fallback) => {
+    const numericValue = Math.floor(Number(value));
+    return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : fallback;
+  };
   const normaliseEventLimitsForDutySupSessions = (limits) => ({
     ...limits,
     exec: {
@@ -83454,12 +83527,20 @@ const App = () => {
     },
     instructor: {
       ...limits.instructor,
+      maxFlightFtd: normalisePositiveIntegerLimit(limits.instructor?.maxFlightFtd, 2),
+      maxFlights: normalisePositiveIntegerLimit(limits.instructor?.maxFlights, 1),
+      maxSimulators: normalisePositiveIntegerLimit(limits.instructor?.maxSimulators, 2),
+      maxFlightSim: normalisePositiveIntegerLimit(
+        limits.instructor?.maxFlightSim,
+        normalisePositiveIntegerLimit(limits.instructor?.maxFlightFtd, 2)
+      ),
+      maxTotal: normalisePositiveIntegerLimit(limits.instructor?.maxTotal, 3),
       maxDutySup: normaliseDutySupSessionLimit(limits.instructor?.maxDutySup, 2)
     }
   });
   const [eventLimits, setEventLimits] = reactExports.useState({
     exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
-    instructor: { maxFlightFtd: 2, maxDutySup: 2, maxTotal: 3 },
+    instructor: { maxFlightFtd: 2, maxFlights: 1, maxSimulators: 2, maxFlightSim: 2, maxDutySup: 2, maxTotal: 3 },
     trainee: { maxFlightFtd: 1, maxTotal: 2 },
     simIp: { maxFtd: 2, maxTotal: 2 }
   });

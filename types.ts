@@ -545,6 +545,9 @@ export interface EventLimits {
   };
   instructor: {
     maxFlightFtd: number;
+    maxFlights?: number;
+    maxSimulators?: number;
+    maxFlightSim?: number;
     maxDutySup: number; // Maximum Duty Sup session length in hours
     maxTotal: number;
   };
