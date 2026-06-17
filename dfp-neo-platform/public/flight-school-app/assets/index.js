@@ -72605,9 +72605,34 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         allocatedTrainingSlots += 1;
       }
     });
-    const activeUnitTrainingItems = streamAllocations.flatMap((allocation) => (itemsByTrainingStream.get(allocation.stream.key) || []).slice(0, allocation.slots)).sort(
-      (left, right) => (activeTrainingWeightByKey.get(right.stream.key) || 0) - (activeTrainingWeightByKey.get(left.stream.key) || 0) || left.stream.kind.localeCompare(right.stream.kind) || Number(left.item.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.item.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.item.orderKey || "").localeCompare(right.item.orderKey || "") || left.item.code.localeCompare(right.item.code)
-    );
+    const selectedTrainingItemsByStream = new Map(streamAllocations.map((allocation) => [
+      allocation.stream.key,
+      (itemsByTrainingStream.get(allocation.stream.key) || []).slice(0, allocation.slots)
+    ]));
+    const placedTrainingItemsByStream = new Map(streamAllocations.map((allocation) => [allocation.stream.key, 0]));
+    const activeUnitTrainingItems = [];
+    const totalSelectedTrainingItems = Array.from(selectedTrainingItemsByStream.values()).reduce((total, items) => total + items.length, 0);
+    while (activeUnitTrainingItems.length < totalSelectedTrainingItems) {
+      const nextPosition = activeUnitTrainingItems.length + 1;
+      const nextAllocation = streamAllocations.filter((allocation) => (placedTrainingItemsByStream.get(allocation.stream.key) || 0) < (selectedTrainingItemsByStream.get(allocation.stream.key) || []).length).sort((left, right) => {
+        const leftPlaced = placedTrainingItemsByStream.get(left.stream.key) || 0;
+        const rightPlaced = placedTrainingItemsByStream.get(right.stream.key) || 0;
+        const leftDeficit = nextPosition * ((activeTrainingWeightByKey.get(left.stream.key) || left.stream.weight) / 100) - leftPlaced;
+        const rightDeficit = nextPosition * ((activeTrainingWeightByKey.get(right.stream.key) || right.stream.weight) / 100) - rightPlaced;
+        return rightDeficit - leftDeficit || (activeTrainingWeightByKey.get(right.stream.key) || right.stream.weight) - (activeTrainingWeightByKey.get(left.stream.key) || left.stream.weight) || left.stream.kind.localeCompare(right.stream.kind) || left.stream.code.localeCompare(right.stream.code);
+      })[0];
+      if (!nextAllocation) break;
+      const streamKey = nextAllocation.stream.key;
+      const streamItems = selectedTrainingItemsByStream.get(streamKey) || [];
+      const placedCount = placedTrainingItemsByStream.get(streamKey) || 0;
+      const nextItem = streamItems[placedCount];
+      if (!nextItem) {
+        placedTrainingItemsByStream.set(streamKey, placedCount + 1);
+        continue;
+      }
+      activeUnitTrainingItems.push(nextItem);
+      placedTrainingItemsByStream.set(streamKey, placedCount + 1);
+    }
     const schedulableTrainingItemsByKind = {
       courses: schedulableTrainingItems.filter((entry) => entry.stream.kind === "course").length,
       packages: schedulableTrainingItems.filter((entry) => entry.stream.kind === "training_package").length
@@ -72658,6 +72683,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           available: allocation.available,
           slots: allocation.slots,
           rawSlots: Math.round(allocation.rawSlots * 100) / 100
+        })),
+        interleavedTrainingQueue: activeUnitTrainingItems.slice(0, 160).map(({ item, stream }, index) => ({
+          sequence: index + 1,
+          source: stream.kind === "course" ? "fixed-crew-course" : "fixed-crew-package",
+          code: item.code,
+          stream: stream.code,
+          kind: stream.kind,
+          weight: stream.weight
         })),
         schedulableFlightOrSimItems: activeUnitTrainingItems.length,
         ignoredBecauseTypeUnsupported: activeFixedCrewTrainingSyllabusItems.filter(({ item }) => !buildFixedCrewEventFromSyllabus(item)).slice(0, 80).map(({ item, stream }) => ({
