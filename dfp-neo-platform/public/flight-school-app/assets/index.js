@@ -72805,6 +72805,25 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         fixedCrewPerf.counters.roleShortfallChecks += 1;
         const shortfalls = getFixedCrewRoleShortfalls(members, event);
+        fixedCrewPerf.counters.staffLimitChecks += members.length;
+        const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
+        const attemptWithLimits = {
+          ...attemptBase,
+          shortfalls,
+          staffLimitViolations,
+          swapCandidates: shortfalls.length > 0 ? getFixedCrewSwapCandidates(shortfalls, members, bookingWindow) : {}
+        };
+        if (shortfalls.length > 0) {
+          incrementFixedCrewRejection("CREW_ROLE_SHORTFALL");
+          pushFixedCrewAttempt({ ...attemptWithLimits, unavailableMembers: [], hasExistingConflict: false, fixedCrewGroupConflict: null, outcome: "rejected", reason: "CREW_ROLE_SHORTFALL" });
+          continue;
+        }
+        if (staffLimitViolations.length > 0) {
+          const reason = staffLimitViolations[0]?.reason || "STAFF_EVENT_LIMIT";
+          incrementFixedCrewRejection(reason);
+          pushFixedCrewAttempt({ ...attemptWithLimits, unavailableMembers: [], hasExistingConflict: false, fixedCrewGroupConflict: null, outcome: "rejected", reason });
+          continue;
+        }
         fixedCrewPerf.counters.availabilityChecks += members.length;
         const unavailableMembers = members.filter(
           (staff) => isFixedCrewStaffUnavailableCached(staff, bookingWindow.start, bookingWindow.end, buildDate, eventTypeForAvailability)
@@ -72815,14 +72834,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         );
         fixedCrewPerf.counters.crewGroupConflictChecks += 1;
         const fixedCrewGroupConflict = findFixedCrewGroupConflict(crew);
-        fixedCrewPerf.counters.staffLimitChecks += members.length;
-        const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
         const attempt = {
-          ...attemptBase,
+          ...attemptWithLimits,
           shortfalls,
           unavailableMembers: unavailableMembers.map((staff) => staff.name),
-          staffLimitViolations,
-          swapCandidates: shortfalls.length > 0 ? getFixedCrewSwapCandidates(shortfalls, members, bookingWindow) : {},
           hasExistingConflict,
           fixedCrewGroupConflict: fixedCrewGroupConflict ? {
             event: fixedCrewGroupConflict.flightNumber,
@@ -72831,17 +72846,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             bookingWindow: getEventBookingWindowForAlgo(fixedCrewGroupConflict, syllabusDetails)
           } : null
         };
-        if (shortfalls.length > 0) {
-          incrementFixedCrewRejection("CREW_ROLE_SHORTFALL");
-          pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason: "CREW_ROLE_SHORTFALL" });
-          continue;
-        }
-        if (staffLimitViolations.length > 0) {
-          const reason = staffLimitViolations[0]?.reason || "STAFF_EVENT_LIMIT";
-          incrementFixedCrewRejection(reason);
-          pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason });
-          continue;
-        }
         if (unavailableMembers.length > 0) {
           incrementFixedCrewRejection("CREW_MEMBER_UNAVAILABLE");
           pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason: "CREW_MEMBER_UNAVAILABLE" });
