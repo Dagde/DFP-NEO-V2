@@ -6312,6 +6312,11 @@ function generateDfpInternal(
                 resourceConflictChecks: 0,
                 ownerUnitRestrictedCrewSelections: 0,
                 ownerUnitFilteredCrewCandidates: 0,
+                staffDailyCountCacheHits: 0,
+                staffDailyCountCacheMisses: 0,
+                staticAvailabilityCacheHits: 0,
+                staticAvailabilityCacheMisses: 0,
+                staffDailyCountCacheClears: 0,
                 placements: 0,
             },
             timingsMs: {} as Record<string, number>,
@@ -6699,6 +6704,28 @@ function generateDfpInternal(
             maxSimulators: Math.max(1, Math.floor(Number(eventLimits.instructor.maxSimulators ?? 2) || 2)),
             maxFlightSim: Math.max(1, Math.floor(Number(eventLimits.instructor.maxFlightSim ?? eventLimits.instructor.maxFlightFtd ?? 2) || 2)),
         };
+        const fixedCrewStaffDailyCountCache = new Map<string, { flights: number; simulators: number; flightSim: number }>();
+        const fixedCrewStaticAvailabilityCache = new Map<string, boolean>();
+        const getFixedCrewStaffCacheKey = (staff: Instructor): string => (
+            String(staff.idNumber || staff.name || '').trim() || staff.name
+        );
+        const isFixedCrewStaffUnavailableCached = (
+            staff: Instructor,
+            start: number,
+            end: number,
+            date: string,
+            type: ScheduleEvent['type']
+        ): boolean => {
+            const key = `${getFixedCrewStaffCacheKey(staff)}|${date}|${type}|${start}|${end}`;
+            if (fixedCrewStaticAvailabilityCache.has(key)) {
+                fixedCrewPerf.counters.staticAvailabilityCacheHits += 1;
+                return fixedCrewStaticAvailabilityCache.get(key)!;
+            }
+            fixedCrewPerf.counters.staticAvailabilityCacheMisses += 1;
+            const unavailable = isPersonStaticallyUnavailable(staff, start, end, date, type);
+            fixedCrewStaticAvailabilityCache.set(key, unavailable);
+            return unavailable;
+        };
         const selectFixedCrewForEvent = (event: Omit<ScheduleEvent, 'date'>): { crew: string; members: Instructor[]; pic: Instructor } | null => {
             const eventTypeForAvailability = event.type === 'ground' ? 'ground' : event.type;
             const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
@@ -6724,6 +6751,13 @@ function generateDfpInternal(
                 return getFixedCrewCrewUnit(crew) === eventOwnerUnit;
             };
             const getFixedCrewStaffDailyCounts = (staff: Instructor): { flights: number; simulators: number; flightSim: number } => {
+                const cacheKey = getFixedCrewStaffCacheKey(staff);
+                const cached = fixedCrewStaffDailyCountCache.get(cacheKey);
+                if (cached) {
+                    fixedCrewPerf.counters.staffDailyCountCacheHits += 1;
+                    return cached;
+                }
+                fixedCrewPerf.counters.staffDailyCountCacheMisses += 1;
                 const counts = { flights: 0, simulators: 0, flightSim: 0 };
                 generatedEvents
                     .filter(existing => eventHasPerson(existing, staff.name))
@@ -6736,6 +6770,7 @@ function generateDfpInternal(
                             counts.flightSim += 1;
                         }
                     });
+                fixedCrewStaffDailyCountCache.set(cacheKey, counts);
                 return counts;
             };
             const getFixedCrewStaffLimitViolations = (members: Instructor[], eventToCheck: Omit<ScheduleEvent, 'date'>): any[] => {
@@ -6790,7 +6825,7 @@ function generateDfpInternal(
                 const shortfalls = getFixedCrewRoleShortfalls(members, event);
                 fixedCrewPerf.counters.availabilityChecks += members.length;
                 const unavailableMembers = members.filter(staff =>
-                    isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, eventTypeForAvailability as any)
+                    isFixedCrewStaffUnavailableCached(staff, bookingWindow.start, bookingWindow.end, buildDate, eventTypeForAvailability as any)
                 );
                 fixedCrewPerf.counters.personnelConflictChecks += members.length;
                 const hasExistingConflict = members.some(staff =>
@@ -6976,6 +7011,8 @@ function generateDfpInternal(
                     };
                     generatedEvents.push(placed);
                     fixedCrewPerf.counters.placements += 1;
+                    fixedCrewPerf.counters.staffDailyCountCacheClears += 1;
+                    fixedCrewStaffDailyCountCache.clear();
                     fixedCrewUsage.set(assignment.crew, (fixedCrewUsage.get(assignment.crew) || 0) + 1);
                     pushFixedCrewPlacement({
                         event: placed.flightNumber,

@@ -72364,6 +72364,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         resourceConflictChecks: 0,
         ownerUnitRestrictedCrewSelections: 0,
         ownerUnitFilteredCrewCandidates: 0,
+        staffDailyCountCacheHits: 0,
+        staffDailyCountCacheMisses: 0,
+        staticAvailabilityCacheHits: 0,
+        staticAvailabilityCacheMisses: 0,
+        staffDailyCountCacheClears: 0,
         placements: 0
       },
       timingsMs: {},
@@ -72699,6 +72704,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       maxSimulators: Math.max(1, Math.floor(Number(eventLimits.instructor.maxSimulators ?? 2) || 2)),
       maxFlightSim: Math.max(1, Math.floor(Number(eventLimits.instructor.maxFlightSim ?? eventLimits.instructor.maxFlightFtd ?? 2) || 2))
     };
+    const fixedCrewStaffDailyCountCache = /* @__PURE__ */ new Map();
+    const fixedCrewStaticAvailabilityCache = /* @__PURE__ */ new Map();
+    const getFixedCrewStaffCacheKey = (staff) => String(staff.idNumber || staff.name || "").trim() || staff.name;
+    const isFixedCrewStaffUnavailableCached = (staff, start, end, date, type) => {
+      const key = `${getFixedCrewStaffCacheKey(staff)}|${date}|${type}|${start}|${end}`;
+      if (fixedCrewStaticAvailabilityCache.has(key)) {
+        fixedCrewPerf.counters.staticAvailabilityCacheHits += 1;
+        return fixedCrewStaticAvailabilityCache.get(key);
+      }
+      fixedCrewPerf.counters.staticAvailabilityCacheMisses += 1;
+      const unavailable = isPersonStaticallyUnavailable(staff, start, end, date, type);
+      fixedCrewStaticAvailabilityCache.set(key, unavailable);
+      return unavailable;
+    };
     const selectFixedCrewForEvent = (event) => {
       const eventTypeForAvailability = event.type === "ground" ? "ground" : event.type;
       const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
@@ -72721,6 +72740,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return getFixedCrewCrewUnit(crew) === eventOwnerUnit;
       };
       const getFixedCrewStaffDailyCounts = (staff) => {
+        const cacheKey = getFixedCrewStaffCacheKey(staff);
+        const cached = fixedCrewStaffDailyCountCache.get(cacheKey);
+        if (cached) {
+          fixedCrewPerf.counters.staffDailyCountCacheHits += 1;
+          return cached;
+        }
+        fixedCrewPerf.counters.staffDailyCountCacheMisses += 1;
         const counts = { flights: 0, simulators: 0, flightSim: 0 };
         generatedEvents.filter((existing) => eventHasPerson(existing, staff.name)).forEach((existing) => {
           if (isFixedCrewFlightEvent(existing)) {
@@ -72731,6 +72757,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             counts.flightSim += 1;
           }
         });
+        fixedCrewStaffDailyCountCache.set(cacheKey, counts);
         return counts;
       };
       const getFixedCrewStaffLimitViolations = (members, eventToCheck) => {
@@ -72780,7 +72807,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const shortfalls = getFixedCrewRoleShortfalls(members, event);
         fixedCrewPerf.counters.availabilityChecks += members.length;
         const unavailableMembers = members.filter(
-          (staff) => isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, eventTypeForAvailability)
+          (staff) => isFixedCrewStaffUnavailableCached(staff, bookingWindow.start, bookingWindow.end, buildDate, eventTypeForAvailability)
         );
         fixedCrewPerf.counters.personnelConflictChecks += members.length;
         const hasExistingConflict = members.some(
@@ -72961,6 +72988,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           };
           generatedEvents.push(placed);
           fixedCrewPerf.counters.placements += 1;
+          fixedCrewPerf.counters.staffDailyCountCacheClears += 1;
+          fixedCrewStaffDailyCountCache.clear();
           fixedCrewUsage.set(assignment.crew, (fixedCrewUsage.get(assignment.crew) || 0) + 1);
           pushFixedCrewPlacement({
             event: placed.flightNumber,
