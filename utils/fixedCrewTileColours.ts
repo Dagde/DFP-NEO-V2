@@ -63,6 +63,20 @@ const normaliseCrewValue = (value: unknown): string => (
   String(value || '').trim().replace(/^CREW\s*/i, '').trim()
 );
 
+const parseScopedCrewValue = (crew: string): { unit: string; crew: string } => {
+  const parts = String(crew || '').split('::');
+  if (parts.length <= 1) return { unit: '', crew: normaliseCrewValue(crew) };
+  return {
+    unit: parts[0],
+    crew: normaliseCrewValue(parts.slice(1).join('::')),
+  };
+};
+
+const formatCrewKeyLabel = (crew: string): string => {
+  const parsed = parseScopedCrewValue(crew);
+  return parsed.unit ? `${parsed.unit} Crew ${parsed.crew}` : `Crew ${parsed.crew}`;
+};
+
 export const getFixedCrewGroupForTileColour = (event: Partial<ScheduleEvent>): string => {
   const explicit = normaliseCrewValue((event as any).fixedCrewGroup);
   if (explicit) return explicit;
@@ -91,6 +105,10 @@ const getFixedCrewEventTypeColourKey = (event: Partial<ScheduleEvent>): string =
 };
 
 const getCrewColour = (crew: string): string => {
+  if (String(crew || '').includes('::')) {
+    const hash = String(crew || '').split('').reduce((total, char) => total + char.charCodeAt(0), 0);
+    return CREW_COLOURS[Math.abs(hash) % CREW_COLOURS.length];
+  }
   const numeric = Number(String(crew).match(/\d+/)?.[0]);
   if (Number.isFinite(numeric) && numeric > 0) return CREW_COLOURS[(numeric - 1) % CREW_COLOURS.length];
   const hash = String(crew || '').split('').reduce((total, char) => total + char.charCodeAt(0), 0);
@@ -127,7 +145,7 @@ export const buildFixedCrewTileColourKey = (
       .sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }));
     return crews.map(crew => ({
       key: `crew:${crew}`,
-      label: `Crew ${crew}`,
+      label: formatCrewKeyLabel(crew),
       color: getCrewColour(crew),
     }));
   }

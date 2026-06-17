@@ -1506,6 +1506,18 @@ const getFixedCrewTileColourModeForUnit = (modesByUnit, unitCode) => {
   return normaliseFixedCrewTileColourMode(modesByUnit?.[key] || modesByUnit?.DEFAULT);
 };
 const normaliseCrewValue = (value) => String(value || "").trim().replace(/^CREW\s*/i, "").trim();
+const parseScopedCrewValue = (crew) => {
+  const parts = String(crew || "").split("::");
+  if (parts.length <= 1) return { unit: "", crew: normaliseCrewValue(crew) };
+  return {
+    unit: parts[0],
+    crew: normaliseCrewValue(parts.slice(1).join("::"))
+  };
+};
+const formatCrewKeyLabel = (crew) => {
+  const parsed = parseScopedCrewValue(crew);
+  return parsed.unit ? `${parsed.unit} Crew ${parsed.crew}` : `Crew ${parsed.crew}`;
+};
 const getFixedCrewGroupForTileColour = (event) => {
   const explicit = normaliseCrewValue(event.fixedCrewGroup);
   if (explicit) return explicit;
@@ -1528,6 +1540,10 @@ const getFixedCrewEventTypeColourKey = (event) => {
   return "other";
 };
 const getCrewColour = (crew) => {
+  if (String(crew || "").includes("::")) {
+    const hash2 = String(crew || "").split("").reduce((total, char) => total + char.charCodeAt(0), 0);
+    return CREW_COLOURS[Math.abs(hash2) % CREW_COLOURS.length];
+  }
   const numeric = Number(String(crew).match(/\d+/)?.[0]);
   if (Number.isFinite(numeric) && numeric > 0) return CREW_COLOURS[(numeric - 1) % CREW_COLOURS.length];
   const hash = String(crew || "").split("").reduce((total, char) => total + char.charCodeAt(0), 0);
@@ -1547,7 +1563,7 @@ const buildFixedCrewTileColourKey = (events, mode) => {
     const crews = Array.from(new Set(fixedCrewEvents.map(getFixedCrewGroupForTileColour).filter(Boolean))).sort((left, right) => left.localeCompare(right, void 0, { numeric: true, sensitivity: "base" }));
     return crews.map((crew) => ({
       key: `crew:${crew}`,
-      label: `Crew ${crew}`,
+      label: formatCrewKeyLabel(crew),
       color: getCrewColour(crew)
     }));
   }
@@ -71461,6 +71477,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const timingReport = config.timingReport;
   const buildOperationalModel = normaliseOperationalModel(config.operationalModel || "flight_school");
   const buildActiveUnitCode = String(config.activeUnitCode || "").trim().toUpperCase();
+  const buildActiveContextUnitCodes = Array.from(new Set(
+    (Array.isArray(config.activeContextUnitCodes) && config.activeContextUnitCodes.length > 0 ? config.activeContextUnitCodes : String(config.activeUnitCode || "").split("+")).map((unitCode) => String(unitCode || "").trim().toUpperCase()).filter(Boolean)
+  ));
   const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
   const buildAircraftCrewComposition = config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: "seat-1", role: "Pilot", eligibleRoles: ["Pilot"] }] };
   const markBuildTiming = (name, details) => markNeoBuildTiming(timingReport, name, details);
@@ -72016,6 +72035,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       context: {
         locationCode: school,
         unitCode: buildActiveUnitCode,
+        memberUnits: buildActiveContextUnitCodes,
         buildDate
       },
       inputs: {
@@ -72054,6 +72074,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       context: {
         locationCode: school,
         unitCode: buildActiveUnitCode,
+        memberUnits: buildActiveContextUnitCodes,
         buildDate
       },
       inputs: {
@@ -72316,9 +72337,32 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const runFixedCrewBuild = () => {
     const diag = neoBuildDiag.fixedCrewPriority;
     const fixedCrewUnit = buildActiveUnitCode;
+    const fixedCrewContextUnits = buildActiveContextUnitCodes.length > 0 ? buildActiveContextUnitCodes : fixedCrewUnit ? [fixedCrewUnit] : [];
+    const fixedCrewContextUnitSet = new Set(fixedCrewContextUnits);
+    const fixedCrewUsesSharedUnitContext = fixedCrewContextUnitSet.size > 1;
+    diag.context = {
+      ...diag.context || {},
+      unitCode: fixedCrewUnit,
+      memberUnits: fixedCrewContextUnits
+    };
     const fixedCrewTileColourMode = normaliseFixedCrewTileColourMode(config.fixedCrewTileColourMode);
     const normaliseCrewValue2 = (value) => String(value || "").trim();
     const normaliseCrewKey = (value) => normaliseCrewValue2(value).toUpperCase();
+    const normaliseFixedCrewUnitCode = (value) => String(value || "").trim().toUpperCase();
+    const fixedCrewMatchesContextUnit = (unit) => {
+      const unitCode = normaliseFixedCrewUnitCode(unit);
+      if (fixedCrewContextUnitSet.size === 0) return true;
+      return Boolean(unitCode) && fixedCrewContextUnitSet.has(unitCode);
+    };
+    const getFixedCrewCrewLabel = (crew) => {
+      const parts = String(crew || "").split("::");
+      return (parts.length > 1 ? parts.slice(1).join("::") : crew).replace(/^CREW\s*/i, "").trim();
+    };
+    const getFixedCrewCrewUnit = (crew) => {
+      const parts = String(crew || "").split("::");
+      return parts.length > 1 ? parts[0] : "";
+    };
+    const getFixedCrewDisplayCrew = (crew) => `CREW ${getFixedCrewCrewLabel(crew)}`;
     const staffCatalogue = config.staffQualificationCatalogue || normaliseStaffQualificationCatalogue(null);
     const picQualification = getQualificationsForOperationalModel(staffCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic");
     const getFixedCrewRoleMatchTokens = (value) => {
@@ -72373,15 +72417,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffCatalogue, false).includes(picQualification.id);
     };
     const isActiveFixedCrewStaff = (staff) => {
-      const staffUnit = String(staff.unit || "").trim().toUpperCase();
-      return Boolean(staff.name) && !staff.isAdminStaff && (!fixedCrewUnit || !staffUnit || staffUnit === fixedCrewUnit);
+      return Boolean(staff.name) && !staff.isAdminStaff && fixedCrewMatchesContextUnit(staff.unit);
     };
     const crewGroups = /* @__PURE__ */ new Map();
     originalInstructors.filter(isActiveFixedCrewStaff).forEach((staff) => {
       const crewKey = normaliseCrewKey(staff.crew);
       if (!crewKey) return;
-      if (!crewGroups.has(crewKey)) crewGroups.set(crewKey, []);
-      crewGroups.get(crewKey).push(staff);
+      const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
+      const scopedCrewKey = fixedCrewUsesSharedUnitContext && staffUnit ? `${staffUnit}::${crewKey}` : crewKey;
+      if (!crewGroups.has(scopedCrewKey)) crewGroups.set(scopedCrewKey, []);
+      crewGroups.get(scopedCrewKey).push(staff);
     });
     const fixedCrewUsage = /* @__PURE__ */ new Map();
     const crewGroupSummaries = Array.from(crewGroups.entries()).sort(([left], [right]) => left.localeCompare(right, void 0, { numeric: true })).map(([crew, members]) => {
@@ -72389,6 +72434,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       fixedCrewUsage.set(crew, 0);
       return {
         crew,
+        crewLabel: getFixedCrewCrewLabel(crew),
+        unit: getFixedCrewCrewUnit(crew),
         members: members.map((staff) => ({ name: staff.name, rank: staff.rank, role: staff.role })),
         memberCount: members.length,
         picCandidates: picMembers.map((staff) => staff.name),
@@ -72558,6 +72605,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const status = !pic ? "NO_PIC" : unavailableMembers.length > 0 ? "UNAVAILABLE" : conflictingMembers.length > 0 ? "BUSY" : "READY";
         return {
           crew,
+          crewLabel: getFixedCrewCrewLabel(crew),
+          unit: getFixedCrewCrewUnit(crew) || null,
           status,
           pic: pic?.name || null,
           unavailableMembers: unavailableMembers.map((staff) => staff.name),
@@ -72583,7 +72632,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           event: event.flightNumber,
           source: event._source || null,
           resourceId: event.resourceId,
-          crew: event.fixedCrewGroup ? `CREW ${event.fixedCrewGroup}` : event.crew || null,
+          crew: event.fixedCrewGroup ? getFixedCrewDisplayCrew(event.fixedCrewGroup) : event.crew || null,
+          crewUnit: event.fixedCrewGroup ? getFixedCrewCrewUnit(event.fixedCrewGroup) || null : null,
           pic: event.fixedCrewPic || event.pilot || event.instructor || null
         }));
         timeline.push({
@@ -72676,6 +72726,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const attempt = {
           event: event.flightNumber,
           crew,
+          crewLabel: getFixedCrewCrewLabel(crew),
+          crewUnit: getFixedCrewCrewUnit(crew) || null,
           startTime: event.startTime,
           resourceId: event.resourceId || null,
           pic: pic?.name || null,
@@ -72778,12 +72830,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (!assignment) continue;
           const candidateBookingWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
           const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, candidateBookingWindow);
+          const assignmentCrewDisplay = getFixedCrewDisplayCrew(assignment.crew);
           if (crewOverlap) {
             incrementFixedCrewRejection("CREW_GROUP_CONFLICT");
             pushFixedCrewAttempt({
               event: candidate.flightNumber,
               source,
               crew: assignment.crew,
+              crewLabel: getFixedCrewCrewLabel(assignment.crew),
+              crewUnit: getFixedCrewCrewUnit(assignment.crew) || null,
               startTime,
               resourceId,
               pic: assignment.pic.name,
@@ -72801,22 +72856,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             ...candidate,
             color: resolveFixedCrewTileColour({
               ...candidate,
-              crew: `CREW ${assignment.crew}`,
-              group: `CREW ${assignment.crew}`,
-              student: `CREW ${assignment.crew}`,
+              crew: assignmentCrewDisplay,
+              group: assignmentCrewDisplay,
+              student: assignmentCrewDisplay,
               fixedCrewGroup: assignment.crew,
               _source: source
             }, fixedCrewTileColourMode),
             instructor: assignment.pic.name,
             pilot: assignment.pic.name,
-            student: `CREW ${assignment.crew}`,
-            crew: `CREW ${assignment.crew}`,
-            group: `CREW ${assignment.crew}`,
+            student: assignmentCrewDisplay,
+            crew: assignmentCrewDisplay,
+            group: assignmentCrewDisplay,
             attendees: assignment.members.map((staff) => staff.name),
             fixedCrewGroup: assignment.crew,
             fixedCrewPic: assignment.pic.name,
             fixedCrewManifestStatus: "complete",
-            fixedCrewManifestNotes: `NEO Build assigned whole crew group ${assignment.crew}.`,
+            fixedCrewManifestNotes: `NEO Build assigned whole crew group ${assignmentCrewDisplay}.`,
             flightType: "Dual",
             soloOrDual: "Dual",
             _source: source
@@ -72829,6 +72884,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             startTime,
             resourceId,
             crew: assignment.crew,
+            crewLabel: getFixedCrewCrewLabel(assignment.crew),
+            crewUnit: getFixedCrewCrewUnit(assignment.crew) || null,
             duration: placed.duration,
             pic: assignment.pic.name,
             attendees: placed.attendees
@@ -72848,7 +72905,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     if (crewGroups.size === 0) {
       diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
-      diag.conclusion = ["Fixed Crew NEO Build found no staff with a crew group in the active unit."];
+      diag.conclusion = [`Fixed Crew NEO Build found no staff with a crew group in the active Fixed Crew context (${fixedCrewContextUnits.join(", ") || fixedCrewUnit || "all units"}).`];
       saveNeoBuildDiag("final");
       return generatedEvents;
     }
@@ -72873,7 +72930,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         enabled: true
       };
     };
-    const activeFixedCrewTrainingSyllabusItems = syllabusDetails.filter((item) => item.isActive !== false && !isSyllabusCourseShell(item)).filter((item) => !fixedCrewUnit || String(item.unit || "").trim().toUpperCase() === fixedCrewUnit).map((item) => ({ item, stream: getFixedCrewTrainingStreamForItem(item) })).filter((entry) => Boolean(entry.stream)).filter((entry) => entry.stream.enabled && entry.stream.weight > 0);
+    const activeFixedCrewTrainingSyllabusItems = syllabusDetails.filter((item) => item.isActive !== false && !isSyllabusCourseShell(item)).filter((item) => fixedCrewMatchesContextUnit(item.unit)).map((item) => ({ item, stream: getFixedCrewTrainingStreamForItem(item) })).filter((entry) => Boolean(entry.stream)).filter((entry) => entry.stream.enabled && entry.stream.weight > 0);
     const activeTrainingStreams = normaliseFixedCrewTrainingPriorityWeights(
       Array.from(new Map(activeFixedCrewTrainingSyllabusItems.map(({ stream }) => [stream.key, stream])).values())
     );
@@ -72986,6 +73043,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     diag.queueSourceAudit = {
       buildDate,
       activeUnit: fixedCrewUnit,
+      activeMemberUnits: fixedCrewContextUnits,
       staffEventLimits: fixedCrewStaffLimits,
       priorityInputs: {
         totalHighestPriorityEvents: highestPriorityEvents.length,
@@ -89717,6 +89775,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const config = {
       operationalModel: activeOperationalModel,
       activeUnitCode,
+      activeContextUnitCodes,
       airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
       fixedCrewTrainingPriorities,
       fixedCrewTileColourMode: activeFixedCrewTileColourMode,

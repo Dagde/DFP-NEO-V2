@@ -4299,6 +4299,7 @@ interface DfpConfig {
   buildDate: string;
   operationalModel?: string;
   activeUnitCode?: string;
+  activeContextUnitCodes?: string[];
   airCombatSchedulingWeights?: any;
   fixedCrewTrainingPriorities?: FixedCrewTrainingStreamPriority[];
   fixedCrewTileColourMode?: FixedCrewTileColourMode;
@@ -5197,6 +5198,13 @@ function generateDfpInternal(
     const timingReport = config.timingReport;
     const buildOperationalModel = normaliseOperationalModel(config.operationalModel || 'flight_school');
     const buildActiveUnitCode = String(config.activeUnitCode || '').trim().toUpperCase();
+    const buildActiveContextUnitCodes = Array.from(new Set(
+        (Array.isArray(config.activeContextUnitCodes) && config.activeContextUnitCodes.length > 0
+            ? config.activeContextUnitCodes
+            : String(config.activeUnitCode || '').split('+'))
+            .map(unitCode => String(unitCode || '').trim().toUpperCase())
+            .filter(Boolean)
+    ));
     const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
     const buildAircraftCrewComposition = config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: 'seat-1', role: 'Pilot', eligibleRoles: ['Pilot'] }] };
     const markBuildTiming = (name: string, details?: Record<string, any>) => markNeoBuildTiming(timingReport, name, details);
@@ -5916,6 +5924,7 @@ function generateDfpInternal(
             context: {
                 locationCode: school,
                 unitCode: buildActiveUnitCode,
+                memberUnits: buildActiveContextUnitCodes,
                 buildDate,
             },
             inputs: {
@@ -5957,6 +5966,7 @@ function generateDfpInternal(
             context: {
                 locationCode: school,
                 unitCode: buildActiveUnitCode,
+                memberUnits: buildActiveContextUnitCodes,
                 buildDate,
             },
             inputs: {
@@ -6269,9 +6279,34 @@ function generateDfpInternal(
     const runFixedCrewBuild = (): Omit<ScheduleEvent, 'date'>[] => {
         const diag = neoBuildDiag.fixedCrewPriority;
         const fixedCrewUnit = buildActiveUnitCode;
+        const fixedCrewContextUnits = buildActiveContextUnitCodes.length > 0
+            ? buildActiveContextUnitCodes
+            : (fixedCrewUnit ? [fixedCrewUnit] : []);
+        const fixedCrewContextUnitSet = new Set(fixedCrewContextUnits);
+        const fixedCrewUsesSharedUnitContext = fixedCrewContextUnitSet.size > 1;
+        diag.context = {
+            ...(diag.context || {}),
+            unitCode: fixedCrewUnit,
+            memberUnits: fixedCrewContextUnits,
+        };
         const fixedCrewTileColourMode = normaliseFixedCrewTileColourMode(config.fixedCrewTileColourMode);
         const normaliseCrewValue = (value?: string | null): string => String(value || '').trim();
         const normaliseCrewKey = (value?: string | null): string => normaliseCrewValue(value).toUpperCase();
+        const normaliseFixedCrewUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
+        const fixedCrewMatchesContextUnit = (unit?: string | null): boolean => {
+            const unitCode = normaliseFixedCrewUnitCode(unit);
+            if (fixedCrewContextUnitSet.size === 0) return true;
+            return Boolean(unitCode) && fixedCrewContextUnitSet.has(unitCode);
+        };
+        const getFixedCrewCrewLabel = (crew: string): string => {
+            const parts = String(crew || '').split('::');
+            return (parts.length > 1 ? parts.slice(1).join('::') : crew).replace(/^CREW\s*/i, '').trim();
+        };
+        const getFixedCrewCrewUnit = (crew: string): string => {
+            const parts = String(crew || '').split('::');
+            return parts.length > 1 ? parts[0] : '';
+        };
+        const getFixedCrewDisplayCrew = (crew: string): string => `CREW ${getFixedCrewCrewLabel(crew)}`;
         const staffCatalogue = config.staffQualificationCatalogue || normaliseStaffQualificationCatalogue(null);
         const picQualification = getQualificationsForOperationalModel(staffCatalogue, 'fixed_crew')
             .find(qualification => (
@@ -6334,8 +6369,7 @@ function generateDfpInternal(
                 .includes(picQualification.id);
         };
         const isActiveFixedCrewStaff = (staff: Instructor): boolean => {
-            const staffUnit = String(staff.unit || '').trim().toUpperCase();
-            return Boolean(staff.name) && !staff.isAdminStaff && (!fixedCrewUnit || !staffUnit || staffUnit === fixedCrewUnit);
+            return Boolean(staff.name) && !staff.isAdminStaff && fixedCrewMatchesContextUnit(staff.unit);
         };
         const crewGroups = new Map<string, Instructor[]>();
         originalInstructors
@@ -6343,8 +6377,10 @@ function generateDfpInternal(
             .forEach(staff => {
                 const crewKey = normaliseCrewKey(staff.crew);
                 if (!crewKey) return;
-                if (!crewGroups.has(crewKey)) crewGroups.set(crewKey, []);
-                crewGroups.get(crewKey)!.push(staff);
+                const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
+                const scopedCrewKey = fixedCrewUsesSharedUnitContext && staffUnit ? `${staffUnit}::${crewKey}` : crewKey;
+                if (!crewGroups.has(scopedCrewKey)) crewGroups.set(scopedCrewKey, []);
+                crewGroups.get(scopedCrewKey)!.push(staff);
             });
         const fixedCrewUsage = new Map<string, number>();
         const crewGroupSummaries = Array.from(crewGroups.entries())
@@ -6354,6 +6390,8 @@ function generateDfpInternal(
                 fixedCrewUsage.set(crew, 0);
                 return {
                     crew,
+                    crewLabel: getFixedCrewCrewLabel(crew),
+                    unit: getFixedCrewCrewUnit(crew),
                     members: members.map(staff => ({ name: staff.name, rank: staff.rank, role: staff.role })),
                     memberCount: members.length,
                     picCandidates: picMembers.map(staff => staff.name),
@@ -6557,6 +6595,8 @@ function generateDfpInternal(
                                 : 'READY';
                     return {
                         crew,
+                        crewLabel: getFixedCrewCrewLabel(crew),
+                        unit: getFixedCrewCrewUnit(crew) || null,
                         status,
                         pic: pic?.name || null,
                         unavailableMembers: unavailableMembers.map(staff => staff.name),
@@ -6588,7 +6628,8 @@ function generateDfpInternal(
                         event: event.flightNumber,
                         source: (event as any)._source || null,
                         resourceId: event.resourceId,
-                        crew: event.fixedCrewGroup ? `CREW ${event.fixedCrewGroup}` : event.crew || null,
+                        crew: event.fixedCrewGroup ? getFixedCrewDisplayCrew(event.fixedCrewGroup) : event.crew || null,
+                        crewUnit: event.fixedCrewGroup ? getFixedCrewCrewUnit(event.fixedCrewGroup) || null : null,
                         pic: event.fixedCrewPic || event.pilot || event.instructor || null,
                     }));
                 timeline.push({
@@ -6690,6 +6731,8 @@ function generateDfpInternal(
                 const attempt = {
                     event: event.flightNumber,
                     crew,
+                    crewLabel: getFixedCrewCrewLabel(crew),
+                    crewUnit: getFixedCrewCrewUnit(crew) || null,
                     startTime: event.startTime,
                     resourceId: event.resourceId || null,
                     pic: pic?.name || null,
@@ -6797,12 +6840,15 @@ function generateDfpInternal(
                     if (!assignment) continue;
                     const candidateBookingWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
                     const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, candidateBookingWindow);
+                    const assignmentCrewDisplay = getFixedCrewDisplayCrew(assignment.crew);
                     if (crewOverlap) {
                         incrementFixedCrewRejection('CREW_GROUP_CONFLICT');
                         pushFixedCrewAttempt({
                             event: candidate.flightNumber,
                             source,
                             crew: assignment.crew,
+                            crewLabel: getFixedCrewCrewLabel(assignment.crew),
+                            crewUnit: getFixedCrewCrewUnit(assignment.crew) || null,
                             startTime,
                             resourceId,
                             pic: assignment.pic.name,
@@ -6820,22 +6866,22 @@ function generateDfpInternal(
                         ...candidate,
                         color: resolveFixedCrewTileColour({
                             ...candidate,
-                            crew: `CREW ${assignment.crew}`,
-                            group: `CREW ${assignment.crew}`,
-                            student: `CREW ${assignment.crew}`,
+                            crew: assignmentCrewDisplay,
+                            group: assignmentCrewDisplay,
+                            student: assignmentCrewDisplay,
                             fixedCrewGroup: assignment.crew,
                             _source: source,
                         } as any, fixedCrewTileColourMode),
                         instructor: assignment.pic.name,
                         pilot: assignment.pic.name,
-                        student: `CREW ${assignment.crew}`,
-                        crew: `CREW ${assignment.crew}`,
-                        group: `CREW ${assignment.crew}`,
+                        student: assignmentCrewDisplay,
+                        crew: assignmentCrewDisplay,
+                        group: assignmentCrewDisplay,
                         attendees: assignment.members.map(staff => staff.name),
                         fixedCrewGroup: assignment.crew,
                         fixedCrewPic: assignment.pic.name,
                         fixedCrewManifestStatus: 'complete',
-                        fixedCrewManifestNotes: `NEO Build assigned whole crew group ${assignment.crew}.`,
+                        fixedCrewManifestNotes: `NEO Build assigned whole crew group ${assignmentCrewDisplay}.`,
                         flightType: 'Dual',
                         soloOrDual: 'Dual',
                         _source: source,
@@ -6848,6 +6894,8 @@ function generateDfpInternal(
                         startTime,
                         resourceId,
                         crew: assignment.crew,
+                        crewLabel: getFixedCrewCrewLabel(assignment.crew),
+                        crewUnit: getFixedCrewCrewUnit(assignment.crew) || null,
                         duration: placed.duration,
                         pic: assignment.pic.name,
                         attendees: placed.attendees,
@@ -6868,7 +6916,7 @@ function generateDfpInternal(
         }
         if (crewGroups.size === 0) {
             diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
-            diag.conclusion = ['Fixed Crew NEO Build found no staff with a crew group in the active unit.'];
+            diag.conclusion = [`Fixed Crew NEO Build found no staff with a crew group in the active Fixed Crew context (${fixedCrewContextUnits.join(', ') || fixedCrewUnit || 'all units'}).`];
             saveNeoBuildDiag('final');
             return generatedEvents;
         }
@@ -6900,7 +6948,7 @@ function generateDfpInternal(
         };
         const activeFixedCrewTrainingSyllabusItems = syllabusDetails
             .filter(item => item.isActive !== false && !isSyllabusCourseShell(item))
-            .filter(item => !fixedCrewUnit || String(item.unit || '').trim().toUpperCase() === fixedCrewUnit)
+            .filter(item => fixedCrewMatchesContextUnit(item.unit))
             .map(item => ({ item, stream: getFixedCrewTrainingStreamForItem(item) }))
             .filter((entry): entry is { item: SyllabusItemDetail; stream: FixedCrewTrainingStreamPriority } => Boolean(entry.stream))
             .filter(entry => entry.stream.enabled && entry.stream.weight > 0);
@@ -7041,6 +7089,7 @@ function generateDfpInternal(
         diag.queueSourceAudit = {
             buildDate,
             activeUnit: fixedCrewUnit,
+            activeMemberUnits: fixedCrewContextUnits,
             staffEventLimits: fixedCrewStaffLimits,
             priorityInputs: {
                 totalHighestPriorityEvents: highestPriorityEvents.length,
@@ -27589,6 +27638,7 @@ const App: React.FC = () => {
         const config: DfpConfig = {
             operationalModel: activeOperationalModel,
             activeUnitCode,
+            activeContextUnitCodes,
             airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
             fixedCrewTrainingPriorities,
             fixedCrewTileColourMode: activeFixedCrewTileColourMode,
