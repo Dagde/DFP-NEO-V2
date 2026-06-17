@@ -6663,6 +6663,18 @@ function generateDfpInternal(
             const starts = Number.isFinite(fixedStartTime)
                 ? [Number(fixedStartTime)]
                 : Array.from({ length: Math.max(0, Math.floor(((window.end - window.start - duration) / 0.25) + 1)) }, (_, index) => Number((window.start + index * 0.25).toFixed(2)));
+            const getPlacedFixedCrewGroup = (event: Partial<ScheduleEvent>): string => {
+                const explicitGroup = normaliseCrewKey(event.fixedCrewGroup);
+                if (explicitGroup) return explicitGroup;
+                return normaliseCrewKey(String(event.crew || event.group || event.student || '').replace(/^CREW\s*/i, ''));
+            };
+            const findPlacedFixedCrewOverlap = (crew: string, start: number, end: number): Partial<ScheduleEvent> | undefined => (
+                generatedEvents.find(existing => (
+                    getPlacedFixedCrewGroup(existing) === normaliseCrewKey(crew)
+                    && Number(existing.startTime) < end
+                    && start < Number(existing.startTime) + getFixedCrewDuration(existing)
+                ))
+            );
             for (const startTime of starts) {
                 if (startTime < window.start || startTime + duration > window.end) {
                     incrementFixedCrewRejection('OUTSIDE_BUILD_WINDOW');
@@ -6692,6 +6704,24 @@ function generateDfpInternal(
                     }
                     const assignment = selectFixedCrewForEvent(candidate);
                     if (!assignment) continue;
+                    const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, startTime, startTime + duration);
+                    if (crewOverlap) {
+                        incrementFixedCrewRejection('CREW_GROUP_CONFLICT');
+                        pushFixedCrewAttempt({
+                            event: candidate.flightNumber,
+                            source,
+                            crew: assignment.crew,
+                            startTime,
+                            resourceId,
+                            pic: assignment.pic.name,
+                            outcome: 'rejected',
+                            reason: 'CREW_GROUP_CONFLICT',
+                            conflictingEvent: crewOverlap.flightNumber,
+                            conflictingStartTime: crewOverlap.startTime,
+                            conflictingDuration: getFixedCrewDuration(crewOverlap),
+                        });
+                        continue;
+                    }
                     const placed: Omit<ScheduleEvent, 'date'> & { _source?: string } = {
                         ...candidate,
                         instructor: assignment.pic.name,

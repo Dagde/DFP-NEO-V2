@@ -71965,6 +71965,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const window2 = getFixedCrewWindow(sourceEvent.type);
       const duration = getFixedCrewDuration(sourceEvent);
       const starts = Number.isFinite(fixedStartTime) ? [Number(fixedStartTime)] : Array.from({ length: Math.max(0, Math.floor((window2.end - window2.start - duration) / 0.25 + 1)) }, (_, index) => Number((window2.start + index * 0.25).toFixed(2)));
+      const getPlacedFixedCrewGroup = (event) => {
+        const explicitGroup = normaliseCrewKey(event.fixedCrewGroup);
+        if (explicitGroup) return explicitGroup;
+        return normaliseCrewKey(String(event.crew || event.group || event.student || "").replace(/^CREW\s*/i, ""));
+      };
+      const findPlacedFixedCrewOverlap = (crew, start, end) => generatedEvents.find((existing) => getPlacedFixedCrewGroup(existing) === normaliseCrewKey(crew) && Number(existing.startTime) < end && start < Number(existing.startTime) + getFixedCrewDuration(existing));
       for (const startTime of starts) {
         if (startTime < window2.start || startTime + duration > window2.end) {
           incrementFixedCrewRejection("OUTSIDE_BUILD_WINDOW");
@@ -71994,6 +72000,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           const assignment = selectFixedCrewForEvent(candidate);
           if (!assignment) continue;
+          const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, startTime, startTime + duration);
+          if (crewOverlap) {
+            incrementFixedCrewRejection("CREW_GROUP_CONFLICT");
+            pushFixedCrewAttempt({
+              event: candidate.flightNumber,
+              source,
+              crew: assignment.crew,
+              startTime,
+              resourceId,
+              pic: assignment.pic.name,
+              outcome: "rejected",
+              reason: "CREW_GROUP_CONFLICT",
+              conflictingEvent: crewOverlap.flightNumber,
+              conflictingStartTime: crewOverlap.startTime,
+              conflictingDuration: getFixedCrewDuration(crewOverlap)
+            });
+            continue;
+          }
           const placed = {
             ...candidate,
             instructor: assignment.pic.name,
