@@ -5,7 +5,7 @@ import { Instructor, PhraseBank, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import CrewRequirementEditor from './CrewRequirementEditor';
 import { logAudit } from '../utils/auditLogger';
-import { createSyllabusItem, updateSyllabusItem, retireSyllabusItem, clearSyllabusCache } from '../lib/syllabusService';
+import { createSyllabusItem, updateSyllabusItem, deleteSyllabusItem, clearSyllabusCache } from '../lib/syllabusService';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
@@ -1385,7 +1385,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               setIsDeleting(false);
               return;
           }
-          // Retire all items for this course
+          // Permanently delete all items for this course/package.
           // Include any item that belongs to this course (even if it also belongs to others)
           const itemsToDelete = syllabusDetails.filter(item =>
               getItemLmpDetailsTab(item) === activeTab &&
@@ -1397,10 +1397,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
           } else {
               await Promise.all(itemsToDelete.map(item =>
-                  retireSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
+                  deleteSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
               ));
           }
-          logAudit({ action: 'Delete', description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${itemsToDelete.length} items retired`, page: 'LMP/Event Details' });
+          logAudit({ action: 'Delete', description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${itemsToDelete.length} database item(s) permanently deleted`, page: 'LMP/Event Details' });
           // Remove from local state by marking isActive: false
           itemsToDelete.forEach(item => onUpdateItem({ ...item, isActive: false } as any));
           setShowDeleteModal(false);
@@ -2209,7 +2209,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     Delete {isTrainingPackagesTab ? 'Package' : 'Course'}: {getCourseTitle(selectedCourseType)}
                 </h2>
                 <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20, lineHeight: 1.6 }}>
-                    This will permanently retire <strong style={{ color: '#f9fafb' }}>all events</strong> in the <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> {activeCollectionNoun} from the database.
+                    This will permanently remove <strong style={{ color: '#f9fafb' }}>all events</strong> in the <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> {activeCollectionNoun} from the database.
                     This action cannot be undone. Enter your password to confirm.
                 </p>
 

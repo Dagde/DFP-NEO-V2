@@ -39527,7 +39527,7 @@ async function updateSyllabusItem(id, updates, changeReason) {
   clearSyllabusCache();
   return data.syllabusItem;
 }
-async function retireSyllabusItem(id, changeReason) {
+async function deleteSyllabusItem(id, changeReason) {
   const response = await fetch(`${API_BASE$1}/syllabus/${id}`, {
     method: "DELETE",
     credentials: "include",
@@ -39536,7 +39536,7 @@ async function retireSyllabusItem(id, changeReason) {
   });
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(err.error || "Failed to retire syllabus item");
+    throw new Error(err.error || "Failed to delete syllabus item");
   }
   clearSyllabusCache();
 }
@@ -40759,10 +40759,10 @@ const SyllabusView = ({
         console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
       } else {
         await Promise.all(itemsToDelete.map(
-          (item) => retireSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
+          (item) => deleteSyllabusItem(item.id, `${activeCollectionTitle} deleted: ${selectedCourseType}`)
         ));
       }
-      logAudit({ action: "Delete", description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${itemsToDelete.length} items retired`, page: "LMP/Event Details" });
+      logAudit({ action: "Delete", description: `Deleted ${activeCollectionNoun}: ${selectedCourseType}`, changes: `${itemsToDelete.length} database item(s) permanently deleted`, page: "LMP/Event Details" });
       itemsToDelete.forEach((item) => onUpdateItem({ ...item, isActive: false }));
       setShowDeleteModal(false);
       setDeletePassword("");
@@ -41587,7 +41587,7 @@ const SyllabusView = ({
                 getCourseTitle(selectedCourseType)
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 12, color: "#9ca3af", marginBottom: 20, lineHeight: 1.6 }, children: [
-                "This will permanently retire ",
+                "This will permanently remove ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: "all events" }),
                 " in the ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#f9fafb" }, children: getCourseTitle(selectedCourseType) }),

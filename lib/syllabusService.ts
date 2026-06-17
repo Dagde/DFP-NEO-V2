@@ -233,7 +233,7 @@ export async function updateSyllabusItem(
   return data.syllabusItem;
 }
 
-export async function retireSyllabusItem(
+export async function deleteSyllabusItem(
   id: string,
   changeReason?: string
 ): Promise<void> {
@@ -246,7 +246,7 @@ export async function retireSyllabusItem(
 
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(err.error || 'Failed to retire syllabus item');
+    throw new Error(err.error || 'Failed to delete syllabus item');
   }
 
   clearSyllabusCache(); // Invalidate cache after change

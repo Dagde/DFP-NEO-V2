@@ -71,44 +71,35 @@ export async function PUT(
   }
 }
 
-// DELETE /api/syllabus/[id] - Soft delete (retire) a syllabus item
-// Sets isActive: false - preserves data integrity for existing scores
+// DELETE /api/syllabus/[id] - Hard delete a syllabus item.
+// Course/package delete must remove rows from the database so hidden active/inactive
+// syllabus records cannot remain as scheduler inputs.
 export async function DELETE(
   request: NextRequest,
   { params }: RouteContext
 ) {
   try {
     const { id } = await params;
-    const body = await request.json().catch(() => ({}));
 
-    const previous = await db.syllabusItem.findUnique({ where: { id } });
+    const previous = await db.syllabusItem.findFirst({
+      where: { OR: [{ id }, { code: id }] },
+    });
     if (!previous) {
       return NextResponse.json({ error: `Syllabus item not found: ${id}` }, { status: 404, headers: getCorsHeaders(request) });
     }
 
-    const retired = await db.syllabusItem.update({
-      where: { id },
-      data: { isActive: false, updatedAt: new Date() },
-    });
+    await db.$executeRawUnsafe(
+      `DELETE FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1`,
+      id
+    );
 
-    await db.syllabusHistory.create({
-      data: {
-        syllabusItemId: id,
-        changeType: 'DELETE',
-        changeData: retired as any,
-        previousData: previous as any,
-        changedBy: body.deletedBy || 'user',
-        changeReason: body.changeReason || 'Syllabus item retired',
-      },
-    });
-
-    console.log(`⚠️ [API] Retired syllabus item: ${retired.code}`);
+    console.log(`✅ [API] Deleted syllabus item: ${previous.code}`);
     return NextResponse.json(
-      { success: true, message: `Syllabus item ${retired.code} retired`, syllabusItem: retired },
+      { success: true, message: `Syllabus item ${previous.code} deleted`, syllabusItem: previous },
       { headers: getCorsHeaders(request) }
     );
   } catch (error) {
-    console.error('❌ Error retiring syllabus item:', error);
-    return NextResponse.json({ error: 'Failed to retire syllabus item' }, { status: 500, headers: getCorsHeaders(request) });
+    console.error('❌ Error deleting syllabus item:', error);
+    return NextResponse.json({ error: 'Failed to delete syllabus item' }, { status: 500, headers: getCorsHeaders(request) });
   }
 }
