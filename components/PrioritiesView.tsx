@@ -47,6 +47,7 @@ type FixedCrewPointerBridge = {
   pointer: { x: number; y: number };
   nonce: number;
 };
+type FixedCrewPointerOrigin = Pick<FixedCrewPointerBridge, 'rect' | 'pointer'>;
 
 interface PrioritiesViewProps {
   school?: string;
@@ -1045,15 +1046,45 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   useEffect(() => {
     if (!fixedCrewPointerBridge) return;
     const clearTimer = window.setTimeout(() => setFixedCrewPointerBridge(null), 1400);
+    const isWithinBridge = (event: Pick<PointerEvent, 'clientX' | 'clientY'>): boolean => {
+      const padding = 10;
+      const { left, top, width, height } = fixedCrewPointerBridge.rect;
+      return (
+        event.clientX >= left - padding &&
+        event.clientX <= left + width + padding &&
+        event.clientY >= top - padding &&
+        event.clientY <= top + height + padding
+      );
+    };
     const handlePointerMove = (event: PointerEvent) => {
       const deltaX = Math.abs(event.clientX - fixedCrewPointerBridge.pointer.x);
       const deltaY = Math.abs(event.clientY - fixedCrewPointerBridge.pointer.y);
       if (deltaX > 8 || deltaY > 8) setFixedCrewPointerBridge(null);
     };
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!isWithinBridge(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      handleFixedCrewStreamWeightChange(fixedCrewPointerBridge.streamKey, fixedCrewPointerBridge.direction, {
+        rect: fixedCrewPointerBridge.rect,
+        pointer: { x: event.clientX, y: event.clientY },
+      });
+    };
+    const handleClick = (event: MouseEvent) => {
+      if (!isWithinBridge(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+    };
     window.addEventListener('pointermove', handlePointerMove, { capture: true });
+    window.addEventListener('pointerdown', handlePointerDown, { capture: true });
+    window.addEventListener('click', handleClick, { capture: true });
     return () => {
       window.clearTimeout(clearTimer);
       window.removeEventListener('pointermove', handlePointerMove, { capture: true });
+      window.removeEventListener('pointerdown', handlePointerDown, { capture: true });
+      window.removeEventListener('click', handleClick, { capture: true });
     };
   }, [fixedCrewPointerBridge]);
 
@@ -1252,10 +1283,24 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const handleFixedCrewStreamWeightChange = (
     streamKey: string,
     direction: FixedCrewPriorityDirection,
-    event?: React.MouseEvent<HTMLButtonElement>,
+    eventOrOrigin?: React.MouseEvent<HTMLButtonElement> | FixedCrewPointerOrigin,
   ) => {
-    const clickRect = event?.currentTarget.getBoundingClientRect();
-    const pointer = event ? { x: event.clientX, y: event.clientY } : null;
+    const pointerOrigin: FixedCrewPointerOrigin | null = eventOrOrigin
+      ? 'currentTarget' in eventOrOrigin
+        ? (() => {
+            const clickRect = eventOrOrigin.currentTarget.getBoundingClientRect();
+            return {
+              rect: {
+                left: clickRect.left,
+                top: clickRect.top,
+                width: clickRect.width,
+                height: clickRect.height,
+              },
+              pointer: { x: eventOrOrigin.clientX, y: eventOrOrigin.clientY },
+            };
+          })()
+        : eventOrOrigin
+      : null;
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
     const next = current.map(stream => ({ ...stream }));
     const targetIndex = next.findIndex(stream => stream.key === streamKey && stream.enabled);
@@ -1294,17 +1339,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const after = reordered.find(stream => stream.key === streamKey);
     if (!after || (after.weight === previousWeight && reordered.findIndex(stream => stream.key === streamKey) === current.findIndex(stream => stream.key === streamKey))) return;
     fixedCrewActiveArrow.current = { streamKey, direction };
-    if (clickRect && pointer) {
+    if (pointerOrigin) {
       setFixedCrewPointerBridge({
         streamKey,
         direction,
-        rect: {
-          left: clickRect.left,
-          top: clickRect.top,
-          width: clickRect.width,
-          height: clickRect.height,
-        },
-        pointer,
+        rect: pointerOrigin.rect,
+        pointer: pointerOrigin.pointer,
         nonce: Date.now(),
       });
     }
