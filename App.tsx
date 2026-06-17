@@ -6577,6 +6577,19 @@ function generateDfpInternal(
         const selectFixedCrewForEvent = (event: Omit<ScheduleEvent, 'date'>): { crew: string; members: Instructor[]; pic: Instructor } | null => {
             const eventTypeForAvailability = event.type === 'ground' ? 'ground' : event.type;
             const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
+            const getExistingFixedCrewGroup = (existing: Partial<ScheduleEvent>): string => {
+                const explicitGroup = normaliseCrewKey(existing.fixedCrewGroup);
+                if (explicitGroup) return explicitGroup;
+                const crewText = String(existing.crew || existing.group || existing.student || '').replace(/^CREW\s*/i, '');
+                return normaliseCrewKey(crewText);
+            };
+            const findFixedCrewGroupConflict = (crew: string): Partial<ScheduleEvent> | undefined => (
+                generatedEvents.find(existing => (
+                    getExistingFixedCrewGroup(existing) === normaliseCrewKey(crew)
+                    && Number(existing.startTime) < bookingWindow.end
+                    && bookingWindow.start < Number(existing.startTime) + getFixedCrewDuration(existing)
+                ))
+            );
             const candidates = Array.from(crewGroups.entries())
                 .sort(([leftCrew], [rightCrew]) =>
                     (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0)
@@ -6591,6 +6604,7 @@ function generateDfpInternal(
                 const hasExistingConflict = members.some(staff =>
                     generatedEvents.some(existing => eventHasPerson(existing, staff.name) && priorityPersonnelConflict(event, existing))
                 );
+                const fixedCrewGroupConflict = findFixedCrewGroupConflict(crew);
                 const attempt = {
                     event: event.flightNumber,
                     crew,
@@ -6601,6 +6615,11 @@ function generateDfpInternal(
                     unavailableMembers: unavailableMembers.map(staff => staff.name),
                     swapCandidates: shortfalls.length > 0 ? getFixedCrewSwapCandidates(shortfalls, members, bookingWindow) : {},
                     hasExistingConflict,
+                    fixedCrewGroupConflict: fixedCrewGroupConflict ? {
+                        event: fixedCrewGroupConflict.flightNumber,
+                        startTime: fixedCrewGroupConflict.startTime,
+                        duration: getFixedCrewDuration(fixedCrewGroupConflict),
+                    } : null,
                 };
                 if (!pic) {
                     incrementFixedCrewRejection('NO_PIC_IN_CREW');
@@ -6620,6 +6639,11 @@ function generateDfpInternal(
                 if (hasExistingConflict) {
                     incrementFixedCrewRejection('CREW_MEMBER_CONFLICT');
                     pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason: 'CREW_MEMBER_CONFLICT' });
+                    continue;
+                }
+                if (fixedCrewGroupConflict) {
+                    incrementFixedCrewRejection('CREW_GROUP_CONFLICT');
+                    pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason: 'CREW_GROUP_CONFLICT' });
                     continue;
                 }
                 pushFixedCrewAttempt({ ...attempt, outcome: 'accepted' });
@@ -6692,6 +6716,7 @@ function generateDfpInternal(
                         startTime,
                         resourceId,
                         crew: assignment.crew,
+                        duration: placed.duration,
                         pic: assignment.pic.name,
                         attendees: placed.attendees,
                     });

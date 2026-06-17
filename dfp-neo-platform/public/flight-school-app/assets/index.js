@@ -71889,6 +71889,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const selectFixedCrewForEvent = (event) => {
       const eventTypeForAvailability = event.type === "ground" ? "ground" : event.type;
       const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
+      const getExistingFixedCrewGroup = (existing) => {
+        const explicitGroup = normaliseCrewKey(existing.fixedCrewGroup);
+        if (explicitGroup) return explicitGroup;
+        const crewText = String(existing.crew || existing.group || existing.student || "").replace(/^CREW\s*/i, "");
+        return normaliseCrewKey(crewText);
+      };
+      const findFixedCrewGroupConflict = (crew) => generatedEvents.find((existing) => getExistingFixedCrewGroup(existing) === normaliseCrewKey(crew) && Number(existing.startTime) < bookingWindow.end && bookingWindow.start < Number(existing.startTime) + getFixedCrewDuration(existing));
       const candidates = Array.from(crewGroups.entries()).sort(
         ([leftCrew], [rightCrew]) => (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0) || leftCrew.localeCompare(rightCrew, void 0, { numeric: true })
       );
@@ -71901,6 +71908,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const hasExistingConflict = members.some(
           (staff) => generatedEvents.some((existing) => eventHasPerson(existing, staff.name) && priorityPersonnelConflict(event, existing))
         );
+        const fixedCrewGroupConflict = findFixedCrewGroupConflict(crew);
         const attempt = {
           event: event.flightNumber,
           crew,
@@ -71910,7 +71918,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           shortfalls,
           unavailableMembers: unavailableMembers.map((staff) => staff.name),
           swapCandidates: shortfalls.length > 0 ? getFixedCrewSwapCandidates(shortfalls, members, bookingWindow) : {},
-          hasExistingConflict
+          hasExistingConflict,
+          fixedCrewGroupConflict: fixedCrewGroupConflict ? {
+            event: fixedCrewGroupConflict.flightNumber,
+            startTime: fixedCrewGroupConflict.startTime,
+            duration: getFixedCrewDuration(fixedCrewGroupConflict)
+          } : null
         };
         if (!pic) {
           incrementFixedCrewRejection("NO_PIC_IN_CREW");
@@ -71930,6 +71943,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (hasExistingConflict) {
           incrementFixedCrewRejection("CREW_MEMBER_CONFLICT");
           pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason: "CREW_MEMBER_CONFLICT" });
+          continue;
+        }
+        if (fixedCrewGroupConflict) {
+          incrementFixedCrewRejection("CREW_GROUP_CONFLICT");
+          pushFixedCrewAttempt({ ...attempt, outcome: "rejected", reason: "CREW_GROUP_CONFLICT" });
           continue;
         }
         pushFixedCrewAttempt({ ...attempt, outcome: "accepted" });
@@ -72000,6 +72018,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             startTime,
             resourceId,
             crew: assignment.crew,
+            duration: placed.duration,
             pic: assignment.pic.name,
             attendees: placed.attendees
           });
