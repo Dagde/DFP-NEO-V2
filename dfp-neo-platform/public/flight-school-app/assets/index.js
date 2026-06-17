@@ -26223,9 +26223,15 @@ const PrioritiesView = ({
     }));
     return normaliseAirCombatSchedulingWeights({ trainingStreams: weighted }).trainingStreams || weighted;
   }, [activeUnitCodeSet, instructorsData, isAirCombatModel, normalisedAirCombatWeights.trainingStreams, school]);
+  const fixedCrewStreamRowRefs = reactExports.useRef(/* @__PURE__ */ new Map());
+  const fixedCrewPreviousRowTops = reactExports.useRef(/* @__PURE__ */ new Map());
+  const fixedCrewArrowButtonRefs = reactExports.useRef(/* @__PURE__ */ new Map());
+  const fixedCrewActiveArrow = reactExports.useRef(null);
   const fixedCrewTrainingStreams = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return [];
-    const saved = new Map(normaliseFixedCrewTrainingPriorityWeights(fixedCrewTrainingPriorities).map((stream) => [stream.key, stream]));
+    const savedStreams = normaliseFixedCrewTrainingPriorityWeights(fixedCrewTrainingPriorities);
+    const saved = new Map(savedStreams.map((stream) => [stream.key, stream]));
+    const savedOrder = new Map(savedStreams.map((stream, index) => [stream.key, index]));
     const grouped = /* @__PURE__ */ new Map();
     syllabusDetails.filter((item) => item.isActive !== false).filter((item) => !isSyllabusCourseShell(item)).forEach((item) => {
       const itemUnit = String(item.unit || "").trim().toUpperCase();
@@ -26253,10 +26259,45 @@ const PrioritiesView = ({
         eventCount: 1
       });
     });
-    return normaliseFixedCrewTrainingPriorityWeights(Array.from(grouped.values())).sort(
-      (left, right) => right.enabled === left.enabled ? right.weight - left.weight || left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code, void 0, { numeric: true }) : Number(right.enabled) - Number(left.enabled)
-    );
+    return normaliseFixedCrewTrainingPriorityWeights(Array.from(grouped.values())).sort((left, right) => {
+      if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
+      const leftSavedOrder = savedOrder.get(left.key);
+      const rightSavedOrder = savedOrder.get(right.key);
+      if (leftSavedOrder !== void 0 && rightSavedOrder !== void 0) return leftSavedOrder - rightSavedOrder;
+      if (leftSavedOrder !== void 0) return -1;
+      if (rightSavedOrder !== void 0) return 1;
+      return right.weight - left.weight || left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code, void 0, { numeric: true });
+    });
   }, [activeUnitCode, activeUnitCodeSet, fixedCrewTrainingPriorities, isFixedCrewModel, school, syllabusDetails]);
+  reactExports.useLayoutEffect(() => {
+    if (!isFixedCrewModel) return;
+    const nextTops = /* @__PURE__ */ new Map();
+    fixedCrewStreamRowRefs.current.forEach((node, key) => {
+      const top = node.getBoundingClientRect().top;
+      const previousTop = fixedCrewPreviousRowTops.current.get(key);
+      if (previousTop !== void 0) {
+        const delta = previousTop - top;
+        if (Math.abs(delta) > 1) {
+          node.animate(
+            [
+              { transform: `translateY(${delta}px)` },
+              { transform: "translateY(0)" }
+            ],
+            { duration: 190, easing: "cubic-bezier(0.2, 0, 0, 1)" }
+          );
+        }
+      }
+      nextTops.set(key, top);
+    });
+    fixedCrewPreviousRowTops.current = nextTops;
+  }, [fixedCrewTrainingStreams, isFixedCrewModel]);
+  reactExports.useEffect(() => {
+    const activeArrow = fixedCrewActiveArrow.current;
+    if (!activeArrow) return;
+    const key = `${activeArrow.streamKey}:${activeArrow.direction}`;
+    fixedCrewArrowButtonRefs.current.get(key)?.focus({ preventScroll: true });
+    fixedCrewActiveArrow.current = null;
+  }, [fixedCrewTrainingStreams]);
   reactExports.useEffect(() => {
     if (!isFixedCrewModel || fixedCrewTrainingStreams.length === 0) return;
     const savedKeys = new Set(normaliseFixedCrewTrainingPriorities(fixedCrewTrainingPriorities).map((stream) => stream.key));
@@ -26271,6 +26312,9 @@ const PrioritiesView = ({
   }, [fixedCrewTrainingPriorities.length, fixedCrewTrainingStreams, isFixedCrewModel, onUpdateFixedCrewTrainingPriorities]);
   const fixedCrewEnabledStreamCount = fixedCrewTrainingStreams.filter((stream) => stream.enabled).length;
   const fixedCrewEnabledStreamTotal = fixedCrewTrainingStreams.filter((stream) => stream.enabled).reduce((sum, stream) => sum + stream.weight, 0);
+  const fixedCrewEnabledStreamKeys = fixedCrewTrainingStreams.filter((stream) => stream.enabled).map((stream) => stream.key);
+  const firstFixedCrewEnabledStreamKey = fixedCrewEnabledStreamKeys[0] || "";
+  const lastFixedCrewEnabledStreamKey = fixedCrewEnabledStreamKeys[fixedCrewEnabledStreamKeys.length - 1] || "";
   reactExports.useEffect(() => {
     setCourseTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
   }, [coursePriorities, coursePercentages]);
@@ -26341,6 +26385,27 @@ const PrioritiesView = ({
     logAudit("Priorities", "Edit", "Updated Fixed Crew course/package priorities", auditLabel);
     onUpdateFixedCrewTrainingPriorities?.(normaliseFixedCrewTrainingPriorityWeights(streams));
   };
+  const getAdjacentFixedCrewEnabledIndex = (streams, startIndex, direction) => {
+    const step = direction === "increase" ? -1 : 1;
+    for (let index = startIndex + step; index >= 0 && index < streams.length; index += step) {
+      if (streams[index].enabled) return index;
+    }
+    return -1;
+  };
+  const reorderFixedCrewStreamAfterWeightChange = (streams, streamKey, direction) => {
+    const ordered = streams.map((stream) => ({ ...stream }));
+    const targetIndex = ordered.findIndex((stream) => stream.key === streamKey);
+    if (targetIndex < 0) return ordered;
+    const adjacentIndex = getAdjacentFixedCrewEnabledIndex(ordered, targetIndex, direction);
+    if (adjacentIndex < 0) return ordered;
+    const target = ordered[targetIndex];
+    const adjacent = ordered[adjacentIndex];
+    const shouldSwap = direction === "decrease" ? target.weight <= adjacent.weight : target.weight >= adjacent.weight;
+    if (!shouldSwap) return ordered;
+    ordered[targetIndex] = adjacent;
+    ordered[adjacentIndex] = target;
+    return ordered;
+  };
   const handleFixedCrewStreamToggle = (streamKey) => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
     const next = current.map((stream) => stream.key === streamKey ? {
@@ -26354,31 +26419,32 @@ const PrioritiesView = ({
   const handleFixedCrewStreamWeightChange = (streamKey, direction) => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
     const next = current.map((stream) => ({ ...stream }));
-    const target = next.find((stream) => stream.key === streamKey && stream.enabled);
-    if (!target) return;
+    const targetIndex = next.findIndex((stream) => stream.key === streamKey && stream.enabled);
+    if (targetIndex < 0) return;
+    const adjacentIndex = getAdjacentFixedCrewEnabledIndex(next, targetIndex, direction);
+    if (adjacentIndex < 0) return;
+    const target = next[targetIndex];
+    const adjacent = next[adjacentIndex];
     const previousWeight = target.weight;
-    target.weight = Math.max(0, Math.min(100, target.weight + (direction === "increase" ? 5 : -5)));
-    const delta = target.weight - previousWeight;
-    if (delta !== 0) {
-      const others = next.filter((stream) => stream.enabled && stream.key !== streamKey).sort((left, right) => direction === "increase" ? right.weight - left.weight : left.weight - right.weight);
-      let remaining = Math.abs(delta);
-      for (const other of others) {
-        if (remaining <= 0) break;
-        if (direction === "increase") {
-          const take = Math.min(other.weight, remaining);
-          other.weight -= take;
-          remaining -= take;
-        } else {
-          other.weight += remaining;
-          remaining = 0;
-        }
-      }
-      if (remaining > 0 && direction === "increase") {
-        target.weight = Math.max(0, target.weight - remaining);
-      }
+    if (direction === "increase") {
+      const transfer = Math.min(5, adjacent.weight);
+      if (transfer <= 0) return;
+      target.weight += transfer;
+      adjacent.weight -= transfer;
+    } else {
+      const transfer = Math.min(5, target.weight);
+      if (transfer <= 0) return;
+      target.weight -= transfer;
+      adjacent.weight += transfer;
     }
-    const after = normaliseFixedCrewTrainingPriorityWeights(next).find((stream) => stream.key === streamKey);
-    updateFixedCrewStreams(next, `${target.code || streamKey} ${previousWeight}% → ${after?.weight ?? target.weight}%`);
+    const reordered = reorderFixedCrewStreamAfterWeightChange(
+      normaliseFixedCrewTrainingPriorityWeights(next),
+      streamKey,
+      direction
+    );
+    const after = reordered.find((stream) => stream.key === streamKey);
+    fixedCrewActiveArrow.current = { streamKey, direction };
+    updateFixedCrewStreams(reordered, `${target.code || streamKey} ${previousWeight}% → ${after?.weight ?? target.weight}%`);
   };
   const handleEqualiseFixedCrewStreams = () => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
@@ -27079,9 +27145,10 @@ const PrioritiesView = ({
     logAudit("Priorities", "Edit", `Updated course percentage for ${courseToChange}`, `${currentPercent}% → ${newPercent}%`);
     onUpdatePercentages(newPercentages);
   };
-  const ArrowButton = ({ direction, onClick, disabled }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  const ArrowButton = ({ direction, onClick, disabled, buttonRef }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
+      ref: buttonRef,
       onClick,
       disabled,
       className: "p-0.5 text-gray-400 rounded-sm hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed",
@@ -27417,6 +27484,10 @@ const PrioritiesView = ({
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: fixedCrewTrainingStreams.map((stream, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "li",
               {
+                ref: (node) => {
+                  if (node) fixedCrewStreamRowRefs.current.set(stream.key, node);
+                  else fixedCrewStreamRowRefs.current.delete(stream.key);
+                },
                 className: `grid items-center gap-3 rounded-md border p-3 text-white md:grid-cols-[42px_84px_94px_1fr_74px_86px_34px] ${stream.enabled ? "border-slate-700 bg-slate-950/70" : "border-slate-800 bg-slate-950/35 opacity-65"}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-sm text-slate-500", children: index + 1 }),
@@ -27447,8 +27518,32 @@ const PrioritiesView = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-slate-500", children: "Share" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "up", onClick: () => handleFixedCrewStreamWeightChange(stream.key, "increase"), disabled: !stream.enabled || stream.weight >= 100 }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "down", onClick: () => handleFixedCrewStreamWeightChange(stream.key, "decrease"), disabled: !stream.enabled || fixedCrewEnabledStreamCount < 2 || stream.weight <= 0 })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      ArrowButton,
+                      {
+                        direction: "up",
+                        onClick: () => handleFixedCrewStreamWeightChange(stream.key, "increase"),
+                        disabled: !stream.enabled || fixedCrewEnabledStreamCount < 2 || stream.key === firstFixedCrewEnabledStreamKey,
+                        buttonRef: (node) => {
+                          const key = `${stream.key}:increase`;
+                          if (node) fixedCrewArrowButtonRefs.current.set(key, node);
+                          else fixedCrewArrowButtonRefs.current.delete(key);
+                        }
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      ArrowButton,
+                      {
+                        direction: "down",
+                        onClick: () => handleFixedCrewStreamWeightChange(stream.key, "decrease"),
+                        disabled: !stream.enabled || fixedCrewEnabledStreamCount < 2 || stream.key === lastFixedCrewEnabledStreamKey || stream.weight <= 0,
+                        buttonRef: (node) => {
+                          const key = `${stream.key}:decrease`;
+                          if (node) fixedCrewArrowButtonRefs.current.set(key, node);
+                          else fixedCrewArrowButtonRefs.current.delete(key);
+                        }
+                      }
+                    )
                   ] })
                 ]
               },
