@@ -140,10 +140,11 @@ const downloadJsonDiagnosticFile = (filename: string, report: any): boolean => {
 
 const buildNeoBuildDiagnosticExport = (): { report: any; filename: string } | null => {
     if (typeof window === 'undefined') return null;
+    const inMemoryReport = (window as any).__lastNeoBuildDiagnosticReport;
     const raw = window.localStorage?.getItem('neo_build_diag_report');
-    if (!raw) return null;
+    if (!inMemoryReport && !raw) return null;
 
-    const report = JSON.parse(raw);
+    const report = inMemoryReport ? JSON.parse(JSON.stringify(inMemoryReport)) : JSON.parse(raw as string);
     try {
         const timingRaw = window.localStorage?.getItem('neo_build_timing_report');
         const runtimeRaw = window.localStorage?.getItem('neo_build_runtime_error_report');
@@ -5995,6 +5996,9 @@ function generateDfpInternal(
         if (stage !== 'build-start' && stage !== 'final' && !neoBuildLiveDiagnostics) return;
         neoBuildDiag.stage = stage;
         neoBuildDiag.updatedAt = new Date().toISOString();
+        if (typeof window !== 'undefined') {
+            (window as any).__lastNeoBuildDiagnosticReport = neoBuildDiag;
+        }
         try {
             localStorage.setItem('neo_build_diag_report', JSON.stringify(neoBuildDiag));
         } catch (error) {
@@ -6306,6 +6310,8 @@ function generateDfpInternal(
                 crewGroupConflictChecks: 0,
                 staffLimitChecks: 0,
                 resourceConflictChecks: 0,
+                ownerUnitRestrictedCrewSelections: 0,
+                ownerUnitFilteredCrewCandidates: 0,
                 placements: 0,
             },
             timingsMs: {} as Record<string, number>,
@@ -6509,6 +6515,8 @@ function generateDfpInternal(
                 color: 'bg-emerald-500',
                 flightType: 'Dual',
                 soloOrDual: 'Dual',
+                unit: item.unit,
+                ...(item.unit ? { fixedCrewUnit: item.unit } as any : {}),
                 locationType: 'Local',
                 origin: school,
                 destination: school,
@@ -6710,6 +6718,11 @@ function generateDfpInternal(
             );
             const isFixedCrewFlightEvent = (eventToCheck: Partial<ScheduleEvent>): boolean => eventToCheck.type === 'flight';
             const isFixedCrewSimulatorEvent = (eventToCheck: Partial<ScheduleEvent>): boolean => eventToCheck.type === 'ftd' || eventToCheck.type === 'cpt';
+            const eventOwnerUnit = normaliseFixedCrewUnitCode((event as any).fixedCrewUnit || event.unit);
+            const crewMatchesEventOwnerUnit = (crew: string): boolean => {
+                if (!fixedCrewUsesSharedUnitContext || !eventOwnerUnit) return true;
+                return getFixedCrewCrewUnit(crew) === eventOwnerUnit;
+            };
             const getFixedCrewStaffDailyCounts = (staff: Instructor): { flights: number; simulators: number; flightSim: number } => {
                 const counts = { flights: 0, simulators: 0, flightSim: 0 };
                 generatedEvents
@@ -6746,10 +6759,15 @@ function generateDfpInternal(
                     .filter(Boolean);
             };
             const candidates = Array.from(crewGroups.entries())
+                .filter(([crew]) => crewMatchesEventOwnerUnit(crew))
                 .sort(([leftCrew], [rightCrew]) =>
                     (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0)
                     || leftCrew.localeCompare(rightCrew, undefined, { numeric: true })
                 );
+            if (fixedCrewUsesSharedUnitContext && eventOwnerUnit) {
+                fixedCrewPerf.counters.ownerUnitRestrictedCrewSelections += 1;
+                fixedCrewPerf.counters.ownerUnitFilteredCrewCandidates += Math.max(0, crewGroups.size - candidates.length);
+            }
             for (const [crew, members] of candidates) {
                 fixedCrewPerf.counters.crewCandidateEvaluations += 1;
                 const pic = members.find(staffHasPicQualification);
@@ -7241,6 +7259,7 @@ function generateDfpInternal(
             preFlightTime: item.event.preStart ?? null,
             postFlightTime: item.event.postEnd ?? null,
             fixedStartTime: item.fixedStartTime ?? null,
+            fixedCrewUnit: (item.event as any).fixedCrewUnit || item.event.unit || null,
             crewRequirement: item.event.crewRequirement || null,
         }));
         recordProgress({ message: 'Scheduling Fixed Crew events...', percentage: 55 });

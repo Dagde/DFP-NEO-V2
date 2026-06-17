@@ -67666,9 +67666,10 @@ const downloadJsonDiagnosticFile = (filename, report) => {
 };
 const buildNeoBuildDiagnosticExport = () => {
   if (typeof window === "undefined") return null;
+  const inMemoryReport = window.__lastNeoBuildDiagnosticReport;
   const raw = window.localStorage?.getItem("neo_build_diag_report");
-  if (!raw) return null;
-  const report = JSON.parse(raw);
+  if (!inMemoryReport && !raw) return null;
+  const report = inMemoryReport ? JSON.parse(JSON.stringify(inMemoryReport)) : JSON.parse(raw);
   try {
     const timingRaw = window.localStorage?.getItem("neo_build_timing_report");
     const runtimeRaw = window.localStorage?.getItem("neo_build_runtime_error_report");
@@ -72100,6 +72101,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (stage !== "build-start" && stage !== "final" && !neoBuildLiveDiagnostics) return;
     neoBuildDiag.stage = stage;
     neoBuildDiag.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    if (typeof window !== "undefined") {
+      window.__lastNeoBuildDiagnosticReport = neoBuildDiag;
+    }
     try {
       localStorage.setItem("neo_build_diag_report", JSON.stringify(neoBuildDiag));
     } catch (error) {
@@ -72358,6 +72362,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         crewGroupConflictChecks: 0,
         staffLimitChecks: 0,
         resourceConflictChecks: 0,
+        ownerUnitRestrictedCrewSelections: 0,
+        ownerUnitFilteredCrewCandidates: 0,
         placements: 0
       },
       timingsMs: {},
@@ -72548,6 +72554,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         color: "bg-emerald-500",
         flightType: "Dual",
         soloOrDual: "Dual",
+        unit: item.unit,
+        ...item.unit ? { fixedCrewUnit: item.unit } : {},
         locationType: "Local",
         origin: school,
         destination: school,
@@ -72707,6 +72715,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       const isFixedCrewFlightEvent = (eventToCheck) => eventToCheck.type === "flight";
       const isFixedCrewSimulatorEvent = (eventToCheck) => eventToCheck.type === "ftd" || eventToCheck.type === "cpt";
+      const eventOwnerUnit = normaliseFixedCrewUnitCode(event.fixedCrewUnit || event.unit);
+      const crewMatchesEventOwnerUnit = (crew) => {
+        if (!fixedCrewUsesSharedUnitContext || !eventOwnerUnit) return true;
+        return getFixedCrewCrewUnit(crew) === eventOwnerUnit;
+      };
       const getFixedCrewStaffDailyCounts = (staff) => {
         const counts = { flights: 0, simulators: 0, flightSim: 0 };
         generatedEvents.filter((existing) => eventHasPerson(existing, staff.name)).forEach((existing) => {
@@ -72738,9 +72751,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           return null;
         }).filter(Boolean);
       };
-      const candidates = Array.from(crewGroups.entries()).sort(
+      const candidates = Array.from(crewGroups.entries()).filter(([crew]) => crewMatchesEventOwnerUnit(crew)).sort(
         ([leftCrew], [rightCrew]) => (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0) || leftCrew.localeCompare(rightCrew, void 0, { numeric: true })
       );
+      if (fixedCrewUsesSharedUnitContext && eventOwnerUnit) {
+        fixedCrewPerf.counters.ownerUnitRestrictedCrewSelections += 1;
+        fixedCrewPerf.counters.ownerUnitFilteredCrewCandidates += Math.max(0, crewGroups.size - candidates.length);
+      }
       for (const [crew, members] of candidates) {
         fixedCrewPerf.counters.crewCandidateEvaluations += 1;
         const pic = members.find(staffHasPicQualification);
@@ -73186,6 +73203,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       preFlightTime: item.event.preStart ?? null,
       postFlightTime: item.event.postEnd ?? null,
       fixedStartTime: item.fixedStartTime ?? null,
+      fixedCrewUnit: item.event.fixedCrewUnit || item.event.unit || null,
       crewRequirement: item.event.crewRequirement || null
     }));
     recordProgress({ message: "Scheduling Fixed Crew events...", percentage: 55 });
