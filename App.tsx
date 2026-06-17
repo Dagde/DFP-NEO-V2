@@ -5981,6 +5981,7 @@ function generateDfpInternal(
             minuteTimeline: [] as any[],
             attempts: [] as any[],
             placements: [] as any[],
+            performance: null as any,
             rejectionReasons: {},
             summary: null,
             conclusion: buildOperationalModel === 'fixed_crew'
@@ -6284,11 +6285,41 @@ function generateDfpInternal(
             : (fixedCrewUnit ? [fixedCrewUnit] : []);
         const fixedCrewContextUnitSet = new Set(fixedCrewContextUnits);
         const fixedCrewUsesSharedUnitContext = fixedCrewContextUnitSet.size > 1;
+        const fixedCrewPerfNow = (): number => (
+            typeof performance !== 'undefined' && typeof performance.now === 'function'
+                ? performance.now()
+                : Date.now()
+        );
+        const fixedCrewPerfStart = fixedCrewPerfNow();
+        const fixedCrewPerf = {
+            startedAt: new Date().toISOString(),
+            contextUnits: fixedCrewContextUnits,
+            counters: {
+                queueItems: 0,
+                startCandidates: 0,
+                resourceCandidates: 0,
+                crewCandidateEvaluations: 0,
+                noPicFastRejects: 0,
+                roleShortfallChecks: 0,
+                availabilityChecks: 0,
+                personnelConflictChecks: 0,
+                crewGroupConflictChecks: 0,
+                staffLimitChecks: 0,
+                resourceConflictChecks: 0,
+                placements: 0,
+            },
+            timingsMs: {} as Record<string, number>,
+            events: [] as any[],
+        };
+        const addFixedCrewPerfTiming = (key: string, startedAt: number) => {
+            fixedCrewPerf.timingsMs[key] = Math.round(((fixedCrewPerf.timingsMs[key] || 0) + (fixedCrewPerfNow() - startedAt)) * 100) / 100;
+        };
         diag.context = {
             ...(diag.context || {}),
             unitCode: fixedCrewUnit,
             memberUnits: fixedCrewContextUnits,
         };
+        diag.performance = fixedCrewPerf;
         const fixedCrewTileColourMode = normaliseFixedCrewTileColourMode(config.fixedCrewTileColourMode);
         const normaliseCrewValue = (value?: string | null): string => String(value || '').trim();
         const normaliseCrewKey = (value?: string | null): string => normaliseCrewValue(value).toUpperCase();
@@ -6372,6 +6403,7 @@ function generateDfpInternal(
             return Boolean(staff.name) && !staff.isAdminStaff && fixedCrewMatchesContextUnit(staff.unit);
         };
         const crewGroups = new Map<string, Instructor[]>();
+        const crewGroupBuildStart = fixedCrewPerfNow();
         originalInstructors
             .filter(isActiveFixedCrewStaff)
             .forEach(staff => {
@@ -6382,6 +6414,7 @@ function generateDfpInternal(
                 if (!crewGroups.has(scopedCrewKey)) crewGroups.set(scopedCrewKey, []);
                 crewGroups.get(scopedCrewKey)!.push(staff);
             });
+        addFixedCrewPerfTiming('crewGroupBuild', crewGroupBuildStart);
         const fixedCrewUsage = new Map<string, number>();
         const crewGroupSummaries = Array.from(crewGroups.entries())
             .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }))
@@ -6718,17 +6751,9 @@ function generateDfpInternal(
                     || leftCrew.localeCompare(rightCrew, undefined, { numeric: true })
                 );
             for (const [crew, members] of candidates) {
+                fixedCrewPerf.counters.crewCandidateEvaluations += 1;
                 const pic = members.find(staffHasPicQualification);
-                const shortfalls = getFixedCrewRoleShortfalls(members, event);
-                const unavailableMembers = members.filter(staff =>
-                    isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, eventTypeForAvailability as any)
-                );
-                const hasExistingConflict = members.some(staff =>
-                    generatedEvents.some(existing => eventHasPerson(existing, staff.name) && priorityPersonnelConflict(event, existing))
-                );
-                const fixedCrewGroupConflict = findFixedCrewGroupConflict(crew);
-                const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
-                const attempt = {
+                const attemptBase = {
                     event: event.flightNumber,
                     crew,
                     crewLabel: getFixedCrewCrewLabel(crew),
@@ -6736,6 +6761,29 @@ function generateDfpInternal(
                     startTime: event.startTime,
                     resourceId: event.resourceId || null,
                     pic: pic?.name || null,
+                };
+                if (!pic) {
+                    fixedCrewPerf.counters.noPicFastRejects += 1;
+                    incrementFixedCrewRejection('NO_PIC_IN_CREW');
+                    pushFixedCrewAttempt({ ...attemptBase, outcome: 'rejected', reason: 'NO_PIC_IN_CREW' });
+                    continue;
+                }
+                fixedCrewPerf.counters.roleShortfallChecks += 1;
+                const shortfalls = getFixedCrewRoleShortfalls(members, event);
+                fixedCrewPerf.counters.availabilityChecks += members.length;
+                const unavailableMembers = members.filter(staff =>
+                    isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, eventTypeForAvailability as any)
+                );
+                fixedCrewPerf.counters.personnelConflictChecks += members.length;
+                const hasExistingConflict = members.some(staff =>
+                    generatedEvents.some(existing => eventHasPerson(existing, staff.name) && priorityPersonnelConflict(event, existing))
+                );
+                fixedCrewPerf.counters.crewGroupConflictChecks += 1;
+                const fixedCrewGroupConflict = findFixedCrewGroupConflict(crew);
+                fixedCrewPerf.counters.staffLimitChecks += members.length;
+                const staffLimitViolations = getFixedCrewStaffLimitViolations(members, event);
+                const attempt = {
+                    ...attemptBase,
                     shortfalls,
                     unavailableMembers: unavailableMembers.map(staff => staff.name),
                     staffLimitViolations,
@@ -6748,11 +6796,6 @@ function generateDfpInternal(
                         bookingWindow: getEventBookingWindowForAlgo(fixedCrewGroupConflict as any, syllabusDetails),
                     } : null,
                 };
-                if (!pic) {
-                    incrementFixedCrewRejection('NO_PIC_IN_CREW');
-                    pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason: 'NO_PIC_IN_CREW' });
-                    continue;
-                }
                 if (shortfalls.length > 0) {
                     incrementFixedCrewRejection('CREW_ROLE_SHORTFALL');
                     pushFixedCrewAttempt({ ...attempt, outcome: 'rejected', reason: 'CREW_ROLE_SHORTFALL' });
@@ -6785,10 +6828,28 @@ function generateDfpInternal(
             return null;
         };
         const tryPlaceFixedCrewEvent = (sourceEvent: Omit<ScheduleEvent, 'date'>, source: string, fixedStartTime?: number): boolean => {
+            const eventPerfStart = fixedCrewPerfNow();
+            const eventPerf = {
+                event: sourceEvent.flightNumber,
+                source,
+                type: sourceEvent.type,
+                duration: getFixedCrewDuration(sourceEvent),
+                fixedStartTime: fixedStartTime ?? null,
+                startCandidates: 0,
+                resourceCandidates: 0,
+                crewCandidateEvaluationsBefore: fixedCrewPerf.counters.crewCandidateEvaluations,
+                outcome: 'pending',
+                reason: null as string | null,
+                elapsedMs: 0,
+            };
             const resourceOptions = getFixedCrewResourceOptions(sourceEvent);
             if (resourceOptions.length === 0) {
                 incrementFixedCrewRejection('NO_RESOURCE_OPTIONS');
                 pushFixedCrewAttempt({ event: sourceEvent.flightNumber, source, outcome: 'rejected', reason: 'NO_RESOURCE_OPTIONS' });
+                eventPerf.outcome = 'rejected';
+                eventPerf.reason = 'NO_RESOURCE_OPTIONS';
+                eventPerf.elapsedMs = Math.round((fixedCrewPerfNow() - eventPerfStart) * 100) / 100;
+                if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
                 return false;
             }
             const window = getFixedCrewWindow(sourceEvent.type);
@@ -6810,11 +6871,15 @@ function generateDfpInternal(
                 })
             );
             for (const startTime of starts) {
+                fixedCrewPerf.counters.startCandidates += 1;
+                eventPerf.startCandidates += 1;
                 if (startTime < window.start || startTime + duration > window.end) {
                     incrementFixedCrewRejection('OUTSIDE_BUILD_WINDOW');
                     continue;
                 }
                 for (const resourceId of resourceOptions) {
+                    fixedCrewPerf.counters.resourceCandidates += 1;
+                    eventPerf.resourceCandidates += 1;
                     const candidate = ensurePriorityResourceConfigCompatibility({
                         ...sourceEvent,
                         id: sourceEvent.id || uuidv4(),
@@ -6830,13 +6895,18 @@ function generateDfpInternal(
                             continue;
                         }
                     }
+                    fixedCrewPerf.counters.resourceConflictChecks += 1;
+                    const resourceConflictStart = fixedCrewPerfNow();
                     const resourceConflict = generatedEvents.find(existing => priorityResourceConflict(candidate, existing));
+                    addFixedCrewPerfTiming('resourceConflictChecks', resourceConflictStart);
                     if (resourceConflict) {
                         incrementFixedCrewRejection('RESOURCE_CONFLICT');
                         pushFixedCrewAttempt({ event: candidate.flightNumber, source, startTime, resourceId, outcome: 'rejected', reason: 'RESOURCE_CONFLICT', conflictingEvent: resourceConflict.flightNumber });
                         continue;
                     }
+                    const selectCrewStart = fixedCrewPerfNow();
                     const assignment = selectFixedCrewForEvent(candidate);
+                    addFixedCrewPerfTiming('selectCrew', selectCrewStart);
                     if (!assignment) continue;
                     const candidateBookingWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
                     const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, candidateBookingWindow);
@@ -6887,6 +6957,7 @@ function generateDfpInternal(
                         _source: source,
                     };
                     generatedEvents.push(placed);
+                    fixedCrewPerf.counters.placements += 1;
                     fixedCrewUsage.set(assignment.crew, (fixedCrewUsage.get(assignment.crew) || 0) + 1);
                     pushFixedCrewPlacement({
                         event: placed.flightNumber,
@@ -6900,11 +6971,20 @@ function generateDfpInternal(
                         pic: assignment.pic.name,
                         attendees: placed.attendees,
                     });
+                    eventPerf.outcome = 'placed';
+                    eventPerf.elapsedMs = Math.round((fixedCrewPerfNow() - eventPerfStart) * 100) / 100;
+                    (eventPerf as any).crewCandidateEvaluations = fixedCrewPerf.counters.crewCandidateEvaluations - eventPerf.crewCandidateEvaluationsBefore;
+                    if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
                     return true;
                 }
             }
             incrementFixedCrewRejection('NO_VALID_PLACEMENT');
             pushFixedCrewAttempt({ event: sourceEvent.flightNumber, source, outcome: 'rejected', reason: 'NO_VALID_PLACEMENT' });
+            eventPerf.outcome = 'rejected';
+            eventPerf.reason = 'NO_VALID_PLACEMENT';
+            eventPerf.elapsedMs = Math.round((fixedCrewPerfNow() - eventPerfStart) * 100) / 100;
+            (eventPerf as any).crewCandidateEvaluations = fixedCrewPerf.counters.crewCandidateEvaluations - eventPerf.crewCandidateEvaluationsBefore;
+            if (fixedCrewPerf.events.length < 120) fixedCrewPerf.events.push(eventPerf);
             return false;
         };
 
@@ -6921,6 +7001,7 @@ function generateDfpInternal(
             return generatedEvents;
         }
 
+        const queueBuildStart = fixedCrewPerfNow();
         const fixedCrewPriorityQueue = highestPriorityEvents
             .filter(event => priorityEventMatchesBuildDate(event, buildDate))
             .filter(event => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed)
@@ -7086,6 +7167,8 @@ function generateDfpInternal(
             ...fixedCrewPriorityQueue,
             ...activeUnitTrainingItems.map(({ event, stream }) => ({ source: stream.kind === 'course' ? 'fixed-crew-course' : 'fixed-crew-package', event })),
         ];
+        fixedCrewPerf.counters.queueItems = fixedCrewQueue.length;
+        addFixedCrewPerfTiming('queueBuild', queueBuildStart);
         diag.queueSourceAudit = {
             buildDate,
             activeUnit: fixedCrewUnit,
@@ -7161,10 +7244,24 @@ function generateDfpInternal(
             crewRequirement: item.event.crewRequirement || null,
         }));
         recordProgress({ message: 'Scheduling Fixed Crew events...', percentage: 55 });
+        const schedulingStart = fixedCrewPerfNow();
         fixedCrewQueue.forEach(item => {
             tryPlaceFixedCrewEvent(item.event, item.source, item.fixedStartTime);
         });
+        addFixedCrewPerfTiming('scheduling', schedulingStart);
+        const timelineStart = fixedCrewPerfNow();
         buildFixedCrewMinuteTimeline(fixedCrewQueue);
+        addFixedCrewPerfTiming('minuteTimeline', timelineStart);
+        fixedCrewPerf.timingsMs.total = Math.round((fixedCrewPerfNow() - fixedCrewPerfStart) * 100) / 100;
+        markBuildTiming('fixedCrew:complete', {
+            totalMs: fixedCrewPerf.timingsMs.total,
+            queueItems: fixedCrewPerf.counters.queueItems,
+            crewGroups: crewGroups.size,
+            resourceCandidates: fixedCrewPerf.counters.resourceCandidates,
+            crewCandidateEvaluations: fixedCrewPerf.counters.crewCandidateEvaluations,
+            noPicFastRejects: fixedCrewPerf.counters.noPicFastRejects,
+            placements: fixedCrewPerf.counters.placements,
+        });
 
         const sortedFixedCrewEvents = [...generatedEvents].sort((left, right) =>
             left.resourceId.localeCompare(right.resourceId, undefined, { numeric: true }) ||
