@@ -6622,11 +6622,12 @@ function generateDfpInternal(
                 return normaliseCrewKey(crewText);
             };
             const findFixedCrewGroupConflict = (crew: string): Partial<ScheduleEvent> | undefined => (
-                generatedEvents.find(existing => (
-                    getExistingFixedCrewGroup(existing) === normaliseCrewKey(crew)
-                    && Number(existing.startTime) < bookingWindow.end
-                    && bookingWindow.start < Number(existing.startTime) + getFixedCrewDuration(existing)
-                ))
+                generatedEvents.find(existing => {
+                    if (getExistingFixedCrewGroup(existing) !== normaliseCrewKey(crew)) return false;
+                    const existingBookingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
+                    return existingBookingWindow.start < bookingWindow.end
+                        && bookingWindow.start < existingBookingWindow.end;
+                })
             );
             const candidates = Array.from(crewGroups.entries())
                 .sort(([leftCrew], [rightCrew]) =>
@@ -6657,6 +6658,7 @@ function generateDfpInternal(
                         event: fixedCrewGroupConflict.flightNumber,
                         startTime: fixedCrewGroupConflict.startTime,
                         duration: getFixedCrewDuration(fixedCrewGroupConflict),
+                        bookingWindow: getEventBookingWindowForAlgo(fixedCrewGroupConflict as any, syllabusDetails),
                     } : null,
                 };
                 if (!pic) {
@@ -6706,12 +6708,13 @@ function generateDfpInternal(
                 if (explicitGroup) return explicitGroup;
                 return normaliseCrewKey(String(event.crew || event.group || event.student || '').replace(/^CREW\s*/i, ''));
             };
-            const findPlacedFixedCrewOverlap = (crew: string, start: number, end: number): Partial<ScheduleEvent> | undefined => (
-                generatedEvents.find(existing => (
-                    getPlacedFixedCrewGroup(existing) === normaliseCrewKey(crew)
-                    && Number(existing.startTime) < end
-                    && start < Number(existing.startTime) + getFixedCrewDuration(existing)
-                ))
+            const findPlacedFixedCrewOverlap = (crew: string, candidateWindow: { start: number; end: number }): Partial<ScheduleEvent> | undefined => (
+                generatedEvents.find(existing => {
+                    if (getPlacedFixedCrewGroup(existing) !== normaliseCrewKey(crew)) return false;
+                    const existingBookingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
+                    return existingBookingWindow.start < candidateWindow.end
+                        && candidateWindow.start < existingBookingWindow.end;
+                })
             );
             for (const startTime of starts) {
                 if (startTime < window.start || startTime + duration > window.end) {
@@ -6742,7 +6745,8 @@ function generateDfpInternal(
                     }
                     const assignment = selectFixedCrewForEvent(candidate);
                     if (!assignment) continue;
-                    const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, startTime, startTime + duration);
+                    const candidateBookingWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
+                    const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, candidateBookingWindow);
                     if (crewOverlap) {
                         incrementFixedCrewRejection('CREW_GROUP_CONFLICT');
                         pushFixedCrewAttempt({
@@ -6757,6 +6761,8 @@ function generateDfpInternal(
                             conflictingEvent: crewOverlap.flightNumber,
                             conflictingStartTime: crewOverlap.startTime,
                             conflictingDuration: getFixedCrewDuration(crewOverlap),
+                            conflictingBookingWindow: getEventBookingWindowForAlgo(crewOverlap as any, syllabusDetails),
+                            candidateBookingWindow,
                         });
                         continue;
                     }

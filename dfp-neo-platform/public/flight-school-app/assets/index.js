@@ -72533,7 +72533,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const crewText = String(existing.crew || existing.group || existing.student || "").replace(/^CREW\s*/i, "");
         return normaliseCrewKey(crewText);
       };
-      const findFixedCrewGroupConflict = (crew) => generatedEvents.find((existing) => getExistingFixedCrewGroup(existing) === normaliseCrewKey(crew) && Number(existing.startTime) < bookingWindow.end && bookingWindow.start < Number(existing.startTime) + getFixedCrewDuration(existing));
+      const findFixedCrewGroupConflict = (crew) => generatedEvents.find((existing) => {
+        if (getExistingFixedCrewGroup(existing) !== normaliseCrewKey(crew)) return false;
+        const existingBookingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
+        return existingBookingWindow.start < bookingWindow.end && bookingWindow.start < existingBookingWindow.end;
+      });
       const candidates = Array.from(crewGroups.entries()).sort(
         ([leftCrew], [rightCrew]) => (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0) || leftCrew.localeCompare(rightCrew, void 0, { numeric: true })
       );
@@ -72560,7 +72564,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           fixedCrewGroupConflict: fixedCrewGroupConflict ? {
             event: fixedCrewGroupConflict.flightNumber,
             startTime: fixedCrewGroupConflict.startTime,
-            duration: getFixedCrewDuration(fixedCrewGroupConflict)
+            duration: getFixedCrewDuration(fixedCrewGroupConflict),
+            bookingWindow: getEventBookingWindowForAlgo(fixedCrewGroupConflict, syllabusDetails)
           } : null
         };
         if (!pic) {
@@ -72608,7 +72613,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (explicitGroup) return explicitGroup;
         return normaliseCrewKey(String(event.crew || event.group || event.student || "").replace(/^CREW\s*/i, ""));
       };
-      const findPlacedFixedCrewOverlap = (crew, start, end) => generatedEvents.find((existing) => getPlacedFixedCrewGroup(existing) === normaliseCrewKey(crew) && Number(existing.startTime) < end && start < Number(existing.startTime) + getFixedCrewDuration(existing));
+      const findPlacedFixedCrewOverlap = (crew, candidateWindow) => generatedEvents.find((existing) => {
+        if (getPlacedFixedCrewGroup(existing) !== normaliseCrewKey(crew)) return false;
+        const existingBookingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
+        return existingBookingWindow.start < candidateWindow.end && candidateWindow.start < existingBookingWindow.end;
+      });
       for (const startTime of starts) {
         if (startTime < window2.start || startTime + duration > window2.end) {
           incrementFixedCrewRejection("OUTSIDE_BUILD_WINDOW");
@@ -72638,7 +72647,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           const assignment = selectFixedCrewForEvent(candidate);
           if (!assignment) continue;
-          const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, startTime, startTime + duration);
+          const candidateBookingWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
+          const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, candidateBookingWindow);
           if (crewOverlap) {
             incrementFixedCrewRejection("CREW_GROUP_CONFLICT");
             pushFixedCrewAttempt({
@@ -72652,7 +72662,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               reason: "CREW_GROUP_CONFLICT",
               conflictingEvent: crewOverlap.flightNumber,
               conflictingStartTime: crewOverlap.startTime,
-              conflictingDuration: getFixedCrewDuration(crewOverlap)
+              conflictingDuration: getFixedCrewDuration(crewOverlap),
+              conflictingBookingWindow: getEventBookingWindowForAlgo(crewOverlap, syllabusDetails),
+              candidateBookingWindow
             });
             continue;
           }
