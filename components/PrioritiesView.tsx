@@ -1050,13 +1050,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const fixedCrewEnabledStreamTotal = fixedCrewTrainingStreams
     .filter(stream => stream.enabled)
     .reduce((sum, stream) => sum + stream.weight, 0);
-  const fixedCrewEnabledStreamKeys = fixedCrewTrainingStreams
-    .filter(stream => stream.enabled)
-    .map(stream => stream.key);
-  const firstFixedCrewEnabledStreamKey = fixedCrewEnabledStreamKeys[0] || '';
-  const lastFixedCrewEnabledStreamKey = fixedCrewEnabledStreamKeys[fixedCrewEnabledStreamKeys.length - 1] || '';
-
-
   useEffect(() => {
     setCourseTimestamp(new Date().toLocaleString());
   }, [coursePriorities, coursePercentages]);
@@ -1149,6 +1142,25 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return -1;
   };
 
+  const getFixedCrewTransferPartnerIndex = (
+    streams: FixedCrewTrainingStreamPriority[],
+    targetIndex: number,
+    direction: 'increase' | 'decrease',
+  ): number => {
+    const preferredStep = direction === 'increase' ? -1 : 1;
+    const fallbackStep = preferredStep * -1;
+    const canTransfer = (stream: FixedCrewTrainingStreamPriority) => (
+      stream.enabled && (direction === 'increase' ? stream.weight > 0 : true)
+    );
+    for (let index = targetIndex + preferredStep; index >= 0 && index < streams.length; index += preferredStep) {
+      if (canTransfer(streams[index])) return index;
+    }
+    for (let index = targetIndex + fallbackStep; index >= 0 && index < streams.length; index += fallbackStep) {
+      if (canTransfer(streams[index])) return index;
+    }
+    return -1;
+  };
+
   const reorderFixedCrewStreamAfterWeightChange = (
     streams: FixedCrewTrainingStreamPriority[],
     streamKey: string,
@@ -1170,6 +1182,37 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return ordered;
   };
 
+  const moveFixedCrewStreamOnePosition = (
+    streams: FixedCrewTrainingStreamPriority[],
+    streamKey: string,
+    direction: 'increase' | 'decrease',
+  ): FixedCrewTrainingStreamPriority[] => {
+    const ordered = streams.map(stream => ({ ...stream }));
+    const targetIndex = ordered.findIndex(stream => stream.key === streamKey);
+    if (targetIndex < 0) return ordered;
+    const adjacentIndex = getAdjacentFixedCrewEnabledIndex(ordered, targetIndex, direction);
+    if (adjacentIndex < 0) return ordered;
+    const target = ordered[targetIndex];
+    ordered[targetIndex] = ordered[adjacentIndex];
+    ordered[adjacentIndex] = target;
+    return ordered;
+  };
+
+  const canIncreaseFixedCrewStream = (stream: FixedCrewTrainingStreamPriority): boolean => {
+    if (!stream.enabled || fixedCrewEnabledStreamCount < 2) return false;
+    const streamIndex = fixedCrewTrainingStreams.findIndex(item => item.key === stream.key);
+    return (
+      fixedCrewTrainingStreams.some(other => other.enabled && other.key !== stream.key && other.weight > 0) ||
+      getAdjacentFixedCrewEnabledIndex(fixedCrewTrainingStreams, streamIndex, 'increase') >= 0
+    );
+  };
+
+  const canDecreaseFixedCrewStream = (stream: FixedCrewTrainingStreamPriority): boolean => {
+    if (!stream.enabled || fixedCrewEnabledStreamCount < 2) return false;
+    const streamIndex = fixedCrewTrainingStreams.findIndex(item => item.key === stream.key);
+    return stream.weight > 0 || getAdjacentFixedCrewEnabledIndex(fixedCrewTrainingStreams, streamIndex, 'decrease') >= 0;
+  };
+
   const handleFixedCrewStreamToggle = (streamKey: string) => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
     const next = current.map(stream => stream.key === streamKey ? {
@@ -1186,29 +1229,39 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const next = current.map(stream => ({ ...stream }));
     const targetIndex = next.findIndex(stream => stream.key === streamKey && stream.enabled);
     if (targetIndex < 0) return;
-    const adjacentIndex = getAdjacentFixedCrewEnabledIndex(next, targetIndex, direction);
-    if (adjacentIndex < 0) return;
     const target = next[targetIndex];
-    const adjacent = next[adjacentIndex];
 
     const previousWeight = target.weight;
+    let changedWeight = false;
     if (direction === 'increase') {
-      const transfer = Math.min(5, adjacent.weight);
-      if (transfer <= 0) return;
-      target.weight += transfer;
-      adjacent.weight -= transfer;
+      const partnerIndex = getFixedCrewTransferPartnerIndex(next, targetIndex, direction);
+      if (partnerIndex >= 0) {
+        const partner = next[partnerIndex];
+        const transfer = Math.min(5, partner.weight);
+        if (transfer > 0) {
+          target.weight += transfer;
+          partner.weight -= transfer;
+          changedWeight = true;
+        }
+      }
     } else {
-      const transfer = Math.min(5, target.weight);
-      if (transfer <= 0) return;
-      target.weight -= transfer;
-      adjacent.weight += transfer;
+      const partnerIndex = getFixedCrewTransferPartnerIndex(next, targetIndex, direction);
+      if (partnerIndex >= 0) {
+        const partner = next[partnerIndex];
+        const transfer = Math.min(5, target.weight);
+        if (transfer > 0) {
+          target.weight -= transfer;
+          partner.weight += transfer;
+          changedWeight = true;
+        }
+      }
     }
-    const reordered = reorderFixedCrewStreamAfterWeightChange(
-      normaliseFixedCrewTrainingPriorityWeights(next),
-      streamKey,
-      direction,
-    );
+    const normalised = normaliseFixedCrewTrainingPriorityWeights(next);
+    const reordered = changedWeight
+      ? reorderFixedCrewStreamAfterWeightChange(normalised, streamKey, direction)
+      : moveFixedCrewStreamOnePosition(normalised, streamKey, direction);
     const after = reordered.find(stream => stream.key === streamKey);
+    if (!after || (after.weight === previousWeight && reordered.findIndex(stream => stream.key === streamKey) === current.findIndex(stream => stream.key === streamKey))) return;
     fixedCrewActiveArrow.current = { streamKey, direction };
     updateFixedCrewStreams(reordered, `${target.code || streamKey} ${previousWeight}% → ${after?.weight ?? target.weight}%`);
   };
@@ -2573,7 +2626,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 <ArrowButton
                                                     direction="up"
                                                     onClick={() => handleFixedCrewStreamWeightChange(stream.key, 'increase')}
-                                                    disabled={!stream.enabled || fixedCrewEnabledStreamCount < 2 || stream.key === firstFixedCrewEnabledStreamKey}
+                                                    disabled={!canIncreaseFixedCrewStream(stream)}
                                                     buttonRef={(node) => {
                                                         const key = `${stream.key}:increase`;
                                                         if (node) fixedCrewArrowButtonRefs.current.set(key, node);
@@ -2583,7 +2636,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 <ArrowButton
                                                     direction="down"
                                                     onClick={() => handleFixedCrewStreamWeightChange(stream.key, 'decrease')}
-                                                    disabled={!stream.enabled || fixedCrewEnabledStreamCount < 2 || stream.key === lastFixedCrewEnabledStreamKey || stream.weight <= 0}
+                                                    disabled={!canDecreaseFixedCrewStream(stream)}
                                                     buttonRef={(node) => {
                                                         const key = `${stream.key}:decrease`;
                                                         if (node) fixedCrewArrowButtonRefs.current.set(key, node);
