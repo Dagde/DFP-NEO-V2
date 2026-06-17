@@ -39,6 +39,15 @@ import {
   type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
 
+type FixedCrewPriorityDirection = 'increase' | 'decrease';
+type FixedCrewPointerBridge = {
+  streamKey: string;
+  direction: FixedCrewPriorityDirection;
+  rect: { left: number; top: number; width: number; height: number };
+  pointer: { x: number; y: number };
+  nonce: number;
+};
+
 interface PrioritiesViewProps {
   school?: string;
   coursePriorities: string[];
@@ -950,7 +959,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const fixedCrewStreamRowRefs = useRef<Map<string, HTMLLIElement>>(new Map());
   const fixedCrewPreviousRowTops = useRef<Map<string, number>>(new Map());
   const fixedCrewArrowButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const fixedCrewActiveArrow = useRef<{ streamKey: string; direction: 'increase' | 'decrease' } | null>(null);
+  const fixedCrewActiveArrow = useRef<{ streamKey: string; direction: FixedCrewPriorityDirection } | null>(null);
+  const [fixedCrewPointerBridge, setFixedCrewPointerBridge] = useState<FixedCrewPointerBridge | null>(null);
   const fixedCrewTrainingStreams = useMemo(() => {
     if (!isFixedCrewModel) return [];
     const savedStreams = normaliseFixedCrewTrainingPriorityWeights(fixedCrewTrainingPriorities);
@@ -1031,6 +1041,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     fixedCrewArrowButtonRefs.current.get(key)?.focus({ preventScroll: true });
     fixedCrewActiveArrow.current = null;
   }, [fixedCrewTrainingStreams]);
+
+  useEffect(() => {
+    if (!fixedCrewPointerBridge) return;
+    const clearTimer = window.setTimeout(() => setFixedCrewPointerBridge(null), 1400);
+    const handlePointerMove = (event: PointerEvent) => {
+      const deltaX = Math.abs(event.clientX - fixedCrewPointerBridge.pointer.x);
+      const deltaY = Math.abs(event.clientY - fixedCrewPointerBridge.pointer.y);
+      if (deltaX > 8 || deltaY > 8) setFixedCrewPointerBridge(null);
+    };
+    window.addEventListener('pointermove', handlePointerMove, { capture: true });
+    return () => {
+      window.clearTimeout(clearTimer);
+      window.removeEventListener('pointermove', handlePointerMove, { capture: true });
+    };
+  }, [fixedCrewPointerBridge]);
 
   useEffect(() => {
     if (!isFixedCrewModel || fixedCrewTrainingStreams.length === 0) return;
@@ -1133,7 +1158,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const getAdjacentFixedCrewEnabledIndex = (
     streams: FixedCrewTrainingStreamPriority[],
     startIndex: number,
-    direction: 'increase' | 'decrease',
+    direction: FixedCrewPriorityDirection,
   ): number => {
     const step = direction === 'increase' ? -1 : 1;
     for (let index = startIndex + step; index >= 0 && index < streams.length; index += step) {
@@ -1145,7 +1170,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const getFixedCrewTransferPartnerIndex = (
     streams: FixedCrewTrainingStreamPriority[],
     targetIndex: number,
-    direction: 'increase' | 'decrease',
+    direction: FixedCrewPriorityDirection,
   ): number => {
     const preferredStep = direction === 'increase' ? -1 : 1;
     const fallbackStep = preferredStep * -1;
@@ -1164,7 +1189,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const reorderFixedCrewStreamAfterWeightChange = (
     streams: FixedCrewTrainingStreamPriority[],
     streamKey: string,
-    direction: 'increase' | 'decrease',
+    direction: FixedCrewPriorityDirection,
   ): FixedCrewTrainingStreamPriority[] => {
     const ordered = streams.map(stream => ({ ...stream }));
     const targetIndex = ordered.findIndex(stream => stream.key === streamKey);
@@ -1185,7 +1210,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const moveFixedCrewStreamOnePosition = (
     streams: FixedCrewTrainingStreamPriority[],
     streamKey: string,
-    direction: 'increase' | 'decrease',
+    direction: FixedCrewPriorityDirection,
   ): FixedCrewTrainingStreamPriority[] => {
     const ordered = streams.map(stream => ({ ...stream }));
     const targetIndex = ordered.findIndex(stream => stream.key === streamKey);
@@ -1224,7 +1249,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     updateFixedCrewStreams(next, `${target?.code || streamKey} ${target?.enabled ? 'enabled' : 'disabled'}`);
   };
 
-  const handleFixedCrewStreamWeightChange = (streamKey: string, direction: 'increase' | 'decrease') => {
+  const handleFixedCrewStreamWeightChange = (
+    streamKey: string,
+    direction: FixedCrewPriorityDirection,
+    event?: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    const clickRect = event?.currentTarget.getBoundingClientRect();
+    const pointer = event ? { x: event.clientX, y: event.clientY } : null;
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
     const next = current.map(stream => ({ ...stream }));
     const targetIndex = next.findIndex(stream => stream.key === streamKey && stream.enabled);
@@ -1263,6 +1294,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const after = reordered.find(stream => stream.key === streamKey);
     if (!after || (after.weight === previousWeight && reordered.findIndex(stream => stream.key === streamKey) === current.findIndex(stream => stream.key === streamKey))) return;
     fixedCrewActiveArrow.current = { streamKey, direction };
+    if (clickRect && pointer) {
+      setFixedCrewPointerBridge({
+        streamKey,
+        direction,
+        rect: {
+          left: clickRect.left,
+          top: clickRect.top,
+          width: clickRect.width,
+          height: clickRect.height,
+        },
+        pointer,
+        nonce: Date.now(),
+      });
+    }
     updateFixedCrewStreams(reordered, `${target.code || streamKey} ${previousWeight}% → ${after?.weight ?? target.weight}%`);
   };
 
@@ -2133,7 +2178,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   
   const ArrowButton: React.FC<{
     direction: 'up' | 'down',
-    onClick: () => void,
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => void,
     disabled?: boolean,
     buttonRef?: (node: HTMLButtonElement | null) => void,
   }> = ({ direction, onClick, disabled, buttonRef }) => (
@@ -2625,7 +2670,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             <div className="flex flex-col">
                                                 <ArrowButton
                                                     direction="up"
-                                                    onClick={() => handleFixedCrewStreamWeightChange(stream.key, 'increase')}
+                                                    onClick={(event) => handleFixedCrewStreamWeightChange(stream.key, 'increase', event)}
                                                     disabled={!canIncreaseFixedCrewStream(stream)}
                                                     buttonRef={(node) => {
                                                         const key = `${stream.key}:increase`;
@@ -2635,7 +2680,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 />
                                                 <ArrowButton
                                                     direction="down"
-                                                    onClick={() => handleFixedCrewStreamWeightChange(stream.key, 'decrease')}
+                                                    onClick={(event) => handleFixedCrewStreamWeightChange(stream.key, 'decrease', event)}
                                                     disabled={!canDecreaseFixedCrewStream(stream)}
                                                     buttonRef={(node) => {
                                                         const key = `${stream.key}:decrease`;
@@ -2648,6 +2693,39 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     ))}
                                 </ul>
                             )}
+                            {fixedCrewPointerBridge && (() => {
+                                const bridgedStream = fixedCrewTrainingStreams.find(stream => stream.key === fixedCrewPointerBridge.streamKey);
+                                if (!bridgedStream) return null;
+                                const isDisabled = fixedCrewPointerBridge.direction === 'increase'
+                                    ? !canIncreaseFixedCrewStream(bridgedStream)
+                                    : !canDecreaseFixedCrewStream(bridgedStream);
+                                if (isDisabled) return null;
+                                return (
+                                    <button
+                                        key={fixedCrewPointerBridge.nonce}
+                                        type="button"
+                                        aria-label={fixedCrewPointerBridge.direction === 'increase' ? 'Increase Fixed Crew priority share' : 'Decrease Fixed Crew priority share'}
+                                        onClick={(event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            handleFixedCrewStreamWeightChange(fixedCrewPointerBridge.streamKey, fixedCrewPointerBridge.direction, event);
+                                        }}
+                                        className="fixed z-[9999] flex items-center justify-center rounded-sm bg-gray-600/95 p-0.5 text-gray-100 shadow-lg ring-1 ring-emerald-300/40 hover:bg-gray-500"
+                                        style={{
+                                            left: fixedCrewPointerBridge.rect.left,
+                                            top: fixedCrewPointerBridge.rect.top,
+                                            width: Math.max(16, fixedCrewPointerBridge.rect.width),
+                                            height: Math.max(16, fixedCrewPointerBridge.rect.height),
+                                        }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                            {fixedCrewPointerBridge.direction === 'increase'
+                                                ? <path fillRule="evenodd" d="M10 5l-5.5 5.5h11L10 5z" clipRule="evenodd" />
+                                                : <path fillRule="evenodd" d="M10 15l5.5-5.5h-11L10 15z" clipRule="evenodd" />}
+                                        </svg>
+                                    </button>
+                                );
+                            })()}
                         </div>
                     )}
                     {isAirCombatModel || isFixedCrewModel ? null : coursePriorities.length === 0 ? (

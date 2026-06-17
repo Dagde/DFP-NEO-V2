@@ -26227,6 +26227,7 @@ const PrioritiesView = ({
   const fixedCrewPreviousRowTops = reactExports.useRef(/* @__PURE__ */ new Map());
   const fixedCrewArrowButtonRefs = reactExports.useRef(/* @__PURE__ */ new Map());
   const fixedCrewActiveArrow = reactExports.useRef(null);
+  const [fixedCrewPointerBridge, setFixedCrewPointerBridge] = reactExports.useState(null);
   const fixedCrewTrainingStreams = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return [];
     const savedStreams = normaliseFixedCrewTrainingPriorityWeights(fixedCrewTrainingPriorities);
@@ -26298,6 +26299,20 @@ const PrioritiesView = ({
     fixedCrewArrowButtonRefs.current.get(key)?.focus({ preventScroll: true });
     fixedCrewActiveArrow.current = null;
   }, [fixedCrewTrainingStreams]);
+  reactExports.useEffect(() => {
+    if (!fixedCrewPointerBridge) return;
+    const clearTimer = window.setTimeout(() => setFixedCrewPointerBridge(null), 1400);
+    const handlePointerMove = (event) => {
+      const deltaX = Math.abs(event.clientX - fixedCrewPointerBridge.pointer.x);
+      const deltaY = Math.abs(event.clientY - fixedCrewPointerBridge.pointer.y);
+      if (deltaX > 8 || deltaY > 8) setFixedCrewPointerBridge(null);
+    };
+    window.addEventListener("pointermove", handlePointerMove, { capture: true });
+    return () => {
+      window.clearTimeout(clearTimer);
+      window.removeEventListener("pointermove", handlePointerMove, { capture: true });
+    };
+  }, [fixedCrewPointerBridge]);
   reactExports.useEffect(() => {
     if (!isFixedCrewModel || fixedCrewTrainingStreams.length === 0) return;
     const savedKeys = new Set(normaliseFixedCrewTrainingPriorities(fixedCrewTrainingPriorities).map((stream) => stream.key));
@@ -26446,7 +26461,9 @@ const PrioritiesView = ({
     const target = next.find((stream) => stream.key === streamKey);
     updateFixedCrewStreams(next, `${target?.code || streamKey} ${target?.enabled ? "enabled" : "disabled"}`);
   };
-  const handleFixedCrewStreamWeightChange = (streamKey, direction) => {
+  const handleFixedCrewStreamWeightChange = (streamKey, direction, event) => {
+    const clickRect = event?.currentTarget.getBoundingClientRect();
+    const pointer = event ? { x: event.clientX, y: event.clientY } : null;
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
     const next = current.map((stream) => ({ ...stream }));
     const targetIndex = next.findIndex((stream) => stream.key === streamKey && stream.enabled);
@@ -26482,6 +26499,20 @@ const PrioritiesView = ({
     const after = reordered.find((stream) => stream.key === streamKey);
     if (!after || after.weight === previousWeight && reordered.findIndex((stream) => stream.key === streamKey) === current.findIndex((stream) => stream.key === streamKey)) return;
     fixedCrewActiveArrow.current = { streamKey, direction };
+    if (clickRect && pointer) {
+      setFixedCrewPointerBridge({
+        streamKey,
+        direction,
+        rect: {
+          left: clickRect.left,
+          top: clickRect.top,
+          width: clickRect.width,
+          height: clickRect.height
+        },
+        pointer,
+        nonce: Date.now()
+      });
+    }
     updateFixedCrewStreams(reordered, `${target.code || streamKey} ${previousWeight}% → ${after?.weight ?? target.weight}%`);
   };
   const handleEqualiseFixedCrewStreams = () => {
@@ -27560,7 +27591,7 @@ const PrioritiesView = ({
                       ArrowButton,
                       {
                         direction: "up",
-                        onClick: () => handleFixedCrewStreamWeightChange(stream.key, "increase"),
+                        onClick: (event) => handleFixedCrewStreamWeightChange(stream.key, "increase", event),
                         disabled: !canIncreaseFixedCrewStream(stream),
                         buttonRef: (node) => {
                           const key = `${stream.key}:increase`;
@@ -27573,7 +27604,7 @@ const PrioritiesView = ({
                       ArrowButton,
                       {
                         direction: "down",
-                        onClick: () => handleFixedCrewStreamWeightChange(stream.key, "decrease"),
+                        onClick: (event) => handleFixedCrewStreamWeightChange(stream.key, "decrease", event),
                         disabled: !canDecreaseFixedCrewStream(stream),
                         buttonRef: (node) => {
                           const key = `${stream.key}:decrease`;
@@ -27586,7 +27617,34 @@ const PrioritiesView = ({
                 ]
               },
               stream.key
-            )) })
+            )) }),
+            fixedCrewPointerBridge && (() => {
+              const bridgedStream = fixedCrewTrainingStreams.find((stream) => stream.key === fixedCrewPointerBridge.streamKey);
+              if (!bridgedStream) return null;
+              const isDisabled = fixedCrewPointerBridge.direction === "increase" ? !canIncreaseFixedCrewStream(bridgedStream) : !canDecreaseFixedCrewStream(bridgedStream);
+              if (isDisabled) return null;
+              return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  "aria-label": fixedCrewPointerBridge.direction === "increase" ? "Increase Fixed Crew priority share" : "Decrease Fixed Crew priority share",
+                  onClick: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleFixedCrewStreamWeightChange(fixedCrewPointerBridge.streamKey, fixedCrewPointerBridge.direction, event);
+                  },
+                  className: "fixed z-[9999] flex items-center justify-center rounded-sm bg-gray-600/95 p-0.5 text-gray-100 shadow-lg ring-1 ring-emerald-300/40 hover:bg-gray-500",
+                  style: {
+                    left: fixedCrewPointerBridge.rect.left,
+                    top: fixedCrewPointerBridge.rect.top,
+                    width: Math.max(16, fixedCrewPointerBridge.rect.width),
+                    height: Math.max(16, fixedCrewPointerBridge.rect.height)
+                  },
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-3 w-3", viewBox: "0 0 20 20", fill: "currentColor", children: fixedCrewPointerBridge.direction === "increase" ? /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5l-5.5 5.5h11L10 5z", clipRule: "evenodd" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 15l5.5-5.5h-11L10 15z", clipRule: "evenodd" }) })
+                },
+                fixedCrewPointerBridge.nonce
+              );
+            })()
           ] }),
           isAirCombatModel || isFixedCrewModel ? null : coursePriorities.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-8 text-center text-gray-500", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium", children: [
