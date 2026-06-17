@@ -6368,9 +6368,11 @@ function generateDfpInternal(
         };
         const getFixedCrewEventType = (item: Partial<SyllabusItemDetail> & Partial<ScheduleEvent>): ScheduleEvent['type'] | null => {
             const rawType = String(item.type || '').trim().toLowerCase();
+            const code = String((item as any).code || (item as any).flightNumber || '').trim().toUpperCase();
             if (rawType === 'flight') return 'flight';
-            if (rawType === 'ftd' || rawType === 'sim') return 'ftd';
-            if (rawType === 'cpt') return 'cpt';
+            if (rawType === 'ftd' || rawType === 'sim' || rawType === 'simulator') return 'ftd';
+            if (rawType === 'cpt' || code.includes('CPT')) return 'cpt';
+            if (rawType === 'ground' || rawType === 'ground school' || rawType === 'pre-post flight') return 'ground';
             return null;
         };
         const getFixedCrewDuration = (item: Partial<SyllabusItemDetail> & Partial<ScheduleEvent>): number => {
@@ -6496,7 +6498,9 @@ function generateDfpInternal(
                             ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`)
                             : eventType === 'cpt'
                                 ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`)
-                                : [];
+                                : eventType === 'ground'
+                                    ? Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`)
+                                    : [];
                 const busyResources = new Set(generatedEvents
                     .filter(event => event.type === eventType && eventActiveAtMinute(event, minuteTime))
                     .map(event => event.resourceId)
@@ -6573,6 +6577,7 @@ function generateDfpInternal(
                         flight: resourceAvailabilityAtMinute(minuteTime, 'flight'),
                         ftd: resourceAvailabilityAtMinute(minuteTime, 'ftd'),
                         cpt: resourceAvailabilityAtMinute(minuteTime, 'cpt'),
+                        ground: resourceAvailabilityAtMinute(minuteTime, 'ground'),
                     },
                     crewReadiness: crewReadinessAtMinute(minuteTime),
                     attemptsAtMinute: (attemptsByMinute.get(minute) || []).slice(0, 40),
@@ -6844,6 +6849,29 @@ function generateDfpInternal(
                 };
             });
         let allocatedTrainingSlots = streamAllocations.reduce((sum, allocation) => sum + Math.min(allocation.slots, allocation.available), 0);
+        const ensureTrainingKindRepresented = (kind: FixedCrewTrainingStreamPriority['kind']) => {
+            if (trainingItemLimit <= 0) return;
+            const kindAllocations = streamAllocations
+                .filter(allocation => allocation.stream.kind === kind && allocation.available > allocation.slots)
+                .sort((left, right) => right.stream.weight - left.stream.weight || right.fraction - left.fraction || left.stream.code.localeCompare(right.stream.code));
+            if (kindAllocations.length === 0) return;
+            const hasKindSlot = streamAllocations.some(allocation => allocation.stream.kind === kind && allocation.slots > 0);
+            if (hasKindSlot) return;
+            const recipient = kindAllocations[0];
+            if (allocatedTrainingSlots < trainingItemLimit) {
+                recipient.slots += 1;
+                allocatedTrainingSlots += 1;
+                return;
+            }
+            const donor = streamAllocations
+                .filter(allocation => allocation.stream.kind !== kind && allocation.slots > 1)
+                .sort((left, right) => right.slots - left.slots || left.stream.weight - right.stream.weight || left.stream.code.localeCompare(right.stream.code))[0];
+            if (!donor) return;
+            donor.slots -= 1;
+            recipient.slots += 1;
+        };
+        ensureTrainingKindRepresented('course');
+        ensureTrainingKindRepresented('training_package');
         streamAllocations
             .filter(allocation => allocation.available > allocation.slots)
             .sort((left, right) => right.fraction - left.fraction || right.stream.weight - left.stream.weight || left.stream.code.localeCompare(right.stream.code))
@@ -6870,6 +6898,18 @@ function generateDfpInternal(
                 (left.item.orderKey || '').localeCompare(right.item.orderKey || '') ||
                 left.item.code.localeCompare(right.item.code)
             );
+        const schedulableTrainingItemsByKind = {
+            courses: schedulableTrainingItems.filter(entry => entry.stream.kind === 'course').length,
+            packages: schedulableTrainingItems.filter(entry => entry.stream.kind === 'training_package').length,
+        };
+        const queuedTrainingItemsByKind = {
+            courses: activeUnitTrainingItems.filter(entry => entry.stream.kind === 'course').length,
+            packages: activeUnitTrainingItems.filter(entry => entry.stream.kind === 'training_package').length,
+        };
+        const unsupportedTrainingItemsByKind = {
+            courses: activeFixedCrewTrainingSyllabusItems.filter(({ item, stream }) => stream.kind === 'course' && !buildFixedCrewEventFromSyllabus(item)).length,
+            packages: activeFixedCrewTrainingSyllabusItems.filter(({ item, stream }) => stream.kind === 'training_package' && !buildFixedCrewEventFromSyllabus(item)).length,
+        };
         const fixedCrewQueue = [
             ...fixedCrewPriorityQueue,
             ...activeUnitTrainingItems.map(({ event, stream }) => ({ source: stream.kind === 'course' ? 'fixed-crew-course' : 'fixed-crew-package', event })),
@@ -6890,6 +6930,9 @@ function generateDfpInternal(
                 activeUnitCourseItems: activeFixedCrewTrainingSyllabusItems.filter(entry => entry.stream.kind === 'course').length,
                 configuredTrainingStreams: configuredFixedCrewTrainingPriorities.length,
                 enabledTrainingStreams: configuredFixedCrewTrainingPriorities.filter(stream => stream.enabled && stream.weight > 0).length,
+                schedulableTrainingItemsByKind,
+                queuedTrainingItemsByKind,
+                unsupportedTrainingItemsByKind,
                 normalizedTrainingStreams: activeTrainingStreams.map(stream => ({
                     key: stream.key,
                     code: stream.code,

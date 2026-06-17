@@ -72159,9 +72159,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const getFixedCrewEventType = (item) => {
       const rawType = String(item.type || "").trim().toLowerCase();
+      const code = String(item.code || item.flightNumber || "").trim().toUpperCase();
       if (rawType === "flight") return "flight";
-      if (rawType === "ftd" || rawType === "sim") return "ftd";
-      if (rawType === "cpt") return "cpt";
+      if (rawType === "ftd" || rawType === "sim" || rawType === "simulator") return "ftd";
+      if (rawType === "cpt" || code.includes("CPT")) return "cpt";
+      if (rawType === "ground" || rawType === "ground school" || rawType === "pre-post flight") return "ground";
       return null;
     };
     const getFixedCrewDuration = (item) => {
@@ -72267,7 +72269,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       const resourceAvailabilityAtMinute = (minuteTime, eventType) => {
         const sampleEvent = fixedCrewQueue2.find((item) => item.event.type === eventType)?.event;
-        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `PC-21 ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : [];
+        const resourceOptions = sampleEvent ? getFixedCrewResourceOptions(sampleEvent) : eventType === "flight" ? Array.from({ length: availableAircraftCount }, (_, index) => `PC-21 ${index + 1}`) : eventType === "ftd" ? Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`) : eventType === "cpt" ? Array.from({ length: cptCount }, (_, index) => `CPT ${index + 1}`) : eventType === "ground" ? Array.from({ length: 6 }, (_, index) => `Ground ${index + 1}`) : [];
         const busyResources = new Set(generatedEvents.filter((event) => event.type === eventType && eventActiveAtMinute(event, minuteTime)).map((event) => event.resourceId).filter(Boolean));
         const freeResources = resourceOptions.filter((resourceId) => !busyResources.has(resourceId));
         return {
@@ -72326,7 +72328,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           resources: {
             flight: resourceAvailabilityAtMinute(minuteTime, "flight"),
             ftd: resourceAvailabilityAtMinute(minuteTime, "ftd"),
-            cpt: resourceAvailabilityAtMinute(minuteTime, "cpt")
+            cpt: resourceAvailabilityAtMinute(minuteTime, "cpt"),
+            ground: resourceAvailabilityAtMinute(minuteTime, "ground")
           },
           crewReadiness: crewReadinessAtMinute(minuteTime),
           attemptsAtMinute: (attemptsByMinute.get(minute) || []).slice(0, 40),
@@ -72562,6 +72565,25 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     });
     let allocatedTrainingSlots = streamAllocations.reduce((sum, allocation) => sum + Math.min(allocation.slots, allocation.available), 0);
+    const ensureTrainingKindRepresented = (kind) => {
+      if (trainingItemLimit <= 0) return;
+      const kindAllocations = streamAllocations.filter((allocation) => allocation.stream.kind === kind && allocation.available > allocation.slots).sort((left, right) => right.stream.weight - left.stream.weight || right.fraction - left.fraction || left.stream.code.localeCompare(right.stream.code));
+      if (kindAllocations.length === 0) return;
+      const hasKindSlot = streamAllocations.some((allocation) => allocation.stream.kind === kind && allocation.slots > 0);
+      if (hasKindSlot) return;
+      const recipient = kindAllocations[0];
+      if (allocatedTrainingSlots < trainingItemLimit) {
+        recipient.slots += 1;
+        allocatedTrainingSlots += 1;
+        return;
+      }
+      const donor = streamAllocations.filter((allocation) => allocation.stream.kind !== kind && allocation.slots > 1).sort((left, right) => right.slots - left.slots || left.stream.weight - right.stream.weight || left.stream.code.localeCompare(right.stream.code))[0];
+      if (!donor) return;
+      donor.slots -= 1;
+      recipient.slots += 1;
+    };
+    ensureTrainingKindRepresented("course");
+    ensureTrainingKindRepresented("training_package");
     streamAllocations.filter((allocation) => allocation.available > allocation.slots).sort((left, right) => right.fraction - left.fraction || right.stream.weight - left.stream.weight || left.stream.code.localeCompare(right.stream.code)).forEach((allocation) => {
       if (allocatedTrainingSlots >= trainingItemLimit) return;
       allocation.slots += 1;
@@ -72576,6 +72598,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const activeUnitTrainingItems = streamAllocations.flatMap((allocation) => (itemsByTrainingStream.get(allocation.stream.key) || []).slice(0, allocation.slots)).sort(
       (left, right) => (activeTrainingWeightByKey.get(right.stream.key) || 0) - (activeTrainingWeightByKey.get(left.stream.key) || 0) || left.stream.kind.localeCompare(right.stream.kind) || Number(left.item.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.item.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.item.orderKey || "").localeCompare(right.item.orderKey || "") || left.item.code.localeCompare(right.item.code)
     );
+    const schedulableTrainingItemsByKind = {
+      courses: schedulableTrainingItems.filter((entry) => entry.stream.kind === "course").length,
+      packages: schedulableTrainingItems.filter((entry) => entry.stream.kind === "training_package").length
+    };
+    const queuedTrainingItemsByKind = {
+      courses: activeUnitTrainingItems.filter((entry) => entry.stream.kind === "course").length,
+      packages: activeUnitTrainingItems.filter((entry) => entry.stream.kind === "training_package").length
+    };
+    const unsupportedTrainingItemsByKind = {
+      courses: activeFixedCrewTrainingSyllabusItems.filter(({ item, stream }) => stream.kind === "course" && !buildFixedCrewEventFromSyllabus(item)).length,
+      packages: activeFixedCrewTrainingSyllabusItems.filter(({ item, stream }) => stream.kind === "training_package" && !buildFixedCrewEventFromSyllabus(item)).length
+    };
     const fixedCrewQueue = [
       ...fixedCrewPriorityQueue,
       ...activeUnitTrainingItems.map(({ event, stream }) => ({ source: stream.kind === "course" ? "fixed-crew-course" : "fixed-crew-package", event }))
@@ -72596,6 +72630,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         activeUnitCourseItems: activeFixedCrewTrainingSyllabusItems.filter((entry) => entry.stream.kind === "course").length,
         configuredTrainingStreams: configuredFixedCrewTrainingPriorities.length,
         enabledTrainingStreams: configuredFixedCrewTrainingPriorities.filter((stream) => stream.enabled && stream.weight > 0).length,
+        schedulableTrainingItemsByKind,
+        queuedTrainingItemsByKind,
+        unsupportedTrainingItemsByKind,
         normalizedTrainingStreams: activeTrainingStreams.map((stream) => ({
           key: stream.key,
           code: stream.code,
