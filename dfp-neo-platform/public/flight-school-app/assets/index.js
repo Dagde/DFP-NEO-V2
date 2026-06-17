@@ -4154,6 +4154,31 @@ const normaliseFixedCrewTrainingPriorities = (streams) => {
     };
   }).filter(Boolean);
 };
+const normaliseFixedCrewTrainingPriorityWeights = (streams) => {
+  const normalised = normaliseFixedCrewTrainingPriorities(streams);
+  const enabled = normalised.filter((stream) => stream.enabled);
+  if (enabled.length === 0) {
+    return normalised.map((stream) => ({ ...stream, weight: 0 }));
+  }
+  const enabledTotal = enabled.reduce((sum, stream) => sum + stream.weight, 0);
+  const fallbackWeight = enabledTotal > 0 ? 0 : 1;
+  const weighted = normalised.map((stream) => ({
+    ...stream,
+    weight: stream.enabled ? enabledTotal > 0 ? stream.weight : fallbackWeight : 0
+  }));
+  const activeTotal = weighted.reduce((sum, stream) => stream.enabled ? sum + stream.weight : sum, 0);
+  let runningTotal = 0;
+  let activeIndex = 0;
+  const activeCount = weighted.filter((stream) => stream.enabled).length;
+  return weighted.map((stream) => {
+    if (!stream.enabled) return { ...stream, weight: 0 };
+    activeIndex += 1;
+    const isLastActive = activeIndex === activeCount;
+    const weight = isLastActive ? Math.max(0, 100 - runningTotal) : Math.round(stream.weight / activeTotal * 100);
+    runningTotal += weight;
+    return { ...stream, weight };
+  });
+};
 const SYLLABUS_COURSE_SHELL_NOTE = "[DFP_COURSE_SHELL]";
 const isSyllabusCourseShell = (item) => String(item?.notes || "").includes(SYLLABUS_COURSE_SHELL_NOTE);
 const pendingAudits = /* @__PURE__ */ new Map();
@@ -26200,7 +26225,7 @@ const PrioritiesView = ({
   }, [activeUnitCodeSet, instructorsData, isAirCombatModel, normalisedAirCombatWeights.trainingStreams, school]);
   const fixedCrewTrainingStreams = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return [];
-    const saved = new Map(normaliseFixedCrewTrainingPriorities(fixedCrewTrainingPriorities).map((stream) => [stream.key, stream]));
+    const saved = new Map(normaliseFixedCrewTrainingPriorityWeights(fixedCrewTrainingPriorities).map((stream) => [stream.key, stream]));
     const grouped = /* @__PURE__ */ new Map();
     syllabusDetails.filter((item) => item.isActive !== false).filter((item) => !isSyllabusCourseShell(item)).forEach((item) => {
       const itemUnit = String(item.unit || "").trim().toUpperCase();
@@ -26228,7 +26253,7 @@ const PrioritiesView = ({
         eventCount: 1
       });
     });
-    return Array.from(grouped.values()).sort(
+    return normaliseFixedCrewTrainingPriorityWeights(Array.from(grouped.values())).sort(
       (left, right) => right.enabled === left.enabled ? right.weight - left.weight || left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code, void 0, { numeric: true }) : Number(right.enabled) - Number(left.enabled)
     );
   }, [activeUnitCode, activeUnitCodeSet, fixedCrewTrainingPriorities, isFixedCrewModel, school, syllabusDetails]);
@@ -26238,12 +26263,14 @@ const PrioritiesView = ({
     const missingStreams = fixedCrewTrainingStreams.filter((stream) => !savedKeys.has(stream.key)).map(({ eventCount: _eventCount, ...stream }) => stream);
     if (missingStreams.length === 0) return;
     onUpdateFixedCrewTrainingPriorities?.(
-      normaliseFixedCrewTrainingPriorities([
+      normaliseFixedCrewTrainingPriorityWeights([
         ...fixedCrewTrainingPriorities,
         ...missingStreams
       ])
     );
   }, [fixedCrewTrainingPriorities.length, fixedCrewTrainingStreams, isFixedCrewModel, onUpdateFixedCrewTrainingPriorities]);
+  const fixedCrewEnabledStreamCount = fixedCrewTrainingStreams.filter((stream) => stream.enabled).length;
+  const fixedCrewEnabledStreamTotal = fixedCrewTrainingStreams.filter((stream) => stream.enabled).reduce((sum, stream) => sum + stream.weight, 0);
   reactExports.useEffect(() => {
     setCourseTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
   }, [coursePriorities, coursePercentages]);
@@ -26312,25 +26339,51 @@ const PrioritiesView = ({
   };
   const updateFixedCrewStreams = (streams, auditLabel) => {
     logAudit("Priorities", "Edit", "Updated Fixed Crew course/package priorities", auditLabel);
-    onUpdateFixedCrewTrainingPriorities?.(normaliseFixedCrewTrainingPriorities(streams));
+    onUpdateFixedCrewTrainingPriorities?.(normaliseFixedCrewTrainingPriorityWeights(streams));
   };
   const handleFixedCrewStreamToggle = (streamKey) => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
-    const next = current.map((stream) => stream.key === streamKey ? { ...stream, enabled: !stream.enabled } : stream);
+    const next = current.map((stream) => stream.key === streamKey ? {
+      ...stream,
+      enabled: !stream.enabled,
+      weight: stream.enabled ? 0 : Math.max(1, stream.weight || 1)
+    } : stream);
     const target = next.find((stream) => stream.key === streamKey);
     updateFixedCrewStreams(next, `${target?.code || streamKey} ${target?.enabled ? "enabled" : "disabled"}`);
   };
   const handleFixedCrewStreamWeightChange = (streamKey, direction) => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
-    const next = current.map((stream) => stream.key === streamKey ? { ...stream, weight: Math.max(0, Math.min(100, stream.weight + (direction === "increase" ? 5 : -5))) } : stream);
-    const before = current.find((stream) => stream.key === streamKey);
-    const after = next.find((stream) => stream.key === streamKey);
-    updateFixedCrewStreams(next, `${after?.code || streamKey} ${before?.weight ?? 0}% → ${after?.weight ?? 0}%`);
+    const next = current.map((stream) => ({ ...stream }));
+    const target = next.find((stream) => stream.key === streamKey && stream.enabled);
+    if (!target) return;
+    const previousWeight = target.weight;
+    target.weight = Math.max(0, Math.min(100, target.weight + (direction === "increase" ? 5 : -5)));
+    const delta = target.weight - previousWeight;
+    if (delta !== 0) {
+      const others = next.filter((stream) => stream.enabled && stream.key !== streamKey).sort((left, right) => direction === "increase" ? right.weight - left.weight : left.weight - right.weight);
+      let remaining = Math.abs(delta);
+      for (const other of others) {
+        if (remaining <= 0) break;
+        if (direction === "increase") {
+          const take = Math.min(other.weight, remaining);
+          other.weight -= take;
+          remaining -= take;
+        } else {
+          other.weight += remaining;
+          remaining = 0;
+        }
+      }
+      if (remaining > 0 && direction === "increase") {
+        target.weight = Math.max(0, target.weight - remaining);
+      }
+    }
+    const after = normaliseFixedCrewTrainingPriorityWeights(next).find((stream) => stream.key === streamKey);
+    updateFixedCrewStreams(next, `${target.code || streamKey} ${previousWeight}% → ${after?.weight ?? target.weight}%`);
   };
   const handleEqualiseFixedCrewStreams = () => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
     if (current.length === 0) return;
-    updateFixedCrewStreams(current.map((stream) => ({ ...stream, weight: 10, enabled: true })), "Enabled and equalised all active Fixed Crew streams");
+    updateFixedCrewStreams(current.map((stream) => ({ ...stream, weight: 1, enabled: true })), "Enabled and equalised all active Fixed Crew streams");
   };
   const nonCleanConfigCapacityTotal = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || "", 10) || 0), 0), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
   const hasEnteredConfigCapacity = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").some((definition) => String(aircraftConfigCapacities[definition.id] || "").trim() !== ""), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
@@ -27339,16 +27392,23 @@ const PrioritiesView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: "Fixed Crew Course & Package Priority" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: handleEqualiseFixedCrewStreams,
-                  disabled: fixedCrewTrainingStreams.length < 2,
-                  className: "rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40",
-                  children: "Enable All"
-                }
-              )
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100", children: [
+                  "Enabled total ",
+                  fixedCrewEnabledStreamTotal,
+                  "%"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: handleEqualiseFixedCrewStreams,
+                    disabled: fixedCrewTrainingStreams.length < 2,
+                    className: "rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40",
+                    children: "Equalise"
+                  }
+                )
+              ] })
             ] }),
             fixedCrewTrainingStreams.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700/70 bg-slate-950/60 p-3 text-sm text-slate-300", children: [
               "No Fixed Crew course or training package events were found for ",
@@ -27381,11 +27441,14 @@ const PrioritiesView = ({
                       stream.eventCount === 1 ? "" : "s"
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right font-mono text-lg font-bold text-emerald-200", children: stream.weight }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-slate-500", children: "Priority" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-right font-mono text-lg font-bold text-emerald-200", children: [
+                    stream.weight,
+                    "%"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-slate-500", children: "Share" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "up", onClick: () => handleFixedCrewStreamWeightChange(stream.key, "increase"), disabled: !stream.enabled || stream.weight >= 100 }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "down", onClick: () => handleFixedCrewStreamWeightChange(stream.key, "decrease"), disabled: !stream.enabled || stream.weight <= 0 })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "down", onClick: () => handleFixedCrewStreamWeightChange(stream.key, "decrease"), disabled: !stream.enabled || fixedCrewEnabledStreamCount < 2 || stream.weight <= 0 })
                   ] })
                 ]
               },
@@ -72232,7 +72295,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return generatedEvents;
     }
     const fixedCrewPriorityQueue = highestPriorityEvents.filter((event) => priorityEventMatchesBuildDate(event, buildDate)).filter((event) => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed).map((event) => ({ source: isTaskingPriorityEvent(event) ? "fixed-crew-tasking" : isCurrencyPriorityEvent(event) ? "fixed-crew-currency" : "fixed-crew-priority", event: buildFixedCrewEventFromPriority(event), fixedStartTime: event.isTimeFixed ? event.startTime : void 0 })).filter((item) => Boolean(item.event));
-    const configuredFixedCrewTrainingPriorities = normaliseFixedCrewTrainingPriorities(config.fixedCrewTrainingPriorities);
+    const configuredFixedCrewTrainingPriorities = normaliseFixedCrewTrainingPriorityWeights(config.fixedCrewTrainingPriorities);
     const fixedCrewTrainingPriorityByKey = new Map(configuredFixedCrewTrainingPriorities.map((stream) => [stream.key, stream]));
     configuredFixedCrewTrainingPriorities.length > 0;
     const getFixedCrewTrainingStreamForItem = (item) => {
@@ -72253,9 +72316,45 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     };
     const activeFixedCrewTrainingSyllabusItems = syllabusDetails.filter((item) => item.isActive !== false && !isSyllabusCourseShell(item)).filter((item) => !fixedCrewUnit || String(item.unit || "").trim().toUpperCase() === fixedCrewUnit).map((item) => ({ item, stream: getFixedCrewTrainingStreamForItem(item) })).filter((entry) => Boolean(entry.stream)).filter((entry) => entry.stream.enabled && entry.stream.weight > 0);
-    const activeUnitTrainingItems = activeFixedCrewTrainingSyllabusItems.map(({ item, stream }) => ({ item, stream, event: buildFixedCrewEventFromSyllabus(item) })).filter((item) => Boolean(item.event)).sort(
-      (left, right) => right.stream.weight - left.stream.weight || left.stream.kind.localeCompare(right.stream.kind) || Number(left.item.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.item.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.item.orderKey || "").localeCompare(right.item.orderKey || "") || left.item.code.localeCompare(right.item.code)
-    ).slice(0, Math.max(1, crewGroups.size * 2));
+    const activeTrainingStreams = normaliseFixedCrewTrainingPriorityWeights(
+      Array.from(new Map(activeFixedCrewTrainingSyllabusItems.map(({ stream }) => [stream.key, stream])).values())
+    );
+    const activeTrainingWeightByKey = new Map(activeTrainingStreams.map((stream) => [stream.key, stream.weight]));
+    const schedulableTrainingItems = activeFixedCrewTrainingSyllabusItems.map(({ item, stream }) => ({ item, stream, event: buildFixedCrewEventFromSyllabus(item) })).filter((item) => Boolean(item.event));
+    const trainingItemLimit = Math.max(1, crewGroups.size * 2);
+    const itemsByTrainingStream = /* @__PURE__ */ new Map();
+    schedulableTrainingItems.sort(
+      (left, right) => left.stream.kind.localeCompare(right.stream.kind) || Number(left.item.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.item.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.item.orderKey || "").localeCompare(right.item.orderKey || "") || left.item.code.localeCompare(right.item.code)
+    ).forEach((entry) => {
+      const current = itemsByTrainingStream.get(entry.stream.key) || [];
+      current.push(entry);
+      itemsByTrainingStream.set(entry.stream.key, current);
+    });
+    const streamAllocations = activeTrainingStreams.filter((stream) => (itemsByTrainingStream.get(stream.key) || []).length > 0).map((stream) => {
+      const rawSlots = stream.weight / 100 * trainingItemLimit;
+      return {
+        stream,
+        rawSlots,
+        slots: Math.min(Math.floor(rawSlots), (itemsByTrainingStream.get(stream.key) || []).length),
+        fraction: rawSlots - Math.floor(rawSlots),
+        available: (itemsByTrainingStream.get(stream.key) || []).length
+      };
+    });
+    let allocatedTrainingSlots = streamAllocations.reduce((sum, allocation) => sum + Math.min(allocation.slots, allocation.available), 0);
+    streamAllocations.filter((allocation) => allocation.available > allocation.slots).sort((left, right) => right.fraction - left.fraction || right.stream.weight - left.stream.weight || left.stream.code.localeCompare(right.stream.code)).forEach((allocation) => {
+      if (allocatedTrainingSlots >= trainingItemLimit) return;
+      allocation.slots += 1;
+      allocatedTrainingSlots += 1;
+    });
+    streamAllocations.filter((allocation) => allocation.available > allocation.slots).sort((left, right) => right.stream.weight - left.stream.weight || left.stream.code.localeCompare(right.stream.code)).forEach((allocation) => {
+      while (allocatedTrainingSlots < trainingItemLimit && allocation.slots < allocation.available) {
+        allocation.slots += 1;
+        allocatedTrainingSlots += 1;
+      }
+    });
+    const activeUnitTrainingItems = streamAllocations.flatMap((allocation) => (itemsByTrainingStream.get(allocation.stream.key) || []).slice(0, allocation.slots)).sort(
+      (left, right) => (activeTrainingWeightByKey.get(right.stream.key) || 0) - (activeTrainingWeightByKey.get(left.stream.key) || 0) || left.stream.kind.localeCompare(right.stream.kind) || Number(left.item.sortOrder ?? Number.MAX_SAFE_INTEGER) - Number(right.item.sortOrder ?? Number.MAX_SAFE_INTEGER) || (left.item.orderKey || "").localeCompare(right.item.orderKey || "") || left.item.code.localeCompare(right.item.code)
+    );
     const fixedCrewQueue = [
       ...fixedCrewPriorityQueue,
       ...activeUnitTrainingItems.map(({ event, stream }) => ({ source: stream.kind === "course" ? "fixed-crew-course" : "fixed-crew-package", event }))
@@ -72276,6 +72375,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         activeUnitCourseItems: activeFixedCrewTrainingSyllabusItems.filter((entry) => entry.stream.kind === "course").length,
         configuredTrainingStreams: configuredFixedCrewTrainingPriorities.length,
         enabledTrainingStreams: configuredFixedCrewTrainingPriorities.filter((stream) => stream.enabled && stream.weight > 0).length,
+        normalizedTrainingStreams: activeTrainingStreams.map((stream) => ({
+          key: stream.key,
+          code: stream.code,
+          kind: stream.kind,
+          weight: stream.weight,
+          enabled: stream.enabled
+        })),
+        streamSlotAllocations: streamAllocations.map((allocation) => ({
+          key: allocation.stream.key,
+          code: allocation.stream.code,
+          kind: allocation.stream.kind,
+          weight: allocation.stream.weight,
+          available: allocation.available,
+          slots: allocation.slots,
+          rawSlots: Math.round(allocation.rawSlots * 100) / 100
+        })),
         schedulableFlightOrSimItems: activeUnitTrainingItems.length,
         ignoredBecauseTypeUnsupported: activeFixedCrewTrainingSyllabusItems.filter(({ item }) => !buildFixedCrewEventFromSyllabus(item)).slice(0, 80).map(({ item, stream }) => ({
           code: item.code,
@@ -83944,7 +84059,7 @@ ${"=".repeat(60)}`);
           setCoursePriorities(localityCourses);
         }
         if (Array.isArray(saved.fixedCrewTrainingPriorities)) {
-          setFixedCrewTrainingPriorities(normaliseFixedCrewTrainingPriorities(saved.fixedCrewTrainingPriorities));
+          setFixedCrewTrainingPriorities(normaliseFixedCrewTrainingPriorityWeights(saved.fixedCrewTrainingPriorities));
         }
         if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
         if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);

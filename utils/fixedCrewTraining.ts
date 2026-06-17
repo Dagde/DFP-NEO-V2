@@ -67,3 +67,33 @@ export const normaliseFixedCrewTrainingPriorities = (
     })
     .filter(Boolean) as FixedCrewTrainingStreamPriority[];
 };
+
+export const normaliseFixedCrewTrainingPriorityWeights = (
+  streams?: Partial<FixedCrewTrainingStreamPriority>[] | null,
+): FixedCrewTrainingStreamPriority[] => {
+  const normalised = normaliseFixedCrewTrainingPriorities(streams);
+  const enabled = normalised.filter(stream => stream.enabled);
+  if (enabled.length === 0) {
+    return normalised.map(stream => ({ ...stream, weight: 0 }));
+  }
+
+  const enabledTotal = enabled.reduce((sum, stream) => sum + stream.weight, 0);
+  const fallbackWeight = enabledTotal > 0 ? 0 : 1;
+  const weighted = normalised.map(stream => ({
+    ...stream,
+    weight: stream.enabled ? (enabledTotal > 0 ? stream.weight : fallbackWeight) : 0,
+  }));
+  const activeTotal = weighted.reduce((sum, stream) => stream.enabled ? sum + stream.weight : sum, 0);
+
+  let runningTotal = 0;
+  let activeIndex = 0;
+  const activeCount = weighted.filter(stream => stream.enabled).length;
+  return weighted.map(stream => {
+    if (!stream.enabled) return { ...stream, weight: 0 };
+    activeIndex += 1;
+    const isLastActive = activeIndex === activeCount;
+    const weight = isLastActive ? Math.max(0, 100 - runningTotal) : Math.round((stream.weight / activeTotal) * 100);
+    runningTotal += weight;
+    return { ...stream, weight };
+  });
+};

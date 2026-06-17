@@ -103,7 +103,7 @@ import {
     getFixedCrewTrainingCodeFromItem,
     getFixedCrewTrainingKey,
     getFixedCrewTrainingKindForLmpType,
-    normaliseFixedCrewTrainingPriorities,
+    normaliseFixedCrewTrainingPriorityWeights,
     type FixedCrewTrainingStreamPriority,
 } from './utils/fixedCrewTraining';
 import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
@@ -6784,7 +6784,7 @@ function generateDfpInternal(
             .filter(event => isTaskingPriorityEvent(event) || isCurrencyPriorityEvent(event) || event.isTimeFixed)
             .map(event => ({ source: isTaskingPriorityEvent(event) ? 'fixed-crew-tasking' : isCurrencyPriorityEvent(event) ? 'fixed-crew-currency' : 'fixed-crew-priority', event: buildFixedCrewEventFromPriority(event), fixedStartTime: event.isTimeFixed ? event.startTime : undefined }))
             .filter((item): item is { source: string; event: Omit<ScheduleEvent, 'date'>; fixedStartTime?: number } => Boolean(item.event));
-        const configuredFixedCrewTrainingPriorities = normaliseFixedCrewTrainingPriorities(config.fixedCrewTrainingPriorities);
+        const configuredFixedCrewTrainingPriorities = normaliseFixedCrewTrainingPriorityWeights(config.fixedCrewTrainingPriorities);
         const fixedCrewTrainingPriorityByKey = new Map(configuredFixedCrewTrainingPriorities.map(stream => [stream.key, stream]));
         const hasConfiguredFixedCrewTrainingPriorities = configuredFixedCrewTrainingPriorities.length > 0;
         const getFixedCrewTrainingStreamForItem = (item: SyllabusItemDetail): FixedCrewTrainingStreamPriority | null => {
@@ -6810,17 +6810,66 @@ function generateDfpInternal(
             .map(item => ({ item, stream: getFixedCrewTrainingStreamForItem(item) }))
             .filter((entry): entry is { item: SyllabusItemDetail; stream: FixedCrewTrainingStreamPriority } => Boolean(entry.stream))
             .filter(entry => entry.stream.enabled && entry.stream.weight > 0);
-        const activeUnitTrainingItems = activeFixedCrewTrainingSyllabusItems
+        const activeTrainingStreams = normaliseFixedCrewTrainingPriorityWeights(
+            Array.from(new Map(activeFixedCrewTrainingSyllabusItems.map(({ stream }) => [stream.key, stream])).values())
+        );
+        const activeTrainingWeightByKey = new Map(activeTrainingStreams.map(stream => [stream.key, stream.weight]));
+        const schedulableTrainingItems = activeFixedCrewTrainingSyllabusItems
             .map(({ item, stream }) => ({ item, stream, event: buildFixedCrewEventFromSyllabus(item) }))
-            .filter((item): item is { item: SyllabusItemDetail; stream: FixedCrewTrainingStreamPriority; event: Omit<ScheduleEvent, 'date'> } => Boolean(item.event))
+            .filter((item): item is { item: SyllabusItemDetail; stream: FixedCrewTrainingStreamPriority; event: Omit<ScheduleEvent, 'date'> } => Boolean(item.event));
+        const trainingItemLimit = Math.max(1, crewGroups.size * 2);
+        const itemsByTrainingStream = new Map<string, typeof schedulableTrainingItems>();
+        schedulableTrainingItems
             .sort((left, right) =>
-                right.stream.weight - left.stream.weight ||
                 left.stream.kind.localeCompare(right.stream.kind) ||
                 Number((left.item as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right.item as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
                 (left.item.orderKey || '').localeCompare(right.item.orderKey || '') ||
                 left.item.code.localeCompare(right.item.code)
             )
-            .slice(0, Math.max(1, crewGroups.size * 2));
+            .forEach(entry => {
+                const current = itemsByTrainingStream.get(entry.stream.key) || [];
+                current.push(entry);
+                itemsByTrainingStream.set(entry.stream.key, current);
+            });
+        const streamAllocations = activeTrainingStreams
+            .filter(stream => (itemsByTrainingStream.get(stream.key) || []).length > 0)
+            .map(stream => {
+                const rawSlots = (stream.weight / 100) * trainingItemLimit;
+                return {
+                    stream,
+                    rawSlots,
+                    slots: Math.min(Math.floor(rawSlots), (itemsByTrainingStream.get(stream.key) || []).length),
+                    fraction: rawSlots - Math.floor(rawSlots),
+                    available: (itemsByTrainingStream.get(stream.key) || []).length,
+                };
+            });
+        let allocatedTrainingSlots = streamAllocations.reduce((sum, allocation) => sum + Math.min(allocation.slots, allocation.available), 0);
+        streamAllocations
+            .filter(allocation => allocation.available > allocation.slots)
+            .sort((left, right) => right.fraction - left.fraction || right.stream.weight - left.stream.weight || left.stream.code.localeCompare(right.stream.code))
+            .forEach(allocation => {
+                if (allocatedTrainingSlots >= trainingItemLimit) return;
+                allocation.slots += 1;
+                allocatedTrainingSlots += 1;
+            });
+        streamAllocations
+            .filter(allocation => allocation.available > allocation.slots)
+            .sort((left, right) => right.stream.weight - left.stream.weight || left.stream.code.localeCompare(right.stream.code))
+            .forEach(allocation => {
+                while (allocatedTrainingSlots < trainingItemLimit && allocation.slots < allocation.available) {
+                    allocation.slots += 1;
+                    allocatedTrainingSlots += 1;
+                }
+            });
+        const activeUnitTrainingItems = streamAllocations
+            .flatMap(allocation => (itemsByTrainingStream.get(allocation.stream.key) || []).slice(0, allocation.slots))
+            .sort((left, right) =>
+                (activeTrainingWeightByKey.get(right.stream.key) || 0) - (activeTrainingWeightByKey.get(left.stream.key) || 0) ||
+                left.stream.kind.localeCompare(right.stream.kind) ||
+                Number((left.item as any).sortOrder ?? Number.MAX_SAFE_INTEGER) - Number((right.item as any).sortOrder ?? Number.MAX_SAFE_INTEGER) ||
+                (left.item.orderKey || '').localeCompare(right.item.orderKey || '') ||
+                left.item.code.localeCompare(right.item.code)
+            );
         const fixedCrewQueue = [
             ...fixedCrewPriorityQueue,
             ...activeUnitTrainingItems.map(({ event, stream }) => ({ source: stream.kind === 'course' ? 'fixed-crew-course' : 'fixed-crew-package', event })),
@@ -6841,6 +6890,22 @@ function generateDfpInternal(
                 activeUnitCourseItems: activeFixedCrewTrainingSyllabusItems.filter(entry => entry.stream.kind === 'course').length,
                 configuredTrainingStreams: configuredFixedCrewTrainingPriorities.length,
                 enabledTrainingStreams: configuredFixedCrewTrainingPriorities.filter(stream => stream.enabled && stream.weight > 0).length,
+                normalizedTrainingStreams: activeTrainingStreams.map(stream => ({
+                    key: stream.key,
+                    code: stream.code,
+                    kind: stream.kind,
+                    weight: stream.weight,
+                    enabled: stream.enabled,
+                })),
+                streamSlotAllocations: streamAllocations.map(allocation => ({
+                    key: allocation.stream.key,
+                    code: allocation.stream.code,
+                    kind: allocation.stream.kind,
+                    weight: allocation.stream.weight,
+                    available: allocation.available,
+                    slots: allocation.slots,
+                    rawSlots: Math.round(allocation.rawSlots * 100) / 100,
+                })),
                 schedulableFlightOrSimItems: activeUnitTrainingItems.length,
                 ignoredBecauseTypeUnsupported: activeFixedCrewTrainingSyllabusItems
                     .filter(({ item }) => !buildFixedCrewEventFromSyllabus(item))
@@ -21025,7 +21090,7 @@ const App: React.FC = () => {
                     setCoursePriorities(localityCourses);
                 }
                 if (Array.isArray((saved as any).fixedCrewTrainingPriorities)) {
-                    setFixedCrewTrainingPriorities(normaliseFixedCrewTrainingPriorities((saved as any).fixedCrewTrainingPriorities));
+                    setFixedCrewTrainingPriorities(normaliseFixedCrewTrainingPriorityWeights((saved as any).fixedCrewTrainingPriorities));
                 }
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
                 if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);

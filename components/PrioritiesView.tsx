@@ -23,6 +23,7 @@ import {
   getFixedCrewTrainingKindForLmpType,
   getFixedCrewTrainingTitleFromItem,
   normaliseFixedCrewTrainingPriorities,
+  normaliseFixedCrewTrainingPriorityWeights,
   type FixedCrewTrainingStreamPriority,
 } from '../utils/fixedCrewTraining';
 import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
@@ -948,7 +949,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   }, [activeUnitCodeSet, instructorsData, isAirCombatModel, normalisedAirCombatWeights.trainingStreams, school]);
   const fixedCrewTrainingStreams = useMemo(() => {
     if (!isFixedCrewModel) return [];
-    const saved = new Map(normaliseFixedCrewTrainingPriorities(fixedCrewTrainingPriorities).map(stream => [stream.key, stream]));
+    const saved = new Map(normaliseFixedCrewTrainingPriorityWeights(fixedCrewTrainingPriorities).map(stream => [stream.key, stream]));
     const grouped = new Map<string, FixedCrewTrainingStreamPriority & { eventCount: number }>();
     syllabusDetails
       .filter(item => item.isActive !== false)
@@ -979,7 +980,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           eventCount: 1,
         });
       });
-    return Array.from(grouped.values()).sort((left, right) =>
+    return normaliseFixedCrewTrainingPriorityWeights(Array.from(grouped.values())).sort((left, right) =>
       right.enabled === left.enabled ? (
         right.weight - left.weight ||
         left.kind.localeCompare(right.kind) ||
@@ -996,12 +997,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       .map(({ eventCount: _eventCount, ...stream }) => stream);
     if (missingStreams.length === 0) return;
     onUpdateFixedCrewTrainingPriorities?.(
-      normaliseFixedCrewTrainingPriorities([
+      normaliseFixedCrewTrainingPriorityWeights([
         ...fixedCrewTrainingPriorities,
         ...missingStreams,
       ]),
     );
   }, [fixedCrewTrainingPriorities.length, fixedCrewTrainingStreams, isFixedCrewModel, onUpdateFixedCrewTrainingPriorities]);
+  const fixedCrewEnabledStreamCount = fixedCrewTrainingStreams.filter(stream => stream.enabled).length;
+  const fixedCrewEnabledStreamTotal = fixedCrewTrainingStreams
+    .filter(stream => stream.enabled)
+    .reduce((sum, stream) => sum + stream.weight, 0);
 
 
   useEffect(() => {
@@ -1081,28 +1086,57 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
   const updateFixedCrewStreams = (streams: FixedCrewTrainingStreamPriority[], auditLabel: string) => {
     logAudit('Priorities', 'Edit', 'Updated Fixed Crew course/package priorities', auditLabel);
-    onUpdateFixedCrewTrainingPriorities?.(normaliseFixedCrewTrainingPriorities(streams));
+    onUpdateFixedCrewTrainingPriorities?.(normaliseFixedCrewTrainingPriorityWeights(streams));
   };
 
   const handleFixedCrewStreamToggle = (streamKey: string) => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
-    const next = current.map(stream => stream.key === streamKey ? { ...stream, enabled: !stream.enabled } : stream);
+    const next = current.map(stream => stream.key === streamKey ? {
+      ...stream,
+      enabled: !stream.enabled,
+      weight: stream.enabled ? 0 : Math.max(1, stream.weight || 1),
+    } : stream);
     const target = next.find(stream => stream.key === streamKey);
     updateFixedCrewStreams(next, `${target?.code || streamKey} ${target?.enabled ? 'enabled' : 'disabled'}`);
   };
 
   const handleFixedCrewStreamWeightChange = (streamKey: string, direction: 'increase' | 'decrease') => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
-    const next = current.map(stream => stream.key === streamKey ? { ...stream, weight: Math.max(0, Math.min(100, stream.weight + (direction === 'increase' ? 5 : -5))) } : stream);
-    const before = current.find(stream => stream.key === streamKey);
-    const after = next.find(stream => stream.key === streamKey);
-    updateFixedCrewStreams(next, `${after?.code || streamKey} ${before?.weight ?? 0}% → ${after?.weight ?? 0}%`);
+    const next = current.map(stream => ({ ...stream }));
+    const target = next.find(stream => stream.key === streamKey && stream.enabled);
+    if (!target) return;
+
+    const previousWeight = target.weight;
+    target.weight = Math.max(0, Math.min(100, target.weight + (direction === 'increase' ? 5 : -5)));
+    const delta = target.weight - previousWeight;
+    if (delta !== 0) {
+      const others = next
+        .filter(stream => stream.enabled && stream.key !== streamKey)
+        .sort((left, right) => direction === 'increase' ? right.weight - left.weight : left.weight - right.weight);
+      let remaining = Math.abs(delta);
+      for (const other of others) {
+        if (remaining <= 0) break;
+        if (direction === 'increase') {
+          const take = Math.min(other.weight, remaining);
+          other.weight -= take;
+          remaining -= take;
+        } else {
+          other.weight += remaining;
+          remaining = 0;
+        }
+      }
+      if (remaining > 0 && direction === 'increase') {
+        target.weight = Math.max(0, target.weight - remaining);
+      }
+    }
+    const after = normaliseFixedCrewTrainingPriorityWeights(next).find(stream => stream.key === streamKey);
+    updateFixedCrewStreams(next, `${target.code || streamKey} ${previousWeight}% → ${after?.weight ?? target.weight}%`);
   };
 
   const handleEqualiseFixedCrewStreams = () => {
     const current = fixedCrewTrainingStreams.map(({ eventCount: _eventCount, ...stream }) => stream);
     if (current.length === 0) return;
-    updateFixedCrewStreams(current.map(stream => ({ ...stream, weight: 10, enabled: true })), 'Enabled and equalised all active Fixed Crew streams');
+    updateFixedCrewStreams(current.map(stream => ({ ...stream, weight: 1, enabled: true })), 'Enabled and equalised all active Fixed Crew streams');
   };
 
   const nonCleanConfigCapacityTotal = useMemo(() => (
@@ -2391,14 +2425,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.
                                     </p>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={handleEqualiseFixedCrewStreams}
-                                    disabled={fixedCrewTrainingStreams.length < 2}
-                                    className="rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                    Enable All
-                                </button>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100">
+                                        Enabled total {fixedCrewEnabledStreamTotal}%
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={handleEqualiseFixedCrewStreams}
+                                        disabled={fixedCrewTrainingStreams.length < 2}
+                                        className="rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        Equalise
+                                    </button>
+                                </div>
                             </div>
                             {fixedCrewTrainingStreams.length === 0 ? (
                                 <div className="rounded border border-slate-700/70 bg-slate-950/60 p-3 text-sm text-slate-300">
@@ -2438,11 +2477,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 <p className="truncate text-sm font-semibold text-slate-100">{stream.title || stream.code}</p>
                                                 <p className="truncate text-xs text-slate-400">{stream.code}{stream.unitCode ? ` • ${stream.unitCode}` : ''} • {stream.eventCount || 0} event{stream.eventCount === 1 ? '' : 's'}</p>
                                             </div>
-                                            <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.weight}</span>
-                                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Priority</span>
+                                            <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.weight}%</span>
+                                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Share</span>
                                             <div className="flex flex-col">
                                                 <ArrowButton direction="up" onClick={() => handleFixedCrewStreamWeightChange(stream.key, 'increase')} disabled={!stream.enabled || stream.weight >= 100} />
-                                                <ArrowButton direction="down" onClick={() => handleFixedCrewStreamWeightChange(stream.key, 'decrease')} disabled={!stream.enabled || stream.weight <= 0} />
+                                                <ArrowButton direction="down" onClick={() => handleFixedCrewStreamWeightChange(stream.key, 'decrease')} disabled={!stream.enabled || fixedCrewEnabledStreamCount < 2 || stream.weight <= 0} />
                                             </div>
                                         </li>
                                     ))}
