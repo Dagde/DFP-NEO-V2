@@ -90331,6 +90331,17 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
     const normaliseBuildUnitCode = (value) => String(value || "").split("/")[0].trim().toUpperCase();
     const assignableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign").filter((item) => item.type !== "Academics" && item.lmpType !== "Staff CAT") : [];
+    const assignableFlightSchoolEventKeys = new Set(
+      assignableFlightSchoolBuildSyllabus.flatMap((item) => [item.id, item.code, item.masterEventId]).map((key) => String(key || "").replace(/\*/g, "").trim()).filter(Boolean)
+    );
+    const isFlightSchoolLmpOverlayItem = (item) => item.lmpSource === "remedial" || item.lmpSource === "custom" || item.isRemedial === true || String(item.id || item.code || "").includes("REM") || String(item.id || item.code || "").endsWith("-RF") || String(item.id || item.code || "").endsWith("-CUR");
+    const getFlightSchoolLmpEventKeys = (item) => [item.id, item.code, item.masterEventId].map((key) => String(key || "").replace(/\*/g, "").trim()).filter(Boolean);
+    const filterFlightSchoolLmpEventsForBuildScope = (events2) => {
+      if (activeOperationalModel !== "flight_school") return Array.isArray(events2) ? events2 : [];
+      if (!Array.isArray(events2) || events2.length === 0) return [];
+      if (assignableFlightSchoolEventKeys.size === 0) return events2;
+      return events2.filter((item) => isFlightSchoolLmpOverlayItem(item) || getFlightSchoolLmpEventKeys(item).some((key) => assignableFlightSchoolEventKeys.has(key)));
+    };
     const activeScopedCourseNames = scopedCourseNameSet;
     const flightSchoolTraineeMatchesBuildScope = (trainee) => {
       if (activeOperationalModel !== "flight_school") return true;
@@ -90448,13 +90459,18 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP outside active Flight School build scope`);
               return;
             }
+            const lmpEventsForBuild = activeOperationalModel === "flight_school" ? filterFlightSchoolLmpEventsForBuildScope(lmp.events) : lmp.events;
+            if (activeOperationalModel === "flight_school" && lmpEventsForBuild.length === 0) {
+              console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because it has no events in the active Flight School Master LMP scope`);
+              return;
+            }
             const traineeUnitCode = activeOperationalModel === "flight_school" ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign") : traineeForLmp?.unit || activeUnitCode;
             if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
               console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
               return;
             }
-            freshLMPs.set(lmp.traineeFullName, lmp.events);
-            freshEventCount += lmp.events.length;
+            freshLMPs.set(lmp.traineeFullName, lmpEventsForBuild);
+            freshEventCount += lmpEventsForBuild.length;
           }
         });
         markNeoBuildTiming(timingReport, "lmp-fetch:json-parsed", {
@@ -90502,7 +90518,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
     const traineesInBuild = traineesForBuildScope;
     if (activeOperationalModel === "flight_school") {
-      const scopedLmpEntries = Array.from(buildTraineeLMPs.entries()).filter(([traineeName, events2]) => traineeNamesForBuildScope.has(String(traineeName || "").trim()));
+      const scopedLmpEntries = Array.from(buildTraineeLMPs.entries()).map(([traineeName, events2]) => [traineeName, filterFlightSchoolLmpEventsForBuildScope(events2)]).filter(([traineeName, events2]) => traineeNamesForBuildScope.has(String(traineeName || "").trim()) && events2.length > 0);
       if (scopedLmpEntries.length !== buildTraineeLMPs.size) {
         console.log("[NEO-Build] Scoped Flight School Individual LMPs to active build trainees:", {
           before: buildTraineeLMPs.size,

@@ -28103,6 +28103,34 @@ const App: React.FC = () => {
             ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, 'Assign')
                 .filter((item: any) => item.type !== 'Academics' && item.lmpType !== 'Staff CAT')
             : [];
+        const assignableFlightSchoolEventKeys = new Set(
+            assignableFlightSchoolBuildSyllabus
+                .flatMap((item: any) => [item.id, item.code, item.masterEventId])
+                .map(key => String(key || '').replace(/\*/g, '').trim())
+                .filter(Boolean)
+        );
+        const isFlightSchoolLmpOverlayItem = (item: SyllabusItemDetail): boolean => (
+            item.lmpSource === 'remedial' ||
+            item.lmpSource === 'custom' ||
+            item.isRemedial === true ||
+            String(item.id || item.code || '').includes('REM') ||
+            String(item.id || item.code || '').endsWith('-RF') ||
+            String(item.id || item.code || '').endsWith('-CUR')
+        );
+        const getFlightSchoolLmpEventKeys = (item: SyllabusItemDetail): string[] => (
+            [item.id, item.code, item.masterEventId]
+                .map(key => String(key || '').replace(/\*/g, '').trim())
+                .filter(Boolean)
+        );
+        const filterFlightSchoolLmpEventsForBuildScope = (events?: SyllabusItemDetail[] | null): SyllabusItemDetail[] => {
+            if (activeOperationalModel !== 'flight_school') return Array.isArray(events) ? events : [];
+            if (!Array.isArray(events) || events.length === 0) return [];
+            if (assignableFlightSchoolEventKeys.size === 0) return events;
+            return events.filter(item => (
+                isFlightSchoolLmpOverlayItem(item) ||
+                getFlightSchoolLmpEventKeys(item).some(key => assignableFlightSchoolEventKeys.has(key))
+            ));
+        };
         const activeScopedCourseNames = scopedCourseNameSet;
         const flightSchoolTraineeMatchesBuildScope = (trainee: Trainee | any): boolean => {
             if (activeOperationalModel !== 'flight_school') return true;
@@ -28248,6 +28276,13 @@ const App: React.FC = () => {
                             console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP outside active Flight School build scope`);
                             return;
                         }
+                        const lmpEventsForBuild = activeOperationalModel === 'flight_school'
+                            ? filterFlightSchoolLmpEventsForBuildScope(lmp.events)
+                            : lmp.events;
+                        if (activeOperationalModel === 'flight_school' && lmpEventsForBuild.length === 0) {
+                            console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because it has no events in the active Flight School Master LMP scope`);
+                            return;
+                        }
                         const traineeUnitCode = activeOperationalModel === 'flight_school'
                             ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'Assign')
                             : traineeForLmp?.unit || activeUnitCode;
@@ -28255,8 +28290,8 @@ const App: React.FC = () => {
                             console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
                             return;
                         }
-                        freshLMPs.set(lmp.traineeFullName, lmp.events);
-                        freshEventCount += lmp.events.length;
+                        freshLMPs.set(lmp.traineeFullName, lmpEventsForBuild);
+                        freshEventCount += lmpEventsForBuild.length;
                     }
                 });
                 markNeoBuildTiming(timingReport, 'lmp-fetch:json-parsed', {
@@ -28323,8 +28358,10 @@ const App: React.FC = () => {
         const traineesInBuild = traineesForBuildScope;
         if (activeOperationalModel === 'flight_school') {
             const scopedLmpEntries = Array.from(buildTraineeLMPs.entries())
+                .map(([traineeName, events]) => [traineeName, filterFlightSchoolLmpEventsForBuildScope(events)] as [string, SyllabusItemDetail[]])
                 .filter(([traineeName, events]) => (
-                    traineeNamesForBuildScope.has(String(traineeName || '').trim())
+                    traineeNamesForBuildScope.has(String(traineeName || '').trim()) &&
+                    events.length > 0
                 ));
             if (scopedLmpEntries.length !== buildTraineeLMPs.size) {
                 console.log('[NEO-Build] Scoped Flight School Individual LMPs to active build trainees:', {
