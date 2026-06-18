@@ -191,6 +191,7 @@ type SettingsSection =
     | 'units'
     | 'organisation'
     | 'crew-composition'
+    | 'standard-missions'
     | 'platform-configuration'
     | 'appearance'
     | 'emergency';
@@ -263,6 +264,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'units': 'Units',
     'organisation': 'Resource Sharing',
     'crew-composition': 'Crew Composition',
+    'standard-missions': 'Standard Missions',
     'platform-configuration': 'Platform Configuration',
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',
@@ -497,6 +499,7 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
     </svg>
   ),
   'crew-composition': platformConfigurationIcon,
+  'standard-missions': platformConfigurationIcon,
   'platform-configuration': platformConfigurationIcon,
   'platform-configuration-health': platformConfigurationIcon,
   'platform-organisation-locations': platformConfigurationIcon,
@@ -559,6 +562,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'units': 'Configure unit settings',
   'organisation': 'Fleet sharing and multi-unit configuration',
   'crew-composition': 'Aircraft-specific crew roles and composition profiles',
+  'standard-missions': 'Fixed Crew mission profiles for regular unit flights',
   'platform-configuration': 'Commercial hierarchy, modules, resource pools and rule sets',
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
   'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
@@ -618,6 +622,7 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'units':             'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'organisation':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'crew-composition':  'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'standard-missions': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-configuration': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-configuration-health': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-organisation-locations': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
@@ -677,6 +682,7 @@ const sectionGroups: {
     defaultSection: 'crew-composition',
     sections: [
         'crew-composition',
+        'standard-missions',
     ],
   },
   {
@@ -1343,10 +1349,14 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     };
 
     const getGroupId = (label: string) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    const isFixedCrewSettingsContext = String(props.activeOperationalModel || '').trim().toLowerCase() === 'fixed_crew';
+    const isSectionAvailable = (section: SettingsMenuSection) => (
+        section !== 'standard-missions' || isFixedCrewSettingsContext
+    );
     const visibleSettingGroups = sectionGroups
         .map(group => ({
             ...group,
-            visibleSections: group.sections.filter(section => matchesSettingsSearch(section, group.label)),
+            visibleSections: group.sections.filter(section => isSectionAvailable(section) && matchesSettingsSearch(section, group.label)),
         }))
         .filter(group => group.visibleSections.length > 0);
     const hasSettingsMatches = visibleSettingGroups.length > 0;
@@ -1755,6 +1765,20 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                            activeOperationalModel={props.activeOperationalModel}
+                            phraseBank={props.phraseBank}
+                        />
+                    )}
+
+                    {activeSection === 'standard-missions' && (
+                        <PlatformConfigurationSettings
+                            currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
+                            scrollTarget="platform-standard-missions"
+                            sectionOnly={true}
+                            canUsePlatformPermission={props.canUsePlatformPermission}
+                            activeUnitCode={props.activeUnitCode}
+                            activeOperationalModel={props.activeOperationalModel}
                             phraseBank={props.phraseBank}
                         />
                     )}
@@ -1765,6 +1789,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      activeSection !== 'scheduling-rules' &&
                      activeSection !== 'training-report-template' &&
                      activeSection !== 'crew-composition' &&
+                     activeSection !== 'standard-missions' &&
                      activeSection !== 'user-list' &&
                      activeSection !== 'staff-database' &&
                      activeSection !== 'staff-mockdata' &&

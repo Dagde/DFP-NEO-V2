@@ -6,6 +6,7 @@ import {
   PLATFORM_PERMISSION_CATALOG,
   DEFAULT_MASTER_LMP_ACCESS_RULES,
   getUnitOperationalModel,
+  normaliseOperationalModel,
   normaliseMasterLmpAccessRules,
   type PlatformMasterLmpAccessRule,
   type PlatformPermissionProfile,
@@ -55,6 +56,7 @@ import {
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
 import {
+  getDefaultUnitCallsign,
   normaliseUnitCallsignSettings,
   type UnitCallsignEntry,
 } from '../utils/unitCallsigns';
@@ -168,6 +170,83 @@ const ACCESS_SCOPE_TONE = {
   border: 'rgba(34, 211, 238, 0.42)',
   fill: 'rgba(8, 145, 178, 0.24)',
   applyBorder: 'rgba(103, 232, 249, 0.62)',
+};
+
+type StandardMissionResourceType = 'Flight' | 'FTD' | 'CPT' | 'Ground';
+
+interface StandardMissionRoleRequirement {
+  role: string;
+  count: number;
+}
+
+interface StandardMissionProfile {
+  id: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  unitCode: string;
+  missionName: string;
+  shortTitle: string;
+  description: string;
+  resourceType: StandardMissionResourceType;
+  departureLocationCode: string;
+  arrivalLocationCode: string;
+  durationMinutes: number;
+  preFlightMinutes: number;
+  postFlightMinutes: number;
+  isFormation: boolean;
+  formationAircraft: number;
+  config: string;
+  acceptableCrewCompositionIds: string[];
+  roleRequirements: StandardMissionRoleRequirement[];
+  defaultCallsignPrefix: string;
+}
+
+const STANDARD_MISSION_RESOURCE_TYPES: StandardMissionResourceType[] = ['Flight', 'FTD', 'CPT', 'Ground'];
+
+const clampWholeNumber = (value: unknown, fallback: number, min: number, max: number): number => {
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
+};
+
+const normaliseStandardMissionProfiles = (source: unknown): StandardMissionProfile[] => {
+  const rows = Array.isArray((source as any)?.profiles)
+    ? (source as any).profiles
+    : Array.isArray(source)
+      ? source
+      : [];
+  return rows.map((row: any, index: number) => {
+    const resourceType = STANDARD_MISSION_RESOURCE_TYPES.includes(row?.resourceType)
+      ? row.resourceType as StandardMissionResourceType
+      : 'Flight';
+    const roleRequirements = Array.isArray(row?.roleRequirements)
+      ? row.roleRequirements.map((requirement: any) => ({
+          role: String(requirement?.role || 'Crew').trim() || 'Crew',
+          count: clampWholeNumber(requirement?.count, 1, 1, 24),
+        }))
+      : [];
+    return {
+      id: String(row?.id || `standard-mission-${index + 1}`),
+      status: String(row?.status || 'ACTIVE').toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+      unitCode: String(row?.unitCode || '').trim().toUpperCase(),
+      missionName: String(row?.missionName || row?.name || `Standard Mission ${index + 1}`),
+      shortTitle: String(row?.shortTitle || row?.code || '').slice(0, 8),
+      description: String(row?.description || ''),
+      resourceType,
+      departureLocationCode: String(row?.departureLocationCode || row?.departure || '').trim().toUpperCase(),
+      arrivalLocationCode: String(row?.arrivalLocationCode || row?.arrival || '').trim().toUpperCase(),
+      durationMinutes: clampWholeNumber(row?.durationMinutes, 240, 1, 1440),
+      preFlightMinutes: clampWholeNumber(row?.preFlightMinutes, 90, 0, 1440),
+      postFlightMinutes: clampWholeNumber(row?.postFlightMinutes, 60, 0, 1440),
+      isFormation: row?.isFormation === true,
+      formationAircraft: clampWholeNumber(row?.formationAircraft, 2, 2, 24),
+      config: String(row?.config || 'ANY'),
+      acceptableCrewCompositionIds: Array.isArray(row?.acceptableCrewCompositionIds)
+        ? row.acceptableCrewCompositionIds.map((value: unknown) => String(value || '').trim()).filter(Boolean)
+        : [],
+      roleRequirements,
+      defaultCallsignPrefix: String(row?.defaultCallsignPrefix || ''),
+    };
+  });
 };
 
 const DEPLOYMENT_MODE_OPTIONS = [
@@ -963,6 +1042,7 @@ interface PlatformConfigurationSettingsProps {
   sectionOnly?: boolean;
   canUsePlatformPermission?: (permissionId: string) => boolean;
   activeUnitCode?: string;
+  activeOperationalModel?: string;
   phraseBank?: Record<string, any>;
 }
 
@@ -973,6 +1053,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   sectionOnly = false,
   canUsePlatformPermission,
   activeUnitCode = '',
+  activeOperationalModel = '',
   phraseBank = {},
 }) => {
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
@@ -2839,6 +2920,90 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     await save(undefined, 'platform-crew-composition');
   };
 
+  const updateStandardMissionProfiles = (profiles: StandardMissionProfile[]) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      standardMissionProfiles: { profiles: normaliseStandardMissionProfiles({ profiles }) },
+    }));
+  };
+
+  const addStandardMissionProfile = () => {
+    const missionIndex = standardMissionProfiles.length + 1;
+    const firstRole = crewCompositionRoleOptions[0] || 'Crew';
+    updateStandardMissionProfiles([
+      ...standardMissionProfiles,
+      {
+        id: createClientRecordId('standard-mission'),
+        status: 'ACTIVE',
+        unitCode: activePrimaryUnitCode,
+        missionName: `Standard Mission ${missionIndex}`,
+        shortTitle: `MISSION${missionIndex}`.slice(0, 8),
+        description: '',
+        resourceType: 'Flight',
+        departureLocationCode: activeHomeLocationCode,
+        arrivalLocationCode: activeHomeLocationCode,
+        durationMinutes: 240,
+        preFlightMinutes: 90,
+        postFlightMinutes: 60,
+        isFormation: false,
+        formationAircraft: 2,
+        config: aircraftConfigOptions[0] || 'ANY',
+        acceptableCrewCompositionIds: standardMissionCrewOptions[0]?.id ? [standardMissionCrewOptions[0].id] : [],
+        roleRequirements: [{ role: firstRole, count: 1 }],
+        defaultCallsignPrefix: defaultMissionCallsign,
+      },
+    ]);
+  };
+
+  const updateStandardMissionProfile = (profileId: string, changes: Partial<StandardMissionProfile>) => {
+    updateStandardMissionProfiles(standardMissionProfiles.map((profile) => (
+      profile.id === profileId ? { ...profile, ...changes } : profile
+    )));
+  };
+
+  const removeStandardMissionProfile = (profileId: string) => {
+    updateStandardMissionProfiles(standardMissionProfiles.filter((profile) => profile.id !== profileId));
+  };
+
+  const updateStandardMissionCrewSelection = (profile: StandardMissionProfile, optionId: string, selected: boolean) => {
+    const nextIds = selected
+      ? Array.from(new Set([...profile.acceptableCrewCompositionIds, optionId]))
+      : profile.acceptableCrewCompositionIds.filter((id) => id !== optionId);
+    updateStandardMissionProfile(profile.id, { acceptableCrewCompositionIds: nextIds });
+  };
+
+  const addStandardMissionRoleRequirement = (profile: StandardMissionProfile) => {
+    const usedRoles = new Set(profile.roleRequirements.map((requirement) => requirement.role.toUpperCase()));
+    const nextRole = crewCompositionRoleOptions.find((role) => !usedRoles.has(role.toUpperCase())) || crewCompositionRoleOptions[0] || 'Crew';
+    updateStandardMissionProfile(profile.id, {
+      roleRequirements: [...profile.roleRequirements, { role: nextRole, count: 1 }],
+    });
+  };
+
+  const updateStandardMissionRoleRequirement = (
+    profile: StandardMissionProfile,
+    roleIndex: number,
+    changes: Partial<StandardMissionRoleRequirement>,
+  ) => {
+    updateStandardMissionProfile(profile.id, {
+      roleRequirements: profile.roleRequirements.map((requirement, index) => (
+        index === roleIndex
+          ? {
+              ...requirement,
+              ...changes,
+              count: changes.count !== undefined ? clampWholeNumber(changes.count, requirement.count, 1, 24) : requirement.count,
+            }
+          : requirement
+      )),
+    });
+  };
+
+  const removeStandardMissionRoleRequirement = (profile: StandardMissionProfile, roleIndex: number) => {
+    updateStandardMissionProfile(profile.id, {
+      roleRequirements: profile.roleRequirements.filter((_, index) => index !== roleIndex),
+    });
+  };
+
   const exitResourcePoolsEditMode = async () => {
     if (!resourcePoolsDirty) {
       setResourcePoolsUnlocked(false);
@@ -2999,6 +3164,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const activeAircraftAlternateCompositions = crewCompositionSettings.alternateCompositions.filter((profile) => (
     String(profile.aircraftTypeCode || '').trim().toUpperCase() === activeCrewCompositionAircraftCode
   ));
+  const activeUnitCodes = String(activeUnitCode || '')
+    .split('+')
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean);
+  const activePrimaryUnitCode = activeUnitCodes[0] || String(config.units.find(isActiveRecord)?.code || config.units[0]?.code || '').trim().toUpperCase();
+  const activePlatformUnit = config.units.find((unit) => String(unit.code || '').trim().toUpperCase() === activePrimaryUnitCode)
+    || config.units.find(isActiveRecord)
+    || config.units[0]
+    || null;
+  const activeHomeLocationCode = String(activePlatformUnit?.locationCode || config.locations[0]?.code || '').trim().toUpperCase();
+  const fixedCrewContext = normaliseOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel) === 'fixed_crew';
+  const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
+  const standardMissionProfilesForContext = standardMissionProfiles.filter((profile) => (
+    !profile.unitCode || !activePrimaryUnitCode || profile.unitCode === activePrimaryUnitCode
+  ));
+  const defaultMissionCallsign = getDefaultUnitCallsign(unitCallsignSettings, activePrimaryUnitCode);
+  const standardMissionCrewOptions = [
+    { id: `standard:${activeCrewCompositionAircraftCode || 'AIRCRAFT'}`, label: `Standard ${activeCrewCompositionAircraftCode || 'Aircraft'} Crew` },
+    ...activeAircraftAlternateCompositions.map((profile) => ({
+      id: `alternate:${profile.id}`,
+      label: profile.name || profile.code,
+    })),
+  ];
+  const aircraftConfigOptions = Array.from(new Set([
+    'ANY',
+    ...config.resourcePools
+      .filter((pool) => !activeCrewCompositionAircraftCode || String(pool.aircraftTypeCode || '').trim().toUpperCase() === activeCrewCompositionAircraftCode)
+      .flatMap((pool) => Array.isArray(pool.settings?.aircraftConfigurations) ? pool.settings.aircraftConfigurations : [])
+      .map((item: any) => String(item.label || item.definition || item.id || '').trim())
+      .filter(Boolean),
+  ]));
   const formatCrewRoleLabel = (role: string) => crewPositionLabelMap[role] || role || 'Crew';
   const getStandardCrewSummary = (composition: AircraftCrewComposition): string[] => (
     composition.seats.map((seat) => formatCrewRoleLabel(seat.role))
@@ -3455,6 +3651,157 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
+        <SectionHeader
+          title="Standard Missions"
+          subtitle="Fixed Crew mission profiles for regular unit flights. These profiles are configuration only for now and are not yet wired into NEO Build."
+          action={canEdit && fixedCrewContext ? (
+            <div className="flex flex-wrap justify-end gap-[1px]">
+              <button type="button" onClick={addStandardMissionProfile} disabled={saving || applyingChanges} className={platformActionButtonClass}>Add Mission</button>
+              <button type="button" onClick={() => save(undefined, 'platform-standard-missions')} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+            </div>
+          ) : null}
+        />
+        <div className="space-y-4 p-4">
+          {!fixedCrewContext ? (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+              Standard Missions are currently available for the Fixed Crew model only.
+            </div>
+          ) : (
+            <>
+              <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
+                <div className="text-sm font-bold text-cyan-100">Active unit context: {activePrimaryUnitCode || 'No unit selected'}</div>
+                <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
+                  New profiles default to the unit home location and unit default callsign. Values can be manually edited per mission.
+                </p>
+              </div>
+              {standardMissionProfilesForContext.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
+                  No Standard Missions configured for this Fixed Crew unit.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {standardMissionProfilesForContext.map((profile) => (
+                    <div key={profile.id} className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900/85 shadow-lg">
+                      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-800 bg-gray-950/70 px-4 py-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{profile.shortTitle || 'MISSION'}</span>
+                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Mission'}</h4>
+                            <span className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">{profile.resourceType}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">{profile.description || 'No description entered.'}</p>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-[1px]">
+                          <SelectField label="Status" value={profile.status} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateStandardMissionProfile(profile.id, { status: value === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE' })} />
+                          <button type="button" onClick={() => removeStandardMissionProfile(profile.id)} disabled={!canEdit} className={platformActionButtonClass}>
+                            <span className="text-[9px] leading-tight text-red-600">Delete</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 p-4 xl:grid-cols-[1.1fr_0.9fr]">
+                        <div className="space-y-4">
+                          <div className={resourceSectionPanelClass}>
+                            <div className={resourceSectionPanelHeaderClass}>
+                              <div>
+                                <div className={resourceSectionPanelTitleClass}>Mission Identity</div>
+                                <div className={resourceSectionPanelHintClass}>Name, short tile title and mission notes.</div>
+                              </div>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-[1fr_150px]">
+                              <Field label="Mission Name" value={profile.missionName} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
+                              <Field label="Short Title" value={profile.shortTitle} disabled={!canEdit} maxLength={8} onChange={(value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() })} />
+                            </div>
+                            <div className="mt-3">
+                              <TextAreaField label="Description" value={profile.description} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { description: value })} />
+                            </div>
+                          </div>
+
+                          <div className={resourceSectionPanelClass}>
+                            <div className={resourceSectionPanelHeaderClass}>
+                              <div>
+                                <div className={resourceSectionPanelTitleClass}>Mission Timing & Route</div>
+                                <div className={resourceSectionPanelHintClass}>Default route and timing values can be changed when a mission is scheduled.</div>
+                              </div>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                              <SelectField label="Unit" value={profile.unitCode || activePrimaryUnitCode} disabled={!canEdit} options={config.units.map((unit) => unit.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { unitCode: value.toUpperCase() })} />
+                              <SelectField label="Type" value={profile.resourceType} disabled={!canEdit} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
+                              <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEdit} options={config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />
+                              <SelectField label="Arr" value={profile.arrivalLocationCode || activeHomeLocationCode} disabled={!canEdit} options={config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() })} />
+                              <NumberField label="Duration (min)" value={profile.durationMinutes} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) })} />
+                              <NumberField label="Pre-Flight (min)" value={profile.preFlightMinutes} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) })} />
+                              <NumberField label="Post-Flight (min)" value={profile.postFlightMinutes} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) })} />
+                              <SelectField label="CONFIG" value={profile.config || 'ANY'} disabled={!canEdit} options={aircraftConfigOptions} onChange={(value) => updateStandardMissionProfile(profile.id, { config: value || 'ANY' })} />
+                            </div>
+                            <div className="mt-3 grid gap-3 md:grid-cols-[1fr_160px]">
+                              <ToggleField label="Formation" checked={profile.isFormation} disabled={!canEdit} onChange={(checked) => updateStandardMissionProfile(profile.id, { isFormation: checked })} />
+                              <NumberField label="No. Aircraft" value={profile.formationAircraft} disabled={!canEdit || !profile.isFormation} onChange={(value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) })} />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className={resourceSectionPanelClass}>
+                            <div className={resourceSectionPanelHeaderClass}>
+                              <div>
+                                <div className={resourceSectionPanelTitleClass}>Crew & Callsign</div>
+                                <div className={resourceSectionPanelHintClass}>Select acceptable crew compositions and any explicit role requirements.</div>
+                              </div>
+                            </div>
+                            <Field label="Default Callsign Prefix" value={profile.defaultCallsignPrefix || defaultMissionCallsign} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { defaultCallsignPrefix: value })} info="Defaults from the unit callsign settings. This is the prefix only; sortie number selection comes later when scheduled." />
+                            <div className="mt-3 rounded border border-gray-800 bg-gray-950/70 p-3">
+                              <div className="mb-2 text-xs font-black uppercase tracking-wide text-cyan-100">Acceptable Crew Composition</div>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {standardMissionCrewOptions.map((option) => {
+                                  const checked = profile.acceptableCrewCompositionIds.includes(option.id);
+                                  return (
+                                    <label key={option.id} className={`flex items-center gap-2 rounded border px-2 py-2 text-xs font-semibold ${checked ? 'border-cyan-400/35 bg-cyan-500/10 text-cyan-100' : 'border-gray-800 bg-gray-900 text-gray-300'}`}>
+                                      <input type="checkbox" className="h-4 w-4 rounded border-gray-500 accent-cyan-400" checked={checked} disabled={!canEdit} onChange={(event) => updateStandardMissionCrewSelection(profile, option.id, event.target.checked)} />
+                                      <span>{option.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={resourceSectionPanelClass}>
+                            <div className={resourceSectionPanelHeaderClass}>
+                              <div>
+                                <div className={resourceSectionPanelTitleClass}>Required Roles</div>
+                                <div className={resourceSectionPanelHintClass}>Manual role requirements are stored with the mission profile for later scheduling use.</div>
+                              </div>
+                              <button type="button" onClick={() => addStandardMissionRoleRequirement(profile)} disabled={!canEdit} className={platformActionButtonClass}>Add Role</button>
+                            </div>
+                            <div className="space-y-2">
+                              {profile.roleRequirements.length === 0 ? (
+                                <div className="rounded border border-dashed border-gray-700 bg-gray-950/70 p-3 text-xs text-gray-400">No manual role requirements configured.</div>
+                              ) : profile.roleRequirements.map((requirement, roleIndex) => (
+                                <div key={`${profile.id}-role-${roleIndex}`} className="grid gap-2 md:grid-cols-[1fr_110px_auto]">
+                                  <SelectField label="Role" value={requirement.role} disabled={!canEdit} options={crewCompositionRoleOptions} optionLabels={crewPositionLabelMap} onChange={(value) => updateStandardMissionRoleRequirement(profile, roleIndex, { role: value })} />
+                                  <NumberField label="Number" value={requirement.count} disabled={!canEdit} onChange={(value) => updateStandardMissionRoleRequirement(profile, roleIndex, { count: value })} />
+                                  <div className="flex items-end">
+                                    <button type="button" onClick={() => removeStandardMissionRoleRequirement(profile, roleIndex)} disabled={!canEdit} className={platformActionButtonClass}>
+                                      <span className="text-[9px] leading-tight">Remove</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </section>
 
@@ -6135,7 +6482,14 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info }: { label
 const TextAreaField = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (
   <label className="lg:col-span-2">
     <FieldLabel label={label} info={info} />
-    <textarea className={`${fieldClass} min-h-[74px] resize-y`} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+    <textarea
+      className={`${fieldClass} min-h-[74px] resize-y`}
+      value={value || ''}
+      disabled={disabled}
+      onKeyDownCapture={stopEditableKeyPropagation}
+      onKeyDown={stopEditableKeyPropagation}
+      onChange={(event) => onChange(event.target.value)}
+    />
   </label>
 );
 

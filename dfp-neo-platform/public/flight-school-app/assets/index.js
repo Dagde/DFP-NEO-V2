@@ -53200,6 +53200,42 @@ const ACCESS_SCOPE_TONE = {
   fill: "rgba(8, 145, 178, 0.24)",
   applyBorder: "rgba(103, 232, 249, 0.62)"
 };
+const STANDARD_MISSION_RESOURCE_TYPES = ["Flight", "FTD", "CPT", "Ground"];
+const clampWholeNumber = (value, fallback, min, max) => {
+  const parsed = Math.round(Number(value));
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
+};
+const normaliseStandardMissionProfiles = (source) => {
+  const rows = Array.isArray(source?.profiles) ? source.profiles : Array.isArray(source) ? source : [];
+  return rows.map((row, index) => {
+    const resourceType = STANDARD_MISSION_RESOURCE_TYPES.includes(row?.resourceType) ? row.resourceType : "Flight";
+    const roleRequirements = Array.isArray(row?.roleRequirements) ? row.roleRequirements.map((requirement) => ({
+      role: String(requirement?.role || "Crew").trim() || "Crew",
+      count: clampWholeNumber(requirement?.count, 1, 1, 24)
+    })) : [];
+    return {
+      id: String(row?.id || `standard-mission-${index + 1}`),
+      status: String(row?.status || "ACTIVE").toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+      unitCode: String(row?.unitCode || "").trim().toUpperCase(),
+      missionName: String(row?.missionName || row?.name || `Standard Mission ${index + 1}`),
+      shortTitle: String(row?.shortTitle || row?.code || "").slice(0, 8),
+      description: String(row?.description || ""),
+      resourceType,
+      departureLocationCode: String(row?.departureLocationCode || row?.departure || "").trim().toUpperCase(),
+      arrivalLocationCode: String(row?.arrivalLocationCode || row?.arrival || "").trim().toUpperCase(),
+      durationMinutes: clampWholeNumber(row?.durationMinutes, 240, 1, 1440),
+      preFlightMinutes: clampWholeNumber(row?.preFlightMinutes, 90, 0, 1440),
+      postFlightMinutes: clampWholeNumber(row?.postFlightMinutes, 60, 0, 1440),
+      isFormation: row?.isFormation === true,
+      formationAircraft: clampWholeNumber(row?.formationAircraft, 2, 2, 24),
+      config: String(row?.config || "ANY"),
+      acceptableCrewCompositionIds: Array.isArray(row?.acceptableCrewCompositionIds) ? row.acceptableCrewCompositionIds.map((value) => String(value || "").trim()).filter(Boolean) : [],
+      roleRequirements,
+      defaultCallsignPrefix: String(row?.defaultCallsignPrefix || "")
+    };
+  });
+};
 const DEPLOYMENT_MODE_OPTIONS = [
   "Online SaaS",
   "Private Defence Network",
@@ -53853,6 +53889,7 @@ const PlatformConfigurationSettings = ({
   sectionOnly = false,
   canUsePlatformPermission,
   activeUnitCode = "",
+  activeOperationalModel = "",
   phraseBank = {}
 }) => {
   const [config, setConfig] = reactExports.useState(emptyConfig);
@@ -55384,6 +55421,70 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const saveCrewCompositionAndKeepPosition = async () => {
     await save(void 0, "platform-crew-composition");
   };
+  const updateStandardMissionProfiles = (profiles) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      standardMissionProfiles: { profiles: normaliseStandardMissionProfiles({ profiles }) }
+    }));
+  };
+  const addStandardMissionProfile = () => {
+    const missionIndex = standardMissionProfiles.length + 1;
+    const firstRole = crewCompositionRoleOptions[0] || "Crew";
+    updateStandardMissionProfiles([
+      ...standardMissionProfiles,
+      {
+        id: createClientRecordId("standard-mission"),
+        status: "ACTIVE",
+        unitCode: activePrimaryUnitCode,
+        missionName: `Standard Mission ${missionIndex}`,
+        shortTitle: `MISSION${missionIndex}`.slice(0, 8),
+        description: "",
+        resourceType: "Flight",
+        departureLocationCode: activeHomeLocationCode,
+        arrivalLocationCode: activeHomeLocationCode,
+        durationMinutes: 240,
+        preFlightMinutes: 90,
+        postFlightMinutes: 60,
+        isFormation: false,
+        formationAircraft: 2,
+        config: aircraftConfigOptions[0] || "ANY",
+        acceptableCrewCompositionIds: standardMissionCrewOptions[0]?.id ? [standardMissionCrewOptions[0].id] : [],
+        roleRequirements: [{ role: firstRole, count: 1 }],
+        defaultCallsignPrefix: defaultMissionCallsign
+      }
+    ]);
+  };
+  const updateStandardMissionProfile = (profileId, changes) => {
+    updateStandardMissionProfiles(standardMissionProfiles.map((profile) => profile.id === profileId ? { ...profile, ...changes } : profile));
+  };
+  const removeStandardMissionProfile = (profileId) => {
+    updateStandardMissionProfiles(standardMissionProfiles.filter((profile) => profile.id !== profileId));
+  };
+  const updateStandardMissionCrewSelection = (profile, optionId, selected) => {
+    const nextIds = selected ? Array.from(/* @__PURE__ */ new Set([...profile.acceptableCrewCompositionIds, optionId])) : profile.acceptableCrewCompositionIds.filter((id) => id !== optionId);
+    updateStandardMissionProfile(profile.id, { acceptableCrewCompositionIds: nextIds });
+  };
+  const addStandardMissionRoleRequirement = (profile) => {
+    const usedRoles = new Set(profile.roleRequirements.map((requirement) => requirement.role.toUpperCase()));
+    const nextRole = crewCompositionRoleOptions.find((role) => !usedRoles.has(role.toUpperCase())) || crewCompositionRoleOptions[0] || "Crew";
+    updateStandardMissionProfile(profile.id, {
+      roleRequirements: [...profile.roleRequirements, { role: nextRole, count: 1 }]
+    });
+  };
+  const updateStandardMissionRoleRequirement = (profile, roleIndex, changes) => {
+    updateStandardMissionProfile(profile.id, {
+      roleRequirements: profile.roleRequirements.map((requirement, index) => index === roleIndex ? {
+        ...requirement,
+        ...changes,
+        count: changes.count !== void 0 ? clampWholeNumber(changes.count, requirement.count, 1, 24) : requirement.count
+      } : requirement)
+    });
+  };
+  const removeStandardMissionRoleRequirement = (profile, roleIndex) => {
+    updateStandardMissionProfile(profile.id, {
+      roleRequirements: profile.roleRequirements.filter((_, index) => index !== roleIndex)
+    });
+  };
   const exitResourcePoolsEditMode = async () => {
     if (!resourcePoolsDirty) {
       setResourcePoolsUnlocked(false);
@@ -55524,6 +55625,25 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const activeCrewPositionEntries = crewPositionTerminology.positions.filter((entry) => activeCrewRoleKeys.has(entry.genericName.toUpperCase()));
   const visibleCrewPositionEntries = activeCrewPositionEntries.length > 0 ? activeCrewPositionEntries : crewPositionTerminology.positions;
   const activeAircraftAlternateCompositions = crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.aircraftTypeCode || "").trim().toUpperCase() === activeCrewCompositionAircraftCode);
+  const activeUnitCodes = String(activeUnitCode || "").split("+").map((value) => value.trim().toUpperCase()).filter(Boolean);
+  const activePrimaryUnitCode = activeUnitCodes[0] || String(config.units.find(isActiveRecord)?.code || config.units[0]?.code || "").trim().toUpperCase();
+  const activePlatformUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activePrimaryUnitCode) || config.units.find(isActiveRecord) || config.units[0] || null;
+  const activeHomeLocationCode = String(activePlatformUnit?.locationCode || config.locations[0]?.code || "").trim().toUpperCase();
+  const fixedCrewContext = normaliseOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel) === "fixed_crew";
+  const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
+  const standardMissionProfilesForContext = standardMissionProfiles.filter((profile) => !profile.unitCode || !activePrimaryUnitCode || profile.unitCode === activePrimaryUnitCode);
+  const defaultMissionCallsign = getDefaultUnitCallsign(unitCallsignSettings, activePrimaryUnitCode);
+  const standardMissionCrewOptions = [
+    { id: `standard:${activeCrewCompositionAircraftCode || "AIRCRAFT"}`, label: `Standard ${activeCrewCompositionAircraftCode || "Aircraft"} Crew` },
+    ...activeAircraftAlternateCompositions.map((profile) => ({
+      id: `alternate:${profile.id}`,
+      label: profile.name || profile.code
+    }))
+  ];
+  const aircraftConfigOptions = Array.from(/* @__PURE__ */ new Set([
+    "ANY",
+    ...config.resourcePools.filter((pool) => !activeCrewCompositionAircraftCode || String(pool.aircraftTypeCode || "").trim().toUpperCase() === activeCrewCompositionAircraftCode).flatMap((pool) => Array.isArray(pool.settings?.aircraftConfigurations) ? pool.settings.aircraftConfigurations : []).map((item) => String(item.label || item.definition || item.id || "").trim()).filter(Boolean)
+  ]));
   const formatCrewRoleLabel = (role) => crewPositionLabelMap[role] || role || "Crew";
   const getStandardCrewSummary = (composition) => composition.seats.map((seat) => formatCrewRoleLabel(seat.role));
   const getAlternateCrewSummary = (profile) => profile.roleRequirements.flatMap((requirement) => Array.from({ length: Math.max(1, Math.round(Number(requirement.count) || 1)) }, () => formatCrewRoleLabel(requirement.role)));
@@ -55922,6 +56042,112 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           ) })
         ] }, rule.id || `master-lmp-access-${index}`))
       ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-standard-missions", className: getSectionClass("platform-standard-missions"), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Standard Missions",
+          subtitle: "Fixed Crew mission profiles for regular unit flights. These profiles are configuration only for now and are not yet wired into NEO Build.",
+          action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Add Mission" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => save(void 0, "platform-standard-missions"), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" })
+          ] }) : null
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Standard Missions are currently available for the Fixed Crew model only." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
+            "Active unit context: ",
+            activePrimaryUnitCode || "No unit selected"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New profiles default to the unit home location and unit default callsign. Values can be manually edited per mission." })
+        ] }),
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Standard Missions configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-900/85 shadow-lg", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-800 bg-gray-950/70 px-4 py-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: profile.shortTitle || "MISSION" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Mission" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: profile.resourceType })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: profile.description || "No description entered." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: profile.status, disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateStandardMissionProfile(profile.id, { status: value === "INACTIVE" ? "INACTIVE" : "ACTIVE" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeStandardMissionProfile(profile.id), disabled: !canEdit, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 xl:grid-cols-[1.1fr_0.9fr]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Mission Identity" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and mission notes." })
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_150px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Mission Name", value: profile.missionName, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Short Title", value: profile.shortTitle, disabled: !canEdit, maxLength: 8, onChange: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Description", value: profile.description, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Mission Timing & Route" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Default route and timing values can be changed when a mission is scheduled." })
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: profile.unitCode || activePrimaryUnitCode, disabled: !canEdit, options: config.units.map((unit) => unit.code), onChange: (value) => updateStandardMissionProfile(profile.id, { unitCode: value.toUpperCase() }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Type", value: profile.resourceType, disabled: !canEdit, options: STANDARD_MISSION_RESOURCE_TYPES, onChange: (value) => updateStandardMissionProfile(profile.id, { resourceType: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Dep", value: profile.departureLocationCode || activeHomeLocationCode, disabled: !canEdit, options: config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Arr", value: profile.arrivalLocationCode || activeHomeLocationCode, disabled: !canEdit, options: config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration (min)", value: profile.durationMinutes, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre-Flight (min)", value: profile.preFlightMinutes, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post-Flight (min)", value: profile.postFlightMinutes, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEdit, options: aircraftConfigOptions, onChange: (value) => updateStandardMissionProfile(profile.id, { config: value || "ANY" }) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-[1fr_160px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ToggleField, { label: "Formation", checked: profile.isFormation, disabled: !canEdit, onChange: (checked) => updateStandardMissionProfile(profile.id, { isFormation: checked }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "No. Aircraft", value: profile.formationAircraft, disabled: !canEdit || !profile.isFormation, onChange: (value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) }) })
+                ] })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Crew & Callsign" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Select acceptable crew compositions and any explicit role requirements." })
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Default Callsign Prefix", value: profile.defaultCallsignPrefix || defaultMissionCallsign, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { defaultCallsignPrefix: value }), info: "Defaults from the unit callsign settings. This is the prefix only; sortie number selection comes later when scheduled." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-800 bg-gray-950/70 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-black uppercase tracking-wide text-cyan-100", children: "Acceptable Crew Composition" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2", children: standardMissionCrewOptions.map((option) => {
+                    const checked = profile.acceptableCrewCompositionIds.includes(option.id);
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded border px-2 py-2 text-xs font-semibold ${checked ? "border-cyan-400/35 bg-cyan-500/10 text-cyan-100" : "border-gray-800 bg-gray-900 text-gray-300"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", className: "h-4 w-4 rounded border-gray-500 accent-cyan-400", checked, disabled: !canEdit, onChange: (event) => updateStandardMissionCrewSelection(profile, option.id, event.target.checked) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label })
+                    ] }, option.id);
+                  }) })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Required Roles" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Manual role requirements are stored with the mission profile for later scheduling use." })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addStandardMissionRoleRequirement(profile), disabled: !canEdit, className: platformActionButtonClass, children: "Add Role" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: profile.roleRequirements.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950/70 p-3 text-xs text-gray-400", children: "No manual role requirements configured." }) : profile.roleRequirements.map((requirement, roleIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[1fr_110px_auto]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: requirement.role, disabled: !canEdit, options: crewCompositionRoleOptions, optionLabels: crewPositionLabelMap, onChange: (value) => updateStandardMissionRoleRequirement(profile, roleIndex, { role: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Number", value: requirement.count, disabled: !canEdit, onChange: (value) => updateStandardMissionRoleRequirement(profile, roleIndex, { count: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeStandardMissionRoleRequirement(profile, roleIndex), disabled: !canEdit, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight", children: "Remove" }) }) })
+                ] }, `${profile.id}-role-${roleIndex}`)) })
+              ] })
+            ] })
+          ] })
+        ] }, profile.id)) })
+      ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-crew-composition", className: getSectionClass("platform-crew-composition"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -58524,7 +58750,17 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info }) => /* @
 ] });
 const TextAreaField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "lg:col-span-2", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: `${fieldClass} min-h-[74px] resize-y`, value: value || "", disabled, onChange: (event) => onChange(event.target.value) })
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      className: `${fieldClass} min-h-[74px] resize-y`,
+      value: value || "",
+      disabled,
+      onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
+      onChange: (event) => onChange(event.target.value)
+    }
+  )
 ] });
 const ToggleField = ({ label, checked, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 text-sm font-semibold text-gray-200", children: [
@@ -59122,6 +59358,7 @@ const sectionLabels = {
   "units": "Units",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
+  "standard-missions": "Standard Missions",
   "platform-configuration": "Platform Configuration",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
@@ -59265,6 +59502,7 @@ const sectionIcons = {
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M10 14h.01M14 14h.01M18 14h.01" })
   ] }),
   "crew-composition": platformConfigurationIcon,
+  "standard-missions": platformConfigurationIcon,
   "platform-configuration": platformConfigurationIcon,
   "platform-configuration-health": platformConfigurationIcon,
   "platform-organisation-locations": platformConfigurationIcon,
@@ -59313,6 +59551,7 @@ const sectionDescriptions = {
   "units": "Configure unit settings",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
+  "standard-missions": "Fixed Crew mission profiles for regular unit flights",
   "platform-configuration": "Commercial hierarchy, modules, resource pools and rule sets",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
@@ -59364,6 +59603,7 @@ const sectionColors = {
   "units": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "organisation": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "crew-composition": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
+  "standard-missions": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-configuration": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-configuration-health": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-organisation-locations": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -59413,7 +59653,8 @@ const sectionGroups = [
     accent: "cyan",
     defaultSection: "crew-composition",
     sections: [
-      "crew-composition"
+      "crew-composition",
+      "standard-missions"
     ]
   },
   {
@@ -59998,9 +60239,11 @@ const SettingsViewWithMenu = (props) => {
     return getAccentClasses(fallback);
   };
   const getGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const isFixedCrewSettingsContext = String(props.activeOperationalModel || "").trim().toLowerCase() === "fixed_crew";
+  const isSectionAvailable = (section) => section !== "standard-missions" || isFixedCrewSettingsContext;
   const visibleSettingGroups = sectionGroups.map((group) => ({
     ...group,
-    visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label))
+    visibleSections: group.sections.filter((section) => isSectionAvailable(section) && matchesSettingsSearch(section, group.label))
   })).filter((group) => group.visibleSections.length > 0);
   const hasSettingsMatches = visibleSettingGroups.length > 0;
   const getDefaultSectionForGroup = (group) => {
@@ -60327,10 +60570,24 @@ const SettingsViewWithMenu = (props) => {
             sectionOnly: true,
             canUsePlatformPermission: props.canUsePlatformPermission,
             activeUnitCode: props.activeUnitCode,
+            activeOperationalModel: props.activeOperationalModel,
             phraseBank: props.phraseBank
           }
         ),
-        activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
+        activeSection === "standard-missions" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          PlatformConfigurationSettings,
+          {
+            currentUserPermission: props.currentUserPermission,
+            onShowSuccess: props.onShowSuccess,
+            scrollTarget: "platform-standard-missions",
+            sectionOnly: true,
+            canUsePlatformPermission: props.canUsePlatformPermission,
+            activeUnitCode: props.activeUnitCode,
+            activeOperationalModel: props.activeOperationalModel,
+            phraseBank: props.phraseBank
+          }
+        ),
+        activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
         activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           UserListSection,
           {
