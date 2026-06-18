@@ -852,6 +852,17 @@ export const getResourcePoolCount = (
   fallback: number,
 ): number => {
   if (!isResourcePoolRuntimeEnabled(pool)) return fallback;
-  const value = Number(pool?.settings?.[key]);
-  return Number.isFinite(value) && value >= 0 ? value : fallback;
+  const settings = pool?.settings || {};
+  const aliases: Record<typeof key, string[]> = {
+    aircraft: ['aircraft', 'airframes'],
+    ftd: ['ftd', 'simulator', 'simulators'],
+    cpt: ['cpt', 'trainer', 'trainers', 'proceduralTrainer', 'proceduralTrainers'],
+    ground: ['ground'],
+    standby: ['standby', 'stby'],
+  };
+  for (const alias of aliases[key]) {
+    const value = Number((settings as Record<string, unknown>)[alias]);
+    if (Number.isFinite(value) && value >= 0) return value;
+  }
+  return fallback;
 };

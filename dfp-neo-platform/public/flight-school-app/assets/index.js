@@ -2543,8 +2543,19 @@ const getLocationResourcePool = (config, locationCode, unitCode) => {
 const isResourcePoolRuntimeEnabled = (pool) => pool?.settings?.applyToV2Runtime === true;
 const getResourcePoolCount = (pool, key, fallback) => {
   if (!isResourcePoolRuntimeEnabled(pool)) return fallback;
-  const value = Number(pool?.settings?.[key]);
-  return Number.isFinite(value) && value >= 0 ? value : fallback;
+  const settings = pool?.settings || {};
+  const aliases = {
+    aircraft: ["aircraft", "airframes"],
+    ftd: ["ftd", "simulator", "simulators"],
+    cpt: ["cpt", "trainer", "trainers", "proceduralTrainer", "proceduralTrainers"],
+    ground: ["ground"],
+    standby: ["standby", "stby"]
+  };
+  for (const alias of aliases[key]) {
+    const value = Number(settings[alias]);
+    if (Number.isFinite(value) && value >= 0) return value;
+  }
+  return fallback;
 };
 const DEFAULT_TASK_PROFILE_CONFIG = {
   flight_school: [
@@ -82728,6 +82739,23 @@ const App = () => {
       return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
     });
   }, [activeUnitCode, getOperationalModelForUnitCode, getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess, school]);
+  const getFlightSchoolAssignableSyllabusForActiveScope = reactExports.useCallback((items, requiredAccess = "View") => {
+    const unitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
+    const seen = /* @__PURE__ */ new Set();
+    return unitCodes.flatMap((unitCode) => filterSyllabusForMasterLmpAccess(items, requiredAccess, unitCode)).filter((item) => {
+      const key = String(item.id || item.code || item.masterEventId || `${item.lmpType || ""}|${item.phase || ""}|${item.module || ""}`).trim();
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [activeContextUnitCodes, activeUnitCode, filterSyllabusForMasterLmpAccess]);
+  const resolveMasterLmpUnitForTrainee = reactExports.useCallback((trainee, lmpType, requiredAccess = "Assign") => {
+    const explicitUnit = String(trainee?.unit || "").trim();
+    if (explicitUnit && hasMasterLmpUnitAccess(lmpType, explicitUnit, requiredAccess)) return explicitUnit;
+    const unitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
+    return unitCodes.find((unitCode) => hasMasterLmpUnitAccess(lmpType, unitCode, requiredAccess)) || explicitUnit || activeUnitCode;
+  }, [activeContextUnitCodes, activeUnitCode, hasMasterLmpUnitAccess]);
   const activePlatformResourcePool = reactExports.useMemo(
     () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
     [activeResourcePoolUnitCode, platformConfig, school]
@@ -83275,7 +83303,7 @@ const App = () => {
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
           try {
-            const assignableSyncSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
+            const assignableSyncSyllabus = getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign");
             const bpcIpcSyllabus = assignableSyncSyllabus.filter(
               (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
             );
@@ -83327,7 +83355,7 @@ const App = () => {
                     const newLMPs = new Map(prev);
                     lmps.forEach((lmp) => {
                       const traineeForLmp = data.trainees.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
-                      const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
+                      const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign");
                       if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
                         newLMPs.delete(lmp.traineeFullName);
                         console.log(`[LMP Sync] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
@@ -83417,7 +83445,7 @@ const App = () => {
                 }
               }
               if (!lmpType) lmpType = "BPC+IPC";
-              const traineeUnitCode = trainee.unit || activeUnitCode;
+              const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "Assign");
               if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
                 newLMPs.delete(trainee.fullName);
                 console.log(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
@@ -83502,7 +83530,7 @@ const App = () => {
         }
         const isFicTrainee = lmpType === "FIC";
         const alreadySet = newLMPs.has(trainee.fullName);
-        const traineeUnitCode = trainee.unit || activeUnitCode;
+        const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "Assign");
         if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
           newLMPs.delete(trainee.fullName);
           console.log(`[LMP Re-init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
@@ -83527,7 +83555,7 @@ const App = () => {
       console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
       return newLMPs;
     });
-  }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, syllabusDetails]);
+  }, [allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, resolveMasterLmpUnitForTrainee, syllabusDetails]);
   reactExports.useEffect(() => {
     let cancelled = false;
     const requestedSchool = school;
@@ -90101,7 +90129,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("🚀 [NEO-Build] highestPriorityEvents:", highestPriorityEvents.length);
     const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
     const normaliseBuildUnitCode = (value) => String(value || "").split("/")[0].trim().toUpperCase();
-    const assignableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode).filter((item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics") : [];
+    const assignableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign").filter((item) => item.type !== "Academics" && item.lmpType !== "Staff CAT") : [];
     const assignableFlightSchoolEventKeys = new Set(
       assignableFlightSchoolBuildSyllabus.flatMap((item) => [item.id, item.code, item.masterEventId]).map((key) => String(key || "").replace(/\*/g, "").trim()).filter(Boolean)
     );
@@ -90254,7 +90282,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because its events do not match the active Flight School Master LMP`);
               return;
             }
-            const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
+            const traineeUnitCode = activeOperationalModel === "flight_school" ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign") : traineeForLmp?.unit || activeUnitCode;
             if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
               console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
               return;
