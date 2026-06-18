@@ -90098,6 +90098,17 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       return disallowedMasterItems.length === 0;
     };
     const activeScopedCourseNames = scopedCourseNameSet;
+    const getLmpEventsForTraineeName = (lmpCollection, traineeName) => {
+      const name = String(traineeName || "").trim();
+      if (!name || !lmpCollection) return void 0;
+      if (typeof lmpCollection.get === "function") return lmpCollection.get(name);
+      if (Array.isArray(lmpCollection)) {
+        const entry = lmpCollection.find((candidate) => Array.isArray(candidate) ? candidate[0] === name : candidate?.traineeFullName === name || candidate?.name === name);
+        if (!entry) return void 0;
+        return Array.isArray(entry) ? entry[1] : entry.events;
+      }
+      return lmpCollection[name] || lmpCollection[traineeName];
+    };
     const flightSchoolTraineeMatchesBuildScope = (trainee, lmpMap = traineeLMPs) => {
       if (activeOperationalModel !== "flight_school") return true;
       const traineeUnitCode = normaliseBuildUnitCode(trainee?.unit);
@@ -90105,7 +90116,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return false;
       }
       const traineeNames = [trainee?.fullName, trainee?.name].map((name) => String(name || "").trim()).filter(Boolean);
-      const traineeLmp = traineeNames.map((name) => lmpMap.get(name)).find(Boolean);
+      const traineeLmp = traineeNames.map((name) => getLmpEventsForTraineeName(lmpMap, name)).find(Boolean);
       if (traineeLmp && !lmpMatchesActiveFlightSchoolSyllabus(traineeLmp)) {
         return false;
       }

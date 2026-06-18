@@ -27848,7 +27848,20 @@ const App: React.FC = () => {
             return disallowedMasterItems.length === 0;
         };
         const activeScopedCourseNames = scopedCourseNameSet;
-        const flightSchoolTraineeMatchesBuildScope = (trainee: Trainee | any, lmpMap: Map<string, SyllabusItemDetail[]> = traineeLMPs): boolean => {
+        const getLmpEventsForTraineeName = (lmpCollection: any, traineeName: string): SyllabusItemDetail[] | undefined => {
+            const name = String(traineeName || '').trim();
+            if (!name || !lmpCollection) return undefined;
+            if (typeof lmpCollection.get === 'function') return lmpCollection.get(name);
+            if (Array.isArray(lmpCollection)) {
+                const entry = lmpCollection.find((candidate: any) => (
+                    Array.isArray(candidate) ? candidate[0] === name : candidate?.traineeFullName === name || candidate?.name === name
+                ));
+                if (!entry) return undefined;
+                return Array.isArray(entry) ? entry[1] : entry.events;
+            }
+            return lmpCollection[name] || lmpCollection[traineeName];
+        };
+        const flightSchoolTraineeMatchesBuildScope = (trainee: Trainee | any, lmpMap: any = traineeLMPs): boolean => {
             if (activeOperationalModel !== 'flight_school') return true;
             const traineeUnitCode = normaliseBuildUnitCode(trainee?.unit);
             if (traineeUnitCode && activeContextUnitCodeSet.size > 0 && !activeContextUnitCodeSet.has(traineeUnitCode)) {
@@ -27858,7 +27871,7 @@ const App: React.FC = () => {
             const traineeNames = [trainee?.fullName, trainee?.name]
                 .map(name => String(name || '').trim())
                 .filter(Boolean);
-            const traineeLmp = traineeNames.map(name => lmpMap.get(name)).find(Boolean);
+            const traineeLmp = traineeNames.map(name => getLmpEventsForTraineeName(lmpMap, name)).find(Boolean);
             if (traineeLmp && !lmpMatchesActiveFlightSchoolSyllabus(traineeLmp)) {
                 return false;
             }
