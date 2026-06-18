@@ -3490,7 +3490,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Crew Position Labels / Roles</h4>
-                <p className={resourceSectionPanelHintClass}>These are the role keys currently used by {activeCrewCompositionAircraftCode || 'this aircraft'}. Model applicability now includes Air Combat, Fixed Crew and Air Mobility.</p>
+                <p className={resourceSectionPanelHintClass}>These are the role keys currently used by {activeCrewCompositionAircraftCode || 'this aircraft'}. Model applicability includes Flight School, Air Combat, Fixed Crew and Air Mobility.</p>
               </div>
               <button type="button" onClick={addCrewPositionEntry} disabled={!canEditCrewComposition} className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">Add Position</button>
             </div>
@@ -3498,13 +3498,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               {visibleCrewPositionEntries.map((entry) => {
                 const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
                 return (
-                  <div key={`crew-role-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_auto]">
+                  <div key={`crew-role-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(130px,0.75fr)_minmax(130px,0.75fr)_minmax(300px,1.65fr)_auto]">
                     <Field label="Generic Position" value={entry.genericName} disabled={!canEditCrewComposition || isDefaultEntry} onChange={(value) => updateCrewPositionEntry(entry.id, { genericName: value })} info={isDefaultEntry ? 'Baseline generic positions stay fixed so aircraft seat links remain stable.' : 'The generic role key saved on aircraft seats and alternate crew profiles.'} />
                     <Field label="Organisation Label" value={entry.label} disabled={!canEditCrewComposition} onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })} />
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400">Applies To</label>
-                      <div className="grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-3">
-                        {OPERATIONAL_MODEL_OPTIONS.filter((option) => option.value === 'air_combat' || option.value === 'fixed_crew' || option.value === 'air_mobility').map((option) => {
+                      <div className="grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2 xl:grid-cols-4">
+                        {OPERATIONAL_MODEL_OPTIONS.map((option) => {
                           const selectedModels = entry.operationalModels?.length ? entry.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
                           const isSelected = selectedModels.includes(option.value);
                           return (
