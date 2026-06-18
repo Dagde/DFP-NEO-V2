@@ -59815,6 +59815,8 @@ const sectionGroups = [
     sections: ["emergency"]
   }
 ];
+const highlightedCrewPageSections = ["crew-composition", "standard-missions"];
+const isHighlightedCrewPageSection = (section) => highlightedCrewPageSections.includes(section);
 const timezoneOptions = [
   { value: -12, label: "UTC-12:00" },
   { value: -11, label: "UTC-11:00" },
@@ -60440,18 +60442,19 @@ const SettingsViewWithMenu = (props) => {
               ]
             }
           ),
-          showSubmenu && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: getGroupId(group.label), className: "ml-5 mt-1 space-y-0.5 border-l border-gray-800 pl-3 pt-1", children: group.visibleSections.map((section) => {
+          showSubmenu && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: getGroupId(group.label), className: `mt-1 ${group.label === "Crew Composition" ? "ml-0 space-y-2 border-l-0 pl-0 pt-1" : "ml-5 space-y-0.5 border-l border-gray-800 pl-3 pt-1"}`, children: group.visibleSections.map((section) => {
             const sectionAccent = getSectionAccent(section, group.accent);
+            const highlightedCrewPage = group.label === "Crew Composition" && isHighlightedCrewPageSection(section);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
                 onClick: () => setActiveSection(section),
-                className: `flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${activeSection === section ? `${sectionAccent.badge} ${sectionAccent.text}` : section === "emergency" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`,
+                className: `flex w-full items-start gap-2 rounded text-left font-semibold transition-colors ${highlightedCrewPage ? `border px-3 py-3 text-sm shadow-sm ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge} ${sectionAccent.text}` : "border-gray-800 bg-gray-950/65 text-gray-200 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-100"}` : `px-3 py-1.5 text-xs ${activeSection === section ? `${sectionAccent.badge} ${sectionAccent.text}` : section === "emergency" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`}`,
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-1.5 w-1.5 flex-shrink-0 rounded-full ${sectionAccent.rail}` }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${highlightedCrewPage ? "mt-1 h-2.5 w-2.5" : "h-1.5 w-1.5"} flex-shrink-0 rounded-full ${sectionAccent.rail}` }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: sectionLabels[section] }),
-                    activeSection === section && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block whitespace-normal text-[11px] font-normal leading-snug text-gray-500", children: sectionDescriptions[section] })
+                    (activeSection === section || highlightedCrewPage) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 block whitespace-normal font-normal leading-snug ${highlightedCrewPage ? "text-[11px] text-gray-400" : "text-[11px] text-gray-500"}`, children: sectionDescriptions[section] })
                   ] })
                 ]
               },
@@ -60514,18 +60517,20 @@ const SettingsViewWithMenu = (props) => {
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `ml-auto rounded border px-2 py-1 text-[11px] font-semibold ${accent.badge} ${accent.text}`, children: group.shortLabel })
                   ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-3 sm:grid-cols-2", children: group.visibleSections.map((section) => {
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid grid-cols-1 gap-2 p-3 ${group.label === "Crew Composition" ? "lg:grid-cols-2" : "sm:grid-cols-2"}`, children: group.visibleSections.map((section) => {
                     const sectionAccent = getSectionAccent(section, group.accent);
+                    const highlightedCrewPage = group.label === "Crew Composition" && isHighlightedCrewPageSection(section);
                     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "button",
                       {
                         onClick: () => setActiveSection(section),
-                        className: `flex min-h-[76px] w-full items-start gap-3 rounded-md border border-gray-800 bg-gray-950/35 px-3 py-3 text-left transition-colors ${section === "emergency" ? "hover:border-red-500/40 hover:bg-red-500/10" : "hover:border-gray-700 hover:bg-gray-800/70"}`,
+                        className: `flex w-full items-start gap-3 rounded-md border px-3 py-3 text-left transition-colors ${highlightedCrewPage ? `min-h-[112px] ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge}` : "border-cyan-500/20 bg-gray-950/55 hover:border-cyan-400/45 hover:bg-cyan-500/10"}` : `min-h-[76px] border-gray-800 bg-gray-950/35 ${section === "emergency" ? "hover:border-red-500/40 hover:bg-red-500/10" : "hover:border-gray-700 hover:bg-gray-800/70"}`}`,
                         children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 h-2 w-2 rounded-full ${sectionAccent.rail}` }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${highlightedCrewPage ? "mt-1 h-3 w-3" : "mt-1 h-2 w-2"} rounded-full ${sectionAccent.rail}` }),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `block text-sm font-semibold ${section === "emergency" ? "text-red-300" : "text-gray-100"}`, children: sectionLabels[section] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-xs leading-snug text-gray-500", children: sectionDescriptions[section] })
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `block ${highlightedCrewPage ? "text-base font-black text-cyan-50" : `text-sm font-semibold ${section === "emergency" ? "text-red-300" : "text-gray-100"}`}`, children: sectionLabels[section] }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 block leading-snug ${highlightedCrewPage ? "text-sm text-gray-300" : "text-xs text-gray-500"}`, children: sectionDescriptions[section] }),
+                            highlightedCrewPage && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-3 inline-flex rounded border border-cyan-400/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-cyan-100", children: "Open Page" })
                           ] })
                         ]
                       },
