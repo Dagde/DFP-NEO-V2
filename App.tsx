@@ -27810,11 +27810,56 @@ const App: React.FC = () => {
         console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
         const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
         const normaliseBuildUnitCode = (value: unknown): string => String(value || '').split('/')[0].trim().toUpperCase();
+        const assignableFlightSchoolBuildSyllabus = activeOperationalModel === 'flight_school'
+            ? filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', activeUnitCode)
+                .filter((item: any) => (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics')
+            : [];
+        const assignableFlightSchoolEventKeys = new Set(
+            assignableFlightSchoolBuildSyllabus
+                .flatMap((item: any) => [item.id, item.code, item.masterEventId])
+                .map(key => String(key || '').replace(/\*/g, '').trim())
+                .filter(Boolean)
+        );
+        const isFlightSchoolLmpOverlayItem = (item: SyllabusItemDetail): boolean => (
+            item.lmpSource === 'remedial' ||
+            item.lmpSource === 'custom' ||
+            item.isRemedial === true ||
+            String(item.id || item.code || '').includes('REM') ||
+            String(item.id || item.code || '').endsWith('-RF') ||
+            String(item.id || item.code || '').endsWith('-CUR')
+        );
+        const getFlightSchoolLmpEventKeys = (item: SyllabusItemDetail): string[] => (
+            [item.id, item.code, item.masterEventId]
+                .map(key => String(key || '').replace(/\*/g, '').trim())
+                .filter(Boolean)
+        );
+        const lmpMatchesActiveFlightSchoolSyllabus = (events?: SyllabusItemDetail[] | null): boolean => {
+            if (activeOperationalModel !== 'flight_school') return true;
+            if (!Array.isArray(events) || events.length === 0 || assignableFlightSchoolEventKeys.size === 0) return false;
+            const masterItems = events.filter(item => !isFlightSchoolLmpOverlayItem(item));
+            if (masterItems.length === 0) return false;
+            const matchingMasterItems = masterItems.filter(item => (
+                getFlightSchoolLmpEventKeys(item).some(key => assignableFlightSchoolEventKeys.has(key))
+            ));
+            if (matchingMasterItems.length === 0) return false;
+            const disallowedMasterItems = masterItems.filter(item => (
+                !getFlightSchoolLmpEventKeys(item).some(key => assignableFlightSchoolEventKeys.has(key))
+            ));
+            return disallowedMasterItems.length === 0;
+        };
         const activeScopedCourseNames = scopedCourseNameSet;
-        const flightSchoolTraineeMatchesBuildScope = (trainee: Trainee | any): boolean => {
+        const flightSchoolTraineeMatchesBuildScope = (trainee: Trainee | any, lmpMap: Map<string, SyllabusItemDetail[]> = traineeLMPs): boolean => {
             if (activeOperationalModel !== 'flight_school') return true;
             const traineeUnitCode = normaliseBuildUnitCode(trainee?.unit);
             if (traineeUnitCode && activeContextUnitCodeSet.size > 0 && !activeContextUnitCodeSet.has(traineeUnitCode)) {
+                return false;
+            }
+
+            const traineeNames = [trainee?.fullName, trainee?.name]
+                .map(name => String(name || '').trim())
+                .filter(Boolean);
+            const traineeLmp = traineeNames.map(name => lmpMap.get(name)).find(Boolean);
+            if (traineeLmp && !lmpMatchesActiveFlightSchoolSyllabus(traineeLmp)) {
                 return false;
             }
 
@@ -27825,10 +27870,10 @@ const App: React.FC = () => {
 
             return true;
         };
-        const traineesForBuildScope = activeOperationalModel === 'flight_school'
+        let traineesForBuildScope = activeOperationalModel === 'flight_school'
             ? traineesData.filter(flightSchoolTraineeMatchesBuildScope)
             : traineesData;
-        const traineeNamesForBuildScope = new Set(
+        let traineeNamesForBuildScope = new Set(
             traineesForBuildScope
                 .flatMap((trainee: any) => [trainee.fullName, trainee.name])
                 .map(name => String(name || '').trim())
@@ -27909,7 +27954,9 @@ const App: React.FC = () => {
         let buildTraineeLMPs = traineeLMPs;
         try {
             const apiBase = getApiBaseUrl();
-            const assignableBuildSyllabus = filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', activeUnitCode);
+            const assignableBuildSyllabus = activeOperationalModel === 'flight_school'
+                ? assignableFlightSchoolBuildSyllabus
+                : filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', activeUnitCode);
             const bpcIpcSyllabus = assignableBuildSyllabus.filter(
                 (item: any) => (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics'
             );
@@ -27951,6 +27998,10 @@ const App: React.FC = () => {
                         const traineeForLmp = traineesForBuildScope.find((candidate: any) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
                         if (activeOperationalModel === 'flight_school' && !traineeForLmp) {
                             console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP outside active Flight School build scope`);
+                            return;
+                        }
+                        if (activeOperationalModel === 'flight_school' && !lmpMatchesActiveFlightSchoolSyllabus(lmp.events)) {
+                            console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because its events do not match the active Flight School Master LMP`);
                             return;
                         }
                         const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
@@ -28014,16 +28065,29 @@ const App: React.FC = () => {
                     return organisationSettings.staffSharingEnabled && airCombatSharedStaffUnitCodes.has(staffUnitCode);
                 })
             : instructorsData;
+        if (activeOperationalModel === 'flight_school') {
+            traineesForBuildScope = traineesData.filter((trainee: any) => flightSchoolTraineeMatchesBuildScope(trainee, buildTraineeLMPs));
+            traineeNamesForBuildScope = new Set(
+                traineesForBuildScope
+                    .flatMap((trainee: any) => [trainee.fullName, trainee.name])
+                    .map(name => String(name || '').trim())
+                    .filter(Boolean)
+            );
+        }
         const traineesInBuild = traineesForBuildScope;
         if (activeOperationalModel === 'flight_school') {
             const scopedLmpEntries = Array.from(buildTraineeLMPs.entries())
-                .filter(([traineeName]) => traineeNamesForBuildScope.has(String(traineeName || '').trim()));
+                .filter(([traineeName, events]) => (
+                    traineeNamesForBuildScope.has(String(traineeName || '').trim()) &&
+                    lmpMatchesActiveFlightSchoolSyllabus(events)
+                ));
             if (scopedLmpEntries.length !== buildTraineeLMPs.size) {
                 console.log('[NEO-Build] Scoped Flight School Individual LMPs to active build trainees:', {
                     before: buildTraineeLMPs.size,
                     after: scopedLmpEntries.length,
                     activeContextUnitCodes,
                     activeCourses: Array.from(activeScopedCourseNames),
+                    assignableMasterEvents: assignableFlightSchoolEventKeys.size,
                 });
                 buildTraineeLMPs = new Map(scopedLmpEntries);
             }
