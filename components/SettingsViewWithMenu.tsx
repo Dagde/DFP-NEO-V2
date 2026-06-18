@@ -1467,10 +1467,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                 onClick={() => setActiveSection(section)}
                                                 className={`flex w-full items-start gap-2 rounded text-left font-semibold transition-colors ${
                                                     highlightedCrewPage
-                                                        ? `border px-3 py-3 text-sm shadow-[0_0_14px_rgba(34,211,238,0.16),inset_0_0_10px_rgba(34,211,238,0.06)] ${
+                                                        ? `border px-3 py-3 text-sm shadow-sm ${
                                                             activeSection === section
-                                                                ? `${sectionAccent.border} ${sectionAccent.badge} ${sectionAccent.text} ring-1 ring-cyan-300/25`
-                                                                : 'border-cyan-500/25 bg-gray-950/65 text-gray-200 hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:text-cyan-100 hover:shadow-[0_0_18px_rgba(34,211,238,0.24),inset_0_0_12px_rgba(34,211,238,0.08)]'
+                                                                ? `${sectionAccent.border} ${sectionAccent.badge} ${sectionAccent.text}`
+                                                                : 'border-gray-800 bg-gray-950/65 text-gray-200 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-100'
                                                         }`
                                                         : `px-3 py-1.5 text-xs ${
                                                             activeSection === section
@@ -1576,7 +1576,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                                     onClick={() => setActiveSection(section)}
                                                                     className={`flex w-full items-start gap-3 rounded-md border px-3 py-3 text-left transition-colors ${
                                                                         highlightedCrewPage
-                                                                            ? `min-h-[112px] shadow-[0_0_18px_rgba(34,211,238,0.14),inset_0_0_12px_rgba(34,211,238,0.05)] ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge} ring-1 ring-cyan-300/25` : 'border-cyan-500/25 bg-gray-950/55 hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:shadow-[0_0_24px_rgba(34,211,238,0.22),inset_0_0_14px_rgba(34,211,238,0.08)]'}`
+                                                                            ? `min-h-[112px] ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge}` : 'border-cyan-500/20 bg-gray-950/55 hover:border-cyan-400/45 hover:bg-cyan-500/10'}`
                                                                             : `min-h-[76px] border-gray-800 bg-gray-950/35 ${section === 'emergency' ? 'hover:border-red-500/40 hover:bg-red-500/10' : 'hover:border-gray-700 hover:bg-gray-800/70'}`
                                                                     }`}
                                                                 >
@@ -1659,6 +1659,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                     {activeGroupSections.map(section => {
                                         const isActive = activeSection === section;
                                         const sectionAccent = getSectionAccent(section, activeGroup.accent);
+                                        const highlightCrewCompositionTab = activeGroup.label === 'Crew Composition' && section === 'crew-composition';
                                         return (
                                             <button
                                                 key={section}
@@ -1668,7 +1669,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                     isActive
                                                         ? `${sectionAccent.badge} ${sectionAccent.text}`
                                                         : 'border-gray-800 bg-gray-950/40 text-gray-400 hover:border-gray-700 hover:bg-gray-800/70 hover:text-gray-200'
-                                                }`}
+                                                } ${highlightCrewCompositionTab ? 'shadow-[0_0_16px_rgba(34,211,238,0.2),inset_0_0_10px_rgba(34,211,238,0.06)] ring-1 ring-cyan-300/20 hover:shadow-[0_0_22px_rgba(34,211,238,0.28),inset_0_0_12px_rgba(34,211,238,0.08)]' : ''}`}
                                             >
                                                 {sectionLabels[section]}
                                             </button>

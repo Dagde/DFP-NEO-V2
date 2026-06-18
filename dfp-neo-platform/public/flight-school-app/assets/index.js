@@ -60449,7 +60449,7 @@ const SettingsViewWithMenu = (props) => {
               "button",
               {
                 onClick: () => setActiveSection(section),
-                className: `flex w-full items-start gap-2 rounded text-left font-semibold transition-colors ${highlightedCrewPage ? `border px-3 py-3 text-sm shadow-[0_0_14px_rgba(34,211,238,0.16),inset_0_0_10px_rgba(34,211,238,0.06)] ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge} ${sectionAccent.text} ring-1 ring-cyan-300/25` : "border-cyan-500/25 bg-gray-950/65 text-gray-200 hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:text-cyan-100 hover:shadow-[0_0_18px_rgba(34,211,238,0.24),inset_0_0_12px_rgba(34,211,238,0.08)]"}` : `px-3 py-1.5 text-xs ${activeSection === section ? `${sectionAccent.badge} ${sectionAccent.text}` : section === "emergency" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`}`,
+                className: `flex w-full items-start gap-2 rounded text-left font-semibold transition-colors ${highlightedCrewPage ? `border px-3 py-3 text-sm shadow-sm ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge} ${sectionAccent.text}` : "border-gray-800 bg-gray-950/65 text-gray-200 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-100"}` : `px-3 py-1.5 text-xs ${activeSection === section ? `${sectionAccent.badge} ${sectionAccent.text}` : section === "emergency" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${highlightedCrewPage ? "mt-1 h-2.5 w-2.5" : "h-1.5 w-1.5"} flex-shrink-0 rounded-full ${sectionAccent.rail}` }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
@@ -60524,7 +60524,7 @@ const SettingsViewWithMenu = (props) => {
                       "button",
                       {
                         onClick: () => setActiveSection(section),
-                        className: `flex w-full items-start gap-3 rounded-md border px-3 py-3 text-left transition-colors ${highlightedCrewPage ? `min-h-[112px] shadow-[0_0_18px_rgba(34,211,238,0.14),inset_0_0_12px_rgba(34,211,238,0.05)] ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge} ring-1 ring-cyan-300/25` : "border-cyan-500/25 bg-gray-950/55 hover:border-cyan-400/50 hover:bg-cyan-500/10 hover:shadow-[0_0_24px_rgba(34,211,238,0.22),inset_0_0_14px_rgba(34,211,238,0.08)]"}` : `min-h-[76px] border-gray-800 bg-gray-950/35 ${section === "emergency" ? "hover:border-red-500/40 hover:bg-red-500/10" : "hover:border-gray-700 hover:bg-gray-800/70"}`}`,
+                        className: `flex w-full items-start gap-3 rounded-md border px-3 py-3 text-left transition-colors ${highlightedCrewPage ? `min-h-[112px] ${activeSection === section ? `${sectionAccent.border} ${sectionAccent.badge}` : "border-cyan-500/20 bg-gray-950/55 hover:border-cyan-400/45 hover:bg-cyan-500/10"}` : `min-h-[76px] border-gray-800 bg-gray-950/35 ${section === "emergency" ? "hover:border-red-500/40 hover:bg-red-500/10" : "hover:border-gray-700 hover:bg-gray-800/70"}`}`,
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${highlightedCrewPage ? "mt-1 h-3 w-3" : "mt-1 h-2 w-2"} rounded-full ${sectionAccent.rail}` }),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
@@ -60584,12 +60584,13 @@ const SettingsViewWithMenu = (props) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: activeGroupSections.map((section) => {
             const isActive = activeSection === section;
             const sectionAccent = getSectionAccent(section, activeGroup.accent);
+            const highlightCrewCompositionTab = activeGroup.label === "Crew Composition" && section === "crew-composition";
             return /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: () => setActiveSection(section),
-                className: `rounded-md border px-3 py-2 text-xs font-semibold transition-colors ${isActive ? `${sectionAccent.badge} ${sectionAccent.text}` : "border-gray-800 bg-gray-950/40 text-gray-400 hover:border-gray-700 hover:bg-gray-800/70 hover:text-gray-200"}`,
+                className: `rounded-md border px-3 py-2 text-xs font-semibold transition-colors ${isActive ? `${sectionAccent.badge} ${sectionAccent.text}` : "border-gray-800 bg-gray-950/40 text-gray-400 hover:border-gray-700 hover:bg-gray-800/70 hover:text-gray-200"} ${highlightCrewCompositionTab ? "shadow-[0_0_16px_rgba(34,211,238,0.2),inset_0_0_10px_rgba(34,211,238,0.06)] ring-1 ring-cyan-300/20 hover:shadow-[0_0_22px_rgba(34,211,238,0.28),inset_0_0_12px_rgba(34,211,238,0.08)]" : ""}`,
                 children: sectionLabels[section]
               },
               section
