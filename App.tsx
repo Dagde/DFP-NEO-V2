@@ -27809,11 +27809,36 @@ const App: React.FC = () => {
         console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
         console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
         const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
+        const normaliseBuildUnitCode = (value: unknown): string => String(value || '').split('/')[0].trim().toUpperCase();
+        const activeScopedCourseNames = scopedCourseNameSet;
+        const flightSchoolTraineeMatchesBuildScope = (trainee: Trainee | any): boolean => {
+            if (activeOperationalModel !== 'flight_school') return true;
+            const traineeUnitCode = normaliseBuildUnitCode(trainee?.unit);
+            if (traineeUnitCode && activeContextUnitCodeSet.size > 0 && !activeContextUnitCodeSet.has(traineeUnitCode)) {
+                return false;
+            }
+
+            const traineeCourse = String(trainee?.course || '').trim();
+            if (activeScopedCourseNames.size > 0) {
+                return Boolean(traineeCourse && activeScopedCourseNames.has(traineeCourse));
+            }
+
+            return true;
+        };
+        const traineesForBuildScope = activeOperationalModel === 'flight_school'
+            ? traineesData.filter(flightSchoolTraineeMatchesBuildScope)
+            : traineesData;
+        const traineeNamesForBuildScope = new Set(
+            traineesForBuildScope
+                .flatMap((trainee: any) => [trainee.fullName, trainee.name])
+                .map(name => String(name || '').trim())
+                .filter(Boolean)
+        );
         localStorage.removeItem('neo_build_runtime_error_report');
         const timingReport = createNeoBuildTimingReport(buildDfpDate, {
             preservedEvents: preservedEvents?.length || 0,
             highestPriorityEvents: highestPriorityEvents.length,
-            trainees: traineesData.length,
+            trainees: traineesForBuildScope.length,
             instructors: instructorsData.length,
             currentTraineeLMPs: traineeLMPs.size,
             scoresTrainees: scores.size,
@@ -27847,7 +27872,7 @@ const App: React.FC = () => {
         // Non-fatal: if the fetch fails, the build proceeds with legacy DFP-scan ELCE.
         let dbElceMap: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null> | undefined;
         try {
-            const activeTraineeNames = traineesData
+            const activeTraineeNames = traineesForBuildScope
                 .filter((t: any) => !t.isPaused)
                 .map((t: any) => t.fullName as string)
                 .filter(Boolean);
@@ -27923,7 +27948,11 @@ const App: React.FC = () => {
                 let freshEventCount = 0;
                 (lmpData.lmps || []).forEach((lmp: any) => {
                     if (lmp.traineeFullName && Array.isArray(lmp.events)) {
-                        const traineeForLmp = traineesData.find((candidate: any) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
+                        const traineeForLmp = traineesForBuildScope.find((candidate: any) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
+                        if (activeOperationalModel === 'flight_school' && !traineeForLmp) {
+                            console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP outside active Flight School build scope`);
+                            return;
+                        }
                         const traineeUnitCode = traineeForLmp?.unit || activeUnitCode;
                         if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'Assign')) {
                             console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
@@ -27956,7 +27985,6 @@ const App: React.FC = () => {
 
         console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
 
-        const normaliseBuildUnitCode = (value: unknown): string => String(value || '').split('/')[0].trim().toUpperCase();
         const staffDataSourceAllowedForBuild = (staff: Instructor): boolean => {
             const isDatabase = (staff as any)._dataSource === 'database';
             const isMock = !isDatabase;
@@ -27986,7 +28014,20 @@ const App: React.FC = () => {
                     return organisationSettings.staffSharingEnabled && airCombatSharedStaffUnitCodes.has(staffUnitCode);
                 })
             : instructorsData;
-        const traineesInBuild = traineesData;
+        const traineesInBuild = traineesForBuildScope;
+        if (activeOperationalModel === 'flight_school') {
+            const scopedLmpEntries = Array.from(buildTraineeLMPs.entries())
+                .filter(([traineeName]) => traineeNamesForBuildScope.has(String(traineeName || '').trim()));
+            if (scopedLmpEntries.length !== buildTraineeLMPs.size) {
+                console.log('[NEO-Build] Scoped Flight School Individual LMPs to active build trainees:', {
+                    before: buildTraineeLMPs.size,
+                    after: scopedLmpEntries.length,
+                    activeContextUnitCodes,
+                    activeCourses: Array.from(activeScopedCourseNames),
+                });
+                buildTraineeLMPs = new Map(scopedLmpEntries);
+            }
+        }
         const storedRemedialRequestsForBuild = loadStoredRemedialRequests();
         const remedialRequestsForBuild = remedialRequests.length > 0 ? remedialRequests : storedRemedialRequestsForBuild;
         console.log('🔍 [NEO BUILD CONFIG DEBUG] Data source settings:', dataSourceSettings);
