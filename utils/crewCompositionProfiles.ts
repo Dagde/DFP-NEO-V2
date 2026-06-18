@@ -8,6 +8,7 @@ export interface CrewCompositionRoleRequirement {
 export interface AlternateCrewCompositionProfile {
   id: string;
   code: string;
+  aircraftTypeCode: string;
   name: string;
   description?: string;
   operationalModels: OperationalModelCode[];
@@ -19,7 +20,7 @@ export interface CrewCompositionSettings {
   alternateCompositions: AlternateCrewCompositionProfile[];
 }
 
-const SUPPORTED_MODELS: OperationalModelCode[] = ['fixed_crew', 'air_mobility'];
+const SUPPORTED_MODELS: OperationalModelCode[] = ['air_combat', 'fixed_crew', 'air_mobility'];
 
 const normaliseCode = (value: unknown, fallback: string): string => {
   const token = String(value || '')
@@ -70,6 +71,7 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
     return {
       id: String(row?.id || `alternate-crew-${index + 1}`),
       code,
+      aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
       name: String(row?.name || code).trim() || code,
       description: String(row?.description || '').trim(),
       operationalModels: operationalModels.length > 0 ? operationalModels : SUPPORTED_MODELS,

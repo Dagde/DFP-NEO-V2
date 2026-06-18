@@ -190,6 +190,7 @@ type SettingsSection =
     | 'location'
     | 'units'
     | 'organisation'
+    | 'crew-composition'
     | 'platform-configuration'
     | 'appearance'
     | 'emergency';
@@ -200,7 +201,6 @@ const platformConfigurationSections = [
     'platform-units',
     'platform-task-profiles',
     'platform-master-lmp-access',
-    'platform-crew-composition',
     'platform-resource-pools',
     'platform-unit-modules',
     'platform-deployment-readiness',
@@ -222,7 +222,6 @@ const platformSectionTargets: Record<'platform-configuration' | PlatformConfigur
     'platform-units': 'platform-units',
     'platform-task-profiles': 'platform-task-profiles',
     'platform-master-lmp-access': 'platform-master-lmp-access',
-    'platform-crew-composition': 'platform-crew-composition',
     'platform-resource-pools': 'platform-resource-pools',
     'platform-unit-modules': 'platform-unit-modules',
     'platform-deployment-readiness': 'platform-deployment-readiness',
@@ -263,13 +262,13 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'location': 'Location',
     'units': 'Units',
     'organisation': 'Resource Sharing',
+    'crew-composition': 'Crew Composition',
     'platform-configuration': 'Platform Configuration',
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',
     'platform-units': 'Units & Ownership',
     'platform-task-profiles': 'Task Profiles',
     'platform-master-lmp-access': 'Master LMP Access',
-    'platform-crew-composition': 'Crew Composition',
     'platform-resource-pools': 'Aircraft & Resource Pools',
     'platform-unit-modules': 'Unit Features & Modules',
     'platform-deployment-readiness': 'Deployment Readiness',
@@ -497,6 +496,7 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
       <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/>
     </svg>
   ),
+  'crew-composition': platformConfigurationIcon,
   'platform-configuration': platformConfigurationIcon,
   'platform-configuration-health': platformConfigurationIcon,
   'platform-organisation-locations': platformConfigurationIcon,
@@ -558,13 +558,13 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'location': 'Manage base locations',
   'units': 'Configure unit settings',
   'organisation': 'Fleet sharing and multi-unit configuration',
+  'crew-composition': 'Aircraft-specific crew roles and composition profiles',
   'platform-configuration': 'Commercial hierarchy, modules, resource pools and rule sets',
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
   'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
   'platform-units': 'Unit type, base ownership and operating status',
   'platform-task-profiles': 'Model-specific tasking lists for Directed Events',
   'platform-master-lmp-access': 'Location and unit access to Master LMPs',
-  'platform-crew-composition': 'Crew roles and task-specific composition profiles',
   'platform-resource-pools': 'Aircraft types, shared pools and resource counts',
   'platform-unit-modules': 'Enable features and modules for each unit',
   'platform-deployment-readiness': 'SaaS, on-premise, offline and hybrid deployment posture',
@@ -617,13 +617,13 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'location':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'units':             'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'organisation':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'crew-composition':  'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-configuration': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-configuration-health': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-organisation-locations': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-units': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-task-profiles': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-master-lmp-access': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
-  'platform-crew-composition': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-resource-pools': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-unit-modules': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-deployment-readiness': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
@@ -659,7 +659,6 @@ const sectionGroups: {
         'platform-units',
         'platform-task-profiles',
         'platform-master-lmp-access',
-        'platform-crew-composition',
         'platform-resource-pools',
         'platform-unit-modules',
         'platform-deployment-readiness',
@@ -668,6 +667,16 @@ const sectionGroups: {
         'organisation',
         'locale-settings',
         'appearance',
+    ],
+  },
+  {
+    label: 'Crew Composition',
+    shortLabel: 'Crew',
+    description: 'Aircraft-specific crew roles, standard crew makeup and alternate tasking compositions.',
+    accent: 'cyan',
+    defaultSection: 'crew-composition',
+    sections: [
+        'crew-composition',
     ],
   },
   {
@@ -1728,11 +1737,24 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         />
                     )}
 
+                    {activeSection === 'crew-composition' && (
+                        <PlatformConfigurationSettings
+                            currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
+                            scrollTarget="platform-crew-composition"
+                            sectionOnly={true}
+                            canUsePlatformPermission={props.canUsePlatformPermission}
+                            activeUnitCode={props.activeUnitCode}
+                            phraseBank={props.phraseBank}
+                        />
+                    )}
+
                     {/* All other sections rendered via SettingsView */}
                     {activeSection !== 'scoring-matrix' &&
                      activeSection !== 'locale-settings' &&
                      activeSection !== 'scheduling-rules' &&
                      activeSection !== 'training-report-template' &&
+                     activeSection !== 'crew-composition' &&
                      activeSection !== 'user-list' &&
                      activeSection !== 'staff-database' &&
                      activeSection !== 'staff-mockdata' &&

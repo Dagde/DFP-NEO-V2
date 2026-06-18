@@ -1000,6 +1000,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
+  const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = useState('');
@@ -1635,17 +1636,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
-  const addAlternateCrewComposition = () => {
-    const name = `Alternate Crew ${crewCompositionSettings.alternateCompositions.length + 1}`;
+  const addAlternateCrewComposition = (aircraftTypeCode: string) => {
+    const aircraftProfiles = crewCompositionSettings.alternateCompositions.filter((profile) => (
+      String(profile.aircraftTypeCode || '').trim().toUpperCase() === aircraftTypeCode.trim().toUpperCase()
+    ));
+    const name = `Alternate Crew ${aircraftProfiles.length + 1}`;
     const role = crewPositionTerminology.positions[0]?.genericName || DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats[0]?.role || 'Crew';
     updateCrewCompositionSettings([
       ...crewCompositionSettings.alternateCompositions,
       {
         id: createClientRecordId('alternate-crew'),
-        code: createAlternateCrewCompositionCode(crewCompositionSettings.alternateCompositions, name),
+        code: createAlternateCrewCompositionCode(aircraftProfiles, name),
+        aircraftTypeCode: aircraftTypeCode.trim().toUpperCase(),
         name,
         description: '',
-        operationalModels: ['fixed_crew', 'air_mobility'],
+        operationalModels: ['air_combat', 'fixed_crew', 'air_mobility'],
         roleRequirements: [{ role, count: 1 }],
         status: 'ACTIVE',
       },
@@ -2951,6 +2956,28 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourceSectionPanelTitleClass = 'text-xs font-black uppercase tracking-wide text-gray-300';
   const resourceSectionPanelHintClass = 'text-[11px] leading-relaxed text-gray-500';
   const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
+  const crewCompositionAircraftTypes = config.aircraftTypes.length > 0
+    ? config.aircraftTypes
+    : [{ code: 'AIRCRAFT', name: 'Aircraft', crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION }];
+  const activeCrewCompositionAircraftIndex = Math.max(
+    0,
+    crewCompositionAircraftTypes.findIndex((aircraft) => String(aircraft.code || '').trim().toUpperCase() === crewCompositionAircraftCode.trim().toUpperCase()),
+  );
+  const activeCrewCompositionAircraft = crewCompositionAircraftTypes[activeCrewCompositionAircraftIndex] || crewCompositionAircraftTypes[0];
+  const activeCrewCompositionAircraftCode = String(activeCrewCompositionAircraft?.code || '').trim().toUpperCase();
+  const activeCrewComposition = normaliseAircraftCrewComposition(activeCrewCompositionAircraft?.crewComposition);
+  const activeCrewRoleKeys = new Set(
+    activeCrewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)).map((role) => role.toUpperCase()),
+  );
+  const activeCrewPositionEntries = crewPositionTerminology.positions.filter((entry) => (
+    activeCrewRoleKeys.has(entry.genericName.toUpperCase())
+  ));
+  const visibleCrewPositionEntries = activeCrewPositionEntries.length > 0
+    ? activeCrewPositionEntries
+    : crewPositionTerminology.positions;
+  const activeAircraftAlternateCompositions = crewCompositionSettings.alternateCompositions.filter((profile) => (
+    String(profile.aircraftTypeCode || '').trim().toUpperCase() === activeCrewCompositionAircraftCode
+  ));
 
   return (
     <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>
@@ -3404,7 +3431,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-crew-composition" className={getSectionClass('platform-crew-composition')}>
         <SectionHeader
           title="Crew Composition"
-          subtitle="Crew role labels and standard or alternate crew makeups for Fixed Crew and Air Mobility scheduling."
+          subtitle="Aircraft-specific role labels, standard crew and alternate tasking crew makeups for Air Combat, Fixed Crew and Air Mobility."
           action={canEdit ? (
             <div className="flex gap-2">
               {crewCompositionUnlocked ? (
@@ -3419,21 +3446,43 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : null}
         />
         <div className="space-y-4 p-4">
+          <div className="flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
+            {crewCompositionAircraftTypes.map((aircraft) => {
+              const code = String(aircraft.code || '').trim().toUpperCase();
+              const isActive = code === activeCrewCompositionAircraftCode;
+              return (
+                <button
+                  key={`crew-composition-aircraft-tab-${code || aircraft.name}`}
+                  type="button"
+                  onClick={() => setCrewCompositionAircraftCode(code)}
+                  className={`rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${
+                    isActive
+                      ? 'border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]'
+                      : 'border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                  }`}
+                >
+                  <span className="block">{code || 'Aircraft'}</span>
+                  <span className="mt-0.5 block max-w-[180px] truncate text-[10px] font-semibold normal-case tracking-normal text-gray-500">{aircraft.name || 'Unnamed aircraft type'}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="grid gap-3 md:grid-cols-3">
             <div className={`rounded-lg border px-3 py-2 ${crewCompositionUnlocked ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-gray-700 bg-gray-950/60'}`}>
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Edit State</div>
               <div className={`mt-1 text-sm font-bold ${crewCompositionUnlocked ? 'text-cyan-100' : 'text-gray-200'}`}>{crewCompositionUnlocked ? 'Editing active' : 'Locked'}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">This page edits scheduler role keys, standard aircraft seats and alternate crew profiles.</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Selected aircraft: {activeCrewCompositionAircraftCode || 'Aircraft'}.</div>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Standard Role Labels</div>
-              <div className="mt-1 text-lg font-black text-cyan-100">{crewPositionTerminology.positions.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Generic keys with organisation display labels.</div>
+              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Aircraft Roles</div>
+              <div className="mt-1 text-lg font-black text-cyan-100">{visibleCrewPositionEntries.length}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Roles currently relevant to this aircraft tab.</div>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Alternate Profiles</div>
-              <div className="mt-1 text-lg font-black text-orange-100">{crewCompositionSettings.alternateCompositions.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Stable codes for variable tasking crew makeups.</div>
+              <div className="mt-1 text-lg font-black text-orange-100">{activeAircraftAlternateCompositions.length}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Profiles for {activeCrewCompositionAircraftCode || 'this aircraft'} only.</div>
             </div>
           </div>
 
@@ -3441,12 +3490,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Crew Position Labels / Roles</h4>
-                <p className={resourceSectionPanelHintClass}>Generic positions are the scheduler-facing role keys. Organisation labels are the words users see.</p>
+                <p className={resourceSectionPanelHintClass}>These are the role keys currently used by {activeCrewCompositionAircraftCode || 'this aircraft'}. Model applicability now includes Air Combat, Fixed Crew and Air Mobility.</p>
               </div>
               <button type="button" onClick={addCrewPositionEntry} disabled={!canEditCrewComposition} className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">Add Position</button>
             </div>
             <div className="space-y-3">
-              {crewPositionTerminology.positions.map((entry) => {
+              {visibleCrewPositionEntries.map((entry) => {
                 const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
                 return (
                   <div key={`crew-role-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_auto]">
@@ -3454,8 +3503,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <Field label="Organisation Label" value={entry.label} disabled={!canEditCrewComposition} onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })} />
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400">Applies To</label>
-                      <div className="grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2">
-                        {OPERATIONAL_MODEL_OPTIONS.filter((option) => option.value === 'fixed_crew' || option.value === 'air_mobility').map((option) => {
+                      <div className="grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-3">
+                        {OPERATIONAL_MODEL_OPTIONS.filter((option) => option.value === 'air_combat' || option.value === 'fixed_crew' || option.value === 'air_mobility').map((option) => {
                           const selectedModels = entry.operationalModels?.length ? entry.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
                           const isSelected = selectedModels.includes(option.value);
                           return (
@@ -3491,56 +3540,49 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Standard Crew Composition</h4>
-                <p className={resourceSectionPanelHintClass}>Standard composition is stored against aircraft type so resource pools and scheduling use the same role rules.</p>
+                <p className={resourceSectionPanelHintClass}>This standard composition is stored against {activeCrewCompositionAircraftCode || 'the selected aircraft type'}.</p>
               </div>
             </div>
-            <div className="space-y-3">
-              {config.aircraftTypes.map((aircraft, index) => {
-                const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
-                const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, crewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)));
-                return (
-                  <div key={`standard-crew-${aircraft.id || index}`} className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
-                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-black text-white">{aircraft.code || 'NEW'} <span className="text-gray-400">{aircraft.name || 'Unnamed aircraft type'}</span></div>
-                        <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">{aircraft.category || 'Training'} aircraft</div>
+            <div className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-black text-white">{activeCrewCompositionAircraftCode || 'AIRCRAFT'} <span className="text-gray-400">{activeCrewCompositionAircraft?.name || 'Unnamed aircraft type'}</span></div>
+                  <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">{activeCrewCompositionAircraft?.category || 'Training'} aircraft</div>
+                </div>
+                <div className="w-32">
+                  <NumberField label="Crew Seats" value={activeCrewComposition.crewCount} disabled={!canEditCrewComposition} onChange={(value) => updateAircraftCrewCount(activeCrewCompositionAircraftIndex, value)} />
+                </div>
+              </div>
+              <div className="grid gap-2 lg:grid-cols-2">
+                {activeCrewComposition.seats.map((seat, seatIndex) => {
+                  const eligibleRoles = getAircraftSeatEligibleRoles(seat);
+                  const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
+                  return (
+                    <div key={seat.id || `standard-crew-seat-${seatIndex}`} className="rounded-lg border border-gray-800 bg-gray-950/70 p-2">
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-black uppercase tracking-wide text-orange-100">Seat {seatIndex + 1}</div>
+                          <div className="text-[11px] text-gray-500">Allowed role set for this seat.</div>
+                        </div>
+                        <div className="w-40">
+                          <SelectField label="Default" value={seat.role} disabled={!canEditCrewComposition} options={eligibleRoles} optionLabels={crewPositionLabelMap} onChange={(value) => updateAircraftSeatRole(activeCrewCompositionAircraftIndex, seatIndex, value)} />
+                        </div>
                       </div>
-                      <div className="w-32">
-                        <NumberField label="Crew Seats" value={crewComposition.crewCount} disabled={!canEditCrewComposition} onChange={(value) => updateAircraftCrewCount(index, value)} />
+                      <div className="grid gap-1 sm:grid-cols-2">
+                        {crewPositionOptions.map((role) => {
+                          const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                          return (
+                            <label key={role} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-semibold ${checked ? 'border-orange-300/35 bg-orange-500/10 text-orange-100' : 'border-gray-800 bg-gray-900/70 text-gray-300'}`}>
+                              <input type="checkbox" className="h-4 w-4 rounded border-gray-500 accent-orange-400" checked={checked} disabled={!canEditCrewComposition || (checked && eligibleRoles.length <= 1)} onChange={(event) => updateAircraftSeatEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, role, event.target.checked)} />
+                              <span>{crewPositionLabelMap[role] || role}</span>
+                            </label>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div className="grid gap-2 lg:grid-cols-2">
-                      {crewComposition.seats.map((seat, seatIndex) => {
-                        const eligibleRoles = getAircraftSeatEligibleRoles(seat);
-                        return (
-                          <div key={seat.id || `standard-crew-seat-${seatIndex}`} className="rounded-lg border border-gray-800 bg-gray-950/70 p-2">
-                            <div className="mb-2 flex items-start justify-between gap-2">
-                              <div>
-                                <div className="text-xs font-black uppercase tracking-wide text-orange-100">Seat {seatIndex + 1}</div>
-                                <div className="text-[11px] text-gray-500">Allowed role set for this seat.</div>
-                              </div>
-                              <div className="w-40">
-                                <SelectField label="Default" value={seat.role} disabled={!canEditCrewComposition} options={eligibleRoles} optionLabels={crewPositionLabelMap} onChange={(value) => updateAircraftSeatRole(index, seatIndex, value)} />
-                              </div>
-                            </div>
-                            <div className="grid gap-1 sm:grid-cols-2">
-                              {crewPositionOptions.map((role) => {
-                                const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
-                                return (
-                                  <label key={role} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-semibold ${checked ? 'border-orange-300/35 bg-orange-500/10 text-orange-100' : 'border-gray-800 bg-gray-900/70 text-gray-300'}`}>
-                                    <input type="checkbox" className="h-4 w-4 rounded border-gray-500 accent-orange-400" checked={checked} disabled={!canEditCrewComposition || (checked && eligibleRoles.length <= 1)} onChange={(event) => updateAircraftSeatEligibleRole(index, seatIndex, role, event.target.checked)} />
-                                    <span>{crewPositionLabelMap[role] || role}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -3548,14 +3590,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Alternate Crew Composition</h4>
-                <p className={resourceSectionPanelHintClass}>Alternate profiles support quick selection of task-specific crew makeups. Codes are stable scheduler references.</p>
+                <p className={resourceSectionPanelHintClass}>Alternate profiles shown here are only for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
-              <button type="button" onClick={addAlternateCrewComposition} disabled={!canEditCrewComposition} className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">Add Alternate</button>
+              <button type="button" onClick={() => addAlternateCrewComposition(activeCrewCompositionAircraftCode)} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">Add Alternate</button>
             </div>
             <div className="space-y-3">
-              {crewCompositionSettings.alternateCompositions.length === 0 ? (
+              {activeAircraftAlternateCompositions.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No alternate crew compositions configured.</div>
-              ) : crewCompositionSettings.alternateCompositions.map((profile) => (
+              ) : activeAircraftAlternateCompositions.map((profile) => (
                 <div key={profile.id} className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
                   <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]">
                     <Field label="Stable Code" value={profile.code} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { code: value })} info="Scheduler-facing reference. Keep it stable once tasking starts using it." />
