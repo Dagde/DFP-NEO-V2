@@ -56087,7 +56087,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Display Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { name: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Description", value: profile.description || "", disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { description: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start pt-[41px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-800 bg-gray-950/70 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
@@ -58358,7 +58358,7 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }) => /* @__P
 ] });
 const OffsetField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
     "input",
     {
       className: fieldClass,
