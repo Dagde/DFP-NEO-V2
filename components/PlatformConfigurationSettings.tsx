@@ -3615,12 +3615,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       onChange={(value) => updateAlternateCrewComposition(profile.id, { code: value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) })}
                       info="This is the three-letter code the app can use to recognise this alternate crew. The display name can change, but keep this short code the same once the crew type is being used."
                     />
-                    <div className="pt-7">
-                      <Field label="Display Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { name: value })} />
-                    </div>
-                    <div className="pt-7">
-                      <Field label="Description" value={profile.description || ''} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { description: value })} />
-                    </div>
+                    <OffsetField label="Display Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { name: value })} />
+                    <OffsetField label="Description" value={profile.description || ''} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { description: value })} />
                     <div className="flex items-end">
                       <button type="button" onClick={() => removeAlternateCrewComposition(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
                         <span className="text-[9px] leading-tight text-red-600">Delete</span>
@@ -5912,6 +5908,21 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: s
         {(value || '').length}/{maxLength}
       </span>
     ) : null}
+  </label>
+);
+
+const OffsetField = ({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) => (
+  <label>
+    <FieldLabel label={label} />
+    <div className="mt-5">
+      <input
+        className={fieldClass}
+        value={value || ''}
+        disabled={disabled}
+        onKeyDownCapture={stopEditableKeyPropagation}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
   </label>
 );
 
