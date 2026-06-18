@@ -116,6 +116,12 @@ import {
     resolveFixedCrewTileColour,
     type FixedCrewTileColourMode,
 } from './utils/fixedCrewTileColours';
+import {
+    DEFAULT_DISPATCH_STAGGER_SETTINGS,
+    getEffectiveDispatchStaggerMinutes,
+    normaliseDispatchStaggerSettings,
+    type DispatchStaggerSettings,
+} from './utils/dispatchStagger';
 import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
@@ -4342,6 +4348,7 @@ interface DfpConfig {
   preferredDutyPeriod: number;
   maxCrewDutyPeriod: number;
   maxDispatchPerHour?: number;
+  dispatchStaggerSettings?: DispatchStaggerSettings;
   eventLimits: EventLimits;
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
@@ -5409,6 +5416,7 @@ function generateDfpInternal(
         highestPriorityEvents, instructorPriority, traineeLMPs, flightTurnaround,
         ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
         maxDispatchPerHour = 8,
+        dispatchStaggerSettings: rawDispatchStaggerSettings,
         eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
         flyingWindowExclusions = [],
         getEventDayNightClassification,
@@ -5427,6 +5435,35 @@ function generateDfpInternal(
     const commenceNightFlying = normaliseBuildWindowStart(rawCommenceNightFlying);
     const ceaseNightFlying = normaliseBuildWindowEnd(commenceNightFlying, rawCeaseNightFlying);
     const hourlyDispatchLimit = Math.max(1, Math.floor(Number(maxDispatchPerHour) || 8));
+    const dispatchStaggerSettings = normaliseDispatchStaggerSettings(rawDispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS);
+    const flightDispatchStaggerMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, 'flight');
+    const simulatorDispatchStaggerMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, 'ftd');
+    const hasDispatchStaggerConflict = (
+        eventType: string | undefined | null,
+        startTime: number,
+        events: Array<ScheduleEvent | Omit<ScheduleEvent, 'date'>>,
+        options: { allowSameFormationTakeoff?: boolean; formationGroupId?: string } = {}
+    ): boolean => {
+        const minMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, eventType);
+        if (minMinutes <= 0) return false;
+        const type = String(eventType || '').trim().toLowerCase();
+        const isSimulator = type === 'ftd' || type === 'sim' || type === 'simulator' || type === 'cpt';
+        return events.some(event => {
+            if (event.isCancelled) return false;
+            if (isStbyResource(event.resourceId)) return false;
+            const existingType = String(event.type || '').trim().toLowerCase();
+            const existingIsSimulator = existingType === 'ftd' || existingType === 'sim' || existingType === 'simulator' || existingType === 'cpt';
+            if (type === 'flight') {
+                if (existingType !== 'flight') return false;
+                if (options.allowSameFormationTakeoff && options.formationGroupId && event.formationId === options.formationGroupId) return false;
+            } else if (isSimulator) {
+                if (!existingIsSimulator) return false;
+            } else {
+                return false;
+            }
+            return Math.abs((event.startTime - startTime) * 60) < minMinutes - 0.001;
+        });
+    };
     const windowNormalisationWarnings = [
         rawFlyingEndTime <= rawFlyingStartTime ? `Day flying window wraps or is invalid (${rawFlyingStartTime} -> ${rawFlyingEndTime}); build uses ${flyingStartTime} -> ${flyingEndTime}.` : null,
         rawFtdEndTime <= rawFtdStartTime ? `${ftdResourceLabel} window wraps or is invalid (${rawFtdStartTime} -> ${rawFtdEndTime}); build uses ${ftdStartTime} -> ${ftdEndTime}.` : null,
@@ -5958,6 +5995,11 @@ function generateDfpInternal(
                 highestPriorityEvents: highestPriorityEvents.length,
                 syllabusItems: syllabusDetails.length,
                 generatedEventsAtBuildStart: generatedEvents.length,
+                dispatchStagger: {
+                    settings: dispatchStaggerSettings,
+                    effectiveFlightMinutes: flightDispatchStaggerMinutes,
+                    effectiveSimulatorMinutes: simulatorDispatchStaggerMinutes,
+                },
             },
             stageTrace: [{
                 stage: 'build-start-preflight',
@@ -5985,6 +6027,11 @@ function generateDfpInternal(
                 syllabusItems: syllabusDetails.length,
                 highestPriorityEvents: highestPriorityEvents.length,
                 generatedEventsAtBuildStart: generatedEvents.length,
+                dispatchStagger: {
+                    settings: dispatchStaggerSettings,
+                    effectiveFlightMinutes: flightDispatchStaggerMinutes,
+                    effectiveSimulatorMinutes: simulatorDispatchStaggerMinutes,
+                },
             },
             crewGroups: [] as any[],
             queueSourceAudit: null,
@@ -7034,6 +7081,31 @@ function generateDfpInternal(
                             pushFixedCrewAttempt({ event: candidate.flightNumber, source, startTime, resourceId, outcome: 'rejected', ...dispatchViolation });
                             continue;
                         }
+                        if (hasDispatchStaggerConflict('flight', candidate.startTime, generatedEvents)) {
+                            incrementFixedCrewRejection('TAKEOFF_SEPARATION_VIOLATION');
+                            pushFixedCrewAttempt({
+                                event: candidate.flightNumber,
+                                source,
+                                startTime,
+                                resourceId,
+                                outcome: 'rejected',
+                                reason: 'TAKEOFF_SEPARATION_VIOLATION',
+                                configuredStaggerMinutes: flightDispatchStaggerMinutes,
+                            });
+                            continue;
+                        }
+                    } else if (hasDispatchStaggerConflict(candidate.type, candidate.startTime, generatedEvents)) {
+                        incrementFixedCrewRejection('SIMULATOR_STAGGER_VIOLATION');
+                        pushFixedCrewAttempt({
+                            event: candidate.flightNumber,
+                            source,
+                            startTime,
+                            resourceId,
+                            outcome: 'rejected',
+                            reason: 'SIMULATOR_STAGGER_VIOLATION',
+                            configuredStaggerMinutes: simulatorDispatchStaggerMinutes,
+                        });
+                        continue;
                     }
                     fixedCrewPerf.counters.resourceConflictChecks += 1;
                     const resourceConflictStart = fixedCrewPerfNow();
@@ -7836,6 +7908,20 @@ function generateDfpInternal(
                     aircraftConfigId: event.type === 'flight' ? getAircraftConfigIdForResource(resourceId) : event.aircraftConfigId,
                     acceptableAircraftConfigs: event.type === 'flight' ? normaliseAircraftConfigRequirement(event) : event.acceptableAircraftConfigs,
                 };
+                if (hasDispatchStaggerConflict(candidate.type, startTime, generatedEvents)) {
+                    traceMandatoryRemedial('placementTrace', {
+                        phase: 'fixed-priority-placement',
+                        trainee: candidate.student || candidate.pilot || '',
+                        event: candidate.flightNumber,
+                        startTime,
+                        displayTime: formatDecimalHourToString(startTime),
+                        resourceId,
+                        outcome: 'rejected',
+                        conflictReason: candidate.type === 'flight' ? 'TAKEOFF_SEPARATION_VIOLATION' : 'SIMULATOR_STAGGER_VIOLATION',
+                        configuredStaggerMinutes: getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, candidate.type),
+                    });
+                    continue;
+                }
                 const remedialInstructor = getRemedialInstructorOverride(candidate.student || candidate.pilot || '', candidate.flightNumber);
                 const ignoredInstructorConflicts: string[] = [];
                 let conflictReason = '';
@@ -10487,20 +10573,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return traceScheduleReject('HOURLY_DISPATCH_LIMIT', { takeoffsInLastHour, limit: hourlyDispatchLimit });
             }
 
-            // All flights (including solo) must respect the 5-minute takeoff separation rule.
+            // All flights (including solo) must respect the configured dispatch stagger.
             // Solo flights depart the same runway and must observe the same spacing as dual flights.
-            const takeoffConflict = nonStbyFlights.some(e => {
-                if (e.type !== 'flight') return false;
-                if (options.allowSameFormationTakeoff && options.formationGroupId && e.formationId === options.formationGroupId) return false;
-                const diffHours = Math.abs(e.startTime - startTime);
-                const diffMinutes = Math.round(diffHours * 60);
-                const isNightCheck = isNightPass && e.flightNumber.startsWith('BNF');
-                const minSeparation = isNightCheck ? 5 : 5;
-                return diffMinutes < minSeparation;
+            const takeoffConflict = hasDispatchStaggerConflict('flight', startTime, nonStbyFlights, {
+                allowSameFormationTakeoff: options.allowSameFormationTakeoff,
+                formationGroupId: options.formationGroupId,
             });
             if (takeoffConflict) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TAKEOFF_SEPARATION_VIOLATION');
-                return traceScheduleReject('TAKEOFF_SEPARATION_VIOLATION');
+                return traceScheduleReject('TAKEOFF_SEPARATION_VIOLATION', {
+                    configuredStaggerMinutes: flightDispatchStaggerMinutes,
+                });
             }
         }
 
@@ -10518,6 +10601,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (startTime + syllabusItem.duration > ftdEndTime) {
                 return traceScheduleReject('FTD_WINDOW_VIOLATION', { eventEnd: startTime + syllabusItem.duration, ftdEndTime });
             }
+        }
+
+        if ((type === 'ftd' || type === 'cpt') && hasDispatchStaggerConflict(type, startTime, generatedEvents)) {
+            return traceScheduleReject('SIMULATOR_STAGGER_VIOLATION', {
+                configuredStaggerMinutes: simulatorDispatchStaggerMinutes,
+            });
         }
 
         const result = {
@@ -11151,14 +11240,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return 'No event scheduled because the hourly aircraft dispatch limit would be exceeded.';
             case 'TAKEOFF_SEPARATION_VIOLATION':
                 return 'No event scheduled because takeoff spacing/turnaround rules would be violated.';
+            case 'SIMULATOR_STAGGER_VIOLATION':
+                return 'No event scheduled because the configured simulator dispatch stagger would be violated.';
             case 'AIRCRAFT_CONFIG_INCOMPATIBLE':
                 return `No event scheduled because the aircraft configuration did not match the event requirement${entry.required ? ` (${entry.required.join(', ')})` : ''}.`;
             case 'FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX':
                 return 'No fallback event was scheduled because doing so would exceed the directed course/training-package priority mix.';
             case 'NO_VALID_FORMATION_SLOT_IN_WINDOW':
-                return 'No event scheduled because every 5-minute formation start time in the flying window was blocked by crew, aircraft, duty, formation, or spacing constraints.';
+                return 'No event scheduled because every checked formation start time in the flying window was blocked by crew, aircraft, duty, formation, or configured spacing constraints.';
             case 'NO_VALID_SLOT_IN_WINDOW':
-                return 'No event scheduled because every 5-minute start time in the valid window was blocked by aircraft, personnel, duty, or spacing constraints.';
+                return 'No event scheduled because every checked start time in the valid window was blocked by aircraft, personnel, duty, or configured spacing constraints.';
             case 'NO_RESOURCE_AVAILABLE':
                 return 'No event scheduled because no suitable aircraft, simulator, CPT, or ground resource was available at that time.';
             default:
@@ -11847,6 +11938,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         _isNext: true,
                         _traineeName: '',
                     };
+                    if (hasDispatchStaggerConflict(candidate.type, roundedTime, generatedEvents)) {
+                        const reason = candidate.type === 'flight' ? 'TAKEOFF_SEPARATION_VIOLATION' : 'SIMULATOR_STAGGER_VIOLATION';
+                        if (attemptSummary.length < 12) {
+                            attemptSummary.push({
+                                time: roundedTime,
+                                displayTime: _fmtT(roundedTime),
+                                resourceId,
+                                outcome: 'rejected',
+                                reason,
+                                configuredStaggerMinutes: getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, candidate.type),
+                            });
+                        }
+                        if (isAirCombatBuild) countAirCombatRejection(reason);
+                        continue;
+                    }
                     const resourceConflict = generatedEvents.find(existing => priorityResourceConflict(candidate, existing));
                     if (resourceConflict) {
                         if (attemptSummary.length < 12) {
@@ -12574,6 +12680,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     continue;
                 }
                 const candidate = { startTime, duration: item.duration, resourceId, flightNumber: item.code, type } as ScheduleEvent;
+                if (hasDispatchStaggerConflict(type, startTime, generatedEvents)) {
+                    pushAirCombatDiag('resourceChecks', {
+                        event: item.code,
+                        type,
+                        startTime,
+                        resourceId,
+                        reason: type === 'flight' ? 'TAKEOFF_SEPARATION_VIOLATION' : 'SIMULATOR_STAGGER_VIOLATION',
+                        configuredStaggerMinutes: getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, type),
+                    }, 800);
+                    countAirCombatRejection(type === 'flight' ? 'TAKEOFF_SEPARATION_VIOLATION' : 'SIMULATOR_STAGGER_VIOLATION');
+                    continue;
+                }
                 const resourceConflict = generatedEvents.find(existing => priorityResourceConflict(candidate, existing));
                 if (resourceConflict) {
                     pushAirCombatDiag('resourceChecks', {
@@ -12604,11 +12722,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return null;
         };
         const hasAirCombatNonFormationTakeoffConflict = (startTime: number): boolean =>
-            generatedEvents.some(event => {
-                if (event.type !== 'flight') return false;
-                if (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY')) return false;
-                return Math.round(Math.abs(event.startTime - startTime) * 60) < 5;
-            });
+            hasDispatchStaggerConflict('flight', startTime, generatedEvents);
         const normaliseFormationContextToken = (value?: string | null): string =>
             String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         const expandFormationLocationAliases = (value?: string | null): string[] => {
@@ -14508,11 +14622,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         ).length;
 
     const hasNonFormationTakeoffConflict = (startTime: number): boolean =>
-        generatedEvents.some(event => {
-            if (event.type !== 'flight') return false;
-            if (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY')) return false;
-            return Math.round(Math.abs(event.startTime - startTime) * 60) < 5;
-        });
+        hasDispatchStaggerConflict('flight', startTime, generatedEvents);
 
     const getFallbackFormationCallsignBase = (leadEvent: Omit<ScheduleEvent, 'date'>): string => {
         const instructorCallsign = instructors.find(ip => ip.name === leadEvent.instructor)?.callsign || '';
@@ -20645,6 +20755,7 @@ const App: React.FC = () => {
     const [preferredDutyPeriod, setPreferredDutyPeriod] = useState(8);
     const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = useState(10);
     const [maxDispatchPerHour, setMaxDispatchPerHour] = useState(8);
+    const [dispatchStaggerSettings, setDispatchStaggerSettings] = useState<DispatchStaggerSettings>(DEFAULT_DISPATCH_STAGGER_SETTINGS);
     const [flightTurnaround, setFlightTurnaround] = useState(1.2);
     const [ftdTurnaround, setFtdTurnaround] = useState(0.5);
     const [cptTurnaround, setCptTurnaround] = useState(0.5);
@@ -21515,6 +21626,7 @@ const App: React.FC = () => {
                 if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
                 if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
                 if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
+                if ((saved as any).dispatchStaggerSettings) setDispatchStaggerSettings(normaliseDispatchStaggerSettings((saved as any).dispatchStaggerSettings));
                 if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
                 if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
                 if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
@@ -21711,6 +21823,7 @@ const App: React.FC = () => {
             preferredDutyPeriod,
             maxCrewDutyPeriod,
             maxDispatchPerHour,
+            dispatchStaggerSettings,
             flightTurnaround,
             ftdTurnaround,
             cptTurnaround,
@@ -21755,7 +21868,7 @@ const App: React.FC = () => {
         settingsLoaded,
         locations, locationAbbreviations, serviceDefinitions, units, unitLocations, locationOpAreas,
         eventLimits,
-        preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour,
+        preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour, dispatchStaggerSettings,
         flightTurnaround, ftdTurnaround, cptTurnaround,
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
@@ -27911,6 +28024,7 @@ const App: React.FC = () => {
             preferredDutyPeriod,
             maxCrewDutyPeriod,
             maxDispatchPerHour,
+            dispatchStaggerSettings,
             eventLimits,
             sctFtds: sctFtds,
             sctFlights: sctFlights,
@@ -28408,13 +28522,24 @@ const App: React.FC = () => {
             ).length;
         };
 
-        // Helper: check if a given time slot has a takeoff within 5 mins (separation violation)
-        const hasTakeoffSeparationConflict = (time: number): boolean => {
+        const hasPauseBuildDispatchStaggerConflict = (eventType: string, time: number): boolean => {
+            const minMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, eventType);
+            if (minMinutes <= 0) return false;
+            const type = String(eventType || '').trim().toLowerCase();
+            const isSimulator = type === 'ftd' || type === 'sim' || type === 'simulator' || type === 'cpt';
             return scheduledEvents.some(e => {
-                if (e.type !== 'flight' || e.isCancelled) return false;
+                if (e.isCancelled) return false;
                 if (e.resourceId.startsWith('STBY')) return false;
-                const diffMinutes = Math.abs(e.startTime - time) * 60;
-                return diffMinutes < 5;
+                const existingType = String(e.type || '').trim().toLowerCase();
+                const existingIsSimulator = existingType === 'ftd' || existingType === 'sim' || existingType === 'simulator' || existingType === 'cpt';
+                if (type === 'flight') {
+                    if (existingType !== 'flight') return false;
+                } else if (isSimulator) {
+                    if (!existingIsSimulator) return false;
+                } else {
+                    return false;
+                }
+                return Math.abs(e.startTime - time) * 60 < minMinutes - 0.001;
             });
         };
 
@@ -28593,6 +28718,11 @@ const App: React.FC = () => {
                         continue;
                     }
 
+                    if (hasPauseBuildDispatchStaggerConflict('ftd', slot)) {
+                        slot += slotStep;
+                        continue;
+                    }
+
                     if (personIsBusy(trainee.fullName, slot, slotEnd)) {
                         slot += slotStep;
                         continue;
@@ -28672,7 +28802,7 @@ const App: React.FC = () => {
                     continue;
                 }
 
-                if (hasTakeoffSeparationConflict(slot)) {
+                if (hasPauseBuildDispatchStaggerConflict('flight', slot)) {
                     slot += slotStep;
                     continue;
                 }
@@ -33730,6 +33860,8 @@ appliedUpdates.forEach(update => {
                     currentUserPermission={currentUserPermission}
                     maxDispatchPerHour={maxDispatchPerHour}
                     onUpdateMaxDispatchPerHour={setMaxDispatchPerHour}
+                    dispatchStaggerSettings={dispatchStaggerSettings}
+                    onUpdateDispatchStaggerSettings={(settings) => setDispatchStaggerSettings(normaliseDispatchStaggerSettings(settings))}
                     timezoneOffset={timezoneOffset}
                     onUpdateTimezoneOffset={setTimezoneOffset}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}

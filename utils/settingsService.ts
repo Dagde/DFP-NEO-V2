@@ -7,6 +7,7 @@
 import { getAppApiBase } from './externalDataControls';
 import { DEFAULT_TILE_STATUS_SETTINGS, normaliseTileStatusSettings, type TileStatusSettings } from './tileStatusSettings';
 import { normaliseFixedCrewTileColourModeByUnit, type FixedCrewTileColourMode } from './fixedCrewTileColours';
+import { DEFAULT_DISPATCH_STAGGER_SETTINGS, normaliseDispatchStaggerSettings, type DispatchStaggerSettings } from './dispatchStagger';
 import type { FlyingWindowExclusionPeriod } from '../types';
 
 export interface ServiceDefinition {
@@ -37,6 +38,7 @@ export interface AppSettingsData {
   preferredDutyPeriod: number;
   maxCrewDutyPeriod: number;
   maxDispatchPerHour: number;
+  dispatchStaggerSettings: DispatchStaggerSettings;
   flightTurnaround: number;
   ftdTurnaround: number;
   cptTurnaround: number;
@@ -308,6 +310,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     preferredDutyPeriod: state.preferredDutyPeriod ?? 8,
     maxCrewDutyPeriod: state.maxCrewDutyPeriod ?? 10,
     maxDispatchPerHour: state.maxDispatchPerHour ?? 8,
+    dispatchStaggerSettings: normaliseDispatchStaggerSettings(state.dispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS),
     flightTurnaround: state.flightTurnaround ?? 1.2,
     ftdTurnaround: state.ftdTurnaround ?? 0.5,
     cptTurnaround: state.cptTurnaround ?? 0.5,

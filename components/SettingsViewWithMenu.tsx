@@ -23,6 +23,7 @@ import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TileStatusSettings } from '../utils/tileStatusSettings';
 import type { FixedCrewTileColourMode } from '../utils/fixedCrewTileColours';
+import type { DispatchStaggerSettings } from '../utils/dispatchStagger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 interface SettingsViewWithMenuProps {
@@ -97,6 +98,8 @@ interface SettingsViewWithMenuProps {
     activeOperationalModel?: string;
     fixedCrewTileColourMode?: FixedCrewTileColourMode;
     onUpdateFixedCrewTileColourMode?: (mode: FixedCrewTileColourMode) => void;
+    dispatchStaggerSettings?: DispatchStaggerSettings;
+    onUpdateDispatchStaggerSettings?: (settings: DispatchStaggerSettings) => void;
     settingsLoaded?: boolean;
     organisationSettings?: {
         staffSharingEnabled: boolean;

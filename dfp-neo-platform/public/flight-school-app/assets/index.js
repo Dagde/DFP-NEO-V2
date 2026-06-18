@@ -1570,6 +1570,35 @@ const buildFixedCrewTileColourKey = (events, mode) => {
   const presentTypes = new Set(fixedCrewEvents.map(getFixedCrewEventTypeColourKey));
   return EVENT_TYPE_ORDER.filter((key) => key !== "other" || presentTypes.has("other")).filter((key) => key === "other" ? presentTypes.has("other") : true).map((key) => EVENT_TYPE_COLOURS[key]);
 };
+const DEFAULT_DISPATCH_STAGGER_SETTINGS = {
+  flightMinutes: 5,
+  simulatorMinutes: 0,
+  flightNoMinimum: false,
+  simulatorNoMinimum: true
+};
+const normaliseMinutes = (value, fallback) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return fallback;
+  return Math.min(120, Math.round(numeric));
+};
+const normaliseDispatchStaggerSettings = (settings) => {
+  const flightNoMinimum = Boolean(settings?.flightNoMinimum);
+  const simulatorNoMinimum = settings?.simulatorNoMinimum == null ? DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum : Boolean(settings.simulatorNoMinimum);
+  return {
+    flightMinutes: normaliseMinutes(settings?.flightMinutes, DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes),
+    simulatorMinutes: normaliseMinutes(settings?.simulatorMinutes, DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes),
+    flightNoMinimum,
+    simulatorNoMinimum
+  };
+};
+const getEffectiveDispatchStaggerMinutes = (settings, eventType) => {
+  const normalised = normaliseDispatchStaggerSettings(settings);
+  const type = String(eventType || "").trim().toLowerCase();
+  const isSimulator = type === "ftd" || type === "sim" || type === "simulator" || type === "cpt";
+  if (isSimulator) return normalised.simulatorNoMinimum ? 0 : normalised.simulatorMinutes;
+  if (type === "flight") return normalised.flightNoMinimum ? 0 : normalised.flightMinutes;
+  return 0;
+};
 const SETTINGS_VERSION = "1.0";
 const ORG_ID = "default";
 let saveDebounceTimer = null;
@@ -1689,6 +1718,7 @@ const buildSettingsSnapshot = (state) => {
     preferredDutyPeriod: state.preferredDutyPeriod ?? 8,
     maxCrewDutyPeriod: state.maxCrewDutyPeriod ?? 10,
     maxDispatchPerHour: state.maxDispatchPerHour ?? 8,
+    dispatchStaggerSettings: normaliseDispatchStaggerSettings(state.dispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS),
     flightTurnaround: state.flightTurnaround ?? 1.2,
     ftdTurnaround: state.ftdTurnaround ?? 0.5,
     cptTurnaround: state.cptTurnaround ?? 0.5,
@@ -46529,6 +46559,8 @@ const SettingsView = ({
   activeOperationalModel,
   maxDispatchPerHour,
   onUpdateMaxDispatchPerHour,
+  dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
+  onUpdateDispatchStaggerSettings,
   tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
   onUpdateTileStatusSettings,
   timezoneOffset,
@@ -46548,6 +46580,14 @@ const SettingsView = ({
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const isFixedCrewModel = String(activeOperationalModel || "").trim().toLowerCase() === "fixed_crew";
+  const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
+  const handleDispatchStaggerChange = (updates) => {
+    if (!onUpdateDispatchStaggerSettings) return;
+    onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings({
+      ...resolvedDispatchStaggerSettings,
+      ...updates
+    }));
+  };
   const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
   const handleTileStatusMinutesChange = (key, value) => {
     if (!onUpdateTileStatusSettings) return;
@@ -48117,6 +48157,82 @@ const SettingsView = ({
               }
             ),
             canEditSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Maximum number of dispatches allowed per hour" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-4 border-t border-gray-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-200", children: "Dispatch Stagger" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Minimum interval between event start times. Formation members may still share an authorised formation start." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-300", children: "Flights" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs text-gray-300", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: resolvedDispatchStaggerSettings.flightNoMinimum,
+                        onChange: (event) => handleDispatchStaggerChange({ flightNoMinimum: event.target.checked }),
+                        disabled: !canEditSettings || !onUpdateDispatchStaggerSettings,
+                        className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
+                      }
+                    ),
+                    "No minimum"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 0,
+                      max: 120,
+                      step: 1,
+                      value: resolvedDispatchStaggerSettings.flightMinutes,
+                      onChange: (event) => handleDispatchStaggerChange({ flightMinutes: Number(event.target.value) }),
+                      disabled: !canEditSettings || !onUpdateDispatchStaggerSettings || resolvedDispatchStaggerSettings.flightNoMinimum,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings && onUpdateDispatchStaggerSettings && !resolvedDispatchStaggerSettings.flightNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-300", children: "Simulators" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs text-gray-300", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: resolvedDispatchStaggerSettings.simulatorNoMinimum,
+                        onChange: (event) => handleDispatchStaggerChange({ simulatorNoMinimum: event.target.checked }),
+                        disabled: !canEditSettings || !onUpdateDispatchStaggerSettings,
+                        className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
+                      }
+                    ),
+                    "No minimum"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 0,
+                      max: 120,
+                      step: 1,
+                      value: resolvedDispatchStaggerSettings.simulatorMinutes,
+                      onChange: (event) => handleDispatchStaggerChange({ simulatorMinutes: Number(event.target.value) }),
+                      disabled: !canEditSettings || !onUpdateDispatchStaggerSettings || resolvedDispatchStaggerSettings.simulatorNoMinimum,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditSettings && onUpdateDispatchStaggerSettings && !resolvedDispatchStaggerSettings.simulatorNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
+                ] })
+              ] })
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-4 border-t border-gray-700", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-between gap-4 mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -71669,6 +71785,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     preferredDutyPeriod,
     maxCrewDutyPeriod,
     maxDispatchPerHour = 8,
+    dispatchStaggerSettings: rawDispatchStaggerSettings,
     eventLimits,
     sctFtds,
     sctFlights,
@@ -71692,6 +71809,30 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const commenceNightFlying = normaliseBuildWindowStart(rawCommenceNightFlying);
   const ceaseNightFlying = normaliseBuildWindowEnd(commenceNightFlying, rawCeaseNightFlying);
   const hourlyDispatchLimit = Math.max(1, Math.floor(Number(maxDispatchPerHour) || 8));
+  const dispatchStaggerSettings = normaliseDispatchStaggerSettings(rawDispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS);
+  const flightDispatchStaggerMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, "flight");
+  const simulatorDispatchStaggerMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, "ftd");
+  const hasDispatchStaggerConflict = (eventType, startTime, events, options = {}) => {
+    const minMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, eventType);
+    if (minMinutes <= 0) return false;
+    const type = String(eventType || "").trim().toLowerCase();
+    const isSimulator = type === "ftd" || type === "sim" || type === "simulator" || type === "cpt";
+    return events.some((event) => {
+      if (event.isCancelled) return false;
+      if (isStbyResource(event.resourceId)) return false;
+      const existingType = String(event.type || "").trim().toLowerCase();
+      const existingIsSimulator = existingType === "ftd" || existingType === "sim" || existingType === "simulator" || existingType === "cpt";
+      if (type === "flight") {
+        if (existingType !== "flight") return false;
+        if (options.allowSameFormationTakeoff && options.formationGroupId && event.formationId === options.formationGroupId) return false;
+      } else if (isSimulator) {
+        if (!existingIsSimulator) return false;
+      } else {
+        return false;
+      }
+      return Math.abs((event.startTime - startTime) * 60) < minMinutes - 1e-3;
+    });
+  };
   const windowNormalisationWarnings = [
     rawFlyingEndTime <= rawFlyingStartTime ? `Day flying window wraps or is invalid (${rawFlyingStartTime} -> ${rawFlyingEndTime}); build uses ${flyingStartTime} -> ${flyingEndTime}.` : null,
     rawFtdEndTime <= rawFtdStartTime ? `${ftdResourceLabel} window wraps or is invalid (${rawFtdStartTime} -> ${rawFtdEndTime}); build uses ${ftdStartTime} -> ${ftdEndTime}.` : null,
@@ -72084,7 +72225,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }, {}),
         highestPriorityEvents: highestPriorityEvents.length,
         syllabusItems: syllabusDetails.length,
-        generatedEventsAtBuildStart: generatedEvents.length
+        generatedEventsAtBuildStart: generatedEvents.length,
+        dispatchStagger: {
+          settings: dispatchStaggerSettings,
+          effectiveFlightMinutes: flightDispatchStaggerMinutes,
+          effectiveSimulatorMinutes: simulatorDispatchStaggerMinutes
+        }
       },
       stageTrace: [{
         stage: "build-start-preflight",
@@ -72109,7 +72255,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         staffTotal: originalInstructors.length,
         syllabusItems: syllabusDetails.length,
         highestPriorityEvents: highestPriorityEvents.length,
-        generatedEventsAtBuildStart: generatedEvents.length
+        generatedEventsAtBuildStart: generatedEvents.length,
+        dispatchStagger: {
+          settings: dispatchStaggerSettings,
+          effectiveFlightMinutes: flightDispatchStaggerMinutes,
+          effectiveSimulatorMinutes: simulatorDispatchStaggerMinutes
+        }
       },
       crewGroups: [],
       queueSourceAudit: null,
@@ -73019,6 +73170,31 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               pushFixedCrewAttempt({ event: candidate.flightNumber, source, startTime, resourceId, outcome: "rejected", ...dispatchViolation });
               continue;
             }
+            if (hasDispatchStaggerConflict("flight", candidate.startTime, generatedEvents)) {
+              incrementFixedCrewRejection("TAKEOFF_SEPARATION_VIOLATION");
+              pushFixedCrewAttempt({
+                event: candidate.flightNumber,
+                source,
+                startTime,
+                resourceId,
+                outcome: "rejected",
+                reason: "TAKEOFF_SEPARATION_VIOLATION",
+                configuredStaggerMinutes: flightDispatchStaggerMinutes
+              });
+              continue;
+            }
+          } else if (hasDispatchStaggerConflict(candidate.type, candidate.startTime, generatedEvents)) {
+            incrementFixedCrewRejection("SIMULATOR_STAGGER_VIOLATION");
+            pushFixedCrewAttempt({
+              event: candidate.flightNumber,
+              source,
+              startTime,
+              resourceId,
+              outcome: "rejected",
+              reason: "SIMULATOR_STAGGER_VIOLATION",
+              configuredStaggerMinutes: simulatorDispatchStaggerMinutes
+            });
+            continue;
           }
           fixedCrewPerf.counters.resourceConflictChecks += 1;
           const resourceConflictStart = fixedCrewPerfNow();
@@ -73671,6 +73847,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           aircraftConfigId: event.type === "flight" ? getAircraftConfigIdForResource(resourceId) : event.aircraftConfigId,
           acceptableAircraftConfigs: event.type === "flight" ? normaliseAircraftConfigRequirement(event) : event.acceptableAircraftConfigs
         };
+        if (hasDispatchStaggerConflict(candidate.type, startTime, generatedEvents)) {
+          traceMandatoryRemedial("placementTrace", {
+            phase: "fixed-priority-placement",
+            trainee: candidate.student || candidate.pilot || "",
+            event: candidate.flightNumber,
+            startTime,
+            displayTime: formatDecimalHourToString(startTime),
+            resourceId,
+            outcome: "rejected",
+            conflictReason: candidate.type === "flight" ? "TAKEOFF_SEPARATION_VIOLATION" : "SIMULATOR_STAGGER_VIOLATION",
+            configuredStaggerMinutes: getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, candidate.type)
+          });
+          continue;
+        }
         const remedialInstructor = getRemedialInstructorOverride(candidate.student || candidate.pilot || "", candidate.flightNumber);
         const ignoredInstructorConflicts = [];
         let conflictReason = "";
@@ -75818,18 +76008,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "HOURLY_DISPATCH_LIMIT");
         return traceScheduleReject("HOURLY_DISPATCH_LIMIT", { takeoffsInLastHour, limit: hourlyDispatchLimit });
       }
-      const takeoffConflict = nonStbyFlights.some((e) => {
-        if (e.type !== "flight") return false;
-        if (options.allowSameFormationTakeoff && options.formationGroupId && e.formationId === options.formationGroupId) return false;
-        const diffHours = Math.abs(e.startTime - startTime);
-        const diffMinutes = Math.round(diffHours * 60);
-        const isNightCheck = isNightPass && e.flightNumber.startsWith("BNF");
-        const minSeparation = isNightCheck ? 5 : 5;
-        return diffMinutes < minSeparation;
+      const takeoffConflict = hasDispatchStaggerConflict("flight", startTime, nonStbyFlights, {
+        allowSameFormationTakeoff: options.allowSameFormationTakeoff,
+        formationGroupId: options.formationGroupId
       });
       if (takeoffConflict) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TAKEOFF_SEPARATION_VIOLATION");
-        return traceScheduleReject("TAKEOFF_SEPARATION_VIOLATION");
+        return traceScheduleReject("TAKEOFF_SEPARATION_VIOLATION", {
+          configuredStaggerMinutes: flightDispatchStaggerMinutes
+        });
       }
     }
     if (type === "ground" || type === "cpt") {
@@ -75842,6 +76029,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (startTime + syllabusItem.duration > ftdEndTime) {
         return traceScheduleReject("FTD_WINDOW_VIOLATION", { eventEnd: startTime + syllabusItem.duration, ftdEndTime });
       }
+    }
+    if ((type === "ftd" || type === "cpt") && hasDispatchStaggerConflict(type, startTime, generatedEvents)) {
+      return traceScheduleReject("SIMULATOR_STAGGER_VIOLATION", {
+        configuredStaggerMinutes: simulatorDispatchStaggerMinutes
+      });
     }
     const result = {
       id: options.eventId || v4(),
@@ -76398,14 +76590,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return "No event scheduled because the hourly aircraft dispatch limit would be exceeded.";
       case "TAKEOFF_SEPARATION_VIOLATION":
         return "No event scheduled because takeoff spacing/turnaround rules would be violated.";
+      case "SIMULATOR_STAGGER_VIOLATION":
+        return "No event scheduled because the configured simulator dispatch stagger would be violated.";
       case "AIRCRAFT_CONFIG_INCOMPATIBLE":
         return `No event scheduled because the aircraft configuration did not match the event requirement${entry.required ? ` (${entry.required.join(", ")})` : ""}.`;
       case "FALLBACK_WOULD_EXCEED_DIRECTED_TRAINING_MIX":
         return "No fallback event was scheduled because doing so would exceed the directed course/training-package priority mix.";
       case "NO_VALID_FORMATION_SLOT_IN_WINDOW":
-        return "No event scheduled because every 5-minute formation start time in the flying window was blocked by crew, aircraft, duty, formation, or spacing constraints.";
+        return "No event scheduled because every checked formation start time in the flying window was blocked by crew, aircraft, duty, formation, or configured spacing constraints.";
       case "NO_VALID_SLOT_IN_WINDOW":
-        return "No event scheduled because every 5-minute start time in the valid window was blocked by aircraft, personnel, duty, or spacing constraints.";
+        return "No event scheduled because every checked start time in the valid window was blocked by aircraft, personnel, duty, or configured spacing constraints.";
       case "NO_RESOURCE_AVAILABLE":
         return "No event scheduled because no suitable aircraft, simulator, CPT, or ground resource was available at that time.";
       default:
@@ -77042,6 +77236,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             _isNext: true,
             _traineeName: ""
           };
+          if (hasDispatchStaggerConflict(candidate.type, roundedTime, generatedEvents)) {
+            const reason = candidate.type === "flight" ? "TAKEOFF_SEPARATION_VIOLATION" : "SIMULATOR_STAGGER_VIOLATION";
+            if (attemptSummary.length < 12) {
+              attemptSummary.push({
+                time: roundedTime,
+                displayTime: _fmtT(roundedTime),
+                resourceId,
+                outcome: "rejected",
+                reason,
+                configuredStaggerMinutes: getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, candidate.type)
+              });
+            }
+            if (isAirCombatBuild) countAirCombatRejection(reason);
+            continue;
+          }
           const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
           if (resourceConflict) {
             if (attemptSummary.length < 12) {
@@ -77639,6 +77848,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           continue;
         }
         const candidate = { startTime, duration: item.duration, resourceId, flightNumber: item.code, type };
+        if (hasDispatchStaggerConflict(type, startTime, generatedEvents)) {
+          pushAirCombatDiag("resourceChecks", {
+            event: item.code,
+            type,
+            startTime,
+            resourceId,
+            reason: type === "flight" ? "TAKEOFF_SEPARATION_VIOLATION" : "SIMULATOR_STAGGER_VIOLATION",
+            configuredStaggerMinutes: getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, type)
+          }, 800);
+          countAirCombatRejection(type === "flight" ? "TAKEOFF_SEPARATION_VIOLATION" : "SIMULATOR_STAGGER_VIOLATION");
+          continue;
+        }
         const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
         if (resourceConflict) {
           pushAirCombatDiag("resourceChecks", {
@@ -77668,11 +77889,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return null;
     };
-    const hasAirCombatNonFormationTakeoffConflict = (startTime) => generatedEvents.some((event) => {
-      if (event.type !== "flight") return false;
-      if (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY")) return false;
-      return Math.round(Math.abs(event.startTime - startTime) * 60) < 5;
-    });
+    const hasAirCombatNonFormationTakeoffConflict = (startTime) => hasDispatchStaggerConflict("flight", startTime, generatedEvents);
     const normaliseFormationContextToken = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     const expandFormationLocationAliases = (value) => {
       const token = normaliseFormationContextToken(value);
@@ -79433,11 +79650,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const countFormationDispatchesInPreviousHour = (startTime) => generatedEvents.filter(
     (event) => event.type === "flight" && !event.resourceId.startsWith("STBY") && !event.resourceId.startsWith("BNF-STBY") && event.startTime > startTime - 1 && event.startTime <= startTime
   ).length;
-  const hasNonFormationTakeoffConflict = (startTime) => generatedEvents.some((event) => {
-    if (event.type !== "flight") return false;
-    if (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY")) return false;
-    return Math.round(Math.abs(event.startTime - startTime) * 60) < 5;
-  });
+  const hasNonFormationTakeoffConflict = (startTime) => hasDispatchStaggerConflict("flight", startTime, generatedEvents);
   const getFallbackFormationCallsignBase = (leadEvent) => {
     const instructorCallsign = instructors.find((ip) => ip.name === leadEvent.instructor)?.callsign || "";
     const prefix = instructorCallsign.match(/^[A-Za-z]+/)?.[0];
@@ -84218,6 +84431,7 @@ const App = () => {
   const [preferredDutyPeriod, setPreferredDutyPeriod] = reactExports.useState(8);
   const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = reactExports.useState(10);
   const [maxDispatchPerHour, setMaxDispatchPerHour] = reactExports.useState(8);
+  const [dispatchStaggerSettings, setDispatchStaggerSettings] = reactExports.useState(DEFAULT_DISPATCH_STAGGER_SETTINGS);
   const [flightTurnaround, setFlightTurnaround] = reactExports.useState(1.2);
   const [ftdTurnaround, setFtdTurnaround] = reactExports.useState(0.5);
   const [cptTurnaround, setCptTurnaround] = reactExports.useState(0.5);
@@ -84951,6 +85165,7 @@ ${"=".repeat(60)}`);
         if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
         if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
         if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
+        if (saved.dispatchStaggerSettings) setDispatchStaggerSettings(normaliseDispatchStaggerSettings(saved.dispatchStaggerSettings));
         if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
         if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
         if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
@@ -85121,6 +85336,7 @@ ${"=".repeat(60)}`);
       preferredDutyPeriod,
       maxCrewDutyPeriod,
       maxDispatchPerHour,
+      dispatchStaggerSettings,
       flightTurnaround,
       ftdTurnaround,
       cptTurnaround,
@@ -85172,6 +85388,7 @@ ${"=".repeat(60)}`);
     preferredDutyPeriod,
     maxCrewDutyPeriod,
     maxDispatchPerHour,
+    dispatchStaggerSettings,
     flightTurnaround,
     ftdTurnaround,
     cptTurnaround,
@@ -90043,6 +90260,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       preferredDutyPeriod,
       maxCrewDutyPeriod,
       maxDispatchPerHour,
+      dispatchStaggerSettings,
       eventLimits,
       sctFtds,
       sctFlights,
@@ -90468,12 +90686,24 @@ ${conflictLines.join("\n")}${moreText}`,
         (e) => e.type === "flight" && !e.isCancelled && !e.resourceId.startsWith("STBY") && e.startTime > time - 1 && e.startTime <= time
       ).length;
     };
-    const hasTakeoffSeparationConflict = (time) => {
+    const hasPauseBuildDispatchStaggerConflict = (eventType, time) => {
+      const minMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, eventType);
+      if (minMinutes <= 0) return false;
+      const type = String(eventType || "").trim().toLowerCase();
+      const isSimulator = type === "ftd" || type === "sim" || type === "simulator" || type === "cpt";
       return scheduledEvents.some((e) => {
-        if (e.type !== "flight" || e.isCancelled) return false;
+        if (e.isCancelled) return false;
         if (e.resourceId.startsWith("STBY")) return false;
-        const diffMinutes = Math.abs(e.startTime - time) * 60;
-        return diffMinutes < 5;
+        const existingType = String(e.type || "").trim().toLowerCase();
+        const existingIsSimulator = existingType === "ftd" || existingType === "sim" || existingType === "simulator" || existingType === "cpt";
+        if (type === "flight") {
+          if (existingType !== "flight") return false;
+        } else if (isSimulator) {
+          if (!existingIsSimulator) return false;
+        } else {
+          return false;
+        }
+        return Math.abs(e.startTime - time) * 60 < minMinutes - 1e-3;
       });
     };
     const personIsBusy = (personName, windowStart, windowEnd) => {
@@ -90576,6 +90806,10 @@ ${conflictLines.join("\n")}${moreText}`,
             slot += slotStep;
             continue;
           }
+          if (hasPauseBuildDispatchStaggerConflict("ftd", slot)) {
+            slot += slotStep;
+            continue;
+          }
           if (personIsBusy(trainee.fullName, slot, slotEnd)) {
             slot += slotStep;
             continue;
@@ -90640,7 +90874,7 @@ ${conflictLines.join("\n")}${moreText}`,
           slot += slotStep;
           continue;
         }
-        if (hasTakeoffSeparationConflict(slot)) {
+        if (hasPauseBuildDispatchStaggerConflict("flight", slot)) {
           slot += slotStep;
           continue;
         }
@@ -94890,6 +95124,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             currentUserPermission,
             maxDispatchPerHour,
             onUpdateMaxDispatchPerHour: setMaxDispatchPerHour,
+            dispatchStaggerSettings,
+            onUpdateDispatchStaggerSettings: (settings) => setDispatchStaggerSettings(normaliseDispatchStaggerSettings(settings)),
             timezoneOffset,
             onUpdateTimezoneOffset: setTimezoneOffset,
             showDepartureDensityOverlay,

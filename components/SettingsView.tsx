@@ -32,6 +32,11 @@ import {
     normaliseTileStatusSettings,
     type TileStatusSettings,
 } from '../utils/tileStatusSettings';
+import {
+    DEFAULT_DISPATCH_STAGGER_SETTINGS,
+    normaliseDispatchStaggerSettings,
+    type DispatchStaggerSettings,
+} from '../utils/dispatchStagger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 
@@ -90,6 +95,8 @@ interface SettingsViewProps {
     activeOperationalModel?: string;
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
+    dispatchStaggerSettings?: DispatchStaggerSettings;
+    onUpdateDispatchStaggerSettings?: (settings: DispatchStaggerSettings) => void;
     tileStatusSettings?: TileStatusSettings;
     onUpdateTileStatusSettings?: (settings: TileStatusSettings) => void;
     formationCallsigns: FormationCallsign[];
@@ -496,6 +503,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     activeOperationalModel,
     maxDispatchPerHour,
     onUpdateMaxDispatchPerHour,
+    dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
+    onUpdateDispatchStaggerSettings,
     tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
     onUpdateTileStatusSettings,
     timezoneOffset,
@@ -519,6 +528,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     // Permission Check - Only Super Admin, Admin, and Scheduler can edit Settings
     const canEditSettings = ['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission);
     const isFixedCrewModel = String(activeOperationalModel || '').trim().toLowerCase() === 'fixed_crew';
+    const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
+    const handleDispatchStaggerChange = (updates: Partial<DispatchStaggerSettings>) => {
+        if (!onUpdateDispatchStaggerSettings) return;
+        onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings({
+            ...resolvedDispatchStaggerSettings,
+            ...updates,
+        }));
+    };
     const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     const handleTileStatusMinutesChange = (key: keyof TileStatusSettings, value: number) => {
         if (!onUpdateTileStatusSettings) return;
@@ -2517,6 +2534,80 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                             Maximum number of dispatches allowed per hour
                                         </p>
                                     )}
+                                </div>
+                                <div className="pt-4 border-t border-gray-700">
+                                    <div className="mb-3">
+                                        <h3 className="text-sm font-semibold text-gray-200">Dispatch Stagger</h3>
+                                        <p className="mt-1 text-xs text-gray-400">
+                                            Minimum interval between event start times. Formation members may still share an authorised formation start.
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="rounded-md border border-gray-700 bg-gray-900/35 p-3">
+                                            <div className="mb-2 flex items-center justify-between gap-3">
+                                                <span className="text-sm font-medium text-gray-300">Flights</span>
+                                                <label className="flex items-center gap-2 text-xs text-gray-300">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={resolvedDispatchStaggerSettings.flightNoMinimum}
+                                                        onChange={(event) => handleDispatchStaggerChange({ flightNoMinimum: event.target.checked })}
+                                                        disabled={!canEditSettings || !onUpdateDispatchStaggerSettings}
+                                                        className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
+                                                    />
+                                                    No minimum
+                                                </label>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={120}
+                                                    step={1}
+                                                    value={resolvedDispatchStaggerSettings.flightMinutes}
+                                                    onChange={(event) => handleDispatchStaggerChange({ flightMinutes: Number(event.target.value) })}
+                                                    disabled={!canEditSettings || !onUpdateDispatchStaggerSettings || resolvedDispatchStaggerSettings.flightNoMinimum}
+                                                    className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
+                                                        canEditSettings && onUpdateDispatchStaggerSettings && !resolvedDispatchStaggerSettings.flightNoMinimum
+                                                            ? 'bg-gray-700 border-gray-600 text-white'
+                                                            : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                                                    }`}
+                                                />
+                                                <span className="text-xs text-gray-400">min</span>
+                                            </div>
+                                        </div>
+                                        <div className="rounded-md border border-gray-700 bg-gray-900/35 p-3">
+                                            <div className="mb-2 flex items-center justify-between gap-3">
+                                                <span className="text-sm font-medium text-gray-300">Simulators</span>
+                                                <label className="flex items-center gap-2 text-xs text-gray-300">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={resolvedDispatchStaggerSettings.simulatorNoMinimum}
+                                                        onChange={(event) => handleDispatchStaggerChange({ simulatorNoMinimum: event.target.checked })}
+                                                        disabled={!canEditSettings || !onUpdateDispatchStaggerSettings}
+                                                        className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
+                                                    />
+                                                    No minimum
+                                                </label>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={120}
+                                                    step={1}
+                                                    value={resolvedDispatchStaggerSettings.simulatorMinutes}
+                                                    onChange={(event) => handleDispatchStaggerChange({ simulatorMinutes: Number(event.target.value) })}
+                                                    disabled={!canEditSettings || !onUpdateDispatchStaggerSettings || resolvedDispatchStaggerSettings.simulatorNoMinimum}
+                                                    className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
+                                                        canEditSettings && onUpdateDispatchStaggerSettings && !resolvedDispatchStaggerSettings.simulatorNoMinimum
+                                                            ? 'bg-gray-700 border-gray-600 text-white'
+                                                            : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                                                    }`}
+                                                />
+                                                <span className="text-xs text-gray-400">min</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="pt-4 border-t border-gray-700">
                                     <div className="flex items-start justify-between gap-4 mb-3">
