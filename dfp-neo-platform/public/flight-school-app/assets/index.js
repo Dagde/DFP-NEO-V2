@@ -6983,6 +6983,81 @@ const Header = ({
     )
   ] });
 };
+const TAILWIND_COLORS = {
+  sky: { "400": [56, 189, 248], "500": [14, 165, 233] },
+  purple: { "400": [192, 132, 252], "500": [168, 85, 247] },
+  yellow: { "400": [250, 204, 21], "500": [234, 179, 8] },
+  pink: { "400": [244, 114, 182], "500": [236, 72, 153] },
+  teal: { "400": [45, 212, 191], "500": [20, 184, 166] },
+  indigo: { "400": [129, 140, 248], "500": [99, 102, 241] },
+  cyan: { "400": [34, 211, 238], "500": [6, 182, 212] },
+  blue: { "400": [96, 165, 250], "500": [59, 130, 246] },
+  green: { "400": [74, 222, 128], "500": [34, 197, 94] },
+  orange: { "400": [251, 146, 60], "500": [249, 115, 22] },
+  red: { "400": [248, 113, 113], "500": [239, 68, 68], "800": [153, 27, 27], "900": [127, 29, 29] },
+  gray: { "400": [156, 163, 175], "500": [107, 114, 128], "600": [75, 85, 99] },
+  amber: { "400": [251, 191, 36], "500": [245, 158, 11], "700": [180, 83, 9] },
+  fuchsia: { "400": [232, 121, 249], "500": [217, 70, 239] },
+  lime: { "400": [163, 230, 53], "500": [132, 204, 22] },
+  violet: { "400": [167, 139, 250], "500": [139, 92, 246] },
+  rose: { "400": [251, 113, 133], "500": [244, 63, 94] }
+};
+const isCssColor = (color) => color.startsWith("#") || color.startsWith("rgb");
+const darkenRgbForLightTheme = (rgb) => {
+  const strength = 0.62;
+  return [
+    Math.round(rgb[0] * strength),
+    Math.round(rgb[1] * strength),
+    Math.round(rgb[2] * strength)
+  ];
+};
+const hexToRgba = (hex, alpha, darken = false) => {
+  try {
+    const strength = darken ? 0.62 : 1;
+    const r = Math.round(parseInt(hex.slice(1, 3), 16) * strength);
+    const g = Math.round(parseInt(hex.slice(3, 5), 16) * strength);
+    const b = Math.round(parseInt(hex.slice(5, 7), 16) * strength);
+    return `rgba(${r},${g},${b},${alpha})`;
+  } catch {
+    return hex;
+  }
+};
+const resolveTailwindBgClassToRgba = (cls, mode = "legend") => {
+  if (!cls || !cls.startsWith("bg-")) return null;
+  const match = cls.match(/^bg-([a-z]+)-(\d+)(?:\/(\d+))?$/);
+  if (!match) return null;
+  const [, colorName, shade, opacityStr] = match;
+  const rgb = TAILWIND_COLORS[colorName]?.[shade];
+  if (!rgb) return null;
+  const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
+  if (mode === "legend") {
+    return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${Math.max(0, Math.min(100, opacity)) / 100})`;
+  }
+  const displayRgb = mode === "tile-light" ? darkenRgbForLightTheme(rgb) : rgb;
+  let alpha;
+  if (mode === "tile-light") {
+    if (opacity >= 75) alpha = 0.88;
+    else if (opacity >= 45) alpha = 0.78;
+    else if (opacity >= 30) alpha = 0.68;
+    else alpha = Math.max(0.58, opacity / 100);
+  } else if (opacity >= 75) alpha = 0.57;
+  else if (opacity >= 45) alpha = 0.42;
+  else if (opacity >= 30) alpha = 0.35;
+  else alpha = opacity / 100 * 0.7;
+  return `rgba(${displayRgb[0]},${displayRgb[1]},${displayRgb[2]},${alpha})`;
+};
+const resolveCourseLegendColor = (color) => {
+  const value = String(color || "").trim();
+  if (!value) return null;
+  if (isCssColor(value)) return value;
+  return resolveTailwindBgClassToRgba(value, "legend");
+};
+const resolveScheduleTileBackgroundColor = (color, mode = "dark") => {
+  const value = String(color || "").trim();
+  if (!value) return null;
+  if (isCssColor(value)) return value.startsWith("#") ? hexToRgba(value, mode === "light" ? 0.92 : 0.57, mode === "light") : value;
+  return resolveTailwindBgClassToRgba(value, mode === "light" ? "tile-light" : "tile-dark");
+};
 const formatTime$7 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
@@ -7086,76 +7161,13 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isEndSegment = segment.segmentType === "start";
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
   const isHexColorEarly = (color) => color && (color.startsWith("#") || color.startsWith("rgb"));
-  const TAILWIND_COLORS = {
-    sky: { "400": [56, 189, 248], "500": [14, 165, 233] },
-    purple: { "400": [192, 132, 252], "500": [168, 85, 247] },
-    yellow: { "400": [250, 204, 21], "500": [234, 179, 8] },
-    pink: { "400": [244, 114, 182], "500": [236, 72, 153] },
-    teal: { "400": [45, 212, 191], "500": [20, 184, 166] },
-    indigo: { "400": [129, 140, 248], "500": [99, 102, 241] },
-    cyan: { "400": [34, 211, 238], "500": [6, 182, 212] },
-    blue: { "400": [96, 165, 250], "500": [59, 130, 246] },
-    green: { "400": [74, 222, 128], "500": [34, 197, 94] },
-    orange: { "400": [251, 146, 60], "500": [249, 115, 22] },
-    red: { "400": [248, 113, 113], "500": [239, 68, 68], "800": [153, 27, 27], "900": [127, 29, 29] },
-    gray: { "400": [156, 163, 175], "500": [107, 114, 128], "600": [75, 85, 99] },
-    amber: { "400": [251, 191, 36], "500": [245, 158, 11], "700": [180, 83, 9] },
-    fuchsia: { "400": [232, 121, 249], "500": [217, 70, 239] },
-    lime: { "400": [163, 230, 53], "500": [132, 204, 22] },
-    violet: { "400": [167, 139, 250], "500": [139, 92, 246] },
-    rose: { "400": [251, 113, 133], "500": [244, 63, 94] }
-  };
-  const darkenRgbForLightTheme = (rgb) => {
-    const strength = 0.62;
-    return [
-      Math.round(rgb[0] * strength),
-      Math.round(rgb[1] * strength),
-      Math.round(rgb[2] * strength)
-    ];
-  };
-  const tailwindBgToRgba = (cls, mode = "dark") => {
-    if (!cls || !cls.startsWith("bg-")) return null;
-    const match = cls.match(/^bg-([a-z]+)-(\d+)(?:\/(\d+))?$/);
-    if (!match) return null;
-    const [, colorName, shade, opacityStr] = match;
-    const rgb = TAILWIND_COLORS[colorName]?.[shade];
-    if (!rgb) return null;
-    const displayRgb = mode === "light" ? darkenRgbForLightTheme(rgb) : rgb;
-    const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
-    let alpha;
-    if (mode === "light") {
-      if (opacity >= 75) alpha = 0.88;
-      else if (opacity >= 45) alpha = 0.78;
-      else if (opacity >= 30) alpha = 0.68;
-      else alpha = Math.max(0.58, opacity / 100);
-    } else if (opacity >= 75) alpha = 0.57;
-    else if (opacity >= 45) alpha = 0.42;
-    else if (opacity >= 30) alpha = 0.35;
-    else alpha = opacity / 100 * 0.7;
-    return `rgba(${displayRgb[0]},${displayRgb[1]},${displayRgb[2]},${alpha})`;
-  };
-  const hexToRgba = (hex, alpha, darken = false) => {
-    try {
-      const strength = darken ? 0.62 : 1;
-      const r = Math.round(parseInt(hex.slice(1, 3), 16) * strength);
-      const g = Math.round(parseInt(hex.slice(3, 5), 16) * strength);
-      const b = Math.round(parseInt(hex.slice(5, 7), 16) * strength);
-      return `rgba(${r},${g},${b},${alpha})`;
-    } catch {
-      return hex;
-    }
-  };
   const resolvedBgColor = (() => {
     if (event.type === "deployment" || event.type === "unavailability" || isUnavailabilityConflict || isConflicting) return null;
-    const c = event.color || "";
-    if (isHexColorEarly(c)) return hexToRgba(c, 0.57);
-    return tailwindBgToRgba(c);
+    return resolveScheduleTileBackgroundColor(event.color, "dark");
   })();
   const resolvedLightBgColor = (() => {
     if (event.type === "deployment" || event.type === "unavailability" || isUnavailabilityConflict || isConflicting) return null;
-    const c = event.color || "";
-    if (isHexColorEarly(c)) return hexToRgba(c, 0.92, true);
-    return tailwindBgToRgba(c, "light");
+    return resolveScheduleTileBackgroundColor(event.color, "light");
   })();
   const style = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
@@ -20408,7 +20420,7 @@ const formatFixedCrewDisplayGroup$1 = (crew) => {
   return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
 };
 const twClassToRgba = (cls) => {
-  const TAILWIND_COLORS = {
+  const TAILWIND_COLORS2 = {
     sky: { "400": [56, 189, 248], "500": [14, 165, 233] },
     purple: { "400": [192, 132, 252], "500": [168, 85, 247] },
     yellow: { "400": [250, 204, 21], "500": [234, 179, 8] },
@@ -20432,7 +20444,7 @@ const twClassToRgba = (cls) => {
   const match = cls.match(/^bg-([a-z]+)-(\d+)(?:\/(\d+))?$/);
   if (!match) return "rgba(107,114,128,0.57)";
   const [, colorName, shade, opacityStr] = match;
-  const rgb = TAILWIND_COLORS[colorName]?.[shade];
+  const rgb = TAILWIND_COLORS2[colorName]?.[shade];
   if (!rgb) return "rgba(107,114,128,0.57)";
   const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
   let alpha;
@@ -30175,25 +30187,6 @@ const CourseMetricsTab = ({
       (left, right) => left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code)
     );
   }, [activeUnitCodes, date, events, instructorsData, syllabusDetails]);
-  const TAILWIND_CHART_COLORS = {
-    sky: { 400: "#38bdf8", 500: "#0ea5e9", 600: "#0284c7" },
-    purple: { 400: "#c084fc", 500: "#a855f7", 600: "#9333ea" },
-    yellow: { 400: "#facc15", 500: "#eab308", 600: "#ca8a04" },
-    pink: { 400: "#f472b6", 500: "#ec4899", 600: "#db2777" },
-    teal: { 400: "#2dd4bf", 500: "#14b8a6", 600: "#0d9488" },
-    indigo: { 400: "#818cf8", 500: "#6366f1", 600: "#4f46e5" },
-    cyan: { 400: "#22d3ee", 500: "#06b6d4", 600: "#0891b2" },
-    blue: { 400: "#60a5fa", 500: "#3b82f6", 600: "#2563eb" },
-    green: { 400: "#4ade80", 500: "#22c55e", 600: "#16a34a" },
-    orange: { 400: "#fb923c", 500: "#f97316", 600: "#ea580c" },
-    red: { 400: "#f87171", 500: "#ef4444", 600: "#dc2626" },
-    gray: { 400: "#9ca3af", 500: "#6b7280", 600: "#4b5563" },
-    amber: { 400: "#fbbf24", 500: "#f59e0b", 600: "#d97706" },
-    fuchsia: { 400: "#e879f9", 500: "#d946ef", 600: "#c026d3" },
-    lime: { 400: "#a3e635", 500: "#84cc16", 600: "#65a30d" },
-    violet: { 400: "#a78bfa", 500: "#8b5cf6", 600: "#7c3aed" },
-    rose: { 400: "#fb7185", 500: "#f43f5e", 600: "#e11d48" }
-  };
   const stripCourseSuffix = (value) => {
     const text = String(value || "").trim();
     const match = text.match(/^(.*?)\s+[–-]\s+([A-Z0-9][A-Z0-9 +/]*?)$/);
@@ -30201,12 +30194,7 @@ const CourseMetricsTab = ({
   };
   const fallbackChartColor = (index, total) => `hsl(${index * 360 / Math.max(total, 1)}, 70%, 60%)`;
   const resolveCourseChartColor = (courseName, index, total) => {
-    const configured = courseColors[courseName];
-    if (!configured) return fallbackChartColor(index, total);
-    if (configured.startsWith("#")) return configured;
-    const match = configured.match(/^bg-([a-z]+)-(\d+)(?:\/\d+)?$/);
-    if (!match) return fallbackChartColor(index, total);
-    return TAILWIND_CHART_COLORS[match[1]]?.[match[2]] || fallbackChartColor(index, total);
+    return resolveCourseLegendColor(courseColors[courseName]) || fallbackChartColor(index, total);
   };
   const traineeCourseLookup = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
@@ -62334,7 +62322,7 @@ const CourseProgressView = ({
   const getCourseColor = (courseName) => {
     return activeCourses.find((course) => course.name === courseName)?.color || courseColors[courseName] || "";
   };
-  const isCssColor = (color) => color.startsWith("#") || color.startsWith("rgb");
+  const isCssColor2 = (color) => color.startsWith("#") || color.startsWith("rgb");
   const darkenHexColor = (color) => {
     if (!color.startsWith("#") || color.length < 7) return color;
     const strength = 0.62;
@@ -62345,19 +62333,19 @@ const CourseProgressView = ({
   };
   const getCourseHeaderClass = (courseName) => {
     const color = getCourseColor(courseName);
-    return color && !isCssColor(color) ? color : "bg-gray-800";
+    return color && !isCssColor2(color) ? color : "bg-gray-800";
   };
   const getCourseHeaderStyle = (courseName) => {
     const color = getCourseColor(courseName);
-    return color && isCssColor(color) ? { backgroundColor: darkenHexColor(color) } : {};
+    return color && isCssColor2(color) ? { backgroundColor: darkenHexColor(color) } : {};
   };
   const getCourseBorderStyle = (courseName) => {
     const color = getCourseColor(courseName);
-    return color && isCssColor(color) ? { borderColor: color } : {};
+    return color && isCssColor2(color) ? { borderColor: color } : {};
   };
   const getCourseBorderClass = (courseName) => {
     const color = courseColors[courseName] || "";
-    return color && !isCssColor(color) ? color.replace(/^bg-/, "border-").replace(/\/\d+$/, "") : "border-gray-700";
+    return color && !isCssColor2(color) ? color.replace(/^bg-/, "border-").replace(/\/\d+$/, "") : "border-gray-700";
   };
   const addAward = () => {
     const id = `award-${Date.now()}`;

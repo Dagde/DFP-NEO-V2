@@ -5,6 +5,7 @@ import CourseDistributionTable from '../shared/CourseDistributionTable';
 import PieChart from '../shared/PieChart';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
 import { normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports, type AirCombatTrainingKind } from '../../utils/airCombatTraining';
+import { resolveCourseLegendColor } from '../../utils/tileColorResolver';
 
 interface CourseAnalysis {
   courseName: string;
@@ -207,26 +208,6 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
     );
   }, [activeUnitCodes, date, events, instructorsData, syllabusDetails]);
 
-  const TAILWIND_CHART_COLORS: Record<string, Record<string, string>> = {
-    sky: { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7' },
-    purple: { 400: '#c084fc', 500: '#a855f7', 600: '#9333ea' },
-    yellow: { 400: '#facc15', 500: '#eab308', 600: '#ca8a04' },
-    pink: { 400: '#f472b6', 500: '#ec4899', 600: '#db2777' },
-    teal: { 400: '#2dd4bf', 500: '#14b8a6', 600: '#0d9488' },
-    indigo: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
-    cyan: { 400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2' },
-    blue: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb' },
-    green: { 400: '#4ade80', 500: '#22c55e', 600: '#16a34a' },
-    orange: { 400: '#fb923c', 500: '#f97316', 600: '#ea580c' },
-    red: { 400: '#f87171', 500: '#ef4444', 600: '#dc2626' },
-    gray: { 400: '#9ca3af', 500: '#6b7280', 600: '#4b5563' },
-    amber: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
-    fuchsia: { 400: '#e879f9', 500: '#d946ef', 600: '#c026d3' },
-    lime: { 400: '#a3e635', 500: '#84cc16', 600: '#65a30d' },
-    violet: { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed' },
-    rose: { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48' },
-  };
-
   const stripCourseSuffix = (value: string): string => {
     const text = String(value || '').trim();
     const match = text.match(/^(.*?)\s+[–-]\s+([A-Z0-9][A-Z0-9 +/]*?)$/);
@@ -238,12 +219,7 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
   );
 
   const resolveCourseChartColor = (courseName: string, index: number, total: number): string => {
-    const configured = courseColors[courseName];
-    if (!configured) return fallbackChartColor(index, total);
-    if (configured.startsWith('#')) return configured;
-    const match = configured.match(/^bg-([a-z]+)-(\d+)(?:\/\d+)?$/);
-    if (!match) return fallbackChartColor(index, total);
-    return TAILWIND_CHART_COLORS[match[1]]?.[match[2]] || fallbackChartColor(index, total);
+    return resolveCourseLegendColor(courseColors[courseName]) || fallbackChartColor(index, total);
   };
 
   // Build a lookup map: trainee fullName/name → course
