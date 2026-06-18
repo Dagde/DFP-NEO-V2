@@ -19654,14 +19654,117 @@ const App: React.FC = () => {
                     'bg-red-400/80', 'bg-cyan-400/80'
                 ];
                 const dbTraineesFromLoad = data.trainees.filter((t: any) => t._dataSource === 'database');
-                const dbCourseNamesFromLoad = [...new Set(dbTraineesFromLoad.map((t: any) => t.course).filter(Boolean))] as string[];
+                const dbCourseNamesFromLoad = [...new Set(dbTraineesFromLoad.map((t: any) => normaliseCourseName(t.course)).filter(Boolean))] as string[];
+                const existingCourseNamesFromLoad = new Set((data.courses || []).map((course: any) => normaliseCourseName(course.name || course.code)).filter(Boolean));
+                const existingCompactCourseNamesFromLoad = new Set(
+                    Array.from(existingCourseNamesFromLoad)
+                        .map(courseName => courseName.toUpperCase().replace(/\s+/g, ''))
+                        .filter(Boolean)
+                );
+                const getRecoveredFlightSchoolCourse = (courseName: string, fallbackColor: string): Course => {
+                    const compactName = courseName.toUpperCase().replace(/\s+/g, '');
+                    const traineesForCourse = dbTraineesFromLoad.filter((trainee: any) => normaliseCourseName(trainee.course) === courseName);
+                    const countByService = (service: string) => traineesForCourse.filter((trainee: any) => String(trainee.service || '').toUpperCase() === service).length;
+                    const baseCourse: Course = {
+                        name: courseName,
+                        color: fallbackColor,
+                        startDate: '',
+                        gradDate: '',
+                        raafStart: countByService('RAAF'),
+                        navyStart: countByService('RAN'),
+                        armyStart: countByService('ARA'),
+                        location: school,
+                        unit: activeUnitCode,
+                        status: 'ACTIVE',
+                    };
+                    if (compactName === 'FIC210') {
+                        return {
+                            ...baseCourse,
+                            color: 'bg-pink-400/50',
+                            startDate: '2025-10-01',
+                            gradDate: '2026-04-01',
+                            raafStart: baseCourse.raafStart || 4,
+                            navyStart: baseCourse.navyStart || 0,
+                            armyStart: baseCourse.armyStart || 0,
+                            lmpType: 'FIC',
+                            academicLmpType: 'FIC',
+                        };
+                    }
+                    if (compactName === 'FIC211') {
+                        return {
+                            ...baseCourse,
+                            color: 'bg-teal-400/50',
+                            startDate: '2025-12-01',
+                            gradDate: '2026-06-01',
+                            raafStart: baseCourse.raafStart || 8,
+                            navyStart: baseCourse.navyStart || 2,
+                            armyStart: baseCourse.armyStart || 0,
+                            lmpType: 'FIC',
+                            academicLmpType: 'FIC',
+                        };
+                    }
+                    if (compactName.startsWith('FIC')) {
+                        return {
+                            ...baseCourse,
+                            lmpType: 'FIC',
+                            academicLmpType: 'FIC',
+                        };
+                    }
+                    return baseCourse;
+                };
+                const missingDbCourseNamesFromLoad = activeOperationalModel === 'flight_school'
+                    ? dbCourseNamesFromLoad.filter(courseName => (
+                        !existingCourseNamesFromLoad.has(courseName) &&
+                        !existingCompactCourseNamesFromLoad.has(courseName.toUpperCase().replace(/\s+/g, ''))
+                    ))
+                    : [];
+                if (missingDbCourseNamesFromLoad.length > 0) {
+                    const apiBase = getAppApiBase();
+                    const recoveredCourses: Course[] = [];
+                    for (let index = 0; index < missingDbCourseNamesFromLoad.length; index += 1) {
+                        const courseName = missingDbCourseNamesFromLoad[index];
+                        const fallbackColor = defaultColors[(Object.keys(courseColors).length + index) % defaultColors.length];
+                        const recoveredCourse = getRecoveredFlightSchoolCourse(courseName, fallbackColor);
+                        try {
+                            const response = await fetch(`${apiBase}/courses`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify(recoveredCourse),
+                            });
+                            if (response.ok) {
+                                recoveredCourses.push(recoveredCourse);
+                                console.log(`[Initial Load] Restored missing Flight School course row "${courseName}" from active DB trainees`);
+                            } else {
+                                console.warn(`[Initial Load] Could not restore missing course "${courseName}": ${response.status}`);
+                            }
+                        } catch (restoreError) {
+                            console.warn(`[Initial Load] Could not restore missing course "${courseName}":`, restoreError);
+                        }
+                    }
+                    if (recoveredCourses.length > 0) {
+                        setCourses(prev => {
+                            const seen = new Set(prev.map(course => normaliseCourseName(course.name)));
+                            const next = [...prev];
+                            recoveredCourses.forEach(course => {
+                                const courseName = normaliseCourseName(course.name);
+                                if (!seen.has(courseName)) {
+                                    next.push(course);
+                                    seen.add(courseName);
+                                }
+                            });
+                            return next;
+                        });
+                    }
+                }
                 if (dbCourseNamesFromLoad.length > 0) {
                     setCourseColors(prev => {
                         const updated = { ...prev };
                         let colorIndex = Object.keys(updated).length;
                         dbCourseNamesFromLoad.forEach((course: string) => {
                             if (!updated[course]) {
-                                updated[course] = defaultColors[colorIndex % defaultColors.length];
+                                const recovered = getRecoveredFlightSchoolCourse(course, defaultColors[colorIndex % defaultColors.length]);
+                                updated[course] = recovered.color;
                                 colorIndex++;
                                 console.log(`[Initial Load] Added missing courseColor for "${course}"`);
                             }
@@ -20350,13 +20453,17 @@ const App: React.FC = () => {
         ));
     }, []);
 
+    const normaliseCourseName = useCallback((value: unknown): string => (
+        String(value || '').trim()
+    ), []);
+
     const courseMatchesActiveContext = useCallback((course: Course): boolean => {
         const courseUnits = getCourseUnitCodes(course);
         const hasCourseUnit = courseUnits.length > 0;
         const courseLocation = String(course.location || '').trim();
         const hasCourseLocation = courseLocation.length > 0;
 
-        if (hasConfiguredCourseUnitScope && !hasCourseUnit) {
+        if (hasConfiguredCourseUnitScope && !hasCourseUnit && (!hasCourseLocation || activeOperationalModel !== 'flight_school')) {
             return false;
         }
 
@@ -20374,17 +20481,37 @@ const App: React.FC = () => {
         }
 
         return hasCourseUnit || hasCourseLocation;
-    }, [activeContextUnitCodeSet, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
+    }, [activeContextUnitCodeSet, activeOperationalModel, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
 
     const scopedCourses = useMemo(
         () => courses.filter(courseMatchesActiveContext),
         [courseMatchesActiveContext, courses],
     );
 
-    const scopedCourseNameSet = useMemo(
-        () => new Set(scopedCourses.map(course => course.name)),
-        [scopedCourses],
-    );
+    const activeFlightSchoolTraineeCourseNames = useMemo(() => {
+        if (activeOperationalModel !== 'flight_school') return new Set<string>();
+        return new Set(
+            traineesData
+                .filter((trainee: any) => {
+                    const traineeUnitCode = String(trainee?.unit || '').trim().toUpperCase();
+                    return !traineeUnitCode || activeContextUnitCodeSet.size === 0 || activeContextUnitCodeSet.has(traineeUnitCode);
+                })
+                .map((trainee: any) => normaliseCourseName(trainee?.course))
+                .filter(Boolean)
+        );
+    }, [activeContextUnitCodeSet, activeOperationalModel, normaliseCourseName, traineesData]);
+
+    const scopedCourseNameSet = useMemo(() => {
+        const names = new Set(
+            scopedCourses
+                .map(course => normaliseCourseName(course.name))
+                .filter(Boolean)
+        );
+        if (activeOperationalModel === 'flight_school') {
+            activeFlightSchoolTraineeCourseNames.forEach(courseName => names.add(courseName));
+        }
+        return names;
+    }, [activeFlightSchoolTraineeCourseNames, activeOperationalModel, normaliseCourseName, scopedCourses]);
 
     const scopedCourseColors = useMemo(() => {
         const entries = Object.entries(courseColors).filter(([courseName]) => scopedCourseNameSet.has(courseName));
