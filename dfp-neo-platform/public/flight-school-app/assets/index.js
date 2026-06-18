@@ -71880,6 +71880,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const dispatchStaggerSettings = normaliseDispatchStaggerSettings(rawDispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS);
   const flightDispatchStaggerMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, "flight");
   const simulatorDispatchStaggerMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, "ftd");
+  const getDispatchSearchStepMinutes = (eventType) => {
+    const type = String(eventType || "").trim().toLowerCase();
+    const configuredMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, type);
+    if (configuredMinutes > 0) return Math.max(1, configuredMinutes);
+    if (type === "flight" || type === "ftd" || type === "sim" || type === "simulator" || type === "cpt") return 1;
+    return 15;
+  };
+  const getDispatchSearchStepHours = (eventType) => getDispatchSearchStepMinutes(eventType) / 60;
   const hasDispatchStaggerConflict = (eventType, startTime, events, options = {}) => {
     const minMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, eventType);
     if (minMinutes <= 0) return false;
@@ -73172,9 +73180,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const eventPerfStart = fixedCrewPerfNow();
       const getFixedCrewStartStepMinutes = (eventType) => {
         const type = String(eventType || "").trim().toLowerCase();
-        if (type === "flight") return Math.max(1, flightDispatchStaggerMinutes || 5);
+        if (type === "flight") return getDispatchSearchStepMinutes("flight");
         const simulatorStep = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, type);
-        return Math.max(1, simulatorStep || 15);
+        return simulatorStep > 0 ? Math.max(1, simulatorStep) : getDispatchSearchStepMinutes(type);
       };
       const buildFixedCrewStartCandidates = (start, end, duration2, stepMinutes) => {
         const latestStartMinutes = Math.floor((end - duration2) * 60 + 1e-3);
@@ -73925,7 +73933,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       isNightRemedial ? commenceNightFlying : 0
     );
     const searchEnd = isNightRemedial ? ceaseNightFlying : isDayRemedial ? Math.min(normalEndTime, commenceNightFlying) : normalEndTime;
-    const timeIncrement = event.type === "flight" ? 5 / 60 : 15 / 60;
+    const timeIncrement = getDispatchSearchStepHours(event.type);
     const resourceOptions = getPriorityResourceOptions(event);
     for (let startTime = searchStart; startTime + event.duration <= searchEnd + 1e-3; startTime += timeIncrement) {
       for (const resourceId of resourceOptions) {
@@ -74915,7 +74923,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log('[FLIGHT-DIAG] END - also in localStorage key "flight_diag_report"');
   };
   const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel, syllabusOverrides, latestStartBefore) => {
-    const timeIncrement = type === "flight" ? 5 / 60 : 15 / 60;
+    const timeIncrement = getDispatchSearchStepHours(type);
     const listName = diagnosticLabel || `${isNightPass ? "BNF" : type.toUpperCase()} ${isPlusOne ? "Next+1" : "Next"}`;
     const isMandatoryTraceList = listName.includes("Mandatory Remedial");
     recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + ["flight", "ftd", "cpt", "ground"].indexOf(type) * 10 });
@@ -77050,7 +77058,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       eventsToSchedule: eventsToSchedule.length,
       generatedEvents: generatedEvents.length
     });
-    const timeIncrement = 5 / 60;
+    const timeIncrement = getDispatchSearchStepHours("flight");
     const orderedTaskingEvents = eventsToSchedule.filter((event) => !scheduledTaskingPriorityEventIds.has(event.id)).sort(
       (left, right) => left.startTime - right.startTime || (left.taskingRequestId || "").localeCompare(right.taskingRequestId || "") || (left.taskingAircraftIndex || 0) - (right.taskingAircraftIndex || 0)
     );
@@ -77514,7 +77522,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       staff: instructors.length,
       syllabus: syllabusDetails.length
     });
-    const slotIncrement = 5 / 60;
+    const slotIncrement = getDispatchSearchStepHours("flight");
     const scheduleWindowStart = scheduleMode === "night" ? commenceNightFlying : flyingStartTime;
     const scheduleWindowEnd = scheduleMode === "night" ? ceaseNightFlying : flyingEndTime;
     const trainingItemMatchesScheduleMode = (item) => scheduleMode === "night" ? item.dayNight === "Night" : item.dayNight !== "Night";
@@ -79405,7 +79413,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const remaining = eventsToSchedule.filter((event) => event.type === eventType);
       const startBoundary = scheduleMode === "night" ? commenceNightFlying : eventType === "flight" ? flyingStartTime : ftdStartTime;
       const endBoundary = scheduleMode === "night" ? ceaseNightFlying : eventType === "flight" ? flyingEndTime : ftdEndTime;
-      const timeIncrement = eventType === "flight" ? 5 / 60 : 15 / 60;
+      const timeIncrement = getDispatchSearchStepHours(eventType);
       traceCurrencyPriority("typePassTrace", {
         phase: "type-pass-start",
         scheduleMode,
@@ -79827,7 +79835,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const scheduleFormationGroups = (groups, startTimeBoundary, endTimeBoundary, diagnosticLabel) => {
     const placedFormationKeys = /* @__PURE__ */ new Set();
     if (groups.length === 0) return placedFormationKeys;
-    const timeIncrement = 5 / 60;
+    const timeIncrement = getDispatchSearchStepHours("flight");
     const listDiag = {
       inputGroups: groups.length,
       attempts: [],
@@ -80425,7 +80433,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   }
   if (!isAirCombatBuild) {
     if (_mandatoryDayFlightList.length > 0) {
-      const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
+      const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + getDispatchSearchStepHours("flight");
       if (flyingStartTime < REMEDIAL_EARLIEST_START) {
         schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
           _allFlightList,
@@ -80518,7 +80526,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       for (let gi = 0; gi < soloGroups.length; gi++) {
         const group = soloGroups[gi];
         buildDebugLog(`[SOLO] Scheduling group ${gi + 1}/${soloGroups.length} (${group.length} trainees), searching from ${_fmtT(groupSearchStart)}`);
-        const TIME_INCREMENT = 5 / 60;
+        const TIME_INCREMENT = getDispatchSearchStepHours("flight");
         let lastPlacedTime = groupSearchStart;
         for (const trainee of group) {
           const { next } = traineeNextEventMap.get(trainee.fullName);
@@ -80812,7 +80820,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
     });
     if (traineesNeedingStby.length > 0) {
-      const timeIncrement = 5 / 60;
+      const timeIncrement = getDispatchSearchStepHours("flight");
       for (const trainee of traineesNeedingStby) {
         const { next } = traineeNextEventMap.get(trainee.fullName);
         if (!next) continue;
@@ -80856,7 +80864,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     buildDebugLog("Trainees needing FTD recovery pass:", traineesNeedingStbyFtd.length);
     if (traineesNeedingStbyFtd.length > 0) {
-      const ftdRecoveryIncrement = 15 / 60;
+      const ftdRecoveryIncrement = getDispatchSearchStepHours("ftd");
       let recoveredToFtd = 0;
       for (const trainee of traineesNeedingStbyFtd) {
         const { next } = traineeNextEventMap.get(trainee.fullName);
@@ -80906,7 +80914,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     for (const trainee of traineesNeedingFinalFtdRecovery) {
       const { next } = traineeNextEventMap.get(trainee.fullName);
       if (!next) continue;
-      const recoveryIncrement = 15 / 60;
+      const recoveryIncrement = getDispatchSearchStepHours("ftd");
       let placedOnRealFtd = false;
       const recoveryStart = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
       for (let time = recoveryStart; time <= ftdEndTime - next.duration + 1e-3; time += recoveryIncrement) {
@@ -81023,7 +81031,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const compressCurrencyFlightPlacements = () => {
     const currencyFlights = generatedEvents.filter((event) => event.type === "flight" && event._source === "highest-priority-currency" && isCurrencyPriorityEvent(event)).sort((a, b) => a.startTime - b.startTime);
     if (currencyFlights.length === 0) return;
-    const timeIncrement = 5 / 60;
+    const timeIncrement = getDispatchSearchStepHours("flight");
     const flightResources = getPriorityResourceOptions({
       type: "flight"
     });

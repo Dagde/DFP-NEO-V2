@@ -5473,6 +5473,15 @@ function generateDfpInternal(
     const dispatchStaggerSettings = normaliseDispatchStaggerSettings(rawDispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS);
     const flightDispatchStaggerMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, 'flight');
     const simulatorDispatchStaggerMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, 'ftd');
+    const getDispatchSearchStepMinutes = (eventType: string | undefined | null): number => {
+        const type = String(eventType || '').trim().toLowerCase();
+        const configuredMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, type);
+        if (configuredMinutes > 0) return Math.max(1, configuredMinutes);
+        if (type === 'flight' || type === 'ftd' || type === 'sim' || type === 'simulator' || type === 'cpt') return 1;
+        return 15;
+    };
+    const getDispatchSearchStepHours = (eventType: string | undefined | null): number =>
+        getDispatchSearchStepMinutes(eventType) / 60;
     const hasDispatchStaggerConflict = (
         eventType: string | undefined | null,
         startTime: number,
@@ -7045,9 +7054,9 @@ function generateDfpInternal(
             const eventPerfStart = fixedCrewPerfNow();
             const getFixedCrewStartStepMinutes = (eventType?: string | null): number => {
                 const type = String(eventType || '').trim().toLowerCase();
-                if (type === 'flight') return Math.max(1, flightDispatchStaggerMinutes || 5);
+                if (type === 'flight') return getDispatchSearchStepMinutes('flight');
                 const simulatorStep = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, type);
-                return Math.max(1, simulatorStep || 15);
+                return simulatorStep > 0 ? Math.max(1, simulatorStep) : getDispatchSearchStepMinutes(type);
             };
             const buildFixedCrewStartCandidates = (start: number, end: number, duration: number, stepMinutes: number): number[] => {
                 const latestStartMinutes = Math.floor((end - duration) * 60 + 0.001);
@@ -7952,7 +7961,7 @@ function generateDfpInternal(
             : isDayRemedial
                 ? Math.min(normalEndTime, commenceNightFlying)
                 : normalEndTime;
-        const timeIncrement = event.type === 'flight' ? 5 / 60 : 15 / 60;
+        const timeIncrement = getDispatchSearchStepHours(event.type);
         const resourceOptions = getPriorityResourceOptions(event);
 
         for (let startTime = searchStart; startTime + event.duration <= searchEnd + 0.001; startTime += timeIncrement) {
@@ -9124,10 +9133,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         syllabusOverrides?: Map<string, SyllabusItemDetail>,
         latestStartBefore?: number
     ) => {
-        // Time increments for slot hunting:
-        // - Flight: 5 minutes (staggered departures to avoid all aircraft taxiing at once)
-        // - Ground/CPT: 15 minutes (represents minimum gap between end of one ground school and start of next)
-        const timeIncrement = type === 'flight' ? 5 / 60 : 15 / 60;
+        const timeIncrement = getDispatchSearchStepHours(type);
         const listName = diagnosticLabel || `${isNightPass ? 'BNF' : type.toUpperCase()} ${isPlusOne ? 'Next+1' : 'Next'}`;
         const isMandatoryTraceList = listName.includes('Mandatory Remedial');
         recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + (['flight', 'ftd', 'cpt', 'ground'].indexOf(type) * 10) });
@@ -11692,7 +11698,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             eventsToSchedule: eventsToSchedule.length,
             generatedEvents: generatedEvents.length,
         });
-        const timeIncrement = 5 / 60;
+        const timeIncrement = getDispatchSearchStepHours('flight');
         const orderedTaskingEvents = eventsToSchedule.filter(event => !scheduledTaskingPriorityEventIds.has(event.id)).sort((left, right) =>
             left.startTime - right.startTime ||
             (left.taskingRequestId || '').localeCompare(right.taskingRequestId || '') ||
@@ -12192,7 +12198,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             staff: instructors.length,
             syllabus: syllabusDetails.length,
         });
-        const slotIncrement = 5 / 60;
+        const slotIncrement = getDispatchSearchStepHours('flight');
         const scheduleWindowStart = scheduleMode === 'night' ? commenceNightFlying : flyingStartTime;
         const scheduleWindowEnd = scheduleMode === 'night' ? ceaseNightFlying : flyingEndTime;
         const trainingItemMatchesScheduleMode = (item: SyllabusItemDetail): boolean =>
@@ -14312,7 +14318,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const endBoundary = scheduleMode === 'night'
                 ? ceaseNightFlying
                 : eventType === 'flight' ? flyingEndTime : ftdEndTime;
-            const timeIncrement = eventType === 'flight' ? 5 / 60 : 15 / 60;
+            const timeIncrement = getDispatchSearchStepHours(eventType);
             traceCurrencyPriority('typePassTrace', {
                 phase: 'type-pass-start',
                 scheduleMode,
@@ -14799,7 +14805,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const placedFormationKeys = new Set<string>();
         if (groups.length === 0) return placedFormationKeys;
 
-        const timeIncrement = 5 / 60;
+        const timeIncrement = getDispatchSearchStepHours('flight');
         const listDiag = {
             inputGroups: groups.length,
             attempts: [] as any[],
@@ -15453,7 +15459,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // Step 3a: Schedule day flights. Multi-resource formation groups run through
     // a dedicated grouped pass so matching trainees are pulled together by event code.
     if (_mandatoryDayFlightList.length > 0) {
-        const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + (5 / 60);
+        const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + getDispatchSearchStepHours('flight');
         if (flyingStartTime < REMEDIAL_EARLIEST_START) {
             schedulePrioritizedDualsAndFormationsWithTaskingBreaks(
                 _allFlightList,
@@ -15571,8 +15577,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             // For each trainee in this group, try to place them starting from groupSearchStart.
             // scheduleEvent enforces all normal rules (cap, separation, window, aircraft, area).
-            // We use the same 5-min increment as scheduleList does for flights.
-            const TIME_INCREMENT = 5 / 60;
+            const TIME_INCREMENT = getDispatchSearchStepHours('flight');
             let lastPlacedTime = groupSearchStart;
 
             for (const trainee of group) {
@@ -16060,7 +16065,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
 
     if (traineesNeedingStby.length > 0) {
-        const timeIncrement = 5 / 60;
+        const timeIncrement = getDispatchSearchStepHours('flight');
         for (const trainee of traineesNeedingStby) {
             const { next } = traineeNextEventMap.get(trainee.fullName)!;
             if (!next) continue;
@@ -16126,7 +16131,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // The first greedy pass can miss later FTD slots after other event types have filled in;
     // STBY should only represent genuinely unplaced FTD work.
     if (traineesNeedingStbyFtd.length > 0) {
-        const ftdRecoveryIncrement = 15 / 60;
+        const ftdRecoveryIncrement = getDispatchSearchStepHours('ftd');
         let recoveredToFtd = 0;
 
         for (const trainee of traineesNeedingStbyFtd) {
@@ -16193,7 +16198,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
         if (!next) continue;
 
-        const recoveryIncrement = 15 / 60;
+        const recoveryIncrement = getDispatchSearchStepHours('ftd');
         let placedOnRealFtd = false;
 
         const recoveryStart = isRemedialSyllabusItem(next)
@@ -16349,7 +16354,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             .sort((a, b) => a.startTime - b.startTime);
         if (currencyFlights.length === 0) return;
 
-        const timeIncrement = 5 / 60;
+        const timeIncrement = getDispatchSearchStepHours('flight');
         const flightResources = getPriorityResourceOptions({
             id: 'currency-flight-resource-options',
             type: 'flight',
