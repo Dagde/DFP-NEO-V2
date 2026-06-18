@@ -56060,14 +56060,21 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 "."
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(activeCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !activeCrewCompositionAircraftCode, className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Alternate" })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+              !crewCompositionUnlocked && canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(true), className: platformActionButtonClass, children: "Edit" }) : null,
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(activeCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !activeCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                "Add",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Alt"
+              ] }) })
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeAircraftAlternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : activeAircraftAlternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Stable Code", value: profile.code, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { code: value }), info: "Scheduler-facing reference. Keep it stable once tasking starts using it." }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Display Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { name: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", value: profile.description || "", disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { description: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50", children: "Delete" }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-800 bg-gray-950/70 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
@@ -56075,12 +56082,16 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-gray-300", children: "Role Requirements" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Counts are grouped by generic scheduler role." })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewRole(profile.id), disabled: !canEditCrewComposition, className: "rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[11px] font-bold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Role" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewRole(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  "Add",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Role"
+                ] }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: profile.roleRequirements.map((requirement, roleIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-[minmax(180px,1fr)_120px_auto]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: requirement.role, disabled: !canEditCrewComposition, options: crewCompositionRoleOptions, optionLabels: crewPositionLabelMap, onChange: (value) => updateAlternateCrewRole(profile.id, roleIndex, { role: value }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Count", value: requirement.count, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewRole(profile.id, roleIndex, { count: value }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewRole(profile.id, roleIndex), disabled: !canEditCrewComposition || profile.roleRequirements.length <= 1, className: "rounded border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50", children: "Remove" }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewRole(profile.id, roleIndex), disabled: !canEditCrewComposition || profile.roleRequirements.length <= 1, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight", children: "Remove" }) }) })
               ] }, `${profile.id}-role-${roleIndex}`)) })
             ] })
           ] }, profile.id)) })

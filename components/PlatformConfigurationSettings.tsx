@@ -3592,7 +3592,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Alternate Crew Composition</h4>
                 <p className={resourceSectionPanelHintClass}>Alternate profiles shown here are only for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
-              <button type="button" onClick={() => addAlternateCrewComposition(activeCrewCompositionAircraftCode)} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">Add Alternate</button>
+              <div className="flex flex-wrap justify-end gap-[1px]">
+                {!crewCompositionUnlocked && canEdit ? (
+                  <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
+                ) : null}
+                <button type="button" onClick={() => addAlternateCrewComposition(activeCrewCompositionAircraftCode)} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className={platformActionButtonClass}>
+                  <span className="text-[9px] leading-tight">Add<br />Alt</span>
+                </button>
+              </div>
             </div>
             <div className="space-y-3">
               {activeAircraftAlternateCompositions.length === 0 ? (
@@ -3604,7 +3611,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <Field label="Display Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { name: value })} />
                     <Field label="Description" value={profile.description || ''} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { description: value })} />
                     <div className="flex items-end">
-                      <button type="button" onClick={() => removeAlternateCrewComposition(profile.id)} disabled={!canEditCrewComposition} className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50">Delete</button>
+                      <button type="button" onClick={() => removeAlternateCrewComposition(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
+                        <span className="text-[9px] leading-tight text-red-600">Delete</span>
+                      </button>
                     </div>
                   </div>
                   <div className="mt-3 rounded-lg border border-gray-800 bg-gray-950/70 p-3">
@@ -3613,7 +3622,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <div className="text-xs font-black uppercase tracking-wide text-gray-300">Role Requirements</div>
                         <div className="text-[11px] text-gray-500">Counts are grouped by generic scheduler role.</div>
                       </div>
-                      <button type="button" onClick={() => addAlternateCrewRole(profile.id)} disabled={!canEditCrewComposition} className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[11px] font-bold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50">Add Role</button>
+                      <button type="button" onClick={() => addAlternateCrewRole(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
+                        <span className="text-[9px] leading-tight">Add<br />Role</span>
+                      </button>
                     </div>
                     <div className="space-y-2">
                       {profile.roleRequirements.map((requirement, roleIndex) => (
@@ -3621,7 +3632,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <SelectField label="Role" value={requirement.role} disabled={!canEditCrewComposition} options={crewCompositionRoleOptions} optionLabels={crewPositionLabelMap} onChange={(value) => updateAlternateCrewRole(profile.id, roleIndex, { role: value })} />
                           <NumberField label="Count" value={requirement.count} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewRole(profile.id, roleIndex, { count: value })} />
                           <div className="flex items-end">
-                            <button type="button" onClick={() => removeAlternateCrewRole(profile.id, roleIndex)} disabled={!canEditCrewComposition || profile.roleRequirements.length <= 1} className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50">Remove</button>
+                            <button type="button" onClick={() => removeAlternateCrewRole(profile.id, roleIndex)} disabled={!canEditCrewComposition || profile.roleRequirements.length <= 1} className={platformActionButtonClass}>
+                              <span className="text-[9px] leading-tight">Remove</span>
+                            </button>
                           </div>
                         </div>
                       ))}
