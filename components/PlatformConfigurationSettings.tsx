@@ -3787,7 +3787,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 <div className={resourceSectionPanelHintClass}>Default route and timing values can be changed when a mission is scheduled.</div>
                               </div>
                             </div>
-                            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <div className="grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[40px_42px] [&>label]:items-start">
                               <SelectField
                                 label="Unit"
                                 value={profile.unitCode || activePrimaryUnitCode}

@@ -56138,7 +56138,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Mission Timing & Route" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Default route and timing values can be changed when a mission is scheduled." })
                   ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[40px_42px] [&>label]:items-start", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       SelectField,
                       {
