@@ -3498,9 +3498,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               {visibleCrewPositionEntries.map((entry) => {
                 const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
                 return (
-                  <div key={`crew-role-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(130px,0.75fr)_minmax(130px,0.75fr)_minmax(300px,1.65fr)_auto]">
+                  <div key={`crew-role-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(182px,1.05fr)_minmax(65px,0.375fr)_minmax(300px,1.65fr)_auto]">
                     <Field label="Generic Position" value={entry.genericName} disabled={!canEditCrewComposition || isDefaultEntry} onChange={(value) => updateCrewPositionEntry(entry.id, { genericName: value })} info={isDefaultEntry ? 'Baseline generic positions stay fixed so aircraft seat links remain stable.' : 'The generic role key saved on aircraft seats and alternate crew profiles.'} />
-                    <Field label="Organisation Label" value={entry.label} disabled={!canEditCrewComposition} onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })} />
+                    <Field label="Label" value={entry.label} disabled={!canEditCrewComposition} onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })} />
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400">Applies To</label>
                       <div className="grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2 xl:grid-cols-4">

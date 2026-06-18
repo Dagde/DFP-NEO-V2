@@ -55974,9 +55974,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleCrewPositionEntries.map((entry) => {
             const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(130px,0.75fr)_minmax(130px,0.75fr)_minmax(300px,1.65fr)_auto]", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(182px,1.05fr)_minmax(65px,0.375fr)_minmax(300px,1.65fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Generic Position", value: entry.genericName, disabled: !canEditCrewComposition || isDefaultEntry, onChange: (value) => updateCrewPositionEntry(entry.id, { genericName: value }), info: isDefaultEntry ? "Baseline generic positions stay fixed so aircraft seat links remain stable." : "The generic role key saved on aircraft seats and alternate crew profiles." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Label", value: entry.label, disabled: !canEditCrewComposition, onChange: (value) => updateCrewPositionEntry(entry.id, { label: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Label", value: entry.label, disabled: !canEditCrewComposition, onChange: (value) => updateCrewPositionEntry(entry.id, { label: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400", children: "Applies To" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2 xl:grid-cols-4", children: OPERATIONAL_MODEL_OPTIONS.map((option) => {
