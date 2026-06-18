@@ -213,6 +213,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 events={props.events}
                 traineesData={props.traineesData}
                 activeCourses={props.activeCourses}
+                courseColors={props.courseColors}
                 onNavigateAndSelectPerson={props.onNavigateAndSelectPerson}
                 analysis={props.analysis}
                 resourceDisplayNames={resourceDisplayNames}

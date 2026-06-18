@@ -30067,6 +30067,7 @@ const CourseMetricsTab = ({
   events,
   traineesData,
   activeCourses,
+  courseColors = {},
   onNavigateAndSelectPerson,
   analysis,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
@@ -30174,11 +30175,50 @@ const CourseMetricsTab = ({
       (left, right) => left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code)
     );
   }, [activeUnitCodes, date, events, instructorsData, syllabusDetails]);
+  const TAILWIND_CHART_COLORS = {
+    sky: { 400: "#38bdf8", 500: "#0ea5e9", 600: "#0284c7" },
+    purple: { 400: "#c084fc", 500: "#a855f7", 600: "#9333ea" },
+    yellow: { 400: "#facc15", 500: "#eab308", 600: "#ca8a04" },
+    pink: { 400: "#f472b6", 500: "#ec4899", 600: "#db2777" },
+    teal: { 400: "#2dd4bf", 500: "#14b8a6", 600: "#0d9488" },
+    indigo: { 400: "#818cf8", 500: "#6366f1", 600: "#4f46e5" },
+    cyan: { 400: "#22d3ee", 500: "#06b6d4", 600: "#0891b2" },
+    blue: { 400: "#60a5fa", 500: "#3b82f6", 600: "#2563eb" },
+    green: { 400: "#4ade80", 500: "#22c55e", 600: "#16a34a" },
+    orange: { 400: "#fb923c", 500: "#f97316", 600: "#ea580c" },
+    red: { 400: "#f87171", 500: "#ef4444", 600: "#dc2626" },
+    gray: { 400: "#9ca3af", 500: "#6b7280", 600: "#4b5563" },
+    amber: { 400: "#fbbf24", 500: "#f59e0b", 600: "#d97706" },
+    fuchsia: { 400: "#e879f9", 500: "#d946ef", 600: "#c026d3" },
+    lime: { 400: "#a3e635", 500: "#84cc16", 600: "#65a30d" },
+    violet: { 400: "#a78bfa", 500: "#8b5cf6", 600: "#7c3aed" },
+    rose: { 400: "#fb7185", 500: "#f43f5e", 600: "#e11d48" }
+  };
+  const stripCourseSuffix = (value) => {
+    const text = String(value || "").trim();
+    const match = text.match(/^(.*?)\s+[–-]\s+([A-Z0-9][A-Z0-9 +/]*?)$/);
+    return match ? match[1].trim() : text;
+  };
+  const fallbackChartColor = (index, total) => `hsl(${index * 360 / Math.max(total, 1)}, 70%, 60%)`;
+  const resolveCourseChartColor = (courseName, index, total) => {
+    const configured = courseColors[courseName];
+    if (!configured) return fallbackChartColor(index, total);
+    if (configured.startsWith("#")) return configured;
+    const match = configured.match(/^bg-([a-z]+)-(\d+)(?:\/\d+)?$/);
+    if (!match) return fallbackChartColor(index, total);
+    return TAILWIND_CHART_COLORS[match[1]]?.[match[2]] || fallbackChartColor(index, total);
+  };
   const traineeCourseLookup = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
     traineesData.forEach((t) => {
-      if (t.fullName && t.course) map.set(t.fullName, t.course);
-      if (t.name && t.course) map.set(t.name, t.course);
+      if (t.fullName && t.course) {
+        map.set(t.fullName, t.course);
+        map.set(stripCourseSuffix(t.fullName), t.course);
+      }
+      if (t.name && t.course) {
+        map.set(t.name, t.course);
+        map.set(stripCourseSuffix(t.name), t.course);
+      }
     });
     return map;
   }, [traineesData]);
@@ -30186,15 +30226,22 @@ const CourseMetricsTab = ({
     if (!studentName) return null;
     const fromLookup = traineeCourseLookup.get(studentName);
     if (fromLookup) return fromLookup;
-    const match = studentName.match(/ \u2013 (.*)$/);
+    const normalisedName = stripCourseSuffix(studentName);
+    const fromNormalisedLookup = traineeCourseLookup.get(normalisedName);
+    if (fromNormalisedLookup) return fromNormalisedLookup;
+    const match = studentName.match(/\s+[–-]\s+(.*)$/);
     return match ? match[1] : null;
   };
   const getEventPersonnel = (e) => {
     const personnel = /* @__PURE__ */ new Set();
-    if (e.instructor) personnel.add(e.instructor);
-    if (e.student) personnel.add(e.student);
-    if (e.pilot) personnel.add(e.pilot);
-    if (e.attendees) e.attendees.forEach((p) => personnel.add(p));
+    const addPerson = (name) => {
+      const normalised = stripCourseSuffix(String(name || ""));
+      if (normalised && !/^TBA$/i.test(normalised)) personnel.add(normalised);
+    };
+    addPerson(e.instructor);
+    addPerson(e.student);
+    addPerson(e.pilot);
+    if (e.attendees) e.attendees.forEach(addPerson);
     return Array.from(personnel);
   };
   const courseStats = reactExports.useMemo(() => {
@@ -30350,7 +30397,7 @@ const CourseMetricsTab = ({
             data: analysis.courseAnalysis.map((course, index) => ({
               label: course.courseName,
               value: course.eventsByType.flight,
-              color: `hsl(${index * 360 / analysis.courseAnalysis.length}, 70%, 60%)`
+              color: resolveCourseChartColor(course.courseName, index, analysis.courseAnalysis.length)
             }))
           }
         ),
@@ -30361,7 +30408,7 @@ const CourseMetricsTab = ({
             data: analysis.courseAnalysis.map((course, index) => ({
               label: course.courseName,
               value: course.eventCount,
-              color: `hsl(${index * 360 / analysis.courseAnalysis.length}, 70%, 60%)`
+              color: resolveCourseChartColor(course.courseName, index, analysis.courseAnalysis.length)
             }))
           }
         )
@@ -36497,6 +36544,7 @@ const BuildIntelligenceView = (props) => {
           events: props.events,
           traineesData: props.traineesData,
           activeCourses: props.activeCourses,
+          courseColors: props.courseColors,
           onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
           analysis: props.analysis,
           resourceDisplayNames,
