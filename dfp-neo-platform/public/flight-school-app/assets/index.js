@@ -56085,8 +56085,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   info: "This is the three-letter code the app can use to recognise this alternate crew. The display name can change, but keep this short code the same once the crew type is being used."
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Display Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { name: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", value: profile.description || "", disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { description: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-7", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Display Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { name: value }) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-7", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", value: profile.description || "", disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { description: value }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-800 bg-gray-950/70 p-3", children: [
