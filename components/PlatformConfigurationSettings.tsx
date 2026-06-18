@@ -3607,7 +3607,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ) : activeAircraftAlternateCompositions.map((profile) => (
                 <div key={profile.id} className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
                   <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]">
-                    <Field label="Stable Code" value={profile.code} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { code: value })} info="This is the short internal code the app can use to recognise this alternate crew. The display name can be changed for users, but this code should stay the same once the crew type is being used." />
+                    <Field
+                      label="Short Code (3 letters)"
+                      value={profile.code}
+                      disabled={!canEditCrewComposition}
+                      maxLength={3}
+                      onChange={(value) => updateAlternateCrewComposition(profile.id, { code: value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) })}
+                      info="This is the three-letter code the app can use to recognise this alternate crew. The display name can change, but keep this short code the same once the crew type is being used."
+                    />
                     <Field label="Display Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { name: value })} />
                     <Field label="Description" value={profile.description || ''} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { description: value })} />
                     <div className="flex items-end">

@@ -53111,8 +53111,18 @@ const AppearanceSettings = ({
 };
 const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "air_mobility"];
 const normaliseCode = (value, fallback) => {
-  const token = String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return token || fallback;
+  const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
+  return token || fallback.slice(0, 3);
+};
+const nextAvailableThreeLetterCode = (baseCode, usedCodes) => {
+  if (!usedCodes.has(baseCode)) return baseCode;
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const prefix = (baseCode.slice(0, 2) || "AL").padEnd(2, "A");
+  for (const letter of alphabet) {
+    const candidate = `${prefix}${letter}`;
+    if (!usedCodes.has(candidate)) return candidate;
+  }
+  return baseCode;
 };
 const normaliseRoleRequirements = (value) => {
   const rows = Array.isArray(value) ? value : [];
@@ -53137,11 +53147,7 @@ const normaliseCrewCompositionSettings = (value) => {
   const alternateCompositions = rows.map((row, index) => {
     const fallbackCode = `ALT-${index + 1}`;
     let code = normaliseCode(row?.code || row?.name, fallbackCode);
-    if (usedCodes.has(code)) {
-      let suffix = 2;
-      while (usedCodes.has(`${code}-${suffix}`)) suffix += 1;
-      code = `${code}-${suffix}`;
-    }
+    code = nextAvailableThreeLetterCode(code, usedCodes);
     usedCodes.add(code);
     const operationalModels = Array.isArray(row?.operationalModels) ? row.operationalModels.filter((model) => SUPPORTED_MODELS.includes(model)) : SUPPORTED_MODELS;
     return {
@@ -53160,10 +53166,7 @@ const normaliseCrewCompositionSettings = (value) => {
 const createAlternateCrewCompositionCode = (existingProfiles, name) => {
   const usedCodes = new Set(existingProfiles.map((profile) => profile.code.toUpperCase()));
   const base = normaliseCode(name, `ALT-${existingProfiles.length + 1}`);
-  if (!usedCodes.has(base)) return base;
-  let suffix = 2;
-  while (usedCodes.has(`${base}-${suffix}`)) suffix += 1;
-  return `${base}-${suffix}`;
+  return nextAvailableThreeLetterCode(base, usedCodes);
 };
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
@@ -56071,7 +56074,17 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeAircraftAlternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : activeAircraftAlternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Stable Code", value: profile.code, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { code: value }), info: "This is the short internal code the app can use to recognise this alternate crew. The display name can be changed for users, but this code should stay the same once the crew type is being used." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Short Code (3 letters)",
+                  value: profile.code,
+                  disabled: !canEditCrewComposition,
+                  maxLength: 3,
+                  onChange: (value) => updateAlternateCrewComposition(profile.id, { code: value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3) }),
+                  info: "This is the three-letter code the app can use to recognise this alternate crew. The display name can change, but keep this short code the same once the crew type is being used."
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Display Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { name: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", value: profile.description || "", disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { description: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })

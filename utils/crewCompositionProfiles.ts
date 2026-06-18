@@ -26,9 +26,20 @@ const normaliseCode = (value: unknown, fallback: string): string => {
   const token = String(value || '')
     .trim()
     .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return token || fallback;
+    .replace(/[^A-Z]+/g, '')
+    .slice(0, 3);
+  return token || fallback.slice(0, 3);
+};
+
+const nextAvailableThreeLetterCode = (baseCode: string, usedCodes: Set<string>): string => {
+  if (!usedCodes.has(baseCode)) return baseCode;
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const prefix = (baseCode.slice(0, 2) || 'AL').padEnd(2, 'A');
+  for (const letter of alphabet) {
+    const candidate = `${prefix}${letter}`;
+    if (!usedCodes.has(candidate)) return candidate;
+  }
+  return baseCode;
 };
 
 const normaliseRoleRequirements = (value: unknown): CrewCompositionRoleRequirement[] => {
@@ -55,11 +66,7 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
   const alternateCompositions = rows.map((row: any, index: number) => {
     const fallbackCode = `ALT-${index + 1}`;
     let code = normaliseCode(row?.code || row?.name, fallbackCode);
-    if (usedCodes.has(code)) {
-      let suffix = 2;
-      while (usedCodes.has(`${code}-${suffix}`)) suffix += 1;
-      code = `${code}-${suffix}`;
-    }
+    code = nextAvailableThreeLetterCode(code, usedCodes);
     usedCodes.add(code);
 
     const operationalModels = Array.isArray(row?.operationalModels)
@@ -89,8 +96,5 @@ export const createAlternateCrewCompositionCode = (
 ): string => {
   const usedCodes = new Set(existingProfiles.map((profile) => profile.code.toUpperCase()));
   const base = normaliseCode(name, `ALT-${existingProfiles.length + 1}`);
-  if (!usedCodes.has(base)) return base;
-  let suffix = 2;
-  while (usedCodes.has(`${base}-${suffix}`)) suffix += 1;
-  return `${base}-${suffix}`;
+  return nextAvailableThreeLetterCode(base, usedCodes);
 };
