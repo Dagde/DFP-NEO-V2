@@ -3597,7 +3597,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
                 ) : null}
                 <button type="button" onClick={() => addAlternateCrewComposition(activeCrewCompositionAircraftCode)} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className={platformActionButtonClass}>
-                  <span className="text-[9px] leading-tight">Add<br />Alt</span>
+                  <span className="text-[9px] leading-tight">Add Alt<br />Crew</span>
                 </button>
               </div>
             </div>
