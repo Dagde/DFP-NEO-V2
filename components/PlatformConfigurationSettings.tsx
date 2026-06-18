@@ -5934,6 +5934,7 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: s
       disabled={disabled}
       maxLength={maxLength}
       onKeyDownCapture={stopEditableKeyPropagation}
+      onKeyDown={stopEditableKeyPropagation}
       onChange={(event) => onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
     />
     {typeof maxLength === 'number' ? (
@@ -5953,6 +5954,7 @@ const OffsetField = ({ label, value, disabled, onChange }: { label: string; valu
         value={value || ''}
         disabled={disabled}
         onKeyDownCapture={stopEditableKeyPropagation}
+        onKeyDown={stopEditableKeyPropagation}
         onChange={(event) => onChange(event.target.value)}
       />
     </div>

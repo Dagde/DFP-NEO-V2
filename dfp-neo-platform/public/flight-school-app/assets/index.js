@@ -53155,7 +53155,7 @@ const normaliseCrewCompositionSettings = (value) => {
       code,
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
       name: String(row?.name || "").trim() ? String(row?.name || "") : code,
-      description: String(row?.description || "").trim(),
+      description: String(row?.description || ""),
       operationalModels: operationalModels.length > 0 ? operationalModels : SUPPORTED_MODELS,
       roleRequirements: normaliseRoleRequirements(row?.roleRequirements),
       status: String(row?.status || "ACTIVE").trim().toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
@@ -58366,6 +58366,7 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }) => /* @__P
       disabled,
       maxLength,
       onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
       onChange: (event) => onChange(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value)
     }
   ),
@@ -58384,6 +58385,7 @@ const OffsetField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ js
       value: value || "",
       disabled,
       onKeyDownCapture: stopEditableKeyPropagation,
+      onKeyDown: stopEditableKeyPropagation,
       onChange: (event) => onChange(event.target.value)
     }
   ) })
