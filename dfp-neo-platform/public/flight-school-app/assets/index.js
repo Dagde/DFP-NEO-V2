@@ -71211,17 +71211,36 @@ const areLmpPrerequisitesMet = (item, completedEventIds) => {
     return !normalized || completedEventIds.has(normalized);
   });
 };
+const getFallbackMasterLmpForTrainee = (trainee, masterSyllabus) => {
+  const normaliseToken = (value) => String(value || "").trim().toUpperCase();
+  const traineeCourse = normaliseToken(trainee.course);
+  const configuredLmpType = normaliseToken(trainee.lmpType);
+  const inferredLmpType = configuredLmpType || (traineeCourse.startsWith("FIC") ? "FIC" : "BPC+IPC");
+  const masterItems = masterSyllabus.filter((item) => item?.isActive !== false && item?.lmpType !== "Staff CAT" && item?.type !== "Academics");
+  const itemCourseTokens = (item) => Array.isArray(item.courses) ? item.courses.map(normaliseToken).filter(Boolean) : [];
+  const matchesInferredLmp = (item) => {
+    const courseTokens = itemCourseTokens(item);
+    if (inferredLmpType === "FIC") {
+      return courseTokens.includes("FIC") || courseTokens.includes(traineeCourse);
+    }
+    if (inferredLmpType === "BPC+IPC") {
+      return courseTokens.length === 0 || courseTokens.includes("BPC+IPC");
+    }
+    return courseTokens.includes(inferredLmpType) || courseTokens.includes(traineeCourse);
+  };
+  return masterItems.filter(matchesInferredLmp);
+};
 const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabus, publishedSchedules, buildDate, dbElceMap) => {
   const verboseNeoBuild = isNeoBuildVerboseDiagnosticsEnabled();
   const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
-  const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
+  const individualLMP = traineeLMPs.get(trainee.fullName) || getFallbackMasterLmpForTrainee(trainee, masterSyllabus);
   if (verboseNeoBuild && hasIndividualLMP) {
     const remedialEvents = individualLMP.filter((item) => item.isRemedial);
     if (remedialEvents.length > 0) {
       console.log(`🔍 [${trainee.fullName}] Has Individual LMP with ${remedialEvents.length} remedial events`);
     }
   } else if (verboseNeoBuild) {
-    console.log(`⚠️ [${trainee.fullName}] Using Master LMP (no Individual LMP found)`);
+    console.log(`⚠️ [${trainee.fullName}] Using scoped Master LMP fallback (no Individual LMP found): ${individualLMP.length} events`);
   }
   if (!individualLMP || individualLMP.length === 0) {
     return { next: null, plusOne: null };

@@ -4559,6 +4559,41 @@ const areLmpPrerequisitesMet = (item: SyllabusItemDetail, completedEventIds: Set
     });
 };
 
+const getFallbackMasterLmpForTrainee = (
+    trainee: Trainee,
+    masterSyllabus: SyllabusItemDetail[]
+): SyllabusItemDetail[] => {
+    const normaliseToken = (value: unknown) => String(value || '').trim().toUpperCase();
+    const traineeCourse = normaliseToken(trainee.course);
+    const configuredLmpType = normaliseToken(trainee.lmpType);
+    const inferredLmpType = configuredLmpType || (traineeCourse.startsWith('FIC') ? 'FIC' : 'BPC+IPC');
+
+    const masterItems = masterSyllabus.filter((item: any) => (
+        item?.isActive !== false &&
+        item?.lmpType !== 'Staff CAT' &&
+        item?.type !== 'Academics'
+    ));
+
+    const itemCourseTokens = (item: SyllabusItemDetail): string[] => (
+        Array.isArray(item.courses)
+            ? item.courses.map(normaliseToken).filter(Boolean)
+            : []
+    );
+
+    const matchesInferredLmp = (item: SyllabusItemDetail): boolean => {
+        const courseTokens = itemCourseTokens(item);
+        if (inferredLmpType === 'FIC') {
+            return courseTokens.includes('FIC') || courseTokens.includes(traineeCourse);
+        }
+        if (inferredLmpType === 'BPC+IPC') {
+            return courseTokens.length === 0 || courseTokens.includes('BPC+IPC');
+        }
+        return courseTokens.includes(inferredLmpType) || courseTokens.includes(traineeCourse);
+    };
+
+    return masterItems.filter(matchesInferredLmp);
+};
+
 // Centralized logic for determining a trainee's next event(s)
 const computeNextEventsForTrainee = (
     trainee: Trainee,
@@ -4570,9 +4605,9 @@ const computeNextEventsForTrainee = (
     dbElceMap?: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null> // NEW: DB-backed ELCE
 ): { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null } => {
     const verboseNeoBuild = isNeoBuildVerboseDiagnosticsEnabled();
-    // Check individual LMP first, then fallback to master syllabus
+    // Check individual LMP first, then fallback only to the trainee's relevant Master LMP stream.
     const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
-    const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
+    const individualLMP = traineeLMPs.get(trainee.fullName) || getFallbackMasterLmpForTrainee(trainee, masterSyllabus);
 
     // Debug logging for remedial tracking
     if (verboseNeoBuild && hasIndividualLMP) {
@@ -4581,7 +4616,7 @@ const computeNextEventsForTrainee = (
             console.log(`🔍 [${trainee.fullName}] Has Individual LMP with ${remedialEvents.length} remedial events`);
         }
     } else if (verboseNeoBuild) {
-        console.log(`⚠️ [${trainee.fullName}] Using Master LMP (no Individual LMP found)`);
+        console.log(`⚠️ [${trainee.fullName}] Using scoped Master LMP fallback (no Individual LMP found): ${individualLMP.length} events`);
     }
 
     if (!individualLMP || individualLMP.length === 0) {
