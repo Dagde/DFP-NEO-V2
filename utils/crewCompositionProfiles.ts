@@ -79,7 +79,7 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
       id: String(row?.id || `alternate-crew-${index + 1}`),
       code,
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
-      name: String(row?.name || code).trim() || code,
+      name: String(row?.name || '').trim() ? String(row?.name || '') : code,
       description: String(row?.description || '').trim(),
       operationalModels: operationalModels.length > 0 ? operationalModels : SUPPORTED_MODELS,
       roleRequirements: normaliseRoleRequirements(row?.roleRequirements),

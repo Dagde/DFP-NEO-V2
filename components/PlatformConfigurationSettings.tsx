@@ -5838,22 +5838,22 @@ const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: s
 };
 
 const InfoHint = ({ text }: { text: string }) => {
-  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const [position, setPosition] = useState<{ left: number; top: number; placement: 'above' | 'below' } | null>(null);
 
   const showHint = (target: HTMLElement) => {
     const rect = target.getBoundingClientRect();
     const margin = 12;
     const width = Math.min(448, window.innerWidth - margin * 2);
-    const estimatedHeight = 180;
     const left = Math.min(
       window.innerWidth - width - margin,
       Math.max(margin, rect.left + rect.width / 2 - width / 2),
     );
-    const belowTop = rect.bottom + 8;
-    const top = belowTop + estimatedHeight > window.innerHeight
-      ? Math.max(margin, rect.top - estimatedHeight - 8)
-      : belowTop;
-    setPosition({ left, top });
+    const shouldShowAbove = rect.bottom + 160 > window.innerHeight && rect.top > 160;
+    setPosition({
+      left,
+      top: shouldShowAbove ? rect.top - 8 : rect.bottom + 8,
+      placement: shouldShowAbove ? 'above' : 'below',
+    });
   };
 
   return (
@@ -5874,6 +5874,7 @@ const InfoHint = ({ text }: { text: string }) => {
           style={{
             left: `${position.left}px`,
             top: `${position.top}px`,
+            transform: position.placement === 'above' ? 'translateY(-100%)' : undefined,
             width: 'min(28rem, calc(100vw - 1.5rem))',
           }}
         >
@@ -5899,6 +5900,7 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: s
       value={value || ''}
       disabled={disabled}
       maxLength={maxLength}
+      onKeyDownCapture={stopEditableKeyPropagation}
       onChange={(event) => onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
     />
     {typeof maxLength === 'number' ? (
