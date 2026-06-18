@@ -3617,7 +3617,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     />
                     <OffsetField label="Display Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { name: value })} />
                     <OffsetField label="Description" value={profile.description || ''} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { description: value })} />
-                    <div className="flex items-start pt-[41px]">
+                    <div className="flex items-start pt-[31px]">
                       <button type="button" onClick={() => removeAlternateCrewComposition(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
                         <span className="text-[9px] leading-tight text-red-600">Delete</span>
                       </button>
