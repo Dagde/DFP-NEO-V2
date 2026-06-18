@@ -56016,51 +56016,51 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               "."
             ] })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_90px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-black text-white", children: activeCrewCompositionAircraftCode || "AIRCRAFT" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: [
-                    activeCrewCompositionAircraft?.category || "Training",
-                    " aircraft"
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Crew Seats", value: activeCrewComposition.crewCount, disabled: !canEditCrewComposition, onChange: (value) => updateAircraftCrewCount(activeCrewCompositionAircraftIndex, value) }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-black text-white", children: activeCrewCompositionAircraftCode || "AIRCRAFT" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: [
+                  activeCrewCompositionAircraft?.category || "Training",
+                  " aircraft"
+                ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 lg:grid-cols-2", children: activeCrewComposition.seats.map((seat, seatIndex) => {
-                const eligibleRoles = getAircraftSeatEligibleRoles(seat);
-                const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-950/70 p-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-black uppercase tracking-wide text-orange-100", children: [
-                        "Seat ",
-                        seatIndex + 1
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Allowed role set for this seat." })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Default", value: seat.role, disabled: !canEditCrewComposition, options: eligibleRoles, optionLabels: crewPositionLabelMap, onChange: (value) => updateAircraftSeatRole(activeCrewCompositionAircraftIndex, seatIndex, value) }) })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1 sm:grid-cols-2", children: crewPositionOptions.map((role) => {
-                    const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
-                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-semibold ${checked ? "border-orange-300/35 bg-orange-500/10 text-orange-100" : "border-gray-800 bg-gray-900/70 text-gray-300"}`, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", className: "h-4 w-4 rounded border-gray-500 accent-orange-400", checked, disabled: !canEditCrewComposition || checked && eligibleRoles.length <= 1, onChange: (event) => updateAircraftSeatEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, role, event.target.checked) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: crewPositionLabelMap[role] || role })
-                    ] }, role);
-                  }) })
-                ] }, seat.id || `standard-crew-seat-${seatIndex}`);
-              }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[110px]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Crew Seats", value: activeCrewComposition.crewCount, disabled: !canEditCrewComposition, onChange: (value) => updateAircraftCrewCount(activeCrewCompositionAircraftIndex, value) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 h-fit rounded-md border border-orange-300/20 bg-orange-500/10 px-2 py-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-orange-100", children: "Crew Summary" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90", children: getStandardCrewSummary(activeCrewComposition).map((roleLabel, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                    index + 1,
+                    ". ",
+                    roleLabel
+                  ] }, `standard-crew-summary-${index}`)) })
+                ] })
+              ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[90px] justify-self-end rounded-md border border-orange-300/20 bg-orange-500/10 px-2 py-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-orange-100", children: "Crew Summary" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90", children: getStandardCrewSummary(activeCrewComposition).map((roleLabel, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
-                index + 1,
-                ". ",
-                roleLabel
-              ] }, `standard-crew-summary-${index}`)) })
-            ] })
-          ] }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 lg:grid-cols-2", children: activeCrewComposition.seats.map((seat, seatIndex) => {
+              const eligibleRoles = getAircraftSeatEligibleRoles(seat);
+              const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-950/70 p-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-black uppercase tracking-wide text-orange-100", children: [
+                      "Seat ",
+                      seatIndex + 1
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Allowed role set for this seat." })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Default", value: seat.role, disabled: !canEditCrewComposition, options: eligibleRoles, optionLabels: crewPositionLabelMap, onChange: (value) => updateAircraftSeatRole(activeCrewCompositionAircraftIndex, seatIndex, value) }) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1 sm:grid-cols-2", children: crewPositionOptions.map((role) => {
+                  const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-semibold ${checked ? "border-orange-300/35 bg-orange-500/10 text-orange-100" : "border-gray-800 bg-gray-900/70 text-gray-300"}`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", className: "h-4 w-4 rounded border-gray-500 accent-orange-400", checked, disabled: !canEditCrewComposition || checked && eligibleRoles.length <= 1, onChange: (event) => updateAircraftSeatEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, role, event.target.checked) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: crewPositionLabelMap[role] || role })
+                  ] }, role);
+                }) })
+              ] }, seat.id || `standard-crew-seat-${seatIndex}`);
+            }) })
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
@@ -56081,7 +56081,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               ] }) })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeAircraftAlternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : activeAircraftAlternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_90px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeAircraftAlternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : activeAircraftAlternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -56118,7 +56118,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 ] }, `${profile.id}-role-${roleIndex}`)) })
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[90px] justify-self-end rounded-md border border-cyan-300/20 bg-cyan-500/10 px-2 py-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-fit w-[110px] justify-self-end rounded-md border border-cyan-300/20 bg-cyan-500/10 px-2 py-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-cyan-100", children: "Crew Summary" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "space-y-0.5 text-[11px] font-semibold leading-tight text-cyan-50/90", children: getAlternateCrewSummary(profile).map((roleLabel, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
                 index + 1,

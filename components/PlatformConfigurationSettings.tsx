@@ -3553,56 +3553,52 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_90px]">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-black text-white">{activeCrewCompositionAircraftCode || 'AIRCRAFT'}</div>
-                      <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">{activeCrewCompositionAircraft?.category || 'Training'} aircraft</div>
-                    </div>
-                    <div className="w-32">
-                      <NumberField label="Crew Seats" value={activeCrewComposition.crewCount} disabled={!canEditCrewComposition} onChange={(value) => updateAircraftCrewCount(activeCrewCompositionAircraftIndex, value)} />
-                    </div>
+                  <div className="text-sm font-black text-white">{activeCrewCompositionAircraftCode || 'AIRCRAFT'}</div>
+                  <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">{activeCrewCompositionAircraft?.category || 'Training'} aircraft</div>
+                </div>
+                <div className="w-[110px]">
+                  <NumberField label="Crew Seats" value={activeCrewComposition.crewCount} disabled={!canEditCrewComposition} onChange={(value) => updateAircraftCrewCount(activeCrewCompositionAircraftIndex, value)} />
+                  <div className="mt-2 h-fit rounded-md border border-orange-300/20 bg-orange-500/10 px-2 py-2">
+                    <div className="mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-orange-100">Crew Summary</div>
+                    <ol className="space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90">
+                      {getStandardCrewSummary(activeCrewComposition).map((roleLabel, index) => (
+                        <li key={`standard-crew-summary-${index}`}>{index + 1}. {roleLabel}</li>
+                      ))}
+                    </ol>
                   </div>
-                  <div className="grid gap-2 lg:grid-cols-2">
-                    {activeCrewComposition.seats.map((seat, seatIndex) => {
-                      const eligibleRoles = getAircraftSeatEligibleRoles(seat);
-                      const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
-                      return (
-                        <div key={seat.id || `standard-crew-seat-${seatIndex}`} className="rounded-lg border border-gray-800 bg-gray-950/70 p-2">
-                          <div className="mb-2 flex items-start justify-between gap-2">
-                            <div>
-                              <div className="text-xs font-black uppercase tracking-wide text-orange-100">Seat {seatIndex + 1}</div>
-                              <div className="text-[11px] text-gray-500">Allowed role set for this seat.</div>
-                            </div>
-                            <div className="w-40">
-                              <SelectField label="Default" value={seat.role} disabled={!canEditCrewComposition} options={eligibleRoles} optionLabels={crewPositionLabelMap} onChange={(value) => updateAircraftSeatRole(activeCrewCompositionAircraftIndex, seatIndex, value)} />
-                            </div>
-                          </div>
-                          <div className="grid gap-1 sm:grid-cols-2">
-                            {crewPositionOptions.map((role) => {
-                              const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
-                              return (
-                                <label key={role} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-semibold ${checked ? 'border-orange-300/35 bg-orange-500/10 text-orange-100' : 'border-gray-800 bg-gray-900/70 text-gray-300'}`}>
-                                  <input type="checkbox" className="h-4 w-4 rounded border-gray-500 accent-orange-400" checked={checked} disabled={!canEditCrewComposition || (checked && eligibleRoles.length <= 1)} onChange={(event) => updateAircraftSeatEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, role, event.target.checked)} />
-                                  <span>{crewPositionLabelMap[role] || role}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
+                </div>
+              </div>
+              <div className="grid gap-2 lg:grid-cols-2">
+                {activeCrewComposition.seats.map((seat, seatIndex) => {
+                  const eligibleRoles = getAircraftSeatEligibleRoles(seat);
+                  const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
+                  return (
+                    <div key={seat.id || `standard-crew-seat-${seatIndex}`} className="rounded-lg border border-gray-800 bg-gray-950/70 p-2">
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-black uppercase tracking-wide text-orange-100">Seat {seatIndex + 1}</div>
+                          <div className="text-[11px] text-gray-500">Allowed role set for this seat.</div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="w-[90px] justify-self-end rounded-md border border-orange-300/20 bg-orange-500/10 px-2 py-2">
-                  <div className="mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-orange-100">Crew Summary</div>
-                  <ol className="space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90">
-                    {getStandardCrewSummary(activeCrewComposition).map((roleLabel, index) => (
-                      <li key={`standard-crew-summary-${index}`}>{index + 1}. {roleLabel}</li>
-                    ))}
-                  </ol>
-                </div>
+                        <div className="w-40">
+                          <SelectField label="Default" value={seat.role} disabled={!canEditCrewComposition} options={eligibleRoles} optionLabels={crewPositionLabelMap} onChange={(value) => updateAircraftSeatRole(activeCrewCompositionAircraftIndex, seatIndex, value)} />
+                        </div>
+                      </div>
+                      <div className="grid gap-1 sm:grid-cols-2">
+                        {crewPositionOptions.map((role) => {
+                          const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                          return (
+                            <label key={role} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-semibold ${checked ? 'border-orange-300/35 bg-orange-500/10 text-orange-100' : 'border-gray-800 bg-gray-900/70 text-gray-300'}`}>
+                              <input type="checkbox" className="h-4 w-4 rounded border-gray-500 accent-orange-400" checked={checked} disabled={!canEditCrewComposition || (checked && eligibleRoles.length <= 1)} onChange={(event) => updateAircraftSeatEligibleRole(activeCrewCompositionAircraftIndex, seatIndex, role, event.target.checked)} />
+                              <span>{crewPositionLabelMap[role] || role}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -3627,7 +3623,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No alternate crew compositions configured.</div>
               ) : activeAircraftAlternateCompositions.map((profile) => (
                 <div key={profile.id} className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_90px]">
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px]">
                     <div>
                       <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]">
                         <Field
@@ -3675,12 +3671,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
                     </div>
-                    <div className="w-[90px] justify-self-end rounded-md border border-cyan-300/20 bg-cyan-500/10 px-2 py-2">
+                    <div className="h-fit w-[110px] justify-self-end rounded-md border border-cyan-300/20 bg-cyan-500/10 px-2 py-2">
                       <div className="mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-cyan-100">Crew Summary</div>
                       <ol className="space-y-0.5 text-[11px] font-semibold leading-tight text-cyan-50/90">
-                      {getAlternateCrewSummary(profile).map((roleLabel, index) => (
-                        <li key={`${profile.id}-summary-${index}`}>{index + 1}. {roleLabel}</li>
-                      ))}
+                        {getAlternateCrewSummary(profile).map((roleLabel, index) => (
+                          <li key={`${profile.id}-summary-${index}`}>{index + 1}. {roleLabel}</li>
+                        ))}
                       </ol>
                     </div>
                   </div>
