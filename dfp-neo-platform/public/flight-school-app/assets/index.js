@@ -83258,6 +83258,7 @@ const App = () => {
         setTraineesData(data.trainees);
         setIsTraineeLoaded(true);
         setEvents(data.events);
+        setScores(new Map(Object.entries(data.scores || {})));
         if (data.courses && data.courses.length > 0) {
           console.log("🎓 Loading", data.courses.length, "courses from DB");
           setCourses(data.courses);
@@ -90351,8 +90352,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       coursePriorities,
       coursePercentages,
       availableAircraftCount: neoAvailableAircraftCount,
-      ftdCount: availableFtdCount,
-      cptCount: availableCptCount,
+      ftdCount: configuredFtdCount,
+      cptCount: configuredCptCount,
       courseColors,
       school,
       dayStart: flyingStartTime,

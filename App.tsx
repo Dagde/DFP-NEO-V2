@@ -19309,6 +19309,7 @@ const App: React.FC = () => {
                 setTraineesData(data.trainees);
                 setIsTraineeLoaded(true);
                 setEvents(data.events);
+                setScores(new Map(Object.entries(data.scores || {}) as [string, Score[]][]));
 
                 // Load courses from DB if any exist
                 if (data.courses && data.courses.length > 0) {
@@ -28173,8 +28174,8 @@ const App: React.FC = () => {
             coursePriorities,
             coursePercentages,
             availableAircraftCount: neoAvailableAircraftCount,
-            ftdCount: availableFtdCount,
-            cptCount: availableCptCount,
+            ftdCount: configuredFtdCount,
+            cptCount: configuredCptCount,
             courseColors,
             school,
             dayStart: flyingStartTime,
