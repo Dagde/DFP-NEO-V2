@@ -73099,12 +73099,30 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const tryPlaceFixedCrewEvent = (sourceEvent, source, fixedStartTime) => {
       const eventPerfStart = fixedCrewPerfNow();
+      const getFixedCrewStartStepMinutes = (eventType) => {
+        const type = String(eventType || "").trim().toLowerCase();
+        if (type === "flight") return Math.max(1, flightDispatchStaggerMinutes || 5);
+        const simulatorStep = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, type);
+        return Math.max(1, simulatorStep || 15);
+      };
+      const buildFixedCrewStartCandidates = (start, end, duration2, stepMinutes) => {
+        const latestStartMinutes = Math.floor((end - duration2) * 60 + 1e-3);
+        const firstStartMinutes = Math.ceil(start * 60 - 1e-3);
+        if (latestStartMinutes < firstStartMinutes) return [];
+        const starts2 = [];
+        for (let minute = firstStartMinutes; minute <= latestStartMinutes; minute += stepMinutes) {
+          starts2.push(Number((minute / 60).toFixed(4)));
+        }
+        return starts2;
+      };
+      const startStepMinutes = getFixedCrewStartStepMinutes(sourceEvent.type);
       const eventPerf = {
         event: sourceEvent.flightNumber,
         source,
         type: sourceEvent.type,
         duration: getFixedCrewDuration(sourceEvent),
         fixedStartTime: fixedStartTime ?? null,
+        startStepMinutes,
         startCandidates: 0,
         resourceCandidates: 0,
         crewCandidateEvaluationsBefore: fixedCrewPerf.counters.crewCandidateEvaluations,
@@ -73124,7 +73142,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       const window2 = getFixedCrewWindow(sourceEvent.type);
       const duration = getFixedCrewDuration(sourceEvent);
-      const starts = Number.isFinite(fixedStartTime) ? [Number(fixedStartTime)] : Array.from({ length: Math.max(0, Math.floor((window2.end - window2.start - duration) / 0.25 + 1)) }, (_, index) => Number((window2.start + index * 0.25).toFixed(2)));
+      const starts = Number.isFinite(fixedStartTime) ? [Number(fixedStartTime)] : buildFixedCrewStartCandidates(window2.start, window2.end, duration, startStepMinutes);
       const eligibleCrewEntries = prefilterFixedCrewCandidateEntries(sourceEvent, eventPerf);
       if (eligibleCrewEntries.length === 0) {
         incrementFixedCrewRejection("NO_ELIGIBLE_CREW_AFTER_PREFILTER");
