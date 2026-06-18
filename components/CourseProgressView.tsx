@@ -88,12 +88,18 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     }, []);
 
     const activeCourses = useMemo(() => {
-        // Filter the full courses list to only include active ones (present in courseColors)
-        // Sort alphabetically by course name
+        const representedCourseNames = new Set(
+            traineesData
+                .filter(trainee => !trainee.isPaused)
+                .map(trainee => String(trainee.course || '').trim())
+                .filter(Boolean)
+        );
+
+        // Filter to courses represented by the already-scoped active trainee list.
         return courses
-            .filter(course => courseColors[course.name])
+            .filter(course => courseColors[course.name] && representedCourseNames.has(course.name))
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [courses, courseColors]);
+    }, [courses, courseColors, traineesData]);
 
     const activeCourseNames = useMemo(() => new Set(activeCourses.map(course => course.name)), [activeCourses]);
 

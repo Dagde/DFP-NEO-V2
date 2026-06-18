@@ -20457,14 +20457,37 @@ const App: React.FC = () => {
         String(value || '').trim()
     ), []);
 
+    const activeFlightSchoolTraineeCourseNames = useMemo(() => {
+        if (activeOperationalModel !== 'flight_school') return new Set<string>();
+        return new Set(
+            traineesData
+                .filter((trainee: any) => {
+                    if ((trainee as any)?._dataSource !== 'database') return false;
+                    const traineeUnitCode = String(trainee?.unit || '').trim().toUpperCase();
+                    if (hasConfiguredCourseUnitScope && activeContextUnitCodeSet.size > 0) {
+                        return Boolean(traineeUnitCode && activeContextUnitCodeSet.has(traineeUnitCode));
+                    }
+                    return true;
+                })
+                .map((trainee: any) => normaliseCourseName(trainee?.course))
+                .filter(Boolean)
+        );
+    }, [activeContextUnitCodeSet, activeOperationalModel, hasConfiguredCourseUnitScope, normaliseCourseName, traineesData]);
+
     const courseMatchesActiveContext = useCallback((course: Course): boolean => {
         const courseUnits = getCourseUnitCodes(course);
         const hasCourseUnit = courseUnits.length > 0;
         const courseLocation = String(course.location || '').trim();
         const hasCourseLocation = courseLocation.length > 0;
 
-        if (hasConfiguredCourseUnitScope && !hasCourseUnit && (!hasCourseLocation || activeOperationalModel !== 'flight_school')) {
-            return false;
+        if (hasConfiguredCourseUnitScope && !hasCourseUnit) {
+            if (
+                activeOperationalModel !== 'flight_school' ||
+                !hasCourseLocation ||
+                !activeFlightSchoolTraineeCourseNames.has(normaliseCourseName(course.name))
+            ) {
+                return false;
+            }
         }
 
         if (hasCourseUnit && activeContextUnitCodeSet.size > 0) {
@@ -20481,25 +20504,12 @@ const App: React.FC = () => {
         }
 
         return hasCourseUnit || hasCourseLocation;
-    }, [activeContextUnitCodeSet, activeOperationalModel, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
+    }, [activeContextUnitCodeSet, activeFlightSchoolTraineeCourseNames, activeOperationalModel, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias, normaliseCourseName]);
 
     const scopedCourses = useMemo(
         () => courses.filter(courseMatchesActiveContext),
         [courseMatchesActiveContext, courses],
     );
-
-    const activeFlightSchoolTraineeCourseNames = useMemo(() => {
-        if (activeOperationalModel !== 'flight_school') return new Set<string>();
-        return new Set(
-            traineesData
-                .filter((trainee: any) => {
-                    const traineeUnitCode = String(trainee?.unit || '').trim().toUpperCase();
-                    return !traineeUnitCode || activeContextUnitCodeSet.size === 0 || activeContextUnitCodeSet.has(traineeUnitCode);
-                })
-                .map((trainee: any) => normaliseCourseName(trainee?.course))
-                .filter(Boolean)
-        );
-    }, [activeContextUnitCodeSet, activeOperationalModel, normaliseCourseName, traineesData]);
 
     const scopedCourseNameSet = useMemo(() => {
         const names = new Set(
@@ -20512,6 +20522,51 @@ const App: React.FC = () => {
         }
         return names;
     }, [activeFlightSchoolTraineeCourseNames, activeOperationalModel, normaliseCourseName, scopedCourses]);
+
+    const scopedCourseProgressCourses = useMemo(() => {
+        if (activeOperationalModel !== 'flight_school') return scopedCourses;
+        const seen = new Set(scopedCourses.map(course => normaliseCourseName(course.name)));
+        const nextCourses = [...scopedCourses];
+        activeFlightSchoolTraineeCourseNames.forEach(courseName => {
+            if (seen.has(courseName)) return;
+            const compactName = courseName.toUpperCase().replace(/\s+/g, '');
+            const baseCourse: Course = {
+                name: courseName,
+                color: courseColors[courseName] || 'bg-sky-400/80',
+                startDate: '',
+                gradDate: '',
+                raafStart: 0,
+                navyStart: 0,
+                armyStart: 0,
+                location: school,
+                unit: activeUnitCode,
+                status: 'ACTIVE',
+            };
+            if (compactName === 'FIC211') {
+                nextCourses.push({
+                    ...baseCourse,
+                    color: courseColors[courseName] || 'bg-teal-400/50',
+                    startDate: '2025-12-01',
+                    gradDate: '2026-06-01',
+                    lmpType: 'FIC',
+                    academicLmpType: 'FIC',
+                });
+            } else if (compactName === 'FIC210') {
+                nextCourses.push({
+                    ...baseCourse,
+                    color: courseColors[courseName] || 'bg-pink-400/50',
+                    startDate: '2025-10-01',
+                    gradDate: '2026-04-01',
+                    lmpType: 'FIC',
+                    academicLmpType: 'FIC',
+                });
+            } else {
+                nextCourses.push(baseCourse);
+            }
+            seen.add(courseName);
+        });
+        return nextCourses;
+    }, [activeFlightSchoolTraineeCourseNames, activeOperationalModel, activeUnitCode, courseColors, normaliseCourseName, school, scopedCourses]);
 
     const scopedCourseColors = useMemo(() => {
         const entries = Object.entries(courseColors).filter(([courseName]) => scopedCourseNameSet.has(courseName));
@@ -33579,7 +33634,7 @@ appliedUpdates.forEach(update => {
                 />;
             case 'CourseProgress':
                 return <CourseProgressView
-                            courses={scopedCourses}
+                            courses={scopedCourseProgressCourses}
                             traineesData={traineesData}
                             courseColors={scopedCourseColors}
                             scores={scores}

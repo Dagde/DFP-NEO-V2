@@ -62032,8 +62032,11 @@ const CourseProgressView = ({
     });
   }, []);
   const activeCourses = reactExports.useMemo(() => {
-    return courses.filter((course) => courseColors[course.name]).sort((a, b) => a.name.localeCompare(b.name));
-  }, [courses, courseColors]);
+    const representedCourseNames = new Set(
+      traineesData.filter((trainee) => !trainee.isPaused).map((trainee) => String(trainee.course || "").trim()).filter(Boolean)
+    );
+    return courses.filter((course) => courseColors[course.name] && representedCourseNames.has(course.name)).sort((a, b) => a.name.localeCompare(b.name));
+  }, [courses, courseColors, traineesData]);
   const activeCourseNames = reactExports.useMemo(() => new Set(activeCourses.map((course) => course.name)), [activeCourses]);
   const activeTrainees = reactExports.useMemo(() => {
     return traineesData.filter((trainee) => !trainee.isPaused && activeCourseNames.has(trainee.course)).sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name));
@@ -84207,13 +84210,28 @@ const App = () => {
     ));
   }, []);
   const normaliseCourseName = reactExports.useCallback((value) => String(value || "").trim(), []);
+  const activeFlightSchoolTraineeCourseNames = reactExports.useMemo(() => {
+    if (activeOperationalModel !== "flight_school") return /* @__PURE__ */ new Set();
+    return new Set(
+      traineesData.filter((trainee) => {
+        if (trainee?._dataSource !== "database") return false;
+        const traineeUnitCode = String(trainee?.unit || "").trim().toUpperCase();
+        if (hasConfiguredCourseUnitScope && activeContextUnitCodeSet.size > 0) {
+          return Boolean(traineeUnitCode && activeContextUnitCodeSet.has(traineeUnitCode));
+        }
+        return true;
+      }).map((trainee) => normaliseCourseName(trainee?.course)).filter(Boolean)
+    );
+  }, [activeContextUnitCodeSet, activeOperationalModel, hasConfiguredCourseUnitScope, normaliseCourseName, traineesData]);
   const courseMatchesActiveContext = reactExports.useCallback((course) => {
     const courseUnits = getCourseUnitCodes(course);
     const hasCourseUnit = courseUnits.length > 0;
     const courseLocation = String(course.location || "").trim();
     const hasCourseLocation = courseLocation.length > 0;
-    if (hasConfiguredCourseUnitScope && !hasCourseUnit && (!hasCourseLocation || activeOperationalModel !== "flight_school")) {
-      return false;
+    if (hasConfiguredCourseUnitScope && !hasCourseUnit) {
+      if (activeOperationalModel !== "flight_school" || !hasCourseLocation || !activeFlightSchoolTraineeCourseNames.has(normaliseCourseName(course.name))) {
+        return false;
+      }
     }
     if (hasCourseUnit && activeContextUnitCodeSet.size > 0) {
       const unitMatches = courseUnits.some((unitCode) => activeContextUnitCodeSet.has(unitCode));
@@ -84226,20 +84244,11 @@ const App = () => {
       return true;
     }
     return hasCourseUnit || hasCourseLocation;
-  }, [activeContextUnitCodeSet, activeOperationalModel, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
+  }, [activeContextUnitCodeSet, activeFlightSchoolTraineeCourseNames, activeOperationalModel, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias, normaliseCourseName]);
   const scopedCourses = reactExports.useMemo(
     () => courses.filter(courseMatchesActiveContext),
     [courseMatchesActiveContext, courses]
   );
-  const activeFlightSchoolTraineeCourseNames = reactExports.useMemo(() => {
-    if (activeOperationalModel !== "flight_school") return /* @__PURE__ */ new Set();
-    return new Set(
-      traineesData.filter((trainee) => {
-        const traineeUnitCode = String(trainee?.unit || "").trim().toUpperCase();
-        return !traineeUnitCode || activeContextUnitCodeSet.size === 0 || activeContextUnitCodeSet.has(traineeUnitCode);
-      }).map((trainee) => normaliseCourseName(trainee?.course)).filter(Boolean)
-    );
-  }, [activeContextUnitCodeSet, activeOperationalModel, normaliseCourseName, traineesData]);
   const scopedCourseNameSet = reactExports.useMemo(() => {
     const names = new Set(
       scopedCourses.map((course) => normaliseCourseName(course.name)).filter(Boolean)
@@ -84249,6 +84258,50 @@ const App = () => {
     }
     return names;
   }, [activeFlightSchoolTraineeCourseNames, activeOperationalModel, normaliseCourseName, scopedCourses]);
+  const scopedCourseProgressCourses = reactExports.useMemo(() => {
+    if (activeOperationalModel !== "flight_school") return scopedCourses;
+    const seen = new Set(scopedCourses.map((course) => normaliseCourseName(course.name)));
+    const nextCourses = [...scopedCourses];
+    activeFlightSchoolTraineeCourseNames.forEach((courseName) => {
+      if (seen.has(courseName)) return;
+      const compactName = courseName.toUpperCase().replace(/\s+/g, "");
+      const baseCourse = {
+        name: courseName,
+        color: courseColors[courseName] || "bg-sky-400/80",
+        startDate: "",
+        gradDate: "",
+        raafStart: 0,
+        navyStart: 0,
+        armyStart: 0,
+        location: school,
+        unit: activeUnitCode,
+        status: "ACTIVE"
+      };
+      if (compactName === "FIC211") {
+        nextCourses.push({
+          ...baseCourse,
+          color: courseColors[courseName] || "bg-teal-400/50",
+          startDate: "2025-12-01",
+          gradDate: "2026-06-01",
+          lmpType: "FIC",
+          academicLmpType: "FIC"
+        });
+      } else if (compactName === "FIC210") {
+        nextCourses.push({
+          ...baseCourse,
+          color: courseColors[courseName] || "bg-pink-400/50",
+          startDate: "2025-10-01",
+          gradDate: "2026-04-01",
+          lmpType: "FIC",
+          academicLmpType: "FIC"
+        });
+      } else {
+        nextCourses.push(baseCourse);
+      }
+      seen.add(courseName);
+    });
+    return nextCourses;
+  }, [activeFlightSchoolTraineeCourseNames, activeOperationalModel, activeUnitCode, courseColors, normaliseCourseName, school, scopedCourses]);
   const scopedCourseColors = reactExports.useMemo(() => {
     const entries = Object.entries(courseColors).filter(([courseName]) => scopedCourseNameSet.has(courseName));
     return Object.fromEntries(entries);
@@ -94782,7 +94835,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           CourseProgressView,
           {
-            courses: scopedCourses,
+            courses: scopedCourseProgressCourses,
             traineesData,
             courseColors: scopedCourseColors,
             scores,
