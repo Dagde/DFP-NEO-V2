@@ -5928,9 +5928,12 @@ function generateDfpInternal(
             excludedPaused: trainees.filter(t => t.isPaused).length,
             excludedCourses: 0,
             excludedStaticUnavailable: 0,
+            byCourse: {},
         },
         nextEventLists: null,
         nextSamples: [],
+        nextByCourse: {},
+        noNextByCourse: {},
         scheduleLists: {},
         scheduleFlow: [] as any[],
         finalCleanup: null,
@@ -8369,6 +8372,14 @@ function generateDfpInternal(
         !(config.excludedCourses || []).includes(t.course) &&
         isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     ).length;
+    const countTraineesByCourse = (list: Trainee[]): Record<string, number> => (
+        list.reduce((counts: Record<string, number>, trainee) => {
+            const courseName = String(trainee.course || 'Unassigned').trim() || 'Unassigned';
+            counts[courseName] = (counts[courseName] || 0) + 1;
+            return counts;
+        }, {})
+    );
+    neoBuildDiag.activeTrainees.byCourse = countTraineesByCourse(activeTrainees);
 
     const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
 
@@ -8645,14 +8656,31 @@ function generateDfpInternal(
         },
         noNextEvent: activeTrainees.filter(t => !traineeNextEventMap.get(t.fullName)?.next).length,
     };
-    neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).slice(0, 80).map(([name, ev]) => ({
+    const nextBucketByCourse = (list: Trainee[]): Record<string, number> => countTraineesByCourse(list);
+    neoBuildDiag.nextByCourse = {
+        flight: nextBucketByCourse(nextEventLists.flight),
+        ftd: nextBucketByCourse(nextEventLists.ftd),
+        cpt: nextBucketByCourse(nextEventLists.cpt),
+        ground: nextBucketByCourse(nextEventLists.ground),
+        bnf: nextBucketByCourse(nextEventLists.bnf),
+        plusOneFlight: nextBucketByCourse(nextPlusOneLists.flight),
+        plusOneFtd: nextBucketByCourse(nextPlusOneLists.ftd),
+        plusOneCpt: nextBucketByCourse(nextPlusOneLists.cpt),
+        plusOneGround: nextBucketByCourse(nextPlusOneLists.ground),
+    };
+    neoBuildDiag.noNextByCourse = countTraineesByCourse(activeTrainees.filter(t => !traineeNextEventMap.get(t.fullName)?.next));
+    neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).map(([name, ev]) => {
+        const trainee = activeTrainees.find(candidate => candidate.fullName === name);
+        return ({
         name,
+        course: trainee?.course || null,
         nextCode: ev.next?.code || null,
         nextType: ev.next?.type || null,
         nextPrerequisites: ev.next?.prerequisites || [],
         plusOneCode: ev.plusOne?.code || null,
         plusOneType: ev.plusOne?.type || null,
-    }));
+        });
+    });
     saveNeoBuildDiag('category-lists-built');
     buildDebugLog(
         `🟢🟢🟢 [SEQ-DIAG] Category lists built:\n` +
@@ -8744,6 +8772,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // If no course priorities configured, return list as-is (no mixing needed)
         if (!coursePriorities.length) return rankedList;
 
+        const rankedCourseNames = Array.from(new Set(
+            rankedList
+                .map(trainee => trainee.course)
+                .filter((courseName): courseName is string => Boolean(courseName))
+        ));
+        const mixingCourses = [
+            ...coursePriorities.filter(courseName => rankedCourseNames.includes(courseName)),
+            ...rankedCourseNames.filter(courseName => !coursePriorities.includes(courseName)),
+        ];
+        if (mixingCourses.length === 0) return rankedList;
+
         // STEP 1: Identify and extract Solo-with-TWR-DI block
         const soloWithTwrDiIndices: number[] = [];
         rankedList.forEach((trainee, index) => {
@@ -8780,18 +8819,22 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         // STEP 2: Apply course mixing to non-Solo-with-TWR-DI trainees
         // 1. Normalize and enforce minimum percentages
-        const normalizedPercentages = normalizePercentages(coursePercentages);
+        const percentagesForMixing = new Map(coursePercentages);
+        mixingCourses.forEach((courseName) => {
+            if (!percentagesForMixing.has(courseName)) percentagesForMixing.set(courseName, 5);
+        });
+        const normalizedPercentages = normalizePercentages(percentagesForMixing);
         const enforcedPercentages = enforceMinimumPercentage(normalizedPercentages, 5);
 
         // 2. Group trainees by course (maintaining their ranked order within each course)
         const listByCourse = new Map<string, Trainee[]>();
-        coursePriorities.forEach(c => listByCourse.set(c, []));
+        mixingCourses.forEach(c => listByCourse.set(c, []));
         traineesForCourseMixing.forEach(t => listByCourse.get(t.course)?.push(t));
 
         // 3. Event-by-event selection based on deficit
         const mixedTrainees: Trainee[] = [];
         const courseAllocations = new Map<string, number>();
-        coursePriorities.forEach(c => courseAllocations.set(c, 0));
+        mixingCourses.forEach(c => courseAllocations.set(c, 0));
 
         let totalAllocated = 0;
 
@@ -8803,7 +8846,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             let maxDeficit = -Infinity;
             let selectedCourse: string | null = null;
 
-            for (const course of coursePriorities) {
+            for (const course of mixingCourses) {
                 const courseTrainees = listByCourse.get(course);
                 if (!courseTrainees || courseTrainees.length === 0) continue;
 

@@ -2542,7 +2542,6 @@ const getLocationResourcePool = (config, locationCode, unitCode) => {
 };
 const isResourcePoolRuntimeEnabled = (pool) => pool?.settings?.applyToV2Runtime === true;
 const getResourcePoolCount = (pool, key, fallback) => {
-  if (!isResourcePoolRuntimeEnabled(pool)) return fallback;
   const settings = pool?.settings || {};
   const aliases = {
     aircraft: ["aircraft", "airframes"],
@@ -72154,10 +72153,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       total: 0,
       excludedPaused: trainees.filter((t) => t.isPaused).length,
       excludedCourses: 0,
-      excludedStaticUnavailable: 0
+      excludedStaticUnavailable: 0,
+      byCourse: {}
     },
     nextEventLists: null,
     nextSamples: [],
+    nextByCourse: {},
+    noNextByCourse: {},
     scheduleLists: {},
     scheduleFlow: [],
     finalCleanup: null,
@@ -74269,6 +74271,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   neoBuildDiag.activeTrainees.excludedStaticUnavailable = trainees.filter(
     (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   ).length;
+  const countTraineesByCourse = (list) => list.reduce((counts, trainee) => {
+    const courseName = String(trainee.course || "Unassigned").trim() || "Unassigned";
+    counts[courseName] = (counts[courseName] || 0) + 1;
+    return counts;
+  }, {});
+  neoBuildDiag.activeTrainees.byCourse = countTraineesByCourse(activeTrainees);
   const traineeNextEventMap = /* @__PURE__ */ new Map();
   activeTrainees.forEach((trainee) => {
     const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
@@ -74511,14 +74519,31 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     },
     noNextEvent: activeTrainees.filter((t) => !traineeNextEventMap.get(t.fullName)?.next).length
   };
-  neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).slice(0, 80).map(([name, ev]) => ({
-    name,
-    nextCode: ev.next?.code || null,
-    nextType: ev.next?.type || null,
-    nextPrerequisites: ev.next?.prerequisites || [],
-    plusOneCode: ev.plusOne?.code || null,
-    plusOneType: ev.plusOne?.type || null
-  }));
+  const nextBucketByCourse = (list) => countTraineesByCourse(list);
+  neoBuildDiag.nextByCourse = {
+    flight: nextBucketByCourse(nextEventLists.flight),
+    ftd: nextBucketByCourse(nextEventLists.ftd),
+    cpt: nextBucketByCourse(nextEventLists.cpt),
+    ground: nextBucketByCourse(nextEventLists.ground),
+    bnf: nextBucketByCourse(nextEventLists.bnf),
+    plusOneFlight: nextBucketByCourse(nextPlusOneLists.flight),
+    plusOneFtd: nextBucketByCourse(nextPlusOneLists.ftd),
+    plusOneCpt: nextBucketByCourse(nextPlusOneLists.cpt),
+    plusOneGround: nextBucketByCourse(nextPlusOneLists.ground)
+  };
+  neoBuildDiag.noNextByCourse = countTraineesByCourse(activeTrainees.filter((t) => !traineeNextEventMap.get(t.fullName)?.next));
+  neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).map(([name, ev]) => {
+    const trainee = activeTrainees.find((candidate) => candidate.fullName === name);
+    return {
+      name,
+      course: trainee?.course || null,
+      nextCode: ev.next?.code || null,
+      nextType: ev.next?.type || null,
+      nextPrerequisites: ev.next?.prerequisites || [],
+      plusOneCode: ev.plusOne?.code || null,
+      plusOneType: ev.plusOne?.type || null
+    };
+  });
   saveNeoBuildDiag("category-lists-built");
   buildDebugLog(
     `🟢🟢🟢 [SEQ-DIAG] Category lists built:
@@ -74580,6 +74605,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const applyCoursePriority = (rankedList) => {
     if (!rankedList.length) return [];
     if (!coursePriorities.length) return rankedList;
+    const rankedCourseNames = Array.from(new Set(
+      rankedList.map((trainee) => trainee.course).filter((courseName) => Boolean(courseName))
+    ));
+    const mixingCourses = [
+      ...coursePriorities.filter((courseName) => rankedCourseNames.includes(courseName)),
+      ...rankedCourseNames.filter((courseName) => !coursePriorities.includes(courseName))
+    ];
+    if (mixingCourses.length === 0) return rankedList;
     const soloWithTwrDiIndices = [];
     rankedList.forEach((trainee, index) => {
       const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
@@ -74603,20 +74636,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     } else {
       traineesForCourseMixing = [...rankedList];
     }
-    const normalizedPercentages = normalizePercentages(coursePercentages);
+    const percentagesForMixing = new Map(coursePercentages);
+    mixingCourses.forEach((courseName) => {
+      if (!percentagesForMixing.has(courseName)) percentagesForMixing.set(courseName, 5);
+    });
+    const normalizedPercentages = normalizePercentages(percentagesForMixing);
     const enforcedPercentages = enforceMinimumPercentage(normalizedPercentages, 5);
     const listByCourse = /* @__PURE__ */ new Map();
-    coursePriorities.forEach((c) => listByCourse.set(c, []));
+    mixingCourses.forEach((c) => listByCourse.set(c, []));
     traineesForCourseMixing.forEach((t) => listByCourse.get(t.course)?.push(t));
     const mixedTrainees = [];
     const courseAllocations = /* @__PURE__ */ new Map();
-    coursePriorities.forEach((c) => courseAllocations.set(c, 0));
+    mixingCourses.forEach((c) => courseAllocations.set(c, 0));
     let totalAllocated = 0;
     while (mixedTrainees.length < traineesForCourseMixing.length) {
       totalAllocated++;
       let maxDeficit = -Infinity;
       let selectedCourse = null;
-      for (const course of coursePriorities) {
+      for (const course of mixingCourses) {
         const courseTrainees = listByCourse.get(course);
         if (!courseTrainees || courseTrainees.length === 0) continue;
         const allocated = courseAllocations.get(course) || 0;
