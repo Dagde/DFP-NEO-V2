@@ -4052,7 +4052,7 @@ const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
   courses: 60,
   trainingPackages: 40
 };
-const normaliseCode$2 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$3 = (value) => String(value || "").trim().toUpperCase();
 const AIR_COMBAT_ICO_PACKAGE_CODE = "ICO";
 const AIR_COMBAT_ICO_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
@@ -4068,7 +4068,7 @@ const getAuthoritativeSyllabusDuration = (item) => {
 const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
   if (!item || item.lmpType !== "Staff CAT") return false;
   const courses = Array.isArray(item.courses) ? item.courses : [];
-  return courses.some((course) => normaliseCode$2(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
+  return courses.some((course) => normaliseCode$3(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
 };
 const normaliseIntegratedCombatOperationsTiming = (item) => {
   if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
@@ -4095,10 +4095,10 @@ const normaliseSyllabusRuntimeTimings = (items) => items.map(normaliseSyllabusRu
 const getAirCombatTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getAirCombatTrainingKey = (kind, code, locationCode, unitCode) => [
   "air_combat",
-  normaliseCode$2(locationCode) || "GLOBAL",
-  normaliseCode$2(unitCode) || "GLOBAL",
+  normaliseCode$3(locationCode) || "GLOBAL",
+  normaliseCode$3(unitCode) || "GLOBAL",
   kind,
-  normaliseCode$2(code)
+  normaliseCode$3(code)
 ].join(":");
 const getAirCombatTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getAirCombatTrainingTitleFromItem = (item) => {
@@ -4108,8 +4108,8 @@ const getAirCombatTrainingTitleFromItem = (item) => {
 const getAirCombatAssignmentFromItem = (item, locationCode, unitCode, assignedBy) => {
   const kind = getAirCombatTrainingKindForLmpType(item.lmpType);
   const code = getAirCombatTrainingCodeFromItem(item);
-  const assignmentLocation = normaliseCode$2(locationCode || item.location);
-  const assignmentUnit = normaliseCode$2(unitCode || item.unit);
+  const assignmentLocation = normaliseCode$3(locationCode || item.location);
+  const assignmentUnit = normaliseCode$3(unitCode || item.unit);
   const trainingKey = getAirCombatTrainingKey(kind, code, assignmentLocation, assignmentUnit);
   return {
     assignmentId: trainingKey,
@@ -4130,8 +4130,8 @@ const normaliseAirCombatTrainingAssignments = (preferences) => {
   const normaliseList = (items, kind) => (Array.isArray(items) ? items : []).map((item) => {
     const code = String(item.code || "").trim();
     if (!code) return null;
-    const locationCode = normaliseCode$2(item.locationCode);
-    const unitCode = normaliseCode$2(item.unitCode);
+    const locationCode = normaliseCode$3(item.locationCode);
+    const unitCode = normaliseCode$3(item.unitCode);
     const trainingKey = String(item.trainingKey || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     return {
       assignmentId: String(item.assignmentId || trainingKey),
@@ -4220,8 +4220,8 @@ const normaliseAirCombatSchedulingWeights = (value) => {
     const kind = stream?.kind === "training_package" ? "training_package" : stream?.kind === "course" ? "course" : null;
     const code = String(stream?.code || "").trim();
     if (!kind || !code) return null;
-    const locationCode = normaliseCode$2(stream?.locationCode);
-    const unitCode = normaliseCode$2(stream?.unitCode);
+    const locationCode = normaliseCode$3(stream?.locationCode);
+    const unitCode = normaliseCode$3(stream?.unitCode);
     const key = String(stream?.key || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     const weight = Number(stream?.weight);
     return {
@@ -4263,7 +4263,7 @@ const normaliseAirCombatSchedulingWeights = (value) => {
 };
 const FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS = 1.5;
 const FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS = 1;
-const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$2 = (value) => String(value || "").trim().toUpperCase();
 const getFixedCrewCoursePackageBriefingTimes = () => ({
   preFlightTime: FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS,
   postFlightTime: FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS
@@ -4276,10 +4276,10 @@ const withFixedCrewCoursePackageBriefingTimes = (item) => ({
 const getFixedCrewTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getFixedCrewTrainingKey = (kind, code, locationCode, unitCode) => [
   "fixed_crew",
-  normaliseCode$1(locationCode) || "GLOBAL",
-  normaliseCode$1(unitCode) || "GLOBAL",
+  normaliseCode$2(locationCode) || "GLOBAL",
+  normaliseCode$2(unitCode) || "GLOBAL",
   kind,
-  normaliseCode$1(code)
+  normaliseCode$2(code)
 ].join(":");
 const getFixedCrewTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getFixedCrewTrainingTitleFromItem = (item) => {
@@ -4292,8 +4292,8 @@ const normaliseFixedCrewTrainingPriorities = (streams) => {
     const kind = stream.kind === "training_package" ? "training_package" : "course";
     const code = String(stream.code || "").trim();
     if (!code) return null;
-    const locationCode = normaliseCode$1(stream.locationCode);
-    const unitCode = normaliseCode$1(stream.unitCode);
+    const locationCode = normaliseCode$2(stream.locationCode);
+    const unitCode = normaliseCode$2(stream.unitCode);
     const key = String(stream.key || getFixedCrewTrainingKey(kind, code, locationCode, unitCode));
     const weight = Math.max(0, Math.min(100, Math.round(Number(stream.weight) || 0)));
     return {
@@ -32975,17 +32975,17 @@ const TrainingIntelligenceTab = () => {
     ] })
   ] }) });
 };
-const normaliseCode = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
 const getTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getTrainingTitleFromItem = (item, fallback) => item.module && item.module !== fallback ? item.module : item.eventDescription || fallback;
 const matchesTrainingAssignment = (item, kind, code, unitCode) => {
   const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
   if (itemKind !== kind) return false;
-  const itemCode = normaliseCode(getTrainingCodeFromItem(item));
-  const assignmentCode = normaliseCode(code);
-  if (itemCode !== assignmentCode && !normaliseCode(item.code).startsWith(assignmentCode)) return false;
-  const itemUnit = normaliseCode(item.unit);
-  const assignmentUnit = normaliseCode(unitCode);
+  const itemCode = normaliseCode$1(getTrainingCodeFromItem(item));
+  const assignmentCode = normaliseCode$1(code);
+  if (itemCode !== assignmentCode && !normaliseCode$1(item.code).startsWith(assignmentCode)) return false;
+  const itemUnit = normaliseCode$1(item.unit);
+  const assignmentUnit = normaliseCode$1(unitCode);
   return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
 };
 const AirCombatTrainingAnalyticsTab = ({
@@ -32995,12 +32995,12 @@ const AirCombatTrainingAnalyticsTab = ({
 }) => {
   const activeUnitCodes = reactExports.useMemo(() => {
     const rawCodes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
-    return new Set(rawCodes.map(normaliseCode).filter(Boolean));
+    return new Set(rawCodes.map(normaliseCode$1).filter(Boolean));
   }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
   const streams = reactExports.useMemo(() => {
     const streamMap = /* @__PURE__ */ new Map();
     const ensureStream = (kind, code, title) => {
-      const normalisedCode = normaliseCode(code);
+      const normalisedCode = normaliseCode$1(code);
       const key = `${kind}:${normalisedCode}`;
       if (!streamMap.has(key)) {
         streamMap.set(key, {
@@ -33016,11 +33016,11 @@ const AirCombatTrainingAnalyticsTab = ({
       return streamMap.get(key);
     };
     instructorsData.forEach((staff) => {
-      const staffUnit = normaliseCode(staff.unit);
+      const staffUnit = normaliseCode$1(staff.unit);
       if (activeUnitCodes.size > 0 && staffUnit && !activeUnitCodes.has(staffUnit)) return;
       const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
       [...assignments.courses, ...assignments.trainingPackages].forEach((assignment) => {
-        const assignmentUnit = normaliseCode(assignment.unitCode || staffUnit);
+        const assignmentUnit = normaliseCode$1(assignment.unitCode || staffUnit);
         if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return;
         const stream = ensureStream(assignment.kind, assignment.code, assignment.title);
         stream.assignedStaff.add(staff.name);
@@ -33028,7 +33028,7 @@ const AirCombatTrainingAnalyticsTab = ({
       normaliseAirCombatTrainingReports(staff.preferences).forEach((report) => {
         if (report.status && report.status !== "Complete") return;
         if (!report.trainingKind || !report.trainingCode) return;
-        const reportUnit = normaliseCode(report.unitCode || staffUnit);
+        const reportUnit = normaliseCode$1(report.unitCode || staffUnit);
         if (activeUnitCodes.size > 0 && reportUnit && !activeUnitCodes.has(reportUnit)) return;
         const stream = ensureStream(report.trainingKind, report.trainingCode, report.trainingTitle || report.trainingCode);
         stream.completedReports += 1;
@@ -53109,6 +53109,61 @@ const AppearanceSettings = ({
     ] })
   ] });
 };
+const SUPPORTED_MODELS = ["fixed_crew", "air_mobility"];
+const normaliseCode = (value, fallback) => {
+  const token = String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return token || fallback;
+};
+const normaliseRoleRequirements = (value) => {
+  const rows = Array.isArray(value) ? value : [];
+  const merged = /* @__PURE__ */ new Map();
+  rows.forEach((row) => {
+    const role = String(row?.role || "").trim();
+    if (!role) return;
+    const key = role.toUpperCase();
+    const count = Math.max(1, Math.min(24, Math.round(Number(row?.count) || 1)));
+    const current = merged.get(key);
+    merged.set(key, {
+      role: current?.role || role,
+      count: Math.min(24, (current?.count || 0) + count)
+    });
+  });
+  return Array.from(merged.values());
+};
+const normaliseCrewCompositionSettings = (value) => {
+  const source = value && typeof value === "object" ? value : {};
+  const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
+  const usedCodes = /* @__PURE__ */ new Set();
+  const alternateCompositions = rows.map((row, index) => {
+    const fallbackCode = `ALT-${index + 1}`;
+    let code = normaliseCode(row?.code || row?.name, fallbackCode);
+    if (usedCodes.has(code)) {
+      let suffix = 2;
+      while (usedCodes.has(`${code}-${suffix}`)) suffix += 1;
+      code = `${code}-${suffix}`;
+    }
+    usedCodes.add(code);
+    const operationalModels = Array.isArray(row?.operationalModels) ? row.operationalModels.filter((model) => SUPPORTED_MODELS.includes(model)) : SUPPORTED_MODELS;
+    return {
+      id: String(row?.id || `alternate-crew-${index + 1}`),
+      code,
+      name: String(row?.name || code).trim() || code,
+      description: String(row?.description || "").trim(),
+      operationalModels: operationalModels.length > 0 ? operationalModels : SUPPORTED_MODELS,
+      roleRequirements: normaliseRoleRequirements(row?.roleRequirements),
+      status: String(row?.status || "ACTIVE").trim().toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
+    };
+  });
+  return { alternateCompositions };
+};
+const createAlternateCrewCompositionCode = (existingProfiles, name) => {
+  const usedCodes = new Set(existingProfiles.map((profile) => profile.code.toUpperCase()));
+  const base = normaliseCode(name, `ALT-${existingProfiles.length + 1}`);
+  if (!usedCodes.has(base)) return base;
+  let suffix = 2;
+  while (usedCodes.has(`${base}-${suffix}`)) suffix += 1;
+  return `${base}-${suffix}`;
+};
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
 const emptyConfig = {
@@ -53820,6 +53875,7 @@ const PlatformConfigurationSettings = ({
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
+  const [crewCompositionUnlocked, setCrewCompositionUnlocked] = reactExports.useState(false);
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = reactExports.useState("aircraftTypes");
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = reactExports.useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = reactExports.useState("");
@@ -53837,6 +53893,7 @@ const PlatformConfigurationSettings = ({
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
+  const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const resourcePoolsDirty = reactExports.useMemo(() => JSON.stringify({
     aircraftTypes: config.aircraftTypes,
     resourcePools: config.resourcePools
@@ -54072,6 +54129,9 @@ const PlatformConfigurationSettings = ({
   );
   const crewPositionTerminology = normaliseCrewPositionTerminology(
     primaryOrganisationSettings.crewPositionTerminology || null
+  );
+  const crewCompositionSettings = normaliseCrewCompositionSettings(
+    primaryOrganisationSettings.crewCompositionSettings || null
   );
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(
     primaryOrganisationSettings.staffQualificationCatalogue || null
@@ -54334,6 +54394,59 @@ const PlatformConfigurationSettings = ({
       ...entry,
       isDefault: entry.unitCode === selected.unitCode ? entry.id === entryId : entry.isDefault
     })));
+  };
+  const updateCrewCompositionSettings = (alternateCompositions) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      crewCompositionSettings: normaliseCrewCompositionSettings({ alternateCompositions })
+    }));
+  };
+  const addAlternateCrewComposition = () => {
+    const name = `Alternate Crew ${crewCompositionSettings.alternateCompositions.length + 1}`;
+    const role = crewPositionTerminology.positions[0]?.genericName || DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats[0]?.role || "Crew";
+    updateCrewCompositionSettings([
+      ...crewCompositionSettings.alternateCompositions,
+      {
+        id: createClientRecordId("alternate-crew"),
+        code: createAlternateCrewCompositionCode(crewCompositionSettings.alternateCompositions, name),
+        name,
+        description: "",
+        operationalModels: ["fixed_crew", "air_mobility"],
+        roleRequirements: [{ role, count: 1 }],
+        status: "ACTIVE"
+      }
+    ]);
+  };
+  const updateAlternateCrewComposition = (profileId, changes) => {
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => profile.id === profileId ? { ...profile, ...changes } : profile));
+  };
+  const removeAlternateCrewComposition = (profileId) => {
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.filter((profile) => profile.id !== profileId));
+  };
+  const updateAlternateCrewRole = (profileId, roleIndex, changes) => {
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => {
+      if (profile.id !== profileId) return profile;
+      const roleRequirements = profile.roleRequirements.map((requirement, index) => index === roleIndex ? {
+        ...requirement,
+        ...changes,
+        role: changes.role !== void 0 ? String(changes.role) : requirement.role,
+        count: changes.count !== void 0 ? Math.max(1, Math.min(24, Math.round(Number(changes.count) || 1))) : requirement.count
+      } : requirement);
+      return { ...profile, roleRequirements };
+    }));
+  };
+  const addAlternateCrewRole = (profileId) => {
+    const role = crewPositionTerminology.positions[0]?.genericName || "Crew";
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => profile.id === profileId ? { ...profile, roleRequirements: [...profile.roleRequirements, { role, count: 1 }] } : profile));
+  };
+  const removeAlternateCrewRole = (profileId, roleIndex) => {
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => {
+      if (profile.id !== profileId || profile.roleRequirements.length <= 1) return profile;
+      return {
+        ...profile,
+        roleRequirements: profile.roleRequirements.filter((_, index) => index !== roleIndex)
+      };
+    }));
   };
   const updateTrainingReportTemplate = (updater) => {
     if (activeTrainingReportUnitIndex < 0) return;
@@ -55374,6 +55487,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const resourceSectionPanelHeaderClass = "mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2";
   const resourceSectionPanelTitleClass = "text-xs font-black uppercase tracking-wide text-gray-300";
   const resourceSectionPanelHintClass = "text-[11px] leading-relaxed text-gray-500";
+  const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: stopEditableKeyPropagation, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
@@ -55768,6 +55882,157 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             }
           ) })
         ] }, rule.id || `master-lmp-access-${index}`))
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-crew-composition", className: getSectionClass("platform-crew-composition"), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Crew Composition",
+          subtitle: "Crew role labels and standard or alternate crew makeups for Fixed Crew and Air Mobility scheduling.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: crewCompositionUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => save(void 0, "platform-crew-composition"), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(false), disabled: saving || applyingChanges, className: platformActionButtonClass, children: "Exit" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setCrewCompositionUnlocked(true), className: platformActionButtonClass, children: "Edit" }) }) : null
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border px-3 py-2 ${crewCompositionUnlocked ? "border-cyan-400/40 bg-cyan-500/10" : "border-gray-700 bg-gray-950/60"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Edit State" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-1 text-sm font-bold ${crewCompositionUnlocked ? "text-cyan-100" : "text-gray-200"}`, children: crewCompositionUnlocked ? "Editing active" : "Locked" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "This page edits scheduler role keys, standard aircraft seats and alternate crew profiles." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Standard Role Labels" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-cyan-100", children: crewPositionTerminology.positions.length }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Generic keys with organisation display labels." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Alternate Profiles" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-orange-100", children: crewCompositionSettings.alternateCompositions.length }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Stable codes for variable tasking crew makeups." })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Crew Position Labels / Roles" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: resourceSectionPanelHintClass, children: "Generic positions are the scheduler-facing role keys. Organisation labels are the words users see." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCrewPositionEntry, disabled: !canEditCrewComposition, className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Position" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: crewPositionTerminology.positions.map((entry) => {
+            const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_auto]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Generic Position", value: entry.genericName, disabled: !canEditCrewComposition || isDefaultEntry, onChange: (value) => updateCrewPositionEntry(entry.id, { genericName: value }), info: isDefaultEntry ? "Baseline generic positions stay fixed so aircraft seat links remain stable." : "The generic role key saved on aircraft seats and alternate crew profiles." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Label", value: entry.label, disabled: !canEditCrewComposition, onChange: (value) => updateCrewPositionEntry(entry.id, { label: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400", children: "Applies To" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2", children: OPERATIONAL_MODEL_OPTIONS.filter((option) => option.value === "fixed_crew" || option.value === "air_mobility").map((option) => {
+                  const selectedModels = entry.operationalModels?.length ? entry.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
+                  const isSelected = selectedModels.includes(option.value);
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded px-2 py-1 text-[11px] font-semibold ${isSelected ? "bg-cyan-500/10 text-cyan-100" : "text-gray-400"}`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: isSelected,
+                        disabled: !canEditCrewComposition,
+                        onChange: (event) => {
+                          const nextModels = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedModels, option.value])) : selectedModels.filter((model) => model !== option.value);
+                          updateCrewPositionEntry(entry.id, { operationalModels: nextModels.length > 0 ? nextModels : [option.value] });
+                        },
+                        className: "h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label.replace(" Model", "") })
+                  ] }, option.value);
+                }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeCrewPositionEntry(entry.id), disabled: !canEditCrewComposition || crewPositionTerminology.positions.length <= 1, className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50", children: "Delete" }) })
+            ] }, `crew-role-${entry.id}`);
+          }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Standard Crew Composition" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: resourceSectionPanelHintClass, children: "Standard composition is stored against aircraft type so resource pools and scheduling use the same role rules." })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => {
+            const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+            const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, crewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)));
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-black text-white", children: [
+                    aircraft.code || "NEW",
+                    " ",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: aircraft.name || "Unnamed aircraft type" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: [
+                    aircraft.category || "Training",
+                    " aircraft"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Crew Seats", value: crewComposition.crewCount, disabled: !canEditCrewComposition, onChange: (value) => updateAircraftCrewCount(index, value) }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 lg:grid-cols-2", children: crewComposition.seats.map((seat, seatIndex) => {
+                const eligibleRoles = getAircraftSeatEligibleRoles(seat);
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-950/70 p-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-black uppercase tracking-wide text-orange-100", children: [
+                        "Seat ",
+                        seatIndex + 1
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Allowed role set for this seat." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Default", value: seat.role, disabled: !canEditCrewComposition, options: eligibleRoles, optionLabels: crewPositionLabelMap, onChange: (value) => updateAircraftSeatRole(index, seatIndex, value) }) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1 sm:grid-cols-2", children: crewPositionOptions.map((role) => {
+                    const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-semibold ${checked ? "border-orange-300/35 bg-orange-500/10 text-orange-100" : "border-gray-800 bg-gray-900/70 text-gray-300"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", className: "h-4 w-4 rounded border-gray-500 accent-orange-400", checked, disabled: !canEditCrewComposition || checked && eligibleRoles.length <= 1, onChange: (event) => updateAircraftSeatEligibleRole(index, seatIndex, role, event.target.checked) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: crewPositionLabelMap[role] || role })
+                    ] }, role);
+                  }) })
+                ] }, seat.id || `standard-crew-seat-${seatIndex}`);
+              }) })
+            ] }, `standard-crew-${aircraft.id || index}`);
+          }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Alternate Crew Composition" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: resourceSectionPanelHintClass, children: "Alternate profiles support quick selection of task-specific crew makeups. Codes are stable scheduler references." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addAlternateCrewComposition, disabled: !canEditCrewComposition, className: "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Alternate" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: crewCompositionSettings.alternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : crewCompositionSettings.alternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Stable Code", value: profile.code, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { code: value }), info: "Scheduler-facing reference. Keep it stable once tasking starts using it." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Display Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { name: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", value: profile.description || "", disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { description: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: "rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50", children: "Delete" }) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-800 bg-gray-950/70 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-gray-300", children: "Role Requirements" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Counts are grouped by generic scheduler role." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewRole(profile.id), disabled: !canEditCrewComposition, className: "rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[11px] font-bold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Role" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: profile.roleRequirements.map((requirement, roleIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-[minmax(180px,1fr)_120px_auto]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: requirement.role, disabled: !canEditCrewComposition, options: crewCompositionRoleOptions, optionLabels: crewPositionLabelMap, onChange: (value) => updateAlternateCrewRole(profile.id, roleIndex, { role: value }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Count", value: requirement.count, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewRole(profile.id, roleIndex, { count: value }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewRole(profile.id, roleIndex), disabled: !canEditCrewComposition || profile.roleRequirements.length <= 1, className: "rounded border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50", children: "Remove" }) })
+              ] }, `${profile.id}-role-${roleIndex}`)) })
+            ] })
+          ] }, profile.id)) })
+        ] })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-resource-pools", className: getSectionClass("platform-resource-pools"), children: [
@@ -58686,6 +58951,7 @@ const platformSectionTargets = {
   "platform-units": "platform-units",
   "platform-task-profiles": "platform-task-profiles",
   "platform-master-lmp-access": "platform-master-lmp-access",
+  "platform-crew-composition": "platform-crew-composition",
   "platform-resource-pools": "platform-resource-pools",
   "platform-unit-modules": "platform-unit-modules",
   "platform-deployment-readiness": "platform-deployment-readiness",
@@ -58729,6 +58995,7 @@ const sectionLabels = {
   "platform-units": "Units & Ownership",
   "platform-task-profiles": "Task Profiles",
   "platform-master-lmp-access": "Master LMP Access",
+  "platform-crew-composition": "Crew Composition",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
   "platform-deployment-readiness": "Deployment Readiness",
@@ -58918,6 +59185,7 @@ const sectionDescriptions = {
   "platform-units": "Unit type, base ownership and operating status",
   "platform-task-profiles": "Model-specific tasking lists for Directed Events",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
+  "platform-crew-composition": "Crew roles and task-specific composition profiles",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
   "platform-deployment-readiness": "SaaS, on-premise, offline and hybrid deployment posture",
@@ -58968,6 +59236,7 @@ const sectionColors = {
   "platform-units": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-task-profiles": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-master-lmp-access": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
+  "platform-crew-composition": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-resource-pools": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-unit-modules": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-deployment-readiness": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -58994,6 +59263,7 @@ const sectionGroups = [
       "platform-units",
       "platform-task-profiles",
       "platform-master-lmp-access",
+      "platform-crew-composition",
       "platform-resource-pools",
       "platform-unit-modules",
       "platform-deployment-readiness",

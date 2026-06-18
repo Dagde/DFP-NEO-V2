@@ -45,6 +45,11 @@ import {
   type CrewPositionTerminologyEntry,
 } from '../utils/crewPositionTerminology';
 import {
+  createAlternateCrewCompositionCode,
+  normaliseCrewCompositionSettings,
+  type AlternateCrewCompositionProfile,
+} from '../utils/crewCompositionProfiles';
+import {
   DEFAULT_STAFF_QUALIFICATIONS,
   normaliseStaffQualificationCatalogue,
   type StaffQualificationDefinition,
@@ -994,6 +999,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
+  const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = useState('');
@@ -1012,6 +1018,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
+  const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const resourcePoolsDirty = useMemo(() => (
     JSON.stringify({
       aircraftTypes: config.aircraftTypes,
@@ -1275,6 +1282,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   );
   const crewPositionTerminology = normaliseCrewPositionTerminology(
     primaryOrganisationSettings.crewPositionTerminology || null,
+  );
+  const crewCompositionSettings = normaliseCrewCompositionSettings(
+    primaryOrganisationSettings.crewCompositionSettings || null,
   );
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(
     primaryOrganisationSettings.staffQualificationCatalogue || null,
@@ -1616,6 +1626,80 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ...entry,
       isDefault: entry.unitCode === selected.unitCode ? entry.id === entryId : entry.isDefault,
     })));
+  };
+
+  const updateCrewCompositionSettings = (alternateCompositions: AlternateCrewCompositionProfile[]) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      crewCompositionSettings: normaliseCrewCompositionSettings({ alternateCompositions }),
+    }));
+  };
+
+  const addAlternateCrewComposition = () => {
+    const name = `Alternate Crew ${crewCompositionSettings.alternateCompositions.length + 1}`;
+    const role = crewPositionTerminology.positions[0]?.genericName || DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats[0]?.role || 'Crew';
+    updateCrewCompositionSettings([
+      ...crewCompositionSettings.alternateCompositions,
+      {
+        id: createClientRecordId('alternate-crew'),
+        code: createAlternateCrewCompositionCode(crewCompositionSettings.alternateCompositions, name),
+        name,
+        description: '',
+        operationalModels: ['fixed_crew', 'air_mobility'],
+        roleRequirements: [{ role, count: 1 }],
+        status: 'ACTIVE',
+      },
+    ]);
+  };
+
+  const updateAlternateCrewComposition = (profileId: string, changes: Partial<AlternateCrewCompositionProfile>) => {
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => (
+      profile.id === profileId ? { ...profile, ...changes } : profile
+    )));
+  };
+
+  const removeAlternateCrewComposition = (profileId: string) => {
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.filter((profile) => profile.id !== profileId));
+  };
+
+  const updateAlternateCrewRole = (
+    profileId: string,
+    roleIndex: number,
+    changes: Partial<{ role: string; count: number }>,
+  ) => {
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => {
+      if (profile.id !== profileId) return profile;
+      const roleRequirements = profile.roleRequirements.map((requirement, index) => (
+        index === roleIndex
+          ? {
+              ...requirement,
+              ...changes,
+              role: changes.role !== undefined ? String(changes.role) : requirement.role,
+              count: changes.count !== undefined ? Math.max(1, Math.min(24, Math.round(Number(changes.count) || 1))) : requirement.count,
+            }
+          : requirement
+      ));
+      return { ...profile, roleRequirements };
+    }));
+  };
+
+  const addAlternateCrewRole = (profileId: string) => {
+    const role = crewPositionTerminology.positions[0]?.genericName || 'Crew';
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => (
+      profile.id === profileId
+        ? { ...profile, roleRequirements: [...profile.roleRequirements, { role, count: 1 }] }
+        : profile
+    )));
+  };
+
+  const removeAlternateCrewRole = (profileId: string, roleIndex: number) => {
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => {
+      if (profile.id !== profileId || profile.roleRequirements.length <= 1) return profile;
+      return {
+        ...profile,
+        roleRequirements: profile.roleRequirements.filter((_, index) => index !== roleIndex),
+      };
+    }));
   };
 
   const updateTrainingReportTemplate = (
@@ -2866,6 +2950,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourceSectionPanelHeaderClass = 'mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2';
   const resourceSectionPanelTitleClass = 'text-xs font-black uppercase tracking-wide text-gray-300';
   const resourceSectionPanelHintClass = 'text-[11px] leading-relaxed text-gray-500';
+  const crewCompositionRoleOptions = getCrewPositionOptions(crewPositionTerminology);
 
   return (
     <div className="relative space-y-8" onKeyDownCapture={stopEditableKeyPropagation}>
@@ -3313,6 +3398,197 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section id="platform-crew-composition" className={getSectionClass('platform-crew-composition')}>
+        <SectionHeader
+          title="Crew Composition"
+          subtitle="Crew role labels and standard or alternate crew makeups for Fixed Crew and Air Mobility scheduling."
+          action={canEdit ? (
+            <div className="flex gap-2">
+              {crewCompositionUnlocked ? (
+                <>
+                  <button type="button" onClick={() => save(undefined, 'platform-crew-composition')} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+                  <button type="button" onClick={() => setCrewCompositionUnlocked(false)} disabled={saving || applyingChanges} className={platformActionButtonClass}>Exit</button>
+                </>
+              ) : (
+                <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
+              )}
+            </div>
+          ) : null}
+        />
+        <div className="space-y-4 p-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className={`rounded-lg border px-3 py-2 ${crewCompositionUnlocked ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-gray-700 bg-gray-950/60'}`}>
+              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Edit State</div>
+              <div className={`mt-1 text-sm font-bold ${crewCompositionUnlocked ? 'text-cyan-100' : 'text-gray-200'}`}>{crewCompositionUnlocked ? 'Editing active' : 'Locked'}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">This page edits scheduler role keys, standard aircraft seats and alternate crew profiles.</div>
+            </div>
+            <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
+              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Standard Role Labels</div>
+              <div className="mt-1 text-lg font-black text-cyan-100">{crewPositionTerminology.positions.length}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Generic keys with organisation display labels.</div>
+            </div>
+            <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
+              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Alternate Profiles</div>
+              <div className="mt-1 text-lg font-black text-orange-100">{crewCompositionSettings.alternateCompositions.length}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Stable codes for variable tasking crew makeups.</div>
+            </div>
+          </div>
+
+          <div className={resourceSectionPanelClass}>
+            <div className={resourceSectionPanelHeaderClass}>
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Crew Position Labels / Roles</h4>
+                <p className={resourceSectionPanelHintClass}>Generic positions are the scheduler-facing role keys. Organisation labels are the words users see.</p>
+              </div>
+              <button type="button" onClick={addCrewPositionEntry} disabled={!canEditCrewComposition} className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">Add Position</button>
+            </div>
+            <div className="space-y-3">
+              {crewPositionTerminology.positions.map((entry) => {
+                const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
+                return (
+                  <div key={`crew-role-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_auto]">
+                    <Field label="Generic Position" value={entry.genericName} disabled={!canEditCrewComposition || isDefaultEntry} onChange={(value) => updateCrewPositionEntry(entry.id, { genericName: value })} info={isDefaultEntry ? 'Baseline generic positions stay fixed so aircraft seat links remain stable.' : 'The generic role key saved on aircraft seats and alternate crew profiles.'} />
+                    <Field label="Organisation Label" value={entry.label} disabled={!canEditCrewComposition} onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })} />
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400">Applies To</label>
+                      <div className="grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2">
+                        {OPERATIONAL_MODEL_OPTIONS.filter((option) => option.value === 'fixed_crew' || option.value === 'air_mobility').map((option) => {
+                          const selectedModels = entry.operationalModels?.length ? entry.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
+                          const isSelected = selectedModels.includes(option.value);
+                          return (
+                            <label key={option.value} className={`flex items-center gap-2 rounded px-2 py-1 text-[11px] font-semibold ${isSelected ? 'bg-cyan-500/10 text-cyan-100' : 'text-gray-400'}`}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!canEditCrewComposition}
+                                onChange={(event) => {
+                                  const nextModels = event.target.checked
+                                    ? Array.from(new Set([...selectedModels, option.value]))
+                                    : selectedModels.filter((model) => model !== option.value);
+                                  updateCrewPositionEntry(entry.id, { operationalModels: nextModels.length > 0 ? nextModels : [option.value] });
+                                }}
+                                className="h-3.5 w-3.5 rounded border-gray-500 accent-cyan-400"
+                              />
+                              <span>{option.label.replace(' Model', '')}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="flex items-end">
+                      <button type="button" onClick={() => removeCrewPositionEntry(entry.id)} disabled={!canEditCrewComposition || crewPositionTerminology.positions.length <= 1} className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50">Delete</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className={resourceSectionPanelClass}>
+            <div className={resourceSectionPanelHeaderClass}>
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Standard Crew Composition</h4>
+                <p className={resourceSectionPanelHintClass}>Standard composition is stored against aircraft type so resource pools and scheduling use the same role rules.</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {config.aircraftTypes.map((aircraft, index) => {
+                const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+                const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, crewComposition.seats.flatMap((seat) => getAircraftSeatEligibleRoles(seat)));
+                return (
+                  <div key={`standard-crew-${aircraft.id || index}`} className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
+                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-black text-white">{aircraft.code || 'NEW'} <span className="text-gray-400">{aircraft.name || 'Unnamed aircraft type'}</span></div>
+                        <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">{aircraft.category || 'Training'} aircraft</div>
+                      </div>
+                      <div className="w-32">
+                        <NumberField label="Crew Seats" value={crewComposition.crewCount} disabled={!canEditCrewComposition} onChange={(value) => updateAircraftCrewCount(index, value)} />
+                      </div>
+                    </div>
+                    <div className="grid gap-2 lg:grid-cols-2">
+                      {crewComposition.seats.map((seat, seatIndex) => {
+                        const eligibleRoles = getAircraftSeatEligibleRoles(seat);
+                        return (
+                          <div key={seat.id || `standard-crew-seat-${seatIndex}`} className="rounded-lg border border-gray-800 bg-gray-950/70 p-2">
+                            <div className="mb-2 flex items-start justify-between gap-2">
+                              <div>
+                                <div className="text-xs font-black uppercase tracking-wide text-orange-100">Seat {seatIndex + 1}</div>
+                                <div className="text-[11px] text-gray-500">Allowed role set for this seat.</div>
+                              </div>
+                              <div className="w-40">
+                                <SelectField label="Default" value={seat.role} disabled={!canEditCrewComposition} options={eligibleRoles} optionLabels={crewPositionLabelMap} onChange={(value) => updateAircraftSeatRole(index, seatIndex, value)} />
+                              </div>
+                            </div>
+                            <div className="grid gap-1 sm:grid-cols-2">
+                              {crewPositionOptions.map((role) => {
+                                const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                                return (
+                                  <label key={role} className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-semibold ${checked ? 'border-orange-300/35 bg-orange-500/10 text-orange-100' : 'border-gray-800 bg-gray-900/70 text-gray-300'}`}>
+                                    <input type="checkbox" className="h-4 w-4 rounded border-gray-500 accent-orange-400" checked={checked} disabled={!canEditCrewComposition || (checked && eligibleRoles.length <= 1)} onChange={(event) => updateAircraftSeatEligibleRole(index, seatIndex, role, event.target.checked)} />
+                                    <span>{crewPositionLabelMap[role] || role}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className={resourceSectionPanelClass}>
+            <div className={resourceSectionPanelHeaderClass}>
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Alternate Crew Composition</h4>
+                <p className={resourceSectionPanelHintClass}>Alternate profiles support quick selection of task-specific crew makeups. Codes are stable scheduler references.</p>
+              </div>
+              <button type="button" onClick={addAlternateCrewComposition} disabled={!canEditCrewComposition} className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">Add Alternate</button>
+            </div>
+            <div className="space-y-3">
+              {crewCompositionSettings.alternateCompositions.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No alternate crew compositions configured.</div>
+              ) : crewCompositionSettings.alternateCompositions.map((profile) => (
+                <div key={profile.id} className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
+                  <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]">
+                    <Field label="Stable Code" value={profile.code} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { code: value })} info="Scheduler-facing reference. Keep it stable once tasking starts using it." />
+                    <Field label="Display Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { name: value })} />
+                    <Field label="Description" value={profile.description || ''} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { description: value })} />
+                    <div className="flex items-end">
+                      <button type="button" onClick={() => removeAlternateCrewComposition(profile.id)} disabled={!canEditCrewComposition} className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50">Delete</button>
+                    </div>
+                  </div>
+                  <div className="mt-3 rounded-lg border border-gray-800 bg-gray-950/70 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-black uppercase tracking-wide text-gray-300">Role Requirements</div>
+                        <div className="text-[11px] text-gray-500">Counts are grouped by generic scheduler role.</div>
+                      </div>
+                      <button type="button" onClick={() => addAlternateCrewRole(profile.id)} disabled={!canEditCrewComposition} className="rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[11px] font-bold text-gray-100 hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50">Add Role</button>
+                    </div>
+                    <div className="space-y-2">
+                      {profile.roleRequirements.map((requirement, roleIndex) => (
+                        <div key={`${profile.id}-role-${roleIndex}`} className="grid gap-2 sm:grid-cols-[minmax(180px,1fr)_120px_auto]">
+                          <SelectField label="Role" value={requirement.role} disabled={!canEditCrewComposition} options={crewCompositionRoleOptions} optionLabels={crewPositionLabelMap} onChange={(value) => updateAlternateCrewRole(profile.id, roleIndex, { role: value })} />
+                          <NumberField label="Count" value={requirement.count} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewRole(profile.id, roleIndex, { count: value })} />
+                          <div className="flex items-end">
+                            <button type="button" onClick={() => removeAlternateCrewRole(profile.id, roleIndex)} disabled={!canEditCrewComposition || profile.roleRequirements.length <= 1} className="rounded border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50">Remove</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
