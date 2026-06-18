@@ -1688,11 +1688,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
+  const getNextAlternateCrewRole = (profile: AlternateCrewCompositionProfile): string | null => {
+    const usedRoles = new Set(profile.roleRequirements.map((requirement) => String(requirement.role || '').trim().toUpperCase()));
+    const configuredRoles = crewPositionTerminology.positions
+      .map((position) => String(position.genericName || '').trim())
+      .filter(Boolean);
+    const fallbackRoles = DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats
+      .map((seat) => String(seat.role || '').trim())
+      .filter(Boolean);
+    const candidateRoles = Array.from(new Set([...configuredRoles, ...fallbackRoles]));
+    return candidateRoles.find((role) => !usedRoles.has(role.toUpperCase())) || null;
+  };
+
   const addAlternateCrewRole = (profileId: string) => {
-    const role = crewPositionTerminology.positions[0]?.genericName || 'Crew';
     updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => (
       profile.id === profileId
-        ? { ...profile, roleRequirements: [...profile.roleRequirements, { role, count: 1 }] }
+        ? (() => {
+            const role = getNextAlternateCrewRole(profile);
+            return role ? { ...profile, roleRequirements: [...profile.roleRequirements, { role, count: 1 }] } : profile;
+          })()
         : profile
     )));
   };
@@ -3649,7 +3663,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className="text-[11px] text-gray-500">Counts are grouped by generic scheduler role.</div>
                           </div>
                           <div className="flex items-start justify-start">
-                            <button type="button" onClick={() => addAlternateCrewRole(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
+                            <button type="button" onClick={() => addAlternateCrewRole(profile.id)} disabled={!canEditCrewComposition || !getNextAlternateCrewRole(profile)} className={platformActionButtonClass}>
                               <span className="text-[9px] leading-tight">Add<br />Role</span>
                             </button>
                           </div>

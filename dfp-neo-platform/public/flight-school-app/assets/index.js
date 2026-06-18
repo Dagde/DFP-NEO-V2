@@ -54442,9 +54442,18 @@ const PlatformConfigurationSettings = ({
       return { ...profile, roleRequirements };
     }));
   };
+  const getNextAlternateCrewRole = (profile) => {
+    const usedRoles = new Set(profile.roleRequirements.map((requirement) => String(requirement.role || "").trim().toUpperCase()));
+    const configuredRoles = crewPositionTerminology.positions.map((position) => String(position.genericName || "").trim()).filter(Boolean);
+    const fallbackRoles = DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats.map((seat) => String(seat.role || "").trim()).filter(Boolean);
+    const candidateRoles = Array.from(/* @__PURE__ */ new Set([...configuredRoles, ...fallbackRoles]));
+    return candidateRoles.find((role) => !usedRoles.has(role.toUpperCase())) || null;
+  };
   const addAlternateCrewRole = (profileId) => {
-    const role = crewPositionTerminology.positions[0]?.genericName || "Crew";
-    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => profile.id === profileId ? { ...profile, roleRequirements: [...profile.roleRequirements, { role, count: 1 }] } : profile));
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => profile.id === profileId ? (() => {
+      const role = getNextAlternateCrewRole(profile);
+      return role ? { ...profile, roleRequirements: [...profile.roleRequirements, { role, count: 1 }] } : profile;
+    })() : profile));
   };
   const removeAlternateCrewRole = (profileId, roleIndex) => {
     updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => {
@@ -56105,7 +56114,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-gray-300", children: "Role Requirements" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Counts are grouped by generic scheduler role." })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-start", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewRole(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-start", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewRole(profile.id), disabled: !canEditCrewComposition || !getNextAlternateCrewRole(profile), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
                     "Add",
                     /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                     "Role"
