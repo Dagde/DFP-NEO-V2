@@ -2810,8 +2810,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       setApplyingChanges(true);
       onShowSuccess('Platform configuration saved. Applying changes...');
       try {
+        const settingsScrollContainer = document.querySelector('[data-settings-content-scroll="true"]') as HTMLElement | null;
+        const restoreScrollTop = settingsScrollContainer?.scrollTop ?? window.scrollY ?? 0;
         sessionStorage.setItem('dfp_restore_view_after_reload', 'Settings');
         sessionStorage.setItem('dfp_restore_settings_section_after_reload', restoreSection || scrollTarget || 'platform-configuration');
+        sessionStorage.setItem('dfp_restore_settings_scroll_top_after_reload', String(Math.max(0, Math.round(restoreScrollTop))));
       } catch {
         // Non-critical: the configuration still saves if session storage is unavailable.
       }
@@ -2830,6 +2833,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const saveResourcePoolsAndExitEdit = async () => {
     const saved = await save(undefined, 'platform-resource-pools');
     if (saved) setResourcePoolsUnlocked(false);
+  };
+
+  const saveCrewCompositionAndKeepPosition = async () => {
+    await save(undefined, 'platform-crew-composition');
   };
 
   const exitResourcePoolsEditMode = async () => {
@@ -3459,7 +3466,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="flex gap-2">
               {crewCompositionUnlocked ? (
                 <>
-                  <button type="button" onClick={() => save(undefined, 'platform-crew-composition')} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+                  <button type="button" onClick={saveCrewCompositionAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
                   <button type="button" onClick={() => setCrewCompositionUnlocked(false)} disabled={saving || applyingChanges} className={platformActionButtonClass}>Exit</button>
                 </>
               ) : (
@@ -3565,6 +3572,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Standard Crew Composition</h4>
                 <p className={resourceSectionPanelHintClass}>This standard composition is stored against {activeCrewCompositionAircraftCode || 'the selected aircraft type'}.</p>
               </div>
+              {crewCompositionUnlocked ? (
+                <button type="button" onClick={saveCrewCompositionAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+              ) : null}
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-900/80 p-3">
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -3624,6 +3634,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <p className={resourceSectionPanelHintClass}>Alternate profiles shown here are only for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
+                {crewCompositionUnlocked ? (
+                  <button type="button" onClick={saveCrewCompositionAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+                ) : null}
                 {!crewCompositionUnlocked && canEdit ? (
                   <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
                 ) : null}

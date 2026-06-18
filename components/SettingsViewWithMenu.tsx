@@ -1282,7 +1282,17 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        contentScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        let restoreScrollTop: number | null = null;
+        try {
+            const restoreValue = sessionStorage.getItem('dfp_restore_settings_scroll_top_after_reload');
+            if (restoreValue !== null) {
+                sessionStorage.removeItem('dfp_restore_settings_scroll_top_after_reload');
+                const parsed = Number(restoreValue);
+                if (Number.isFinite(parsed) && parsed >= 0) restoreScrollTop = parsed;
+            }
+        } catch (e) { /* ignore */ }
+
+        contentScrollRef.current?.scrollTo({ top: restoreScrollTop ?? 0, left: 0, behavior: 'auto' });
     }, [activeSection]);
 
     // Initialize filtered mockdata with instructorsData
@@ -1480,7 +1490,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 )}
             </aside>
 
-            <div ref={contentScrollRef} className="flex-1 overflow-y-auto bg-gray-900">
+            <div ref={contentScrollRef} data-settings-content-scroll="true" className="flex-1 overflow-y-auto bg-gray-900">
                 <div className="p-4 sm:p-6">
 
                     {/* ── ICON GRID HOME ───────────────────────────────────── */}
