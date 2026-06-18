@@ -56099,7 +56099,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                 /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Description", value: profile.description || "", disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { description: value }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start pt-[31px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-800 bg-gray-950/70 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-800 bg-gray-950/70 py-3 pl-3 pr-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-gray-300", children: "Role Requirements" }),

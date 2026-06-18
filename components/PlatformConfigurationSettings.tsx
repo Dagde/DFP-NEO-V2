@@ -3642,7 +3642,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           </button>
                         </div>
                       </div>
-                      <div className="mt-3 rounded-lg border border-gray-800 bg-gray-950/70 p-3">
+                      <div className="mt-3 rounded-lg border border-gray-800 bg-gray-950/70 py-3 pl-3 pr-0">
                         <div className="mb-2 grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]">
                           <div className="lg:col-span-3">
                             <div className="text-xs font-black uppercase tracking-wide text-gray-300">Role Requirements</div>
