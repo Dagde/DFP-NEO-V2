@@ -27858,18 +27858,15 @@ const PrioritiesView = ({
                             width: `${width}%`,
                             background: colour
                           },
-                          children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "div",
                             {
-                              className: "pointer-events-none absolute top-8 min-w-24 -translate-x-1/2 text-center",
+                              className: "pointer-events-none absolute top-8 -translate-x-1/2 text-center",
                               style: { left: `${width / 2}%` },
-                              children: [
-                                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-[11px] font-bold text-slate-100", children: stream.title || stream.code }),
-                                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "font-mono text-xs font-bold text-emerald-100", children: [
-                                  stream.weight,
-                                  "%"
-                                ] })
-                              ]
+                              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "font-mono text-xs font-bold text-emerald-100", children: [
+                                stream.weight,
+                                "%"
+                              ] })
                             }
                           )
                         },

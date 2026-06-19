@@ -2757,10 +2757,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                             }}
                                                         >
                                                             <div
-                                                                className="pointer-events-none absolute top-8 min-w-24 -translate-x-1/2 text-center"
+                                                                className="pointer-events-none absolute top-8 -translate-x-1/2 text-center"
                                                                 style={{ left: `${width / 2}%` }}
                                                             >
-                                                                <p className="truncate text-[11px] font-bold text-slate-100">{stream.title || stream.code}</p>
                                                                 <p className="font-mono text-xs font-bold text-emerald-100">{stream.weight}%</p>
                                                             </div>
                                                         </div>
