@@ -1269,6 +1269,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   }, [coursePriorities, coursePercentages]);
 
   useEffect(() => {
+    setFlightSchoolPriorityDraftStreams([]);
+  }, [coursePriorities, coursePercentages]);
+
+  useEffect(() => {
     setAircraftTimestamp(new Date().toLocaleString());
   }, [availableAircraftCount, aircraftConfigCapacities]);
 
@@ -1356,8 +1360,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       });
 
     if (priorityAllocationModel === 'flight_school') {
-      onUpdatePriorities(sorted.filter(item => item.enabled).map(item => item.code));
-      onUpdatePercentages(new Map(sorted.map(item => [item.code, item.enabled ? item.weight : 0])));
+      const nextPercentages = new Map<string, number>();
+      coursePriorities.forEach(course => {
+        const stream = prepared.find(item => item.code === course);
+        nextPercentages.set(course, stream?.enabled ? stream.weight : 0);
+      });
+      onUpdatePercentages(nextPercentages);
       logAudit('Priorities', 'Edit', 'Updated Flight School course priorities', `${sorted.length} courses`);
       return;
     }
