@@ -76491,6 +76491,33 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
       }
     }
+    const getResourceTurnaroundAfter = (event) => {
+      if (event.type === "flight") return flightTurnaround;
+      if (event.type === "ftd") return ftdTurnaround;
+      if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
+      return 0;
+    };
+    const hasFtdResourceAvailableAtTime = () => {
+      const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
+      for (let index = 1; index <= ftdCount; index++) {
+        const candidateResourceId = `FTD ${index}`;
+        const resourceIsOccupied = generatedEvents.some((e) => {
+          if (e.resourceId !== candidateResourceId) return false;
+          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
+          const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+          return startTime < existingEventEnd && proposedEventEnd > e.startTime;
+        });
+        if (!resourceIsOccupied) return true;
+      }
+      return false;
+    };
+    if (type === "ftd" && !hasFtdResourceAvailableAtTime()) {
+      return traceScheduleReject("NO_RESOURCE_AVAILABLE", {
+        resourcePrefix: "FTD ",
+        resourceCount: ftdCount,
+        earlyResourceCheck: true
+      });
+    }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
       const isBnfEvent2 = isNightPass && syllabusItemForCheck.code.startsWith("BNF") && !isRemedialSyllabusItem(syllabusItemForCheck);
       if (isBnfEvent2) {
@@ -77072,12 +77099,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       const resourceIsOccupied = generatedEvents.some((e) => {
         if (e.resourceId !== id) return false;
-        const getResourceTurnaroundAfter = (event) => {
-          if (event.type === "flight") return flightTurnaround;
-          if (event.type === "ftd") return ftdTurnaround;
-          if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
-          return 0;
-        };
         let existingTurnaround = getResourceTurnaroundAfter(e);
         if (e.type === "flight") {
           const isExistingEventNight = e.flightNumber.startsWith("BNF");
