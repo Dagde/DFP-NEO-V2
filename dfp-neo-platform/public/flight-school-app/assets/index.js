@@ -76511,12 +76511,82 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return false;
     };
+    const getDayFlightResourceAvailabilityAtTime = () => {
+      let aircraftConfigMismatchCount2 = 0;
+      const aircraftConfigMismatchSamples2 = [];
+      let compatibleResourceCandidateCount2 = 0;
+      const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
+      for (let index = 1; index <= availableAircraftCount; index++) {
+        const candidateResourceId = `PC-21 ${index}`;
+        const resourceAircraftConfigId = getAircraftConfigIdForResource(candidateResourceId);
+        if (!eventAcceptsResourceConfig(syllabusItem, resourceAircraftConfigId)) {
+          aircraftConfigMismatchCount2++;
+          if (aircraftConfigMismatchSamples2.length < 8) {
+            aircraftConfigMismatchSamples2.push({
+              resourceId: candidateResourceId,
+              aircraftConfigId: resourceAircraftConfigId,
+              aircraftConfigLabel: getAircraftConfigLabelForId(resourceAircraftConfigId)
+            });
+          }
+          continue;
+        }
+        compatibleResourceCandidateCount2++;
+        const resourceIsOccupied = generatedEvents.some((e) => {
+          if (e.resourceId !== candidateResourceId) return false;
+          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
+          const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+          return startTime < existingEventEnd && proposedEventEnd > e.startTime;
+        });
+        if (!resourceIsOccupied) {
+          return {
+            available: true,
+            aircraftConfigMismatchCount: aircraftConfigMismatchCount2,
+            aircraftConfigMismatchSamples: aircraftConfigMismatchSamples2,
+            compatibleResourceCandidateCount: compatibleResourceCandidateCount2
+          };
+        }
+      }
+      return {
+        available: false,
+        aircraftConfigMismatchCount: aircraftConfigMismatchCount2,
+        aircraftConfigMismatchSamples: aircraftConfigMismatchSamples2,
+        compatibleResourceCandidateCount: compatibleResourceCandidateCount2
+      };
+    };
     if (type === "ftd" && !hasFtdResourceAvailableAtTime()) {
       return traceScheduleReject("NO_RESOURCE_AVAILABLE", {
         resourcePrefix: "FTD ",
         resourceCount: ftdCount,
         earlyResourceCheck: true
       });
+    }
+    if (type === "flight" && !isNightPass) {
+      const dayFlightResourceAvailability = getDayFlightResourceAvailabilityAtTime();
+      if (!dayFlightResourceAvailability.available) {
+        if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "NO_AIRCRAFT_AVAILABLE");
+        if (dayFlightResourceAvailability.compatibleResourceCandidateCount === 0 && dayFlightResourceAvailability.aircraftConfigMismatchCount > 0) {
+          return traceScheduleReject("AIRCRAFT_CONFIG_MISMATCH", {
+            resourcePrefix: "PC-21 ",
+            resourceCount: availableAircraftCount,
+            preferredNightAircraft: null,
+            requiredAircraftConfig: getAircraftConfigRequirementSummary(syllabusItem),
+            acceptedAircraftConfigs: normaliseAircraftConfigRequirement(syllabusItem),
+            mismatchCount: dayFlightResourceAvailability.aircraftConfigMismatchCount,
+            mismatchSamples: dayFlightResourceAvailability.aircraftConfigMismatchSamples,
+            earlyResourceCheck: true
+          });
+        }
+        return traceScheduleReject("NO_RESOURCE_AVAILABLE", {
+          resourcePrefix: "PC-21 ",
+          resourceCount: availableAircraftCount,
+          preferredNightAircraft: null,
+          requiredAircraftConfig: getAircraftConfigRequirementSummary(syllabusItem),
+          compatibleResourceCandidateCount: dayFlightResourceAvailability.compatibleResourceCandidateCount,
+          aircraftConfigMismatchCount: dayFlightResourceAvailability.aircraftConfigMismatchCount,
+          aircraftConfigMismatchSamples: dayFlightResourceAvailability.aircraftConfigMismatchSamples,
+          earlyResourceCheck: true
+        });
+      }
     }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
       const isBnfEvent2 = isNightPass && syllabusItemForCheck.code.startsWith("BNF") && !isRemedialSyllabusItem(syllabusItemForCheck);

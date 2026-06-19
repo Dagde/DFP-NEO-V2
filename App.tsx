@@ -9965,12 +9965,85 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return false;
         };
 
+        const getDayFlightResourceAvailabilityAtTime = () => {
+            let aircraftConfigMismatchCount = 0;
+            const aircraftConfigMismatchSamples: Array<{ resourceId: string; aircraftConfigId: string; aircraftConfigLabel: string }> = [];
+            let compatibleResourceCandidateCount = 0;
+            const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
+
+            for (let index = 1; index <= availableAircraftCount; index++) {
+                const candidateResourceId = `PC-21 ${index}`;
+                const resourceAircraftConfigId = getAircraftConfigIdForResource(candidateResourceId);
+                if (!eventAcceptsResourceConfig(syllabusItem, resourceAircraftConfigId)) {
+                    aircraftConfigMismatchCount++;
+                    if (aircraftConfigMismatchSamples.length < 8) {
+                        aircraftConfigMismatchSamples.push({
+                            resourceId: candidateResourceId,
+                            aircraftConfigId: resourceAircraftConfigId,
+                            aircraftConfigLabel: getAircraftConfigLabelForId(resourceAircraftConfigId),
+                        });
+                    }
+                    continue;
+                }
+                compatibleResourceCandidateCount++;
+                const resourceIsOccupied = generatedEvents.some(e => {
+                    if (e.resourceId !== candidateResourceId) return false;
+                    const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
+                    const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+                    return startTime < existingEventEnd && proposedEventEnd > e.startTime;
+                });
+                if (!resourceIsOccupied) {
+                    return {
+                        available: true,
+                        aircraftConfigMismatchCount,
+                        aircraftConfigMismatchSamples,
+                        compatibleResourceCandidateCount,
+                    };
+                }
+            }
+
+            return {
+                available: false,
+                aircraftConfigMismatchCount,
+                aircraftConfigMismatchSamples,
+                compatibleResourceCandidateCount,
+            };
+        };
+
         if (type === 'ftd' && !hasFtdResourceAvailableAtTime()) {
             return traceScheduleReject('NO_RESOURCE_AVAILABLE', {
                 resourcePrefix: 'FTD ',
                 resourceCount: ftdCount,
                 earlyResourceCheck: true,
             });
+        }
+        if (type === 'flight' && !isNightPass) {
+            const dayFlightResourceAvailability = getDayFlightResourceAvailabilityAtTime();
+            if (!dayFlightResourceAvailability.available) {
+                if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AIRCRAFT_AVAILABLE');
+                if (dayFlightResourceAvailability.compatibleResourceCandidateCount === 0 && dayFlightResourceAvailability.aircraftConfigMismatchCount > 0) {
+                    return traceScheduleReject('AIRCRAFT_CONFIG_MISMATCH', {
+                        resourcePrefix: 'PC-21 ',
+                        resourceCount: availableAircraftCount,
+                        preferredNightAircraft: null,
+                        requiredAircraftConfig: getAircraftConfigRequirementSummary(syllabusItem),
+                        acceptedAircraftConfigs: normaliseAircraftConfigRequirement(syllabusItem),
+                        mismatchCount: dayFlightResourceAvailability.aircraftConfigMismatchCount,
+                        mismatchSamples: dayFlightResourceAvailability.aircraftConfigMismatchSamples,
+                        earlyResourceCheck: true,
+                    });
+                }
+                return traceScheduleReject('NO_RESOURCE_AVAILABLE', {
+                    resourcePrefix: 'PC-21 ',
+                    resourceCount: availableAircraftCount,
+                    preferredNightAircraft: null,
+                    requiredAircraftConfig: getAircraftConfigRequirementSummary(syllabusItem),
+                    compatibleResourceCandidateCount: dayFlightResourceAvailability.compatibleResourceCandidateCount,
+                    aircraftConfigMismatchCount: dayFlightResourceAvailability.aircraftConfigMismatchCount,
+                    aircraftConfigMismatchSamples: dayFlightResourceAvailability.aircraftConfigMismatchSamples,
+                    earlyResourceCheck: true,
+                });
+            }
         }
 
         const findAvailableInstructor = (
