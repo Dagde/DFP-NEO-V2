@@ -51,6 +51,17 @@ type FixedCrewPointerOrigin = Pick<FixedCrewPointerBridge, 'rect' | 'pointer'>;
 const FIXED_CREW_PRIORITY_STEP = 5;
 const FIXED_CREW_PRIORITY_TOTAL_STEPS = 100 / FIXED_CREW_PRIORITY_STEP;
 
+const snapFixedCrewPriorityWeight = (value: number): number => (
+  Math.max(0, Math.min(100, Math.round((Number(value) || 0) / FIXED_CREW_PRIORITY_STEP) * FIXED_CREW_PRIORITY_STEP))
+);
+
+const snapFixedCrewTrainingPriorityWeightsToStep = (
+  streams?: Partial<FixedCrewTrainingStreamPriority>[] | null,
+): FixedCrewTrainingStreamPriority[] => normaliseFixedCrewTrainingPriorities(streams).map(stream => ({
+  ...stream,
+  weight: stream.enabled ? snapFixedCrewPriorityWeight(stream.weight) : 0,
+}));
+
 const normaliseFixedCrewTrainingPriorityWeightsToStep = (
   streams?: Partial<FixedCrewTrainingStreamPriority>[] | null,
 ): FixedCrewTrainingStreamPriority[] => {
@@ -1176,6 +1187,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const fixedCrewEnabledStreamTotal = displayedFixedCrewTrainingStreams
     .filter(stream => stream.enabled)
     .reduce((sum, stream) => sum + stream.weight, 0);
+  const canApplyFixedCrewPriorities = isEditingFixedCrewPriorities
+    && fixedCrewEnabledStreamCount > 0
+    && fixedCrewEnabledStreamTotal === 100;
   useEffect(() => {
     setCourseTimestamp(new Date().toLocaleString());
   }, [coursePriorities, coursePercentages]);
@@ -1274,7 +1288,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const prepareFixedCrewPriorityStreams = (
     streams: FixedCrewTrainingStreamPriority[],
-  ): FixedCrewTrainingStreamPriority[] => normaliseFixedCrewTrainingPriorityWeightsToStep(streams);
+  ): FixedCrewTrainingStreamPriority[] => snapFixedCrewTrainingPriorityWeightsToStep(streams);
 
   const updateFixedCrewDraftStreams = (streams: FixedCrewTrainingStreamPriority[]) => {
     const eventCounts = new Map(displayedFixedCrewTrainingStreams.map(stream => [stream.key, stream.eventCount]));
@@ -1311,6 +1325,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         if (right.weight !== left.weight) return right.weight - left.weight;
         return (draftOrder.get(left.key) ?? 0) - (draftOrder.get(right.key) ?? 0);
       });
+    const enabledTotal = nextStreams.filter(stream => stream.enabled).reduce((sum, stream) => sum + stream.weight, 0);
+    if (enabledTotal !== 100) return;
     logAudit('Priorities', 'Edit', 'Applied Fixed Crew course/package priorities', `${nextStreams.length} streams`);
     onUpdateFixedCrewTrainingPriorities?.(nextStreams);
     setFixedCrewPointerBridge(null);
@@ -1318,33 +1334,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     setIsEditingFixedCrewPriorities(false);
   };
 
-  const getFixedCrewTransferPartnerIndex = (
-    streams: FixedCrewTrainingStreamPriority[],
-    targetIndex: number,
-    direction: FixedCrewPriorityDirection,
-  ): number => {
-    const preferredStep = direction === 'increase' ? -1 : 1;
-    const fallbackStep = preferredStep * -1;
-    const canTransfer = (stream: FixedCrewTrainingStreamPriority) => (
-      stream.enabled && (direction === 'increase' ? stream.weight > 0 : true)
-    );
-    for (let index = targetIndex + preferredStep; index >= 0 && index < streams.length; index += preferredStep) {
-      if (canTransfer(streams[index])) return index;
-    }
-    for (let index = targetIndex + fallbackStep; index >= 0 && index < streams.length; index += fallbackStep) {
-      if (canTransfer(streams[index])) return index;
-    }
-    return -1;
-  };
-
   const canIncreaseFixedCrewStream = (stream: FixedCrewTrainingStreamPriority): boolean => {
-    if (!isEditingFixedCrewPriorities || !stream.enabled || fixedCrewEnabledStreamCount < 2) return false;
-    return displayedFixedCrewTrainingStreams.some(other => other.enabled && other.key !== stream.key && other.weight > 0);
+    return isEditingFixedCrewPriorities && stream.enabled && stream.weight < 100;
   };
 
   const canDecreaseFixedCrewStream = (stream: FixedCrewTrainingStreamPriority): boolean => {
-    if (!isEditingFixedCrewPriorities || !stream.enabled || fixedCrewEnabledStreamCount < 2) return false;
-    return stream.weight > 0;
+    return isEditingFixedCrewPriorities && stream.enabled && stream.weight > 0;
   };
 
   const handleFixedCrewStreamToggle = (streamKey: string) => {
@@ -1353,7 +1348,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const next = current.map(stream => stream.key === streamKey ? {
       ...stream,
       enabled: !stream.enabled,
-      weight: stream.enabled ? 0 : Math.max(FIXED_CREW_PRIORITY_STEP, stream.weight || FIXED_CREW_PRIORITY_STEP),
+      weight: 0,
     } : stream);
     updateFixedCrewDraftStreams(next);
   };
@@ -1387,27 +1382,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const target = next[targetIndex];
 
     const previousWeight = target.weight;
-    if (direction === 'increase') {
-      const partnerIndex = getFixedCrewTransferPartnerIndex(next, targetIndex, direction);
-      if (partnerIndex >= 0) {
-        const partner = next[partnerIndex];
-        const transfer = Math.min(FIXED_CREW_PRIORITY_STEP, partner.weight);
-        if (transfer > 0) {
-          target.weight += transfer;
-          partner.weight -= transfer;
-        }
-      }
-    } else {
-      const partnerIndex = getFixedCrewTransferPartnerIndex(next, targetIndex, direction);
-      if (partnerIndex >= 0) {
-        const partner = next[partnerIndex];
-        const transfer = Math.min(FIXED_CREW_PRIORITY_STEP, target.weight);
-        if (transfer > 0) {
-          target.weight -= transfer;
-          partner.weight += transfer;
-        }
-      }
-    }
+    target.weight = snapFixedCrewPriorityWeight(target.weight + (direction === 'increase' ? FIXED_CREW_PRIORITY_STEP : -FIXED_CREW_PRIORITY_STEP));
     const normalised = prepareFixedCrewPriorityStreams(next);
     const after = normalised.find(stream => stream.key === streamKey);
     if (!after || after.weight === previousWeight) return;
@@ -1424,11 +1399,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     updateFixedCrewDraftStreams(normalised);
   };
 
+  const handleFixedCrewStreamWeightInput = (streamKey: string, value: string) => {
+    if (!isEditingFixedCrewPriorities) return;
+    const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
+    const next = current.map(stream => stream.key === streamKey ? {
+      ...stream,
+      weight: stream.enabled ? snapFixedCrewPriorityWeight(parseInt(value, 10) || 0) : 0,
+    } : stream);
+    updateFixedCrewDraftStreams(next);
+  };
+
   const handleEqualiseFixedCrewStreams = () => {
     if (!isEditingFixedCrewPriorities) return;
     const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
     if (current.length === 0) return;
-    updateFixedCrewDraftStreams(current.map(stream => ({ ...stream, weight: 1, enabled: true })));
+    updateFixedCrewDraftStreams(normaliseFixedCrewTrainingPriorityWeightsToStep(current.map(stream => ({ ...stream, weight: 1, enabled: true }))));
   };
 
   const nonCleanConfigCapacityTotal = useMemo(() => (
@@ -2724,15 +2709,25 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100">
+                                    <span className={`rounded border px-2 py-1 text-xs font-semibold ${
+                                        fixedCrewEnabledStreamTotal === 100
+                                            ? 'border-emerald-500/30 bg-emerald-950/50 text-emerald-100'
+                                            : 'border-amber-400/40 bg-amber-500/10 text-amber-100'
+                                    }`}>
                                         Enabled total {fixedCrewEnabledStreamTotal}%
                                     </span>
+                                    {isEditingFixedCrewPriorities && fixedCrewEnabledStreamTotal !== 100 && (
+                                        <span className="rounded border border-amber-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-amber-100">
+                                            {fixedCrewEnabledStreamTotal < 100 ? `${100 - fixedCrewEnabledStreamTotal}% unassigned` : `${fixedCrewEnabledStreamTotal - 100}% over`}
+                                        </span>
+                                    )}
                                     {isEditingFixedCrewPriorities ? (
                                         <>
                                             <button
                                                 type="button"
                                                 onClick={handleApplyFixedCrewPriorities}
-                                                className="rounded border border-emerald-300/60 bg-emerald-400/20 px-2 py-1 text-xs font-semibold text-emerald-50 transition hover:border-emerald-200"
+                                                disabled={!canApplyFixedCrewPriorities}
+                                                className="rounded border border-emerald-300/60 bg-emerald-400/20 px-2 py-1 text-xs font-semibold text-emerald-50 transition hover:border-emerald-200 disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-900 disabled:text-slate-500"
                                             >
                                                 Apply
                                             </button>
@@ -2777,7 +2772,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 if (node) fixedCrewStreamRowRefs.current.set(stream.key, node);
                                                 else fixedCrewStreamRowRefs.current.delete(stream.key);
                                             }}
-                                            className={`grid items-center gap-3 rounded-md border p-3 text-white md:grid-cols-[42px_84px_94px_1fr_74px_86px_34px] ${
+                                            className={`grid items-center gap-3 rounded-md border p-3 text-white md:grid-cols-[42px_84px_94px_1fr_112px_86px_34px] ${
                                                 stream.enabled
                                                     ? 'border-slate-700 bg-slate-950/70'
                                                     : 'border-slate-800 bg-slate-950/35 opacity-65'
@@ -2807,7 +2802,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 <p className="truncate text-sm font-semibold text-slate-100">{stream.title || stream.code}</p>
                                                 <p className="truncate text-xs text-slate-400">{stream.code}{stream.unitCode ? ` • ${stream.unitCode}` : ''} • {stream.eventCount || 0} event{stream.eventCount === 1 ? '' : 's'}</p>
                                             </div>
-                                            <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.weight}%</span>
+                                            {isEditingFixedCrewPriorities ? (
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        max={100}
+                                                        step={FIXED_CREW_PRIORITY_STEP}
+                                                        value={stream.weight}
+                                                        onChange={(event) => handleFixedCrewStreamWeightInput(stream.key, event.target.value)}
+                                                        disabled={!stream.enabled}
+                                                        className="h-9 w-20 rounded border border-slate-600 bg-slate-950 px-2 text-right font-mono text-sm font-bold text-emerald-100 outline-none transition focus:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    />
+                                                    <span className="text-xs font-bold text-emerald-200">%</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.weight}%</span>
+                                            )}
                                             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Share</span>
                                             <div className="flex flex-col">
                                                 <ArrowButton

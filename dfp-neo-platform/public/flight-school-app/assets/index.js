@@ -25763,6 +25763,11 @@ const NextDayBuildView = ({
 };
 const FIXED_CREW_PRIORITY_STEP = 5;
 const FIXED_CREW_PRIORITY_TOTAL_STEPS = 100 / FIXED_CREW_PRIORITY_STEP;
+const snapFixedCrewPriorityWeight = (value) => Math.max(0, Math.min(100, Math.round((Number(value) || 0) / FIXED_CREW_PRIORITY_STEP) * FIXED_CREW_PRIORITY_STEP));
+const snapFixedCrewTrainingPriorityWeightsToStep = (streams) => normaliseFixedCrewTrainingPriorities(streams).map((stream) => ({
+  ...stream,
+  weight: stream.enabled ? snapFixedCrewPriorityWeight(stream.weight) : 0
+}));
 const normaliseFixedCrewTrainingPriorityWeightsToStep = (streams) => {
   const normalised = normaliseFixedCrewTrainingPriorities(streams);
   const enabled = normalised.filter((stream) => stream.enabled);
@@ -26598,6 +26603,7 @@ const PrioritiesView = ({
   }, [fixedCrewTrainingPriorities.length, fixedCrewTrainingStreams, isFixedCrewModel, onUpdateFixedCrewTrainingPriorities]);
   const fixedCrewEnabledStreamCount = displayedFixedCrewTrainingStreams.filter((stream) => stream.enabled).length;
   const fixedCrewEnabledStreamTotal = displayedFixedCrewTrainingStreams.filter((stream) => stream.enabled).reduce((sum, stream) => sum + stream.weight, 0);
+  const canApplyFixedCrewPriorities = isEditingFixedCrewPriorities && fixedCrewEnabledStreamCount > 0 && fixedCrewEnabledStreamTotal === 100;
   reactExports.useEffect(() => {
     setCourseTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
   }, [coursePriorities, coursePercentages]);
@@ -26677,7 +26683,7 @@ const PrioritiesView = ({
     updateAirCombatStreamWeights(currentStreams.map((stream) => ({ ...stream, weight: 1 })), "Equalised all active Air Combat course/package streams");
   };
   const stripFixedCrewDisplayFields = (streams) => streams.map(({ eventCount: _eventCount, ...stream }) => stream);
-  const prepareFixedCrewPriorityStreams = (streams) => normaliseFixedCrewTrainingPriorityWeightsToStep(streams);
+  const prepareFixedCrewPriorityStreams = (streams) => snapFixedCrewTrainingPriorityWeightsToStep(streams);
   const updateFixedCrewDraftStreams = (streams) => {
     const eventCounts = new Map(displayedFixedCrewTrainingStreams.map((stream) => [stream.key, stream.eventCount]));
     setFixedCrewPriorityDraftStreams(
@@ -26708,31 +26714,19 @@ const PrioritiesView = ({
       if (right.weight !== left.weight) return right.weight - left.weight;
       return (draftOrder.get(left.key) ?? 0) - (draftOrder.get(right.key) ?? 0);
     });
+    const enabledTotal = nextStreams.filter((stream) => stream.enabled).reduce((sum, stream) => sum + stream.weight, 0);
+    if (enabledTotal !== 100) return;
     logAudit("Priorities", "Edit", "Applied Fixed Crew course/package priorities", `${nextStreams.length} streams`);
     onUpdateFixedCrewTrainingPriorities?.(nextStreams);
     setFixedCrewPointerBridge(null);
     setFixedCrewPriorityDraftStreams([]);
     setIsEditingFixedCrewPriorities(false);
   };
-  const getFixedCrewTransferPartnerIndex = (streams, targetIndex, direction) => {
-    const preferredStep = direction === "increase" ? -1 : 1;
-    const fallbackStep = preferredStep * -1;
-    const canTransfer = (stream) => stream.enabled && (direction === "increase" ? stream.weight > 0 : true);
-    for (let index = targetIndex + preferredStep; index >= 0 && index < streams.length; index += preferredStep) {
-      if (canTransfer(streams[index])) return index;
-    }
-    for (let index = targetIndex + fallbackStep; index >= 0 && index < streams.length; index += fallbackStep) {
-      if (canTransfer(streams[index])) return index;
-    }
-    return -1;
-  };
   const canIncreaseFixedCrewStream = (stream) => {
-    if (!isEditingFixedCrewPriorities || !stream.enabled || fixedCrewEnabledStreamCount < 2) return false;
-    return displayedFixedCrewTrainingStreams.some((other) => other.enabled && other.key !== stream.key && other.weight > 0);
+    return isEditingFixedCrewPriorities && stream.enabled && stream.weight < 100;
   };
   const canDecreaseFixedCrewStream = (stream) => {
-    if (!isEditingFixedCrewPriorities || !stream.enabled || fixedCrewEnabledStreamCount < 2) return false;
-    return stream.weight > 0;
+    return isEditingFixedCrewPriorities && stream.enabled && stream.weight > 0;
   };
   const handleFixedCrewStreamToggle = (streamKey) => {
     if (!isEditingFixedCrewPriorities) return;
@@ -26740,7 +26734,7 @@ const PrioritiesView = ({
     const next = current.map((stream) => stream.key === streamKey ? {
       ...stream,
       enabled: !stream.enabled,
-      weight: stream.enabled ? 0 : Math.max(FIXED_CREW_PRIORITY_STEP, stream.weight || FIXED_CREW_PRIORITY_STEP)
+      weight: 0
     } : stream);
     updateFixedCrewDraftStreams(next);
   };
@@ -26764,27 +26758,7 @@ const PrioritiesView = ({
     if (targetIndex < 0) return;
     const target = next[targetIndex];
     const previousWeight = target.weight;
-    if (direction === "increase") {
-      const partnerIndex = getFixedCrewTransferPartnerIndex(next, targetIndex, direction);
-      if (partnerIndex >= 0) {
-        const partner = next[partnerIndex];
-        const transfer = Math.min(FIXED_CREW_PRIORITY_STEP, partner.weight);
-        if (transfer > 0) {
-          target.weight += transfer;
-          partner.weight -= transfer;
-        }
-      }
-    } else {
-      const partnerIndex = getFixedCrewTransferPartnerIndex(next, targetIndex, direction);
-      if (partnerIndex >= 0) {
-        const partner = next[partnerIndex];
-        const transfer = Math.min(FIXED_CREW_PRIORITY_STEP, target.weight);
-        if (transfer > 0) {
-          target.weight -= transfer;
-          partner.weight += transfer;
-        }
-      }
-    }
+    target.weight = snapFixedCrewPriorityWeight(target.weight + (direction === "increase" ? FIXED_CREW_PRIORITY_STEP : -FIXED_CREW_PRIORITY_STEP));
     const normalised = prepareFixedCrewPriorityStreams(next);
     const after = normalised.find((stream) => stream.key === streamKey);
     if (!after || after.weight === previousWeight) return;
@@ -26800,11 +26774,20 @@ const PrioritiesView = ({
     }
     updateFixedCrewDraftStreams(normalised);
   };
+  const handleFixedCrewStreamWeightInput = (streamKey, value) => {
+    if (!isEditingFixedCrewPriorities) return;
+    const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
+    const next = current.map((stream) => stream.key === streamKey ? {
+      ...stream,
+      weight: stream.enabled ? snapFixedCrewPriorityWeight(parseInt(value, 10) || 0) : 0
+    } : stream);
+    updateFixedCrewDraftStreams(next);
+  };
   const handleEqualiseFixedCrewStreams = () => {
     if (!isEditingFixedCrewPriorities) return;
     const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
     if (current.length === 0) return;
-    updateFixedCrewDraftStreams(current.map((stream) => ({ ...stream, weight: 1, enabled: true })));
+    updateFixedCrewDraftStreams(normaliseFixedCrewTrainingPriorityWeightsToStep(current.map((stream) => ({ ...stream, weight: 1, enabled: true }))));
   };
   const nonCleanConfigCapacityTotal = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || "", 10) || 0), 0), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
   const hasEnteredConfigCapacity = reactExports.useMemo(() => aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0").some((definition) => String(aircraftConfigCapacities[definition.id] || "").trim() !== ""), [aircraftConfigCapacities, aircraftConfigurationDefinitions]);
@@ -27815,18 +27798,20 @@ const PrioritiesView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `rounded border px-2 py-1 text-xs font-semibold ${fixedCrewEnabledStreamTotal === 100 ? "border-emerald-500/30 bg-emerald-950/50 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: [
                   "Enabled total ",
                   fixedCrewEnabledStreamTotal,
                   "%"
                 ] }),
+                isEditingFixedCrewPriorities && fixedCrewEnabledStreamTotal !== 100 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-amber-100", children: fixedCrewEnabledStreamTotal < 100 ? `${100 - fixedCrewEnabledStreamTotal}% unassigned` : `${fixedCrewEnabledStreamTotal - 100}% over` }),
                 isEditingFixedCrewPriorities ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       type: "button",
                       onClick: handleApplyFixedCrewPriorities,
-                      className: "rounded border border-emerald-300/60 bg-emerald-400/20 px-2 py-1 text-xs font-semibold text-emerald-50 transition hover:border-emerald-200",
+                      disabled: !canApplyFixedCrewPriorities,
+                      className: "rounded border border-emerald-300/60 bg-emerald-400/20 px-2 py-1 text-xs font-semibold text-emerald-50 transition hover:border-emerald-200 disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-900 disabled:text-slate-500",
                       children: "Apply"
                     }
                   ),
@@ -27872,7 +27857,7 @@ const PrioritiesView = ({
                   if (node) fixedCrewStreamRowRefs.current.set(stream.key, node);
                   else fixedCrewStreamRowRefs.current.delete(stream.key);
                 },
-                className: `grid items-center gap-3 rounded-md border p-3 text-white md:grid-cols-[42px_84px_94px_1fr_74px_86px_34px] ${stream.enabled ? "border-slate-700 bg-slate-950/70" : "border-slate-800 bg-slate-950/35 opacity-65"}`,
+                className: `grid items-center gap-3 rounded-md border p-3 text-white md:grid-cols-[42px_84px_94px_1fr_112px_86px_34px] ${stream.enabled ? "border-slate-700 bg-slate-950/70" : "border-slate-800 bg-slate-950/35 opacity-65"}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-sm text-slate-500", children: index + 1 }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27897,7 +27882,22 @@ const PrioritiesView = ({
                       stream.eventCount === 1 ? "" : "s"
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-right font-mono text-lg font-bold text-emerald-200", children: [
+                  isEditingFixedCrewPriorities ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-end gap-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "number",
+                        min: 0,
+                        max: 100,
+                        step: FIXED_CREW_PRIORITY_STEP,
+                        value: stream.weight,
+                        onChange: (event) => handleFixedCrewStreamWeightInput(stream.key, event.target.value),
+                        disabled: !stream.enabled,
+                        className: "h-9 w-20 rounded border border-slate-600 bg-slate-950 px-2 text-right font-mono text-sm font-bold text-emerald-100 outline-none transition focus:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-emerald-200", children: "%" })
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-right font-mono text-lg font-bold text-emerald-200", children: [
                     stream.weight,
                     "%"
                   ] }),
