@@ -1192,6 +1192,32 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setRankTerminologyUnlocked(false);
   };
 
+  const saveRankTerminology = async () => {
+    await save(undefined, 'platform-rank-terminology');
+  };
+
+  const renderRankTerminologySectionAction = () => {
+    if (!canUnlockRankTerminology) return null;
+    return rankTerminologyUnlocked ? (
+      <button
+        type="button"
+        onClick={saveRankTerminology}
+        disabled={saving}
+        className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Save
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={unlockRankTerminology}
+        className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-900 hover:bg-gray-200"
+      >
+        Edit
+      </button>
+    );
+  };
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -5826,6 +5852,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels.
             </div>
           ) : null}
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/70 p-4">
+            <div>
+              <h5 className="text-sm font-bold text-cyan-100">Personnel Terminology</h5>
+              <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                Configure sort mode, local instructor wording, contractor grouping and the customer-facing training report name.
+              </p>
+            </div>
+            {renderRankTerminologySectionAction()}
+          </div>
           <div className="grid gap-3 lg:grid-cols-2">
             <SelectField
               label="Personnel Sort Mode"
@@ -5882,14 +5917,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   Generic positions are the stable aircraft seat roles. Organisation labels are the words this organisation uses for those positions. Operational models control where each role appears in crew requirement dropdowns.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={addCrewPositionEntry}
-                disabled={!canEditRankTerminology}
-                className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Add Position
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {renderRankTerminologySectionAction()}
+                <button
+                  type="button"
+                  onClick={addCrewPositionEntry}
+                  disabled={!canEditRankTerminology}
+                  className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Add Position
+                </button>
+              </div>
             </div>
             <div className="mt-4 space-y-3">
               {crewPositionTerminology.positions.map((entry) => {
@@ -5969,14 +6007,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff Profile qualification options are drawn from this list.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={addStaffQualificationEntry}
-                disabled={!canEditRankTerminology}
-                className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Add Qualification
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {renderRankTerminologySectionAction()}
+                <button
+                  type="button"
+                  onClick={addStaffQualificationEntry}
+                  disabled={!canEditRankTerminology}
+                  className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Add Qualification
+                </button>
+              </div>
             </div>
             <div className="mt-4 space-y-3">
               {[...staffQualificationCatalogue.qualifications]
@@ -6064,14 +6105,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   Define unit callsign bases for manual scheduling. When a PIC has no individual profile callsign, the unit default is offered with a selectable sortie number.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={addUnitCallsignEntry}
-                disabled={!canEditRankTerminology || config.units.length === 0}
-                className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Add Callsign
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {renderRankTerminologySectionAction()}
+                <button
+                  type="button"
+                  onClick={addUnitCallsignEntry}
+                  disabled={!canEditRankTerminology || config.units.length === 0}
+                  className="rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Add Callsign
+                </button>
+              </div>
             </div>
             <div className="mt-4 space-y-3">
               {unitCallsignSettings.entries.length === 0 && (
@@ -6127,6 +6171,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
                 ))}
             </div>
+          </div>
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-violet-400/25 bg-violet-500/10 p-4">
+            <div>
+              <h5 className="text-sm font-bold text-violet-100">Rank Order</h5>
+              <p className="mt-1 text-xs leading-relaxed text-violet-100/75">
+                Maintain staff and trainee rank display priority without returning to the top of the page to unlock or save.
+              </p>
+            </div>
+            {renderRankTerminologySectionAction()}
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <TextAreaField
