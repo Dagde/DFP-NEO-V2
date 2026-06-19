@@ -1039,8 +1039,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   }, [activeUnitCodeSet, instructorsData, isAirCombatModel, normalisedAirCombatWeights.trainingStreams, school]);
   const fixedCrewStreamRowRefs = useRef<Map<string, HTMLLIElement>>(new Map());
   const fixedCrewPreviousRowTops = useRef<Map<string, number>>(new Map());
+  const fixedCrewSuppressNextTableAnimation = useRef(true);
   const fixedCrewSliderTrackRef = useRef<HTMLDivElement | null>(null);
-  const [isEditingFixedCrewPriorities, setIsEditingFixedCrewPriorities] = useState(false);
   const [fixedCrewPriorityDraftStreams, setFixedCrewPriorityDraftStreams] = useState<FixedCrewTrainingStreamDisplay[]>([]);
   const fixedCrewTrainingStreams = useMemo(() => {
     if (!isFixedCrewModel) return [];
@@ -1091,7 +1091,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       );
     });
   }, [activeUnitCode, activeUnitCodeSet, fixedCrewTrainingPriorities, isFixedCrewModel, school, syllabusDetails]);
-  const displayedFixedCrewTrainingStreams = isEditingFixedCrewPriorities
+  const displayedFixedCrewTrainingStreams = fixedCrewPriorityDraftStreams.length > 0
     ? fixedCrewPriorityDraftStreams
     : fixedCrewTrainingStreams;
   const fixedCrewColourByKey = useMemo(() => {
@@ -1124,10 +1124,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   useLayoutEffect(() => {
     if (!isFixedCrewModel) return;
     const nextTops = new Map<string, number>();
+    const shouldSuppressAnimation = fixedCrewSuppressNextTableAnimation.current;
     fixedCrewStreamRowRefs.current.forEach((node, key) => {
       const top = node.getBoundingClientRect().top;
       const previousTop = fixedCrewPreviousRowTops.current.get(key);
-      if (previousTop !== undefined) {
+      if (!shouldSuppressAnimation && previousTop !== undefined) {
         const delta = previousTop - top;
         if (Math.abs(delta) > 1) {
           node.getAnimations().forEach(animation => {
@@ -1157,6 +1158,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       nextTops.set(key, top);
     });
     fixedCrewPreviousRowTops.current = nextTops;
+    fixedCrewSuppressNextTableAnimation.current = false;
   }, [fixedCrewPriorityTableSignature, isFixedCrewModel]);
 
   useEffect(() => {
@@ -1177,8 +1179,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const fixedCrewEnabledStreamTotal = displayedFixedCrewTrainingStreams
     .filter(stream => stream.enabled)
     .reduce((sum, stream) => sum + stream.weight, 0);
-  const canApplyFixedCrewPriorities = isEditingFixedCrewPriorities
-    && fixedCrewEnabledStreamCount > 0
+  const canApplyFixedCrewPriorities = fixedCrewEnabledStreamCount > 0
     && fixedCrewEnabledStreamTotal === 100;
   useEffect(() => {
     setCourseTimestamp(new Date().toLocaleString());
@@ -1282,6 +1283,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const updateFixedCrewDraftStreams = (streams: FixedCrewTrainingStreamPriority[]) => {
     const eventCounts = new Map(displayedFixedCrewTrainingStreams.map(stream => [stream.key, stream.eventCount]));
+    if (fixedCrewPriorityDraftStreams.length === 0) fixedCrewSuppressNextTableAnimation.current = true;
     setFixedCrewPriorityDraftStreams(
       prepareFixedCrewPriorityStreams(streams).map(stream => ({
         ...stream,
@@ -1290,24 +1292,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     );
   };
 
-  const handleEditFixedCrewPriorities = () => {
-    setFixedCrewPriorityDraftStreams(
-      prepareFixedCrewPriorityStreams(stripFixedCrewDisplayFields(fixedCrewTrainingStreams)).map(stream => ({
-        ...stream,
-        eventCount: fixedCrewTrainingStreams.find(item => item.key === stream.key)?.eventCount,
-      })),
-    );
-    setIsEditingFixedCrewPriorities(true);
-  };
-
-  const handleCancelFixedCrewPriorities = () => {
-    setFixedCrewPriorityDraftStreams([]);
-    setIsEditingFixedCrewPriorities(false);
-  };
-
   const handleApplyFixedCrewPriorities = () => {
-    const draftOrder = new Map(fixedCrewPriorityDraftStreams.map((stream, index) => [stream.key, index]));
-    const nextStreams = prepareFixedCrewPriorityStreams(stripFixedCrewDisplayFields(fixedCrewPriorityDraftStreams))
+    const sourceStreams = fixedCrewPriorityDraftStreams.length > 0 ? fixedCrewPriorityDraftStreams : fixedCrewTrainingStreams;
+    const draftOrder = new Map(sourceStreams.map((stream, index) => [stream.key, index]));
+    const nextStreams = prepareFixedCrewPriorityStreams(stripFixedCrewDisplayFields(sourceStreams))
       .slice()
       .sort((left, right) => {
         if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
@@ -1318,8 +1306,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (enabledTotal !== 100) return;
     logAudit('Priorities', 'Edit', 'Applied Fixed Crew course/package priorities', `${nextStreams.length} streams`);
     onUpdateFixedCrewTrainingPriorities?.(nextStreams);
+    fixedCrewSuppressNextTableAnimation.current = true;
     setFixedCrewPriorityDraftStreams([]);
-    setIsEditingFixedCrewPriorities(false);
   };
 
   const equaliseFixedCrewPriorityStreams = (
@@ -1329,7 +1317,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   );
 
   const updateFixedCrewPriorityBoundary = (boundaryIndex: number, nextBoundaryPercent: number) => {
-    if (!isEditingFixedCrewPriorities) return;
     const activeStreams = activeFixedCrewPriorityStreams;
     if (boundaryIndex < 0 || boundaryIndex >= activeStreams.length - 1) return;
     const leftStream = activeStreams[boundaryIndex];
@@ -1354,7 +1341,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     boundaryIndex: number,
     event: React.PointerEvent<HTMLButtonElement>,
   ) => {
-    if (!isEditingFixedCrewPriorities || !fixedCrewSliderTrackRef.current) return;
+    if (!fixedCrewSliderTrackRef.current) return;
     event.preventDefault();
     const track = fixedCrewSliderTrackRef.current;
     const pointerId = event.pointerId;
@@ -1384,7 +1371,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const handleFixedCrewStreamToggle = (streamKey: string) => {
-    if (!isEditingFixedCrewPriorities) return;
     const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
     const target = current.find(stream => stream.key === streamKey);
     if (target?.enabled && current.filter(stream => stream.enabled).length <= 1) return;
@@ -1397,7 +1383,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const handleEqualiseFixedCrewStreams = () => {
-    if (!isEditingFixedCrewPriorities) return;
     const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
     if (current.length === 0) return;
     updateFixedCrewDraftStreams(equaliseFixedCrewPriorityStreams(current.map(stream => ({ ...stream, enabled: true }))));
@@ -2703,43 +2688,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     }`}>
                                         Enabled total {fixedCrewEnabledStreamTotal}%
                                     </span>
-                                    {isEditingFixedCrewPriorities && fixedCrewEnabledStreamTotal !== 100 && (
+                                    {fixedCrewEnabledStreamTotal !== 100 && (
                                         <span className="rounded border border-amber-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-amber-100">
                                             {fixedCrewEnabledStreamTotal < 100 ? `${100 - fixedCrewEnabledStreamTotal}% unassigned` : `${fixedCrewEnabledStreamTotal - 100}% over`}
                                         </span>
                                     )}
-                                    {isEditingFixedCrewPriorities ? (
-                                        <>
-                                            <button
-                                                type="button"
-                                                onClick={handleApplyFixedCrewPriorities}
-                                                disabled={!canApplyFixedCrewPriorities}
-                                                className="rounded border border-emerald-300/60 bg-emerald-400/20 px-2 py-1 text-xs font-semibold text-emerald-50 transition hover:border-emerald-200 disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-900 disabled:text-slate-500"
-                                            >
-                                                Apply Priorities
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleCancelFixedCrewPriorities}
-                                                className="rounded border border-slate-500/50 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-slate-200 transition hover:border-slate-300/70"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={handleEditFixedCrewPriorities}
-                                            disabled={fixedCrewTrainingStreams.length === 0}
-                                            className="rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40"
-                                        >
-                                            Edit
-                                        </button>
-                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={handleApplyFixedCrewPriorities}
+                                        disabled={!canApplyFixedCrewPriorities}
+                                        className="rounded border border-emerald-300/60 bg-emerald-400/20 px-2 py-1 text-xs font-semibold text-emerald-50 transition hover:border-emerald-200 disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-900 disabled:text-slate-500"
+                                    >
+                                        Apply Priorities
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={handleEqualiseFixedCrewStreams}
-                                        disabled={!isEditingFixedCrewPriorities || displayedFixedCrewTrainingStreams.length < 2}
+                                        disabled={displayedFixedCrewTrainingStreams.length < 2}
                                         className="rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40"
                                     >
                                         Reset Evenly
@@ -2756,7 +2721,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         <div className="relative px-2 pb-14 pt-10">
                                             <div
                                                 ref={fixedCrewSliderTrackRef}
-                                                className={`relative h-5 overflow-visible rounded-full border border-slate-600 bg-slate-900 shadow-inner ${isEditingFixedCrewPriorities ? 'cursor-ew-resize' : ''}`}
+                                                className="relative h-5 cursor-ew-resize overflow-visible rounded-full border border-slate-600 bg-slate-900 shadow-inner"
                                             >
                                                 <span className="absolute -top-8 left-0 -translate-x-1/2 font-mono text-[11px] font-bold text-slate-400">0%</span>
                                                 <span className="absolute -top-8 left-full -translate-x-1/2 font-mono text-[11px] font-bold text-slate-400">100%</span>
@@ -2784,7 +2749,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                     <button
                                                         key={`${activeFixedCrewPriorityStreams[index]?.key || index}-handle`}
                                                         type="button"
-                                                        disabled={!isEditingFixedCrewPriorities}
                                                         aria-label={`Move priority boundary at ${boundary}%`}
                                                         onPointerDown={(event) => handleFixedCrewPriorityHandlePointerDown(index, event)}
                                                         className="absolute top-1/2 z-10 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-950 bg-white shadow-lg ring-2 ring-cyan-300/70 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-70"
@@ -2840,7 +2804,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleFixedCrewStreamToggle(stream.key)}
-                                                                disabled={!isEditingFixedCrewPriorities}
                                                                 className={`rounded px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${
                                                                     stream.enabled
                                                                         ? 'border border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
