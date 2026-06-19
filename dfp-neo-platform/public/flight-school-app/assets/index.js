@@ -26553,6 +26553,7 @@ const PrioritiesView = ({
     boundaries.push(previous + stream.weight);
     return boundaries;
   }, []);
+  const fixedCrewPriorityTableSignature = sortedFixedCrewPriorityTableStreams.map((stream) => `${stream.key}:${stream.enabled ? 1 : 0}:${stream.weight}`).join("|");
   reactExports.useLayoutEffect(() => {
     if (!isFixedCrewModel) return;
     const nextTops = /* @__PURE__ */ new Map();
@@ -26562,19 +26563,34 @@ const PrioritiesView = ({
       if (previousTop !== void 0) {
         const delta = previousTop - top;
         if (Math.abs(delta) > 1) {
-          node.animate(
+          node.getAnimations().forEach((animation2) => {
+            animation2.onfinish = null;
+            animation2.oncancel = null;
+            animation2.cancel();
+          });
+          node.style.position = "relative";
+          node.style.zIndex = "1";
+          node.style.willChange = "transform";
+          const animation = node.animate(
             [
               { transform: `translateY(${delta}px)` },
               { transform: "translateY(0)" }
             ],
-            { duration: 190, easing: "cubic-bezier(0.2, 0, 0, 1)" }
+            { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" }
           );
+          const clearAnimationStyles = () => {
+            node.style.position = "";
+            node.style.zIndex = "";
+            node.style.willChange = "";
+          };
+          animation.onfinish = clearAnimationStyles;
+          animation.oncancel = clearAnimationStyles;
         }
       }
       nextTops.set(key, top);
     });
     fixedCrewPreviousRowTops.current = nextTops;
-  }, [displayedFixedCrewTrainingStreams, isFixedCrewModel]);
+  }, [fixedCrewPriorityTableSignature, isFixedCrewModel]);
   reactExports.useEffect(() => {
     if (!isFixedCrewModel || fixedCrewTrainingStreams.length === 0) return;
     const savedKeys = new Set(normaliseFixedCrewTrainingPriorities(fixedCrewTrainingPriorities).map((stream) => stream.key));
@@ -27885,13 +27901,13 @@ const PrioritiesView = ({
                   ]
                 }
               ) }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-slate-700/80 bg-slate-950/60", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[46px_1fr_92px_92px] gap-3 border-b border-slate-700/70 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-500", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-visible rounded-lg border border-slate-700/80 bg-slate-950/60", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-t-lg border-b border-slate-700/70 bg-slate-950/80 px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[46px_1fr_92px_92px] gap-3 text-[11px] font-bold uppercase tracking-wide text-slate-500", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Rank" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Course / Package" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right", children: "Priority" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right", children: "Status" })
-                ] }),
+                ] }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: sortedFixedCrewPriorityTableStreams.map((stream, index) => {
                   const colour = fixedCrewColourByKey.get(stream.key) || FIXED_CREW_PRIORITY_COLOURS[index % FIXED_CREW_PRIORITY_COLOURS.length];
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -27901,7 +27917,7 @@ const PrioritiesView = ({
                         if (node) fixedCrewStreamRowRefs.current.set(stream.key, node);
                         else fixedCrewStreamRowRefs.current.delete(stream.key);
                       },
-                      className: `grid grid-cols-[46px_1fr_92px_92px] items-center gap-3 border-b border-slate-800/80 px-3 py-3 last:border-b-0 ${stream.enabled ? "text-slate-100" : "text-slate-500 opacity-70"}`,
+                      className: `grid grid-cols-[46px_1fr_92px_92px] items-center gap-3 border-b border-slate-800/80 bg-slate-950/60 px-3 py-3 shadow-sm last:border-b-0 ${stream.enabled ? "text-slate-100" : "text-slate-500 opacity-75"}`,
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-sm text-slate-500", children: stream.enabled ? index + 1 : "-" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
@@ -27935,7 +27951,7 @@ const PrioritiesView = ({
                     stream.key
                   );
                 }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end border-t border-slate-700/70 px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-bold text-emerald-100", children: "Total: 100%" }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end rounded-b-lg border-t border-slate-700/70 bg-slate-950/80 px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-bold text-emerald-100", children: "Total: 100%" }) })
               ] })
             ] })
           ] }),
