@@ -39,6 +39,19 @@ import {
 } from '../utils/unitCallsigns';
 
 type FixedCrewTrainingStreamDisplay = FixedCrewTrainingStreamPriority & { eventCount?: number };
+type PriorityAllocationModel = 'flight_school' | 'air_combat' | 'fixed_crew';
+type PriorityAllocationKind = 'course' | 'training_package';
+type PriorityAllocationItem = {
+  key: string;
+  kind: PriorityAllocationKind;
+  code: string;
+  title?: string;
+  locationCode?: string;
+  unitCode?: string;
+  eventCount?: number;
+  weight: number;
+  enabled: boolean;
+};
 const FIXED_CREW_PRIORITY_STEP = 5;
 const FIXED_CREW_PRIORITY_TOTAL_STEPS = 100 / FIXED_CREW_PRIORITY_STEP;
 const FIXED_CREW_PRIORITY_MIN_PERCENT = 0;
@@ -58,6 +71,44 @@ const FIXED_CREW_PRIORITY_COLOURS = [
 const snapFixedCrewPriorityWeight = (value: number): number => (
   Math.max(0, Math.min(100, Math.round((Number(value) || 0) / FIXED_CREW_PRIORITY_STEP) * FIXED_CREW_PRIORITY_STEP))
 );
+
+const normalisePriorityAllocationItemsToStep = <T extends { weight: number; enabled?: boolean }>(
+  items: T[],
+): T[] => {
+  const enabled = items.filter(item => item.enabled !== false);
+  if (enabled.length === 0) return items.map(item => ({ ...item, weight: 0 }));
+  const enabledTotal = enabled.reduce((sum, item) => sum + Math.max(0, Number(item.weight) || 0), 0);
+  if (enabledTotal <= 0) {
+    const baseSteps = Math.floor(FIXED_CREW_PRIORITY_TOTAL_STEPS / enabled.length);
+    let extraSteps = FIXED_CREW_PRIORITY_TOTAL_STEPS - (baseSteps * enabled.length);
+    return items.map(item => {
+      if (item.enabled === false) return { ...item, weight: 0 };
+      const steps = baseSteps + (extraSteps > 0 ? 1 : 0);
+      if (extraSteps > 0) extraSteps -= 1;
+      return { ...item, weight: steps * FIXED_CREW_PRIORITY_STEP };
+    });
+  }
+
+  const targets = enabled.map((item, index) => {
+    const exactSteps = (Math.max(0, Number(item.weight) || 0) / enabledTotal) * FIXED_CREW_PRIORITY_TOTAL_STEPS;
+    return { item, index, exactSteps, steps: Math.max(0, Math.round(exactSteps)) };
+  });
+  let stepDelta = FIXED_CREW_PRIORITY_TOTAL_STEPS - targets.reduce((sum, target) => sum + target.steps, 0);
+  while (stepDelta !== 0) {
+    const candidates = stepDelta > 0
+      ? targets.slice().sort((left, right) => (right.exactSteps - right.steps) - (left.exactSteps - left.steps) || left.index - right.index)
+      : targets.filter(target => target.steps > 0).sort((left, right) => (left.exactSteps - left.steps) - (right.exactSteps - right.steps) || left.index - right.index);
+    const target = candidates[0];
+    if (!target) break;
+    target.steps += stepDelta > 0 ? 1 : -1;
+    stepDelta += stepDelta > 0 ? -1 : 1;
+  }
+  const stepsByItem = new Map(targets.map(target => [target.item, target.steps]));
+  return items.map(item => ({
+    ...item,
+    weight: item.enabled === false ? 0 : (stepsByItem.get(item) || 0) * FIXED_CREW_PRIORITY_STEP,
+  }));
+};
 
 const snapFixedCrewTrainingPriorityWeightsToStep = (
   streams?: Partial<FixedCrewTrainingStreamPriority>[] | null,
@@ -958,9 +1009,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       : [BASE_AIRCRAFT_CONFIG, ...definitions];
   }, [aircraftConfigurationDefinitions]);
 
-  // State for Course Priorities
-  const courseDragItem = useRef<number | null>(null);
-  const courseDragOverItem = useRef<number | null>(null);
   const [courseTimestamp, setCourseTimestamp] = useState(new Date().toLocaleString());
 
   // SCT Request Constants
@@ -976,6 +1024,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [turnaroundTimestamp, setTurnaroundTimestamp] = useState(new Date().toLocaleString());
   const isAirCombatModel = String(operationalModel || '').trim().toLowerCase() === 'air_combat';
   const isFixedCrewModel = String(operationalModel || '').trim().toLowerCase() === 'fixed_crew';
+  const priorityAllocationModel: PriorityAllocationModel = isAirCombatModel ? 'air_combat' : isFixedCrewModel ? 'fixed_crew' : 'flight_school';
   const normalisedAirCombatWeights = useMemo(
     () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
     [airCombatSchedulingWeights],
@@ -1042,6 +1091,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const fixedCrewSuppressNextTableAnimation = useRef(true);
   const fixedCrewSliderTrackRef = useRef<HTMLDivElement | null>(null);
   const [fixedCrewPriorityDraftStreams, setFixedCrewPriorityDraftStreams] = useState<FixedCrewTrainingStreamDisplay[]>([]);
+  const [airCombatPriorityDraftStreams, setAirCombatPriorityDraftStreams] = useState<PriorityAllocationItem[]>([]);
+  const [flightSchoolPriorityDraftStreams, setFlightSchoolPriorityDraftStreams] = useState<PriorityAllocationItem[]>([]);
   const fixedCrewTrainingStreams = useMemo(() => {
     if (!isFixedCrewModel) return [];
     const savedStreams = normaliseFixedCrewTrainingPriorityWeightsToStep(fixedCrewTrainingPriorities);
@@ -1091,21 +1142,55 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       );
     });
   }, [activeUnitCode, activeUnitCodeSet, fixedCrewTrainingPriorities, isFixedCrewModel, school, syllabusDetails]);
+  const flightSchoolPriorityStreams = useMemo<PriorityAllocationItem[]>(() => (
+    normalisePriorityAllocationItemsToStep(coursePriorities.map(course => ({
+      key: course,
+      kind: 'course' as const,
+      code: course,
+      title: course,
+      weight: coursePercentages.get(course) ?? 0,
+      enabled: true,
+    })))
+  ), [coursePercentages, coursePriorities]);
+  const airCombatPriorityStreams = useMemo<PriorityAllocationItem[]>(() => (
+    normalisePriorityAllocationItemsToStep(airCombatTrainingStreams.map(stream => ({
+      key: stream.key,
+      kind: stream.kind,
+      code: stream.code,
+      title: stream.title,
+      locationCode: stream.locationCode,
+      unitCode: stream.unitCode,
+      weight: stream.weight,
+      enabled: true,
+    })))
+  ), [airCombatTrainingStreams]);
   const displayedFixedCrewTrainingStreams = fixedCrewPriorityDraftStreams.length > 0
     ? fixedCrewPriorityDraftStreams
     : fixedCrewTrainingStreams;
+  const displayedPriorityAllocationStreams = priorityAllocationModel === 'air_combat'
+    ? (airCombatPriorityDraftStreams.length > 0 ? airCombatPriorityDraftStreams : airCombatPriorityStreams)
+    : priorityAllocationModel === 'fixed_crew'
+      ? displayedFixedCrewTrainingStreams.map(stream => ({
+          key: stream.key,
+          kind: stream.kind,
+          code: stream.code,
+          title: stream.title,
+          locationCode: stream.locationCode,
+          unitCode: stream.unitCode,
+          eventCount: stream.eventCount,
+          weight: stream.weight,
+          enabled: stream.enabled,
+        }))
+      : (flightSchoolPriorityDraftStreams.length > 0 ? flightSchoolPriorityDraftStreams : flightSchoolPriorityStreams);
   const fixedCrewColourByKey = useMemo(() => {
     const colours = new Map<string, string>();
-    fixedCrewTrainingStreams.forEach((stream, index) => {
+    displayedPriorityAllocationStreams.forEach((stream, index) => {
       colours.set(stream.key, FIXED_CREW_PRIORITY_COLOURS[index % FIXED_CREW_PRIORITY_COLOURS.length]);
     });
-    displayedFixedCrewTrainingStreams.forEach((stream, index) => {
-      if (!colours.has(stream.key)) colours.set(stream.key, FIXED_CREW_PRIORITY_COLOURS[index % FIXED_CREW_PRIORITY_COLOURS.length]);
-    });
     return colours;
-  }, [displayedFixedCrewTrainingStreams, fixedCrewTrainingStreams]);
-  const activeFixedCrewPriorityStreams = displayedFixedCrewTrainingStreams.filter(stream => stream.enabled);
-  const sortedFixedCrewPriorityTableStreams = displayedFixedCrewTrainingStreams
+  }, [displayedPriorityAllocationStreams]);
+  const activeFixedCrewPriorityStreams = displayedPriorityAllocationStreams.filter(stream => stream.enabled);
+  const sortedFixedCrewPriorityTableStreams = displayedPriorityAllocationStreams
     .slice()
     .sort((left, right) => {
       if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
@@ -1175,8 +1260,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       ]),
     );
   }, [fixedCrewTrainingPriorities.length, fixedCrewTrainingStreams, isFixedCrewModel, onUpdateFixedCrewTrainingPriorities]);
-  const fixedCrewEnabledStreamCount = displayedFixedCrewTrainingStreams.filter(stream => stream.enabled).length;
-  const fixedCrewEnabledStreamTotal = displayedFixedCrewTrainingStreams
+  const fixedCrewEnabledStreamCount = displayedPriorityAllocationStreams.filter(stream => stream.enabled).length;
+  const fixedCrewEnabledStreamTotal = displayedPriorityAllocationStreams
     .filter(stream => stream.enabled)
     .reduce((sum, stream) => sum + stream.weight, 0);
   useEffect(() => {
@@ -1237,44 +1322,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     onUpdateAirCombatSchedulingWeights?.(nextWeights);
   };
 
-  const handleAirCombatStreamWeightChange = (streamKey: string, direction: 'increase' | 'decrease') => {
-    const changeAmount = direction === 'increase' ? 5 : -5;
-    const currentStreams = airCombatTrainingStreams.length > 0 ? airCombatTrainingStreams : (normalisedAirCombatWeights.trainingStreams || []);
-    const nextStreams = currentStreams.map(stream => ({ ...stream }));
-    const target = nextStreams.find(stream => stream.key === streamKey);
-    if (!target) return;
-    const previousWeight = target.weight;
-    target.weight = Math.max(0, target.weight + changeAmount);
-    const delta = target.weight - previousWeight;
-    if (delta !== 0) {
-      const others = nextStreams
-        .filter(stream => stream.key !== streamKey)
-        .sort((left, right) => direction === 'increase' ? right.weight - left.weight : left.weight - right.weight);
-      let remaining = Math.abs(delta);
-      for (const other of others) {
-        if (remaining <= 0) break;
-        if (direction === 'increase') {
-          const take = Math.min(other.weight, remaining);
-          other.weight -= take;
-          remaining -= take;
-        } else {
-          other.weight += remaining;
-          remaining = 0;
-        }
-      }
-    }
-    updateAirCombatStreamWeights(nextStreams, `${target.code} ${previousWeight}% → ${target.weight}%`);
-  };
-
-  const handleEqualiseAirCombatStreams = () => {
-    const currentStreams = airCombatTrainingStreams.length > 0 ? airCombatTrainingStreams : (normalisedAirCombatWeights.trainingStreams || []);
-    if (currentStreams.length === 0) return;
-    updateAirCombatStreamWeights(currentStreams.map(stream => ({ ...stream, weight: 1 })), 'Equalised all active Air Combat course/package streams');
-  };
-  const stripFixedCrewDisplayFields = (
-    streams: FixedCrewTrainingStreamDisplay[],
-  ): FixedCrewTrainingStreamPriority[] => streams.map(({ eventCount: _eventCount, ...stream }) => stream);
-
   const prepareFixedCrewPriorityStreams = (
     streams: FixedCrewTrainingStreamPriority[],
   ): FixedCrewTrainingStreamPriority[] => snapFixedCrewTrainingPriorityWeightsToStep(streams);
@@ -1295,22 +1342,77 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     onUpdateFixedCrewTrainingPriorities?.(nextStreams);
   };
 
-  const updateFixedCrewDraftStreams = (streams: FixedCrewTrainingStreamPriority[]) => {
-    const eventCounts = new Map(displayedFixedCrewTrainingStreams.map(stream => [stream.key, stream.eventCount]));
-    if (fixedCrewPriorityDraftStreams.length === 0) fixedCrewSuppressNextTableAnimation.current = true;
-    const prepared = prepareFixedCrewPriorityStreams(streams);
-    setFixedCrewPriorityDraftStreams(
-      prepared.map(stream => ({
-        ...stream,
-        eventCount: eventCounts.get(stream.key) ?? fixedCrewTrainingStreams.find(item => item.key === stream.key)?.eventCount,
-      })),
-    );
-    persistFixedCrewPriorityStreams(prepared);
+  const persistPriorityAllocationStreams = (items: PriorityAllocationItem[]) => {
+    const prepared = normalisePriorityAllocationItemsToStep(items);
+    const enabledTotal = prepared.filter(item => item.enabled).reduce((sum, item) => sum + item.weight, 0);
+    if (enabledTotal !== 100) return;
+    const order = new Map(prepared.map((item, index) => [item.key, index]));
+    const sorted = prepared
+      .slice()
+      .sort((left, right) => {
+        if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
+        if (right.weight !== left.weight) return right.weight - left.weight;
+        return (order.get(left.key) ?? 0) - (order.get(right.key) ?? 0);
+      });
+
+    if (priorityAllocationModel === 'flight_school') {
+      onUpdatePriorities(sorted.filter(item => item.enabled).map(item => item.code));
+      onUpdatePercentages(new Map(sorted.map(item => [item.code, item.enabled ? item.weight : 0])));
+      logAudit('Priorities', 'Edit', 'Updated Flight School course priorities', `${sorted.length} courses`);
+      return;
+    }
+
+    if (priorityAllocationModel === 'air_combat') {
+      const trainingStreams: AirCombatTrainingStreamWeight[] = sorted.map(item => ({
+        key: item.key,
+        kind: item.kind,
+        code: item.code,
+        title: item.title,
+        locationCode: item.locationCode,
+        unitCode: item.unitCode,
+        weight: item.enabled ? item.weight : 0,
+      }));
+      updateAirCombatStreamWeights(trainingStreams, `${trainingStreams.length} streams`);
+      return;
+    }
+
+    const fixedCrewStreams: FixedCrewTrainingStreamPriority[] = sorted.map(item => ({
+      key: item.key,
+      kind: item.kind,
+      code: item.code,
+      title: item.title,
+      locationCode: item.locationCode,
+      unitCode: item.unitCode,
+      weight: item.enabled ? item.weight : 0,
+      enabled: item.enabled,
+    }));
+    persistFixedCrewPriorityStreams(fixedCrewStreams);
   };
 
-  const equaliseFixedCrewPriorityStreams = (
-    streams: FixedCrewTrainingStreamPriority[],
-  ): FixedCrewTrainingStreamPriority[] => normaliseFixedCrewTrainingPriorityWeightsToStep(
+  const updatePriorityAllocationStreams = (items: PriorityAllocationItem[]) => {
+    if (priorityAllocationModel === 'fixed_crew' && fixedCrewPriorityDraftStreams.length === 0) {
+      fixedCrewSuppressNextTableAnimation.current = true;
+    }
+    const prepared = normalisePriorityAllocationItemsToStep(items);
+    if (priorityAllocationModel === 'air_combat') {
+      setAirCombatPriorityDraftStreams(prepared);
+    } else if (priorityAllocationModel === 'fixed_crew') {
+      const eventCounts = new Map(displayedFixedCrewTrainingStreams.map(stream => [stream.key, stream.eventCount]));
+      setFixedCrewPriorityDraftStreams(
+        prepared.map(item => ({
+          ...item,
+          eventCount: eventCounts.get(item.key) ?? fixedCrewTrainingStreams.find(stream => stream.key === item.key)?.eventCount,
+        })),
+      );
+    } else {
+      setFlightSchoolPriorityDraftStreams(prepared);
+    }
+    persistPriorityAllocationStreams(prepared);
+  };
+
+  const equalisePriorityAllocationStreams = (
+    streams: PriorityAllocationItem[],
+  ): PriorityAllocationItem[] => normalisePriorityAllocationItemsToStep(
     streams.map(stream => ({ ...stream, weight: stream.enabled ? 1 : 0 })),
   );
 
@@ -1327,12 +1429,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     );
     const leftWeight = boundedBoundary - previousBoundary;
     const rightWeight = followingBoundary - boundedBoundary;
-    const nextStreams = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams).map(stream => {
+    const nextStreams = displayedPriorityAllocationStreams.map(stream => {
       if (stream.key === leftStream.key) return { ...stream, weight: leftWeight };
       if (stream.key === rightStream.key) return { ...stream, weight: rightWeight };
       return stream;
     });
-    updateFixedCrewDraftStreams(nextStreams);
+    updatePriorityAllocationStreams(nextStreams);
   };
 
   const handleFixedCrewPriorityHandlePointerDown = (
@@ -1369,7 +1471,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const handleFixedCrewStreamToggle = (streamKey: string) => {
-    const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
+    const current = displayedPriorityAllocationStreams.map(stream => ({ ...stream }));
     const target = current.find(stream => stream.key === streamKey);
     if (target?.enabled && current.filter(stream => stream.enabled).length <= 1) return;
     const next = current.map(stream => stream.key === streamKey ? {
@@ -1377,13 +1479,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       enabled: !stream.enabled,
       weight: 0,
     } : stream);
-    updateFixedCrewDraftStreams(equaliseFixedCrewPriorityStreams(next));
+    updatePriorityAllocationStreams(equalisePriorityAllocationStreams(next));
   };
 
   const handleEqualiseFixedCrewStreams = () => {
-    const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
+    const current = displayedPriorityAllocationStreams.map(stream => ({ ...stream }));
     if (current.length === 0) return;
-    updateFixedCrewDraftStreams(equaliseFixedCrewPriorityStreams(current.map(stream => ({ ...stream, enabled: true }))));
+    updatePriorityAllocationStreams(equalisePriorityAllocationStreams(current.map(stream => ({ ...stream, enabled: true }))));
   };
 
   const nonCleanConfigCapacityTotal = useMemo(() => (
@@ -1423,10 +1525,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   }, [flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, allowNightFlying, flyingWindowExclusions]);
 
   
-
-  const totalPercentage = useMemo(() => {
-    return Array.from(coursePercentages.values()).reduce((sum: number, p: number) => sum + p, 0);
-  }, [coursePercentages]);
 
   const timeOptions = useMemo(() => {
     const options = [];
@@ -2210,60 +2308,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     }));
   };
 
-  // --- Course Priority Handlers ---
-  const handleCourseDragStart = (index: number) => { courseDragItem.current = index; };
-  const handleCourseDragEnter = (index: number) => { courseDragOverItem.current = index; };
-  const handleCourseDragEnd = () => {
-    if (courseDragItem.current !== null && courseDragOverItem.current !== null) {
-      const newPriorities = [...coursePriorities];
-      const draggedItemContent = newPriorities.splice(courseDragItem.current, 1)[0];
-      newPriorities.splice(courseDragOverItem.current, 0, draggedItemContent);
-      onUpdatePriorities(newPriorities);
-         
-         // Log the change
-         logAudit('Priorities', 'Edit', 'Updated course priority order', 
-           `Moved ${draggedItemContent} from position ${courseDragItem.current + 1} to position ${courseDragOverItem.current + 1}`);
-    }
-    courseDragItem.current = null;
-    courseDragOverItem.current = null;
-  };
-
-  const handlePercentageChange = (courseToChange: string, direction: 'increase' | 'decrease') => {
-    const newPercentages = new Map<string, number>(coursePercentages);
-    const currentPercent = newPercentages.get(courseToChange) ?? 0;
-    const changeAmount = 5;
-    
-    // Calculate new percentage with 5% minimum enforcement
-    let newPercent = direction === 'increase' 
-      ? Math.min(100, currentPercent + changeAmount) 
-      : Math.max(5, currentPercent - changeAmount); // Enforce 5% minimum
-    
-    newPercentages.set(courseToChange, newPercent);
-       
-    // Log the change
-    logAudit('Priorities', 'Edit', `Updated course percentage for ${courseToChange}`, `${currentPercent}% → ${newPercent}%`);
-    onUpdatePercentages(newPercentages);
-  };
-  
-  const ArrowButton: React.FC<{
-    direction: 'up' | 'down',
-    onClick: (event: React.MouseEvent<HTMLButtonElement>) => void,
-    disabled?: boolean,
-    buttonRef?: (node: HTMLButtonElement | null) => void,
-  }> = ({ direction, onClick, disabled, buttonRef }) => (
-    <button
-      ref={buttonRef}
-      onClick={onClick}
-      disabled={disabled}
-      className="p-0.5 text-gray-400 rounded-sm hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-      aria-label={direction === 'up' ? 'Increase percentage' : 'Decrease percentage'}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-        {direction === 'up' ? <path fillRule="evenodd" d="M10 5l-5.5 5.5h11L10 5z" clipRule="evenodd" /> : <path fillRule="evenodd" d="M10 15l5.5-5.5h-11L10 15z" clipRule="evenodd" />}
-      </svg>
-    </button>
-  );
-  
   const formatTime = (time: number): string => {
     const hours = Math.floor(time);
     const minutes = Math.round((time % 1) * 60);
@@ -2612,70 +2656,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <span className="text-xs text-gray-500">Last updated: {courseTimestamp}</span>
                 </div>
                 <div className="p-4 border-t border-gray-700">
-                    {isAirCombatModel && (
+                    {(
                         <div className="mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
                             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <h3 className="text-sm font-bold text-emerald-100">Air Combat Course & Package Priority</h3>
+                                    <h3 className="text-sm font-bold text-emerald-100">
+                                        {priorityAllocationModel === 'air_combat'
+                                            ? 'Air Combat Course & Package Priority'
+                                            : priorityAllocationModel === 'fixed_crew'
+                                                ? 'Fixed Crew Course & Package Priority'
+                                                : 'Flight School Course Priority'}
+                                    </h3>
                                     <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
-                                        Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after tasking and currency are attempted.
-                                    </p>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-semibold text-emerald-100">
-                                        Courses {normalisedAirCombatWeights.courses}% / Packages {normalisedAirCombatWeights.trainingPackages}%
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={handleEqualiseAirCombatStreams}
-                                        disabled={airCombatTrainingStreams.length < 2}
-                                        className="rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                        Equalise
-                                    </button>
-                                </div>
-                            </div>
-                            {airCombatTrainingStreams.length === 0 ? (
-                                <div className="rounded border border-slate-700/70 bg-slate-950/60 p-3 text-sm text-slate-300">
-                                    No Air Combat course or training package assignments were found for {activeUnitCode || school}. Assign staff to unit courses/packages and they will appear here.
-                                </div>
-                            ) : (
-                                <ul className="space-y-2">
-                                    {airCombatTrainingStreams.map((stream, index) => (
-                                        <li
-                                            key={stream.key}
-                                            className="grid items-center gap-3 rounded-md border border-slate-700 bg-slate-950/70 p-3 text-white md:grid-cols-[42px_96px_1fr_86px_34px]"
-                                        >
-                                            <span className="font-mono text-sm text-slate-500">{index + 1}</span>
-                                            <span className={`rounded px-2 py-1 text-center text-[11px] font-bold uppercase tracking-wide ${
-                                                stream.kind === 'course'
-                                                    ? 'border border-sky-400/30 bg-sky-500/10 text-sky-100'
-                                                    : 'border border-violet-400/30 bg-violet-500/10 text-violet-100'
-                                            }`}>
-                                                {stream.kind === 'course' ? 'Course' : 'Package'}
-                                            </span>
-                                            <div className="min-w-0">
-                                                <p className="truncate text-sm font-semibold text-slate-100">{stream.code}</p>
-                                                <p className="truncate text-xs text-slate-400">{stream.title || stream.code}{stream.unitCode ? ` • ${stream.unitCode}` : ''}</p>
-                                            </div>
-                                            <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.weight}%</span>
-                                            <div className="flex flex-col">
-                                                <ArrowButton direction="up" onClick={() => handleAirCombatStreamWeightChange(stream.key, 'increase')} disabled={stream.weight >= 100} />
-                                                <ArrowButton direction="down" onClick={() => handleAirCombatStreamWeightChange(stream.key, 'decrease')} disabled={stream.weight <= 0} />
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    )}
-                    {isFixedCrewModel && (
-                        <div className="mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
-                            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                    <h3 className="text-sm font-bold text-emerald-100">Fixed Crew Course & Package Priority</h3>
-                                    <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
-                                        Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.
+                                        {priorityAllocationModel === 'air_combat'
+                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after tasking and currency are attempted."
+                                            : priorityAllocationModel === 'fixed_crew'
+                                                ? 'Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.'
+                                                : 'Set how Flight School training capacity is shared across active courses for this locality.'}
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -2694,16 +2691,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     <button
                                         type="button"
                                         onClick={handleEqualiseFixedCrewStreams}
-                                        disabled={displayedFixedCrewTrainingStreams.length < 2}
+                                        disabled={displayedPriorityAllocationStreams.length < 2}
                                         className="rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40"
                                     >
                                         Reset Evenly
                                     </button>
                                 </div>
                             </div>
-                            {displayedFixedCrewTrainingStreams.length === 0 ? (
+                            {displayedPriorityAllocationStreams.length === 0 ? (
                                 <div className="rounded border border-slate-700/70 bg-slate-950/60 p-3 text-sm text-slate-300">
-                                    No Fixed Crew course or training package events were found for {activeUnitCode || school}. Add visible Master LMP courses or Training Packages for this unit and they will appear here.
+                                    {priorityAllocationModel === 'air_combat'
+                                        ? `No Air Combat course or training package assignments were found for ${activeUnitCode || school}. Assign staff to unit courses/packages and they will appear here.`
+                                        : priorityAllocationModel === 'fixed_crew'
+                                            ? `No Fixed Crew course or training package events were found for ${activeUnitCode || school}. Add visible Master LMP courses or Training Packages for this unit and they will appear here.`
+                                            : `No courses found for ${locationDisplayName}. Courses will appear here once trainees are loaded for this locality.`}
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -2755,7 +2756,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         <div className="rounded-t-lg border-b border-slate-700/70 bg-slate-950/80 px-3 py-2">
                                             <div className="grid grid-cols-[46px_1fr_92px_92px] gap-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
                                                 <span>Rank</span>
-                                                <span>Course / Package</span>
+                                            <span>{priorityAllocationModel === 'flight_school' ? 'Course' : 'Course / Package'}</span>
                                                 <span className="text-right">Priority</span>
                                                 <span className="text-right">Status</span>
                                             </div>
@@ -2791,17 +2792,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                         </div>
                                                         <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.enabled ? `${stream.weight}%` : '0%'}</span>
                                                         <div className="flex justify-end">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleFixedCrewStreamToggle(stream.key)}
-                                                                className={`rounded px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${
-                                                                    stream.enabled
-                                                                        ? 'border border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
-                                                                        : 'border border-slate-600 bg-slate-900 text-slate-400'
-                                                                } disabled:cursor-not-allowed disabled:opacity-70`}
-                                                            >
-                                                                {stream.enabled ? 'Enabled' : 'Off'}
-                                                            </button>
+                                                            {priorityAllocationModel === 'fixed_crew' ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleFixedCrewStreamToggle(stream.key)}
+                                                                    className={`rounded px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${
+                                                                        stream.enabled
+                                                                            ? 'border border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                                                                            : 'border border-slate-600 bg-slate-900 text-slate-400'
+                                                                    } disabled:cursor-not-allowed disabled:opacity-70`}
+                                                                >
+                                                                    {stream.enabled ? 'Enabled' : 'Off'}
+                                                                </button>
+                                                            ) : (
+                                                                <span className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-100">
+                                                                    Active
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </li>
                                                 );
@@ -2814,52 +2821,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 </div>
                             )}
                         </div>
-                    )}
-                    {isAirCombatModel || isFixedCrewModel ? null : coursePriorities.length === 0 ? (
-                        <div className="py-8 text-center text-gray-500">
-                            <p className="text-sm font-medium">No courses found for {locationDisplayName}</p>
-                            <p className="text-xs mt-1">Courses will appear here once trainees are loaded for this locality.</p>
-                        </div>
-                    ) : (
-                        <>
-                            <ul className="space-y-2">
-                                {coursePriorities.map((course, index) => (
-                                    <li
-                                        key={course}
-                                        draggable
-                                        onDragStart={() => handleCourseDragStart(index)}
-                                        onDragEnter={() => handleCourseDragEnter(index)}
-                                        onDragEnd={handleCourseDragEnd}
-                                        onDragOver={(e) => e.preventDefault()}
-                                        className="p-3 bg-slate-950/70 border border-slate-700 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing"
-                                    >
-                                        <div className="flex items-center space-x-3">
-                                            <span className="font-mono text-gray-500">{index + 1}</span>
-                                            <span className="font-semibold">{course}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <span className={`font-mono w-12 text-center ${totalPercentage !== 100 && 'text-red-400'}`}>{coursePercentages.get(course) ?? 0}%</span>
-                                            <div className="flex flex-col">
-                                                <ArrowButton direction="up" onClick={() => handlePercentageChange(course, 'increase')} disabled={(coursePercentages.get(course) ?? 0) >= 100} />
-                                                <ArrowButton direction="down" onClick={() => handlePercentageChange(course, 'decrease')} disabled={(coursePercentages.get(course) ?? 0) <= 5} />
-                                            </div>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                            <div className={`mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                                Total: {totalPercentage}%
-                            </div>
-                            <div data-priority-help="true" className="mt-2 p-2 bg-cyan-500/10 border border-cyan-500/30 rounded text-xs text-cyan-300">
-                                <p className="font-semibold mb-1">&#x2139;&#xFE0F; Weighted Priority System:</p>
-                                <ul className="list-disc list-inside space-y-1 text-cyan-200">
-                                    <li>Percentages are auto-normalized to 100%</li>
-                                    <li>Minimum percentage per course: 5%</li>
-                                    <li>Higher % = more events (biased allocation)</li>
-                                    <li>All courses still get events (no starvation)</li>
-                                </ul>
-                            </div>
-                        </>
                     )}
                 </div>
             </div>
