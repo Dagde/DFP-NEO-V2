@@ -38,18 +38,22 @@ import {
   type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
 
-type FixedCrewPriorityDirection = 'increase' | 'decrease';
 type FixedCrewTrainingStreamDisplay = FixedCrewTrainingStreamPriority & { eventCount?: number };
-type FixedCrewPointerBridge = {
-  streamKey: string;
-  direction: FixedCrewPriorityDirection;
-  rect: { left: number; top: number; width: number; height: number };
-  pointer: { x: number; y: number };
-  nonce: number;
-};
-type FixedCrewPointerOrigin = Pick<FixedCrewPointerBridge, 'rect' | 'pointer'>;
 const FIXED_CREW_PRIORITY_STEP = 5;
 const FIXED_CREW_PRIORITY_TOTAL_STEPS = 100 / FIXED_CREW_PRIORITY_STEP;
+const FIXED_CREW_PRIORITY_MIN_PERCENT = 0;
+const FIXED_CREW_PRIORITY_COLOURS = [
+  '#22d3ee',
+  '#a78bfa',
+  '#34d399',
+  '#f59e0b',
+  '#f472b6',
+  '#60a5fa',
+  '#fb7185',
+  '#c084fc',
+  '#2dd4bf',
+  '#facc15',
+];
 
 const snapFixedCrewPriorityWeight = (value: number): number => (
   Math.max(0, Math.min(100, Math.round((Number(value) || 0) / FIXED_CREW_PRIORITY_STEP) * FIXED_CREW_PRIORITY_STEP))
@@ -1035,9 +1039,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   }, [activeUnitCodeSet, instructorsData, isAirCombatModel, normalisedAirCombatWeights.trainingStreams, school]);
   const fixedCrewStreamRowRefs = useRef<Map<string, HTMLLIElement>>(new Map());
   const fixedCrewPreviousRowTops = useRef<Map<string, number>>(new Map());
-  const fixedCrewArrowButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const fixedCrewActiveArrow = useRef<{ streamKey: string; direction: FixedCrewPriorityDirection } | null>(null);
-  const [fixedCrewPointerBridge, setFixedCrewPointerBridge] = useState<FixedCrewPointerBridge | null>(null);
+  const fixedCrewSliderTrackRef = useRef<HTMLDivElement | null>(null);
   const [isEditingFixedCrewPriorities, setIsEditingFixedCrewPriorities] = useState(false);
   const [fixedCrewPriorityDraftStreams, setFixedCrewPriorityDraftStreams] = useState<FixedCrewTrainingStreamDisplay[]>([]);
   const fixedCrewTrainingStreams = useMemo(() => {
@@ -1092,6 +1094,29 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const displayedFixedCrewTrainingStreams = isEditingFixedCrewPriorities
     ? fixedCrewPriorityDraftStreams
     : fixedCrewTrainingStreams;
+  const fixedCrewColourByKey = useMemo(() => {
+    const colours = new Map<string, string>();
+    fixedCrewTrainingStreams.forEach((stream, index) => {
+      colours.set(stream.key, FIXED_CREW_PRIORITY_COLOURS[index % FIXED_CREW_PRIORITY_COLOURS.length]);
+    });
+    displayedFixedCrewTrainingStreams.forEach((stream, index) => {
+      if (!colours.has(stream.key)) colours.set(stream.key, FIXED_CREW_PRIORITY_COLOURS[index % FIXED_CREW_PRIORITY_COLOURS.length]);
+    });
+    return colours;
+  }, [displayedFixedCrewTrainingStreams, fixedCrewTrainingStreams]);
+  const activeFixedCrewPriorityStreams = displayedFixedCrewTrainingStreams.filter(stream => stream.enabled);
+  const sortedFixedCrewPriorityTableStreams = displayedFixedCrewTrainingStreams
+    .slice()
+    .sort((left, right) => {
+      if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
+      if (right.weight !== left.weight) return right.weight - left.weight;
+      return String(left.title || left.code).localeCompare(String(right.title || right.code));
+    });
+  const fixedCrewPriorityBoundaries = activeFixedCrewPriorityStreams.reduce<number[]>((boundaries, stream, index) => {
+    const previous = boundaries[index - 1] || 0;
+    boundaries.push(previous + stream.weight);
+    return boundaries;
+  }, []);
 
   useLayoutEffect(() => {
     if (!isFixedCrewModel) return;
@@ -1115,59 +1140,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     });
     fixedCrewPreviousRowTops.current = nextTops;
   }, [displayedFixedCrewTrainingStreams, isFixedCrewModel]);
-
-  useEffect(() => {
-    const activeArrow = fixedCrewActiveArrow.current;
-    if (!activeArrow) return;
-    const key = `${activeArrow.streamKey}:${activeArrow.direction}`;
-    fixedCrewArrowButtonRefs.current.get(key)?.focus({ preventScroll: true });
-    fixedCrewActiveArrow.current = null;
-  }, [displayedFixedCrewTrainingStreams]);
-
-  useEffect(() => {
-    if (!fixedCrewPointerBridge) return;
-    const clearTimer = window.setTimeout(() => setFixedCrewPointerBridge(null), 1400);
-    const isWithinBridge = (event: Pick<PointerEvent, 'clientX' | 'clientY'>): boolean => {
-      const padding = 10;
-      const { left, top, width, height } = fixedCrewPointerBridge.rect;
-      return (
-        event.clientX >= left - padding &&
-        event.clientX <= left + width + padding &&
-        event.clientY >= top - padding &&
-        event.clientY <= top + height + padding
-      );
-    };
-    const handlePointerMove = (event: PointerEvent) => {
-      const deltaX = Math.abs(event.clientX - fixedCrewPointerBridge.pointer.x);
-      const deltaY = Math.abs(event.clientY - fixedCrewPointerBridge.pointer.y);
-      if (deltaX > 8 || deltaY > 8) setFixedCrewPointerBridge(null);
-    };
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!isWithinBridge(event)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      handleFixedCrewStreamWeightChange(fixedCrewPointerBridge.streamKey, fixedCrewPointerBridge.direction, {
-        rect: fixedCrewPointerBridge.rect,
-        pointer: { x: event.clientX, y: event.clientY },
-      });
-    };
-    const handleClick = (event: MouseEvent) => {
-      if (!isWithinBridge(event)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-    };
-    window.addEventListener('pointermove', handlePointerMove, { capture: true });
-    window.addEventListener('pointerdown', handlePointerDown, { capture: true });
-    window.addEventListener('click', handleClick, { capture: true });
-    return () => {
-      window.clearTimeout(clearTimer);
-      window.removeEventListener('pointermove', handlePointerMove, { capture: true });
-      window.removeEventListener('pointerdown', handlePointerDown, { capture: true });
-      window.removeEventListener('click', handleClick, { capture: true });
-    };
-  }, [fixedCrewPointerBridge]);
 
   useEffect(() => {
     if (!isFixedCrewModel || fixedCrewTrainingStreams.length === 0) return;
@@ -1311,7 +1283,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const handleCancelFixedCrewPriorities = () => {
-    setFixedCrewPointerBridge(null);
     setFixedCrewPriorityDraftStreams([]);
     setIsEditingFixedCrewPriorities(false);
   };
@@ -1324,96 +1295,94 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
         if (right.weight !== left.weight) return right.weight - left.weight;
         return (draftOrder.get(left.key) ?? 0) - (draftOrder.get(right.key) ?? 0);
-      });
+    });
     const enabledTotal = nextStreams.filter(stream => stream.enabled).reduce((sum, stream) => sum + stream.weight, 0);
     if (enabledTotal !== 100) return;
     logAudit('Priorities', 'Edit', 'Applied Fixed Crew course/package priorities', `${nextStreams.length} streams`);
     onUpdateFixedCrewTrainingPriorities?.(nextStreams);
-    setFixedCrewPointerBridge(null);
     setFixedCrewPriorityDraftStreams([]);
     setIsEditingFixedCrewPriorities(false);
   };
 
-  const canIncreaseFixedCrewStream = (stream: FixedCrewTrainingStreamPriority): boolean => {
-    return isEditingFixedCrewPriorities && stream.enabled && stream.weight < 100;
+  const equaliseFixedCrewPriorityStreams = (
+    streams: FixedCrewTrainingStreamPriority[],
+  ): FixedCrewTrainingStreamPriority[] => normaliseFixedCrewTrainingPriorityWeightsToStep(
+    streams.map(stream => ({ ...stream, weight: stream.enabled ? 1 : 0 })),
+  );
+
+  const updateFixedCrewPriorityBoundary = (boundaryIndex: number, nextBoundaryPercent: number) => {
+    if (!isEditingFixedCrewPriorities) return;
+    const activeStreams = activeFixedCrewPriorityStreams;
+    if (boundaryIndex < 0 || boundaryIndex >= activeStreams.length - 1) return;
+    const leftStream = activeStreams[boundaryIndex];
+    const rightStream = activeStreams[boundaryIndex + 1];
+    const previousBoundary = boundaryIndex === 0 ? 0 : fixedCrewPriorityBoundaries[boundaryIndex - 1];
+    const followingBoundary = fixedCrewPriorityBoundaries[boundaryIndex + 1] ?? 100;
+    const boundedBoundary = Math.max(
+      previousBoundary + FIXED_CREW_PRIORITY_MIN_PERCENT,
+      Math.min(followingBoundary - FIXED_CREW_PRIORITY_MIN_PERCENT, snapFixedCrewPriorityWeight(nextBoundaryPercent)),
+    );
+    const leftWeight = boundedBoundary - previousBoundary;
+    const rightWeight = followingBoundary - boundedBoundary;
+    const nextStreams = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams).map(stream => {
+      if (stream.key === leftStream.key) return { ...stream, weight: leftWeight };
+      if (stream.key === rightStream.key) return { ...stream, weight: rightWeight };
+      return stream;
+    });
+    updateFixedCrewDraftStreams(nextStreams);
   };
 
-  const canDecreaseFixedCrewStream = (stream: FixedCrewTrainingStreamPriority): boolean => {
-    return isEditingFixedCrewPriorities && stream.enabled && stream.weight > 0;
+  const handleFixedCrewPriorityHandlePointerDown = (
+    boundaryIndex: number,
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) => {
+    if (!isEditingFixedCrewPriorities || !fixedCrewSliderTrackRef.current) return;
+    event.preventDefault();
+    const track = fixedCrewSliderTrackRef.current;
+    const pointerId = event.pointerId;
+    event.currentTarget.setPointerCapture(pointerId);
+
+    const updateFromClientX = (clientX: number) => {
+      const rect = track.getBoundingClientRect();
+      const rawPercent = ((clientX - rect.left) / Math.max(1, rect.width)) * 100;
+      updateFixedCrewPriorityBoundary(boundaryIndex, rawPercent);
+    };
+
+    updateFromClientX(event.clientX);
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      moveEvent.preventDefault();
+      updateFromClientX(moveEvent.clientX);
+    };
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      if (upEvent.pointerId !== pointerId) return;
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
   };
 
   const handleFixedCrewStreamToggle = (streamKey: string) => {
     if (!isEditingFixedCrewPriorities) return;
     const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
+    const target = current.find(stream => stream.key === streamKey);
+    if (target?.enabled && current.filter(stream => stream.enabled).length <= 1) return;
     const next = current.map(stream => stream.key === streamKey ? {
       ...stream,
       enabled: !stream.enabled,
       weight: 0,
     } : stream);
-    updateFixedCrewDraftStreams(next);
-  };
-
-  const handleFixedCrewStreamWeightChange = (
-    streamKey: string,
-    direction: FixedCrewPriorityDirection,
-    eventOrOrigin?: React.MouseEvent<HTMLButtonElement> | FixedCrewPointerOrigin,
-  ) => {
-    const pointerOrigin: FixedCrewPointerOrigin | null = eventOrOrigin
-      ? 'currentTarget' in eventOrOrigin
-        ? (() => {
-            const clickRect = eventOrOrigin.currentTarget.getBoundingClientRect();
-            return {
-              rect: {
-                left: clickRect.left,
-                top: clickRect.top,
-                width: clickRect.width,
-                height: clickRect.height,
-              },
-              pointer: { x: eventOrOrigin.clientX, y: eventOrOrigin.clientY },
-            };
-          })()
-        : eventOrOrigin
-      : null;
-    if (!isEditingFixedCrewPriorities) return;
-    const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
-    const next = current.map(stream => ({ ...stream }));
-    const targetIndex = next.findIndex(stream => stream.key === streamKey && stream.enabled);
-    if (targetIndex < 0) return;
-    const target = next[targetIndex];
-
-    const previousWeight = target.weight;
-    target.weight = snapFixedCrewPriorityWeight(target.weight + (direction === 'increase' ? FIXED_CREW_PRIORITY_STEP : -FIXED_CREW_PRIORITY_STEP));
-    const normalised = prepareFixedCrewPriorityStreams(next);
-    const after = normalised.find(stream => stream.key === streamKey);
-    if (!after || after.weight === previousWeight) return;
-    fixedCrewActiveArrow.current = { streamKey, direction };
-    if (pointerOrigin) {
-      setFixedCrewPointerBridge({
-        streamKey,
-        direction,
-        rect: pointerOrigin.rect,
-        pointer: pointerOrigin.pointer,
-        nonce: Date.now(),
-      });
-    }
-    updateFixedCrewDraftStreams(normalised);
-  };
-
-  const handleFixedCrewStreamWeightInput = (streamKey: string, value: string) => {
-    if (!isEditingFixedCrewPriorities) return;
-    const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
-    const next = current.map(stream => stream.key === streamKey ? {
-      ...stream,
-      weight: stream.enabled ? snapFixedCrewPriorityWeight(parseInt(value, 10) || 0) : 0,
-    } : stream);
-    updateFixedCrewDraftStreams(next);
+    updateFixedCrewDraftStreams(equaliseFixedCrewPriorityStreams(next));
   };
 
   const handleEqualiseFixedCrewStreams = () => {
     if (!isEditingFixedCrewPriorities) return;
     const current = stripFixedCrewDisplayFields(displayedFixedCrewTrainingStreams);
     if (current.length === 0) return;
-    updateFixedCrewDraftStreams(normaliseFixedCrewTrainingPriorityWeightsToStep(current.map(stream => ({ ...stream, weight: 1, enabled: true }))));
+    updateFixedCrewDraftStreams(equaliseFixedCrewPriorityStreams(current.map(stream => ({ ...stream, enabled: true }))));
   };
 
   const nonCleanConfigCapacityTotal = useMemo(() => (
@@ -2729,7 +2698,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 disabled={!canApplyFixedCrewPriorities}
                                                 className="rounded border border-emerald-300/60 bg-emerald-400/20 px-2 py-1 text-xs font-semibold text-emerald-50 transition hover:border-emerald-200 disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-900 disabled:text-slate-500"
                                             >
-                                                Apply
+                                                Apply Priorities
                                             </button>
                                             <button
                                                 type="button"
@@ -2755,7 +2724,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         disabled={!isEditingFixedCrewPriorities || displayedFixedCrewTrainingStreams.length < 2}
                                         className="rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40"
                                     >
-                                        Equalise
+                                        Reset Evenly
                                     </button>
                                 </div>
                             </div>
@@ -2764,121 +2733,117 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     No Fixed Crew course or training package events were found for {activeUnitCode || school}. Add visible Master LMP courses or Training Packages for this unit and they will appear here.
                                 </div>
                             ) : (
-                                <ul className="space-y-2">
-                                    {displayedFixedCrewTrainingStreams.map((stream: FixedCrewTrainingStreamDisplay, index) => (
-                                        <li
-                                            key={stream.key}
-                                            ref={(node) => {
-                                                if (node) fixedCrewStreamRowRefs.current.set(stream.key, node);
-                                                else fixedCrewStreamRowRefs.current.delete(stream.key);
-                                            }}
-                                            className={`grid items-center gap-3 rounded-md border p-3 text-white md:grid-cols-[42px_84px_94px_1fr_112px_86px_34px] ${
-                                                stream.enabled
-                                                    ? 'border-slate-700 bg-slate-950/70'
-                                                    : 'border-slate-800 bg-slate-950/35 opacity-65'
-                                            }`}
-                                        >
-                                            <span className="font-mono text-sm text-slate-500">{index + 1}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleFixedCrewStreamToggle(stream.key)}
-                                                disabled={!isEditingFixedCrewPriorities}
-                                                className={`rounded px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${
-                                                    stream.enabled
-                                                        ? 'border border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
-                                                        : 'border border-slate-600 bg-slate-900 text-slate-400'
-                                                } disabled:cursor-not-allowed disabled:opacity-70`}
+                                <div className="space-y-4">
+                                    <div className="rounded-lg border border-slate-700/80 bg-slate-950/60 p-4">
+                                        <div className="relative px-2 pb-14 pt-10">
+                                            <div
+                                                ref={fixedCrewSliderTrackRef}
+                                                className={`relative h-5 overflow-visible rounded-full border border-slate-600 bg-slate-900 shadow-inner ${isEditingFixedCrewPriorities ? 'cursor-ew-resize' : ''}`}
                                             >
-                                                {stream.enabled ? 'Enabled' : 'Off'}
-                                            </button>
-                                            <span className={`rounded px-2 py-1 text-center text-[11px] font-bold uppercase tracking-wide ${
-                                                stream.kind === 'course'
-                                                    ? 'border border-sky-400/30 bg-sky-500/10 text-sky-100'
-                                                    : 'border border-violet-400/30 bg-violet-500/10 text-violet-100'
-                                            }`}>
-                                                {stream.kind === 'course' ? 'Course' : 'Package'}
-                                            </span>
-                                            <div className="min-w-0">
-                                                <p className="truncate text-sm font-semibold text-slate-100">{stream.title || stream.code}</p>
-                                                <p className="truncate text-xs text-slate-400">{stream.code}{stream.unitCode ? ` • ${stream.unitCode}` : ''} • {stream.eventCount || 0} event{stream.eventCount === 1 ? '' : 's'}</p>
+                                                <span className="absolute -top-8 left-0 -translate-x-1/2 font-mono text-[11px] font-bold text-slate-400">0%</span>
+                                                <span className="absolute -top-8 left-full -translate-x-1/2 font-mono text-[11px] font-bold text-slate-400">100%</span>
+                                                {activeFixedCrewPriorityStreams.map((stream, index) => {
+                                                    const start = index === 0 ? 0 : fixedCrewPriorityBoundaries[index - 1];
+                                                    const width = stream.weight;
+                                                    const colour = fixedCrewColourByKey.get(stream.key) || FIXED_CREW_PRIORITY_COLOURS[index % FIXED_CREW_PRIORITY_COLOURS.length];
+                                                    return (
+                                                        <div
+                                                            key={stream.key}
+                                                            className="absolute top-0 h-full first:rounded-l-full last:rounded-r-full"
+                                                            style={{
+                                                                left: `${start}%`,
+                                                                width: `${width}%`,
+                                                                background: colour,
+                                                            }}
+                                                        >
+                                                            <div
+                                                                className="pointer-events-none absolute top-8 min-w-24 -translate-x-1/2 text-center"
+                                                                style={{ left: `${width / 2}%` }}
+                                                            >
+                                                                <p className="truncate text-[11px] font-bold text-slate-100">{stream.title || stream.code}</p>
+                                                                <p className="font-mono text-xs font-bold text-emerald-100">{stream.weight}%</p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {fixedCrewPriorityBoundaries.slice(0, -1).map((boundary, index) => (
+                                                    <button
+                                                        key={`${activeFixedCrewPriorityStreams[index]?.key || index}-handle`}
+                                                        type="button"
+                                                        disabled={!isEditingFixedCrewPriorities}
+                                                        aria-label={`Move priority boundary at ${boundary}%`}
+                                                        onPointerDown={(event) => handleFixedCrewPriorityHandlePointerDown(index, event)}
+                                                        className="absolute top-1/2 z-10 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-950 bg-white shadow-lg ring-2 ring-cyan-300/70 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-70"
+                                                        style={{ left: `${boundary}%` }}
+                                                    >
+                                                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] font-bold text-cyan-100">{boundary}%</span>
+                                                    </button>
+                                                ))}
                                             </div>
-                                            {isEditingFixedCrewPriorities ? (
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <input
-                                                        type="number"
-                                                        min={0}
-                                                        max={100}
-                                                        step={FIXED_CREW_PRIORITY_STEP}
-                                                        value={stream.weight}
-                                                        onChange={(event) => handleFixedCrewStreamWeightInput(stream.key, event.target.value)}
-                                                        disabled={!stream.enabled}
-                                                        className="h-9 w-20 rounded border border-slate-600 bg-slate-950 px-2 text-right font-mono text-sm font-bold text-emerald-100 outline-none transition focus:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    />
-                                                    <span className="text-xs font-bold text-emerald-200">%</span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.weight}%</span>
-                                            )}
-                                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Share</span>
-                                            <div className="flex flex-col">
-                                                <ArrowButton
-                                                    direction="up"
-                                                    onClick={(event) => handleFixedCrewStreamWeightChange(stream.key, 'increase', event)}
-                                                    disabled={!canIncreaseFixedCrewStream(stream)}
-                                                    buttonRef={(node) => {
-                                                        const key = `${stream.key}:increase`;
-                                                        if (node) fixedCrewArrowButtonRefs.current.set(key, node);
-                                                        else fixedCrewArrowButtonRefs.current.delete(key);
-                                                    }}
-                                                />
-                                                <ArrowButton
-                                                    direction="down"
-                                                    onClick={(event) => handleFixedCrewStreamWeightChange(stream.key, 'decrease', event)}
-                                                    disabled={!canDecreaseFixedCrewStream(stream)}
-                                                    buttonRef={(node) => {
-                                                        const key = `${stream.key}:decrease`;
-                                                        if (node) fixedCrewArrowButtonRefs.current.set(key, node);
-                                                        else fixedCrewArrowButtonRefs.current.delete(key);
-                                                    }}
-                                                />
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
+                                        </div>
+                                    </div>
+
+                                    <div className="overflow-hidden rounded-lg border border-slate-700/80 bg-slate-950/60">
+                                        <div className="grid grid-cols-[46px_1fr_92px_92px] gap-3 border-b border-slate-700/70 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                            <span>Rank</span>
+                                            <span>Course / Package</span>
+                                            <span className="text-right">Priority</span>
+                                            <span className="text-right">Status</span>
+                                        </div>
+                                        <ul>
+                                            {sortedFixedCrewPriorityTableStreams.map((stream: FixedCrewTrainingStreamDisplay, index) => {
+                                                const colour = fixedCrewColourByKey.get(stream.key) || FIXED_CREW_PRIORITY_COLOURS[index % FIXED_CREW_PRIORITY_COLOURS.length];
+                                                return (
+                                                    <li
+                                                        key={stream.key}
+                                                        ref={(node) => {
+                                                            if (node) fixedCrewStreamRowRefs.current.set(stream.key, node);
+                                                            else fixedCrewStreamRowRefs.current.delete(stream.key);
+                                                        }}
+                                                        className={`grid grid-cols-[46px_1fr_92px_92px] items-center gap-3 border-b border-slate-800/80 px-3 py-3 last:border-b-0 ${
+                                                            stream.enabled ? 'text-slate-100' : 'text-slate-500 opacity-70'
+                                                        }`}
+                                                    >
+                                                        <span className="font-mono text-sm text-slate-500">{stream.enabled ? index + 1 : '-'}</span>
+                                                        <div className="min-w-0">
+                                                            <div className="flex min-w-0 items-center gap-2">
+                                                                <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: colour }} />
+                                                                <p className="truncate text-sm font-semibold">{stream.title || stream.code}</p>
+                                                                <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                                                                    stream.kind === 'course'
+                                                                        ? 'border border-sky-400/30 bg-sky-500/10 text-sky-100'
+                                                                        : 'border border-violet-400/30 bg-violet-500/10 text-violet-100'
+                                                                }`}>
+                                                                    {stream.kind === 'course' ? 'Course' : 'Package'}
+                                                                </span>
+                                                            </div>
+                                                            <p className="truncate text-xs text-slate-500">{stream.code}{stream.unitCode ? ` • ${stream.unitCode}` : ''} • {stream.eventCount || 0} event{stream.eventCount === 1 ? '' : 's'}</p>
+                                                        </div>
+                                                        <span className="text-right font-mono text-lg font-bold text-emerald-200">{stream.enabled ? `${stream.weight}%` : '0%'}</span>
+                                                        <div className="flex justify-end">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleFixedCrewStreamToggle(stream.key)}
+                                                                disabled={!isEditingFixedCrewPriorities}
+                                                                className={`rounded px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${
+                                                                    stream.enabled
+                                                                        ? 'border border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
+                                                                        : 'border border-slate-600 bg-slate-900 text-slate-400'
+                                                                } disabled:cursor-not-allowed disabled:opacity-70`}
+                                                            >
+                                                                {stream.enabled ? 'Enabled' : 'Off'}
+                                                            </button>
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                        <div className="flex justify-end border-t border-slate-700/70 px-3 py-2">
+                                            <span className="rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-1 text-xs font-bold text-emerald-100">Total: 100%</span>
+                                        </div>
+                                    </div>
+                                </div>
                             )}
-                            {fixedCrewPointerBridge && (() => {
-                                const bridgedStream = displayedFixedCrewTrainingStreams.find(stream => stream.key === fixedCrewPointerBridge.streamKey);
-                                if (!bridgedStream) return null;
-                                const isDisabled = fixedCrewPointerBridge.direction === 'increase'
-                                    ? !canIncreaseFixedCrewStream(bridgedStream)
-                                    : !canDecreaseFixedCrewStream(bridgedStream);
-                                if (isDisabled) return null;
-                                return (
-                                    <button
-                                        key={fixedCrewPointerBridge.nonce}
-                                        type="button"
-                                        aria-label={fixedCrewPointerBridge.direction === 'increase' ? 'Increase Fixed Crew priority share' : 'Decrease Fixed Crew priority share'}
-                                        onClick={(event) => {
-                                            event.preventDefault();
-                                            event.stopPropagation();
-                                            handleFixedCrewStreamWeightChange(fixedCrewPointerBridge.streamKey, fixedCrewPointerBridge.direction, event);
-                                        }}
-                                        className="fixed z-[9999] flex items-center justify-center rounded-sm bg-gray-600/95 p-0.5 text-gray-100 shadow-lg ring-1 ring-emerald-300/40 hover:bg-gray-500"
-                                        style={{
-                                            left: fixedCrewPointerBridge.rect.left,
-                                            top: fixedCrewPointerBridge.rect.top,
-                                            width: Math.max(16, fixedCrewPointerBridge.rect.width),
-                                            height: Math.max(16, fixedCrewPointerBridge.rect.height),
-                                        }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                            {fixedCrewPointerBridge.direction === 'increase'
-                                                ? <path fillRule="evenodd" d="M10 5l-5.5 5.5h11L10 5z" clipRule="evenodd" />
-                                                : <path fillRule="evenodd" d="M10 15l5.5-5.5h-11L10 15z" clipRule="evenodd" />}
-                                        </svg>
-                                    </button>
-                                );
-                            })()}
                         </div>
                     )}
                     {isAirCombatModel || isFixedCrewModel ? null : coursePriorities.length === 0 ? (
