@@ -1179,8 +1179,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const fixedCrewEnabledStreamTotal = displayedFixedCrewTrainingStreams
     .filter(stream => stream.enabled)
     .reduce((sum, stream) => sum + stream.weight, 0);
-  const canApplyFixedCrewPriorities = fixedCrewEnabledStreamCount > 0
-    && fixedCrewEnabledStreamTotal === 100;
   useEffect(() => {
     setCourseTimestamp(new Date().toLocaleString());
   }, [coursePriorities, coursePercentages]);
@@ -1281,33 +1279,33 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     streams: FixedCrewTrainingStreamPriority[],
   ): FixedCrewTrainingStreamPriority[] => snapFixedCrewTrainingPriorityWeightsToStep(streams);
 
-  const updateFixedCrewDraftStreams = (streams: FixedCrewTrainingStreamPriority[]) => {
-    const eventCounts = new Map(displayedFixedCrewTrainingStreams.map(stream => [stream.key, stream.eventCount]));
-    if (fixedCrewPriorityDraftStreams.length === 0) fixedCrewSuppressNextTableAnimation.current = true;
-    setFixedCrewPriorityDraftStreams(
-      prepareFixedCrewPriorityStreams(streams).map(stream => ({
-        ...stream,
-        eventCount: eventCounts.get(stream.key) ?? fixedCrewTrainingStreams.find(item => item.key === stream.key)?.eventCount,
-      })),
-    );
-  };
-
-  const handleApplyFixedCrewPriorities = () => {
-    const sourceStreams = fixedCrewPriorityDraftStreams.length > 0 ? fixedCrewPriorityDraftStreams : fixedCrewTrainingStreams;
-    const draftOrder = new Map(sourceStreams.map((stream, index) => [stream.key, index]));
-    const nextStreams = prepareFixedCrewPriorityStreams(stripFixedCrewDisplayFields(sourceStreams))
+  const persistFixedCrewPriorityStreams = (streams: FixedCrewTrainingStreamPriority[]) => {
+    const prepared = prepareFixedCrewPriorityStreams(streams);
+    const enabledTotal = prepared.filter(stream => stream.enabled).reduce((sum, stream) => sum + stream.weight, 0);
+    if (enabledTotal !== 100) return;
+    const streamOrder = new Map(prepared.map((stream, index) => [stream.key, index]));
+    const nextStreams = prepared
       .slice()
       .sort((left, right) => {
         if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
         if (right.weight !== left.weight) return right.weight - left.weight;
-        return (draftOrder.get(left.key) ?? 0) - (draftOrder.get(right.key) ?? 0);
-    });
-    const enabledTotal = nextStreams.filter(stream => stream.enabled).reduce((sum, stream) => sum + stream.weight, 0);
-    if (enabledTotal !== 100) return;
-    logAudit('Priorities', 'Edit', 'Applied Fixed Crew course/package priorities', `${nextStreams.length} streams`);
+        return (streamOrder.get(left.key) ?? 0) - (streamOrder.get(right.key) ?? 0);
+      });
+    logAudit('Priorities', 'Edit', 'Updated Fixed Crew course/package priorities', `${nextStreams.length} streams`);
     onUpdateFixedCrewTrainingPriorities?.(nextStreams);
-    fixedCrewSuppressNextTableAnimation.current = true;
-    setFixedCrewPriorityDraftStreams([]);
+  };
+
+  const updateFixedCrewDraftStreams = (streams: FixedCrewTrainingStreamPriority[]) => {
+    const eventCounts = new Map(displayedFixedCrewTrainingStreams.map(stream => [stream.key, stream.eventCount]));
+    if (fixedCrewPriorityDraftStreams.length === 0) fixedCrewSuppressNextTableAnimation.current = true;
+    const prepared = prepareFixedCrewPriorityStreams(streams);
+    setFixedCrewPriorityDraftStreams(
+      prepared.map(stream => ({
+        ...stream,
+        eventCount: eventCounts.get(stream.key) ?? fixedCrewTrainingStreams.find(item => item.key === stream.key)?.eventCount,
+      })),
+    );
+    persistFixedCrewPriorityStreams(prepared);
   };
 
   const equaliseFixedCrewPriorityStreams = (
@@ -2693,14 +2691,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             {fixedCrewEnabledStreamTotal < 100 ? `${100 - fixedCrewEnabledStreamTotal}% unassigned` : `${fixedCrewEnabledStreamTotal - 100}% over`}
                                         </span>
                                     )}
-                                    <button
-                                        type="button"
-                                        onClick={handleApplyFixedCrewPriorities}
-                                        disabled={!canApplyFixedCrewPriorities}
-                                        className="rounded border border-emerald-300/60 bg-emerald-400/20 px-2 py-1 text-xs font-semibold text-emerald-50 transition hover:border-emerald-200 disabled:cursor-not-allowed disabled:border-slate-600 disabled:bg-slate-900 disabled:text-slate-500"
-                                    >
-                                        Apply Priorities
-                                    </button>
                                     <button
                                         type="button"
                                         onClick={handleEqualiseFixedCrewStreams}
