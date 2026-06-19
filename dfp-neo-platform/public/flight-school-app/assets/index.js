@@ -26268,14 +26268,17 @@ const PrioritiesView = ({
   onUpdatePercentages,
   availableAircraftCount,
   onUpdateAircraftCount,
+  maxAircraftCount,
   aircraftConfigurationDefinitions = [],
   aircraftConfigCapacities = {},
   onUpdateAircraftConfigCapacities = () => {
   },
   availableFtdCount,
   onUpdateFtdCount,
+  maxFtdCount,
   availableCptCount,
   onUpdateCptCount,
+  maxCptCount,
   flyingStartTime,
   onUpdateFlyingStartTime,
   flyingEndTime,
@@ -26338,6 +26341,9 @@ const PrioritiesView = ({
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
   const cptLabel = resourceDisplayNames.cpt;
+  const aircraftCapacityMax = Math.max(0, Math.floor(Number(maxAircraftCount ?? availableAircraftCount) || 0));
+  const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
+  const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
   const locationDisplayName = school === "ESL" ? "East Sale (ESL)" : school === "PEA" ? "Pearce (PEA)" : school;
   const staffRankOrder = ["WGCDR", "SQNLDR", "FLTLT", "FLGOFF", "PLTOFF", "Mr"];
   const aircraftConfigOptions = reactExports.useMemo(() => {
@@ -26550,8 +26556,17 @@ const PrioritiesView = ({
   reactExports.useEffect(() => {
     setAircraftTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
   }, [availableAircraftCount, aircraftConfigCapacities]);
+  reactExports.useEffect(() => {
+    if (availableAircraftCount > aircraftCapacityMax) onUpdateAircraftCount(aircraftCapacityMax);
+  }, [aircraftCapacityMax, availableAircraftCount, onUpdateAircraftCount]);
+  reactExports.useEffect(() => {
+    if (availableFtdCount > ftdCapacityMax) onUpdateFtdCount(ftdCapacityMax);
+  }, [availableFtdCount, ftdCapacityMax, onUpdateFtdCount]);
+  reactExports.useEffect(() => {
+    if (availableCptCount > cptCapacityMax) onUpdateCptCount(cptCapacityMax);
+  }, [availableCptCount, cptCapacityMax, onUpdateCptCount]);
   const handleAircraftCapacityChange = (value) => {
-    const nextCount = Math.max(0, parseInt(value, 10) || 0);
+    const nextCount = Math.min(aircraftCapacityMax, Math.max(0, parseInt(value, 10) || 0));
     logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} → ${nextCount}`);
     onUpdateAircraftCount(nextCount);
   };
@@ -26563,7 +26578,10 @@ const PrioritiesView = ({
     return String(Math.max(0, parseInt(digitsOnly, 10) || 0));
   };
   const handleAircraftConfigCapacityChange = (configId, value) => {
-    const nextValue = normaliseCapacityInput(value);
+    const normalisedValue = normaliseCapacityInput(value);
+    const otherNonCleanTotal = aircraftConfigurationDefinitions.filter((definition) => definition.id !== "CONFIG-0" && definition.id !== configId).reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || "", 10) || 0), 0);
+    const maxForConfig = Math.max(0, Math.min(availableAircraftCount, aircraftCapacityMax) - otherNonCleanTotal);
+    const nextValue = normalisedValue ? String(Math.min(maxForConfig, parseInt(normalisedValue, 10) || 0)) : "";
     const nextCapacities = { ...aircraftConfigCapacities, [configId]: nextValue };
     if (!nextValue) delete nextCapacities[configId];
     logAudit("Priorities", "Edit", `Updated ${configId.replace("-", " ")} aircraft capacity`, `${aircraftConfigCapacities[configId] || "blank"} → ${nextValue || "blank"}`);
@@ -28188,7 +28206,11 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 p-4 md:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-slate-300", children: "Total Aircraft Available" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", min: 0, value: availableAircraftCount, onChange: (e) => handleAircraftCapacityChange(e.target.value), className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", min: 0, max: aircraftCapacityMax, value: availableAircraftCount, onChange: (e) => handleAircraftCapacityChange(e.target.value), className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] text-slate-500", children: [
+              "Configured maximum: ",
+              aircraftCapacityMax
+            ] }),
             aircraftConfigurationDefinitions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 border-t border-slate-700 pt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: aircraftConfigurationDefinitions.map((definition) => {
               const isCleanConfig = definition.id === "CONFIG-0";
               const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
@@ -28202,6 +28224,7 @@ const PrioritiesView = ({
                   {
                     type: "number",
                     min: 0,
+                    max: Math.max(0, Math.min(availableAircraftCount, aircraftCapacityMax)),
                     step: 1,
                     inputMode: "numeric",
                     value: displayValue,
@@ -28222,20 +28245,30 @@ const PrioritiesView = ({
               ftdLabel,
               " Available"
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "ftd-count", type: "number", value: availableFtdCount, onChange: (e) => {
-              logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} → ${parseInt(e.target.value)}`);
-              onUpdateFtdCount(parseInt(e.target.value));
-            }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "ftd-count", type: "number", min: 0, max: ftdCapacityMax, value: availableFtdCount, onChange: (e) => {
+              const nextCount = Math.min(ftdCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0));
+              logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} → ${nextCount}`);
+              onUpdateFtdCount(nextCount);
+            }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] text-slate-500", children: [
+              "Configured maximum: ",
+              ftdCapacityMax
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "cpt-count", className: "block text-sm font-medium text-slate-300", children: [
               cptLabel,
               " Available"
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "cpt-count", type: "number", value: availableCptCount, onChange: (e) => {
-              logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} → ${parseInt(e.target.value)}`);
-              onUpdateCptCount(parseInt(e.target.value));
-            }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "cpt-count", type: "number", min: 0, max: cptCapacityMax, value: availableCptCount, onChange: (e) => {
+              const nextCount = Math.min(cptCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0));
+              logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} → ${nextCount}`);
+              onUpdateCptCount(nextCount);
+            }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] text-slate-500", children: [
+              "Configured maximum: ",
+              cptCapacityMax
+            ] })
           ] })
         ] })
       ] })
@@ -95530,13 +95563,16 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdatePercentages: setCoursePercentages,
             availableAircraftCount: neoAvailableAircraftCount,
             onUpdateAircraftCount: handleUpdateNeoAvailableAircraftCount,
+            maxAircraftCount: configuredAirframeCount,
             aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
             aircraftConfigCapacities: neoAircraftConfigCapacities,
             onUpdateAircraftConfigCapacities: handleUpdateNeoAircraftConfigCapacities,
             availableFtdCount,
             onUpdateFtdCount: setAvailableFtdCount,
+            maxFtdCount: configuredFtdCount,
             availableCptCount,
             onUpdateCptCount: setAvailableCptCount,
+            maxCptCount: configuredCptCount,
             flyingStartTime,
             onUpdateFlyingStartTime: setFlyingStartTime,
             flyingEndTime,
@@ -97359,6 +97395,7 @@ Do you want to replace the existing entry?`,
                     onDeletePriorityEvent: handleDeletePriorityEvent,
                     availableAircraftCount: neoAvailableAircraftCount,
                     onUpdateAircraftCount: handleUpdateNeoAvailableAircraftCount,
+                    maxAircraftCount: configuredAirframeCount,
                     aircraftConfigCapacities: neoAircraftConfigCapacities,
                     aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
                     aircraftCrewComposition: activeAircraftCrewComposition,
@@ -97366,8 +97403,10 @@ Do you want to replace the existing entry?`,
                     onUpdateAircraftConfigCapacities: handleUpdateNeoAircraftConfigCapacities,
                     availableFtdCount,
                     onUpdateFtdCount: setAvailableFtdCount,
+                    maxFtdCount: configuredFtdCount,
                     availableCptCount,
                     onUpdateCptCount: setAvailableCptCount,
+                    maxCptCount: configuredCptCount,
                     locationCode: school,
                     trainingAreas: activeTrainingAreas,
                     callsignOptions: neoAssistCallsignOptions,

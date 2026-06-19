@@ -57,13 +57,16 @@ interface PrioritiesViewProps {
   onUpdatePercentages: (newPercentages: Map<string, number>) => void;
   availableAircraftCount: number;
   onUpdateAircraftCount: (count: number) => void;
+  maxAircraftCount?: number;
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
   aircraftConfigCapacities?: Record<string, string>;
   onUpdateAircraftConfigCapacities?: (capacities: Record<string, string>) => void;
   availableFtdCount: number;
   onUpdateFtdCount: (count: number) => void;
+  maxFtdCount?: number;
   availableCptCount: number;
   onUpdateCptCount: (count: number) => void;
+  maxCptCount?: number;
   flyingStartTime: number;
   onUpdateFlyingStartTime: (time: number) => void;
   flyingEndTime: number;
@@ -800,13 +803,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onUpdatePercentages,
   availableAircraftCount,
   onUpdateAircraftCount,
+  maxAircraftCount,
   aircraftConfigurationDefinitions = [],
   aircraftConfigCapacities = {},
   onUpdateAircraftConfigCapacities = () => {},
   availableFtdCount,
   onUpdateFtdCount,
+  maxFtdCount,
   availableCptCount,
   onUpdateCptCount,
+  maxCptCount,
   flyingStartTime,
   onUpdateFlyingStartTime,
   flyingEndTime,
@@ -867,6 +873,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
   const cptLabel = resourceDisplayNames.cpt;
+  const aircraftCapacityMax = Math.max(0, Math.floor(Number(maxAircraftCount ?? availableAircraftCount) || 0));
+  const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
+  const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
   const locationDisplayName = school === 'ESL' ? 'East Sale (ESL)' : school === 'PEA' ? 'Pearce (PEA)' : school;
   const staffRankOrder = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'];
   const aircraftConfigOptions = useMemo(() => {
@@ -1114,8 +1123,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     setAircraftTimestamp(new Date().toLocaleString());
   }, [availableAircraftCount, aircraftConfigCapacities]);
 
+  useEffect(() => {
+    if (availableAircraftCount > aircraftCapacityMax) onUpdateAircraftCount(aircraftCapacityMax);
+  }, [aircraftCapacityMax, availableAircraftCount, onUpdateAircraftCount]);
+
+  useEffect(() => {
+    if (availableFtdCount > ftdCapacityMax) onUpdateFtdCount(ftdCapacityMax);
+  }, [availableFtdCount, ftdCapacityMax, onUpdateFtdCount]);
+
+  useEffect(() => {
+    if (availableCptCount > cptCapacityMax) onUpdateCptCount(cptCapacityMax);
+  }, [availableCptCount, cptCapacityMax, onUpdateCptCount]);
+
   const handleAircraftCapacityChange = (value: string) => {
-    const nextCount = Math.max(0, parseInt(value, 10) || 0);
+    const nextCount = Math.min(aircraftCapacityMax, Math.max(0, parseInt(value, 10) || 0));
     logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} → ${nextCount}`);
     onUpdateAircraftCount(nextCount);
   };
@@ -1129,7 +1150,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const handleAircraftConfigCapacityChange = (configId: string, value: string) => {
-    const nextValue = normaliseCapacityInput(value);
+    const normalisedValue = normaliseCapacityInput(value);
+    const otherNonCleanTotal = aircraftConfigurationDefinitions
+      .filter(definition => definition.id !== 'CONFIG-0' && definition.id !== configId)
+      .reduce((total, definition) => total + (parseInt(aircraftConfigCapacities[definition.id] || '', 10) || 0), 0);
+    const maxForConfig = Math.max(0, Math.min(availableAircraftCount, aircraftCapacityMax) - otherNonCleanTotal);
+    const nextValue = normalisedValue ? String(Math.min(maxForConfig, parseInt(normalisedValue, 10) || 0)) : '';
     const nextCapacities = { ...aircraftConfigCapacities, [configId]: nextValue };
     if (!nextValue) delete nextCapacities[configId];
     logAudit("Priorities", "Edit", `Updated ${configId.replace('-', ' ')} aircraft capacity`, `${aircraftConfigCapacities[configId] || 'blank'} → ${nextValue || 'blank'}`);
@@ -3057,7 +3083,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                             <label htmlFor="aircraft-count" className="block text-sm font-medium text-slate-300">Total Aircraft Available</label>
-                            <input id="aircraft-count" type="number" min={0} value={availableAircraftCount} onChange={(e) => handleAircraftCapacityChange(e.target.value)} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <input id="aircraft-count" type="number" min={0} max={aircraftCapacityMax} value={availableAircraftCount} onChange={(e) => handleAircraftCapacityChange(e.target.value)} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <p className="mt-1 text-[11px] text-slate-500">Configured maximum: {aircraftCapacityMax}</p>
                             {aircraftConfigurationDefinitions.length > 0 && (
                                 <div className="mt-4 border-t border-slate-700 pt-3">
                                     <div className="grid grid-cols-1 gap-2">
@@ -3075,6 +3102,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                     <input
                                                         type="number"
                                                         min={0}
+                                                        max={Math.max(0, Math.min(availableAircraftCount, aircraftCapacityMax))}
                                                         step={1}
                                                         inputMode="numeric"
                                                         value={displayValue}
@@ -3095,11 +3123,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </div>
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                             <label htmlFor="ftd-count" className="block text-sm font-medium text-slate-300">{ftdLabel} Available</label>
-                            <input id="ftd-count" type="number" value={availableFtdCount} onChange={(e) => { logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} \u2192 ${parseInt(e.target.value)}`); onUpdateFtdCount(parseInt(e.target.value)); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <input id="ftd-count" type="number" min={0} max={ftdCapacityMax} value={availableFtdCount} onChange={(e) => { const nextCount = Math.min(ftdCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0)); logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} \u2192 ${nextCount}`); onUpdateFtdCount(nextCount); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <p className="mt-1 text-[11px] text-slate-500">Configured maximum: {ftdCapacityMax}</p>
                         </div>
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                             <label htmlFor="cpt-count" className="block text-sm font-medium text-slate-300">{cptLabel} Available</label>
-                            <input id="cpt-count" type="number" value={availableCptCount} onChange={(e) => { logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} \u2192 ${parseInt(e.target.value)}`); onUpdateCptCount(parseInt(e.target.value)); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <input id="cpt-count" type="number" min={0} max={cptCapacityMax} value={availableCptCount} onChange={(e) => { const nextCount = Math.min(cptCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0)); logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} \u2192 ${nextCount}`); onUpdateCptCount(nextCount); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <p className="mt-1 text-[11px] text-slate-500">Configured maximum: {cptCapacityMax}</p>
                         </div>
                     </div>
                 </div>
