@@ -95,6 +95,8 @@ interface SettingsViewWithMenuProps {
     instructorLabel?: string;
     canUsePlatformPermission?: (permissionId: string) => boolean;
     activeUnitCode?: string;
+    activeUnitCodes?: string[];
+    activeCompositeUnitCode?: string;
     activeOperationalModel?: string;
     fixedCrewTileColourMode?: FixedCrewTileColourMode;
     onUpdateFixedCrewTileColourMode?: (mode: FixedCrewTileColourMode) => void;
@@ -1761,6 +1763,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 sectionOnly={true}
                                 canUsePlatformPermission={props.canUsePlatformPermission}
                                 activeUnitCode={props.activeUnitCode}
+                                activeUnitCodes={props.activeUnitCodes}
+                                activeCompositeUnitCode={props.activeCompositeUnitCode}
                                 phraseBank={props.phraseBank}
                             />
                         </div>
@@ -1774,6 +1778,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                            activeUnitCodes={props.activeUnitCodes}
+                            activeCompositeUnitCode={props.activeCompositeUnitCode}
                             phraseBank={props.phraseBank}
                         />
                     )}
@@ -1786,6 +1792,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                            activeUnitCodes={props.activeUnitCodes}
+                            activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
                             phraseBank={props.phraseBank}
                         />
@@ -1799,6 +1807,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                            activeUnitCodes={props.activeUnitCodes}
+                            activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
                             phraseBank={props.phraseBank}
                         />

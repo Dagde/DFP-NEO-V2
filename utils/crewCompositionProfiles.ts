@@ -8,6 +8,9 @@ export interface CrewCompositionRoleRequirement {
 export interface AlternateCrewCompositionProfile {
   id: string;
   code: string;
+  unitCode?: string;
+  compositeUnitCode?: string;
+  compositeProfileId?: string;
   aircraftTypeCode: string;
   name: string;
   description?: string;
@@ -62,9 +65,14 @@ const normaliseRoleRequirements = (value: unknown): CrewCompositionRoleRequireme
 export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositionSettings => {
   const source = (value && typeof value === 'object') ? value as any : {};
   const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
-  const usedCodes = new Set<string>();
+  const usedCodesByScope = new Map<string, Set<string>>();
   const alternateCompositions = rows.map((row: any, index: number) => {
     const fallbackCode = `ALT-${index + 1}`;
+    const unitCode = String(row?.unitCode || '').trim().toUpperCase();
+    const compositeUnitCode = String(row?.compositeUnitCode || '').trim().toUpperCase();
+    const codeScope = unitCode || compositeUnitCode || 'GLOBAL';
+    const usedCodes = usedCodesByScope.get(codeScope) || new Set<string>();
+    usedCodesByScope.set(codeScope, usedCodes);
     let code = normaliseCode(row?.code || row?.name, fallbackCode);
     code = nextAvailableThreeLetterCode(code, usedCodes);
     usedCodes.add(code);
@@ -78,6 +86,9 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
     return {
       id: String(row?.id || `alternate-crew-${index + 1}`),
       code,
+      unitCode,
+      compositeUnitCode,
+      compositeProfileId: String(row?.compositeProfileId || '').trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
       name: String(row?.name || '').trim() ? String(row?.name || '') : code,
       description: String(row?.description || ''),

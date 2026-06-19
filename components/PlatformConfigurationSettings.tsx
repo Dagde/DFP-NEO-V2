@@ -184,6 +184,8 @@ interface StandardMissionProfile {
   id: string;
   status: 'ACTIVE' | 'INACTIVE';
   unitCode: string;
+  compositeUnitCode: string;
+  compositeProfileId: string;
   aircraftTypeCode: string;
   missionName: string;
   shortTitle: string;
@@ -232,6 +234,8 @@ const normaliseStandardMissionProfiles = (source: unknown): StandardMissionProfi
       id: String(row?.id || `standard-mission-${index + 1}`),
       status: String(row?.status || 'ACTIVE').toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
       unitCode: String(row?.unitCode || '').trim().toUpperCase(),
+      compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
+      compositeProfileId: String(row?.compositeProfileId || '').trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
       missionName: String(row?.missionName || row?.name || `Standard Mission ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || '').slice(0, 8),
@@ -1055,6 +1059,8 @@ interface PlatformConfigurationSettingsProps {
   sectionOnly?: boolean;
   canUsePlatformPermission?: (permissionId: string) => boolean;
   activeUnitCode?: string;
+  activeUnitCodes?: string[];
+  activeCompositeUnitCode?: string;
   activeOperationalModel?: string;
   phraseBank?: Record<string, any>;
 }
@@ -1066,6 +1072,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   sectionOnly = false,
   canUsePlatformPermission,
   activeUnitCode = '',
+  activeUnitCodes = [],
+  activeCompositeUnitCode = '',
   activeOperationalModel = '',
   phraseBank = {},
 }) => {
@@ -1731,34 +1739,55 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addAlternateCrewComposition = (aircraftTypeCode: string) => {
-    const aircraftProfiles = crewCompositionSettings.alternateCompositions.filter((profile) => (
+    const aircraftProfiles = getVisibleAlternateCrewCompositions().filter((profile) => (
       String(profile.aircraftTypeCode || '').trim().toUpperCase() === aircraftTypeCode.trim().toUpperCase()
     ));
     const name = `Alternate Crew ${aircraftProfiles.length + 1}`;
     const role = crewPositionTerminology.positions[0]?.genericName || DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats[0]?.role || 'Crew';
+    const baseId = createClientRecordId('alternate-crew');
+    const targetUnitCodes = getActiveScopedUnitCodes();
+    const combinedContext = targetUnitCodes.length > 1;
+    const code = createAlternateCrewCompositionCode(aircraftProfiles, name);
     updateCrewCompositionSettings([
       ...crewCompositionSettings.alternateCompositions,
-      {
-        id: createClientRecordId('alternate-crew'),
-        code: createAlternateCrewCompositionCode(aircraftProfiles, name),
+      ...targetUnitCodes.map((unitCode) => ({
+        id: combinedContext ? `${baseId}-${unitCode.toLowerCase()}` : baseId,
+        code,
+        unitCode,
+        compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
+        compositeProfileId: combinedContext ? baseId : '',
         aircraftTypeCode: aircraftTypeCode.trim().toUpperCase(),
         name,
         description: '',
         operationalModels: ['air_combat', 'fixed_crew', 'air_mobility'],
         roleRequirements: [{ role, count: 1 }],
         status: 'ACTIVE',
-      },
+      })),
     ]);
   };
 
   const updateAlternateCrewComposition = (profileId: string, changes: Partial<AlternateCrewCompositionProfile>) => {
+    const targetProfile = crewCompositionSettings.alternateCompositions.find((profile) => profile.id === profileId);
+    const compositeProfileId = targetProfile?.compositeProfileId || '';
     updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => (
-      profile.id === profileId ? { ...profile, ...changes } : profile
+      profile.id === profileId || (compositeProfileId && profile.compositeProfileId === compositeProfileId)
+        ? {
+            ...profile,
+            ...changes,
+            unitCode: profile.unitCode,
+            compositeUnitCode: profile.compositeUnitCode,
+            compositeProfileId: profile.compositeProfileId,
+          }
+        : profile
     )));
   };
 
   const removeAlternateCrewComposition = (profileId: string) => {
-    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.filter((profile) => profile.id !== profileId));
+    const targetProfile = crewCompositionSettings.alternateCompositions.find((profile) => profile.id === profileId);
+    const compositeProfileId = targetProfile?.compositeProfileId || '';
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.filter((profile) => (
+      profile.id !== profileId && (!compositeProfileId || profile.compositeProfileId !== compositeProfileId)
+    )));
   };
 
   const updateAlternateCrewRole = (
@@ -1766,8 +1795,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     roleIndex: number,
     changes: Partial<{ role: string; count: number }>,
   ) => {
+    const targetProfile = crewCompositionSettings.alternateCompositions.find((profile) => profile.id === profileId);
+    const compositeProfileId = targetProfile?.compositeProfileId || '';
     updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => {
-      if (profile.id !== profileId) return profile;
+      if (profile.id !== profileId && (!compositeProfileId || profile.compositeProfileId !== compositeProfileId)) return profile;
       const roleRequirements = profile.roleRequirements.map((requirement, index) => (
         index === roleIndex
           ? {
@@ -1795,8 +1826,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addAlternateCrewRole = (profileId: string) => {
+    const targetProfile = crewCompositionSettings.alternateCompositions.find((profile) => profile.id === profileId);
+    const compositeProfileId = targetProfile?.compositeProfileId || '';
     updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => (
-      profile.id === profileId
+      profile.id === profileId || (compositeProfileId && profile.compositeProfileId === compositeProfileId)
         ? (() => {
             const role = getNextAlternateCrewRole(profile);
             return role ? { ...profile, roleRequirements: [...profile.roleRequirements, { role, count: 1 }] } : profile;
@@ -1806,8 +1839,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const removeAlternateCrewRole = (profileId: string, roleIndex: number) => {
+    const targetProfile = crewCompositionSettings.alternateCompositions.find((profile) => profile.id === profileId);
+    const compositeProfileId = targetProfile?.compositeProfileId || '';
     updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions.map((profile) => {
-      if (profile.id !== profileId || profile.roleRequirements.length <= 1) return profile;
+      if ((profile.id !== profileId && (!compositeProfileId || profile.compositeProfileId !== compositeProfileId)) || profile.roleRequirements.length <= 1) return profile;
       return {
         ...profile,
         roleRequirements: profile.roleRequirements.filter((_, index) => index !== roleIndex),
@@ -2946,42 +2981,62 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const aircraftTypeCode = activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || String(config.aircraftTypes[0]?.code || 'AIRCRAFT').trim().toUpperCase();
     const crewOptions = getStandardMissionCrewOptions(aircraftTypeCode);
     const selectedCrewCompositionId = crewOptions.find((option) => option.mode === 'STANDARD')?.id || crewOptions[0]?.id || '';
+    const baseId = createClientRecordId('standard-mission');
+    const targetUnitCodes = getActiveScopedUnitCodes();
+    const combinedContext = targetUnitCodes.length > 1;
+    const createProfileForUnit = (unitCode: string): StandardMissionProfile => ({
+      id: combinedContext ? `${baseId}-${unitCode.toLowerCase()}` : baseId,
+      status: 'ACTIVE',
+      unitCode,
+      compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
+      compositeProfileId: combinedContext ? baseId : '',
+      aircraftTypeCode,
+      missionName: `Standard Mission ${missionIndex}`,
+      shortTitle: `MISSION${missionIndex}`.slice(0, 8),
+      description: '',
+      resourceType: 'Flight',
+      departureLocationCode: activeHomeLocationCode,
+      arrivalLocationCode: activeHomeLocationCode,
+      durationMinutes: 240,
+      preFlightMinutes: 90,
+      postFlightMinutes: 60,
+      isFormation: false,
+      formationAircraft: 2,
+      config: getAircraftConfigOptions(aircraftTypeCode)[0] || 'ANY',
+      crewCompositionMode: selectedCrewCompositionId.startsWith('alternate:') ? 'ALTERNATE' : 'STANDARD',
+      selectedCrewCompositionId,
+      acceptableCrewCompositionIds: selectedCrewCompositionId ? [selectedCrewCompositionId] : [],
+      roleRequirements: [{ role: firstRole, count: 1 }],
+      defaultCallsignPrefix: defaultMissionCallsign,
+    });
     updateStandardMissionProfiles([
       ...standardMissionProfiles,
-      {
-        id: createClientRecordId('standard-mission'),
-        status: 'ACTIVE',
-        unitCode: activeStandardMissionUnitCode,
-        aircraftTypeCode,
-        missionName: `Standard Mission ${missionIndex}`,
-        shortTitle: `MISSION${missionIndex}`.slice(0, 8),
-        description: '',
-        resourceType: 'Flight',
-        departureLocationCode: activeHomeLocationCode,
-        arrivalLocationCode: activeHomeLocationCode,
-        durationMinutes: 240,
-        preFlightMinutes: 90,
-        postFlightMinutes: 60,
-        isFormation: false,
-        formationAircraft: 2,
-        config: getAircraftConfigOptions(aircraftTypeCode)[0] || 'ANY',
-        crewCompositionMode: selectedCrewCompositionId.startsWith('alternate:') ? 'ALTERNATE' : 'STANDARD',
-        selectedCrewCompositionId,
-        acceptableCrewCompositionIds: selectedCrewCompositionId ? [selectedCrewCompositionId] : [],
-        roleRequirements: [{ role: firstRole, count: 1 }],
-        defaultCallsignPrefix: defaultMissionCallsign,
-      },
+      ...targetUnitCodes.map(createProfileForUnit),
     ]);
   };
 
   const updateStandardMissionProfile = (profileId: string, changes: Partial<StandardMissionProfile>) => {
+    const targetProfile = standardMissionProfiles.find((profile) => profile.id === profileId);
+    const compositeProfileId = targetProfile?.compositeProfileId || '';
     updateStandardMissionProfiles(standardMissionProfiles.map((profile) => (
-      profile.id === profileId ? { ...profile, ...changes } : profile
+      profile.id === profileId || (compositeProfileId && profile.compositeProfileId === compositeProfileId)
+        ? {
+            ...profile,
+            ...changes,
+            unitCode: profile.unitCode,
+            compositeUnitCode: profile.compositeUnitCode,
+            compositeProfileId: profile.compositeProfileId,
+          }
+        : profile
     )));
   };
 
   const removeStandardMissionProfile = (profileId: string) => {
-    updateStandardMissionProfiles(standardMissionProfiles.filter((profile) => profile.id !== profileId));
+    const targetProfile = standardMissionProfiles.find((profile) => profile.id === profileId);
+    const compositeProfileId = targetProfile?.compositeProfileId || '';
+    updateStandardMissionProfiles(standardMissionProfiles.filter((profile) => (
+      profile.id !== profileId && (!compositeProfileId || profile.compositeProfileId !== compositeProfileId)
+    )));
   };
 
   const updateStandardMissionCrewSelection = (profile: StandardMissionProfile, optionId: string, selected: boolean) => {
@@ -3195,15 +3250,56 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleCrewPositionEntries = activeCrewPositionEntries.length > 0
     ? activeCrewPositionEntries
     : crewPositionTerminology.positions;
-  const activeAircraftAlternateCompositions = crewCompositionSettings.alternateCompositions.filter((profile) => (
-    String(profile.aircraftTypeCode || '').trim().toUpperCase() === activeCrewCompositionAircraftCode
-  ));
-  const activeUnitCodes = String(activeUnitCode || '')
-    .split('+')
-    .map((value) => value.trim().toUpperCase())
-    .filter(Boolean);
-  const activePrimaryUnitCode = activeUnitCodes[0] || String(config.units.find(isActiveRecord)?.code || config.units[0]?.code || '').trim().toUpperCase();
-  const activeStandardMissionUnitCode = String(activeUnitCode || activePrimaryUnitCode).trim().toUpperCase() || activePrimaryUnitCode;
+  const normaliseUnitCode = (value: unknown) => String(value || '').trim().toUpperCase();
+  const parseUnitContextCodes = (value: unknown): string[] => (
+    String(value || '')
+      .split(/[+/]/)
+      .map(normaliseUnitCode)
+      .filter(Boolean)
+  );
+  const activeContextUnitCodes = (
+    Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0
+      ? activeUnitCodes.map(normaliseUnitCode).filter(Boolean)
+      : [
+          ...parseUnitContextCodes(activeCompositeUnitCode),
+          ...parseUnitContextCodes(activeUnitCode),
+        ]
+  ).filter((value, index, values) => values.indexOf(value) === index);
+  const getActiveScopedUnitCodes = () => activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activePrimaryUnitCode].filter(Boolean);
+  const activePrimaryUnitCode = activeContextUnitCodes[0] || String(config.units.find(isActiveRecord)?.code || config.units[0]?.code || '').trim().toUpperCase();
+  const activeStandardMissionUnitCode = activeContextUnitCodes.length > 1
+    ? activeContextUnitCodes.join('+')
+    : String(activeCompositeUnitCode || activeUnitCode || activePrimaryUnitCode).trim().toUpperCase() || activePrimaryUnitCode;
+  const activeStandardMissionUnitLabel = activeContextUnitCodes.length > 1
+    ? activeContextUnitCodes.join('/')
+    : activeStandardMissionUnitCode;
+  const isProfileInActiveUnitContext = (profile: { unitCode?: string; compositeUnitCode?: string }) => {
+    const profileUnitCode = normaliseUnitCode(profile.unitCode);
+    const profileCompositeUnitCode = normaliseUnitCode(profile.compositeUnitCode);
+    if (activeContextUnitCodes.length > 1) {
+      return !profileUnitCode
+        || profileCompositeUnitCode === activeStandardMissionUnitCode
+        || activeContextUnitCodes.includes(profileUnitCode)
+        || profileUnitCode === activeStandardMissionUnitCode;
+    }
+    return !profileUnitCode || profileUnitCode === activePrimaryUnitCode;
+  };
+  const uniqueProfilesByCompositeGroup = <T extends { id: string; compositeProfileId?: string }>(profiles: T[]): T[] => {
+    const seen = new Set<string>();
+    return profiles.filter((profile) => {
+      const key = profile.compositeProfileId || profile.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+  const getVisibleAlternateCrewCompositions = () => uniqueProfilesByCompositeGroup(
+    crewCompositionSettings.alternateCompositions.filter((profile) => (
+      String(profile.aircraftTypeCode || '').trim().toUpperCase() === activeCrewCompositionAircraftCode
+      && isProfileInActiveUnitContext(profile)
+    )),
+  );
+  const activeAircraftAlternateCompositions = getVisibleAlternateCrewCompositions();
   const activePlatformUnit = config.units.find((unit) => String(unit.code || '').trim().toUpperCase() === activePrimaryUnitCode)
     || config.units.find(isActiveRecord)
     || config.units[0]
@@ -3223,18 +3319,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const activeMissionAircraftTypeCode = getUnitAircraftTypeCode(activePrimaryUnitCode);
   const fixedCrewContext = normaliseOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel) === 'fixed_crew';
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
-  const standardMissionProfilesForContext = standardMissionProfiles.filter((profile) => (
-    !profile.unitCode
-    || !activeStandardMissionUnitCode
-    || profile.unitCode === activeStandardMissionUnitCode
-    || activeUnitCodes.includes(profile.unitCode)
-  ));
+  const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
+    standardMissionProfiles.filter(isProfileInActiveUnitContext),
+  );
   const defaultMissionCallsign = getDefaultUnitCallsign(unitCallsignSettings, activePrimaryUnitCode);
   const getStandardMissionCrewOptions = (aircraftTypeCode: string): Array<{ id: string; label: string; mode: 'STANDARD' | 'ALTERNATE' }> => {
     const aircraftCode = String(aircraftTypeCode || activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || 'AIRCRAFT').trim().toUpperCase();
-    const alternateCompositions = crewCompositionSettings.alternateCompositions.filter((profile) => (
-      String(profile.aircraftTypeCode || '').trim().toUpperCase() === aircraftCode
-    ));
+    const alternateCompositions = uniqueProfilesByCompositeGroup(
+      crewCompositionSettings.alternateCompositions.filter((profile) => (
+        String(profile.aircraftTypeCode || '').trim().toUpperCase() === aircraftCode
+        && isProfileInActiveUnitContext(profile)
+      )),
+    );
     return [
       { id: `standard:${aircraftCode || 'AIRCRAFT'}`, label: `Standard ${aircraftCode || 'Aircraft'} Crew`, mode: 'STANDARD' },
       ...alternateCompositions.map((profile) => ({
@@ -3730,7 +3826,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : (
             <>
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
-                <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitCode || 'No unit selected'}</div>
+                <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
                   New profiles default to the unit home location and unit default callsign. Values can be manually edited per mission.
                 </p>
@@ -3795,7 +3891,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className="grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[40px_42px] [&>label]:items-start">
                               <Field
                                 label="Unit"
-                                value={activeStandardMissionUnitCode}
+                                value={activeStandardMissionUnitLabel}
                                 disabled
                                 onChange={() => undefined}
                                 info="Standard Missions are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
