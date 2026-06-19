@@ -28397,6 +28397,9 @@ const App: React.FC = () => {
         }
         console.log('🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):', traineesInBuild.length, '| mockData count:', traineesInBuild.filter((t: any) => (t as any)._dataSource !== 'database').length, '| DB count:', traineesInBuild.filter((t: any) => (t as any)._dataSource === 'database').length);
         console.log('🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:', instructorsInBuild.slice(0, 5).map((i: any) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: (i as any)._dataSource })));
+        const effectiveInstructorPriority = activeOperationalModel === 'fixed_crew'
+            ? { ...instructorPriority, enabled: false }
+            : instructorPriority;
 
         const config: DfpConfig = {
             operationalModel: activeOperationalModel,
@@ -28426,7 +28429,7 @@ const App: React.FC = () => {
             flyingWindowExclusions,
             buildDate: buildDfpDate,
             highestPriorityEvents: eventsToUse,
-            instructorPriority,
+            instructorPriority: effectiveInstructorPriority,
             traineeLMPs: buildTraineeLMPs,
             flightTurnaround,
             ftdTurnaround,

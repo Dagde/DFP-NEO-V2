@@ -28273,7 +28273,7 @@ const PrioritiesView = ({
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-people-rules space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
+    !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-people-rules space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Second Input" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Instructor Allocation Rules" }),
@@ -28985,6 +28985,8 @@ const PrioritiesViewWithMenu = (props) => {
   const [activeSection, setActiveSection] = reactExports.useState("build-timeline");
   const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const locationDisplayName = props.school === "ESL" ? "East Sale" : props.school === "PEA" ? "Pearce" : props.school;
+  const isFixedCrewModel = String(props.operationalModel || "").trim().toLowerCase() === "fixed_crew";
+  const effectiveInstructorPriority = isFixedCrewModel ? { ...props.instructorPriority, enabled: false } : props.instructorPriority;
   const workflowItems = [
     {
       id: "build-timeline",
@@ -28998,7 +29000,8 @@ const PrioritiesViewWithMenu = (props) => {
       step: "02",
       label: "Instructor Rules",
       shortLabel: "People",
-      description: "Control how instructor preference or restriction should influence placement."
+      description: "Control how instructor preference or restriction should influence placement.",
+      hidden: isFixedCrewModel
     },
     {
       id: "course-demand",
@@ -29014,7 +29017,12 @@ const PrioritiesViewWithMenu = (props) => {
       shortLabel: "Exceptions",
       description: "Manage SCT requests, high-priority events, optional SCT and remedial queues."
     }
-  ];
+  ].filter((item) => !item.hidden);
+  reactExports.useEffect(() => {
+    if (isFixedCrewModel && activeSection === "people-rules") {
+      setActiveSection("build-timeline");
+    }
+  }, [activeSection, isFixedCrewModel]);
   const activeWorkflowItem = workflowItems.find((item) => item.id === activeSection) ?? workflowItems[0];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priorities-view": "true", className: "flex-1 flex overflow-hidden bg-slate-950 text-slate-100", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-80 bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0", children: [
@@ -29070,7 +29078,7 @@ const PrioritiesViewWithMenu = (props) => {
             " build setup"
           ] })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "priorities-content", onKeyDownCapture: stopEditableKeyPropagation, children: /* @__PURE__ */ jsxRuntimeExports.jsx(PrioritiesView, { ...props, activeSection }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "priorities-content", onKeyDownCapture: stopEditableKeyPropagation, children: /* @__PURE__ */ jsxRuntimeExports.jsx(PrioritiesView, { ...props, instructorPriority: effectiveInstructorPriority, activeSection }) })
       ] })
     ] })
   ] });
@@ -91515,6 +91523,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
     console.log("🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):", traineesInBuild.length, "| mockData count:", traineesInBuild.filter((t) => t._dataSource !== "database").length, "| DB count:", traineesInBuild.filter((t) => t._dataSource === "database").length);
     console.log("🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:", instructorsInBuild.slice(0, 5).map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: i._dataSource })));
+    const effectiveInstructorPriority = activeOperationalModel === "fixed_crew" ? { ...instructorPriority, enabled: false } : instructorPriority;
     const config = {
       operationalModel: activeOperationalModel,
       activeUnitCode,
@@ -91543,7 +91552,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       flyingWindowExclusions,
       buildDate: buildDfpDate,
       highestPriorityEvents: eventsToUse,
-      instructorPriority,
+      instructorPriority: effectiveInstructorPriority,
       traineeLMPs: buildTraineeLMPs,
       flightTurnaround,
       ftdTurnaround,

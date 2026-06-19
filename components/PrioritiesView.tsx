@@ -3135,6 +3135,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 </div>
            </div>
 
+           {!isFixedCrewModel && (
            <div className="section-people-rules space-y-6">
                 <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
@@ -3286,6 +3287,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 </div>
 
             </div>
+           )}
                    
         <div className="section-directed-events space-y-6">
         <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">

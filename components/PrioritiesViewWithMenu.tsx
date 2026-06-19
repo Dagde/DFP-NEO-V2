@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PrioritiesView } from './PrioritiesView';
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod } from '../types';
@@ -91,6 +91,10 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const [activeSection, setActiveSection] = useState<PrioritiesSection>('build-timeline');
     const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
     const locationDisplayName = props.school === 'ESL' ? 'East Sale' : props.school === 'PEA' ? 'Pearce' : props.school;
+    const isFixedCrewModel = String(props.operationalModel || '').trim().toLowerCase() === 'fixed_crew';
+    const effectiveInstructorPriority = isFixedCrewModel
+        ? { ...props.instructorPriority, enabled: false }
+        : props.instructorPriority;
 
     const workflowItems = [
         {
@@ -106,6 +110,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             label: 'Instructor Rules',
             shortLabel: 'People',
             description: 'Control how instructor preference or restriction should influence placement.',
+            hidden: isFixedCrewModel,
         },
         {
             id: 'course-demand' as const,
@@ -121,7 +126,13 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             shortLabel: 'Exceptions',
             description: 'Manage SCT requests, high-priority events, optional SCT and remedial queues.',
         },
-    ];
+    ].filter(item => !item.hidden);
+
+    useEffect(() => {
+        if (isFixedCrewModel && activeSection === 'people-rules') {
+            setActiveSection('build-timeline');
+        }
+    }, [activeSection, isFixedCrewModel]);
 
     const activeWorkflowItem = workflowItems.find((item) => item.id === activeSection) ?? workflowItems[0];
 
@@ -198,7 +209,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                         </div>
                     </div>
                     <div className="priorities-content" onKeyDownCapture={stopEditableKeyPropagation}>
-                        <PrioritiesView {...props} activeSection={activeSection} />
+                        <PrioritiesView {...props} instructorPriority={effectiveInstructorPriority} activeSection={activeSection} />
                     </div>
                 </div>
             </main>
