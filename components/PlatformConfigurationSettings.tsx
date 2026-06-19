@@ -6,6 +6,7 @@ import {
   PLATFORM_PERMISSION_CATALOG,
   DEFAULT_MASTER_LMP_ACCESS_RULES,
   getUnitOperationalModel,
+  getLocationResourcePool,
   normaliseOperationalModel,
   normaliseMasterLmpAccessRules,
   type PlatformMasterLmpAccessRule,
@@ -3210,11 +3211,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const normalisedUnitCode = String(unitCode || '').trim().toUpperCase();
     const unit = config.units.find((row) => String(row.code || '').trim().toUpperCase() === normalisedUnitCode) || null;
     const unitSettingAircraft = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || '').trim().toUpperCase();
-    const unitPoolAircraft = String(config.resourcePools.find((pool) => (
-      isActiveRecord(pool)
-      && String(pool.unitCode || '').trim().toUpperCase() === normalisedUnitCode
-      && String(pool.aircraftTypeCode || '').trim()
-    ))?.aircraftTypeCode || '').trim().toUpperCase();
+    const unitPoolAircraft = String(getLocationResourcePool(
+      config,
+      unit?.locationCode || activePlatformUnit?.locationCode || config.locations[0]?.code || '',
+      normalisedUnitCode,
+    )?.aircraftTypeCode || '').trim().toUpperCase();
     return unitPoolAircraft || unitSettingAircraft || activeCrewCompositionAircraftCode || String(config.aircraftTypes[0]?.code || '').trim().toUpperCase();
   };
   const activeHomeLocationCode = String(activePlatformUnit?.locationCode || config.locations[0]?.code || '').trim().toUpperCase();
