@@ -91585,7 +91585,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
     markNeoBuildTiming(timingReport, "elce:complete");
     let buildTraineeLMPs = traineeLMPs;
-    try {
+    const shouldRefreshComposedLmpsBeforeBuild = activeOperationalModel !== "air_combat";
+    if (!shouldRefreshComposedLmpsBeforeBuild) {
+      markNeoBuildTiming(timingReport, "lmp-refresh:skipped", {
+        operationalModel: activeOperationalModel,
+        reason: "air-combat-build-uses-configured-training-inputs",
+        currentTraineeLMPs: buildTraineeLMPs.size
+      });
+    } else try {
       const apiBase2 = getApiBaseUrl();
       const assignableBuildSyllabus = activeOperationalModel === "flight_school" ? assignableFlightSchoolBuildSyllabus : filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
       const bpcIpcSyllabus = assignableBuildSyllabus.filter(

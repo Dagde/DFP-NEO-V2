@@ -28490,7 +28490,14 @@ const App: React.FC = () => {
         markNeoBuildTiming(timingReport, 'elce:complete');
 
         let buildTraineeLMPs = traineeLMPs;
-        try {
+        const shouldRefreshComposedLmpsBeforeBuild = activeOperationalModel !== 'air_combat';
+        if (!shouldRefreshComposedLmpsBeforeBuild) {
+            markNeoBuildTiming(timingReport, 'lmp-refresh:skipped', {
+                operationalModel: activeOperationalModel,
+                reason: 'air-combat-build-uses-configured-training-inputs',
+                currentTraineeLMPs: buildTraineeLMPs.size,
+            });
+        } else try {
             const apiBase = getApiBaseUrl();
             const assignableBuildSyllabus = activeOperationalModel === 'flight_school'
                 ? assignableFlightSchoolBuildSyllabus
