@@ -9256,6 +9256,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const timeIncrement = getDispatchSearchStepHours(type);
         const listName = diagnosticLabel || `${isNightPass ? 'BNF' : type.toUpperCase()} ${isPlusOne ? 'Next+1' : 'Next'}`;
         const isMandatoryTraceList = listName.includes('Mandatory Remedial');
+        const scheduleListStartedAt = performance.now();
         recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + (['flight', 'ftd', 'cpt', 'ground'].indexOf(type) * 10) });
 
         let unplacedTrainees = [...list];
@@ -9273,6 +9274,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             generatedEventsAtStart: generatedEvents.length,
             generatedEventsAtEnd: generatedEvents.length,
             generatedDelta: 0,
+            durationMs: 0,
+            passes: 0,
             candidateSlots: 0,
             noSyllabusItem: 0,
             blockedPrimaryMissing: 0,
@@ -9280,6 +9283,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             rejectionReasons: {} as Record<string, number>,
             rejectionSamples: [] as any[],
             attemptSamples: [] as any[],
+            passSummaries: [] as any[],
             searchWindowSamples: [] as any[],
             sample: list.slice(0, 20).map(trainee => {
                 const nextEvents = traineeNextEventMap.get(trainee.fullName);
@@ -9306,7 +9310,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             }
         }
 
+        let passNumber = 0;
         while(placedThisPass && unplacedTrainees.length > 0) {
+            passNumber++;
+            const passStartedAt = performance.now();
+            const passInput = unplacedTrainees.length;
+            const passAttemptsAtStart = listDiag.attempts;
+            const passSuccessesAtStart = listDiag.successes;
+            const passGeneratedEventsAtStart = generatedEvents.length;
             placedThisPass = false;
             const remainingForNextPass: Trainee[] = [];
 
@@ -9588,6 +9599,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             unplacedTrainees = remainingForNextPass;
             listDiag.generatedEventsAtEnd = generatedEvents.length;
             listDiag.generatedDelta = listDiag.generatedEventsAtEnd - listDiag.generatedEventsAtStart;
+            listDiag.durationMs = Math.round(performance.now() - scheduleListStartedAt);
+            listDiag.passes = passNumber;
             listDiag.unplaced = unplacedTrainees.slice(0, 40).map(trainee => {
                 const nextEvents = traineeNextEventMap.get(trainee.fullName);
                 const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
@@ -9597,10 +9610,23 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     eventType: item?.type || null,
                 };
             });
-            saveNeoBuildDiag(`schedule-list-pass:${listName}`);
+            listDiag.passSummaries.push({
+                pass: passNumber,
+                input: passInput,
+                attempts: listDiag.attempts - passAttemptsAtStart,
+                successes: listDiag.successes - passSuccessesAtStart,
+                generatedDelta: generatedEvents.length - passGeneratedEventsAtStart,
+                remaining: unplacedTrainees.length,
+                durationMs: Math.round(performance.now() - passStartedAt),
+            });
+            if (passNumber <= 3 || passNumber % 10 === 0 || !placedThisPass || unplacedTrainees.length === 0) {
+                saveNeoBuildDiag(`schedule-list-pass:${listName}:${passNumber}`);
+            }
         }
         listDiag.generatedEventsAtEnd = generatedEvents.length;
         listDiag.generatedDelta = listDiag.generatedEventsAtEnd - listDiag.generatedEventsAtStart;
+        listDiag.durationMs = Math.round(performance.now() - scheduleListStartedAt);
+        listDiag.passes = passNumber;
         neoBuildDiag.scheduleFlow.push({
             listName,
             type,
@@ -9613,14 +9639,29 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             generatedEventsAtStart: listDiag.generatedEventsAtStart,
             generatedEventsAtEnd: listDiag.generatedEventsAtEnd,
             generatedDelta: listDiag.generatedDelta,
+            durationMs: listDiag.durationMs,
+            passes: listDiag.passes,
             noSearchWindow: listDiag.noSearchWindow,
             noSyllabusItem: listDiag.noSyllabusItem,
             blockedPrimaryMissing: listDiag.blockedPrimaryMissing,
+            passSummaries: listDiag.passSummaries.slice(-12),
             topRejectionReasons: Object.entries(listDiag.rejectionReasons)
                 .sort((a: any, b: any) => b[1] - a[1])
                 .slice(0, 8),
             firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
             firstRejectionSample: listDiag.rejectionSamples[0] || null,
+        });
+        markBuildTiming(`schedule-list:${listName}`, {
+            durationMs: listDiag.durationMs,
+            passes: listDiag.passes,
+            input: listDiag.input,
+            attempts: listDiag.attempts,
+            candidateSlots: listDiag.candidateSlots,
+            successes: listDiag.successes,
+            generatedDelta: listDiag.generatedDelta,
+            topRejectionReasons: Object.entries(listDiag.rejectionReasons)
+                .sort((a: any, b: any) => b[1] - a[1])
+                .slice(0, 5),
         });
         saveNeoBuildDiag(`schedule-list-end:${listName}`);
 
