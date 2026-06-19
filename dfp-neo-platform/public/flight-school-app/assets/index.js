@@ -72562,6 +72562,17 @@ window.__downloadNeoBuildTiming = () => {
   downloadJsonDiagnosticFile(filename, report);
   console.log("[NEO-BUILD-TIMING] Download triggered:", filename);
 };
+window.__downloadFlightSchoolPriorityDiag = () => {
+  const raw = localStorage.getItem("flight_school_priority_diag_report");
+  if (!raw) {
+    console.error("No Flight School priority diagnostic report found. Run a Flight School build first.");
+    return;
+  }
+  const report = JSON.parse(raw);
+  const filename = `flight-school-priority-diag-${getDiagnosticTimestamp(report.summary?.updatedAt || (/* @__PURE__ */ new Date()).toISOString())}.json`;
+  downloadJsonDiagnosticFile(filename, report);
+  console.log("[FLIGHT-SCHOOL-PRIORITY-DIAG] Download triggered:", filename);
+};
 function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
@@ -73232,6 +73243,30 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       summary: null,
       conclusion: buildOperationalModel === "fixed_crew" ? ["Build report was saved before the Fixed Crew scheduler stage completed. Check attempts and rejectionReasons for the earlier failure point."] : [`Fixed Crew scheduler did not run because active model was ${buildOperationalModel || "blank"}.`]
     },
+    flightSchoolPriority: {
+      enabled: buildOperationalModel === "flight_school",
+      model: buildOperationalModel,
+      context: {
+        locationCode: school,
+        unitCode: buildActiveUnitCode,
+        memberUnits: buildActiveContextUnitCodes,
+        buildDate
+      },
+      sliderRegressionFocus: true,
+      inputs: {
+        coursePriorities: coursePriorities.map((course, index) => ({
+          index,
+          course,
+          percentage: coursePercentages.get(course) ?? null
+        })),
+        coursePercentages: Object.fromEntries(Array.from(coursePercentages.entries())),
+        activeTraineesAtBuildStart: 0
+      },
+      normalisedPercentages: [],
+      calls: [],
+      slowCalls: [],
+      summary: null
+    },
     final: null
   };
   const saveNeoBuildDiag = (stage) => {
@@ -73333,6 +73368,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           minuteTimeline: (neoBuildDiag.fixedCrewPriority.minuteTimeline || []).slice(0, 1500),
           attempts: (neoBuildDiag.fixedCrewPriority.attempts || []).slice(-1200),
           placements: (neoBuildDiag.fixedCrewPriority.placements || []).slice(-500)
+        } : void 0,
+        flightSchoolPriority: neoBuildDiag.flightSchoolPriority ? {
+          ...neoBuildDiag.flightSchoolPriority,
+          calls: (neoBuildDiag.flightSchoolPriority.calls || []).slice(-80),
+          slowCalls: (neoBuildDiag.flightSchoolPriority.slowCalls || []).slice(-40)
         } : void 0
       };
       try {
@@ -75529,9 +75569,65 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     return normalizePercentages(enforced);
   };
-  const applyCoursePriority = (rankedList) => {
-    if (!rankedList.length) return [];
-    if (!coursePriorities.length) return rankedList;
+  const saveFlightSchoolPriorityDiagSnapshot = (reason) => {
+    if (buildOperationalModel !== "flight_school") return;
+    const calls = neoBuildDiag.flightSchoolPriority.calls || [];
+    neoBuildDiag.flightSchoolPriority.summary = {
+      reason,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      callCount: calls.length,
+      slowCallCount: (neoBuildDiag.flightSchoolPriority.slowCalls || []).length,
+      totalDurationMs: Math.round(calls.reduce((sum, call) => sum + (call.durationMs || 0), 0)),
+      maxDurationMs: Math.round(Math.max(0, ...calls.map((call) => call.durationMs || 0))),
+      coursePrioritiesCount: coursePriorities.length,
+      coursePercentagesCount: coursePercentages.size
+    };
+    try {
+      localStorage.setItem("flight_school_priority_diag_report", JSON.stringify(neoBuildDiag.flightSchoolPriority));
+    } catch (error) {
+      console.warn("[FLIGHT-SCHOOL-PRIORITY-DIAG] Failed to save focused diagnostic:", error);
+    }
+  };
+  if (buildOperationalModel === "flight_school") {
+    const rawPercentageTotal = Array.from(coursePercentages.values()).reduce((sum, value) => sum + (Number(value) || 0), 0);
+    const normalisedAtBuildStart = normalizePercentages(new Map(coursePercentages));
+    neoBuildDiag.flightSchoolPriority.inputs.activeTraineesAtBuildStart = activeTrainees.length;
+    neoBuildDiag.flightSchoolPriority.inputs.rawPercentageTotal = rawPercentageTotal;
+    neoBuildDiag.flightSchoolPriority.inputs.coursePriorityDuplicates = coursePriorities.filter((course, index) => coursePriorities.indexOf(course) !== index);
+    neoBuildDiag.flightSchoolPriority.inputs.percentagesWithoutPriority = Array.from(coursePercentages.keys()).filter((course) => !coursePriorities.includes(course));
+    neoBuildDiag.flightSchoolPriority.inputs.prioritiesWithoutPercentage = coursePriorities.filter((course) => !coursePercentages.has(course));
+    neoBuildDiag.flightSchoolPriority.normalisedPercentages = Array.from(normalisedAtBuildStart.entries()).map(([course, percentage]) => ({
+      course,
+      percentage
+    }));
+    saveFlightSchoolPriorityDiagSnapshot("course-priority-diagnostics-initialised");
+  }
+  const applyCoursePriority = (rankedList, diagnosticLabel = "unlabelled") => {
+    const diagnosticStart = performance.now();
+    const finishPriorityDiagnostic = (result, extra = {}) => {
+      if (buildOperationalModel !== "flight_school") return result;
+      const durationMs = performance.now() - diagnosticStart;
+      const call = {
+        label: diagnosticLabel,
+        inputCount: rankedList.length,
+        outputCount: result.length,
+        durationMs,
+        coursePrioritiesCount: coursePriorities.length,
+        coursePercentagesCount: coursePercentages.size,
+        ...extra
+      };
+      neoBuildDiag.flightSchoolPriority.calls.push(call);
+      if (durationMs > 50 || rankedList.length > 200) neoBuildDiag.flightSchoolPriority.slowCalls.push(call);
+      saveFlightSchoolPriorityDiagSnapshot(durationMs > 50 ? `slow:${diagnosticLabel}` : `call:${diagnosticLabel}`);
+      markBuildTiming(`flight-school-priority:${diagnosticLabel}`, {
+        durationMs,
+        inputCount: rankedList.length,
+        outputCount: result.length
+      });
+      return result;
+    };
+    if (!rankedList.length) return finishPriorityDiagnostic([], { exitReason: "empty-ranked-list" });
+    if (!coursePriorities.length) return finishPriorityDiagnostic(rankedList, { exitReason: "no-course-priorities" });
     const rankedCourseNames = Array.from(new Set(
       rankedList.map((trainee) => trainee.course).filter((courseName) => Boolean(courseName))
     ));
@@ -75539,7 +75635,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ...coursePriorities.filter((courseName) => rankedCourseNames.includes(courseName)),
       ...rankedCourseNames.filter((courseName) => !coursePriorities.includes(courseName))
     ];
-    if (mixingCourses.length === 0) return rankedList;
+    if (mixingCourses.length === 0) return finishPriorityDiagnostic(rankedList, { exitReason: "no-mixing-courses" });
     const soloWithTwrDiIndices = [];
     rankedList.forEach((trainee, index) => {
       const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
@@ -75576,7 +75672,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const courseAllocations = /* @__PURE__ */ new Map();
     mixingCourses.forEach((c) => courseAllocations.set(c, 0));
     let totalAllocated = 0;
+    let loopIterations = 0;
     while (mixedTrainees.length < traineesForCourseMixing.length) {
+      loopIterations++;
       totalAllocated++;
       let maxDeficit = -Infinity;
       let selectedCourse = null;
@@ -75620,9 +75718,27 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (!soloBlockInserted) {
         finalTrainees.push(...soloWithTwrDiBlock);
       }
-      return finalTrainees;
+      return finishPriorityDiagnostic(finalTrainees, {
+        exitReason: "mixed-with-solo-block",
+        mixingCourses,
+        rankedCourseCount: rankedCourseNames.length,
+        traineesForCourseMixing: traineesForCourseMixing.length,
+        loopIterations,
+        soloWithTwrDiCount: soloWithTwrDiIndices.length,
+        enforcedPercentages: Object.fromEntries(enforcedPercentages),
+        courseAllocations: Object.fromEntries(courseAllocations)
+      });
     } else {
-      return mixedTrainees;
+      return finishPriorityDiagnostic(mixedTrainees, {
+        exitReason: "mixed",
+        mixingCourses,
+        rankedCourseCount: rankedCourseNames.length,
+        traineesForCourseMixing: traineesForCourseMixing.length,
+        loopIterations,
+        soloWithTwrDiCount: soloWithTwrDiIndices.length,
+        enforcedPercentages: Object.fromEntries(enforcedPercentages),
+        courseAllocations: Object.fromEntries(courseAllocations)
+      });
     }
   };
   const bnfTraineeNames = new Set(nextEventLists.bnf.map((t) => t.fullName));
@@ -81021,10 +81137,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const item = mandatoryRemedialFlightItems.get(trainee.fullName);
     return !!item && item.dayNight !== "Night";
   };
-  const _mandatoryDayFlightList = applyCoursePriority(activeTrainees.filter(_isDayMandatoryRemedialFlightTrainee));
-  const _mandatoryNightFlightList = applyCoursePriority(activeTrainees.filter(_isNightMandatoryRemedialFlightTrainee));
+  const _mandatoryDayFlightList = applyCoursePriority(activeTrainees.filter(_isDayMandatoryRemedialFlightTrainee), "mandatory-day-flight");
+  const _mandatoryNightFlightList = applyCoursePriority(activeTrainees.filter(_isNightMandatoryRemedialFlightTrainee), "mandatory-night-flight");
   const _mandatoryFlightList = [..._mandatoryDayFlightList, ..._mandatoryNightFlightList];
-  const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter((t) => !_isMandatoryRemedialFlightTrainee(t))));
+  const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter((t) => !_isMandatoryRemedialFlightTrainee(t))), "day-flight-next");
   const _formationFlightGroups = Array.from(formationGroups.values()).map((group) => ({
     item: group.item,
     trainees: _allFlightList.filter(
@@ -81452,7 +81568,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     _fbPrintSummary();
     recordProgress({ message: "Scheduling Night Flying...", percentage: 55 });
     if (nextEventLists.bnf.length >= 2) {
-      const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf.filter((t) => !_isMandatoryRemedialFlightTrainee(t)));
+      const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf.filter((t) => !_isMandatoryRemedialFlightTrainee(t)), "bnf-wave-one");
       scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
     }
     if (_mandatoryNightFlightList.length > 0) {
@@ -81471,7 +81587,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
     recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
     scheduleList(
-      applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
+      applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd), "ftd-next"),
       "ftd",
       false,
       ftdStartTime,
@@ -81482,7 +81598,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
     recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
     scheduleList(
-      applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
+      applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt), "cpt-next"),
       "cpt",
       false,
       flyingStartTime,
@@ -81493,7 +81609,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
     recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
     scheduleList(
-      applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground)),
+      applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground), "ground-next"),
       "ground",
       false,
       flyingStartTime,
@@ -81503,7 +81619,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     recordProgress({ message: "Scheduling Day Flight Events (Plus-One)...", percentage: 78 });
     scheduleList(
-      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight)),
+      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight), "day-flight-plus-one"),
       "flight",
       true,
       flyingStartTime,
@@ -81521,7 +81637,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
     scheduleList(
-      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
+      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd), "ftd-plus-one"),
       "ftd",
       true,
       ftdStartTime,
@@ -81531,7 +81647,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
     scheduleList(
-      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
+      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt), "cpt-plus-one"),
       "cpt",
       true,
       flyingStartTime,
@@ -81541,7 +81657,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     recordProgress({ message: "Scheduling Ground Events (Plus-One)...", percentage: 86 });
     scheduleList(
-      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground)),
+      applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground), "ground-plus-one"),
       "ground",
       true,
       flyingStartTime,
