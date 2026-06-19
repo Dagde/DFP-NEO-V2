@@ -55441,7 +55441,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
       {
         id: createClientRecordId("standard-mission"),
         status: "ACTIVE",
-        unitCode: activePrimaryUnitCode,
+        unitCode: activeStandardMissionUnitCode,
         aircraftTypeCode,
         missionName: `Standard Mission ${missionIndex}`,
         shortTitle: `MISSION${missionIndex}`.slice(0, 8),
@@ -55649,6 +55649,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const activeAircraftAlternateCompositions = crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.aircraftTypeCode || "").trim().toUpperCase() === activeCrewCompositionAircraftCode);
   const activeUnitCodes = String(activeUnitCode || "").split("+").map((value) => value.trim().toUpperCase()).filter(Boolean);
   const activePrimaryUnitCode = activeUnitCodes[0] || String(config.units.find(isActiveRecord)?.code || config.units[0]?.code || "").trim().toUpperCase();
+  const activeStandardMissionUnitCode = String(activeUnitCode || activePrimaryUnitCode).trim().toUpperCase() || activePrimaryUnitCode;
   const activePlatformUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activePrimaryUnitCode) || config.units.find(isActiveRecord) || config.units[0] || null;
   const getUnitAircraftTypeCode = (unitCode) => {
     const normalisedUnitCode = String(unitCode || "").trim().toUpperCase();
@@ -55665,7 +55666,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const activeMissionAircraftTypeCode = getUnitAircraftTypeCode(activePrimaryUnitCode);
   const fixedCrewContext = normaliseOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel) === "fixed_crew";
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
-  const standardMissionProfilesForContext = standardMissionProfiles.filter((profile) => !profile.unitCode || !activePrimaryUnitCode || profile.unitCode === activePrimaryUnitCode);
+  const standardMissionProfilesForContext = standardMissionProfiles.filter((profile) => !profile.unitCode || !activeStandardMissionUnitCode || profile.unitCode === activeStandardMissionUnitCode || activeUnitCodes.includes(profile.unitCode));
   const defaultMissionCallsign = getDefaultUnitCallsign(unitCallsignSettings, activePrimaryUnitCode);
   const getStandardMissionCrewOptions = (aircraftTypeCode) => {
     const aircraftCode = String(aircraftTypeCode || activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || "AIRCRAFT").trim().toUpperCase();
@@ -56098,7 +56099,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
             "Active unit context: ",
-            activePrimaryUnitCode || "No unit selected"
+            activeStandardMissionUnitCode || "No unit selected"
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New profiles default to the unit home location and unit default callsign. Values can be manually edited per mission." })
         ] }),
@@ -56144,24 +56145,13 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[40px_42px] [&>label]:items-start", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      SelectField,
+                      Field,
                       {
                         label: "Unit",
-                        value: profile.unitCode || activePrimaryUnitCode,
-                        disabled: !canEdit,
-                        options: config.units.map((unit) => unit.code),
-                        onChange: (value) => {
-                          const nextUnitCode = value.toUpperCase();
-                          const nextAircraftTypeCode = getUnitAircraftTypeCode(nextUnitCode);
-                          updateStandardMissionProfile(profile.id, {
-                            unitCode: nextUnitCode,
-                            aircraftTypeCode: nextAircraftTypeCode,
-                            config: getAircraftConfigOptions(nextAircraftTypeCode)[0] || "ANY",
-                            selectedCrewCompositionId: `standard:${nextAircraftTypeCode || "AIRCRAFT"}`,
-                            acceptableCrewCompositionIds: [`standard:${nextAircraftTypeCode || "AIRCRAFT"}`],
-                            crewCompositionMode: "STANDARD"
-                          });
-                        }
+                        value: activeStandardMissionUnitCode,
+                        disabled: true,
+                        onChange: () => void 0,
+                        info: "Standard Missions are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEdit, onChange: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),

@@ -2951,7 +2951,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       {
         id: createClientRecordId('standard-mission'),
         status: 'ACTIVE',
-        unitCode: activePrimaryUnitCode,
+        unitCode: activeStandardMissionUnitCode,
         aircraftTypeCode,
         missionName: `Standard Mission ${missionIndex}`,
         shortTitle: `MISSION${missionIndex}`.slice(0, 8),
@@ -3203,6 +3203,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     .map((value) => value.trim().toUpperCase())
     .filter(Boolean);
   const activePrimaryUnitCode = activeUnitCodes[0] || String(config.units.find(isActiveRecord)?.code || config.units[0]?.code || '').trim().toUpperCase();
+  const activeStandardMissionUnitCode = String(activeUnitCode || activePrimaryUnitCode).trim().toUpperCase() || activePrimaryUnitCode;
   const activePlatformUnit = config.units.find((unit) => String(unit.code || '').trim().toUpperCase() === activePrimaryUnitCode)
     || config.units.find(isActiveRecord)
     || config.units[0]
@@ -3223,7 +3224,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const fixedCrewContext = normaliseOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel) === 'fixed_crew';
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = standardMissionProfiles.filter((profile) => (
-    !profile.unitCode || !activePrimaryUnitCode || profile.unitCode === activePrimaryUnitCode
+    !profile.unitCode
+    || !activeStandardMissionUnitCode
+    || profile.unitCode === activeStandardMissionUnitCode
+    || activeUnitCodes.includes(profile.unitCode)
   ));
   const defaultMissionCallsign = getDefaultUnitCallsign(unitCallsignSettings, activePrimaryUnitCode);
   const getStandardMissionCrewOptions = (aircraftTypeCode: string): Array<{ id: string; label: string; mode: 'STANDARD' | 'ALTERNATE' }> => {
@@ -3726,7 +3730,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : (
             <>
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
-                <div className="text-sm font-bold text-cyan-100">Active unit context: {activePrimaryUnitCode || 'No unit selected'}</div>
+                <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitCode || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
                   New profiles default to the unit home location and unit default callsign. Values can be manually edited per mission.
                 </p>
@@ -3789,23 +3793,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               </div>
                             </div>
                             <div className="grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[40px_42px] [&>label]:items-start">
-                              <SelectField
+                              <Field
                                 label="Unit"
-                                value={profile.unitCode || activePrimaryUnitCode}
-                                disabled={!canEdit}
-                                options={config.units.map((unit) => unit.code)}
-                                onChange={(value) => {
-                                  const nextUnitCode = value.toUpperCase();
-                                  const nextAircraftTypeCode = getUnitAircraftTypeCode(nextUnitCode);
-                                  updateStandardMissionProfile(profile.id, {
-                                    unitCode: nextUnitCode,
-                                    aircraftTypeCode: nextAircraftTypeCode,
-                                    config: getAircraftConfigOptions(nextAircraftTypeCode)[0] || 'ANY',
-                                    selectedCrewCompositionId: `standard:${nextAircraftTypeCode || 'AIRCRAFT'}`,
-                                    acceptableCrewCompositionIds: [`standard:${nextAircraftTypeCode || 'AIRCRAFT'}`],
-                                    crewCompositionMode: 'STANDARD',
-                                  });
-                                }}
+                                value={activeStandardMissionUnitCode}
+                                disabled
+                                onChange={() => undefined}
+                                info="Standard Missions are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                               />
                               <Field label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEdit} onChange={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEdit} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
