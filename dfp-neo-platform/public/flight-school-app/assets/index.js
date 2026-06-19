@@ -26110,6 +26110,7 @@ const TaskingRequestTable = ({
     const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
     const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
     const selectedConfig = aircraftConfigOptions.find((definition) => definition.id === request.aircraftConfigId);
+    const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-slate-700/80 bg-slate-900/45 p-3 shadow-lg shadow-black/10", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Tasking", hint: request.tasking || "Select or type task", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -26214,7 +26215,7 @@ const TaskingRequestTable = ({
                 });
               },
               className: taskingControlClass,
-              children: unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: entry.callsign }, entry.id))
+              children: unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: showCallsignUnitLabels ? `${entry.callsign} (${entry.unitCode})` : entry.callsign }, entry.id))
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -26464,13 +26465,23 @@ const PrioritiesView = ({
     const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
   }, [activeUnitCode, activeUnitCodes]);
-  const unitCallsignEntries = reactExports.useMemo(
-    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode || school),
-    [activeUnitCode, school, unitCallsignSettings]
-  );
+  const activeCallsignUnitCodes = reactExports.useMemo(() => {
+    const contextCodes = Array.from(activeUnitCodeSet);
+    if (contextCodes.length > 0) return contextCodes;
+    return String(activeUnitCode || school || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
+  }, [activeUnitCode, activeUnitCodeSet, school]);
+  const unitCallsignEntries = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return activeCallsignUnitCodes.flatMap((unitCode) => getUnitCallsignEntries(unitCallsignSettings, unitCode)).filter((entry) => {
+      const key = `${entry.unitCode}::${entry.callsign.toUpperCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [activeCallsignUnitCodes, unitCallsignSettings]);
   const defaultUnitCallsign = reactExports.useMemo(
-    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode || school),
-    [activeUnitCode, school, unitCallsignSettings]
+    () => activeCallsignUnitCodes.map((unitCode) => getDefaultUnitCallsign(unitCallsignSettings, unitCode)).find(Boolean) || "",
+    [activeCallsignUnitCodes, unitCallsignSettings]
   );
   const callsignNumberOptions = reactExports.useMemo(
     () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
