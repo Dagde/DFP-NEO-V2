@@ -9,6 +9,7 @@ import type { AirCombatSchedulingWeights } from '../utils/airCombatTraining';
 import type { FixedCrewTrainingStreamPriority } from '../utils/fixedCrewTraining';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import type { CrewCompositionSettings } from '../utils/crewCompositionProfiles';
 import type { UnitCallsignSettings } from '../utils/unitCallsigns';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
@@ -75,13 +76,17 @@ interface PrioritiesViewWithMenuProps {
   taskProfileAbbreviations?: Record<string, string>;
   operationalModel?: string;
   operationalModelLabel?: string;
+  activeUnitCode?: string;
+  activeUnitCodes?: string[];
   airCombatSchedulingWeights?: AirCombatSchedulingWeights;
   onUpdateAirCombatSchedulingWeights?: (weights: AirCombatSchedulingWeights) => void;
   fixedCrewTrainingPriorities?: FixedCrewTrainingStreamPriority[];
   onUpdateFixedCrewTrainingPriorities?: (priorities: FixedCrewTrainingStreamPriority[]) => void;
   isSingleSeatAircraft?: boolean;
   aircraftCrewComposition?: AircraftCrewComposition;
+  aircraftTypeCode?: string | null;
   crewPositionTerminology?: CrewPositionTerminology;
+  crewCompositionSettings?: CrewCompositionSettings;
   unitCallsignSettings?: UnitCallsignSettings;
 }
 

@@ -10,11 +10,20 @@ import {
   resolveCrewRequirement,
 } from '../utils/crewRequirements';
 
+export interface CrewRequirementPreset {
+  id: string;
+  label: string;
+  description?: string;
+  kind: 'standard' | 'alternate';
+  roles?: CrewRequirementRole[];
+}
+
 interface CrewRequirementEditorProps {
   value?: CrewRequirement | null;
   aircraftCrewComposition?: AircraftCrewComposition;
   crewPositionTerminology?: CrewPositionTerminology;
   operationalModel?: string;
+  crewRequirementPresets?: CrewRequirementPreset[];
   onChange: (value: CrewRequirement) => void;
   compact?: boolean;
 }
@@ -32,11 +41,28 @@ const normaliseRoleRows = (
   return resolveCrewRequirement(null, aircraftCrewComposition).roles || [];
 };
 
+const getCrewRolesSignature = (roles?: CrewRequirementRole[]): string => (
+  (roles || [])
+    .map((role) => {
+      const eligibleRoles = Array.isArray(role.eligibleRoles)
+        ? role.eligibleRoles.map(value => String(value || '').trim().toUpperCase()).filter(Boolean).sort()
+        : [];
+      return [
+        String(role.role || '').trim().toUpperCase(),
+        Math.max(0, Math.min(20, Math.round(Number(role.count) || 0))),
+        eligibleRoles.join('|'),
+      ].join(':');
+    })
+    .sort()
+    .join(';')
+);
+
 const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
   value,
   aircraftCrewComposition,
   crewPositionTerminology,
   operationalModel,
+  crewRequirementPresets = [],
   onChange,
   compact = false,
 }) => {
@@ -45,6 +71,13 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
   const aircraftDefaultSummary = formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology);
   const roleOptions = getCrewRequirementOptions(crewPositionTerminology, operationalModel);
   const customRows = normaliseRoleRows(value, aircraftCrewComposition);
+  const normalisedPresetRows = normalised.mode === 'custom' ? normaliseCrewRequirement({ mode: 'custom', roles: customRows }).roles || [] : [];
+  const selectedPresetValue = normalised.mode === 'aircraft_default'
+    ? crewRequirementPresets.find(preset => preset.kind === 'standard')?.id || 'aircraft_default'
+    : crewRequirementPresets.find(preset => (
+        preset.kind === 'alternate'
+        && getCrewRolesSignature(preset.roles) === getCrewRolesSignature(normalisedPresetRows)
+      ))?.id || 'custom';
   const getRoleOptionsForRow = (row: CrewRequirementRole) => (
     getCrewRequirementOptions(crewPositionTerminology, operationalModel, getCrewRequirementRoleOptions(row))
   );
@@ -58,6 +91,28 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
       mode: 'custom',
       roles: customRows.length > 0
         ? customRows
+        : [{ role: roleOptions[0]?.value || 'Pilot', crewPositionId: roleOptions[0]?.id, count: 1 }],
+    });
+  };
+
+  const setPreset = (presetId: string) => {
+    if (presetId === 'custom') {
+      setMode('custom');
+      return;
+    }
+    const preset = crewRequirementPresets.find(candidate => candidate.id === presetId);
+    if (!preset || preset.kind === 'standard') {
+      onChange({ mode: 'aircraft_default' });
+      return;
+    }
+    const presetRows = normaliseCrewRequirement({
+      mode: 'custom',
+      roles: preset.roles || [],
+    }).roles || [];
+    onChange({
+      mode: 'custom',
+      roles: presetRows.length > 0
+        ? presetRows
         : [{ role: roleOptions[0]?.value || 'Pilot', crewPositionId: roleOptions[0]?.id, count: 1 }],
     });
   };
@@ -94,14 +149,27 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
           <div className="font-semibold text-slate-100">Crew Required</div>
           {!compact && <div className="mt-0.5 break-words text-slate-400">{effectiveSummary}</div>}
         </div>
-        <select
-          value={normalised.mode}
-          onChange={(event) => setMode(event.target.value as CrewRequirement['mode'])}
-          className={`${compact ? 'w-full max-w-[10.5rem]' : ''} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`}
-        >
-          <option value="aircraft_default">Use aircraft default</option>
-          <option value="custom">Custom crew</option>
-        </select>
+        {crewRequirementPresets.length > 0 ? (
+          <select
+            value={selectedPresetValue}
+            onChange={(event) => setPreset(event.target.value)}
+            className={`${compact ? 'w-full max-w-[13rem]' : ''} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`}
+          >
+            {crewRequirementPresets.map(preset => (
+              <option key={preset.id} value={preset.id}>{preset.label}</option>
+            ))}
+            <option value="custom">Custom crew</option>
+          </select>
+        ) : (
+          <select
+            value={normalised.mode}
+            onChange={(event) => setMode(event.target.value as CrewRequirement['mode'])}
+            className={`${compact ? 'w-full max-w-[10.5rem]' : ''} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`}
+          >
+            <option value="aircraft_default">Use aircraft default</option>
+            <option value="custom">Custom crew</option>
+          </select>
+        )}
         {compact && <div className="min-w-0 break-words text-slate-400">{effectiveSummary}</div>}
       </div>
 

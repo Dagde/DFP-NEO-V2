@@ -3706,6 +3706,73 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
   return JSON.parse(JSON.stringify(source));
 };
+const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "air_mobility"];
+const normaliseCode$3 = (value, fallback) => {
+  const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
+  return token || fallback.slice(0, 3);
+};
+const nextAvailableThreeLetterCode = (baseCode, usedCodes) => {
+  if (!usedCodes.has(baseCode)) return baseCode;
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const prefix = (baseCode.slice(0, 2) || "AL").padEnd(2, "A");
+  for (const letter of alphabet) {
+    const candidate = `${prefix}${letter}`;
+    if (!usedCodes.has(candidate)) return candidate;
+  }
+  return baseCode;
+};
+const normaliseRoleRequirements = (value) => {
+  const rows = Array.isArray(value) ? value : [];
+  const merged = /* @__PURE__ */ new Map();
+  rows.forEach((row) => {
+    const role = String(row?.role || "").trim();
+    if (!role) return;
+    const key = role.toUpperCase();
+    const count = Math.max(1, Math.min(24, Math.round(Number(row?.count) || 1)));
+    const current = merged.get(key);
+    merged.set(key, {
+      role: current?.role || role,
+      count: Math.min(24, (current?.count || 0) + count)
+    });
+  });
+  return Array.from(merged.values());
+};
+const normaliseCrewCompositionSettings = (value) => {
+  const source = value && typeof value === "object" ? value : {};
+  const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
+  const usedCodesByScope = /* @__PURE__ */ new Map();
+  const alternateCompositions = rows.map((row, index) => {
+    const fallbackCode = `ALT-${index + 1}`;
+    const unitCode = String(row?.unitCode || "").trim().toUpperCase();
+    const compositeUnitCode = String(row?.compositeUnitCode || "").trim().toUpperCase();
+    const codeScope = unitCode || compositeUnitCode || "GLOBAL";
+    const usedCodes = usedCodesByScope.get(codeScope) || /* @__PURE__ */ new Set();
+    usedCodesByScope.set(codeScope, usedCodes);
+    let code = normaliseCode$3(row?.code || row?.name, fallbackCode);
+    code = nextAvailableThreeLetterCode(code, usedCodes);
+    usedCodes.add(code);
+    const operationalModels = Array.isArray(row?.operationalModels) ? row.operationalModels.filter((model) => SUPPORTED_MODELS.includes(model)) : SUPPORTED_MODELS;
+    return {
+      id: String(row?.id || `alternate-crew-${index + 1}`),
+      code,
+      unitCode,
+      compositeUnitCode,
+      compositeProfileId: String(row?.compositeProfileId || "").trim(),
+      aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
+      name: String(row?.name || "").trim() ? String(row?.name || "") : code,
+      description: String(row?.description || ""),
+      operationalModels: operationalModels.length > 0 ? operationalModels : SUPPORTED_MODELS,
+      roleRequirements: normaliseRoleRequirements(row?.roleRequirements),
+      status: String(row?.status || "ACTIVE").trim().toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
+    };
+  });
+  return { alternateCompositions };
+};
+const createAlternateCrewCompositionCode = (existingProfiles, name) => {
+  const usedCodes = new Set(existingProfiles.map((profile) => profile.code.toUpperCase()));
+  const base = normaliseCode$3(name, `ALT-${existingProfiles.length + 1}`);
+  return nextAvailableThreeLetterCode(base, usedCodes);
+};
 const ALL_OPERATIONAL_MODEL_CODES = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
 const DEFAULT_STAFF_QUALIFICATIONS = {
   qualifications: [
@@ -4052,7 +4119,7 @@ const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
   courses: 60,
   trainingPackages: 40
 };
-const normaliseCode$3 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$2 = (value) => String(value || "").trim().toUpperCase();
 const AIR_COMBAT_ICO_PACKAGE_CODE = "ICO";
 const AIR_COMBAT_ICO_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 const AIR_COMBAT_ICO_PREFLIGHT_HOURS = 1.5;
@@ -4068,7 +4135,7 @@ const getAuthoritativeSyllabusDuration = (item) => {
 const isIntegratedCombatOperationsTrainingPackageItem = (item) => {
   if (!item || item.lmpType !== "Staff CAT") return false;
   const courses = Array.isArray(item.courses) ? item.courses : [];
-  return courses.some((course) => normaliseCode$3(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
+  return courses.some((course) => normaliseCode$2(course) === AIR_COMBAT_ICO_PACKAGE_CODE);
 };
 const normaliseIntegratedCombatOperationsTiming = (item) => {
   if (!isIntegratedCombatOperationsTrainingPackageItem(item)) return item;
@@ -4095,10 +4162,10 @@ const normaliseSyllabusRuntimeTimings = (items) => items.map(normaliseSyllabusRu
 const getAirCombatTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getAirCombatTrainingKey = (kind, code, locationCode, unitCode) => [
   "air_combat",
-  normaliseCode$3(locationCode) || "GLOBAL",
-  normaliseCode$3(unitCode) || "GLOBAL",
+  normaliseCode$2(locationCode) || "GLOBAL",
+  normaliseCode$2(unitCode) || "GLOBAL",
   kind,
-  normaliseCode$3(code)
+  normaliseCode$2(code)
 ].join(":");
 const getAirCombatTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getAirCombatTrainingTitleFromItem = (item) => {
@@ -4108,8 +4175,8 @@ const getAirCombatTrainingTitleFromItem = (item) => {
 const getAirCombatAssignmentFromItem = (item, locationCode, unitCode, assignedBy) => {
   const kind = getAirCombatTrainingKindForLmpType(item.lmpType);
   const code = getAirCombatTrainingCodeFromItem(item);
-  const assignmentLocation = normaliseCode$3(locationCode || item.location);
-  const assignmentUnit = normaliseCode$3(unitCode || item.unit);
+  const assignmentLocation = normaliseCode$2(locationCode || item.location);
+  const assignmentUnit = normaliseCode$2(unitCode || item.unit);
   const trainingKey = getAirCombatTrainingKey(kind, code, assignmentLocation, assignmentUnit);
   return {
     assignmentId: trainingKey,
@@ -4130,8 +4197,8 @@ const normaliseAirCombatTrainingAssignments = (preferences) => {
   const normaliseList = (items, kind) => (Array.isArray(items) ? items : []).map((item) => {
     const code = String(item.code || "").trim();
     if (!code) return null;
-    const locationCode = normaliseCode$3(item.locationCode);
-    const unitCode = normaliseCode$3(item.unitCode);
+    const locationCode = normaliseCode$2(item.locationCode);
+    const unitCode = normaliseCode$2(item.unitCode);
     const trainingKey = String(item.trainingKey || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     return {
       assignmentId: String(item.assignmentId || trainingKey),
@@ -4220,8 +4287,8 @@ const normaliseAirCombatSchedulingWeights = (value) => {
     const kind = stream?.kind === "training_package" ? "training_package" : stream?.kind === "course" ? "course" : null;
     const code = String(stream?.code || "").trim();
     if (!kind || !code) return null;
-    const locationCode = normaliseCode$3(stream?.locationCode);
-    const unitCode = normaliseCode$3(stream?.unitCode);
+    const locationCode = normaliseCode$2(stream?.locationCode);
+    const unitCode = normaliseCode$2(stream?.unitCode);
     const key = String(stream?.key || getAirCombatTrainingKey(kind, code, locationCode, unitCode));
     const weight = Number(stream?.weight);
     return {
@@ -4263,7 +4330,7 @@ const normaliseAirCombatSchedulingWeights = (value) => {
 };
 const FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS = 1.5;
 const FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS = 1;
-const normaliseCode$2 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
 const getFixedCrewCoursePackageBriefingTimes = () => ({
   preFlightTime: FIXED_CREW_COURSE_PACKAGE_PREFLIGHT_HOURS,
   postFlightTime: FIXED_CREW_COURSE_PACKAGE_POSTFLIGHT_HOURS
@@ -4276,10 +4343,10 @@ const withFixedCrewCoursePackageBriefingTimes = (item) => ({
 const getFixedCrewTrainingKindForLmpType = (lmpType) => lmpType === "Staff CAT" ? "training_package" : "course";
 const getFixedCrewTrainingKey = (kind, code, locationCode, unitCode) => [
   "fixed_crew",
-  normaliseCode$2(locationCode) || "GLOBAL",
-  normaliseCode$2(unitCode) || "GLOBAL",
+  normaliseCode$1(locationCode) || "GLOBAL",
+  normaliseCode$1(unitCode) || "GLOBAL",
   kind,
-  normaliseCode$2(code)
+  normaliseCode$1(code)
 ].join(":");
 const getFixedCrewTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getFixedCrewTrainingTitleFromItem = (item) => {
@@ -4292,8 +4359,8 @@ const normaliseFixedCrewTrainingPriorities = (streams) => {
     const kind = stream.kind === "training_package" ? "training_package" : "course";
     const code = String(stream.code || "").trim();
     if (!code) return null;
-    const locationCode = normaliseCode$2(stream.locationCode);
-    const unitCode = normaliseCode$2(stream.unitCode);
+    const locationCode = normaliseCode$1(stream.locationCode);
+    const unitCode = normaliseCode$1(stream.unitCode);
     const key = String(stream.key || getFixedCrewTrainingKey(kind, code, locationCode, unitCode));
     const weight = Math.max(0, Math.min(100, Math.round(Number(stream.weight) || 0)));
     return {
@@ -4936,11 +5003,20 @@ const normaliseRoleRows = (value, aircraftCrewComposition) => {
   }
   return resolveCrewRequirement(null, aircraftCrewComposition).roles || [];
 };
+const getCrewRolesSignature = (roles) => (roles || []).map((role) => {
+  const eligibleRoles = Array.isArray(role.eligibleRoles) ? role.eligibleRoles.map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).sort() : [];
+  return [
+    String(role.role || "").trim().toUpperCase(),
+    Math.max(0, Math.min(20, Math.round(Number(role.count) || 0))),
+    eligibleRoles.join("|")
+  ].join(":");
+}).sort().join(";");
 const CrewRequirementEditor = ({
   value,
   aircraftCrewComposition,
   crewPositionTerminology,
   operationalModel: operationalModel2,
+  crewRequirementPresets = [],
   onChange,
   compact = false
 }) => {
@@ -4949,6 +5025,8 @@ const CrewRequirementEditor = ({
   const aircraftDefaultSummary = formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology);
   const roleOptions = getCrewRequirementOptions(crewPositionTerminology, operationalModel2);
   const customRows = normaliseRoleRows(value, aircraftCrewComposition);
+  const normalisedPresetRows = normalised.mode === "custom" ? normaliseCrewRequirement({ mode: "custom", roles: customRows }).roles || [] : [];
+  const selectedPresetValue = normalised.mode === "aircraft_default" ? crewRequirementPresets.find((preset) => preset.kind === "standard")?.id || "aircraft_default" : crewRequirementPresets.find((preset) => preset.kind === "alternate" && getCrewRolesSignature(preset.roles) === getCrewRolesSignature(normalisedPresetRows))?.id || "custom";
   const getRoleOptionsForRow = (row) => getCrewRequirementOptions(crewPositionTerminology, operationalModel2, getCrewRequirementRoleOptions(row));
   const setMode = (mode) => {
     if (mode === "aircraft_default") {
@@ -4958,6 +5036,25 @@ const CrewRequirementEditor = ({
     onChange({
       mode: "custom",
       roles: customRows.length > 0 ? customRows : [{ role: roleOptions[0]?.value || "Pilot", crewPositionId: roleOptions[0]?.id, count: 1 }]
+    });
+  };
+  const setPreset = (presetId) => {
+    if (presetId === "custom") {
+      setMode("custom");
+      return;
+    }
+    const preset = crewRequirementPresets.find((candidate) => candidate.id === presetId);
+    if (!preset || preset.kind === "standard") {
+      onChange({ mode: "aircraft_default" });
+      return;
+    }
+    const presetRows = normaliseCrewRequirement({
+      mode: "custom",
+      roles: preset.roles || []
+    }).roles || [];
+    onChange({
+      mode: "custom",
+      roles: presetRows.length > 0 ? presetRows : [{ role: roleOptions[0]?.value || "Pilot", crewPositionId: roleOptions[0]?.id, count: 1 }]
     });
   };
   const updateRole = (index, updates) => {
@@ -4986,7 +5083,18 @@ const CrewRequirementEditor = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-100", children: "Crew Required" }),
         !compact && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 break-words text-slate-400", children: effectiveSummary })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      crewRequirementPresets.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "select",
+        {
+          value: selectedPresetValue,
+          onChange: (event) => setPreset(event.target.value),
+          className: `${compact ? "w-full max-w-[13rem]" : ""} rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white focus:ring-cyan-500`,
+          children: [
+            crewRequirementPresets.map((preset) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: preset.id, children: preset.label }, preset.id)),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "custom", children: "Custom crew" })
+          ]
+        }
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "select",
         {
           value: normalised.mode,
@@ -25877,6 +25985,8 @@ const ConfigCapacityInfoHint = ({ definition }) => {
 };
 const TASKING_REQUEST_STORAGE_KEY$1 = "neoTaskingRequests";
 const TASKING_REQUESTS_UPDATED_EVENT$1 = "neoTaskingRequestsUpdated";
+const normaliseTaskingUnitCode = (value) => String(value || "").trim().toUpperCase();
+const splitTaskingCompositeUnitCode = (value) => normaliseTaskingUnitCode(value).split(/[+/]/).map((code) => code.trim()).filter(Boolean);
 const AircraftConfigSelect = ({ value, definitions, disabled = false, includeAny = false, onChange }) => {
   const selectedValue = value || BASE_AIRCRAFT_CONFIG.id;
   const selectedDefinition = definitions.find((definition) => definition.id === selectedValue);
@@ -26094,6 +26204,7 @@ const TaskingRequestTable = ({
   operationalModelLabel,
   isSingleSeatAircraft,
   aircraftCrewComposition,
+  crewRequirementPresets,
   crewPositionTerminology,
   unitCallsignEntries,
   callsignNumberOptions,
@@ -26281,6 +26392,7 @@ const TaskingRequestTable = ({
           {
             value: request.crewRequirement,
             aircraftCrewComposition,
+            crewRequirementPresets,
             crewPositionTerminology,
             operationalModel: operationalModel2,
             compact: true,
@@ -26433,7 +26545,9 @@ const PrioritiesView = ({
   onUpdateFixedCrewTrainingPriorities,
   isSingleSeatAircraft = false,
   aircraftCrewComposition,
+  aircraftTypeCode,
   crewPositionTerminology,
+  crewCompositionSettings,
   unitCallsignSettings
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
@@ -26467,6 +26581,46 @@ const PrioritiesView = ({
     const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
   }, [activeUnitCode, activeUnitCodes]);
+  const crewRequirementPresets = reactExports.useMemo(() => {
+    const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
+    const contextCodes = Array.from(activeUnitCodeSet);
+    const activeAircraftTypeCode = String(aircraftTypeCode || "").trim().toUpperCase();
+    const compositeCodes = new Set([
+      normaliseTaskingUnitCode(activeUnitCode),
+      contextCodes.join("+"),
+      contextCodes.join("/")
+    ].filter(Boolean));
+    const appliesToActiveContext = (unitCode, compositeUnitCode) => {
+      const profileUnitCode = normaliseTaskingUnitCode(unitCode);
+      if (profileUnitCode && contextCodes.length > 0) return contextCodes.includes(profileUnitCode);
+      const profileCompositeCode = normaliseTaskingUnitCode(compositeUnitCode);
+      if (!profileCompositeCode) return !profileUnitCode;
+      if (compositeCodes.has(profileCompositeCode)) return true;
+      const profileCompositeParts = splitTaskingCompositeUnitCode(profileCompositeCode);
+      return profileCompositeParts.length > 0 && profileCompositeParts.every((code) => contextCodes.includes(code));
+    };
+    const profileModel = String(operationalModel2 || "").trim().toLowerCase();
+    const alternatePresets = settings.alternateCompositions.filter((profile) => profile.status !== "INACTIVE").filter((profile) => !profile.aircraftTypeCode || !activeAircraftTypeCode || profile.aircraftTypeCode === activeAircraftTypeCode).filter((profile) => !profile.operationalModels.length || profile.operationalModels.includes(profileModel)).filter((profile) => appliesToActiveContext(profile.unitCode, profile.compositeUnitCode)).map((profile) => ({
+      id: `alternate:${profile.id}`,
+      label: `${profile.code} - ${profile.name}`,
+      description: profile.description,
+      kind: "alternate",
+      roles: profile.roleRequirements.map((role) => ({
+        role: role.role,
+        count: role.count,
+        eligibleRoles: [role.role]
+      }))
+    }));
+    return [
+      {
+        id: "standard-aircraft-crew",
+        label: `Standard ${activeAircraftTypeCode || "Aircraft"} Crew`,
+        description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
+        kind: "standard"
+      },
+      ...alternatePresets
+    ];
+  }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel2]);
   const activeCallsignUnitCodes = reactExports.useMemo(() => {
     const contextCodes = Array.from(activeUnitCodeSet);
     if (contextCodes.length > 0) return contextCodes;
@@ -28401,6 +28555,7 @@ const PrioritiesView = ({
             operationalModelLabel,
             isSingleSeatAircraft,
             aircraftCrewComposition,
+            crewRequirementPresets,
             crewPositionTerminology,
             unitCallsignEntries,
             callsignNumberOptions,
@@ -32978,17 +33133,17 @@ const TrainingIntelligenceTab = () => {
     ] })
   ] }) });
 };
-const normaliseCode$1 = (value) => String(value || "").trim().toUpperCase();
+const normaliseCode = (value) => String(value || "").trim().toUpperCase();
 const getTrainingCodeFromItem = (item) => (item.courses || []).find(Boolean) || item.code || "";
 const getTrainingTitleFromItem = (item, fallback) => item.module && item.module !== fallback ? item.module : item.eventDescription || fallback;
 const matchesTrainingAssignment = (item, kind, code, unitCode) => {
   const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
   if (itemKind !== kind) return false;
-  const itemCode = normaliseCode$1(getTrainingCodeFromItem(item));
-  const assignmentCode = normaliseCode$1(code);
-  if (itemCode !== assignmentCode && !normaliseCode$1(item.code).startsWith(assignmentCode)) return false;
-  const itemUnit = normaliseCode$1(item.unit);
-  const assignmentUnit = normaliseCode$1(unitCode);
+  const itemCode = normaliseCode(getTrainingCodeFromItem(item));
+  const assignmentCode = normaliseCode(code);
+  if (itemCode !== assignmentCode && !normaliseCode(item.code).startsWith(assignmentCode)) return false;
+  const itemUnit = normaliseCode(item.unit);
+  const assignmentUnit = normaliseCode(unitCode);
   return !assignmentUnit || !itemUnit || itemUnit === assignmentUnit;
 };
 const AirCombatTrainingAnalyticsTab = ({
@@ -32998,12 +33153,12 @@ const AirCombatTrainingAnalyticsTab = ({
 }) => {
   const activeUnitCodes = reactExports.useMemo(() => {
     const rawCodes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
-    return new Set(rawCodes.map(normaliseCode$1).filter(Boolean));
+    return new Set(rawCodes.map(normaliseCode).filter(Boolean));
   }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
   const streams = reactExports.useMemo(() => {
     const streamMap = /* @__PURE__ */ new Map();
     const ensureStream = (kind, code, title) => {
-      const normalisedCode = normaliseCode$1(code);
+      const normalisedCode = normaliseCode(code);
       const key = `${kind}:${normalisedCode}`;
       if (!streamMap.has(key)) {
         streamMap.set(key, {
@@ -33019,11 +33174,11 @@ const AirCombatTrainingAnalyticsTab = ({
       return streamMap.get(key);
     };
     instructorsData.forEach((staff) => {
-      const staffUnit = normaliseCode$1(staff.unit);
+      const staffUnit = normaliseCode(staff.unit);
       if (activeUnitCodes.size > 0 && staffUnit && !activeUnitCodes.has(staffUnit)) return;
       const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
       [...assignments.courses, ...assignments.trainingPackages].forEach((assignment) => {
-        const assignmentUnit = normaliseCode$1(assignment.unitCode || staffUnit);
+        const assignmentUnit = normaliseCode(assignment.unitCode || staffUnit);
         if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return;
         const stream = ensureStream(assignment.kind, assignment.code, assignment.title);
         stream.assignedStaff.add(staff.name);
@@ -33031,7 +33186,7 @@ const AirCombatTrainingAnalyticsTab = ({
       normaliseAirCombatTrainingReports(staff.preferences).forEach((report) => {
         if (report.status && report.status !== "Complete") return;
         if (!report.trainingKind || !report.trainingCode) return;
-        const reportUnit = normaliseCode$1(report.unitCode || staffUnit);
+        const reportUnit = normaliseCode(report.unitCode || staffUnit);
         if (activeUnitCodes.size > 0 && reportUnit && !activeUnitCodes.has(reportUnit)) return;
         const stream = ensureStream(report.trainingKind, report.trainingCode, report.trainingTitle || report.trainingCode);
         stream.completedReports += 1;
@@ -53111,73 +53266,6 @@ const AppearanceSettings = ({
       ] })
     ] })
   ] });
-};
-const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "air_mobility"];
-const normaliseCode = (value, fallback) => {
-  const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
-  return token || fallback.slice(0, 3);
-};
-const nextAvailableThreeLetterCode = (baseCode, usedCodes) => {
-  if (!usedCodes.has(baseCode)) return baseCode;
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const prefix = (baseCode.slice(0, 2) || "AL").padEnd(2, "A");
-  for (const letter of alphabet) {
-    const candidate = `${prefix}${letter}`;
-    if (!usedCodes.has(candidate)) return candidate;
-  }
-  return baseCode;
-};
-const normaliseRoleRequirements = (value) => {
-  const rows = Array.isArray(value) ? value : [];
-  const merged = /* @__PURE__ */ new Map();
-  rows.forEach((row) => {
-    const role = String(row?.role || "").trim();
-    if (!role) return;
-    const key = role.toUpperCase();
-    const count = Math.max(1, Math.min(24, Math.round(Number(row?.count) || 1)));
-    const current = merged.get(key);
-    merged.set(key, {
-      role: current?.role || role,
-      count: Math.min(24, (current?.count || 0) + count)
-    });
-  });
-  return Array.from(merged.values());
-};
-const normaliseCrewCompositionSettings = (value) => {
-  const source = value && typeof value === "object" ? value : {};
-  const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
-  const usedCodesByScope = /* @__PURE__ */ new Map();
-  const alternateCompositions = rows.map((row, index) => {
-    const fallbackCode = `ALT-${index + 1}`;
-    const unitCode = String(row?.unitCode || "").trim().toUpperCase();
-    const compositeUnitCode = String(row?.compositeUnitCode || "").trim().toUpperCase();
-    const codeScope = unitCode || compositeUnitCode || "GLOBAL";
-    const usedCodes = usedCodesByScope.get(codeScope) || /* @__PURE__ */ new Set();
-    usedCodesByScope.set(codeScope, usedCodes);
-    let code = normaliseCode(row?.code || row?.name, fallbackCode);
-    code = nextAvailableThreeLetterCode(code, usedCodes);
-    usedCodes.add(code);
-    const operationalModels = Array.isArray(row?.operationalModels) ? row.operationalModels.filter((model) => SUPPORTED_MODELS.includes(model)) : SUPPORTED_MODELS;
-    return {
-      id: String(row?.id || `alternate-crew-${index + 1}`),
-      code,
-      unitCode,
-      compositeUnitCode,
-      compositeProfileId: String(row?.compositeProfileId || "").trim(),
-      aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
-      name: String(row?.name || "").trim() ? String(row?.name || "") : code,
-      description: String(row?.description || ""),
-      operationalModels: operationalModels.length > 0 ? operationalModels : SUPPORTED_MODELS,
-      roleRequirements: normaliseRoleRequirements(row?.roleRequirements),
-      status: String(row?.status || "ACTIVE").trim().toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
-    };
-  });
-  return { alternateCompositions };
-};
-const createAlternateCrewCompositionCode = (existingProfiles, name) => {
-  const usedCodes = new Set(existingProfiles.map((profile) => profile.code.toUpperCase()));
-  const base = normaliseCode(name, `ALT-${existingProfiles.length + 1}`);
-  return nextAvailableThreeLetterCode(base, usedCodes);
 };
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
@@ -84056,6 +84144,10 @@ const App = () => {
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
     return normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
   }, [platformConfig]);
+  const activeCrewCompositionSettings = reactExports.useMemo(() => {
+    const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+    return normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
+  }, [platformConfig]);
   const activeStaffQualificationCatalogue = reactExports.useMemo(() => {
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
     return normaliseStaffQualificationCatalogue(activeOrganisation?.settings?.staffQualificationCatalogue || null);
@@ -95867,7 +95959,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             activeScheduleEvents: Object.values(publishedSchedules).flat(),
             isSingleSeatAircraft: activeAircraftCrewComposition.crewCount === 1,
             aircraftCrewComposition: activeAircraftCrewComposition,
+            aircraftTypeCode: activeRuntimeAircraftTypeCode,
             crewPositionTerminology: activeCrewPositionTerminology,
+            crewCompositionSettings: activeCrewCompositionSettings,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             unitCallsignSettings: activeUnitCallsignSettings,
             onAddPriorityEvents: (eventsToAdd) => {

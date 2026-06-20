@@ -63,6 +63,7 @@ import {
     normaliseCrewPositionTerminology,
     type CrewPositionTerminology,
 } from './utils/crewPositionTerminology';
+import { normaliseCrewCompositionSettings } from './utils/crewCompositionProfiles';
 import {
     getQualificationsForOperationalModel,
     normaliseAssignedQualificationIds,
@@ -18958,6 +18959,12 @@ const App: React.FC = () => {
         )) || platformConfig?.organisations?.[0];
         return normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
     }, [platformConfig]);
+    const activeCrewCompositionSettings = useMemo(() => {
+        const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
+            String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+        )) || platformConfig?.organisations?.[0];
+        return normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
+    }, [platformConfig]);
     const activeStaffQualificationCatalogue = useMemo(() => {
         const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
             String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
@@ -33691,7 +33698,9 @@ appliedUpdates.forEach(update => {
                     activeScheduleEvents={Object.values(publishedSchedules).flat()}
                     isSingleSeatAircraft={activeAircraftCrewComposition.crewCount === 1}
                     aircraftCrewComposition={activeAircraftCrewComposition}
+                    aircraftTypeCode={activeRuntimeAircraftTypeCode}
                     crewPositionTerminology={activeCrewPositionTerminology}
+                    crewCompositionSettings={activeCrewCompositionSettings}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     onAddPriorityEvents={(eventsToAdd) => {

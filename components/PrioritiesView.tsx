@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest, FlyingWindowExclusionPeriod, FlyingWindowExclusionRestriction, CrewRequirement } from '../types';
 import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import AuditButton from './AuditButton';
-import CrewRequirementEditor from './CrewRequirementEditor';
+import CrewRequirementEditor, { type CrewRequirementPreset } from './CrewRequirementEditor';
 import { logAudit } from '../utils/auditLogger';
 import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -29,6 +29,10 @@ import { isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { formatCrewRequirementSummary } from '../utils/crewRequirements';
+import {
+  normaliseCrewCompositionSettings,
+  type CrewCompositionSettings,
+} from '../utils/crewCompositionProfiles';
 import {
   buildUnitEventCallsign,
   formatUnitCallsignNumber,
@@ -243,7 +247,9 @@ interface PrioritiesViewProps {
   onUpdateFixedCrewTrainingPriorities?: (priorities: FixedCrewTrainingStreamPriority[]) => void;
   isSingleSeatAircraft?: boolean;
   aircraftCrewComposition?: AircraftCrewComposition;
+  aircraftTypeCode?: string | null;
   crewPositionTerminology?: CrewPositionTerminology;
+  crewCompositionSettings?: CrewCompositionSettings;
   unitCallsignSettings?: UnitCallsignSettings;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
@@ -268,6 +274,17 @@ const ConfigCapacityInfoHint: React.FC<{ definition: AircraftConfigurationDefini
 
 const TASKING_REQUEST_STORAGE_KEY = 'neoTaskingRequests';
 const TASKING_REQUESTS_UPDATED_EVENT = 'neoTaskingRequestsUpdated';
+
+const normaliseTaskingUnitCode = (value?: string | null): string => (
+  String(value || '').trim().toUpperCase()
+);
+
+const splitTaskingCompositeUnitCode = (value?: string | null): string[] => (
+  normaliseTaskingUnitCode(value)
+    .split(/[+/]/)
+    .map(code => code.trim())
+    .filter(Boolean)
+);
 
 const AircraftConfigSelect: React.FC<{
   value?: string;
@@ -612,6 +629,7 @@ interface TaskingRequestTableProps {
   operationalModelLabel: string;
   isSingleSeatAircraft: boolean;
   aircraftCrewComposition?: AircraftCrewComposition;
+  crewRequirementPresets?: CrewRequirementPreset[];
   crewPositionTerminology?: CrewPositionTerminology;
   unitCallsignEntries: UnitCallsignEntry[];
   callsignNumberOptions: Array<{ value: number; label: string }>;
@@ -654,6 +672,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   operationalModelLabel,
   isSingleSeatAircraft,
   aircraftCrewComposition,
+  crewRequirementPresets,
   crewPositionTerminology,
   unitCallsignEntries,
   callsignNumberOptions,
@@ -847,6 +866,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
               <CrewRequirementEditor
                 value={request.crewRequirement}
                 aircraftCrewComposition={aircraftCrewComposition}
+                crewRequirementPresets={crewRequirementPresets}
                 crewPositionTerminology={crewPositionTerminology}
                 operationalModel={operationalModel}
                 compact
@@ -993,7 +1013,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onUpdateFixedCrewTrainingPriorities,
   isSingleSeatAircraft = false,
   aircraftCrewComposition,
+  aircraftTypeCode,
   crewPositionTerminology,
+  crewCompositionSettings,
   unitCallsignSettings,
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
@@ -1037,6 +1059,52 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || '').split('+');
     return new Set(codes.map(code => String(code || '').trim().toUpperCase()).filter(Boolean));
   }, [activeUnitCode, activeUnitCodes]);
+  const crewRequirementPresets = useMemo<CrewRequirementPreset[]>(() => {
+    const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
+    const contextCodes = Array.from(activeUnitCodeSet);
+    const activeAircraftTypeCode = String(aircraftTypeCode || '').trim().toUpperCase();
+    const compositeCodes = new Set<string>([
+      normaliseTaskingUnitCode(activeUnitCode),
+      contextCodes.join('+'),
+      contextCodes.join('/'),
+    ].filter(Boolean));
+    const appliesToActiveContext = (unitCode?: string, compositeUnitCode?: string): boolean => {
+      const profileUnitCode = normaliseTaskingUnitCode(unitCode);
+      if (profileUnitCode && contextCodes.length > 0) return contextCodes.includes(profileUnitCode);
+      const profileCompositeCode = normaliseTaskingUnitCode(compositeUnitCode);
+      if (!profileCompositeCode) return !profileUnitCode;
+      if (compositeCodes.has(profileCompositeCode)) return true;
+      const profileCompositeParts = splitTaskingCompositeUnitCode(profileCompositeCode);
+      return profileCompositeParts.length > 0 && profileCompositeParts.every(code => contextCodes.includes(code));
+    };
+    const profileModel = String(operationalModel || '').trim().toLowerCase();
+    const alternatePresets = settings.alternateCompositions
+      .filter(profile => profile.status !== 'INACTIVE')
+      .filter(profile => !profile.aircraftTypeCode || !activeAircraftTypeCode || profile.aircraftTypeCode === activeAircraftTypeCode)
+      .filter(profile => !profile.operationalModels.length || profile.operationalModels.includes(profileModel as any))
+      .filter(profile => appliesToActiveContext(profile.unitCode, profile.compositeUnitCode))
+      .map((profile): CrewRequirementPreset => ({
+        id: `alternate:${profile.id}`,
+        label: `${profile.code} - ${profile.name}`,
+        description: profile.description,
+        kind: 'alternate',
+        roles: profile.roleRequirements.map(role => ({
+          role: role.role,
+          count: role.count,
+          eligibleRoles: [role.role],
+        })),
+      }));
+
+    return [
+      {
+        id: 'standard-aircraft-crew',
+        label: `Standard ${activeAircraftTypeCode || 'Aircraft'} Crew`,
+        description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
+        kind: 'standard',
+      },
+      ...alternatePresets,
+    ];
+  }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel]);
   const activeCallsignUnitCodes = useMemo(() => {
     const contextCodes = Array.from(activeUnitCodeSet);
     if (contextCodes.length > 0) return contextCodes;
@@ -3319,6 +3387,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               operationalModelLabel={operationalModelLabel}
               isSingleSeatAircraft={isSingleSeatAircraft}
               aircraftCrewComposition={aircraftCrewComposition}
+              crewRequirementPresets={crewRequirementPresets}
               crewPositionTerminology={crewPositionTerminology}
               unitCallsignEntries={unitCallsignEntries}
               callsignNumberOptions={callsignNumberOptions}
