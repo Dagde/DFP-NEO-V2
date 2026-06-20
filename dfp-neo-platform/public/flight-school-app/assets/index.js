@@ -56948,12 +56948,27 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No currency profiles configured." }) : activeCurrencyProfiles.map((profile) => {
+            const profileCrewOptions = getStandardMissionCrewOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode).map((option) => option.label).filter(Boolean);
+            const crewOptions = Array.from(new Set([
+              profile.crew,
+              ...profileCrewOptions
+            ].map((option) => String(option || "").trim()).filter(Boolean)));
             const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
             const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
             const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency) ? activeCurrencyDefinitionNames : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Profile Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { name: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Crew", value: profile.crew, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                OffsetField,
+                {
+                  label: "Crew",
+                  value: profile.crew,
+                  disabled: !canEditCrewComposition,
+                  onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }),
+                  listId: `currency-profile-crew-options-${profile.id}`,
+                  options: crewOptions
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEditCrewComposition, options: configOptions, onChange: (value) => updateCurrencyProfile(profile.id, { config: value || "ANY" }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 SelectField,
@@ -59241,19 +59256,23 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }) => /* @__P
     maxLength
   ] }) : null
 ] });
-const OffsetField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const OffsetField = ({ label, value, disabled, onChange, listId, options = [] }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      className: fieldClass,
-      value: value || "",
-      disabled,
-      onKeyDownCapture: stopEditableKeyPropagation,
-      onKeyDown: stopEditableKeyPropagation,
-      onChange: (event) => onChange(event.target.value)
-    }
-  ) })
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-[15px]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: fieldClass,
+        value: value || "",
+        disabled,
+        list: listId,
+        onKeyDownCapture: stopEditableKeyPropagation,
+        onKeyDown: stopEditableKeyPropagation,
+        onChange: (event) => onChange(event.target.value)
+      }
+    ),
+    listId && options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: listId, children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option }, option)) }) : null
+  ] })
 ] });
 const parseCommaListFieldValue = (value) => value.split(",").map((item) => item.trim()).filter(Boolean);
 const formatCommaListFieldValue = (value) => value.map((item) => String(item || "").trim()).filter(Boolean).join(", ");

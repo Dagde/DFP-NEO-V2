@@ -4460,6 +4460,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               {activeCurrencyProfiles.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No currency profiles configured.</div>
               ) : activeCurrencyProfiles.map((profile) => {
+                const profileCrewOptions = getStandardMissionCrewOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode)
+                  .map((option) => option.label)
+                  .filter(Boolean);
+                const crewOptions = Array.from(new Set([
+                  profile.crew,
+                  ...profileCrewOptions,
+                ].map((option) => String(option || '').trim()).filter(Boolean)));
                 const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
                 const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
                 const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency)
@@ -4468,7 +4475,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 return (
                 <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]">
                   <OffsetField label="Profile Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { name: value })} />
-                  <OffsetField label="Crew" value={profile.crew} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })} />
+                  <OffsetField
+                    label="Crew"
+                    value={profile.crew}
+                    disabled={!canEditCrewComposition}
+                    onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })}
+                    listId={`currency-profile-crew-options-${profile.id}`}
+                    options={crewOptions}
+                  />
                   <div className="[&_select]:mt-[15px]">
                     <SelectField label="CONFIG" value={profile.config || 'ANY'} disabled={!canEditCrewComposition} options={configOptions} onChange={(value) => updateCurrencyProfile(profile.id, { config: value || 'ANY' })} />
                   </div>
@@ -6779,7 +6793,7 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: s
   </label>
 );
 
-const OffsetField = ({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) => (
+const OffsetField = ({ label, value, disabled, onChange, listId, options = [] }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; listId?: string; options?: string[] }) => (
   <label>
     <FieldLabel label={label} />
     <div className="mt-[15px]">
@@ -6787,10 +6801,16 @@ const OffsetField = ({ label, value, disabled, onChange }: { label: string; valu
         className={fieldClass}
         value={value || ''}
         disabled={disabled}
+        list={listId}
         onKeyDownCapture={stopEditableKeyPropagation}
         onKeyDown={stopEditableKeyPropagation}
         onChange={(event) => onChange(event.target.value)}
       />
+      {listId && options.length > 0 ? (
+        <datalist id={listId}>
+          {options.map((option) => <option key={option} value={option} />)}
+        </datalist>
+      ) : null}
     </div>
   </label>
 );
