@@ -936,7 +936,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
         </div>
       );
     })}
-    <button onClick={onAddTaskingRequest} className="px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold">+ Add Request</button>
+    <button onClick={onAddTaskingRequest} className="btn-aluminium-brushed flex h-[41px] min-w-[104px] items-center justify-center rounded-md px-3 py-1 text-center text-[10px] font-semibold">+ Add Request</button>
   </div>
 );
 
@@ -2492,19 +2492,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         }
     };
 
-    const formatDate = (dateString: string | undefined): string => {
-        if (!dateString) return '-';
-        try {
-            const date = new Date(dateString + 'T00:00:00Z');
-            if (isNaN(date.getTime())) return '-';
-            const day = String(date.getUTCDate()).padStart(2, '0');
-            const month = date.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
-            const year = String(date.getUTCFullYear()).slice(-2);
-            return `${day}${month}${year}`;
-        } catch (e) {
-            return '-';
-        }
-    };
+    const addRequestButtonClass = 'btn-aluminium-brushed flex h-[41px] min-w-[104px] items-center justify-center rounded-md px-3 py-1 text-center text-[10px] font-semibold';
+    const statusButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed';
     
       return (
       <div>
@@ -2555,7 +2544,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </div>
                               </div>
                           </div>
-                          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(12rem,1.25fr)_minmax(9rem,0.95fr)_minmax(7rem,0.65fr)_minmax(7rem,0.65fr)_minmax(12rem,1fr)]">
+                          <div className="mt-3 grid items-end gap-3 lg:grid-cols-[minmax(12rem,1.25fr)_minmax(9rem,0.95fr)_minmax(7rem,0.65fr)_minmax(7rem,0.65fr)_minmax(8rem,0.7fr)_auto_auto]">
                               <div className={fieldShellClass}>
                                   <div className={fieldLabelClass}>Currency</div>
                                   <CurrencySelect request={req} type={type} />
@@ -2575,41 +2564,35 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </div>
                               </div>
                               <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Status / Submit</div>
-                                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2">
-                                      <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className={controlClass}>
-                                          <option value="High">High</option>
-                                          <option value="Medium">Medium</option>
-                                          <option value="Low">Low</option>
-                                      </select>
-                                      {req.submitted ? (
-                                          <span className="rounded border border-green-500/30 bg-green-500/10 px-2 py-1 text-xs font-semibold text-green-300">Submitted</span>
-                                      ) : (
-                                          <button
-                                              onClick={() => {
-                                                  if (req.name && req.event) {
-                                                      onSubmitSctRequest(req.id, type);
-                                                  }
-                                              }}
-                                              disabled={!req.name || !req.event}
-                                              className={`rounded px-2 py-1 text-xs font-semibold ${
-                                                  req.name && req.event
-                                                      ? 'bg-green-600 text-white hover:bg-green-700'
-                                                      : 'cursor-not-allowed bg-gray-600 text-gray-400'
-                                              }`}
-                                          >
-                                              Submit
-                                          </button>
-                                      )}
-                                      <button onClick={() => onRemoveSctRequest(req.id, type)} className="p-1 text-gray-400 hover:text-red-400" aria-label="Remove crew currency request"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
-                                  </div>
+                                  <div className={fieldLabelClass}>Priority</div>
+                                  <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className={controlClass}>
+                                      <option value="High">High</option>
+                                      <option value="Medium">Medium</option>
+                                      <option value="Low">Low</option>
+                                  </select>
                               </div>
+                              {req.submitted ? (
+                                  <span className={`${statusButtonClass} text-green-400`}>Submitted</span>
+                              ) : (
+                                  <button
+                                      onClick={() => {
+                                          if (req.name && req.event) {
+                                              onSubmitSctRequest(req.id, type);
+                                          }
+                                      }}
+                                      disabled={!req.name || !req.event}
+                                      className={`${statusButtonClass} ${req.name && req.event ? 'text-slate-900' : 'text-gray-500'}`}
+                                  >
+                                      Submit
+                                  </button>
+                              )}
+                              <button onClick={() => onRemoveSctRequest(req.id, type)} className="flex h-[41px] w-6 items-center justify-center text-gray-400 hover:text-red-400" aria-label="Remove crew currency request"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
                           </div>
                       </div>
                   );
               })}
           </div>
-          <button onClick={() => onAddSctRequest(type)} className="mt-2 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold">+ Add Request</button>
+          <button onClick={() => onAddSctRequest(type)} className={`mt-2 ${addRequestButtonClass}`}>+ Add Request</button>
       </div>
   )};
 
