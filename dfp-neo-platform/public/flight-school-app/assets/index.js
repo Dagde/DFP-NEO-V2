@@ -26468,7 +26468,11 @@ const TaskingRequestTable = ({
       ] })
     ] }, request.id);
   }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onAddTaskingRequest, className: "btn-aluminium-brushed flex h-[41px] min-w-[104px] items-center justify-center rounded-md px-3 py-1 text-center text-[10px] font-semibold", children: "+ Add Request" })
+  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onAddTaskingRequest, className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+    "+ Add",
+    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+    "Request"
+  ] }) })
 ] });
 const PrioritiesView = ({
   school = "ESL",
@@ -27762,7 +27766,7 @@ const PrioritiesView = ({
         return null;
       }
     };
-    const addRequestButtonClass = "btn-aluminium-brushed flex h-[41px] min-w-[104px] items-center justify-center rounded-md px-3 py-1 text-center text-[10px] font-semibold";
+    const addRequestButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight";
     const statusButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed";
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-400 mb-2", children: type === "flight" ? "Flights" : ftdLabel }),
@@ -27803,7 +27807,7 @@ const PrioritiesView = ({
               ) })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid items-end gap-3 lg:grid-cols-[minmax(12rem,1.25fr)_minmax(9rem,0.95fr)_minmax(7rem,0.65fr)_minmax(7rem,0.65fr)_minmax(8rem,0.7fr)_auto_auto]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid items-end gap-3 lg:grid-cols-[minmax(12rem,1.25fr)_minmax(9rem,0.95fr)_minmax(7rem,0.65fr)_minmax(7rem,0.65fr)_minmax(8rem,0.7fr)_auto]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Currency" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(CurrencySelect, { request: req, type })
@@ -27828,24 +27832,28 @@ const PrioritiesView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
               ] })
             ] }),
-            req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${statusButtonClass} text-green-400`, children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => {
-                  if (req.name && req.event) {
-                    onSubmitSctRequest(req.id, type);
-                  }
-                },
-                disabled: !req.name || !req.event,
-                className: `${statusButtonClass} ${req.name && req.event ? "text-slate-900" : "text-gray-500"}`,
-                children: "Submit"
-              }
-            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveSctRequest(req.id, type), className: "flex h-[41px] w-6 items-center justify-center text-gray-400 hover:text-red-400", "aria-label": "Remove crew currency request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) })
-          ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex justify-end", children: req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${statusButtonClass} text-green-400`, children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => {
+                if (req.name && req.event) {
+                  onSubmitSctRequest(req.id, type);
+                }
+              },
+              disabled: !req.name || !req.event,
+              className: `${statusButtonClass} ${req.name && req.event ? "text-slate-900" : "text-gray-500"}`,
+              children: "Submit"
+            }
+          ) })
         ] }, req.id);
       }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddSctRequest(type), className: `mt-2 ${addRequestButtonClass}`, children: "+ Add Request" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddSctRequest(type), className: `mt-2 ${addRequestButtonClass}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+        "+ Add",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+        "Request"
+      ] }) })
     ] });
   };
   const standardPriorityEvents = highestPriorityEvents;
