@@ -6092,6 +6092,17 @@ function generateDfpInternal(
             },
             crewGroups: [] as any[],
             queueSourceAudit: null,
+            sctCrewTrace: {
+                purpose: 'Explains why a Fixed Crew SCT/currency tile shows one crew instead of the crew selected in Specific Currency Requests.',
+                requestInputs: [] as any[],
+                priorityInputs: [] as any[],
+                activeDfpInputs: [] as any[],
+                queueInputs: [] as any[],
+                attemptsForSctEvents: [] as any[],
+                placementsForSctEvents: [] as any[],
+                finalEvents: [] as any[],
+                conclusions: [] as any[],
+            },
             queue: [] as any[],
             minuteTimeline: [] as any[],
             attempts: [] as any[],
@@ -6513,6 +6524,71 @@ function generateDfpInternal(
             const crewUnit = getFixedCrewCrewUnit(crew);
             return crewUnit ? `CREW ${crewLabel}/${crewUnit}` : `CREW ${crewLabel}`;
         };
+        const isFixedCrewSctEvent = (event: Partial<ScheduleEvent> | any): boolean => (
+            event?.isSct === true ||
+            event?.eventCategory === 'sct' ||
+            /^sct-(flight|ftd)-/.test(String(event?.id || ''))
+        );
+        const getFixedCrewSctRequestId = (event: Partial<ScheduleEvent> | any): string => {
+            const explicitId = String(event?.sctRequestId || '').trim();
+            if (explicitId) return explicitId;
+            const parsed = String(event?.id || '').match(/^sct-(?:flight|ftd)-(.+)$/);
+            return parsed?.[1] || '';
+        };
+        const summarizeFixedCrewSctRequest = (request: SctRequest, requestType: 'flight' | 'ftd') => ({
+            id: request.id,
+            requestType,
+            event: request.event,
+            eventCode: request.eventCode || null,
+            selectedCrewGroupKey: request.crewGroupKey || null,
+            selectedCrewGroup: request.crewGroup || null,
+            selectedCrewUnitCode: request.crewUnitCode || null,
+            selectedCrewDisplayLabel: request.crewDisplayLabel || null,
+            selectedIndividual: request.crewIndividual || null,
+            nameField: request.name || null,
+            crewMemberField: request.crewMember || null,
+            currency: request.currency || null,
+            submitted: request.submitted === true,
+            includeInBuild: request.includeInBuild === true,
+            priority: request.priority,
+            dateRequested: request.dateRequested || null,
+            requestedTime: request.requestedTime || null,
+        });
+        const summarizeFixedCrewSctEvent = (event: Partial<ScheduleEvent> | any, source: string) => ({
+            source,
+            id: event?.id || null,
+            sctRequestId: getFixedCrewSctRequestId(event) || null,
+            sctRequestType: event?.sctRequestType || null,
+            date: event?.date || buildDate || null,
+            flightNumber: event?.flightNumber || null,
+            type: event?.type || null,
+            startTime: event?.startTime ?? null,
+            duration: event?.duration ?? null,
+            resourceId: event?.resourceId || null,
+            fixedCrewGroup: event?.fixedCrewGroup || null,
+            fixedCrewDisplay: event?.fixedCrewGroup ? getFixedCrewDisplayCrew(String(event.fixedCrewGroup)) : null,
+            pilot: event?.pilot || null,
+            instructor: event?.instructor || null,
+            student: event?.student || null,
+            crew: event?.crew || null,
+            group: event?.group || null,
+            attendees: event?.attendees || [],
+            isTimeFixed: event?.isTimeFixed === true,
+            isSct: event?.isSct === true,
+            eventCategory: event?.eventCategory || null,
+            notes: event?.notes || null,
+            rawSource: event?._source || null,
+        });
+        diag.sctCrewTrace.requestInputs = [
+            ...(config.sctFlights || []).map(request => summarizeFixedCrewSctRequest(request, 'flight')),
+            ...(config.sctFtds || []).map(request => summarizeFixedCrewSctRequest(request, 'ftd')),
+        ];
+        diag.sctCrewTrace.priorityInputs = highestPriorityEvents
+            .filter(isFixedCrewSctEvent)
+            .map(event => summarizeFixedCrewSctEvent(event, 'highestPriorityEvents'));
+        diag.sctCrewTrace.activeDfpInputs = activeDfpEventsWithoutDate
+            .filter(isFixedCrewSctEvent)
+            .map(event => summarizeFixedCrewSctEvent(event, 'activeDfpEventsWithoutDate'));
         const staffCatalogue = config.staffQualificationCatalogue || normaliseStaffQualificationCatalogue(null);
         const picQualification = getQualificationsForOperationalModel(staffCatalogue, 'fixed_crew')
             .find(qualification => (
@@ -7036,6 +7112,11 @@ function generateDfpInternal(
                 const pic = members.find(staffHasPicQualification);
                 const attemptBase = {
                     event: event.flightNumber,
+                    eventId: event.id || null,
+                    isSct: isFixedCrewSctEvent(event),
+                    sctRequestId: getFixedCrewSctRequestId(event) || null,
+                    requestedFixedCrewGroup: event.fixedCrewGroup || null,
+                    requestedFixedCrewDisplay: event.fixedCrewGroup ? getFixedCrewDisplayCrew(String(event.fixedCrewGroup)) : null,
                     crew,
                     crewLabel: getFixedCrewCrewLabel(crew),
                     crewUnit: getFixedCrewCrewUnit(crew) || null,
@@ -7302,6 +7383,11 @@ function generateDfpInternal(
                     fixedCrewUsage.set(assignment.crew, (fixedCrewUsage.get(assignment.crew) || 0) + 1);
                     pushFixedCrewPlacement({
                         event: placed.flightNumber,
+                        eventId: placed.id || null,
+                        isSct: isFixedCrewSctEvent(placed),
+                        sctRequestId: getFixedCrewSctRequestId(placed) || null,
+                        requestedFixedCrewGroup: candidate.fixedCrewGroup || null,
+                        requestedFixedCrewDisplay: candidate.fixedCrewGroup ? getFixedCrewDisplayCrew(String(candidate.fixedCrewGroup)) : null,
                         source,
                         startTime,
                         resourceId,
@@ -7576,6 +7662,10 @@ function generateDfpInternal(
         };
         diag.queue = fixedCrewQueue.map(item => ({
             source: item.source,
+            id: item.event.id || null,
+            sctRequestId: getFixedCrewSctRequestId(item.event) || null,
+            sctRequestType: (item.event as any).sctRequestType || null,
+            isSct: isFixedCrewSctEvent(item.event),
             event: item.event.flightNumber,
             type: item.event.type,
             duration: item.event.duration,
@@ -7583,8 +7673,20 @@ function generateDfpInternal(
             postFlightTime: item.event.postEnd ?? null,
             fixedStartTime: item.fixedStartTime ?? null,
             fixedCrewUnit: (item.event as any).fixedCrewUnit || item.event.unit || null,
+            fixedCrewGroup: item.event.fixedCrewGroup || null,
+            fixedCrewDisplay: item.event.fixedCrewGroup ? getFixedCrewDisplayCrew(String(item.event.fixedCrewGroup)) : null,
+            pilot: item.event.pilot || null,
+            student: item.event.student || null,
+            crew: item.event.crew || null,
+            group: item.event.group || null,
             crewRequirement: item.event.crewRequirement || null,
         }));
+        diag.sctCrewTrace.queueInputs = fixedCrewQueue
+            .filter(item => isFixedCrewSctEvent(item.event))
+            .map(item => ({
+                ...summarizeFixedCrewSctEvent(item.event, `fixedCrewQueue:${item.source}`),
+                fixedStartTime: item.fixedStartTime ?? null,
+            }));
         recordProgress({ message: 'Scheduling Fixed Crew events...', percentage: 55 });
         const schedulingStart = fixedCrewPerfNow();
         fixedCrewQueue.forEach(item => {
@@ -17494,6 +17596,62 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     sortedEvents
         .filter(eventMatchesTaskTrace)
         .forEach(event => traceTaskProvenance('finalEvents', 'final-sorted-event', event));
+    if (neoBuildDiag.fixedCrewPriority?.sctCrewTrace) {
+        const sctTrace = neoBuildDiag.fixedCrewPriority.sctCrewTrace;
+        sctTrace.attemptsForSctEvents = (neoBuildDiag.fixedCrewPriority.attempts || [])
+            .filter((attempt: any) => attempt.isSct || attempt.sctRequestId)
+            .slice(-500);
+        sctTrace.placementsForSctEvents = (neoBuildDiag.fixedCrewPriority.placements || [])
+            .filter((placement: any) => placement.isSct || placement.sctRequestId)
+            .slice(-200);
+        sctTrace.finalEvents = sortedEvents
+            .filter(isFixedCrewSctEvent)
+            .map(event => summarizeFixedCrewSctEvent(event, 'final-sorted-events'));
+        const requestsById = new Map((sctTrace.requestInputs || []).map((request: any) => [request.id, request]));
+        sctTrace.conclusions = sctTrace.finalEvents.map((event: any) => {
+            const request = event.sctRequestId ? requestsById.get(event.sctRequestId) : null;
+            const selectedCrew = request?.selectedCrewDisplayLabel || request?.selectedCrewGroupKey || null;
+            const finalCrew = event.fixedCrewDisplay || event.student || event.crew || event.group || null;
+            const matchingQueue = (sctTrace.queueInputs || []).filter((entry: any) => (
+                (event.sctRequestId && entry.sctRequestId === event.sctRequestId) || entry.id === event.id
+            ));
+            const matchingPlacements = (sctTrace.placementsForSctEvents || []).filter((entry: any) => (
+                (event.sctRequestId && entry.sctRequestId === event.sctRequestId) || entry.eventId === event.id
+            ));
+            const matchingAttempts = (sctTrace.attemptsForSctEvents || []).filter((entry: any) => (
+                (event.sctRequestId && entry.sctRequestId === event.sctRequestId) || entry.eventId === event.id
+            ));
+            let likelyReason = 'No request found for this final SCT event; it may be a stale/preserved tile or an event created outside Specific Currency Requests.';
+            if (request && !selectedCrew) {
+                likelyReason = 'The SCT request reached NEO Build without a selected crewDisplayLabel/crewGroupKey.';
+            } else if (request && matchingQueue.length === 0) {
+                likelyReason = 'The SCT request existed, but no matching Fixed Crew queue item was found.';
+            } else if (request && selectedCrew && finalCrew && selectedCrew !== finalCrew) {
+                const placement = matchingPlacements[matchingPlacements.length - 1];
+                if (placement?.requestedFixedCrewDisplay && placement?.crew && placement.requestedFixedCrewDisplay !== finalCrew) {
+                    likelyReason = 'The allocator placement changed the displayed crew after receiving a different requested crew.';
+                } else if (matchingQueue.some((entry: any) => entry.fixedCrewDisplay && entry.fixedCrewDisplay !== selectedCrew)) {
+                    likelyReason = 'The queue item crew differs from the selected request crew before allocator placement.';
+                } else {
+                    likelyReason = 'The final tile crew differs from the selected request crew; inspect attempts/placements for the handoff point.';
+                }
+            } else if (request && selectedCrew && finalCrew === selectedCrew) {
+                likelyReason = 'Selected crew and final tile crew match.';
+            }
+            return {
+                sctRequestId: event.sctRequestId || null,
+                eventId: event.id,
+                eventCode: event.flightNumber,
+                selectedCrew,
+                finalCrew,
+                request,
+                matchingQueue,
+                matchingAttempts: matchingAttempts.slice(-80),
+                matchingPlacements,
+                likelyReason,
+            };
+        });
+    }
     if (neoBuildDiag.taskProvenance) {
         const finalWatchedEvents = sortedEvents.filter(eventMatchesTaskTrace);
         const findMatchingTrace = (event: any, entries: any[] = []) =>
