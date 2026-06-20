@@ -1104,7 +1104,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
-  const [crewCompositionPageTab, setCrewCompositionPageTab] = useState<'crew' | 'currency'>('crew');
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = useState('');
@@ -3057,6 +3056,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     await save(undefined, 'platform-crew-composition');
   };
 
+  const saveCurrencyProfilesAndKeepPosition = async () => {
+    await save(undefined, 'platform-currency-profiles');
+  };
+
   const updateStandardMissionProfiles = (profiles: StandardMissionProfile[]) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -4157,27 +4160,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             })}
           </div>
 
-          <div className="flex flex-wrap gap-2 rounded-lg border border-cyan-500/20 bg-gray-950/80 p-2">
-            {[
-              { id: 'crew' as const, label: 'Crew Composition' },
-              { id: 'currency' as const, label: 'Currency Profiles' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setCrewCompositionPageTab(tab.id)}
-                className={`rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${
-                  crewCompositionPageTab === tab.id
-                    ? 'border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]'
-                    : 'border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {crewCompositionPageTab === 'crew' && <>
           <div className="grid gap-3 md:grid-cols-3">
             <div className={`rounded-lg border px-3 py-2 ${crewCompositionUnlocked ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-gray-700 bg-gray-950/60'}`}>
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Edit State</div>
@@ -4391,45 +4373,84 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ))}
             </div>
           </div>
-          </>}
+        </div>
+      </section>
 
-          {crewCompositionPageTab === 'currency' && (
-            <div className={resourceSectionPanelClass}>
-              <div className={resourceSectionPanelHeaderClass}>
-                <div>
-                  <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Currency Profiles</h4>
-                  <p className={resourceSectionPanelHintClass}>Profiles prefill Specific Currency Requests with crew, aircraft CONFIG and currency for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
-                </div>
-                <div className="flex flex-wrap justify-end gap-[1px]">
-                  {crewCompositionUnlocked ? (
-                    <button type="button" onClick={saveCrewCompositionAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
-                  ) : null}
-                  {!crewCompositionUnlocked && canEdit ? (
-                    <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
-                  ) : null}
-                  <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className={platformActionButtonClass}>
-                    <span className="text-[9px] leading-tight">Add<br />Profile</span>
-                  </button>
-                </div>
+      <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
+        <SectionHeader
+          title="Currency Profiles"
+          subtitle="Currency profile presets for Specific Currency Requests. Profiles store crew, CONFIG and currency against the selected aircraft."
+          action={canEdit ? (
+            <div className="flex gap-2">
+              {crewCompositionUnlocked ? (
+                <>
+                  <button type="button" onClick={saveCurrencyProfilesAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+                  <button type="button" onClick={() => setCrewCompositionUnlocked(false)} disabled={saving || applyingChanges} className={platformActionButtonClass}>Exit</button>
+                </>
+              ) : (
+                <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
+              )}
+            </div>
+          ) : null}
+        />
+        <div className="space-y-4 p-4">
+          <div className="flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
+            {crewCompositionAircraftTypes.map((aircraft) => {
+              const code = String(aircraft.code || '').trim().toUpperCase();
+              const isActive = code === activeCrewCompositionAircraftCode;
+              return (
+                <button
+                  key={`currency-profile-aircraft-tab-${code || aircraft.name}`}
+                  type="button"
+                  onClick={() => setCrewCompositionAircraftCode(code)}
+                  className={`rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${
+                    isActive
+                      ? 'border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]'
+                      : 'border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                  }`}
+                >
+                  <span className="block">{code || 'Aircraft'}</span>
+                  <span className="mt-0.5 block max-w-[180px] truncate text-[10px] font-semibold normal-case tracking-normal text-gray-500">{aircraft.name || 'Unnamed aircraft type'}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className={resourceSectionPanelClass}>
+            <div className={resourceSectionPanelHeaderClass}>
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Currency Profiles</h4>
+                <p className={resourceSectionPanelHintClass}>Profiles prefill Specific Currency Requests with crew, aircraft CONFIG and currency for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
-              <div className="space-y-3">
-                {activeCurrencyProfiles.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No currency profiles configured.</div>
-                ) : activeCurrencyProfiles.map((profile) => (
-                  <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
-                    <OffsetField label="Crew" value={profile.crew} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })} />
-                    <OffsetField label="CONFIG" value={profile.config} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { config: value })} />
-                    <OffsetField label="Currency" value={profile.currency} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { currency: value })} />
-                    <div className="flex items-end">
-                      <button type="button" onClick={() => removeCurrencyProfile(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
-                        <span className="text-[9px] leading-tight text-red-600">Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex flex-wrap justify-end gap-[1px]">
+                {crewCompositionUnlocked ? (
+                  <button type="button" onClick={saveCurrencyProfilesAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+                ) : null}
+                {!crewCompositionUnlocked && canEdit ? (
+                  <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
+                ) : null}
+                <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className={platformActionButtonClass}>
+                  <span className="text-[9px] leading-tight">Add<br />Profile</span>
+                </button>
               </div>
             </div>
-          )}
+            <div className="space-y-3">
+              {activeCurrencyProfiles.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No currency profiles configured.</div>
+              ) : activeCurrencyProfiles.map((profile) => (
+                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <OffsetField label="Crew" value={profile.crew} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })} />
+                  <OffsetField label="CONFIG" value={profile.config} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { config: value })} />
+                  <OffsetField label="Currency" value={profile.currency} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { currency: value })} />
+                  <div className="flex items-end">
+                    <button type="button" onClick={() => removeCurrencyProfile(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
+                      <span className="text-[9px] leading-tight text-red-600">Delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
