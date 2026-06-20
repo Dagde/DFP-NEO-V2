@@ -27924,7 +27924,7 @@ const PrioritiesView = ({
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-400 mb-2", children: type === "flight" ? "Flights" : ftdLabel }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: requests.filter((req) => !req.submitted).map((req) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: requests.map((req) => {
         const expiryInfo = calculateDaysToExpire(req.currencyExpire);
         const fieldLabelClass = "mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500";
         const fieldShellClass = "min-w-0";
@@ -74191,6 +74191,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const parts = String(crew || "").split("::");
       return parts.length > 1 ? parts[0] : "";
     };
+    const normaliseFixedCrewGroupKey = (value) => {
+      const cleaned = String(value || "").replace(/^CREW\s*/i, "").trim().toUpperCase();
+      if (!cleaned) return "";
+      if (cleaned.includes("::")) return cleaned;
+      const displayMatch = cleaned.match(/^(.+?)\/([A-Z0-9_-]+)$/);
+      if (displayMatch) {
+        const crewLabel = displayMatch[1].replace(/^CREW\s*/i, "").trim();
+        const unitCode = displayMatch[2].trim();
+        return unitCode && crewLabel ? `${unitCode}::${crewLabel}` : cleaned;
+      }
+      return cleaned;
+    };
     const getFixedCrewDisplayCrew = (crew) => {
       const crewLabel = getFixedCrewCrewLabel(crew);
       const crewUnit = getFixedCrewCrewUnit(crew);
@@ -74561,12 +74573,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const getFixedCrewCandidateEntries = (event) => {
       const eventOwnerUnit = getFixedCrewEventOwnerUnit(event);
-      const candidates = Array.from(crewGroups.entries()).filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit)).sort(
+      const requestedCrewGroup = normaliseFixedCrewGroupKey(event.fixedCrewGroup);
+      const candidates = Array.from(crewGroups.entries()).filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit)).filter(([crew]) => !requestedCrewGroup || normaliseFixedCrewGroupKey(crew) === requestedCrewGroup).sort(
         ([leftCrew], [rightCrew]) => (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0) || leftCrew.localeCompare(rightCrew, void 0, { numeric: true })
       );
       if (fixedCrewUsesSharedUnitContext && eventOwnerUnit) {
         fixedCrewPerf.counters.ownerUnitRestrictedCrewSelections += 1;
         fixedCrewPerf.counters.ownerUnitFilteredCrewCandidates += Math.max(0, crewGroups.size - candidates.length);
+      }
+      if (requestedCrewGroup && candidates.length === 0) {
+        pushFixedCrewAttempt({
+          event: event.flightNumber,
+          requestedCrewGroup,
+          ownerUnit: eventOwnerUnit || null,
+          outcome: "rejected",
+          reason: "REQUESTED_CREW_GROUP_NOT_AVAILABLE"
+        });
       }
       return candidates;
     };
@@ -91315,6 +91337,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           startTime,
           flightType: sctReq.flightType,
           soloOrDual: sctReq.flightType,
+          sctRequestId: sctReq.id,
+          sctRequestType: "flight",
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
           aircraftConfigId,
@@ -91359,6 +91383,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           isSct: true,
           eventCategory: "sct",
           // This is the key field that makes it use SCT logic
+          sctRequestId: sctReq.id,
+          sctRequestType: "flight",
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
           aircraftConfigId,
@@ -91399,6 +91425,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           startTime,
           flightType: "Dual",
           soloOrDual: "Dual",
+          sctRequestId: sctReq.id,
+          sctRequestType: "ftd",
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
@@ -91440,6 +91468,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           isSct: true,
           eventCategory: "sct",
           // This is the key field that makes it use SCT logic
+          sctRequestId: sctReq.id,
+          sctRequestType: "ftd",
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
@@ -93212,6 +93242,30 @@ ${conflictLines.join("\n")}${moreText}`,
     });
     console.log("[PUBLISH] nextDayBuildEvents:", nextDayBuildEvents.length, "→ after dedup:", dedupedBuildEvents.length);
     const newEventsForDate = dedupedBuildEvents.map((e) => ({ ...e, date: buildDfpDate }));
+    const publishedSctRequestIdsByType = newEventsForDate.reduce((map, event) => {
+      const explicitId = String(event.sctRequestId || "").trim();
+      const parsedMatch = !explicitId ? String(event.id || "").match(/^sct-(flight|ftd)-(.+)$/) : null;
+      const requestId = explicitId || parsedMatch?.[2] || "";
+      const requestType = String(event.sctRequestType || parsedMatch?.[1] || "").trim();
+      if (!requestId || requestType !== "flight" && requestType !== "ftd") return map;
+      map[requestType].add(requestId);
+      return map;
+    }, { flight: /* @__PURE__ */ new Set(), ftd: /* @__PURE__ */ new Set() });
+    const publishedSctRequestIds = [
+      ...Array.from(publishedSctRequestIdsByType.flight),
+      ...Array.from(publishedSctRequestIdsByType.ftd)
+    ];
+    if (publishedSctRequestIdsByType.flight.size > 0) {
+      setSctFlights((prev) => prev.filter((request) => !publishedSctRequestIdsByType.flight.has(request.id)));
+    }
+    if (publishedSctRequestIdsByType.ftd.size > 0) {
+      setSctFtds((prev) => prev.filter((request) => !publishedSctRequestIdsByType.ftd.has(request.id)));
+    }
+    if (publishedSctRequestIds.length > 0) {
+      publishedSctRequestIds.forEach((requestId) => {
+        fetch(`/api/sct-requests/${requestId}`, { method: "DELETE" }).catch((err) => console.error("Failed to delete published SCT request:", err));
+      });
+    }
     setPublishedSchedules((prev) => ({
       ...prev,
       [buildDfpDate]: newEventsForDate

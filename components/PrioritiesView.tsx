@@ -2657,7 +2657,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       <div>
           <h3 className="text-lg font-semibold text-sky-400 mb-2">{type === 'flight' ? 'Flights' : ftdLabel}</h3>
           <div className="space-y-3">
-              {requests.filter(req => !req.submitted).map(req => {
+              {requests.map(req => {
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
                   const fieldLabelClass = 'mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500';
                   const fieldShellClass = 'min-w-0';

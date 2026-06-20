@@ -6496,6 +6496,18 @@ function generateDfpInternal(
             const parts = String(crew || '').split('::');
             return parts.length > 1 ? parts[0] : '';
         };
+        const normaliseFixedCrewGroupKey = (value?: string | null): string => {
+            const cleaned = String(value || '').replace(/^CREW\s*/i, '').trim().toUpperCase();
+            if (!cleaned) return '';
+            if (cleaned.includes('::')) return cleaned;
+            const displayMatch = cleaned.match(/^(.+?)\/([A-Z0-9_-]+)$/);
+            if (displayMatch) {
+                const crewLabel = displayMatch[1].replace(/^CREW\s*/i, '').trim();
+                const unitCode = displayMatch[2].trim();
+                return unitCode && crewLabel ? `${unitCode}::${crewLabel}` : cleaned;
+            }
+            return cleaned;
+        };
         const getFixedCrewDisplayCrew = (crew: string): string => {
             const crewLabel = getFixedCrewCrewLabel(crew);
             const crewUnit = getFixedCrewCrewUnit(crew);
@@ -6932,8 +6944,10 @@ function generateDfpInternal(
         };
         const getFixedCrewCandidateEntries = (event: Partial<ScheduleEvent>): Array<[string, Instructor[]]> => {
             const eventOwnerUnit = getFixedCrewEventOwnerUnit(event);
+            const requestedCrewGroup = normaliseFixedCrewGroupKey(event.fixedCrewGroup);
             const candidates = Array.from(crewGroups.entries())
                 .filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit))
+                .filter(([crew]) => !requestedCrewGroup || normaliseFixedCrewGroupKey(crew) === requestedCrewGroup)
                 .sort(([leftCrew], [rightCrew]) =>
                     (fixedCrewUsage.get(leftCrew) || 0) - (fixedCrewUsage.get(rightCrew) || 0)
                     || leftCrew.localeCompare(rightCrew, undefined, { numeric: true })
@@ -6941,6 +6955,15 @@ function generateDfpInternal(
             if (fixedCrewUsesSharedUnitContext && eventOwnerUnit) {
                 fixedCrewPerf.counters.ownerUnitRestrictedCrewSelections += 1;
                 fixedCrewPerf.counters.ownerUnitFilteredCrewCandidates += Math.max(0, crewGroups.size - candidates.length);
+            }
+            if (requestedCrewGroup && candidates.length === 0) {
+                pushFixedCrewAttempt({
+                    event: event.flightNumber,
+                    requestedCrewGroup,
+                    ownerUnit: eventOwnerUnit || null,
+                    outcome: 'rejected',
+                    reason: 'REQUESTED_CREW_GROUP_NOT_AVAILABLE',
+                });
             }
             return candidates;
         };
@@ -27410,6 +27433,8 @@ const App: React.FC = () => {
                     startTime: startTime,
                     flightType: sctReq.flightType,
                     soloOrDual: sctReq.flightType,
+                    sctRequestId: sctReq.id,
+                    sctRequestType: 'flight',
                     currency: sctReq.currency,
                     notes: buildSctEventNotes(sctReq),
                     aircraftConfigId,
@@ -27450,6 +27475,8 @@ const App: React.FC = () => {
                     isTimeFixed: true,
                     isSct: true,
                     eventCategory: 'sct', // This is the key field that makes it use SCT logic
+                    sctRequestId: sctReq.id,
+                    sctRequestType: 'flight',
                     currency: sctReq.currency,
                     notes: buildSctEventNotes(sctReq),
                     aircraftConfigId,
@@ -27500,6 +27527,8 @@ const App: React.FC = () => {
                     startTime: startTime,
                     flightType: 'Dual',
                     soloOrDual: 'Dual',
+                    sctRequestId: sctReq.id,
+                    sctRequestType: 'ftd',
                     currency: sctReq.currency,
                     notes: buildSctEventNotes(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
@@ -27537,6 +27566,8 @@ const App: React.FC = () => {
                     isTimeFixed: true,
                     isSct: true,
                     eventCategory: 'sct', // This is the key field that makes it use SCT logic
+                    sctRequestId: sctReq.id,
+                    sctRequestType: 'ftd',
                     currency: sctReq.currency,
                     notes: buildSctEventNotes(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
@@ -29750,6 +29781,31 @@ const App: React.FC = () => {
         console.log('[PUBLISH] nextDayBuildEvents:', nextDayBuildEvents.length, '→ after dedup:', dedupedBuildEvents.length);
 
         const newEventsForDate = dedupedBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
+        const publishedSctRequestIdsByType = newEventsForDate.reduce((map, event) => {
+            const explicitId = String(event.sctRequestId || '').trim();
+            const parsedMatch = !explicitId ? String(event.id || '').match(/^sct-(flight|ftd)-(.+)$/) : null;
+            const requestId = explicitId || parsedMatch?.[2] || '';
+            const requestType = String(event.sctRequestType || parsedMatch?.[1] || '').trim();
+            if (!requestId || (requestType !== 'flight' && requestType !== 'ftd')) return map;
+            map[requestType].add(requestId);
+            return map;
+        }, { flight: new Set<string>(), ftd: new Set<string>() });
+        const publishedSctRequestIds = [
+            ...Array.from(publishedSctRequestIdsByType.flight),
+            ...Array.from(publishedSctRequestIdsByType.ftd),
+        ];
+        if (publishedSctRequestIdsByType.flight.size > 0) {
+            setSctFlights(prev => prev.filter(request => !publishedSctRequestIdsByType.flight.has(request.id)));
+        }
+        if (publishedSctRequestIdsByType.ftd.size > 0) {
+            setSctFtds(prev => prev.filter(request => !publishedSctRequestIdsByType.ftd.has(request.id)));
+        }
+        if (publishedSctRequestIds.length > 0) {
+            publishedSctRequestIds.forEach(requestId => {
+                fetch(`/api/sct-requests/${requestId}`, { method: 'DELETE' })
+                    .catch(err => console.error('Failed to delete published SCT request:', err));
+            });
+        }
 
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
             ...prev,
