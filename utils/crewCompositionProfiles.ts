@@ -113,18 +113,22 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
   });
 
   const currencyRows = Array.isArray(source.currencyProfiles) ? source.currencyProfiles : [];
-  const currencyProfiles = currencyRows.map((row: any, index: number): CurrencyProfile => ({
-    id: String(row?.id || `currency-profile-${index + 1}`),
-    unitCode: String(row?.unitCode || '').trim().toUpperCase(),
-    compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
-    compositeProfileId: String(row?.compositeProfileId || '').trim(),
-    aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
-    name: String(row?.name || row?.profileName || row?.label || row?.currency || row?.event || `Currency Profile ${index + 1}`).trim(),
-    crew: String(row?.crew || '').trim(),
-    config: String(row?.config || row?.aircraftConfigId || 'ANY').trim() || 'ANY',
-    currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
-    status: String(row?.status || 'ACTIVE').trim().toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
-  })).filter((profile) => profile.currency);
+  const currencyProfiles = currencyRows.map((row: any, index: number): CurrencyProfile => {
+    const rawName = String(row?.name || row?.profileName || row?.label || '');
+    const fallbackName = String(row?.currency || row?.event || `Currency Profile ${index + 1}`).trim();
+    return {
+      id: String(row?.id || `currency-profile-${index + 1}`),
+      unitCode: String(row?.unitCode || '').trim().toUpperCase(),
+      compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
+      compositeProfileId: String(row?.compositeProfileId || '').trim(),
+      aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
+      name: rawName.length > 0 ? rawName : fallbackName,
+      crew: String(row?.crew || ''),
+      config: String(row?.config || row?.aircraftConfigId || 'ANY').trim() || 'ANY',
+      currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
+      status: String(row?.status || 'ACTIVE').trim().toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+    };
+  }).filter((profile) => profile.currency);
 
   return { alternateCompositions, currencyProfiles };
 };

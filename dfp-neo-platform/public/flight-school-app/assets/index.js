@@ -3767,18 +3767,22 @@ const normaliseCrewCompositionSettings = (value) => {
     };
   });
   const currencyRows = Array.isArray(source.currencyProfiles) ? source.currencyProfiles : [];
-  const currencyProfiles = currencyRows.map((row, index) => ({
-    id: String(row?.id || `currency-profile-${index + 1}`),
-    unitCode: String(row?.unitCode || "").trim().toUpperCase(),
-    compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
-    compositeProfileId: String(row?.compositeProfileId || "").trim(),
-    aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
-    name: String(row?.name || row?.profileName || row?.label || row?.currency || row?.event || `Currency Profile ${index + 1}`).trim(),
-    crew: String(row?.crew || "").trim(),
-    config: String(row?.config || row?.aircraftConfigId || "ANY").trim() || "ANY",
-    currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
-    status: String(row?.status || "ACTIVE").trim().toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
-  })).filter((profile) => profile.currency);
+  const currencyProfiles = currencyRows.map((row, index) => {
+    const rawName = String(row?.name || row?.profileName || row?.label || "");
+    const fallbackName = String(row?.currency || row?.event || `Currency Profile ${index + 1}`).trim();
+    return {
+      id: String(row?.id || `currency-profile-${index + 1}`),
+      unitCode: String(row?.unitCode || "").trim().toUpperCase(),
+      compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
+      compositeProfileId: String(row?.compositeProfileId || "").trim(),
+      aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
+      name: rawName.length > 0 ? rawName : fallbackName,
+      crew: String(row?.crew || ""),
+      config: String(row?.config || row?.aircraftConfigId || "ANY").trim() || "ANY",
+      currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
+      status: String(row?.status || "ACTIVE").trim().toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
+    };
+  }).filter((profile) => profile.currency);
   return { alternateCompositions, currencyProfiles };
 };
 const createAlternateCrewCompositionCode = (existingProfiles, name) => {
@@ -56950,8 +56954,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Profile Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { name: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Crew", value: profile.crew, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEditCrewComposition, options: configOptions, onChange: (value) => updateCurrencyProfile(profile.id, { config: value || "ANY" }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEditCrewComposition, options: configOptions, onChange: (value) => updateCurrencyProfile(profile.id, { config: value || "ANY" }) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 SelectField,
                 {
                   label: "Currency",
@@ -56961,7 +56965,7 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
                   onChange: (value) => updateCurrencyProfile(profile.id, { currency: value }),
                   emptyLabel: currencyOptions.length === 0 ? "No unit currencies configured" : void 0
                 }
-              ),
+              ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeCurrencyProfile(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
             ] }, profile.id);
           }) })

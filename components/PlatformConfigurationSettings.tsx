@@ -4469,15 +4469,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]">
                   <OffsetField label="Profile Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { name: value })} />
                   <OffsetField label="Crew" value={profile.crew} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })} />
-                  <SelectField label="CONFIG" value={profile.config || 'ANY'} disabled={!canEditCrewComposition} options={configOptions} onChange={(value) => updateCurrencyProfile(profile.id, { config: value || 'ANY' })} />
-                  <SelectField
-                    label="Currency"
-                    value={profile.currency}
-                    disabled={!canEditCrewComposition || currencyOptions.length === 0}
-                    options={currencyOptions}
-                    onChange={(value) => updateCurrencyProfile(profile.id, { currency: value })}
-                    emptyLabel={currencyOptions.length === 0 ? 'No unit currencies configured' : undefined}
-                  />
+                  <div className="[&_select]:mt-[15px]">
+                    <SelectField label="CONFIG" value={profile.config || 'ANY'} disabled={!canEditCrewComposition} options={configOptions} onChange={(value) => updateCurrencyProfile(profile.id, { config: value || 'ANY' })} />
+                  </div>
+                  <div className="[&_select]:mt-[15px]">
+                    <SelectField
+                      label="Currency"
+                      value={profile.currency}
+                      disabled={!canEditCrewComposition || currencyOptions.length === 0}
+                      options={currencyOptions}
+                      onChange={(value) => updateCurrencyProfile(profile.id, { currency: value })}
+                      emptyLabel={currencyOptions.length === 0 ? 'No unit currencies configured' : undefined}
+                    />
+                  </div>
                   <div className="flex items-end">
                     <button type="button" onClick={() => removeCurrencyProfile(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
                       <span className="text-[9px] leading-tight text-red-600">Delete</span>
