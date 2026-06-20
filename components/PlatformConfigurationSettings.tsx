@@ -1914,7 +1914,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       compositeProfileId: combinedContext ? baseId : '',
       aircraftTypeCode: activeCrewCompositionAircraftCode,
       name: `Profile ${profileIndex}`,
-      crew: 'Standard Crew',
+      crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || 'Aircraft'} Crew`,
       config: 'ANY',
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
       status: 'ACTIVE',
@@ -3421,6 +3421,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
   const activeHomeLocationCode = String(activePlatformUnit?.locationCode || config.locations[0]?.code || '').trim().toUpperCase();
   const activeMissionAircraftTypeCode = getUnitAircraftTypeCode(activePrimaryUnitCode);
+  const activeUnitAircraftTypeCodes = Array.from(new Set(
+    getActiveScopedUnitCodes()
+      .map((unitCode) => getUnitAircraftTypeCode(unitCode))
+      .map((aircraftCode) => String(aircraftCode || '').trim().toUpperCase())
+      .filter(Boolean),
+  ));
   const fixedCrewContext = normaliseOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel) === 'fixed_crew';
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
@@ -3453,12 +3459,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       .filter(Boolean),
   ]));
   const currencyProfileCrewOptions = Array.from(new Set([
-    ...crewCompositionAircraftTypes.map((aircraft) => {
-      const aircraftCode = String(aircraft.code || '').trim().toUpperCase();
+    ...activeUnitAircraftTypeCodes.map((aircraftCode) => {
       return `Standard ${aircraftCode || 'Aircraft'} Crew`;
     }),
     ...uniqueProfilesByCompositeGroup(
-      crewCompositionSettings.alternateCompositions.filter((profile) => isProfileInActiveUnitContext(profile)),
+      crewCompositionSettings.alternateCompositions.filter((profile) => (
+        isProfileInActiveUnitContext(profile)
+        && activeUnitAircraftTypeCodes.includes(String(profile.aircraftTypeCode || '').trim().toUpperCase())
+      )),
     ).map((profile) => {
       const aircraftCode = String(profile.aircraftTypeCode || '').trim().toUpperCase();
       const profileName = String(profile.name || profile.code || '').trim();
@@ -4474,7 +4482,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No currency profiles configured.</div>
               ) : activeCurrencyProfiles.map((profile) => {
                 const crewOptions = Array.from(new Set([
-                  profile.crew,
                   ...currencyProfileCrewOptions,
                 ].map((option) => String(option || '').trim()).filter(Boolean)));
                 const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
