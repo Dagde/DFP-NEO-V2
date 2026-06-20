@@ -56091,6 +56091,19 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     "ANY",
     ...config.resourcePools.filter((pool) => !aircraftTypeCode || String(pool.aircraftTypeCode || "").trim().toUpperCase() === String(aircraftTypeCode || "").trim().toUpperCase()).flatMap((pool) => Array.isArray(pool.settings?.aircraftConfigurations) ? pool.settings.aircraftConfigurations : []).map((item) => String(item.label || item.definition || item.id || "").trim()).filter(Boolean)
   ]));
+  const currencyProfileCrewOptions = Array.from(new Set([
+    ...crewCompositionAircraftTypes.map((aircraft) => {
+      const aircraftCode = String(aircraft.code || "").trim().toUpperCase();
+      return `Standard ${aircraftCode || "Aircraft"} Crew`;
+    }),
+    ...uniqueProfilesByCompositeGroup(
+      crewCompositionSettings.alternateCompositions.filter((profile) => isProfileInActiveUnitContext(profile))
+    ).map((profile) => {
+      const aircraftCode = String(profile.aircraftTypeCode || "").trim().toUpperCase();
+      const profileName = String(profile.name || profile.code || "").trim();
+      return aircraftCode ? `${profileName} - ${aircraftCode}` : profileName;
+    })
+  ].map((option) => String(option || "").trim()).filter(Boolean)));
   const activeCurrencyDefinitionNames = Array.from(/* @__PURE__ */ new Set([
     ...getActiveScopedUnitCodes().flatMap((unitCode) => {
       const definitions = unitCurrencyDefinitions[String(unitCode || "").trim().toUpperCase()];
@@ -56948,27 +56961,16 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No currency profiles configured." }) : activeCurrencyProfiles.map((profile) => {
-            const profileCrewOptions = getStandardMissionCrewOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode).map((option) => option.label).filter(Boolean);
             const crewOptions = Array.from(new Set([
               profile.crew,
-              ...profileCrewOptions
+              ...currencyProfileCrewOptions
             ].map((option) => String(option || "").trim()).filter(Boolean)));
             const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
             const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
             const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency) ? activeCurrencyDefinitionNames : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Profile Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { name: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                OffsetField,
-                {
-                  label: "Crew",
-                  value: profile.crew,
-                  disabled: !canEditCrewComposition,
-                  onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }),
-                  listId: `currency-profile-crew-options-${profile.id}`,
-                  options: crewOptions
-                }
-              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Crew", value: profile.crew, disabled: !canEditCrewComposition || crewOptions.length === 0, options: crewOptions, onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEditCrewComposition, options: configOptions, onChange: (value) => updateCurrencyProfile(profile.id, { config: value || "ANY" }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 SelectField,
