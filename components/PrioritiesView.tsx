@@ -226,6 +226,7 @@ interface PrioritiesViewProps {
   onAddSctRequest: (type: 'flight' | 'ftd') => void;
   onRemoveSctRequest: (id: string, type: 'flight' | 'ftd') => void;
   onUpdateSctRequest: (id: string, field: keyof SctRequest, value: string, type: 'flight' | 'ftd') => void;
+  onPatchSctRequest: (id: string, updates: Partial<SctRequest>, type: 'flight' | 'ftd') => void;
   onSubmitSctRequest: (id: string, type: 'flight' | 'ftd') => void;
   onToggleSctInclude: (id: string, type: 'flight' | 'ftd') => void;
   syllabusDetails: SyllabusItemDetail[];
@@ -995,6 +996,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onAddSctRequest,
   onRemoveSctRequest,
   onUpdateSctRequest,
+  onPatchSctRequest,
   onSubmitSctRequest,
   onToggleSctInclude,
   syllabusDetails,
@@ -2613,7 +2615,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   
   
-  const SctRequestTable: React.FC<{ type: 'flight' | 'ftd', requests: SctRequest[] }> = ({ type, requests }) => {
+  const renderSctRequestTable = (type: 'flight' | 'ftd', requests: SctRequest[]) => {
       
     const calculateDaysToExpire = (expireDateStr: string): { days: number; color: string } | null => {
         if (!expireDateStr) return null;
@@ -2642,15 +2644,18 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         String(candidate.name || candidate.currency || '').trim() === eventValue
         || String(candidate.currency || '').trim() === eventValue
       ));
-      onUpdateSctRequest(requestId, 'event', profile ? String(profile.name || profile.currency || '').trim() : eventValue, type);
-      if (!profile) return;
-      onUpdateSctRequest(requestId, 'eventCode', String(profile.code || '').trim().toUpperCase().slice(0, 8), type);
-      onUpdateSctRequest(requestId, 'currency', profile.currency, type);
-      const configId = getCurrencyProfileConfigId(profile);
-      if (configId) onUpdateSctRequest(requestId, 'aircraftConfigId', configId, type);
-      if (isFixedCrewModel && profile.crew) {
-        onUpdateSctRequest(requestId, 'crewMember', profile.crew, type);
+      if (!profile) {
+        onUpdateSctRequest(requestId, 'event', eventValue, type);
+        return;
       }
+      const configId = getCurrencyProfileConfigId(profile);
+      onPatchSctRequest(requestId, {
+        event: String(profile.name || profile.currency || '').trim(),
+        eventCode: String(profile.code || '').trim().toUpperCase().slice(0, 8),
+        currency: profile.currency,
+        ...(configId ? { aircraftConfigId: configId } : {}),
+        ...(isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}),
+      }, type);
     };
     
       return (
@@ -2679,12 +2684,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               value={selectedCrewGroup?.key || ''}
                                               onChange={e => {
                                                   const group = fixedCrewRequestCrewGroups.find(candidate => candidate.key === e.target.value);
-                                                  onUpdateSctRequest(req.id, 'crewGroupKey', group?.key || '', type);
-                                                  onUpdateSctRequest(req.id, 'crewGroup', group?.crewValue || '', type);
-                                                  onUpdateSctRequest(req.id, 'crewUnitCode', group?.unitCode || '', type);
-                                                  onUpdateSctRequest(req.id, 'crewDisplayLabel', group?.label || '', type);
-                                                  onUpdateSctRequest(req.id, 'crewIndividual', '', type);
-                                                  onUpdateSctRequest(req.id, 'name', '', type);
+                                                  onPatchSctRequest(req.id, {
+                                                      crewGroupKey: group?.key || '',
+                                                      crewGroup: group?.crewValue || '',
+                                                      crewUnitCode: group?.unitCode || '',
+                                                      crewDisplayLabel: group?.label || '',
+                                                      crewIndividual: '',
+                                                      name: '',
+                                                  }, type);
                                               }}
                                               className={controlClass}
                                           >
@@ -2700,8 +2707,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           <select
                                               value={req.crewIndividual || ''}
                                               onChange={e => {
-                                                  onUpdateSctRequest(req.id, 'crewIndividual', e.target.value, type);
-                                                  onUpdateSctRequest(req.id, 'name', e.target.value, type);
+                                                  onPatchSctRequest(req.id, {
+                                                      crewIndividual: e.target.value,
+                                                      name: e.target.value,
+                                                  }, type);
                                               }}
                                               disabled={!selectedCrewGroup}
                                               className={controlClass}
@@ -3619,8 +3628,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Specific Currency Requests</h2>
             <div className="space-y-6">
-                <SctRequestTable type="flight" requests={sctFlights} />
-                <SctRequestTable type="ftd" requests={sctFtds} />
+                {renderSctRequestTable('flight', sctFlights)}
+                {renderSctRequestTable('ftd', sctFtds)}
             </div>
         </div>
 

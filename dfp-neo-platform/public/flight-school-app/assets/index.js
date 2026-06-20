@@ -26549,6 +26549,7 @@ const PrioritiesView = ({
   onAddSctRequest,
   onRemoveSctRequest,
   onUpdateSctRequest,
+  onPatchSctRequest,
   onSubmitSctRequest,
   onToggleSctInclude,
   syllabusDetails,
@@ -27891,7 +27892,7 @@ const PrioritiesView = ({
       ] })
     ] });
   };
-  const SctRequestTable = ({ type, requests }) => {
+  const renderSctRequestTable = (type, requests) => {
     const calculateDaysToExpire = (expireDateStr) => {
       if (!expireDateStr) return null;
       try {
@@ -27912,15 +27913,18 @@ const PrioritiesView = ({
     const statusButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed";
     const applyCurrencyProfile = (requestId, eventValue) => {
       const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === eventValue || String(candidate.currency || "").trim() === eventValue);
-      onUpdateSctRequest(requestId, "event", profile ? String(profile.name || profile.currency || "").trim() : eventValue, type);
-      if (!profile) return;
-      onUpdateSctRequest(requestId, "eventCode", String(profile.code || "").trim().toUpperCase().slice(0, 8), type);
-      onUpdateSctRequest(requestId, "currency", profile.currency, type);
-      const configId = getCurrencyProfileConfigId(profile);
-      if (configId) onUpdateSctRequest(requestId, "aircraftConfigId", configId, type);
-      if (isFixedCrewModel && profile.crew) {
-        onUpdateSctRequest(requestId, "crewMember", profile.crew, type);
+      if (!profile) {
+        onUpdateSctRequest(requestId, "event", eventValue, type);
+        return;
       }
+      const configId = getCurrencyProfileConfigId(profile);
+      onPatchSctRequest(requestId, {
+        event: String(profile.name || profile.currency || "").trim(),
+        eventCode: String(profile.code || "").trim().toUpperCase().slice(0, 8),
+        currency: profile.currency,
+        ...configId ? { aircraftConfigId: configId } : {},
+        ...isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}
+      }, type);
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-400 mb-2", children: type === "flight" ? "Flights" : ftdLabel }),
@@ -27942,12 +27946,14 @@ const PrioritiesView = ({
                     value: selectedCrewGroup?.key || "",
                     onChange: (e) => {
                       const group = fixedCrewRequestCrewGroups.find((candidate) => candidate.key === e.target.value);
-                      onUpdateSctRequest(req.id, "crewGroupKey", group?.key || "", type);
-                      onUpdateSctRequest(req.id, "crewGroup", group?.crewValue || "", type);
-                      onUpdateSctRequest(req.id, "crewUnitCode", group?.unitCode || "", type);
-                      onUpdateSctRequest(req.id, "crewDisplayLabel", group?.label || "", type);
-                      onUpdateSctRequest(req.id, "crewIndividual", "", type);
-                      onUpdateSctRequest(req.id, "name", "", type);
+                      onPatchSctRequest(req.id, {
+                        crewGroupKey: group?.key || "",
+                        crewGroup: group?.crewValue || "",
+                        crewUnitCode: group?.unitCode || "",
+                        crewDisplayLabel: group?.label || "",
+                        crewIndividual: "",
+                        name: ""
+                      }, type);
                     },
                     className: controlClass,
                     children: [
@@ -27961,8 +27967,10 @@ const PrioritiesView = ({
                   {
                     value: req.crewIndividual || "",
                     onChange: (e) => {
-                      onUpdateSctRequest(req.id, "crewIndividual", e.target.value, type);
-                      onUpdateSctRequest(req.id, "name", e.target.value, type);
+                      onPatchSctRequest(req.id, {
+                        crewIndividual: e.target.value,
+                        name: e.target.value
+                      }, type);
                     },
                     disabled: !selectedCrewGroup,
                     className: controlClass,
@@ -28808,8 +28816,8 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Specific Currency Requests" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SctRequestTable, { type: "flight", requests: sctFlights }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SctRequestTable, { type: "ftd", requests: sctFtds })
+          renderSctRequestTable("flight", sctFlights),
+          renderSctRequestTable("ftd", sctFtds)
         ] })
       ] }),
       !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
@@ -86693,6 +86701,7 @@ const App = () => {
           id: r.id,
           name: r.name,
           event: r.event,
+          eventCode: r.eventCode || "",
           flightType: r.flightType,
           currency: r.currency,
           currencyExpire: r.currencyExpire,
@@ -86702,12 +86711,19 @@ const App = () => {
           requestedTime: r.requestedTime,
           submitted: r.submitted,
           includeInBuild: r.includeInBuild,
-          aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id
+          aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+          crewMember: r.crewMember || "",
+          crewGroup: r.crewGroup || "",
+          crewGroupKey: r.crewGroupKey || "",
+          crewUnitCode: r.crewUnitCode || "",
+          crewDisplayLabel: r.crewDisplayLabel || "",
+          crewIndividual: r.crewIndividual || ""
         })));
         setSctFtds(data.filter((r) => r.requestType === "ftd").map((r) => ({
           id: r.id,
           name: r.name,
           event: r.event,
+          eventCode: r.eventCode || "",
           flightType: r.flightType,
           currency: r.currency,
           currencyExpire: r.currencyExpire,
@@ -86717,7 +86733,13 @@ const App = () => {
           requestedTime: r.requestedTime,
           submitted: r.submitted,
           includeInBuild: r.includeInBuild,
-          aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id
+          aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+          crewMember: r.crewMember || "",
+          crewGroup: r.crewGroup || "",
+          crewGroupKey: r.crewGroupKey || "",
+          crewUnitCode: r.crewUnitCode || "",
+          crewDisplayLabel: r.crewDisplayLabel || "",
+          crewIndividual: r.crewIndividual || ""
         })));
       } catch (err) {
         console.error("[SCT] Failed to load SCT requests from DB:", err);
@@ -96568,8 +96590,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               console.log("[SCT] Attempting to save - userId from getCurrentUserId():", userId);
               if (userId) {
                 try {
-                  const { eventCode: eventCode2, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual, ...persistableReq } = newReq;
-                  const payload = { ...persistableReq, userId, requestType: type };
+                  const payload = { ...newReq, userId, requestType: type };
                   console.log("[SCT] POST payload:", JSON.stringify(payload));
                   const res = await fetch("/api/sct-requests", {
                     method: "POST",
@@ -96608,7 +96629,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               const updater = (prev) => prev.map((r) => r.id === id ? { ...r, [field]: effectiveValue } : r);
               if (type === "flight") setSctFlights(updater);
               else setSctFtds(updater);
-              if (field === "crewMember" || field === "eventCode" || field === "crewGroup" || field === "crewGroupKey" || field === "crewUnitCode" || field === "crewDisplayLabel" || field === "crewIndividual") return;
+              setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-${type}-${id}`));
               try {
                 await fetch(`/api/sct-requests/${id}`, {
                   method: "PUT",
@@ -96622,6 +96643,33 @@ ${error instanceof Error ? error.message : String(error)}`,
                 const requests = type === "flight" ? sctFlights : sctFtds;
                 const request = requests.find((r) => r.id === id);
                 const updatedRequest = request ? { ...request, [field]: effectiveValue } : null;
+                if (updatedRequest && (updatedRequest.priority === "High" || updatedRequest.includeInBuild)) {
+                  syncPriorityEventsWithSctAndRemedial();
+                }
+              }, 100);
+            },
+            onPatchSctRequest: async (id, updates, type) => {
+              const normalisedUpdates = { ...updates };
+              if (type === "flight" && normalisedUpdates.flightType && activeAircraftCrewComposition.crewCount === 1) {
+                normalisedUpdates.flightType = "Solo";
+              }
+              const updater = (prev) => prev.map((r) => r.id === id ? { ...r, ...normalisedUpdates } : r);
+              if (type === "flight") setSctFlights(updater);
+              else setSctFtds(updater);
+              setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-${type}-${id}`));
+              try {
+                await fetch(`/api/sct-requests/${id}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(normalisedUpdates)
+                });
+              } catch (err) {
+                console.error("Failed to patch SCT request:", err);
+              }
+              setTimeout(() => {
+                const requests = type === "flight" ? sctFlights : sctFtds;
+                const request = requests.find((r) => r.id === id);
+                const updatedRequest = request ? { ...request, ...normalisedUpdates } : null;
                 if (updatedRequest && (updatedRequest.priority === "High" || updatedRequest.includeInBuild)) {
                   syncPriorityEventsWithSctAndRemedial();
                 }

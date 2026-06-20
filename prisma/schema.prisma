@@ -297,6 +297,7 @@ model SctRequest {
   requestType    String   @default("flight") // "flight" or "ftd"
   name           String
   event          String
+  eventCode      String?  @default("")
   flightType     String   @default("Dual")
   currency       String   @default("")
   currencyExpire String   @default("")
@@ -307,6 +308,12 @@ model SctRequest {
   submitted      Boolean  @default(false)
   includeInBuild Boolean  @default(false)
   aircraftConfigId String? @default("CONFIG-0")
+  crewMember     String?  @default("")
+  crewGroup      String?  @default("")
+  crewGroupKey   String?  @default("")
+  crewUnitCode   String?  @default("")
+  crewDisplayLabel String? @default("")
+  crewIndividual String?  @default("")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

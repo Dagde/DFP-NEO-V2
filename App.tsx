@@ -21582,18 +21582,30 @@ const App: React.FC = () => {
                 const data = await res.json();
                 console.log('[SCT] Loaded', data.length, 'SCT requests from DB');
                 setSctFlights(data.filter((r: any) => r.requestType === 'flight').map((r: any) => ({
-                    id: r.id, name: r.name, event: r.event, flightType: r.flightType as 'Solo' | 'Dual',
+                    id: r.id, name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
                     notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
                     submitted: r.submitted, includeInBuild: r.includeInBuild,
                     aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                    crewMember: r.crewMember || '',
+                    crewGroup: r.crewGroup || '',
+                    crewGroupKey: r.crewGroupKey || '',
+                    crewUnitCode: r.crewUnitCode || '',
+                    crewDisplayLabel: r.crewDisplayLabel || '',
+                    crewIndividual: r.crewIndividual || '',
                 })));
                 setSctFtds(data.filter((r: any) => r.requestType === 'ftd').map((r: any) => ({
-                    id: r.id, name: r.name, event: r.event, flightType: r.flightType as 'Solo' | 'Dual',
+                    id: r.id, name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
                     notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
                     submitted: r.submitted, includeInBuild: r.includeInBuild,
                     aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                    crewMember: r.crewMember || '',
+                    crewGroup: r.crewGroup || '',
+                    crewGroupKey: r.crewGroupKey || '',
+                    crewUnitCode: r.crewUnitCode || '',
+                    crewDisplayLabel: r.crewDisplayLabel || '',
+                    crewIndividual: r.crewIndividual || '',
                 })));
             } catch (err) {
                 console.error('[SCT] Failed to load SCT requests from DB:', err);
@@ -33861,8 +33873,7 @@ appliedUpdates.forEach(update => {
                       console.log('[SCT] Attempting to save - userId from getCurrentUserId():', userId);
                       if (userId) {
                         try {
-                          const { eventCode, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual, ...persistableReq } = newReq;
-                          const payload = { ...persistableReq, userId, requestType: type };
+                          const payload = { ...newReq, userId, requestType: type };
                           console.log('[SCT] POST payload:', JSON.stringify(payload));
                           const res = await fetch('/api/sct-requests', {
                             method: 'POST',
@@ -33901,7 +33912,7 @@ appliedUpdates.forEach(update => {
                       const updater = (prev: SctRequest[]) => prev.map(r => r.id === id ? { ...r, [field]: effectiveValue } : r);
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
-                      if (field === 'crewMember' || field === 'eventCode' || field === 'crewGroup' || field === 'crewGroupKey' || field === 'crewUnitCode' || field === 'crewDisplayLabel' || field === 'crewIndividual') return;
+                      setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
                       // Persist to DB
                       try {
                         await fetch(`/api/sct-requests/${id}`, {
@@ -33915,6 +33926,31 @@ appliedUpdates.forEach(update => {
                         const requests = type === 'flight' ? sctFlights : sctFtds;
                         const request = requests.find(r => r.id === id);
                         const updatedRequest = request ? { ...request, [field]: effectiveValue } : null;
+                        if (updatedRequest && (updatedRequest.priority === 'High' || updatedRequest.includeInBuild)) {
+                          syncPriorityEventsWithSctAndRemedial();
+                        }
+                      }, 100);
+                    }}
+                    onPatchSctRequest={async (id, updates, type) => {
+                      const normalisedUpdates: Partial<SctRequest> = { ...updates };
+                      if (type === 'flight' && normalisedUpdates.flightType && activeAircraftCrewComposition.crewCount === 1) {
+                        normalisedUpdates.flightType = 'Solo';
+                      }
+                      const updater = (prev: SctRequest[]) => prev.map(r => r.id === id ? { ...r, ...normalisedUpdates } : r);
+                      if (type === 'flight') setSctFlights(updater);
+                      else setSctFtds(updater);
+                      setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
+                      try {
+                        await fetch(`/api/sct-requests/${id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(normalisedUpdates)
+                        });
+                      } catch (err) { console.error('Failed to patch SCT request:', err); }
+                      setTimeout(() => {
+                        const requests = type === 'flight' ? sctFlights : sctFtds;
+                        const request = requests.find(r => r.id === id);
+                        const updatedRequest = request ? { ...request, ...normalisedUpdates } : null;
                         if (updatedRequest && (updatedRequest.priority === 'High' || updatedRequest.includeInBuild)) {
                           syncPriorityEventsWithSctAndRemedial();
                         }

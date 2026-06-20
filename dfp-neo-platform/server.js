@@ -187,6 +187,7 @@ async function ensureSctRequestTable(db) {
         "requestType"    TEXT NOT NULL DEFAULT 'flight',
         "name"           TEXT NOT NULL DEFAULT '',
         "event"          TEXT NOT NULL DEFAULT '',
+        "eventCode"      TEXT DEFAULT '',
         "flightType"     TEXT NOT NULL DEFAULT 'Dual',
         "currency"       TEXT NOT NULL DEFAULT '',
         "currencyExpire" TEXT NOT NULL DEFAULT '',
@@ -197,6 +198,12 @@ async function ensureSctRequestTable(db) {
         "submitted"      BOOLEAN NOT NULL DEFAULT false,
         "includeInBuild" BOOLEAN NOT NULL DEFAULT false,
         "aircraftConfigId" TEXT DEFAULT 'CONFIG-0',
+        "crewMember"     TEXT DEFAULT '',
+        "crewGroup"      TEXT DEFAULT '',
+        "crewGroupKey"   TEXT DEFAULT '',
+        "crewUnitCode"   TEXT DEFAULT '',
+        "crewDisplayLabel" TEXT DEFAULT '',
+        "crewIndividual" TEXT DEFAULT '',
         "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "SctRequest_pkey" PRIMARY KEY ("id")
@@ -205,6 +212,16 @@ async function ensureSctRequestTable(db) {
     await db.$executeRawUnsafe(`
       ALTER TABLE "SctRequest"
       ADD COLUMN IF NOT EXISTS "aircraftConfigId" TEXT DEFAULT 'CONFIG-0';
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "SctRequest"
+      ADD COLUMN IF NOT EXISTS "eventCode" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewMember" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewGroup" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewGroupKey" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewUnitCode" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewDisplayLabel" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewIndividual" TEXT DEFAULT '';
     `);
     await db.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "SctRequest_userId_idx"
@@ -1096,17 +1113,18 @@ app.get('/api/sct-requests', async (req, res) => {
 app.post('/api/sct-requests', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { id, userId, requestType, name, event, flightType, currency, currencyExpire, priority, notes, dateRequested, requestedTime, aircraftConfigId } = req.body;
+    const { id, userId, requestType, name, event, eventCode, flightType, currency, currencyExpire, priority, notes, dateRequested, requestedTime, aircraftConfigId, crewMember, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
     const newId = id || generateUUID();
     await db.$executeRawUnsafe(
-      `INSERT INTO "SctRequest" ("id","userId","requestType","name","event","flightType","currency","currencyExpire","priority","notes","dateRequested","requestedTime","submitted","includeInBuild","aircraftConfigId","createdAt","updatedAt")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW(),NOW())`,
+      `INSERT INTO "SctRequest" ("id","userId","requestType","name","event","eventCode","flightType","currency","currencyExpire","priority","notes","dateRequested","requestedTime","submitted","includeInBuild","aircraftConfigId","crewMember","crewGroup","crewGroupKey","crewUnitCode","crewDisplayLabel","crewIndividual","createdAt","updatedAt")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,NOW(),NOW())`,
       newId,
       String(userId),
       requestType || 'flight',
       name || '',
       event || '',
+      eventCode || '',
       flightType || 'Dual',
       currency || '',
       currencyExpire || '',
@@ -1116,7 +1134,13 @@ app.post('/api/sct-requests', async (req, res) => {
       requestedTime || '15:00',
       false,
       false,
-      aircraftConfigId || 'CONFIG-0'
+      aircraftConfigId || 'CONFIG-0',
+      crewMember || '',
+      crewGroup || '',
+      crewGroupKey || '',
+      crewUnitCode || '',
+      crewDisplayLabel || '',
+      crewIndividual || ''
     );
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SctRequest" WHERE "id" = $1`, newId);
     console.log(`✅ POST /api/sct-requests - created record id: ${newId} for userId: ${userId}`);
