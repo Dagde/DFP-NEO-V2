@@ -91368,7 +91368,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
         console.log("🔄 Updated HIGH priority SCT flight:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
-      } else if (!existingInNextDay) {
+      } else {
+        if (existingInNextDay) {
+          setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-flight-${sctReq.id}`));
+        }
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
         const duration = syllabusItem?.duration || 1.5;
@@ -91454,7 +91457,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
         console.log("🔄 Updated HIGH priority SCT FTD:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
-      } else if (!existingInNextDay) {
+      } else {
+        if (existingInNextDay) {
+          setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-ftd-${sctReq.id}`));
+        }
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
         const duration = syllabusItem?.duration || 1.5;
@@ -92039,6 +92045,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const highestPriorityEventsBeforeSync = highestPriorityEvents;
     const rawSyncedPriorityEvents = syncPriorityEventsWithSctAndRemedial();
     const isTaskingEvent2 = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+    const isSctPriorityEvent = (event) => event.isSct === true || event.eventCategory === "sct" || /^sct-(flight|ftd)-/.test(String(event.id || ""));
+    const getSctRequestIdFromEvent = (event) => {
+      const explicitId = String(event.sctRequestId || "").trim();
+      if (explicitId) return explicitId;
+      const parsed = String(event.id || "").match(/^sct-(?:flight|ftd)-(.+)$/);
+      return parsed?.[1] || "";
+    };
     const submittedTaskingRequestIds = (() => {
       try {
         const parsed = JSON.parse(localStorage.getItem("neoTaskingRequests") || "[]");
@@ -92086,18 +92099,32 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const currentTaskingRequestIds = new Set(
       syncedPriorityEvents.filter(isTaskingEvent2).map((event) => event.taskingRequestId).filter(Boolean)
     );
+    const currentSctPriorityIds = new Set(
+      syncedPriorityEvents.filter(isSctPriorityEvent).map((event) => event.id)
+    );
+    const currentSctRequestIds = new Set(
+      syncedPriorityEvents.filter(isSctPriorityEvent).map(getSctRequestIdFromEvent).filter(Boolean)
+    );
     const isCurrentTaskingEvent = (event) => currentTaskingPriorityIds.has(event.id) || !!event.taskingRequestId && currentTaskingRequestIds.has(event.taskingRequestId);
     const staleExistingTaskingEventsForDate = existingEventsForDate.filter(
       (event) => isTaskingEvent2(event) && !isCurrentTaskingEvent(event)
     );
-    const buildPublishedSchedulesForRun = staleExistingTaskingEventsForDate.length > 0 ? {
+    const isCurrentSctEvent = (event) => currentSctPriorityIds.has(event.id) || !!getSctRequestIdFromEvent(event) && currentSctRequestIds.has(getSctRequestIdFromEvent(event));
+    const staleExistingSctEventsForDate = existingEventsForDate.filter(
+      (event) => isSctPriorityEvent(event) && isCurrentSctEvent(event)
+    );
+    const buildPublishedSchedulesForRun = staleExistingTaskingEventsForDate.length > 0 || staleExistingSctEventsForDate.length > 0 ? {
       ...publishedSchedules,
       [buildDfpDate]: existingEventsForDate.filter(
-        (event) => !isTaskingEvent2(event) || isCurrentTaskingEvent(event)
+        (event) => (!isTaskingEvent2(event) || isCurrentTaskingEvent(event)) && (!isSctPriorityEvent(event) || !isCurrentSctEvent(event))
       )
     } : publishedSchedules;
     const fixedExistingEventsForDate = existingEventsForDate.filter((event) => {
       if (!event.isTimeFixed) return false;
+      if (isSctPriorityEvent(event) && isCurrentSctEvent(event)) {
+        console.log(`DEBUG Skipping stale fixed SCT event from Active DFP preservation: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || "none"})`);
+        return false;
+      }
       if (!isTaskingEvent2(event)) return true;
       const stillRequestedTasking = isCurrentTaskingEvent(event);
       if (!stillRequestedTasking) {
@@ -92112,6 +92139,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         removedStalePublishedTaskingEvents: staleExistingTaskingEventsForDate.map((event) => summariseTaskTraceEvent(event, "removed-stale-published-tasking-before-build-handoff")),
         sanitizedPublishedScheduleForBuildDate: (buildPublishedSchedulesForRun[buildDfpDate] || []).filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "sanitized-publishedSchedules-buildDate"))
       };
+    }
+    if (staleExistingSctEventsForDate.length > 0) {
+      console.log(`DEBUG Removed ${staleExistingSctEventsForDate.length} stale SCT event(s) from build-date published schedule before NEO Build input handoff.`);
     }
     console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
     let newHighestPriorityEvents = [...syncedPriorityEvents];
