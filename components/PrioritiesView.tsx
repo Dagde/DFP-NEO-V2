@@ -743,7 +743,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             </TaskingFieldPanel>
           </div>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.52fr)_minmax(0,0.8fr)_minmax(0,0.94fr)_minmax(0,0.78fr)]">
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.52fr)_minmax(0,0.8fr)]">
             <TaskingFieldPanel label="Route" hint={`${request.depPoint || 'Departure'} -> ${request.arrivalPoint || 'Arrival'}`}>
               <div className="grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]">
                 <div className="min-w-0">
@@ -840,6 +840,9 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 />
               </div>
             </TaskingFieldPanel>
+          </div>
+
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className="min-w-0 h-full [&>div]:h-full [&>div]:min-h-[8rem]">
               <CrewRequirementEditor
                 value={request.crewRequirement}
