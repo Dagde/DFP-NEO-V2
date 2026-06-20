@@ -27332,6 +27332,8 @@ const App: React.FC = () => {
             const noteLines: string[] = [];
             const existingNotes = String(sctReq.notes || '').trim();
             if (existingNotes) noteLines.push(existingNotes);
+            if (String(sctReq.crewDisplayLabel || '').trim()) noteLines.push(`Crew: ${sctReq.crewDisplayLabel}`);
+            if (String(sctReq.crewIndividual || '').trim()) noteLines.push(`Individual: ${sctReq.crewIndividual}`);
             if (String(sctReq.currency || '').trim()) noteLines.push(`Currency: ${sctReq.currency}`);
             if (String(sctReq.currencyExpire || '').trim()) noteLines.push(`Currency Expire: ${sctReq.currencyExpire}`);
             if (String(sctReq.dateRequested || '').trim()) noteLines.push(`Date Requested: ${sctReq.dateRequested}`);
@@ -27345,20 +27347,38 @@ const App: React.FC = () => {
             }
             return noteLines.join('\n');
         };
+        const getSctCrewGroupKey = (sctReq: SctRequest): string => {
+            const explicitKey = String(sctReq.crewGroupKey || '').trim();
+            if (explicitKey) return explicitKey;
+            const unitCode = String(sctReq.crewUnitCode || '').trim().toUpperCase();
+            const crewGroup = String(sctReq.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase();
+            return unitCode && crewGroup ? `${unitCode}::${crewGroup}` : '';
+        };
+        const getSctCrewDisplayLabel = (sctReq: SctRequest): string => String(sctReq.crewDisplayLabel || '').trim();
+        const getSctSelectedPerson = (sctReq: SctRequest): string => String(sctReq.crewIndividual || sctReq.name || '').trim();
+        const getSctTileCrew = (sctReq: SctRequest): string => (
+            getSctCrewDisplayLabel(sctReq)
+            || (sctReq.flightType === 'Dual' ? String(sctReq.crewMember || '').trim() : '')
+            || 'TBA'
+        );
+        const hasSctParticipant = (sctReq: SctRequest): boolean => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
 
         // 1. Auto-add HIGH priority SCT requests AND MEDIUM/LOW with includeInBuild=true
         console.log('🔍 SCT Sync - buildDfpDate:', buildDfpDate);
         const highPrioritySctFlights = sctFlights.filter(req =>
-            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.event.trim() !== ''
+            (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         const highPrioritySctFtds = sctFtds.filter(req =>
-            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.event.trim() !== ''
+            (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         console.log('🔍 Found SCT flights to include:', highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
 
         // Process SCT Flights
         highPrioritySctFlights.forEach(sctReq => {
             const sctEventCode = String(sctReq.eventCode || sctReq.event || '').trim().toUpperCase().slice(0, 8) || sctReq.event;
+            const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
+            const sctSelectedPerson = getSctSelectedPerson(sctReq);
+            const sctTileCrew = getSctTileCrew(sctReq);
             // Check both highestPriorityEvents AND nextDayBuildEvents for existing event
             const existingInPriorityIndex = newPriorityEvents.findIndex(e =>
                 e.id === `sct-flight-${sctReq.id}`
@@ -27383,8 +27403,8 @@ const App: React.FC = () => {
                 const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
                 newPriorityEvents[existingInPriorityIndex] = {
                     ...newPriorityEvents[existingInPriorityIndex],
-                    student: sctReq.flightType === 'Dual' ? (sctReq.crewMember || 'TBA') : '',
-                    pilot: sctReq.name,
+                    student: sctReq.flightType === 'Dual' ? sctTileCrew : '',
+                    pilot: sctSelectedPerson,
                     flightNumber: sctEventCode,
                     duration: duration,
                     startTime: startTime,
@@ -27394,6 +27414,7 @@ const App: React.FC = () => {
                     notes: buildSctEventNotes(sctReq),
                     aircraftConfigId,
                     acceptableAircraftConfigs: [aircraftConfigId],
+                    fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
                 console.log('🔄 Updated HIGH priority SCT flight:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else if (!existingInNextDay) {
@@ -27414,8 +27435,8 @@ const App: React.FC = () => {
                     date: buildDfpDate,
                     type: 'flight',
                     instructor: '', // Crew field - blank initially, can be selected
-                    student: sctReq.flightType === 'Dual' ? (sctReq.crewMember || 'TBA') : '', // Store crew member for Dual events, default to TBA
-                    pilot: sctReq.name, // Pilot field shows the person
+                    student: sctReq.flightType === 'Dual' ? sctTileCrew : '', // Fixed Crew tiles display the selected crew group.
+                    pilot: sctSelectedPerson, // Optional selected individual/PIC candidate.
                     flightNumber: sctEventCode,
                     duration: duration,
                     startTime: startTime, // Use requested time
@@ -27433,6 +27454,7 @@ const App: React.FC = () => {
                     notes: buildSctEventNotes(sctReq),
                     aircraftConfigId,
                     acceptableAircraftConfigs: [aircraftConfigId],
+                    fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
 
                 newPriorityEvents.push(newEvent);
@@ -27445,6 +27467,9 @@ const App: React.FC = () => {
         // Process SCT FTDs
         highPrioritySctFtds.forEach(sctReq => {
             const sctEventCode = String(sctReq.eventCode || sctReq.event || '').trim().toUpperCase().slice(0, 8) || sctReq.event;
+            const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
+            const sctSelectedPerson = getSctSelectedPerson(sctReq);
+            const sctTileCrew = getSctTileCrew(sctReq);
             // Check both highestPriorityEvents AND nextDayBuildEvents for existing event
             const existingInPriorityIndex = newPriorityEvents.findIndex(e =>
                 e.id === `sct-ftd-${sctReq.id}`
@@ -27468,15 +27493,16 @@ const App: React.FC = () => {
                 // Update the existing event with new data from SCT request
                 newPriorityEvents[existingInPriorityIndex] = {
                     ...newPriorityEvents[existingInPriorityIndex],
-                    student: sctReq.flightType === 'Dual' ? (sctReq.crewMember || 'TBA') : '',
-                    pilot: sctReq.name,
+                    student: sctReq.flightType === 'Dual' ? sctTileCrew : '',
+                    pilot: sctSelectedPerson,
                     flightNumber: sctEventCode,
                     duration: duration,
                     startTime: startTime,
                     flightType: 'Dual',
                     soloOrDual: 'Dual',
                     currency: sctReq.currency,
-                    notes: buildSctEventNotes(sctReq)
+                    notes: buildSctEventNotes(sctReq),
+                    fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
                 console.log('🔄 Updated HIGH priority SCT FTD:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else if (!existingInNextDay) {
@@ -27496,8 +27522,8 @@ const App: React.FC = () => {
                     date: buildDfpDate,
                     type: 'ftd',
                     instructor: '', // Crew field - blank initially, can be selected
-                    student: sctReq.flightType === 'Dual' ? (sctReq.crewMember || 'TBA') : '', // Store crew member for Dual events, default to TBA
-                    pilot: sctReq.name, // Pilot field shows the person
+                    student: sctReq.flightType === 'Dual' ? sctTileCrew : '', // Fixed Crew tiles display the selected crew group.
+                    pilot: sctSelectedPerson, // Optional selected individual/PIC candidate.
                     flightNumber: sctEventCode,
                     duration: duration,
                     startTime: startTime, // Use requested time
@@ -27512,7 +27538,8 @@ const App: React.FC = () => {
                     isSct: true,
                     eventCategory: 'sct', // This is the key field that makes it use SCT logic
                     currency: sctReq.currency,
-                    notes: buildSctEventNotes(sctReq)
+                    notes: buildSctEventNotes(sctReq),
+                    fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
                 console.log('\u2705 Added HIGH priority SCT FTD:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
                 console.log('  - Event date:', newEvent.date, '| isTimeFixed:', newEvent.isTimeFixed, '| startTime:', newEvent.startTime);
@@ -33764,6 +33791,11 @@ appliedUpdates.forEach(update => {
                           submitted: false,
                           includeInBuild: false,
                           aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+                          crewGroup: '',
+                          crewGroupKey: '',
+                          crewUnitCode: '',
+                          crewDisplayLabel: '',
+                          crewIndividual: '',
                       };
                       console.log('[SCT] Created new request:', newReq.id);
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
@@ -33773,7 +33805,7 @@ appliedUpdates.forEach(update => {
                       console.log('[SCT] Attempting to save - userId from getCurrentUserId():', userId);
                       if (userId) {
                         try {
-                          const { eventCode, ...persistableReq } = newReq;
+                          const { eventCode, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual, ...persistableReq } = newReq;
                           const payload = { ...persistableReq, userId, requestType: type };
                           console.log('[SCT] POST payload:', JSON.stringify(payload));
                           const res = await fetch('/api/sct-requests', {
@@ -33813,7 +33845,7 @@ appliedUpdates.forEach(update => {
                       const updater = (prev: SctRequest[]) => prev.map(r => r.id === id ? { ...r, [field]: effectiveValue } : r);
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
-                      if (field === 'crewMember' || field === 'eventCode') return;
+                      if (field === 'crewMember' || field === 'eventCode' || field === 'crewGroup' || field === 'crewGroupKey' || field === 'crewUnitCode' || field === 'crewDisplayLabel' || field === 'crewIndividual') return;
                       // Persist to DB
                       try {
                         await fetch(`/api/sct-requests/${id}`, {

@@ -1200,6 +1200,56 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     ...currencyProfilesForContext.map(profile => String(profile.crew || '').trim()).filter(Boolean),
     ...standardMissionCrewOptions.map(option => String(option || '').trim()).filter(Boolean),
   ])), [currencyProfilesForContext, standardMissionCrewOptions]);
+  const fixedCrewRequestCrewGroups = useMemo(() => {
+    const groups = new Map<string, {
+      key: string;
+      unitCode: string;
+      crewValue: string;
+      label: string;
+      members: Instructor[];
+    }>();
+    const formatCrewLabel = (crewValue: string, unitCode: string): string => {
+      const crewCore = String(crewValue || '').replace(/^CREW\s*/i, '').trim().toUpperCase();
+      const crewLabel = crewCore ? `CREW ${crewCore}` : String(crewValue || '').trim().toUpperCase();
+      return unitCode ? `${crewLabel}/${unitCode}` : crewLabel;
+    };
+
+    instructorsData.forEach(staff => {
+      const crewValue = String(staff.crew || '').trim();
+      if (!crewValue) return;
+      const unitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+      if (activeUnitCodeSet.size > 0 && unitCode && !activeUnitCodeSet.has(unitCode)) return;
+      const crewCore = crewValue.replace(/^CREW\s*/i, '').trim().toUpperCase();
+      if (!crewCore) return;
+      const key = `${unitCode || 'UNIT'}::${crewCore}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.members.push(staff);
+        return;
+      }
+      groups.set(key, {
+        key,
+        unitCode,
+        crewValue: crewCore,
+        label: formatCrewLabel(crewCore, unitCode),
+        members: [staff],
+      });
+    });
+
+    return Array.from(groups.values())
+      .map(group => ({
+        ...group,
+        members: group.members.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
+      }))
+      .sort((a, b) => a.unitCode.localeCompare(b.unitCode, undefined, { sensitivity: 'base' })
+        || a.crewValue.localeCompare(b.crewValue, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [activeUnitCode, activeUnitCodeSet, instructorsData, school]);
+  const fixedCrewRequestCrewGroupsByUnit = useMemo(() => fixedCrewRequestCrewGroups.reduce((map, group) => {
+    const unitKey = group.unitCode || 'Unit';
+    if (!map.has(unitKey)) map.set(unitKey, []);
+    map.get(unitKey)!.push(group);
+    return map;
+  }, new Map<string, typeof fixedCrewRequestCrewGroups>()), [fixedCrewRequestCrewGroups]);
   const getCurrencyProfileConfigId = (profile: CurrencyProfile): string | null => {
     const profileConfig = String(profile.config || '').trim();
     if (!profileConfig || profileConfig.toUpperCase() === 'ANY') return null;
@@ -2607,20 +2657,67 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       <div>
           <h3 className="text-lg font-semibold text-sky-400 mb-2">{type === 'flight' ? 'Flights' : ftdLabel}</h3>
           <div className="space-y-3">
-              {requests.map(req => {
+              {requests.filter(req => !req.submitted).map(req => {
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
                   const fieldLabelClass = 'mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500';
                   const fieldShellClass = 'min-w-0';
                   const controlClass = 'w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500';
+                  const selectedCrewGroup = fixedCrewRequestCrewGroups.find(group => (
+                    group.key === req.crewGroupKey
+                    || (group.crewValue === String(req.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
+                      && group.unitCode === String(req.crewUnitCode || '').trim().toUpperCase())
+                  ));
+                  const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? (req.crewGroupKey || req.crewDisplayLabel) : req.name));
                   return (
                       <div key={req.id} className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20">
                           <div className="grid gap-3 lg:grid-cols-[minmax(12rem,1.4fr)_minmax(9rem,1fr)_minmax(7rem,0.7fr)_minmax(10rem,1fr)]">
                               <div className={fieldShellClass}>
                                   <div className={fieldLabelClass}>Name</div>
-                                  <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className={controlClass}>
-                                      <option value="">Select Instructor</option>
-                                      {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
-                                  </select>
+                                  {isFixedCrewModel ? (
+                                      <div className="grid gap-2">
+                                          <select
+                                              value={selectedCrewGroup?.key || ''}
+                                              onChange={e => {
+                                                  const group = fixedCrewRequestCrewGroups.find(candidate => candidate.key === e.target.value);
+                                                  onUpdateSctRequest(req.id, 'crewGroupKey', group?.key || '', type);
+                                                  onUpdateSctRequest(req.id, 'crewGroup', group?.crewValue || '', type);
+                                                  onUpdateSctRequest(req.id, 'crewUnitCode', group?.unitCode || '', type);
+                                                  onUpdateSctRequest(req.id, 'crewDisplayLabel', group?.label || '', type);
+                                                  onUpdateSctRequest(req.id, 'crewIndividual', '', type);
+                                                  onUpdateSctRequest(req.id, 'name', '', type);
+                                              }}
+                                              className={controlClass}
+                                          >
+                                              <option value="">Select crew</option>
+                                              {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
+                                                  <optgroup key={unitCode} label={unitCode}>
+                                                      {groups.map(group => (
+                                                          <option key={group.key} value={group.key}>{group.label}</option>
+                                                      ))}
+                                                  </optgroup>
+                                              ))}
+                                          </select>
+                                          <select
+                                              value={req.crewIndividual || ''}
+                                              onChange={e => {
+                                                  onUpdateSctRequest(req.id, 'crewIndividual', e.target.value, type);
+                                                  onUpdateSctRequest(req.id, 'name', e.target.value, type);
+                                              }}
+                                              disabled={!selectedCrewGroup}
+                                              className={controlClass}
+                                          >
+                                              <option value="">{selectedCrewGroup ? 'Whole crew' : 'Select crew first'}</option>
+                                              {selectedCrewGroup?.members.map(member => (
+                                                  <option key={member.id || member.idNumber || member.name} value={member.name}>{member.name}</option>
+                                              ))}
+                                          </select>
+                                      </div>
+                                  ) : (
+                                      <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className={controlClass}>
+                                          <option value="">Select Instructor</option>
+                                          {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
+                                      </select>
+                                  )}
                               </div>
                               <div className={fieldShellClass}>
                                   <div className={fieldLabelClass}>Event</div>
@@ -2700,12 +2797,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                               ) : (
                                   <button
                                       onClick={() => {
-                                          if (req.name && req.event) {
+                                          if (canSubmitRequest) {
                                               onSubmitSctRequest(req.id, type);
                                           }
                                       }}
-                                      disabled={!req.name || !req.event}
-                                      className={`${statusButtonClass} ${req.name && req.event ? 'text-slate-900' : 'text-gray-500'}`}
+                                      disabled={!canSubmitRequest}
+                                      className={`${statusButtonClass} ${canSubmitRequest ? 'text-slate-900' : 'text-gray-500'}`}
                                   >
                                       Submit
                                   </button>

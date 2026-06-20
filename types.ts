@@ -577,6 +577,11 @@ export interface SctRequest {
     includeInBuild?: boolean; // For MEDIUM/LOW priority - user can manually include in build
     aircraftConfigId?: string;
     crewMember?: string;
+    crewGroup?: string;
+    crewGroupKey?: string;
+    crewUnitCode?: string;
+    crewDisplayLabel?: string;
+    crewIndividual?: string;
     crewRequirement?: CrewRequirement;
 }
 

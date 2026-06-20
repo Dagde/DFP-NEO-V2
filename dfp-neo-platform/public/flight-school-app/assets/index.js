@@ -26731,6 +26731,45 @@ const PrioritiesView = ({
     ...currencyProfilesForContext.map((profile) => String(profile.crew || "").trim()).filter(Boolean),
     ...standardMissionCrewOptions.map((option) => String(option || "").trim()).filter(Boolean)
   ])), [currencyProfilesForContext, standardMissionCrewOptions]);
+  const fixedCrewRequestCrewGroups = reactExports.useMemo(() => {
+    const groups = /* @__PURE__ */ new Map();
+    const formatCrewLabel = (crewValue, unitCode) => {
+      const crewCore = String(crewValue || "").replace(/^CREW\s*/i, "").trim().toUpperCase();
+      const crewLabel = crewCore ? `CREW ${crewCore}` : String(crewValue || "").trim().toUpperCase();
+      return unitCode ? `${crewLabel}/${unitCode}` : crewLabel;
+    };
+    instructorsData.forEach((staff) => {
+      const crewValue = String(staff.crew || "").trim();
+      if (!crewValue) return;
+      const unitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+      if (activeUnitCodeSet.size > 0 && unitCode && !activeUnitCodeSet.has(unitCode)) return;
+      const crewCore = crewValue.replace(/^CREW\s*/i, "").trim().toUpperCase();
+      if (!crewCore) return;
+      const key = `${unitCode || "UNIT"}::${crewCore}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.members.push(staff);
+        return;
+      }
+      groups.set(key, {
+        key,
+        unitCode,
+        crewValue: crewCore,
+        label: formatCrewLabel(crewCore, unitCode),
+        members: [staff]
+      });
+    });
+    return Array.from(groups.values()).map((group) => ({
+      ...group,
+      members: group.members.slice().sort((a, b) => a.name.localeCompare(b.name, void 0, { sensitivity: "base" }))
+    })).sort((a, b) => a.unitCode.localeCompare(b.unitCode, void 0, { sensitivity: "base" }) || a.crewValue.localeCompare(b.crewValue, void 0, { numeric: true, sensitivity: "base" }));
+  }, [activeUnitCode, activeUnitCodeSet, instructorsData, school]);
+  const fixedCrewRequestCrewGroupsByUnit = reactExports.useMemo(() => fixedCrewRequestCrewGroups.reduce((map, group) => {
+    const unitKey = group.unitCode || "Unit";
+    if (!map.has(unitKey)) map.set(unitKey, []);
+    map.get(unitKey).push(group);
+    return map;
+  }, /* @__PURE__ */ new Map()), [fixedCrewRequestCrewGroups]);
   const getCurrencyProfileConfigId = (profile) => {
     const profileConfig = String(profile.config || "").trim();
     if (!profileConfig || profileConfig.toUpperCase() === "ANY") return null;
@@ -27885,16 +27924,55 @@ const PrioritiesView = ({
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-400 mb-2", children: type === "flight" ? "Flights" : ftdLabel }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: requests.map((req) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: requests.filter((req) => !req.submitted).map((req) => {
         const expiryInfo = calculateDaysToExpire(req.currencyExpire);
         const fieldLabelClass = "mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500";
         const fieldShellClass = "min-w-0";
         const controlClass = "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500";
+        const selectedCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === req.crewGroupKey || group.crewValue === String(req.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(req.crewUnitCode || "").trim().toUpperCase());
+        const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? req.crewGroupKey || req.crewDisplayLabel : req.name));
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(12rem,1.4fr)_minmax(9rem,1fr)_minmax(7rem,0.7fr)_minmax(10rem,1fr)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Name" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.name, onChange: (e) => onUpdateSctRequest(req.id, "name", e.target.value, type), className: controlClass, children: [
+              isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: selectedCrewGroup?.key || "",
+                    onChange: (e) => {
+                      const group = fixedCrewRequestCrewGroups.find((candidate) => candidate.key === e.target.value);
+                      onUpdateSctRequest(req.id, "crewGroupKey", group?.key || "", type);
+                      onUpdateSctRequest(req.id, "crewGroup", group?.crewValue || "", type);
+                      onUpdateSctRequest(req.id, "crewUnitCode", group?.unitCode || "", type);
+                      onUpdateSctRequest(req.id, "crewDisplayLabel", group?.label || "", type);
+                      onUpdateSctRequest(req.id, "crewIndividual", "", type);
+                      onUpdateSctRequest(req.id, "name", "", type);
+                    },
+                    className: controlClass,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
+                      Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group.key, children: group.label }, group.key)) }, unitCode))
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: req.crewIndividual || "",
+                    onChange: (e) => {
+                      onUpdateSctRequest(req.id, "crewIndividual", e.target.value, type);
+                      onUpdateSctRequest(req.id, "name", e.target.value, type);
+                    },
+                    disabled: !selectedCrewGroup,
+                    className: controlClass,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: selectedCrewGroup ? "Whole crew" : "Select crew first" }),
+                      selectedCrewGroup?.members.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: member.name }, member.id || member.idNumber || member.name))
+                    ]
+                  }
+                )
+              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.name, onChange: (e) => onUpdateSctRequest(req.id, "name", e.target.value, type), className: controlClass, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Instructor" }),
                 instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
               ] })
@@ -27968,12 +28046,12 @@ const PrioritiesView = ({
               "button",
               {
                 onClick: () => {
-                  if (req.name && req.event) {
+                  if (canSubmitRequest) {
                     onSubmitSctRequest(req.id, type);
                   }
                 },
-                disabled: !req.name || !req.event,
-                className: `${statusButtonClass} ${req.name && req.event ? "text-slate-900" : "text-gray-500"}`,
+                disabled: !canSubmitRequest,
+                className: `${statusButtonClass} ${canSubmitRequest ? "text-slate-900" : "text-gray-500"}`,
                 children: "Submit"
               }
             ),
@@ -91174,6 +91252,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       const noteLines = [];
       const existingNotes = String(sctReq.notes || "").trim();
       if (existingNotes) noteLines.push(existingNotes);
+      if (String(sctReq.crewDisplayLabel || "").trim()) noteLines.push(`Crew: ${sctReq.crewDisplayLabel}`);
+      if (String(sctReq.crewIndividual || "").trim()) noteLines.push(`Individual: ${sctReq.crewIndividual}`);
       if (String(sctReq.currency || "").trim()) noteLines.push(`Currency: ${sctReq.currency}`);
       if (String(sctReq.currencyExpire || "").trim()) noteLines.push(`Currency Expire: ${sctReq.currencyExpire}`);
       if (String(sctReq.dateRequested || "").trim()) noteLines.push(`Date Requested: ${sctReq.dateRequested}`);
@@ -91187,16 +91267,30 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       }
       return noteLines.join("\n");
     };
+    const getSctCrewGroupKey = (sctReq) => {
+      const explicitKey = String(sctReq.crewGroupKey || "").trim();
+      if (explicitKey) return explicitKey;
+      const unitCode = String(sctReq.crewUnitCode || "").trim().toUpperCase();
+      const crewGroup = String(sctReq.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase();
+      return unitCode && crewGroup ? `${unitCode}::${crewGroup}` : "";
+    };
+    const getSctCrewDisplayLabel = (sctReq) => String(sctReq.crewDisplayLabel || "").trim();
+    const getSctSelectedPerson = (sctReq) => String(sctReq.crewIndividual || sctReq.name || "").trim();
+    const getSctTileCrew = (sctReq) => getSctCrewDisplayLabel(sctReq) || (sctReq.flightType === "Dual" ? String(sctReq.crewMember || "").trim() : "") || "TBA";
+    const hasSctParticipant = (sctReq) => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
     console.log("🔍 SCT Sync - buildDfpDate:", buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
-      (req) => (req.priority === "High" || req.includeInBuild) && req.name.trim() !== "" && req.event.trim() !== ""
+      (req) => (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
     const highPrioritySctFtds = sctFtds.filter(
-      (req) => (req.priority === "High" || req.includeInBuild) && req.name.trim() !== "" && req.event.trim() !== ""
+      (req) => (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
     console.log("🔍 Found SCT flights to include:", highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
     highPrioritySctFlights.forEach((sctReq) => {
       const sctEventCode = String(sctReq.eventCode || sctReq.event || "").trim().toUpperCase().slice(0, 8) || sctReq.event;
+      const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
+      const sctSelectedPerson = getSctSelectedPerson(sctReq);
+      const sctTileCrew = getSctTileCrew(sctReq);
       const existingInPriorityIndex = newPriorityEvents.findIndex(
         (e) => e.id === `sct-flight-${sctReq.id}`
       );
@@ -91214,8 +91308,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
         newPriorityEvents[existingInPriorityIndex] = {
           ...newPriorityEvents[existingInPriorityIndex],
-          student: sctReq.flightType === "Dual" ? sctReq.crewMember || "TBA" : "",
-          pilot: sctReq.name,
+          student: sctReq.flightType === "Dual" ? sctTileCrew : "",
+          pilot: sctSelectedPerson,
           flightNumber: sctEventCode,
           duration,
           startTime,
@@ -91224,7 +91318,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
           aircraftConfigId,
-          acceptableAircraftConfigs: [aircraftConfigId]
+          acceptableAircraftConfigs: [aircraftConfigId],
+          fixedCrewGroup: sctCrewGroupKey || void 0
         };
         console.log("🔄 Updated HIGH priority SCT flight:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
@@ -91243,10 +91338,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           type: "flight",
           instructor: "",
           // Crew field - blank initially, can be selected
-          student: sctReq.flightType === "Dual" ? sctReq.crewMember || "TBA" : "",
-          // Store crew member for Dual events, default to TBA
-          pilot: sctReq.name,
-          // Pilot field shows the person
+          student: sctReq.flightType === "Dual" ? sctTileCrew : "",
+          // Fixed Crew tiles display the selected crew group.
+          pilot: sctSelectedPerson,
+          // Optional selected individual/PIC candidate.
           flightNumber: sctEventCode,
           duration,
           startTime,
@@ -91267,7 +91362,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq),
           aircraftConfigId,
-          acceptableAircraftConfigs: [aircraftConfigId]
+          acceptableAircraftConfigs: [aircraftConfigId],
+          fixedCrewGroup: sctCrewGroupKey || void 0
         };
         newPriorityEvents.push(newEvent);
         added++;
@@ -91277,6 +91373,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     });
     highPrioritySctFtds.forEach((sctReq) => {
       const sctEventCode = String(sctReq.eventCode || sctReq.event || "").trim().toUpperCase().slice(0, 8) || sctReq.event;
+      const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
+      const sctSelectedPerson = getSctSelectedPerson(sctReq);
+      const sctTileCrew = getSctTileCrew(sctReq);
       const existingInPriorityIndex = newPriorityEvents.findIndex(
         (e) => e.id === `sct-ftd-${sctReq.id}`
       );
@@ -91293,15 +91392,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         newPriorityEvents[existingInPriorityIndex] = {
           ...newPriorityEvents[existingInPriorityIndex],
-          student: sctReq.flightType === "Dual" ? sctReq.crewMember || "TBA" : "",
-          pilot: sctReq.name,
+          student: sctReq.flightType === "Dual" ? sctTileCrew : "",
+          pilot: sctSelectedPerson,
           flightNumber: sctEventCode,
           duration,
           startTime,
           flightType: "Dual",
           soloOrDual: "Dual",
           currency: sctReq.currency,
-          notes: buildSctEventNotes(sctReq)
+          notes: buildSctEventNotes(sctReq),
+          fixedCrewGroup: sctCrewGroupKey || void 0
         };
         console.log("🔄 Updated HIGH priority SCT FTD:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
@@ -91319,10 +91419,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           type: "ftd",
           instructor: "",
           // Crew field - blank initially, can be selected
-          student: sctReq.flightType === "Dual" ? sctReq.crewMember || "TBA" : "",
-          // Store crew member for Dual events, default to TBA
-          pilot: sctReq.name,
-          // Pilot field shows the person
+          student: sctReq.flightType === "Dual" ? sctTileCrew : "",
+          // Fixed Crew tiles display the selected crew group.
+          pilot: sctSelectedPerson,
+          // Optional selected individual/PIC candidate.
           flightNumber: sctEventCode,
           duration,
           startTime,
@@ -91341,7 +91441,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           eventCategory: "sct",
           // This is the key field that makes it use SCT logic
           currency: sctReq.currency,
-          notes: buildSctEventNotes(sctReq)
+          notes: buildSctEventNotes(sctReq),
+          fixedCrewGroup: sctCrewGroupKey || void 0
         };
         console.log("✅ Added HIGH priority SCT FTD:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
         console.log("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
@@ -96399,7 +96500,12 @@ ${error instanceof Error ? error.message : String(error)}`,
                 requestedTime: "15:00",
                 submitted: false,
                 includeInBuild: false,
-                aircraftConfigId: BASE_AIRCRAFT_CONFIG.id
+                aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+                crewGroup: "",
+                crewGroupKey: "",
+                crewUnitCode: "",
+                crewDisplayLabel: "",
+                crewIndividual: ""
               };
               console.log("[SCT] Created new request:", newReq.id);
               if (type === "flight") setSctFlights((prev) => [...prev, newReq]);
@@ -96408,7 +96514,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               console.log("[SCT] Attempting to save - userId from getCurrentUserId():", userId);
               if (userId) {
                 try {
-                  const { eventCode: eventCode2, ...persistableReq } = newReq;
+                  const { eventCode: eventCode2, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual, ...persistableReq } = newReq;
                   const payload = { ...persistableReq, userId, requestType: type };
                   console.log("[SCT] POST payload:", JSON.stringify(payload));
                   const res = await fetch("/api/sct-requests", {
@@ -96448,7 +96554,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               const updater = (prev) => prev.map((r) => r.id === id ? { ...r, [field]: effectiveValue } : r);
               if (type === "flight") setSctFlights(updater);
               else setSctFtds(updater);
-              if (field === "crewMember" || field === "eventCode") return;
+              if (field === "crewMember" || field === "eventCode" || field === "crewGroup" || field === "crewGroupKey" || field === "crewUnitCode" || field === "crewDisplayLabel" || field === "crewIndividual") return;
               try {
                 await fetch(`/api/sct-requests/${id}`, {
                   method: "PUT",
