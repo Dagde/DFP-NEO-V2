@@ -3737,6 +3737,11 @@ const normaliseRoleRequirements = (value) => {
   });
   return Array.from(merged.values());
 };
+const normaliseCurrencyProfileCode = (value, fallback) => {
+  const token = String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  if (token) return token;
+  return String(fallback || "CURR").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CURR";
+};
 const normaliseCrewCompositionSettings = (value) => {
   const source = value && typeof value === "object" ? value : {};
   const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
@@ -3770,13 +3775,15 @@ const normaliseCrewCompositionSettings = (value) => {
   const currencyProfiles = currencyRows.map((row, index) => {
     const rawName = String(row?.name || row?.profileName || row?.label || "");
     const fallbackName = String(row?.currency || row?.event || `Currency Profile ${index + 1}`).trim();
+    const name = rawName.length > 0 ? rawName : fallbackName;
     return {
       id: String(row?.id || `currency-profile-${index + 1}`),
       unitCode: String(row?.unitCode || "").trim().toUpperCase(),
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
-      name: rawName.length > 0 ? rawName : fallbackName,
+      name,
+      code: normaliseCurrencyProfileCode(row?.code || row?.eventCode || row?.shortCode, name || fallbackName),
       crew: String(row?.crew || ""),
       config: String(row?.config || row?.aircraftConfigId || "ANY").trim() || "ANY",
       currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
@@ -27415,6 +27422,7 @@ const PrioritiesView = ({
         ...draft,
         aircraftConfigId: draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
         currencyProfileName: String(draft?.currencyProfileName || draft?.eventName || "").trim(),
+        currencyProfileCode: String(draft?.currencyProfileCode || draft?.eventCode || "").trim().toUpperCase().slice(0, 8),
         crewRequirement: draft?.crewRequirement || { mode: "aircraft_default" }
       })) : [];
     } catch {
@@ -27670,6 +27678,7 @@ const PrioritiesView = ({
       return {
         ...event,
         currencyProfileName: String(profile.name || profile.currency || "").trim(),
+        currencyProfileCode: String(profile.code || "").trim().toUpperCase().slice(0, 8),
         selectedCurrencies: profile.currency ? [profile.currency] : event.selectedCurrencies,
         aircraftConfigId: configId || event.aircraftConfigId
       };
@@ -27679,6 +27688,7 @@ const PrioritiesView = ({
     const events = [];
     const defaultProfile = currencyProfilesForContext[0] || null;
     const defaultProfileName = defaultProfile ? String(defaultProfile.name || defaultProfile.currency || "").trim() : "";
+    const defaultProfileCode = defaultProfile ? String(defaultProfile.code || "").trim().toUpperCase().slice(0, 8) : "";
     const defaultProfileConfigId = defaultProfile ? getCurrencyProfileConfigId(defaultProfile) : null;
     people.forEach((person, personIndex) => {
       const displayName = person.fullName || person.name;
@@ -27697,6 +27707,7 @@ const PrioritiesView = ({
           rank: person.rank,
           eventType: type,
           currencyProfileName: defaultProfileName,
+          currencyProfileCode: defaultProfileCode,
           crewMode,
           dueCurrencies: person.dueCurrencies,
           selectedCurrencies: defaultProfile?.currency ? [defaultProfile.currency] : [],
@@ -27715,6 +27726,7 @@ const PrioritiesView = ({
       const startBase = draft.eventType === "flight" ? flyingStartTime : ftdStartTime;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(", ") : "";
       const aircraftConfigId = draft.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+      const eventCode2 = String(draft.currencyProfileCode || "").trim().toUpperCase().slice(0, 8) || "CURR";
       return {
         id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${v4()}`,
         currencyDraftId: draft.id,
@@ -27723,7 +27735,7 @@ const PrioritiesView = ({
         instructor: "",
         student: draft.personName,
         pilot: isSolo ? draft.personName : "",
-        flightNumber: "CURR",
+        flightNumber: eventCode2,
         duration: draft.eventType === "flight" ? 1.2 : 1.5,
         startTime: startBase,
         resourceId: "",
@@ -27863,6 +27875,7 @@ const PrioritiesView = ({
       const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === eventValue || String(candidate.currency || "").trim() === eventValue);
       onUpdateSctRequest(requestId, "event", profile ? String(profile.name || profile.currency || "").trim() : eventValue, type);
       if (!profile) return;
+      onUpdateSctRequest(requestId, "eventCode", String(profile.code || "").trim().toUpperCase().slice(0, 8), type);
       onUpdateSctRequest(requestId, "currency", profile.currency, type);
       const configId = getCurrencyProfileConfigId(profile);
       if (configId) onUpdateSctRequest(requestId, "aircraftConfigId", configId, type);
@@ -54834,6 +54847,7 @@ const PlatformConfigurationSettings = ({
       compositeProfileId: combinedContext ? baseId : "",
       aircraftTypeCode: activeCrewCompositionAircraftCode,
       name: `Profile ${profileIndex}`,
+      code: `CURR${profileIndex}`.slice(0, 8).toUpperCase(),
       crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || "Aircraft"} Crew`,
       config: "ANY",
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
@@ -56969,8 +56983,18 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
             const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
             const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
             const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency) ? activeCurrencyDefinitionNames : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Profile Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { name: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                OffsetField,
+                {
+                  label: "Code",
+                  value: profile.code,
+                  disabled: !canEditCrewComposition,
+                  maxLength: 8,
+                  onChange: (value) => updateCurrencyProfile(profile.id, { code: value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) })
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Crew", value: profile.crew, disabled: !canEditCrewComposition || crewOptions.length === 0, options: crewOptions, onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEditCrewComposition, options: configOptions, onChange: (value) => updateCurrencyProfile(profile.id, { config: value || "ANY" }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59259,7 +59283,7 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }) => /* @__P
     maxLength
   ] }) : null
 ] });
-const OffsetField = ({ label, value, disabled, onChange, listId, options = [] }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-[15px]", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59269,6 +59293,7 @@ const OffsetField = ({ label, value, disabled, onChange, listId, options = [] })
         value: value || "",
         disabled,
         list: listId,
+        maxLength,
         onKeyDownCapture: stopEditableKeyPropagation,
         onKeyDown: stopEditableKeyPropagation,
         onChange: (event) => onChange(event.target.value)
@@ -91171,6 +91196,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     );
     console.log("🔍 Found SCT flights to include:", highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
     highPrioritySctFlights.forEach((sctReq) => {
+      const sctEventCode = String(sctReq.eventCode || sctReq.event || "").trim().toUpperCase().slice(0, 8) || sctReq.event;
       const existingInPriorityIndex = newPriorityEvents.findIndex(
         (e) => e.id === `sct-flight-${sctReq.id}`
       );
@@ -91190,7 +91216,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           ...newPriorityEvents[existingInPriorityIndex],
           student: sctReq.flightType === "Dual" ? sctReq.crewMember || "TBA" : "",
           pilot: sctReq.name,
-          flightNumber: sctReq.event,
+          flightNumber: sctEventCode,
           duration,
           startTime,
           flightType: sctReq.flightType,
@@ -91200,7 +91226,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           aircraftConfigId,
           acceptableAircraftConfigs: [aircraftConfigId]
         };
-        console.log("🔄 Updated HIGH priority SCT flight:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        console.log("🔄 Updated HIGH priority SCT flight:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
@@ -91221,7 +91247,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           // Store crew member for Dual events, default to TBA
           pilot: sctReq.name,
           // Pilot field shows the person
-          flightNumber: sctReq.event,
+          flightNumber: sctEventCode,
           duration,
           startTime,
           // Use requested time
@@ -91245,11 +91271,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         };
         newPriorityEvents.push(newEvent);
         added++;
-        console.log("✅ Added HIGH priority SCT flight:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        console.log("✅ Added HIGH priority SCT flight:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
         console.log("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
       }
     });
     highPrioritySctFtds.forEach((sctReq) => {
+      const sctEventCode = String(sctReq.eventCode || sctReq.event || "").trim().toUpperCase().slice(0, 8) || sctReq.event;
       const existingInPriorityIndex = newPriorityEvents.findIndex(
         (e) => e.id === `sct-ftd-${sctReq.id}`
       );
@@ -91268,7 +91295,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           ...newPriorityEvents[existingInPriorityIndex],
           student: sctReq.flightType === "Dual" ? sctReq.crewMember || "TBA" : "",
           pilot: sctReq.name,
-          flightNumber: sctReq.event,
+          flightNumber: sctEventCode,
           duration,
           startTime,
           flightType: "Dual",
@@ -91276,7 +91303,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq)
         };
-        console.log("🔄 Updated HIGH priority SCT FTD:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        console.log("🔄 Updated HIGH priority SCT FTD:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
         allTraineesData.find((t) => t.fullName === sctReq.name);
@@ -91296,7 +91323,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           // Store crew member for Dual events, default to TBA
           pilot: sctReq.name,
           // Pilot field shows the person
-          flightNumber: sctReq.event,
+          flightNumber: sctEventCode,
           duration,
           startTime,
           // Use requested time
@@ -91316,7 +91343,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           currency: sctReq.currency,
           notes: buildSctEventNotes(sctReq)
         };
-        console.log("✅ Added HIGH priority SCT FTD:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        console.log("✅ Added HIGH priority SCT FTD:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
         console.log("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
         newPriorityEvents.push(newEvent);
         added++;
@@ -96363,6 +96390,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 id: v4(),
                 name: "",
                 event: "",
+                eventCode: "",
                 flightType: type === "flight" && activeAircraftCrewComposition.crewCount === 1 ? "Solo" : "Dual",
                 currency: "",
                 currencyExpire: "",
@@ -96380,7 +96408,8 @@ ${error instanceof Error ? error.message : String(error)}`,
               console.log("[SCT] Attempting to save - userId from getCurrentUserId():", userId);
               if (userId) {
                 try {
-                  const payload = { ...newReq, userId, requestType: type };
+                  const { eventCode: eventCode2, ...persistableReq } = newReq;
+                  const payload = { ...persistableReq, userId, requestType: type };
                   console.log("[SCT] POST payload:", JSON.stringify(payload));
                   const res = await fetch("/api/sct-requests", {
                     method: "POST",
@@ -96419,7 +96448,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               const updater = (prev) => prev.map((r) => r.id === id ? { ...r, [field]: effectiveValue } : r);
               if (type === "flight") setSctFlights(updater);
               else setSctFtds(updater);
-              if (field === "crewMember") return;
+              if (field === "crewMember" || field === "eventCode") return;
               try {
                 await fetch(`/api/sct-requests/${id}`, {
                   method: "PUT",

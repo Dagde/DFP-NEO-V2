@@ -26,6 +26,7 @@ export interface CurrencyProfile {
   compositeProfileId?: string;
   aircraftTypeCode?: string;
   name: string;
+  code: string;
   crew: string;
   config: string;
   currency: string;
@@ -76,6 +77,20 @@ const normaliseRoleRequirements = (value: unknown): CrewCompositionRoleRequireme
   return Array.from(merged.values());
 };
 
+const normaliseCurrencyProfileCode = (value: unknown, fallback: string): string => {
+  const token = String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 8);
+  if (token) return token;
+  return String(fallback || 'CURR')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 8) || 'CURR';
+};
+
 export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositionSettings => {
   const source = (value && typeof value === 'object') ? value as any : {};
   const rows = Array.isArray(source.alternateCompositions) ? source.alternateCompositions : [];
@@ -116,13 +131,15 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
   const currencyProfiles = currencyRows.map((row: any, index: number): CurrencyProfile => {
     const rawName = String(row?.name || row?.profileName || row?.label || '');
     const fallbackName = String(row?.currency || row?.event || `Currency Profile ${index + 1}`).trim();
+    const name = rawName.length > 0 ? rawName : fallbackName;
     return {
       id: String(row?.id || `currency-profile-${index + 1}`),
       unitCode: String(row?.unitCode || '').trim().toUpperCase(),
       compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || '').trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
-      name: rawName.length > 0 ? rawName : fallbackName,
+      name,
+      code: normaliseCurrencyProfileCode(row?.code || row?.eventCode || row?.shortCode, name || fallbackName),
       crew: String(row?.crew || ''),
       config: String(row?.config || row?.aircraftConfigId || 'ANY').trim() || 'ANY',
       currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),

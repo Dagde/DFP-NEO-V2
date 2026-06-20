@@ -1914,6 +1914,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       compositeProfileId: combinedContext ? baseId : '',
       aircraftTypeCode: activeCrewCompositionAircraftCode,
       name: `Profile ${profileIndex}`,
+      code: `CURR${profileIndex}`.slice(0, 8).toUpperCase(),
       crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || 'Aircraft'} Crew`,
       config: 'ANY',
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
@@ -4490,8 +4491,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   ? activeCurrencyDefinitionNames
                   : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
                 return (
-                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]">
+                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]">
                   <OffsetField label="Profile Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { name: value })} />
+                  <OffsetField
+                    label="Code"
+                    value={profile.code}
+                    disabled={!canEditCrewComposition}
+                    maxLength={8}
+                    onChange={(value) => updateCurrencyProfile(profile.id, { code: value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) })}
+                  />
                   <div className="[&_select]:mt-[15px]">
                     <SelectField label="Crew" value={profile.crew} disabled={!canEditCrewComposition || crewOptions.length === 0} options={crewOptions} onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })} />
                   </div>
@@ -6805,7 +6813,7 @@ const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: s
   </label>
 );
 
-const OffsetField = ({ label, value, disabled, onChange, listId, options = [] }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; listId?: string; options?: string[] }) => (
+const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; listId?: string; options?: string[]; maxLength?: number }) => (
   <label>
     <FieldLabel label={label} />
     <div className="mt-[15px]">
@@ -6814,6 +6822,7 @@ const OffsetField = ({ label, value, disabled, onChange, listId, options = [] }:
         value={value || ''}
         disabled={disabled}
         list={listId}
+        maxLength={maxLength}
         onKeyDownCapture={stopEditableKeyPropagation}
         onKeyDown={stopEditableKeyPropagation}
         onChange={(event) => onChange(event.target.value)}

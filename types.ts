@@ -565,6 +565,7 @@ export interface SctRequest {
     id: string;
     name: string;
     event: string;
+    eventCode?: string;
     flightType: 'Solo' | 'Dual';
     currency: string;
     currencyExpire: string;

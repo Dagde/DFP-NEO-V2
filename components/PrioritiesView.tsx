@@ -2013,6 +2013,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     rank?: string;
     eventType: 'flight' | 'ftd';
     currencyProfileName: string;
+    currencyProfileCode: string;
     crewMode: 'withInstructor' | 'solo' | 'withOtherPilot';
     dueCurrencies: string[];
     selectedCurrencies: string[];
@@ -2029,6 +2030,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             ...draft,
             aircraftConfigId: draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
             currencyProfileName: String(draft?.currencyProfileName || draft?.eventName || '').trim(),
+            currencyProfileCode: String(draft?.currencyProfileCode || draft?.eventCode || '').trim().toUpperCase().slice(0, 8),
             crewRequirement: draft?.crewRequirement || { mode: 'aircraft_default' },
           }))
         : [];
@@ -2360,6 +2362,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       return {
         ...event,
         currencyProfileName: String(profile.name || profile.currency || '').trim(),
+        currencyProfileCode: String(profile.code || '').trim().toUpperCase().slice(0, 8),
         selectedCurrencies: profile.currency ? [profile.currency] : event.selectedCurrencies,
         aircraftConfigId: configId || event.aircraftConfigId,
       };
@@ -2376,6 +2379,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const events: typeof currencyDraftEvents = [];
     const defaultProfile = currencyProfilesForContext[0] || null;
     const defaultProfileName = defaultProfile ? String(defaultProfile.name || defaultProfile.currency || '').trim() : '';
+    const defaultProfileCode = defaultProfile ? String(defaultProfile.code || '').trim().toUpperCase().slice(0, 8) : '';
     const defaultProfileConfigId = defaultProfile ? getCurrencyProfileConfigId(defaultProfile) : null;
     people.forEach((person, personIndex) => {
       const displayName = person.fullName || person.name;
@@ -2394,6 +2398,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           rank: person.rank,
           eventType: type,
           currencyProfileName: defaultProfileName,
+          currencyProfileCode: defaultProfileCode,
           crewMode,
           dueCurrencies: person.dueCurrencies,
           selectedCurrencies: defaultProfile?.currency ? [defaultProfile.currency] : [],
@@ -2413,6 +2418,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const startBase = draft.eventType === 'flight' ? flyingStartTime : ftdStartTime;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(', ') : '';
       const aircraftConfigId = draft.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
+      const eventCode = String(draft.currencyProfileCode || '').trim().toUpperCase().slice(0, 8) || 'CURR';
       return {
         id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${uuidv4()}`,
         currencyDraftId: draft.id,
@@ -2421,7 +2427,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         instructor: '',
         student: draft.personName,
         pilot: isSolo ? draft.personName : '',
-        flightNumber: 'CURR',
+        flightNumber: eventCode,
         duration: draft.eventType === 'flight' ? 1.2 : 1.5,
         startTime: startBase,
         resourceId: '',
@@ -2588,6 +2594,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       ));
       onUpdateSctRequest(requestId, 'event', profile ? String(profile.name || profile.currency || '').trim() : eventValue, type);
       if (!profile) return;
+      onUpdateSctRequest(requestId, 'eventCode', String(profile.code || '').trim().toUpperCase().slice(0, 8), type);
       onUpdateSctRequest(requestId, 'currency', profile.currency, type);
       const configId = getCurrencyProfileConfigId(profile);
       if (configId) onUpdateSctRequest(requestId, 'aircraftConfigId', configId, type);
