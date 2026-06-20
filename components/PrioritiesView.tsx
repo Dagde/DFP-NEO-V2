@@ -3407,7 +3407,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
         </div>
 
-        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+        {!isFixedCrewModel && <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
                     <h2 className="text-xl font-semibold text-sky-400">Trainee Currency Events</h2>
@@ -3539,7 +3539,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </table>
                 </div>
             </div>}
-        </div>
+        </div>}
 
         <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">

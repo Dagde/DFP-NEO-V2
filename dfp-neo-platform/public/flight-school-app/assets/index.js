@@ -28604,7 +28604,7 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(SctRequestTable, { type: "ftd", requests: sctFtds })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+      !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Trainee Currency Events" }),
