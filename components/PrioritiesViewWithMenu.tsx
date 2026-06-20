@@ -87,6 +87,7 @@ interface PrioritiesViewWithMenuProps {
   aircraftTypeCode?: string | null;
   crewPositionTerminology?: CrewPositionTerminology;
   crewCompositionSettings?: CrewCompositionSettings;
+  standardMissionCrewOptions?: string[];
   unitCallsignSettings?: UnitCallsignSettings;
 }
 

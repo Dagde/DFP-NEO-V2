@@ -19,8 +19,21 @@ export interface AlternateCrewCompositionProfile {
   status?: string;
 }
 
+export interface CurrencyProfile {
+  id: string;
+  unitCode?: string;
+  compositeUnitCode?: string;
+  compositeProfileId?: string;
+  aircraftTypeCode?: string;
+  crew: string;
+  config: string;
+  currency: string;
+  status?: string;
+}
+
 export interface CrewCompositionSettings {
   alternateCompositions: AlternateCrewCompositionProfile[];
+  currencyProfiles: CurrencyProfile[];
 }
 
 const SUPPORTED_MODELS: OperationalModelCode[] = ['air_combat', 'fixed_crew', 'air_mobility'];
@@ -98,7 +111,20 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
     };
   });
 
-  return { alternateCompositions };
+  const currencyRows = Array.isArray(source.currencyProfiles) ? source.currencyProfiles : [];
+  const currencyProfiles = currencyRows.map((row: any, index: number): CurrencyProfile => ({
+    id: String(row?.id || `currency-profile-${index + 1}`),
+    unitCode: String(row?.unitCode || '').trim().toUpperCase(),
+    compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
+    compositeProfileId: String(row?.compositeProfileId || '').trim(),
+    aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
+    crew: String(row?.crew || '').trim(),
+    config: String(row?.config || row?.aircraftConfigId || 'ANY').trim() || 'ANY',
+    currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
+    status: String(row?.status || 'ACTIVE').trim().toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+  })).filter((profile) => profile.currency);
+
+  return { alternateCompositions, currencyProfiles };
 };
 
 export const createAlternateCrewCompositionCode = (

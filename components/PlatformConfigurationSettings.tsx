@@ -50,6 +50,7 @@ import {
   createAlternateCrewCompositionCode,
   normaliseCrewCompositionSettings,
   type AlternateCrewCompositionProfile,
+  type CurrencyProfile,
 } from '../utils/crewCompositionProfiles';
 import {
   DEFAULT_STAFF_QUALIFICATIONS,
@@ -1103,6 +1104,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
   const [crewCompositionUnlocked, setCrewCompositionUnlocked] = useState(false);
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
+  const [crewCompositionPageTab, setCrewCompositionPageTab] = useState<'crew' | 'currency'>('crew');
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = useState('');
@@ -1757,11 +1759,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     })));
   };
 
-  const updateCrewCompositionSettings = (alternateCompositions: AlternateCrewCompositionProfile[]) => {
+  const updateCrewCompositionSettings = (
+    alternateCompositions: AlternateCrewCompositionProfile[],
+    currencyProfiles: CurrencyProfile[] = crewCompositionSettings.currencyProfiles,
+  ) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
-      crewCompositionSettings: normaliseCrewCompositionSettings({ alternateCompositions }),
+      crewCompositionSettings: normaliseCrewCompositionSettings({ alternateCompositions, currencyProfiles }),
     }));
+  };
+
+  const updateCurrencyProfiles = (currencyProfiles: CurrencyProfile[]) => {
+    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions, currencyProfiles);
   };
 
   const addAlternateCrewComposition = (aircraftTypeCode: string) => {
@@ -1874,6 +1883,60 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         roleRequirements: profile.roleRequirements.filter((_, index) => index !== roleIndex),
       };
     }));
+  };
+
+  const getVisibleCurrencyProfiles = () => uniqueProfilesByCompositeGroup(
+    crewCompositionSettings.currencyProfiles.filter((profile) => (
+      (!profile.aircraftTypeCode || String(profile.aircraftTypeCode || '').trim().toUpperCase() === activeCrewCompositionAircraftCode)
+      && isProfileInActiveUnitContext(profile)
+    )),
+  );
+
+  const addCurrencyProfile = () => {
+    const visibleProfiles = getVisibleCurrencyProfiles();
+    const profileIndex = visibleProfiles.length + 1;
+    const baseId = createClientRecordId('currency-profile');
+    const targetUnitCodes = getActiveScopedUnitCodes();
+    const combinedContext = targetUnitCodes.length > 1;
+    const createProfileForUnit = (unitCode: string): CurrencyProfile => ({
+      id: combinedContext ? `${baseId}-${unitCode.toLowerCase()}` : baseId,
+      unitCode,
+      compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
+      compositeProfileId: combinedContext ? baseId : '',
+      aircraftTypeCode: activeCrewCompositionAircraftCode,
+      crew: 'Standard Crew',
+      config: 'ANY',
+      currency: `Currency ${profileIndex}`,
+      status: 'ACTIVE',
+    });
+    updateCurrencyProfiles([
+      ...crewCompositionSettings.currencyProfiles,
+      ...targetUnitCodes.map(createProfileForUnit),
+    ]);
+  };
+
+  const updateCurrencyProfile = (profileId: string, changes: Partial<CurrencyProfile>) => {
+    const targetProfile = crewCompositionSettings.currencyProfiles.find((profile) => profile.id === profileId);
+    const compositeProfileId = targetProfile?.compositeProfileId || '';
+    updateCurrencyProfiles(crewCompositionSettings.currencyProfiles.map((profile) => (
+      profile.id === profileId || (compositeProfileId && profile.compositeProfileId === compositeProfileId)
+        ? {
+            ...profile,
+            ...changes,
+            unitCode: profile.unitCode,
+            compositeUnitCode: profile.compositeUnitCode,
+            compositeProfileId: profile.compositeProfileId,
+          }
+        : profile
+    )));
+  };
+
+  const removeCurrencyProfile = (profileId: string) => {
+    const targetProfile = crewCompositionSettings.currencyProfiles.find((profile) => profile.id === profileId);
+    const compositeProfileId = targetProfile?.compositeProfileId || '';
+    updateCurrencyProfiles(crewCompositionSettings.currencyProfiles.filter((profile) => (
+      profile.id !== profileId && (!compositeProfileId || profile.compositeProfileId !== compositeProfileId)
+    )));
   };
 
   const updateTrainingReportTemplate = (
@@ -3326,6 +3389,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     )),
   );
   const activeAircraftAlternateCompositions = getVisibleAlternateCrewCompositions();
+  const activeCurrencyProfiles = getVisibleCurrencyProfiles();
   const activePlatformUnit = config.units.find((unit) => String(unit.code || '').trim().toUpperCase() === activePrimaryUnitCode)
     || config.units.find(isActiveRecord)
     || config.units[0]
@@ -4093,6 +4157,27 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             })}
           </div>
 
+          <div className="flex flex-wrap gap-2 rounded-lg border border-cyan-500/20 bg-gray-950/80 p-2">
+            {[
+              { id: 'crew' as const, label: 'Crew Composition' },
+              { id: 'currency' as const, label: 'Currency Profiles' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setCrewCompositionPageTab(tab.id)}
+                className={`rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${
+                  crewCompositionPageTab === tab.id
+                    ? 'border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]'
+                    : 'border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {crewCompositionPageTab === 'crew' && <>
           <div className="grid gap-3 md:grid-cols-3">
             <div className={`rounded-lg border px-3 py-2 ${crewCompositionUnlocked ? 'border-cyan-400/40 bg-cyan-500/10' : 'border-gray-700 bg-gray-950/60'}`}>
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Edit State</div>
@@ -4306,6 +4391,45 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ))}
             </div>
           </div>
+          </>}
+
+          {crewCompositionPageTab === 'currency' && (
+            <div className={resourceSectionPanelClass}>
+              <div className={resourceSectionPanelHeaderClass}>
+                <div>
+                  <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Currency Profiles</h4>
+                  <p className={resourceSectionPanelHintClass}>Profiles prefill Specific Currency Requests with crew, aircraft CONFIG and currency for {activeCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
+                </div>
+                <div className="flex flex-wrap justify-end gap-[1px]">
+                  {crewCompositionUnlocked ? (
+                    <button type="button" onClick={saveCrewCompositionAndKeepPosition} disabled={saving || applyingChanges} className={platformActionButtonClass}>Save</button>
+                  ) : null}
+                  {!crewCompositionUnlocked && canEdit ? (
+                    <button type="button" onClick={() => setCrewCompositionUnlocked(true)} className={platformActionButtonClass}>Edit</button>
+                  ) : null}
+                  <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !activeCrewCompositionAircraftCode} className={platformActionButtonClass}>
+                    <span className="text-[9px] leading-tight">Add<br />Profile</span>
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {activeCurrencyProfiles.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No currency profiles configured.</div>
+                ) : activeCurrencyProfiles.map((profile) => (
+                  <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+                    <OffsetField label="Crew" value={profile.crew} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })} />
+                    <OffsetField label="CONFIG" value={profile.config} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { config: value })} />
+                    <OffsetField label="Currency" value={profile.currency} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { currency: value })} />
+                    <div className="flex items-end">
+                      <button type="button" onClick={() => removeCurrencyProfile(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
+                        <span className="text-[9px] leading-tight text-red-600">Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

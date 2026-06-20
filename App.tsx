@@ -18965,6 +18965,33 @@ const App: React.FC = () => {
         )) || platformConfig?.organisations?.[0];
         return normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
     }, [platformConfig]);
+    const activeStandardMissionCrewOptions = useMemo(() => {
+        const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
+            String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
+        )) || platformConfig?.organisations?.[0];
+        const source = activeOrganisation?.settings?.standardMissionProfiles;
+        const rows = Array.isArray(source?.profiles) ? source.profiles : Array.isArray(source) ? source : [];
+        const activeCodes = activeContextUnitCodes.length > 0
+            ? activeContextUnitCodes.map(code => String(code || '').trim().toUpperCase()).filter(Boolean)
+            : String(activeUnitCode || '').split('+').map(code => String(code || '').trim().toUpperCase()).filter(Boolean);
+        const activeCompositeCodes = new Set([
+            String(activeUnitCode || '').trim().toUpperCase(),
+            activeCodes.join('+'),
+            activeCodes.join('/'),
+        ].filter(Boolean));
+        const options = rows
+            .filter((row: any) => String(row?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+            .filter((row: any) => {
+                const unitCode = String(row?.unitCode || '').trim().toUpperCase();
+                const compositeUnitCode = String(row?.compositeUnitCode || '').trim().toUpperCase();
+                if (unitCode && activeCodes.length > 0) return activeCodes.includes(unitCode);
+                if (compositeUnitCode) return activeCompositeCodes.has(compositeUnitCode);
+                return true;
+            })
+            .map((row: any) => String(row?.shortTitle || row?.missionName || row?.name || '').trim())
+            .filter(Boolean);
+        return Array.from(new Set(options));
+    }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
     const activeStaffQualificationCatalogue = useMemo(() => {
         const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
             String(organisation.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
@@ -33701,6 +33728,7 @@ appliedUpdates.forEach(update => {
                     aircraftTypeCode={activeRuntimeAircraftTypeCode}
                     crewPositionTerminology={activeCrewPositionTerminology}
                     crewCompositionSettings={activeCrewCompositionSettings}
+                    standardMissionCrewOptions={activeStandardMissionCrewOptions}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     onAddPriorityEvents={(eventsToAdd) => {
@@ -33723,7 +33751,7 @@ appliedUpdates.forEach(update => {
                       const newReq: SctRequest = {
                           id: uuidv4(),
                           name: '',
-                          event: 'SCT GF',
+                          event: '',
                           flightType: type === 'flight' && activeAircraftCrewComposition.crewCount === 1 ? 'Solo' : 'Dual',
                           currency: '',
                           currencyExpire: '',
@@ -33781,6 +33809,7 @@ appliedUpdates.forEach(update => {
                       const updater = (prev: SctRequest[]) => prev.map(r => r.id === id ? { ...r, [field]: effectiveValue } : r);
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
+                      if (field === 'crewMember') return;
                       // Persist to DB
                       try {
                         await fetch(`/api/sct-requests/${id}`, {

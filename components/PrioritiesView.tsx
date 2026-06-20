@@ -32,6 +32,7 @@ import { formatCrewRequirementSummary } from '../utils/crewRequirements';
 import {
   normaliseCrewCompositionSettings,
   type CrewCompositionSettings,
+  type CurrencyProfile,
 } from '../utils/crewCompositionProfiles';
 import {
   buildUnitEventCallsign,
@@ -250,6 +251,7 @@ interface PrioritiesViewProps {
   aircraftTypeCode?: string | null;
   crewPositionTerminology?: CrewPositionTerminology;
   crewCompositionSettings?: CrewCompositionSettings;
+  standardMissionCrewOptions?: string[];
   unitCallsignSettings?: UnitCallsignSettings;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
@@ -1018,6 +1020,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   aircraftTypeCode,
   crewPositionTerminology,
   crewCompositionSettings,
+  standardMissionCrewOptions = [],
   unitCallsignSettings,
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
@@ -1039,8 +1042,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const [courseTimestamp, setCourseTimestamp] = useState(new Date().toLocaleString());
 
-  // SCT Request Constants
-  const sctEvents = ['SCT GF', 'SCT IF', 'SCT NAV', 'SCT FORM'];
   const instructorNames = useMemo(() => instructorsData.map(i => i.name).sort(), [instructorsData]);
   const [openCurrencyRequestKey, setOpenCurrencyRequestKey] = useState<string | null>(null);
 
@@ -1147,6 +1148,45 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
     [],
   );
+  const currencyProfilesForContext = useMemo<CurrencyProfile[]>(() => {
+    const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
+    const contextCodes = Array.from(activeUnitCodeSet);
+    const activeAircraftTypeCode = String(aircraftTypeCode || '').trim().toUpperCase();
+    const activeCompositeCodes = new Set([
+      normaliseTaskingUnitCode(activeUnitCode),
+      contextCodes.join('+'),
+      contextCodes.join('/'),
+    ].filter(Boolean));
+    const appliesToContext = (profile: CurrencyProfile): boolean => {
+      const profileAircraftCode = String(profile.aircraftTypeCode || '').trim().toUpperCase();
+      if (profileAircraftCode && activeAircraftTypeCode && profileAircraftCode !== activeAircraftTypeCode) return false;
+      const profileUnitCode = normaliseTaskingUnitCode(profile.unitCode);
+      if (profileUnitCode && contextCodes.length > 0) return contextCodes.includes(profileUnitCode);
+      const profileCompositeCode = normaliseTaskingUnitCode(profile.compositeUnitCode);
+      if (!profileCompositeCode) return !profileUnitCode;
+      if (activeCompositeCodes.has(profileCompositeCode)) return true;
+      const profileCompositeParts = splitTaskingCompositeUnitCode(profileCompositeCode);
+      return profileCompositeParts.length > 0 && profileCompositeParts.every(code => contextCodes.includes(code));
+    };
+    const seen = new Set<string>();
+    return settings.currencyProfiles
+      .filter(profile => profile.status !== 'INACTIVE')
+      .filter(appliesToContext)
+      .filter(profile => {
+        const key = profile.compositeProfileId || profile.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [activeUnitCode, activeUnitCodeSet, aircraftTypeCode, crewCompositionSettings]);
+  const sctEvents = useMemo(() => {
+    const profileCurrencies = currencyProfilesForContext.map(profile => String(profile.currency || '').trim()).filter(Boolean);
+    return Array.from(new Set(profileCurrencies));
+  }, [currencyProfilesForContext]);
+  const fixedCrewCurrencyCrewOptions = useMemo(() => Array.from(new Set([
+    ...currencyProfilesForContext.map(profile => String(profile.crew || '').trim()).filter(Boolean),
+    ...standardMissionCrewOptions.map(option => String(option || '').trim()).filter(Boolean),
+  ])), [currencyProfilesForContext, standardMissionCrewOptions]);
   const airCombatTrainingStreams = useMemo(() => {
     if (!isAirCombatModel) return [];
     const streams = new Map<string, AirCombatTrainingStreamWeight>();
@@ -2496,6 +2536,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
     const addRequestButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight';
     const statusButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed';
+    const applyCurrencyProfile = (requestId: string, eventValue: string) => {
+      const profile = currencyProfilesForContext.find(candidate => String(candidate.currency || '').trim() === eventValue);
+      onUpdateSctRequest(requestId, 'event', eventValue, type);
+      if (!profile) return;
+      onUpdateSctRequest(requestId, 'currency', profile.currency, type);
+      if (profile.config && profile.config.toUpperCase() !== 'ANY') {
+        const configMatch = aircraftConfigOptions.find(definition => (
+          definition.id === profile.config || definition.label === profile.config || definition.definition === profile.config
+        ));
+        if (configMatch) onUpdateSctRequest(requestId, 'aircraftConfigId', configMatch.id, type);
+      }
+      if (isFixedCrewModel && profile.crew) {
+        onUpdateSctRequest(requestId, 'crewMember', profile.crew, type);
+      }
+    };
     
       return (
       <div>
@@ -2518,13 +2573,27 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                               </div>
                               <div className={fieldShellClass}>
                                   <div className={fieldLabelClass}>Event</div>
-                                  <select value={req.event} onChange={e => onUpdateSctRequest(req.id, 'event', e.target.value, type)} className={controlClass}>
+                                  <select value={req.event} onChange={e => applyCurrencyProfile(req.id, e.target.value)} className={controlClass}>
+                                      <option value="">Select profile</option>
                                       {sctEvents.map(e => <option key={e} value={e}>{e}</option>)}
                                   </select>
                               </div>
                               <div className={fieldShellClass}>
-                                  <div className={fieldLabelClass}>Solo/Dual</div>
-                                  {type === 'flight' && isSingleSeatAircraft ? (
+                                  <div className={fieldLabelClass}>{isFixedCrewModel ? 'Crew' : 'Solo/Dual'}</div>
+                                  {isFixedCrewModel ? (
+                                      <>
+                                          <input
+                                              type="text"
+                                              list={`currency-crew-options-${type}-${req.id}`}
+                                              value={req.crewMember || ''}
+                                              onChange={e => onUpdateSctRequest(req.id, 'crewMember', e.target.value, type)}
+                                              className={controlClass}
+                                          />
+                                          <datalist id={`currency-crew-options-${type}-${req.id}`}>
+                                              {fixedCrewCurrencyCrewOptions.map(option => <option key={option} value={option} />)}
+                                          </datalist>
+                                      </>
+                                  ) : type === 'flight' && isSingleSeatAircraft ? (
                                       <div className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100">
                                           Solo
                                       </div>
