@@ -2509,108 +2509,107 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       return (
       <div>
           <h3 className="text-lg font-semibold text-sky-400 mb-2">{type === 'flight' ? 'Flights' : ftdLabel}</h3>
-          <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                  <thead className="text-xs text-gray-400 uppercase">
-                      <tr>
-                          <th className="py-2 px-2 text-left">Name</th>
-                          <th className="py-2 px-2 text-left">Event</th>
-                          <th className="py-2 px-2 text-left">Solo/Dual</th>
-                          <th className="py-2 px-2 text-left">Currency</th>
-                          <th className="py-2 px-2 text-left">Currency Expire</th>
-                          <th className="py-2 px-2 text-left">Date Req.</th>
-                          <th className="py-2 px-2 text-left">Days to Expire</th>
-                          <th className="py-2 px-2 text-left">Priority</th>
-                          {type === 'flight' && <th className="py-2 px-2 text-left">Config</th>}
-                          <th className="py-2 px-2 text-left">Status</th>
-                          <th className="py-2 px-1 text-right"></th>
-                      </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-700/50">
-                      {requests.map(req => {
-                          const expiryInfo = calculateDaysToExpire(req.currencyExpire);
-                          return (
-                          <tr key={req.id}>
-                              <td className="py-1 px-2 w-48">
-                                  <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+          <div className="space-y-3">
+              {requests.map(req => {
+                  const expiryInfo = calculateDaysToExpire(req.currencyExpire);
+                  const fieldLabelClass = 'mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500';
+                  const fieldShellClass = 'min-w-0';
+                  const controlClass = 'w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500';
+                  return (
+                      <div key={req.id} className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20">
+                          <div className="grid gap-3 lg:grid-cols-[minmax(12rem,1.4fr)_minmax(9rem,1fr)_minmax(7rem,0.7fr)_minmax(10rem,1fr)]">
+                              <div className={fieldShellClass}>
+                                  <div className={fieldLabelClass}>Name</div>
+                                  <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className={controlClass}>
                                       <option value="">Select Instructor</option>
                                       {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
                                   </select>
-                              </td>
-                              <td className="py-1 px-2 w-40">
-                                  <select value={req.event} onChange={e => onUpdateSctRequest(req.id, 'event', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+                              </div>
+                              <div className={fieldShellClass}>
+                                  <div className={fieldLabelClass}>Event</div>
+                                  <select value={req.event} onChange={e => onUpdateSctRequest(req.id, 'event', e.target.value, type)} className={controlClass}>
                                       {sctEvents.map(e => <option key={e} value={e}>{e}</option>)}
                                   </select>
-                              </td>
-                              <td className="py-1 px-2 w-32">
+                              </div>
+                              <div className={fieldShellClass}>
+                                  <div className={fieldLabelClass}>Solo/Dual</div>
                                   {type === 'flight' && isSingleSeatAircraft ? (
                                       <div className="rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100">
                                           Solo
                                       </div>
                                   ) : (
-                                      <select value={req.flightType} onChange={e => onUpdateSctRequest(req.id, 'flightType', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+                                      <select value={req.flightType} onChange={e => onUpdateSctRequest(req.id, 'flightType', e.target.value, type)} className={controlClass}>
                                           <option value="Solo">Solo</option>
                                           <option value="Dual">Dual</option>
                                       </select>
                                   )}
-                              </td>
-                               <td className="py-1 px-2 w-48">
-                                  <CurrencySelect request={req} type={type} />
-                              </td>
-                               <td className="py-1 px-2 w-40">
-                                  <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" />
-                              </td>
-                              <td className="py-1 px-2 w-24 text-gray-300 font-mono">
-                                {formatDate(req.dateRequested)}
-                              </td>
-                              <td className="py-1 px-2 w-32 text-center">
-                                {expiryInfo ? <span className={`font-bold ${expiryInfo.color}`}>{expiryInfo.days}</span> : <span className="text-gray-500">-</span>}
-                              </td>
-                               <td className="py-1 px-2 w-32">
-                                  <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
-                                      <option value="High">High</option>
-                                      <option value="Medium">Medium</option>
-                                      <option value="Low">Low</option>
-                                  </select>
-                              </td>
-                              {type === 'flight' && (
-                                  <td className="py-1 px-2 w-48">
+                              </div>
+                              <div className={fieldShellClass}>
+                                  <div className={fieldLabelClass}>Config</div>
+                                  <div className="[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white">
                                       <AircraftConfigSelect
                                           value={req.aircraftConfigId}
                                           definitions={aircraftConfigOptions}
-                                          onChange={(aircraftConfigId) => onUpdateSctRequest(req.id, 'aircraftConfigId', aircraftConfigId, 'flight')}
+                                          onChange={(aircraftConfigId) => onUpdateSctRequest(req.id, 'aircraftConfigId', aircraftConfigId, type)}
                                       />
-                                  </td>
-                              )}
-                              <td className="py-1 px-2 w-24">
-                                  {req.submitted ? (
-                                      <span className="text-green-400 text-xs font-semibold">Submitted</span>
-                                  ) : (
-                                      <button 
-                                          onClick={() => {
-                                              if (req.name && req.event) {
-                                                  onSubmitSctRequest(req.id, type);
-                                              }
-                                          }}
-                                          disabled={!req.name || !req.event}
-                                          className={`px-2 py-1 text-xs rounded font-semibold ${
-                                              req.name && req.event 
-                                                  ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                          }`}
-                                      >
-                                          Submit
-                                      </button>
-                                  )}
-                              </td>
-                              <td className="py-1 px-1 text-right">
-                                  <button onClick={() => onRemoveSctRequest(req.id, type)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
-                              </td>
-                          </tr>
-                          );
-                      })}
-                  </tbody>
-              </table>
+                                  </div>
+                              </div>
+                          </div>
+                          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(12rem,1.25fr)_minmax(9rem,0.95fr)_minmax(7rem,0.65fr)_minmax(7rem,0.65fr)_minmax(12rem,1fr)]">
+                              <div className={fieldShellClass}>
+                                  <div className={fieldLabelClass}>Currency</div>
+                                  <CurrencySelect request={req} type={type} />
+                              </div>
+                              <div className={fieldShellClass}>
+                                  <div className={fieldLabelClass}>Currency Expire</div>
+                                  <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
+                              </div>
+                              <div className={fieldShellClass}>
+                                  <div className={fieldLabelClass}>Date Req.</div>
+                                  <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-xs text-gray-300">
+                                      {formatDate(req.dateRequested)}
+                                  </div>
+                              </div>
+                              <div className={fieldShellClass}>
+                                  <div className={fieldLabelClass}>Days to Expire</div>
+                                  <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs">
+                                      {expiryInfo ? <span className={`font-bold ${expiryInfo.color}`}>{expiryInfo.days}</span> : <span className="text-gray-500">-</span>}
+                                  </div>
+                              </div>
+                              <div className={fieldShellClass}>
+                                  <div className={fieldLabelClass}>Status / Submit</div>
+                                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2">
+                                      <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className={controlClass}>
+                                          <option value="High">High</option>
+                                          <option value="Medium">Medium</option>
+                                          <option value="Low">Low</option>
+                                      </select>
+                                      {req.submitted ? (
+                                          <span className="rounded border border-green-500/30 bg-green-500/10 px-2 py-1 text-xs font-semibold text-green-300">Submitted</span>
+                                      ) : (
+                                          <button
+                                              onClick={() => {
+                                                  if (req.name && req.event) {
+                                                      onSubmitSctRequest(req.id, type);
+                                                  }
+                                              }}
+                                              disabled={!req.name || !req.event}
+                                              className={`rounded px-2 py-1 text-xs font-semibold ${
+                                                  req.name && req.event
+                                                      ? 'bg-green-600 text-white hover:bg-green-700'
+                                                      : 'cursor-not-allowed bg-gray-600 text-gray-400'
+                                              }`}
+                                          >
+                                              Submit
+                                          </button>
+                                      )}
+                                      <button onClick={() => onRemoveSctRequest(req.id, type)} className="p-1 text-gray-400 hover:text-red-400" aria-label="Remove crew currency request"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  );
+              })}
           </div>
           <button onClick={() => onAddSctRequest(type)} className="mt-2 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold">+ Add Request</button>
       </div>

@@ -27777,66 +27777,87 @@ const PrioritiesView = ({
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-400 mb-2", children: type === "flight" ? "Flights" : ftdLabel }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Solo/Dual" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency Expire" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Date Req." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Days to Expire" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
-          type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Status" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-1 text-right" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: requests.map((req) => {
-          const expiryInfo = calculateDaysToExpire(req.currencyExpire);
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.name, onChange: (e) => onUpdateSctRequest(req.id, "name", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Instructor" }),
-              instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: req.event, onChange: (e) => onUpdateSctRequest(req.id, "event", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: e }, e)) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: type === "flight" && isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100", children: "Solo" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.flightType, onChange: (e) => onUpdateSctRequest(req.id, "flightType", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CurrencySelect, { request: req, type }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.currencyExpire, onChange: (e) => onUpdateSctRequest(req.id, "currencyExpire", e.target.value, type), style: { colorScheme: "dark" }, className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24 text-gray-300 font-mono", children: formatDate2(req.dateRequested) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32 text-center", children: expiryInfo ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold ${expiryInfo.color}`, children: expiryInfo.days }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "-" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.priority, onChange: (e) => onUpdateSctRequest(req.id, "priority", e.target.value, type), className: "w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
-            ] }) }),
-            type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-48", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              AircraftConfigSelect,
-              {
-                value: req.aircraftConfigId,
-                definitions: aircraftConfigOptions,
-                onChange: (aircraftConfigId) => onUpdateSctRequest(req.id, "aircraftConfigId", aircraftConfigId, "flight")
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-2 w-24", children: req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 text-xs font-semibold", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => {
-                  if (req.name && req.event) {
-                    onSubmitSctRequest(req.id, type);
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: requests.map((req) => {
+        const expiryInfo = calculateDaysToExpire(req.currencyExpire);
+        const fieldLabelClass = "mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500";
+        const fieldShellClass = "min-w-0";
+        const controlClass = "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500";
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(12rem,1.4fr)_minmax(9rem,1fr)_minmax(7rem,0.7fr)_minmax(10rem,1fr)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Name" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.name, onChange: (e) => onUpdateSctRequest(req.id, "name", e.target.value, type), className: controlClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Instructor" }),
+                instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Event" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: req.event, onChange: (e) => onUpdateSctRequest(req.id, "event", e.target.value, type), className: controlClass, children: sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: e }, e)) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Solo/Dual" }),
+              type === "flight" && isSingleSeatAircraft ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-100", children: "Solo" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.flightType, onChange: (e) => onUpdateSctRequest(req.id, "flightType", e.target.value, type), className: controlClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Config" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                AircraftConfigSelect,
+                {
+                  value: req.aircraftConfigId,
+                  definitions: aircraftConfigOptions,
+                  onChange: (aircraftConfigId) => onUpdateSctRequest(req.id, "aircraftConfigId", aircraftConfigId, type)
+                }
+              ) })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(12rem,1.25fr)_minmax(9rem,0.95fr)_minmax(7rem,0.65fr)_minmax(7rem,0.65fr)_minmax(12rem,1fr)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Currency" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CurrencySelect, { request: req, type })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Currency Expire" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.currencyExpire, onChange: (e) => onUpdateSctRequest(req.id, "currencyExpire", e.target.value, type), style: { colorScheme: "dark" }, className: controlClass })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Date Req." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-xs text-gray-300", children: formatDate2(req.dateRequested) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Days to Expire" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs", children: expiryInfo ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold ${expiryInfo.color}`, children: expiryInfo.days }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "-" }) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Status / Submit" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.priority, onChange: (e) => onUpdateSctRequest(req.id, "priority", e.target.value, type), className: controlClass, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
+                ] }),
+                req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-green-500/30 bg-green-500/10 px-2 py-1 text-xs font-semibold text-green-300", children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: () => {
+                      if (req.name && req.event) {
+                        onSubmitSctRequest(req.id, type);
+                      }
+                    },
+                    disabled: !req.name || !req.event,
+                    className: `rounded px-2 py-1 text-xs font-semibold ${req.name && req.event ? "bg-green-600 text-white hover:bg-green-700" : "cursor-not-allowed bg-gray-600 text-gray-400"}`,
+                    children: "Submit"
                   }
-                },
-                disabled: !req.name || !req.event,
-                className: `px-2 py-1 text-xs rounded font-semibold ${req.name && req.event ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-600 text-gray-400 cursor-not-allowed"}`,
-                children: "Submit"
-              }
-            ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1 px-1 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveSctRequest(req.id, type), className: "p-1 text-gray-400 hover:text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) }) })
-          ] }, req.id);
-        }) })
-      ] }) }),
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onRemoveSctRequest(req.id, type), className: "p-1 text-gray-400 hover:text-red-400", "aria-label": "Remove crew currency request", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) })
+              ] })
+            ] })
+          ] })
+        ] }, req.id);
+      }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddSctRequest(type), className: "mt-2 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 text-xs font-semibold", children: "+ Add Request" })
     ] });
   };
