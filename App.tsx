@@ -34563,6 +34563,7 @@ appliedUpdates.forEach(update => {
                     onNavigate={handleNavigation}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}
+                    unitCurrencyDefinitions={unitCurrencyDefinitions}
                     sctEvents={sctEvents}
                     onUpdateSctEvents={setSctEvents}
                     preferredDutyPeriod={preferredDutyPeriod}

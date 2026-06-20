@@ -25,6 +25,7 @@ export interface CurrencyProfile {
   compositeUnitCode?: string;
   compositeProfileId?: string;
   aircraftTypeCode?: string;
+  name: string;
   crew: string;
   config: string;
   currency: string;
@@ -118,6 +119,7 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
     compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
     compositeProfileId: String(row?.compositeProfileId || '').trim(),
     aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
+    name: String(row?.name || row?.profileName || row?.label || row?.currency || row?.event || `Currency Profile ${index + 1}`).trim(),
     crew: String(row?.crew || '').trim(),
     config: String(row?.config || row?.aircraftConfigId || 'ANY').trim() || 'ANY',
     currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),

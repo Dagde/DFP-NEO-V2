@@ -1180,13 +1180,34 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       });
   }, [activeUnitCode, activeUnitCodeSet, aircraftTypeCode, crewCompositionSettings]);
   const sctEvents = useMemo(() => {
-    const profileCurrencies = currencyProfilesForContext.map(profile => String(profile.currency || '').trim()).filter(Boolean);
-    return Array.from(new Set(profileCurrencies));
+    const profileNames = currencyProfilesForContext.map(profile => String(profile.name || profile.currency || '').trim()).filter(Boolean);
+    return Array.from(new Set(profileNames));
+  }, [currencyProfilesForContext]);
+  const currencyProfileNameLabels = useMemo(() => {
+    const counts = currencyProfilesForContext.reduce((map, profile) => {
+      const name = String(profile.name || profile.currency || '').trim();
+      if (!name) return map;
+      map.set(name, (map.get(name) || 0) + 1);
+      return map;
+    }, new Map<string, number>());
+    return Object.fromEntries(currencyProfilesForContext.map((profile) => {
+      const name = String(profile.name || profile.currency || '').trim();
+      const currency = String(profile.currency || '').trim();
+      return [name, counts.get(name)! > 1 && currency ? `${name} - ${currency}` : name];
+    }).filter(([name]) => Boolean(name)));
   }, [currencyProfilesForContext]);
   const fixedCrewCurrencyCrewOptions = useMemo(() => Array.from(new Set([
     ...currencyProfilesForContext.map(profile => String(profile.crew || '').trim()).filter(Boolean),
     ...standardMissionCrewOptions.map(option => String(option || '').trim()).filter(Boolean),
   ])), [currencyProfilesForContext, standardMissionCrewOptions]);
+  const getCurrencyProfileConfigId = (profile: CurrencyProfile): string | null => {
+    const profileConfig = String(profile.config || '').trim();
+    if (!profileConfig || profileConfig.toUpperCase() === 'ANY') return null;
+    const configMatch = aircraftConfigOptions.find(definition => (
+      definition.id === profileConfig || definition.label === profileConfig || definition.definition === profileConfig
+    ));
+    return configMatch?.id || null;
+  };
   const airCombatTrainingStreams = useMemo(() => {
     if (!isAirCombatModel) return [];
     const streams = new Map<string, AirCombatTrainingStreamWeight>();
@@ -1991,6 +2012,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     course?: string;
     rank?: string;
     eventType: 'flight' | 'ftd';
+    currencyProfileName: string;
     crewMode: 'withInstructor' | 'solo' | 'withOtherPilot';
     dueCurrencies: string[];
     selectedCurrencies: string[];
@@ -2006,6 +2028,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         ? parsed.map((draft: any) => ({
             ...draft,
             aircraftConfigId: draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+            currencyProfileName: String(draft?.currencyProfileName || draft?.eventName || '').trim(),
             crewRequirement: draft?.crewRequirement || { mode: 'aircraft_default' },
           }))
         : [];
@@ -2325,6 +2348,24 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return next;
   };
 
+  const applyCurrencyProfileToDraftEvent = (draftId: string, profileName: string) => {
+    const profile = currencyProfilesForContext.find(candidate => (
+      String(candidate.name || candidate.currency || '').trim() === profileName
+      || String(candidate.currency || '').trim() === profileName
+    ));
+    setCurrencyDraftEvents(prev => prev.map(event => {
+      if (event.id !== draftId) return event;
+      if (!profile) return { ...event, currencyProfileName: profileName };
+      const configId = getCurrencyProfileConfigId(profile);
+      return {
+        ...event,
+        currencyProfileName: String(profile.name || profile.currency || '').trim(),
+        selectedCurrencies: profile.currency ? [profile.currency] : event.selectedCurrencies,
+        aircraftConfigId: configId || event.aircraftConfigId,
+      };
+    }));
+  };
+
   const buildCurrencyDraftEvents = (
     audience: 'trainee' | 'staff',
     people: { idNumber: number; personKey: string; name: string; fullName?: string; course?: string; rank?: string; dueCurrencies: string[] }[],
@@ -2333,6 +2374,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     crewMode: 'withInstructor' | 'solo' | 'withOtherPilot'
   ) => {
     const events: typeof currencyDraftEvents = [];
+    const defaultProfile = currencyProfilesForContext[0] || null;
+    const defaultProfileName = defaultProfile ? String(defaultProfile.name || defaultProfile.currency || '').trim() : '';
+    const defaultProfileConfigId = defaultProfile ? getCurrencyProfileConfigId(defaultProfile) : null;
     people.forEach((person, personIndex) => {
       const displayName = person.fullName || person.name;
       const modeList: ('flight' | 'ftd')[] = [
@@ -2349,10 +2393,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           course: person.course,
           rank: person.rank,
           eventType: type,
+          currencyProfileName: defaultProfileName,
           crewMode,
           dueCurrencies: person.dueCurrencies,
-          selectedCurrencies: [],
-          aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+          selectedCurrencies: defaultProfile?.currency ? [defaultProfile.currency] : [],
+          aircraftConfigId: defaultProfileConfigId || BASE_AIRCRAFT_CONFIG.id,
           crewRequirement: { mode: 'aircraft_default' },
           selected: true,
           pushed: false,
@@ -2537,16 +2582,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const addRequestButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight';
     const statusButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed';
     const applyCurrencyProfile = (requestId: string, eventValue: string) => {
-      const profile = currencyProfilesForContext.find(candidate => String(candidate.currency || '').trim() === eventValue);
-      onUpdateSctRequest(requestId, 'event', eventValue, type);
+      const profile = currencyProfilesForContext.find(candidate => (
+        String(candidate.name || candidate.currency || '').trim() === eventValue
+        || String(candidate.currency || '').trim() === eventValue
+      ));
+      onUpdateSctRequest(requestId, 'event', profile ? String(profile.name || profile.currency || '').trim() : eventValue, type);
       if (!profile) return;
       onUpdateSctRequest(requestId, 'currency', profile.currency, type);
-      if (profile.config && profile.config.toUpperCase() !== 'ANY') {
-        const configMatch = aircraftConfigOptions.find(definition => (
-          definition.id === profile.config || definition.label === profile.config || definition.definition === profile.config
-        ));
-        if (configMatch) onUpdateSctRequest(requestId, 'aircraftConfigId', configMatch.id, type);
-      }
+      const configId = getCurrencyProfileConfigId(profile);
+      if (configId) onUpdateSctRequest(requestId, 'aircraftConfigId', configId, type);
       if (isFixedCrewModel && profile.crew) {
         onUpdateSctRequest(requestId, 'crewMember', profile.crew, type);
       }
@@ -2575,7 +2619,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   <div className={fieldLabelClass}>Event</div>
                                   <select value={req.event} onChange={e => applyCurrencyProfile(req.id, e.target.value)} className={controlClass}>
                                       <option value="">Select profile</option>
-                                      {sctEvents.map(e => <option key={e} value={e}>{e}</option>)}
+                                      {sctEvents.map(e => <option key={e} value={e}>{currencyProfileNameLabels[e] || e}</option>)}
                                   </select>
                               </div>
                               <div className={fieldShellClass}>
@@ -3790,7 +3834,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 </td>
                                 <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-300'}`}>{draft.audience === 'trainee' ? (draft.course || 'Trainee') : (draft.rank || 'Staff')}</td>
                                 <td className={`px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`}>{draft.personName}</td>
-                                <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-amber-200'}`}>{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</td>
+                                <td className="px-2 py-2">
+                                    <select
+                                        value={draft.currencyProfileName}
+                                        disabled={isPublishedInActiveSchedule}
+                                        onChange={(event) => applyCurrencyProfileToDraftEvent(draft.id, event.target.value)}
+                                        className="w-full min-w-[11rem] rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <option value="">{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</option>
+                                        {sctEvents.map(name => (
+                                            <option key={`${draft.id}-${name}`} value={name}>{currencyProfileNameLabels[name] || name}</option>
+                                        ))}
+                                    </select>
+                                </td>
                                 <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-300'}`}>{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'Dual' : 'With other pilot'}</td>
                                 <td className="px-2 py-2">
                                     <AircraftConfigSelect

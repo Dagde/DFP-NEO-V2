@@ -66,6 +66,7 @@ import { getAppApiBase } from '../utils/externalDataControls';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import type { CurrencyRequirement, MasterCurrency } from '../types';
 import {
   DEFAULT_INSERT_EVENT_TYPES,
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -1064,6 +1065,12 @@ interface PlatformConfigurationSettingsProps {
   activeCompositeUnitCode?: string;
   activeOperationalModel?: string;
   phraseBank?: Record<string, any>;
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
+  unitCurrencyDefinitions?: Record<string, {
+    masterCurrencies: MasterCurrency[];
+    currencyRequirements: CurrencyRequirement[];
+  }>;
 }
 
 const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps> = ({
@@ -1077,6 +1084,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   activeCompositeUnitCode = '',
   activeOperationalModel = '',
   phraseBank = {},
+  masterCurrencies = [],
+  currencyRequirements = [],
+  unitCurrencyDefinitions = {},
 }) => {
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
   const [loading, setLoading] = useState(true);
@@ -1903,9 +1913,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
       compositeProfileId: combinedContext ? baseId : '',
       aircraftTypeCode: activeCrewCompositionAircraftCode,
+      name: `Profile ${profileIndex}`,
       crew: 'Standard Crew',
       config: 'ANY',
-      currency: `Currency ${profileIndex}`,
+      currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
       status: 'ACTIVE',
     });
     updateCurrencyProfiles([
@@ -3441,6 +3452,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       .map((item: any) => String(item.label || item.definition || item.id || '').trim())
       .filter(Boolean),
   ]));
+  const activeCurrencyDefinitionNames = Array.from(new Set([
+    ...getActiveScopedUnitCodes().flatMap((unitCode) => {
+      const definitions = unitCurrencyDefinitions[String(unitCode || '').trim().toUpperCase()];
+      return [
+        ...(definitions?.masterCurrencies || []),
+        ...(definitions?.currencyRequirements || []),
+      ].map((currency) => String(currency.name || '').trim()).filter(Boolean);
+    }),
+    ...masterCurrencies.map((currency) => String(currency.name || '').trim()).filter(Boolean),
+    ...currencyRequirements.map((currency) => String(currency.name || '').trim()).filter(Boolean),
+  ])).sort((a, b) => a.localeCompare(b));
   const formatCrewRoleLabel = (role: string) => crewPositionLabelMap[role] || role || 'Crew';
   const getStandardCrewSummary = (composition: AircraftCrewComposition): string[] => (
     composition.seats.map((seat) => formatCrewRoleLabel(seat.role))
@@ -4437,18 +4459,32 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="space-y-3">
               {activeCurrencyProfiles.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No currency profiles configured.</div>
-              ) : activeCurrencyProfiles.map((profile) => (
-                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+              ) : activeCurrencyProfiles.map((profile) => {
+                const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
+                const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
+                const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency)
+                  ? activeCurrencyDefinitionNames
+                  : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
+                return (
+                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]">
+                  <OffsetField label="Profile Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { name: value })} />
                   <OffsetField label="Crew" value={profile.crew} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })} />
-                  <OffsetField label="CONFIG" value={profile.config} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { config: value })} />
-                  <OffsetField label="Currency" value={profile.currency} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { currency: value })} />
+                  <SelectField label="CONFIG" value={profile.config || 'ANY'} disabled={!canEditCrewComposition} options={configOptions} onChange={(value) => updateCurrencyProfile(profile.id, { config: value || 'ANY' })} />
+                  <SelectField
+                    label="Currency"
+                    value={profile.currency}
+                    disabled={!canEditCrewComposition || currencyOptions.length === 0}
+                    options={currencyOptions}
+                    onChange={(value) => updateCurrencyProfile(profile.id, { currency: value })}
+                    emptyLabel={currencyOptions.length === 0 ? 'No unit currencies configured' : undefined}
+                  />
                   <div className="flex items-end">
                     <button type="button" onClick={() => removeCurrencyProfile(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
                       <span className="text-[9px] leading-tight text-red-600">Delete</span>
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         </div>

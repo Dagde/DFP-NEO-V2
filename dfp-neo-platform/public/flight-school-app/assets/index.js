@@ -3773,6 +3773,7 @@ const normaliseCrewCompositionSettings = (value) => {
     compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
     compositeProfileId: String(row?.compositeProfileId || "").trim(),
     aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
+    name: String(row?.name || row?.profileName || row?.label || row?.currency || row?.event || `Currency Profile ${index + 1}`).trim(),
     crew: String(row?.crew || "").trim(),
     config: String(row?.config || row?.aircraftConfigId || "ANY").trim() || "ANY",
     currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
@@ -26699,13 +26700,32 @@ const PrioritiesView = ({
     });
   }, [activeUnitCode, activeUnitCodeSet, aircraftTypeCode, crewCompositionSettings]);
   const sctEvents = reactExports.useMemo(() => {
-    const profileCurrencies = currencyProfilesForContext.map((profile) => String(profile.currency || "").trim()).filter(Boolean);
-    return Array.from(new Set(profileCurrencies));
+    const profileNames = currencyProfilesForContext.map((profile) => String(profile.name || profile.currency || "").trim()).filter(Boolean);
+    return Array.from(new Set(profileNames));
+  }, [currencyProfilesForContext]);
+  const currencyProfileNameLabels = reactExports.useMemo(() => {
+    const counts = currencyProfilesForContext.reduce((map, profile) => {
+      const name = String(profile.name || profile.currency || "").trim();
+      if (!name) return map;
+      map.set(name, (map.get(name) || 0) + 1);
+      return map;
+    }, /* @__PURE__ */ new Map());
+    return Object.fromEntries(currencyProfilesForContext.map((profile) => {
+      const name = String(profile.name || profile.currency || "").trim();
+      const currency = String(profile.currency || "").trim();
+      return [name, counts.get(name) > 1 && currency ? `${name} - ${currency}` : name];
+    }).filter(([name]) => Boolean(name)));
   }, [currencyProfilesForContext]);
   const fixedCrewCurrencyCrewOptions = reactExports.useMemo(() => Array.from(/* @__PURE__ */ new Set([
     ...currencyProfilesForContext.map((profile) => String(profile.crew || "").trim()).filter(Boolean),
     ...standardMissionCrewOptions.map((option) => String(option || "").trim()).filter(Boolean)
   ])), [currencyProfilesForContext, standardMissionCrewOptions]);
+  const getCurrencyProfileConfigId = (profile) => {
+    const profileConfig = String(profile.config || "").trim();
+    if (!profileConfig || profileConfig.toUpperCase() === "ANY") return null;
+    const configMatch = aircraftConfigOptions.find((definition) => definition.id === profileConfig || definition.label === profileConfig || definition.definition === profileConfig);
+    return configMatch?.id || null;
+  };
   const airCombatTrainingStreams = reactExports.useMemo(() => {
     if (!isAirCombatModel) return [];
     const streams = /* @__PURE__ */ new Map();
@@ -27390,6 +27410,7 @@ const PrioritiesView = ({
       return Array.isArray(parsed) ? parsed.map((draft) => ({
         ...draft,
         aircraftConfigId: draft?.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+        currencyProfileName: String(draft?.currencyProfileName || draft?.eventName || "").trim(),
         crewRequirement: draft?.crewRequirement || { mode: "aircraft_default" }
       })) : [];
     } catch {
@@ -27636,8 +27657,25 @@ const PrioritiesView = ({
     else next.add(value);
     return next;
   };
+  const applyCurrencyProfileToDraftEvent = (draftId, profileName) => {
+    const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === profileName || String(candidate.currency || "").trim() === profileName);
+    setCurrencyDraftEvents((prev) => prev.map((event) => {
+      if (event.id !== draftId) return event;
+      if (!profile) return { ...event, currencyProfileName: profileName };
+      const configId = getCurrencyProfileConfigId(profile);
+      return {
+        ...event,
+        currencyProfileName: String(profile.name || profile.currency || "").trim(),
+        selectedCurrencies: profile.currency ? [profile.currency] : event.selectedCurrencies,
+        aircraftConfigId: configId || event.aircraftConfigId
+      };
+    }));
+  };
   const buildCurrencyDraftEvents = (audience, people, includeFlights, includeSims, crewMode) => {
     const events = [];
+    const defaultProfile = currencyProfilesForContext[0] || null;
+    const defaultProfileName = defaultProfile ? String(defaultProfile.name || defaultProfile.currency || "").trim() : "";
+    const defaultProfileConfigId = defaultProfile ? getCurrencyProfileConfigId(defaultProfile) : null;
     people.forEach((person, personIndex) => {
       const displayName = person.fullName || person.name;
       const modeList = [
@@ -27654,10 +27692,11 @@ const PrioritiesView = ({
           course: person.course,
           rank: person.rank,
           eventType: type,
+          currencyProfileName: defaultProfileName,
           crewMode,
           dueCurrencies: person.dueCurrencies,
-          selectedCurrencies: [],
-          aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
+          selectedCurrencies: defaultProfile?.currency ? [defaultProfile.currency] : [],
+          aircraftConfigId: defaultProfileConfigId || BASE_AIRCRAFT_CONFIG.id,
           crewRequirement: { mode: "aircraft_default" },
           selected: true,
           pushed: false
@@ -27817,14 +27856,12 @@ const PrioritiesView = ({
     const addRequestButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight";
     const statusButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed";
     const applyCurrencyProfile = (requestId, eventValue) => {
-      const profile = currencyProfilesForContext.find((candidate) => String(candidate.currency || "").trim() === eventValue);
-      onUpdateSctRequest(requestId, "event", eventValue, type);
+      const profile = currencyProfilesForContext.find((candidate) => String(candidate.name || candidate.currency || "").trim() === eventValue || String(candidate.currency || "").trim() === eventValue);
+      onUpdateSctRequest(requestId, "event", profile ? String(profile.name || profile.currency || "").trim() : eventValue, type);
       if (!profile) return;
       onUpdateSctRequest(requestId, "currency", profile.currency, type);
-      if (profile.config && profile.config.toUpperCase() !== "ANY") {
-        const configMatch = aircraftConfigOptions.find((definition) => definition.id === profile.config || definition.label === profile.config || definition.definition === profile.config);
-        if (configMatch) onUpdateSctRequest(requestId, "aircraftConfigId", configMatch.id, type);
-      }
+      const configId = getCurrencyProfileConfigId(profile);
+      if (configId) onUpdateSctRequest(requestId, "aircraftConfigId", configId, type);
       if (isFixedCrewModel && profile.crew) {
         onUpdateSctRequest(requestId, "crewMember", profile.crew, type);
       }
@@ -27849,7 +27886,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Event" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.event, onChange: (e) => applyCurrencyProfile(req.id, e.target.value), className: controlClass, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select profile" }),
-                sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: e }, e))
+                sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: currencyProfileNameLabels[e] || e }, e))
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
@@ -28995,7 +29032,19 @@ const PrioritiesView = ({
                 ) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-slate-300"}`, children: draft.audience === "trainee" ? draft.course || "Trainee" : draft.rank || "Staff" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? "text-green-300" : "text-white"}`, children: draft.personName }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-amber-200"}`, children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: draft.currencyProfileName,
+                    disabled: isPublishedInActiveSchedule,
+                    onChange: (event) => applyCurrencyProfileToDraftEvent(draft.id, event.target.value),
+                    className: "w-full min-w-[11rem] rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-60",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
+                      sctEvents.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: currencyProfileNameLabels[name] || name }, `${draft.id}-${name}`))
+                    ]
+                  }
+                ) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-slate-300"}`, children: draft.crewMode === "solo" ? "Solo" : draft.audience === "trainee" ? "Dual" : "With other pilot" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   AircraftConfigSelect,
@@ -54101,7 +54150,10 @@ const PlatformConfigurationSettings = ({
   activeUnitCodes = [],
   activeCompositeUnitCode = "",
   activeOperationalModel = "",
-  phraseBank = {}
+  phraseBank = {},
+  masterCurrencies = [],
+  currencyRequirements = [],
+  unitCurrencyDefinitions = {}
 }) => {
   const [config, setConfig] = reactExports.useState(emptyConfig);
   const [loading, setLoading] = reactExports.useState(true);
@@ -54777,9 +54829,10 @@ const PlatformConfigurationSettings = ({
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : "",
       compositeProfileId: combinedContext ? baseId : "",
       aircraftTypeCode: activeCrewCompositionAircraftCode,
+      name: `Profile ${profileIndex}`,
       crew: "Standard Crew",
       config: "ANY",
-      currency: `Currency ${profileIndex}`,
+      currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
       status: "ACTIVE"
     });
     updateCurrencyProfiles([
@@ -56034,6 +56087,17 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
     "ANY",
     ...config.resourcePools.filter((pool) => !aircraftTypeCode || String(pool.aircraftTypeCode || "").trim().toUpperCase() === String(aircraftTypeCode || "").trim().toUpperCase()).flatMap((pool) => Array.isArray(pool.settings?.aircraftConfigurations) ? pool.settings.aircraftConfigurations : []).map((item) => String(item.label || item.definition || item.id || "").trim()).filter(Boolean)
   ]));
+  const activeCurrencyDefinitionNames = Array.from(/* @__PURE__ */ new Set([
+    ...getActiveScopedUnitCodes().flatMap((unitCode) => {
+      const definitions = unitCurrencyDefinitions[String(unitCode || "").trim().toUpperCase()];
+      return [
+        ...definitions?.masterCurrencies || [],
+        ...definitions?.currencyRequirements || []
+      ].map((currency) => String(currency.name || "").trim()).filter(Boolean);
+    }),
+    ...masterCurrencies.map((currency) => String(currency.name || "").trim()).filter(Boolean),
+    ...currencyRequirements.map((currency) => String(currency.name || "").trim()).filter(Boolean)
+  ])).sort((a, b) => a.localeCompare(b));
   const formatCrewRoleLabel = (role) => crewPositionLabelMap[role] || role || "Crew";
   const getStandardCrewSummary = (composition) => composition.seats.map((seat) => formatCrewRoleLabel(seat.role));
   const getAlternateCrewSummary = (profile) => profile.roleRequirements.flatMap((requirement) => Array.from({ length: Math.max(1, Math.round(Number(requirement.count) || 1)) }, () => formatCrewRoleLabel(requirement.role)));
@@ -56879,12 +56943,28 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
               ] }) })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No currency profiles configured." }) : activeCurrencyProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Crew", value: profile.crew, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "CONFIG", value: profile.config, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { config: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Currency", value: profile.currency, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { currency: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeCurrencyProfile(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
-          ] }, profile.id)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: activeCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No currency profiles configured." }) : activeCurrencyProfiles.map((profile) => {
+            const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || activeCrewCompositionAircraftCode);
+            const configOptions = profileConfigOptions.includes(profile.config) ? profileConfigOptions : [profile.config, ...profileConfigOptions].filter(Boolean);
+            const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency) ? activeCurrencyDefinitionNames : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Profile Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { name: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Crew", value: profile.crew, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "CONFIG", value: profile.config || "ANY", disabled: !canEditCrewComposition, options: configOptions, onChange: (value) => updateCurrencyProfile(profile.id, { config: value || "ANY" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectField,
+                {
+                  label: "Currency",
+                  value: profile.currency,
+                  disabled: !canEditCrewComposition || currencyOptions.length === 0,
+                  options: currencyOptions,
+                  onChange: (value) => updateCurrencyProfile(profile.id, { currency: value }),
+                  emptyLabel: currencyOptions.length === 0 ? "No unit currencies configured" : void 0
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeCurrencyProfile(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
+            ] }, profile.id);
+          }) })
         ] })
       ] })
     ] }),
@@ -61093,7 +61173,10 @@ const SettingsViewWithMenu = (props) => {
               activeUnitCode: props.activeUnitCode,
               activeUnitCodes: props.activeUnitCodes,
               activeCompositeUnitCode: props.activeCompositeUnitCode,
-              phraseBank: props.phraseBank
+              phraseBank: props.phraseBank,
+              masterCurrencies: props.masterCurrencies,
+              currencyRequirements: props.currencyRequirements,
+              unitCurrencyDefinitions: props.unitCurrencyDefinitions
             }
           )
         ] }),
@@ -61108,7 +61191,10 @@ const SettingsViewWithMenu = (props) => {
             activeUnitCode: props.activeUnitCode,
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
-            phraseBank: props.phraseBank
+            phraseBank: props.phraseBank,
+            masterCurrencies: props.masterCurrencies,
+            currencyRequirements: props.currencyRequirements,
+            unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
         activeSection === "crew-composition" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -61123,7 +61209,10 @@ const SettingsViewWithMenu = (props) => {
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
-            phraseBank: props.phraseBank
+            phraseBank: props.phraseBank,
+            masterCurrencies: props.masterCurrencies,
+            currencyRequirements: props.currencyRequirements,
+            unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
         activeSection === "standard-missions" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -61138,7 +61227,10 @@ const SettingsViewWithMenu = (props) => {
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
-            phraseBank: props.phraseBank
+            phraseBank: props.phraseBank,
+            masterCurrencies: props.masterCurrencies,
+            currencyRequirements: props.currencyRequirements,
+            unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
         activeSection === "currency-profiles" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -61153,7 +61245,10 @@ const SettingsViewWithMenu = (props) => {
             activeUnitCodes: props.activeUnitCodes,
             activeCompositeUnitCode: props.activeCompositeUnitCode,
             activeOperationalModel: props.activeOperationalModel,
-            phraseBank: props.phraseBank
+            phraseBank: props.phraseBank,
+            masterCurrencies: props.masterCurrencies,
+            currencyRequirements: props.currencyRequirements,
+            unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
         activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
@@ -61236,7 +61331,12 @@ const SettingsViewWithMenu = (props) => {
             sectionOnly: true,
             canUsePlatformPermission: props.canUsePlatformPermission,
             activeUnitCode: props.activeUnitCode,
-            phraseBank: props.phraseBank
+            activeUnitCodes: props.activeUnitCodes,
+            activeCompositeUnitCode: props.activeCompositeUnitCode,
+            phraseBank: props.phraseBank,
+            masterCurrencies: props.masterCurrencies,
+            currencyRequirements: props.currencyRequirements,
+            unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
         activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -97021,6 +97121,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onNavigate: handleNavigation,
             masterCurrencies,
             currencyRequirements,
+            unitCurrencyDefinitions,
             sctEvents,
             onUpdateSctEvents: setSctEvents,
             preferredDutyPeriod,

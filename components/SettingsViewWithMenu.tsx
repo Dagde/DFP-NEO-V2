@@ -58,6 +58,10 @@ interface SettingsViewWithMenuProps {
     onNavigate: (view: string) => void;
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
+    unitCurrencyDefinitions?: Record<string, {
+        masterCurrencies: MasterCurrency[];
+        currencyRequirements: CurrencyRequirement[];
+    }>;
     sctEvents: string[];
     onUpdateSctEvents: (events: string[]) => void;
     preferredDutyPeriod: number;
@@ -1763,6 +1767,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 activeUnitCodes={props.activeUnitCodes}
                                 activeCompositeUnitCode={props.activeCompositeUnitCode}
                                 phraseBank={props.phraseBank}
+                                masterCurrencies={props.masterCurrencies}
+                                currencyRequirements={props.currencyRequirements}
+                                unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                             />
                         </div>
                     )}
@@ -1778,6 +1785,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             activeUnitCodes={props.activeUnitCodes}
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             phraseBank={props.phraseBank}
+                            masterCurrencies={props.masterCurrencies}
+                            currencyRequirements={props.currencyRequirements}
+                            unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
 
@@ -1793,6 +1803,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
                             phraseBank={props.phraseBank}
+                            masterCurrencies={props.masterCurrencies}
+                            currencyRequirements={props.currencyRequirements}
+                            unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
 
@@ -1808,6 +1821,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
                             phraseBank={props.phraseBank}
+                            masterCurrencies={props.masterCurrencies}
+                            currencyRequirements={props.currencyRequirements}
+                            unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
 
@@ -1823,6 +1839,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             activeCompositeUnitCode={props.activeCompositeUnitCode}
                             activeOperationalModel={props.activeOperationalModel}
                             phraseBank={props.phraseBank}
+                            masterCurrencies={props.masterCurrencies}
+                            currencyRequirements={props.currencyRequirements}
+                            unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
 
@@ -1919,7 +1938,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             sectionOnly={true}
                             canUsePlatformPermission={props.canUsePlatformPermission}
                             activeUnitCode={props.activeUnitCode}
+                            activeUnitCodes={props.activeUnitCodes}
+                            activeCompositeUnitCode={props.activeCompositeUnitCode}
                             phraseBank={props.phraseBank}
+                            masterCurrencies={props.masterCurrencies}
+                            currencyRequirements={props.currencyRequirements}
+                            unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
                     {activeSection === 'appearance' && (
