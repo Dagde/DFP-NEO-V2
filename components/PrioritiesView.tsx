@@ -3400,7 +3400,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         </div>
 
         <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-sky-400 mb-4">Crew Currency Requests</h2>
+            <h2 className="text-xl font-semibold text-sky-400 mb-4">Specific Currency Requests</h2>
             <div className="space-y-6">
                 <SctRequestTable type="flight" requests={sctFlights} />
                 <SctRequestTable type="ftd" requests={sctFtds} />
@@ -3544,14 +3544,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
-                    <h2 className="text-xl font-semibold text-sky-400">Staff Currency Events</h2>
+                    <h2 className="text-xl font-semibold text-sky-400">Bulk Currency Builder</h2>
                     <p className="mt-1 text-xs text-slate-400">Open the builder, select staff, then build a consolidated currency event review list.</p>
                 </div>
                 <button
                     onClick={() => setIsStaffCurrencyBuilderOpen(prev => !prev)}
                     className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20"
                 >
-                    {isStaffCurrencyBuilderOpen ? 'Hide Builder' : 'Build Staff Currency Events'}
+                    {isStaffCurrencyBuilderOpen ? 'Hide Builder' : 'Build Bulk Currency'}
                 </button>
             </div>
             {isStaffCurrencyBuilderOpen && <>
@@ -3798,7 +3798,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional SCT Events</h2>
             <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
             {sctFlights.filter(r => r.priority !== 'High').length === 0 && sctFtds.filter(r => r.priority !== 'High').length === 0 && (
-              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority SCT events. Add crew currency requests with MEDIUM or LOW priority in the Crew Currency Requests section above.</p>
+              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority SCT events. Add specific currency requests with MEDIUM or LOW priority in the Specific Currency Requests section above.</p>
             )}
 
               {/* SCT Flights - MEDIUM/LOW */}

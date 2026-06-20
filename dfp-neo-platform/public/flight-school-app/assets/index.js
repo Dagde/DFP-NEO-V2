@@ -28598,7 +28598,7 @@ const PrioritiesView = ({
         )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Crew Currency Requests" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Specific Currency Requests" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(SctRequestTable, { type: "flight", requests: sctFlights }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SctRequestTable, { type: "ftd", requests: sctFtds })
@@ -28742,7 +28742,7 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Staff Currency Events" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Bulk Currency Builder" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "Open the builder, select staff, then build a consolidated currency event review list." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -28750,7 +28750,7 @@ const PrioritiesView = ({
             {
               onClick: () => setIsStaffCurrencyBuilderOpen((prev) => !prev),
               className: "rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20",
-              children: isStaffCurrencyBuilderOpen ? "Hide Builder" : "Build Staff Currency Events"
+              children: isStaffCurrencyBuilderOpen ? "Hide Builder" : "Build Bulk Currency"
             }
           )
         ] }),
@@ -28988,7 +28988,7 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400 mb-2", children: "Optional SCT Events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-4", children: 'MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.' }),
-        sctFlights.filter((r) => r.priority !== "High").length === 0 && sctFtds.filter((r) => r.priority !== "High").length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic", children: "No MEDIUM or LOW priority SCT events. Add crew currency requests with MEDIUM or LOW priority in the Crew Currency Requests section above." }),
+        sctFlights.filter((r) => r.priority !== "High").length === 0 && sctFtds.filter((r) => r.priority !== "High").length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic", children: "No MEDIUM or LOW priority SCT events. Add specific currency requests with MEDIUM or LOW priority in the Specific Currency Requests section above." }),
         sctFlights.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "SCT Flights" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
