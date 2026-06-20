@@ -2566,9 +2566,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                               </div>
                               <div className={fieldShellClass}>
                                   <div className={fieldLabelClass}>Date Req.</div>
-                                  <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-xs text-gray-300">
-                                      {formatDate(req.dateRequested)}
-                                  </div>
+                                  <input type="date" value={req.dateRequested} onChange={e => onUpdateSctRequest(req.id, 'dateRequested', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
                               </div>
                               <div className={fieldShellClass}>
                                   <div className={fieldLabelClass}>Days to Expire</div>

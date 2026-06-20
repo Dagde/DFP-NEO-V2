@@ -27762,19 +27762,6 @@ const PrioritiesView = ({
         return null;
       }
     };
-    const formatDate2 = (dateString) => {
-      if (!dateString) return "-";
-      try {
-        const date = /* @__PURE__ */ new Date(dateString + "T00:00:00Z");
-        if (isNaN(date.getTime())) return "-";
-        const day = String(date.getUTCDate()).padStart(2, "0");
-        const month = date.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
-        const year = String(date.getUTCFullYear()).slice(-2);
-        return `${day}${month}${year}`;
-      } catch (e) {
-        return "-";
-      }
-    };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-400 mb-2", children: type === "flight" ? "Flights" : ftdLabel }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: requests.map((req) => {
@@ -27825,7 +27812,7 @@ const PrioritiesView = ({
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Date Req." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-xs text-gray-300", children: formatDate2(req.dateRequested) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.dateRequested, onChange: (e) => onUpdateSctRequest(req.id, "dateRequested", e.target.value, type), style: { colorScheme: "dark" }, className: controlClass })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: fieldShellClass, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldLabelClass, children: "Days to Expire" }),
