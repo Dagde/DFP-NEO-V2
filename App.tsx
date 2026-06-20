@@ -28432,17 +28432,35 @@ const App: React.FC = () => {
                 return new Set<string>();
             }
         })();
+        const liveSctRequestIds = new Set(
+            [...sctFlights, ...sctFtds]
+                .map(request => String(request.id || '').trim())
+                .filter(Boolean)
+        );
         const syncedPriorityEvents = rawSyncedPriorityEvents.filter(event => {
-            if (!isTaskingEvent(event)) return true;
-            const requestId = String(event.taskingRequestId || '').trim();
-            const stillRequested = !!requestId && submittedTaskingRequestIds.has(requestId);
-            if (!stillRequested) {
-                console.log(`DEBUG Removing stale tasking priority before build: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${requestId || 'none'})`);
+            if (isTaskingEvent(event)) {
+                const requestId = String(event.taskingRequestId || '').trim();
+                const stillRequested = !!requestId && submittedTaskingRequestIds.has(requestId);
+                if (!stillRequested) {
+                    console.log(`DEBUG Removing stale tasking priority before build: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${requestId || 'none'})`);
+                }
+                return stillRequested;
             }
-            return stillRequested;
+            if (isSctPriorityEvent(event)) {
+                const requestId = getSctRequestIdFromEvent(event);
+                const stillRequested = !!requestId && liveSctRequestIds.has(requestId);
+                if (!stillRequested) {
+                    console.log(`DEBUG Removing stale SCT priority before build: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${requestId || 'none'})`);
+                }
+                return stillRequested;
+            }
+            return true;
         });
         const removedStaleTaskingPriorities = rawSyncedPriorityEvents
             .filter(event => isTaskingEvent(event))
+            .filter(event => !syncedPriorityEvents.some(kept => kept.id === event.id));
+        const removedStaleSctPriorities = rawSyncedPriorityEvents
+            .filter(event => isSctPriorityEvent(event))
             .filter(event => !syncedPriorityEvents.some(kept => kept.id === event.id));
         (window as any).__lastTaskingProvenancePreBuild = {
             timestamp: new Date().toISOString(),
@@ -28455,6 +28473,7 @@ const App: React.FC = () => {
             highestPriorityBeforeSync: highestPriorityEventsBeforeSync.filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'highestPriorityEvents-before-sync')),
             syncedPriorityBeforePurge: rawSyncedPriorityEvents.filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'syncedPriorityEvents-before-tasking-purge')),
             removedStaleTaskingPriorities: removedStaleTaskingPriorities.map(event => summariseTaskTraceEvent(event, 'removed-stale-tasking-priority')),
+            removedStaleSctPriorities: removedStaleSctPriorities.map(event => summariseTaskTraceEvent(event, 'removed-stale-sct-priority')),
             syncedPriorityAfterPurge: syncedPriorityEvents.filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'syncedPriorityEvents-after-tasking-purge')),
             publishedScheduleForBuildDate: (publishedSchedules[buildDfpDate] || []).filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'publishedSchedules-buildDate')),
             nextDayBuildEventsBeforeBuild: (nextDayBuildEvents || []).filter(eventMatchesTaskTrace).map(event => summariseTaskTraceEvent(event, 'nextDayBuildEvents-before-build')),
@@ -28478,17 +28497,6 @@ const App: React.FC = () => {
                 .map(event => event.taskingRequestId)
                 .filter(Boolean) as string[]
         );
-        const currentSctPriorityIds = new Set(
-            syncedPriorityEvents
-                .filter(isSctPriorityEvent)
-                .map(event => event.id)
-        );
-        const currentSctRequestIds = new Set(
-            syncedPriorityEvents
-                .filter(isSctPriorityEvent)
-                .map(getSctRequestIdFromEvent)
-                .filter(Boolean)
-        );
         const isCurrentTaskingEvent = (event: ScheduleEvent): boolean => (
             currentTaskingPriorityIds.has(event.id) ||
             (!!event.taskingRequestId && currentTaskingRequestIds.has(event.taskingRequestId))
@@ -28496,26 +28504,22 @@ const App: React.FC = () => {
         const staleExistingTaskingEventsForDate = existingEventsForDate.filter(event =>
             isTaskingEvent(event) && !isCurrentTaskingEvent(event)
         );
-        const isCurrentSctEvent = (event: ScheduleEvent): boolean => (
-            currentSctPriorityIds.has(event.id) ||
-            (!!getSctRequestIdFromEvent(event) && currentSctRequestIds.has(getSctRequestIdFromEvent(event)))
-        );
         const staleExistingSctEventsForDate = existingEventsForDate.filter(event =>
-            isSctPriorityEvent(event) && isCurrentSctEvent(event)
+            isSctPriorityEvent(event)
         );
         const buildPublishedSchedulesForRun: Record<string, ScheduleEvent[]> = staleExistingTaskingEventsForDate.length > 0 || staleExistingSctEventsForDate.length > 0
             ? {
                 ...publishedSchedules,
                 [buildDfpDate]: existingEventsForDate.filter(event =>
                     (!isTaskingEvent(event) || isCurrentTaskingEvent(event)) &&
-                    (!isSctPriorityEvent(event) || !isCurrentSctEvent(event))
+                    !isSctPriorityEvent(event)
                 ),
             }
             : publishedSchedules;
         const fixedExistingEventsForDate = existingEventsForDate.filter(event => {
             if (!event.isTimeFixed) return false;
-            if (isSctPriorityEvent(event) && isCurrentSctEvent(event)) {
-                console.log(`DEBUG Skipping stale fixed SCT event from Active DFP preservation: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || 'none'})`);
+            if (isSctPriorityEvent(event)) {
+                console.log(`DEBUG Skipping fixed SCT event from Active DFP preservation so live requests can regenerate it: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || 'none'})`);
                 return false;
             }
             if (!isTaskingEvent(event)) return true;

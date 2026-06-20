@@ -92199,16 +92199,30 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return /* @__PURE__ */ new Set();
       }
     })();
+    const liveSctRequestIds = new Set(
+      [...sctFlights, ...sctFtds].map((request) => String(request.id || "").trim()).filter(Boolean)
+    );
     const syncedPriorityEvents = rawSyncedPriorityEvents.filter((event) => {
-      if (!isTaskingEvent2(event)) return true;
-      const requestId = String(event.taskingRequestId || "").trim();
-      const stillRequested = !!requestId && submittedTaskingRequestIds.has(requestId);
-      if (!stillRequested) {
-        console.log(`DEBUG Removing stale tasking priority before build: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${requestId || "none"})`);
+      if (isTaskingEvent2(event)) {
+        const requestId = String(event.taskingRequestId || "").trim();
+        const stillRequested = !!requestId && submittedTaskingRequestIds.has(requestId);
+        if (!stillRequested) {
+          console.log(`DEBUG Removing stale tasking priority before build: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${requestId || "none"})`);
+        }
+        return stillRequested;
       }
-      return stillRequested;
+      if (isSctPriorityEvent(event)) {
+        const requestId = getSctRequestIdFromEvent(event);
+        const stillRequested = !!requestId && liveSctRequestIds.has(requestId);
+        if (!stillRequested) {
+          console.log(`DEBUG Removing stale SCT priority before build: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${requestId || "none"})`);
+        }
+        return stillRequested;
+      }
+      return true;
     });
     const removedStaleTaskingPriorities = rawSyncedPriorityEvents.filter((event) => isTaskingEvent2(event)).filter((event) => !syncedPriorityEvents.some((kept) => kept.id === event.id));
+    const removedStaleSctPriorities = rawSyncedPriorityEvents.filter((event) => isSctPriorityEvent(event)).filter((event) => !syncedPriorityEvents.some((kept) => kept.id === event.id));
     window.__lastTaskingProvenancePreBuild = {
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       buildDate: buildDfpDate,
@@ -92220,6 +92234,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       highestPriorityBeforeSync: highestPriorityEventsBeforeSync.filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "highestPriorityEvents-before-sync")),
       syncedPriorityBeforePurge: rawSyncedPriorityEvents.filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "syncedPriorityEvents-before-tasking-purge")),
       removedStaleTaskingPriorities: removedStaleTaskingPriorities.map((event) => summariseTaskTraceEvent(event, "removed-stale-tasking-priority")),
+      removedStaleSctPriorities: removedStaleSctPriorities.map((event) => summariseTaskTraceEvent(event, "removed-stale-sct-priority")),
       syncedPriorityAfterPurge: syncedPriorityEvents.filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "syncedPriorityEvents-after-tasking-purge")),
       publishedScheduleForBuildDate: (publishedSchedules[buildDfpDate] || []).filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "publishedSchedules-buildDate")),
       nextDayBuildEventsBeforeBuild: (nextDayBuildEvents || []).filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "nextDayBuildEvents-before-build"))
@@ -92235,30 +92250,23 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const currentTaskingRequestIds = new Set(
       syncedPriorityEvents.filter(isTaskingEvent2).map((event) => event.taskingRequestId).filter(Boolean)
     );
-    const currentSctPriorityIds = new Set(
-      syncedPriorityEvents.filter(isSctPriorityEvent).map((event) => event.id)
-    );
-    const currentSctRequestIds = new Set(
-      syncedPriorityEvents.filter(isSctPriorityEvent).map(getSctRequestIdFromEvent).filter(Boolean)
-    );
     const isCurrentTaskingEvent = (event) => currentTaskingPriorityIds.has(event.id) || !!event.taskingRequestId && currentTaskingRequestIds.has(event.taskingRequestId);
     const staleExistingTaskingEventsForDate = existingEventsForDate.filter(
       (event) => isTaskingEvent2(event) && !isCurrentTaskingEvent(event)
     );
-    const isCurrentSctEvent = (event) => currentSctPriorityIds.has(event.id) || !!getSctRequestIdFromEvent(event) && currentSctRequestIds.has(getSctRequestIdFromEvent(event));
     const staleExistingSctEventsForDate = existingEventsForDate.filter(
-      (event) => isSctPriorityEvent(event) && isCurrentSctEvent(event)
+      (event) => isSctPriorityEvent(event)
     );
     const buildPublishedSchedulesForRun = staleExistingTaskingEventsForDate.length > 0 || staleExistingSctEventsForDate.length > 0 ? {
       ...publishedSchedules,
       [buildDfpDate]: existingEventsForDate.filter(
-        (event) => (!isTaskingEvent2(event) || isCurrentTaskingEvent(event)) && (!isSctPriorityEvent(event) || !isCurrentSctEvent(event))
+        (event) => (!isTaskingEvent2(event) || isCurrentTaskingEvent(event)) && !isSctPriorityEvent(event)
       )
     } : publishedSchedules;
     const fixedExistingEventsForDate = existingEventsForDate.filter((event) => {
       if (!event.isTimeFixed) return false;
-      if (isSctPriorityEvent(event) && isCurrentSctEvent(event)) {
-        console.log(`DEBUG Skipping stale fixed SCT event from Active DFP preservation: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || "none"})`);
+      if (isSctPriorityEvent(event)) {
+        console.log(`DEBUG Skipping fixed SCT event from Active DFP preservation so live requests can regenerate it: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || "none"})`);
         return false;
       }
       if (!isTaskingEvent2(event)) return true;
