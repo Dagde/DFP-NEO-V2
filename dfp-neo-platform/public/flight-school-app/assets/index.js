@@ -26600,9 +26600,20 @@ const PrioritiesView = ({
       return profileCompositeParts.length > 0 && profileCompositeParts.every((code) => contextCodes.includes(code));
     };
     const profileModel = String(operationalModel2 || "").trim().toLowerCase();
-    const alternatePresets = settings.alternateCompositions.filter((profile) => profile.status !== "INACTIVE").filter((profile) => !profile.aircraftTypeCode || !activeAircraftTypeCode || profile.aircraftTypeCode === activeAircraftTypeCode).filter((profile) => !profile.operationalModels.length || profile.operationalModels.includes(profileModel)).filter((profile) => appliesToActiveContext(profile.unitCode, profile.compositeUnitCode)).map((profile) => ({
+    const applicableAlternateProfiles = settings.alternateCompositions.filter((profile) => profile.status !== "INACTIVE").filter((profile) => !profile.aircraftTypeCode || !activeAircraftTypeCode || profile.aircraftTypeCode === activeAircraftTypeCode).filter((profile) => !profile.operationalModels.length || profile.operationalModels.includes(profileModel)).filter((profile) => appliesToActiveContext(profile.unitCode, profile.compositeUnitCode));
+    const labelCounts = applicableAlternateProfiles.reduce((counts, profile) => {
+      const label = `${profile.code} - ${profile.name}`;
+      counts.set(label, (counts.get(label) || 0) + 1);
+      return counts;
+    }, /* @__PURE__ */ new Map());
+    const alternatePresets = applicableAlternateProfiles.map((profile) => ({
       id: `alternate:${profile.id}`,
-      label: `${profile.code} - ${profile.name}`,
+      label: (() => {
+        const baseLabel = `${profile.code} - ${profile.name}`;
+        if ((labelCounts.get(baseLabel) || 0) <= 1) return baseLabel;
+        const sourceUnit = normaliseTaskingUnitCode(profile.unitCode) || normaliseTaskingUnitCode(profile.compositeUnitCode);
+        return sourceUnit ? `${baseLabel} - ${sourceUnit}` : baseLabel;
+      })(),
       description: profile.description,
       kind: "alternate",
       roles: profile.roleRequirements.map((role) => ({

@@ -1078,14 +1078,25 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       return profileCompositeParts.length > 0 && profileCompositeParts.every(code => contextCodes.includes(code));
     };
     const profileModel = String(operationalModel || '').trim().toLowerCase();
-    const alternatePresets = settings.alternateCompositions
+    const applicableAlternateProfiles = settings.alternateCompositions
       .filter(profile => profile.status !== 'INACTIVE')
       .filter(profile => !profile.aircraftTypeCode || !activeAircraftTypeCode || profile.aircraftTypeCode === activeAircraftTypeCode)
       .filter(profile => !profile.operationalModels.length || profile.operationalModels.includes(profileModel as any))
-      .filter(profile => appliesToActiveContext(profile.unitCode, profile.compositeUnitCode))
+      .filter(profile => appliesToActiveContext(profile.unitCode, profile.compositeUnitCode));
+    const labelCounts = applicableAlternateProfiles.reduce((counts, profile) => {
+      const label = `${profile.code} - ${profile.name}`;
+      counts.set(label, (counts.get(label) || 0) + 1);
+      return counts;
+    }, new Map<string, number>());
+    const alternatePresets = applicableAlternateProfiles
       .map((profile): CrewRequirementPreset => ({
         id: `alternate:${profile.id}`,
-        label: `${profile.code} - ${profile.name}`,
+        label: (() => {
+          const baseLabel = `${profile.code} - ${profile.name}`;
+          if ((labelCounts.get(baseLabel) || 0) <= 1) return baseLabel;
+          const sourceUnit = normaliseTaskingUnitCode(profile.unitCode) || normaliseTaskingUnitCode(profile.compositeUnitCode);
+          return sourceUnit ? `${baseLabel} - ${sourceUnit}` : baseLabel;
+        })(),
         description: profile.description,
         kind: 'alternate',
         roles: profile.roleRequirements.map(role => ({
