@@ -74668,6 +74668,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
       },
       crewGroups: [],
+      duplicateCrewMemberships: [],
       queueSourceAudit: null,
       sctCrewTrace: {
         purpose: "Explains why a Fixed Crew SCT/currency tile shows one crew instead of the crew selected in Specific Currency Requests.",
@@ -75263,6 +75264,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     });
     diag.crewGroups = crewGroupSummaries;
+    const crewMembershipsByPerson = /* @__PURE__ */ new Map();
+    crewGroups.forEach((members, crew) => {
+      members.forEach((staff) => {
+        const name = String(staff.name || "").trim();
+        if (!name) return;
+        if (!crewMembershipsByPerson.has(name)) crewMembershipsByPerson.set(name, []);
+        crewMembershipsByPerson.get(name).push({
+          crew,
+          crewLabel: getFixedCrewCrewLabel(crew),
+          unit: getFixedCrewCrewUnit(crew) || null,
+          role: staff.role || "",
+          id: staff.id || staff.idNumber || null
+        });
+      });
+    });
+    diag.duplicateCrewMemberships = Array.from(crewMembershipsByPerson.entries()).map(([name, memberships]) => ({ name, memberships })).filter((entry) => entry.memberships.length > 1).sort((left, right) => left.name.localeCompare(right.name));
     const incrementFixedCrewRejection = (reason) => {
       diag.rejectionReasons[reason] = (diag.rejectionReasons[reason] || 0) + 1;
     };
@@ -76237,17 +76254,40 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }, {});
     const placementsByCrew = Array.from(fixedCrewCrewDecisionSummary.values()).sort((left, right) => left.crew.localeCompare(right.crew, void 0, { numeric: true }));
     const idleCrewAnalysis = placementsByCrew.filter((summary) => summary.placedEvents === 0).map((summary) => {
+      const crewMembers = crewGroups.get(summary.crew) || [];
+      const scheduledElsewhere = crewMembers.map((staff) => {
+        const conflicts = generatedEvents.filter((existing) => {
+          if (!eventHasPerson(existing, staff.name)) return false;
+          const existingCrew = normaliseCrewKey(existing.fixedCrewGroup || String(existing.crew || existing.group || existing.student || "").replace(/^CREW\s*/i, ""));
+          return existingCrew !== normaliseCrewKey(summary.crew);
+        }).map((existing) => ({
+          event: existing.flightNumber || null,
+          crew: existing.fixedCrewGroup || null,
+          crewDisplay: existing.crew || existing.group || existing.student || null,
+          resourceId: existing.resourceId || null,
+          startTime: existing.startTime ?? null,
+          duration: getFixedCrewDuration(existing),
+          type: existing.type || null
+        }));
+        return conflicts.length > 0 ? {
+          member: staff.name,
+          role: staff.role || null,
+          conflicts,
+          otherCrewMemberships: (crewMembershipsByPerson.get(staff.name) || []).filter((membership) => membership.crew !== summary.crew)
+        } : null;
+      }).filter(Boolean);
       const rejectionTotals = Object.entries(summary.placementRejections).reduce((acc, [reason, count]) => {
         acc[reason] = (acc[reason] || 0) + count;
         return acc;
       }, { ...summary.prefilterRejections });
       const dominantReason = Object.entries(rejectionTotals).sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0] || null;
       const ownedQueueEvents = summary.crewUnit ? queuedEventsByOwnerUnit[summary.crewUnit] || 0 : 0;
-      const likelyReason = summary.picCandidates.length === 0 ? "Crew has no PIC-qualified member." : ownedQueueEvents === 0 ? "No queued Fixed Crew training events were owned by this crew unit." : summary.acceptedAttempts === 0 && dominantReason ? `Crew was considered but rejected mostly for ${dominantReason}.` : summary.candidateEvents === 0 ? "Crew was not reached by the allocator before all queued events were placed or rejected." : "Crew was eligible for at least one attempt but another lower-usage/earlier candidate crew was selected first.";
+      const likelyReason = summary.picCandidates.length === 0 ? "Crew has no PIC-qualified member." : scheduledElsewhere.length > 0 ? "Crew has members already scheduled under another crew group, so personnel conflict protection prevents another event." : ownedQueueEvents === 0 ? "No queued Fixed Crew training events were owned by this crew unit." : summary.acceptedAttempts === 0 && dominantReason ? `Crew was considered but rejected mostly for ${dominantReason}.` : summary.candidateEvents === 0 ? "Crew was not reached by the allocator before all queued events were placed or rejected." : "Crew was eligible for at least one attempt but another lower-usage/earlier candidate crew was selected first.";
       return {
         ...summary,
         ownedQueueEvents,
         dominantReason,
+        scheduledElsewhere,
         likelyReason
       };
     });
