@@ -70145,6 +70145,13 @@ const DfpSidePanelTimeline = ({
     const crewValue = String(staff.crew || "").replace(/^CREW\s*/i, "").trim();
     return unitCode && crewValue ? `${unitCode}::${crewValue}` : "";
   }).filter(Boolean))).sort((left, right) => formatFixedCrewDisplayGroup(left).localeCompare(formatFixedCrewDisplayGroup(right), void 0, { numeric: true })), [fixedCrewAssistUnitCodeSet, instructors]);
+  const fixedCrewAssistGroupsByUnit = reactExports.useMemo(() => fixedCrewAssistGroups.reduce((groups, groupKey) => {
+    const [unitCode, ...crewParts] = String(groupKey || "").split("::");
+    const unit = crewParts.length > 0 ? unitCode.trim().toUpperCase() : "Unit";
+    if (!groups.has(unit)) groups.set(unit, []);
+    groups.get(unit).push(groupKey);
+    return groups;
+  }, /* @__PURE__ */ new Map()), [fixedCrewAssistGroups]);
   const fixedCrewAssistMembers = reactExports.useMemo(() => {
     if (!selectedFixedCrewGroup) return [];
     const [selectedUnitCode, ...selectedCrewParts] = String(selectedFixedCrewGroup || "").split("::");
@@ -72334,7 +72341,7 @@ const DfpSidePanelTimeline = ({
                 className: fieldClass2,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                  fixedCrewAssistGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group, children: formatFixedCrewDisplayGroup(group) }, group))
+                  activeAssistCallsignUnitCodes.length > 1 ? Array.from(fixedCrewAssistGroupsByUnit.entries()).map(([unitCode, groups]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group, children: formatFixedCrewDisplayGroup(group) }, group)) }, unitCode)) : fixedCrewAssistGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group, children: formatFixedCrewDisplayGroup(group) }, group))
                 ]
               }
             )

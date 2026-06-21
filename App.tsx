@@ -929,6 +929,13 @@ const DfpSidePanelTimeline: React.FC<{
         })
         .filter(Boolean)))
         .sort((left, right) => formatFixedCrewDisplayGroup(left).localeCompare(formatFixedCrewDisplayGroup(right), undefined, { numeric: true })), [fixedCrewAssistUnitCodeSet, instructors]);
+    const fixedCrewAssistGroupsByUnit = useMemo(() => fixedCrewAssistGroups.reduce((groups, groupKey) => {
+        const [unitCode, ...crewParts] = String(groupKey || '').split('::');
+        const unit = crewParts.length > 0 ? unitCode.trim().toUpperCase() : 'Unit';
+        if (!groups.has(unit)) groups.set(unit, []);
+        groups.get(unit)!.push(groupKey);
+        return groups;
+    }, new Map<string, string[]>()), [fixedCrewAssistGroups]);
     const fixedCrewAssistMembers = useMemo(() => {
         if (!selectedFixedCrewGroup) return [];
         const [selectedUnitCode, ...selectedCrewParts] = String(selectedFixedCrewGroup || '').split('::');
@@ -3386,9 +3393,17 @@ const DfpSidePanelTimeline: React.FC<{
                                 className={fieldClass}
                             >
                                 <option value="">Select crew</option>
-                                {fixedCrewAssistGroups.map(group => (
-                                    <option key={group} value={group}>{formatFixedCrewDisplayGroup(group)}</option>
-                                ))}
+                                {activeAssistCallsignUnitCodes.length > 1
+                                    ? Array.from(fixedCrewAssistGroupsByUnit.entries()).map(([unitCode, groups]) => (
+                                        <optgroup key={unitCode} label={unitCode}>
+                                            {groups.map(group => (
+                                                <option key={group} value={group}>{formatFixedCrewDisplayGroup(group)}</option>
+                                            ))}
+                                        </optgroup>
+                                    ))
+                                    : fixedCrewAssistGroups.map(group => (
+                                        <option key={group} value={group}>{formatFixedCrewDisplayGroup(group)}</option>
+                                    ))}
                             </select>
                         </label>
                         <label className="block font-semibold uppercase tracking-[0.1em] text-slate-400">
