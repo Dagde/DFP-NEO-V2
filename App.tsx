@@ -336,6 +336,11 @@ const DfpSidePanelTimeline: React.FC<{
     highestPriorityEvents: ScheduleEvent[];
     onAddPriorityEvents: (events: ScheduleEvent[]) => void;
     onDeletePriorityEvent: (eventId: string) => void | Promise<void>;
+    sctFlights?: SctRequest[];
+    sctFtds?: SctRequest[];
+    onAddSctRequestFromAssist?: (type: 'flight' | 'ftd', request: SctRequest) => void;
+    onPatchSctRequestFromAssist?: (id: string, updates: Partial<SctRequest>, type: 'flight' | 'ftd') => void;
+    onSyncSctRequestsFromAssist?: () => void;
     availableAircraftCount: number;
     onUpdateAircraftCount: (count: number) => void;
     aircraftConfigCapacities: Record<string, string>;
@@ -395,6 +400,11 @@ const DfpSidePanelTimeline: React.FC<{
     highestPriorityEvents,
     onAddPriorityEvents,
     onDeletePriorityEvent,
+    sctFlights = [],
+    sctFtds = [],
+    onAddSctRequestFromAssist = () => {},
+    onPatchSctRequestFromAssist = () => {},
+    onSyncSctRequestsFromAssist = () => {},
     availableAircraftCount,
     onUpdateAircraftCount,
     aircraftConfigCapacities,
@@ -1674,21 +1684,28 @@ const DfpSidePanelTimeline: React.FC<{
         onAddPriorityEvents(buildTaskRequestEvents(request));
         setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: true, ignored: false } : item));
     };
-    const isAssistCurrencyRequestInHighestPriority = (id: string) => (
-        highestPriorityEvents.some(event => event.currencyDraftId === id || String(event.id || '') === `neo-assist-currency-${id}`)
-    );
+    const getAssistCurrencyRequestType = (id: string): 'flight' | 'ftd' | null => {
+        if (sctFlights.some(request => request.id === id)) return 'flight';
+        if (sctFtds.some(request => request.id === id)) return 'ftd';
+        return null;
+    };
+    const patchAssistCurrencyRequest = (id: string, updates: Partial<SctRequest>, type = getAssistCurrencyRequestType(id)) => {
+        if (!type) return;
+        onPatchSctRequestFromAssist(id, updates, type);
+        window.setTimeout(onSyncSctRequestsFromAssist, 120);
+    };
     const saveAssistCurrencyRequest = (id: string) => {
-        setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: false, ignored: false } : item));
+        patchAssistCurrencyRequest(id, { submitted: false, includeInBuild: false });
     };
     const submitAssistCurrencyRequest = (id: string) => {
-        const request = assistCurrencyRequests.find(item => item.id === id);
-        if (!request || !request.currency.trim()) return;
-        if (isAssistCurrencyRequestInHighestPriority(id)) {
-            window.alert('Already added to Highest Priority Events list');
-            return;
-        }
-        onAddPriorityEvents([buildCurrencyRequestEvent(request)]);
-        setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: true, ignored: false } : item));
+        const type = getAssistCurrencyRequestType(id);
+        const request = type === 'flight'
+            ? sctFlights.find(item => item.id === id)
+            : type === 'ftd'
+                ? sctFtds.find(item => item.id === id)
+                : null;
+        if (!type || !request || !String(request.event || request.currency || '').trim()) return;
+        patchAssistCurrencyRequest(id, { submitted: true, includeInBuild: true }, type);
     };
     const highestPriorityTaskRows = useMemo(() => {
         const grouped = new Map<string, ScheduleEvent[]>();
@@ -1739,9 +1756,11 @@ const DfpSidePanelTimeline: React.FC<{
         setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: false, ignored: true } : item));
     };
     const ignoreAssistCurrencyRequest = (id: string) => {
-        const request = assistCurrencyRequests.find(item => item.id === id);
-        if (request?.submitted) ignorePriorityEvents([buildCurrencyRequestEvent(request)]);
-        setAssistCurrencyRequests(prev => prev.map(item => item.id === id ? { ...item, submitted: false, ignored: true } : item));
+        const type = getAssistCurrencyRequestType(id);
+        highestPriorityEvents
+            .filter(event => event.sctRequestId === id || event.id === `sct-${type}-${id}`)
+            .forEach(event => void onDeletePriorityEvent(event.id));
+        patchAssistCurrencyRequest(id, { submitted: false, includeInBuild: false }, type);
     };
     const wizardStepsCount = 12;
     const moveWizardTo = (nextStep: number) => {
@@ -1816,7 +1835,16 @@ const DfpSidePanelTimeline: React.FC<{
     };
     const renderWizardStep = () => {
         const savedTaskRequests = assistTaskRequests.filter(request => request.saved && !request.ignored);
-        const savedCurrencyRequests = assistCurrencyRequests.filter(request => request.saved && !request.ignored);
+        const savedCurrencyRequests = [
+            ...sctFlights,
+            ...sctFtds,
+        ]
+            .filter(request => request.submitted || request.includeInBuild || request.priority === 'High')
+            .map(request => ({
+                id: request.id,
+                currency: request.event || request.currency || 'Currency',
+                takeoff: parseTimeToDecimal(request.requestedTime || formatTime(flyingStartTime)),
+            }));
         const configSummaryText = aircraftConfigurationDefinitions
             .map(definition => {
                 const value = definition.id === BASE_AIRCRAFT_CONFIG.id && hasEnteredConfigCapacity
@@ -2771,23 +2799,35 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (activeAssistSection === 'currency') {
-            const localRows = assistCurrencyRequests.map(request => ({
+            const buildPriorityRows = [
+                ...sctFlights.map(request => ({ request, requestType: 'flight' as const })),
+                ...sctFtds.map(request => ({ request, requestType: 'ftd' as const })),
+            ].map(({ request, requestType }) => ({
                 id: request.id,
-                currency: request.currency || 'Currency',
-                date: request.date,
-                takeoff: request.takeoff,
-                duration: request.duration,
+                requestType,
+                currency: request.event || request.currency || 'Currency',
+                date: request.dateRequested || date,
+                takeoff: parseTimeToDecimal(request.requestedTime || formatTime(flyingStartTime)),
+                duration: 1.2,
                 flightType: request.flightType,
-                depPoint: request.depPoint,
-                arrivalPoint: request.arrivalPoint,
+                depPoint: locationCode,
+                arrivalPoint: locationCode,
                 aircraftConfigId: request.aircraftConfigId,
-                saved: Boolean(request.saved),
-                scheduled: Boolean(request.submitted),
-                ignored: Boolean(request.ignored),
-                source: 'local' as const,
+                priority: request.priority,
+                saved: true,
+                scheduled: Boolean(request.submitted || request.priority === 'High' || request.includeInBuild),
+                ignored: false,
+                source: 'build-priorities' as const,
             }));
-            const visibleRemoteRows = highestPriorityCurrencyRows.filter(remote => !assistCurrencyRequests.some(local => local.id === remote.id));
-            const rows = [...localRows, ...visibleRemoteRows.map(row => ({ ...row, ignored: false, source: 'remote' as const }))];
+            const buildPriorityIds = new Set(buildPriorityRows.map(row => row.id));
+            const visibleRemoteRows = highestPriorityCurrencyRows.filter(remote => {
+                const remoteId = String(remote.id || '');
+                const sourceRequestId = String((remote.event as any).sctRequestId || '');
+                return !buildPriorityIds.has(remoteId)
+                    && !buildPriorityIds.has(sourceRequestId)
+                    && !Array.from(buildPriorityIds).some(id => remoteId === `sct-flight-${id}` || remoteId === `sct-ftd-${id}`);
+            });
+            const rows = [...buildPriorityRows, ...visibleRemoteRows.map(row => ({ ...row, ignored: false, source: 'remote' as const }))];
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
                     <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
@@ -2825,7 +2865,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                 Select
                                             </label>
                                         )
-                                    ) : row.source === 'local' && (
+                                    ) : row.source === 'build-priorities' && (
                                         <button
                                             type="button"
                                             onClick={() => row.scheduled || row.saved ? submitAssistCurrencyRequest(row.id) : saveAssistCurrencyRequest(row.id)}
@@ -2838,7 +2878,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                if (row.source === 'local') ignoreAssistCurrencyRequest(row.id);
+                                                if (row.source === 'build-priorities') ignoreAssistCurrencyRequest(row.id);
                                                 else {
                                                     const remote = highestPriorityCurrencyRows.find(item => item.id === row.id);
                                                     if (remote) ignorePriorityEvents([remote.event]);
@@ -2876,8 +2916,11 @@ const DfpSidePanelTimeline: React.FC<{
                                     {timeOptions.map(option => <option key={`assist-currency-${option.label}`} value={option.value}>{option.label}</option>)}
                                 </select>
                             </label>
-                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Duration
-                                <input type="number" min={0.1} step={0.1} value={assistCurrencyDuration} onChange={event => setAssistCurrencyDuration(Math.max(0.1, Number(event.target.value) || 0.1))} className={fieldClass} />
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Request Type
+                                <select value={selectedResourceKind === 'ftd' ? 'ftd' : 'flight'} onChange={event => setSelectedResourceKind(event.target.value as 'flight' | 'ftd')} className={fieldClass}>
+                                    <option value="flight">Flight</option>
+                                    <option value="ftd">Sim</option>
+                                </select>
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Solo/Dual
                                 {isSingleSeatFlightResource ? (
@@ -2891,12 +2934,6 @@ const DfpSidePanelTimeline: React.FC<{
                                     </select>
                                 )}
                             </label>
-                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Dep Point
-                                <input value={assistCurrencyDepPoint} onChange={event => setAssistCurrencyDepPoint(event.target.value.toUpperCase())} className={fieldClass} />
-                            </label>
-                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Arrival Point
-                                <input value={assistCurrencyArrivalPoint} onChange={event => setAssistCurrencyArrivalPoint(event.target.value.toUpperCase())} className={fieldClass} />
-                            </label>
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">CONFIG
                                 <select value={assistCurrencyConfigId} onChange={event => setAssistCurrencyConfigId(event.target.value)} className={fieldClass}>
                                     {aircraftConfigurationDefinitions.map(definition => <option key={definition.id} value={definition.id}>{definition.label}</option>)}
@@ -2905,18 +2942,30 @@ const DfpSidePanelTimeline: React.FC<{
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setAssistCurrencyRequests(prev => [...prev, {
+                                    const requestType = selectedResourceKind === 'ftd' ? 'ftd' : 'flight';
+                                    const nextRequest: SctRequest = {
                                         id: uuidv4(),
+                                        name: selectedCrewName || '',
+                                        event: selectedCurrencyName,
+                                        eventCode: selectedCurrencyName.toUpperCase().slice(0, 8),
                                         currency: selectedCurrencyName,
-                                        date: assistCurrencyDate,
-                                        takeoff: assistCurrencyTakeoff,
-                                        duration: assistCurrencyDuration,
                                         flightType: effectiveAssistCurrencyFlightType,
-                                        depPoint: assistCurrencyDepPoint,
-                                        arrivalPoint: assistCurrencyArrivalPoint,
+                                        currencyExpire: '',
+                                        priority: 'Medium',
+                                        dateRequested: assistCurrencyDate,
+                                        requestedTime: formatTime(assistCurrencyTakeoff),
+                                        submitted: false,
+                                        includeInBuild: false,
                                         aircraftConfigId: assistCurrencyConfigId,
-                                        saved: false,
-                                    }]);
+                                        crewMember: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : '',
+                                        crewGroup: isFixedCrewNeoAssist ? selectedFixedCrewGroup.replace(/^.*::/, '') : '',
+                                        crewGroupKey: isFixedCrewNeoAssist ? selectedFixedCrewGroup : '',
+                                        crewUnitCode: isFixedCrewNeoAssist ? selectedFixedCrewGroup.split('::')[0] || activeAssistUnitCode : '',
+                                        crewDisplayLabel: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : '',
+                                        crewIndividual: isFixedCrewNeoAssist ? selectedFixedCrewPic : '',
+                                    };
+                                    onAddSctRequestFromAssist(requestType, nextRequest);
+                                    window.setTimeout(onSyncSctRequestsFromAssist, 120);
                                     setShowAssistCurrencyForm(false);
                                 }}
                                 className="col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100"
@@ -36133,6 +36182,49 @@ appliedUpdates.forEach(update => {
                                         });
                                     }}
                                     onDeletePriorityEvent={handleDeletePriorityEvent}
+                                    sctFlights={sctFlights}
+                                    sctFtds={sctFtds}
+                                    onAddSctRequestFromAssist={async (type, request) => {
+                                        if (type === 'flight') setSctFlights(prev => [...prev, request]);
+                                        else setSctFtds(prev => [...prev, request]);
+                                        const userId = getCurrentUserId();
+                                        if (!userId) return;
+                                        try {
+                                            const res = await fetch('/api/sct-requests', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ ...request, userId, requestType: type }),
+                                            });
+                                            if (res.ok) {
+                                                const saved = await res.json();
+                                                const updater = (prev: SctRequest[]) => prev.map(item => (
+                                                    item.id === request.id ? { ...item, id: saved.id } : item
+                                                ));
+                                                if (type === 'flight') setSctFlights(updater);
+                                                else setSctFtds(updater);
+                                            }
+                                        } catch (err) {
+                                            console.error('Failed to save NEO Assist SCT request:', err);
+                                        }
+                                    }}
+                                    onPatchSctRequestFromAssist={async (id, updates, type) => {
+                                        const updater = (prev: SctRequest[]) => prev.map(request => (
+                                            request.id === id ? { ...request, ...updates } : request
+                                        ));
+                                        if (type === 'flight') setSctFlights(updater);
+                                        else setSctFtds(updater);
+                                        setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
+                                        try {
+                                            await fetch(`/api/sct-requests/${id}`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify(updates),
+                                            });
+                                        } catch (err) {
+                                            console.error('Failed to patch NEO Assist SCT request:', err);
+                                        }
+                                    }}
+                                    onSyncSctRequestsFromAssist={syncPriorityEventsWithSctAndRemedial}
                                     availableAircraftCount={neoAvailableAircraftCount}
                                     onUpdateAircraftCount={handleUpdateNeoAvailableAircraftCount}
                                     maxAircraftCount={configuredAirframeCount}
