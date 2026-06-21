@@ -18102,6 +18102,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [alertSent, setAlertSent] = reactExports.useState(false);
   const [alertDescription, setAlertDescription] = reactExports.useState("");
   const [alertUserNote, setAlertUserNote] = reactExports.useState("");
+  const [activeCrewConflictName, setActiveCrewConflictName] = reactExports.useState(null);
   const isOracleContext = !!oracleContextForModal;
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
   const isFixedCrewModel = normaliseOperationalModel(operationalModel2) === "fixed_crew";
@@ -18181,6 +18182,29 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     const crewParts = splitFixedCrewGroupKey(eventCrewKey);
     return instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewParts.crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   }, [event, fixedCrewGroup, instructorsData, isFixedCrewCrewedEvent, activeUnitMemberCodes, personnelDisplaySettings]);
+  const staffHasAvailabilityConflict = (staff, bookingWindow, eventDate) => {
+    if (!eventDate) return false;
+    return (staff.unavailability || []).some((period) => {
+      const periodStartDate = String(period.startDate || "");
+      const periodEndDate = String(period.endDate || period.startDate || "");
+      if (eventDate < periodStartDate || eventDate > periodEndDate) return false;
+      if (period.allDay) return true;
+      const unavailableStart = periodStartDate === eventDate ? normaliseTimeFieldToHour(period.startTime, 0) : 0;
+      const unavailableEnd = periodEndDate === eventDate ? normaliseTimeFieldToHour(period.endTime, 24) : 24;
+      return unavailableStart < bookingWindow.end && bookingWindow.start < unavailableEnd;
+    });
+  };
+  const staffHasEventConflict = (staff, bookingWindow) => (eventsForDate || []).filter((otherEvent) => otherEvent.id !== event.id).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).some((otherEvent) => {
+    const otherWindow = getEventBookingWindow2(otherEvent);
+    return otherWindow.start < bookingWindow.end && bookingWindow.start < otherWindow.end;
+  });
+  const getAvailableFixedCrewRoleAlternatives = (staff, bookingWindow, eventDate) => {
+    const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || "";
+    const crewUnit = splitFixedCrewGroupKey(eventCrewKey).unit || normaliseFixedCrewUnitCode(staff.unit);
+    const role = String(staff.role || "").trim().toUpperCase();
+    if (!crewUnit || !role) return [];
+    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => String(candidate.role || "").trim().toUpperCase() === role).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+  };
   const fixedCrewRosterStatus = reactExports.useMemo(() => {
     const bookingWindow = getEventBookingWindow2(event);
     const eventDate = event.date;
@@ -18196,29 +18220,53 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         return unavailableStart < bookingWindow.end && bookingWindow.start < unavailableEnd;
       }).map((period) => ({
         type: "unavailability",
-        label: period.allDay ? `${period.reason || "Unavailable"} all day` : `${period.reason || "Unavailable"} ${formatTime$4(normaliseTimeFieldToHour(period.startTime, 0))}-${formatTime$4(normaliseTimeFieldToHour(period.endTime, 24))}`
+        label: period.allDay ? `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable all day${period.reason ? ` because ${period.reason}` : ""}.` : `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable from ${formatTime$4(normaliseTimeFieldToHour(period.startTime, 0))} to ${formatTime$4(normaliseTimeFieldToHour(period.endTime, 24))}${period.reason ? ` because ${period.reason}` : ""}.`
       }));
       const eventConflicts = (eventsForDate || []).filter((otherEvent) => otherEvent.id !== event.id).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).filter((otherEvent) => {
         const otherWindow = getEventBookingWindow2(otherEvent);
         return otherWindow.start < bookingWindow.end && bookingWindow.start < otherWindow.end;
       }).map((otherEvent) => ({
         type: "event",
-        label: `${otherEvent.flightNumber || "Event"} ${formatTime$4(otherEvent.startTime)}-${formatTime$4((otherEvent.startTime || 0) + (otherEvent.duration || 0))}`
+        label: `${[staff.rank, staff.name].filter(Boolean).join(" ")} is already assigned to ${otherEvent.flightNumber || "another event"} from ${formatTime$4(otherEvent.startTime)} to ${formatTime$4((otherEvent.startTime || 0) + (otherEvent.duration || 0))}.`
       }));
       const conflicts = [...unavailabilityConflicts, ...eventConflicts];
       return {
         staff,
         conflicts,
-        isClear: conflicts.length === 0
+        isClear: conflicts.length === 0,
+        alternatives: getAvailableFixedCrewRoleAlternatives(staff, bookingWindow, eventDate)
       };
     });
   }, [event, eventsForDate, rosteredFixedCrewMembers, syllabusDetails]);
+  const fixedCrewRosterByRole = reactExports.useMemo(() => {
+    const picName = String(fixedCrewPic || event.fixedCrewPic || event.pilot || "").trim();
+    const roleRank = (role) => String(role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
+    return fixedCrewRosterStatus.slice().sort((a, b) => {
+      const aPic = a.staff.name === picName ? 0 : 1;
+      const bPic = b.staff.name === picName ? 0 : 1;
+      if (aPic !== bPic) return aPic - bPic;
+      const roleDiff = roleRank(a.staff.role) - roleRank(b.staff.role);
+      if (roleDiff !== 0) return roleDiff;
+      return comparePeopleByConfiguredRank(a.staff, b.staff, personnelDisplaySettings, "staff");
+    }).reduce((groups, status) => {
+      const role = status.staff.role || "Crew";
+      const existing = groups.find((group) => group.role === role);
+      if (existing) existing.members.push(status);
+      else groups.push({ role, members: [status] });
+      return groups;
+    }, []).sort((a, b) => {
+      const aRank = String(a.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
+      const bRank = String(b.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
+      if (aRank !== bRank) return aRank - bRank;
+      return a.role.localeCompare(b.role);
+    });
+  }, [event.fixedCrewPic, event.pilot, fixedCrewPic, fixedCrewRosterStatus, personnelDisplaySettings]);
   const renderFixedCrewRosterStatus = () => {
     if (!isFixedCrewCrewedEvent) return null;
     const bookingWindow = getEventBookingWindow2(event);
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-700 bg-gray-900/50 p-3 space-y-2.5", children: [
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/50 p-3 space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-emerald-200", children: "Crew Roster" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "rounded bg-emerald-500/15 px-2 py-1 text-sm font-bold text-emerald-200", children: formatFixedCrewDisplayGroup$2(fixedCrewGroup || event.fixedCrewGroup || "") || "Crew not assigned" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
           "Availability window ",
           formatTime$4(Math.max(0, bookingWindow.start)),
@@ -18226,36 +18274,51 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           formatTime$4(Math.min(24, bookingWindow.end))
         ] })
       ] }),
-      fixedCrewRosterStatus.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-1.5", children: fixedCrewRosterStatus.map(({ staff, conflicts, isClear }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          className: `rounded border px-2.5 py-1.5 ${isClear ? "border-emerald-500/25 bg-emerald-950/15" : "border-red-500/40 bg-red-950/20"}`,
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 items-baseline gap-1.5", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate text-xs font-semibold ${isClear ? "text-emerald-300" : "text-red-300"}`, children: [staff.rank, staff.name].filter(Boolean).join(" ") }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-[11px] text-gray-400", children: staff.role || "Crew" })
-            ] }) }),
-            !isClear && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-0.5", children: conflicts.map((conflict, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-red-200", children: conflict.label }, `${staff.name}-conflict-${index}`)) })
-          ]
-        },
-        staff.id || staff.name
-      )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "No crew roster is assigned to this event." })
+      fixedCrewRosterByRole.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: fixedCrewRosterByRole.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500", children: group.role }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: group.members.map(({ staff, conflicts, isClear, alternatives }) => {
+          const isPic = staff.name === String(fixedCrewPic || event.fixedCrewPic || event.pilot || "").trim();
+          const isFlyoutOpen = activeCrewConflictName === staff.name;
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex items-baseline gap-2 text-left", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                disabled: isClear,
+                onClick: () => setActiveCrewConflictName(isFlyoutOpen ? null : staff.name),
+                onMouseEnter: () => !isClear && setActiveCrewConflictName(staff.name),
+                onMouseLeave: () => !isClear && setActiveCrewConflictName((current) => current === staff.name ? null : current),
+                className: `min-w-0 truncate text-xs font-semibold ${isClear ? "cursor-default text-emerald-300" : "cursor-help text-red-300 underline decoration-red-300/40 underline-offset-2"}`,
+                children: [staff.rank, staff.name].filter(Boolean).join(" ")
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 text-[11px] text-gray-400", children: [
+              staff.role || "Crew",
+              isPic ? " / PIC" : ""
+            ] }),
+            !isClear && isFlyoutOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "absolute left-0 top-5 z-[300] w-80 rounded-lg border border-red-400/40 bg-gray-950 p-3 text-left shadow-2xl",
+                onMouseEnter: () => setActiveCrewConflictName(staff.name),
+                onMouseLeave: () => setActiveCrewConflictName((current) => current === staff.name ? null : current),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-bold uppercase tracking-wider text-red-300", children: "Conflict details" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: conflicts.map((conflict, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-snug text-red-100", children: conflict.label }, `${staff.name}-conflict-detail-${index}`)) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 border-t border-gray-800 pt-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300", children: [
+                      "Available same-unit ",
+                      staff.role || "crew"
+                    ] }),
+                    alternatives.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-0.5", children: alternatives.slice(0, 8).map((candidate) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-emerald-100", children: [candidate.rank, candidate.name].filter(Boolean).join(" ") }, candidate.id || candidate.name)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400", children: "No same-unit crew with this role are available for the full event window." })
+                  ] })
+                ]
+              }
+            )
+          ] }, staff.id || staff.name);
+        }) })
+      ] }, group.role)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "No crew roster is assigned to this event." })
     ] });
-  };
-  const formatFixedCrewAssignmentStatus = (status) => {
-    switch (status) {
-      case "complete":
-        return "Complete";
-      case "partial":
-        return "Partial";
-      case "swapped":
-        return "Swapped";
-      case "invalid":
-        return "Invalid";
-      case "pending":
-      default:
-        return "Pending";
-    }
   };
   const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map((t) => t.trainee.fullName) : trainees;
   const [dynamicSyllabusOptions, setDynamicSyllabusOptions] = reactExports.useState(isOracleContext ? [] : syllabus);
@@ -20054,63 +20117,61 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             ] }, deployment.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500 italic", children: "No deployments available for this event type" }) })
           ] })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-gray-300 space-y-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          !isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Syllabus Item:" }),
             " ",
             event.flightNumber
           ] }),
-          event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          !isFixedCrewCrewedEvent && event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Route:" }),
             " ",
             event.origin,
             "-",
             event.destination
           ] }),
-          event.type === "flight" && event.area && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          !isFixedCrewCrewedEvent && event.type === "flight" && event.area && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Area:" }),
             " ",
             event.area
           ] }),
-          event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          !isFixedCrewCrewedEvent && event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "CONFIG:" }),
             " ",
             aircraftConfigOptions.find((definition) => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label
           ] }),
-          isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Duration" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-100", children: [
-                event.duration.toFixed(1),
-                " hours"
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Start Time" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-100", children: [
-                Math.floor(event.startTime),
-                ":",
-                String(Math.round(event.startTime % 1 * 60)).padStart(2, "0")
-              ] })
-            ] })
-          ] }),
           isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-emerald-200", children: "Fixed Crew Manifest" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wider text-emerald-300", children: formatFixedCrewAssignmentStatus(event.fixedCrewManifestStatus) })
-            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Crew" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.fixedCrewGroup ? formatFixedCrewDisplayGroup$2(event.fixedCrewGroup) : "Not assigned" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Syllabus Item" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.flightNumber || "Not set" })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2 sm:col-span-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Route" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-100", children: [
+                  event.origin || school,
+                  "-",
+                  event.destination || school
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "CONFIG" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: aircraftConfigOptions.find((definition) => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "PIC" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.fixedCrewPic || "Not selected" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: event.fixedCrewPic || event.pilot || "Not selected" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Duration" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-100", children: [
+                  event.duration.toFixed(1),
+                  " hours"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Start Time" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$4(event.startTime) })
               ] })
-            ] }),
-            event.fixedCrewManifestNotes && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2 text-sm", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500 mb-1", children: "Swap / Manifest Notes" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-wrap text-gray-200", children: event.fixedCrewManifestNotes })
             ] }),
             renderFixedCrewRosterStatus()
           ] }),
