@@ -70136,8 +70136,26 @@ const DfpSidePanelTimeline = ({
     []
   );
   const fixedCrewAssistCallsign = buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, assistUnitCallsignNumber);
-  const fixedCrewAssistGroups = reactExports.useMemo(() => Array.from(new Set(instructors.filter((staff) => !activeAssistUnitCode || String(staff.unit || "").trim().toUpperCase() === activeAssistUnitCode).map((staff) => String(staff.crew || "").trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right, void 0, { numeric: true })), [activeAssistUnitCode, instructors]);
-  const fixedCrewAssistMembers = reactExports.useMemo(() => selectedFixedCrewGroup ? instructors.filter((staff) => !activeAssistUnitCode || String(staff.unit || "").trim().toUpperCase() === activeAssistUnitCode).filter((staff) => String(staff.crew || "").trim().toUpperCase() === String(selectedFixedCrewGroup || "").trim().toUpperCase()).filter((staff) => !staff.isAdminStaff).sort((left, right) => String(left.name || "").localeCompare(String(right.name || ""), void 0, { sensitivity: "base" })) : [], [activeAssistUnitCode, instructors, selectedFixedCrewGroup]);
+  const fixedCrewAssistUnitCodeSet = reactExports.useMemo(() => new Set(activeAssistCallsignUnitCodes), [activeAssistCallsignUnitCodes]);
+  const fixedCrewAssistGroups = reactExports.useMemo(() => Array.from(new Set(instructors.filter((staff) => {
+    const unitCode = String(staff.unit || "").trim().toUpperCase();
+    return fixedCrewAssistUnitCodeSet.size === 0 || fixedCrewAssistUnitCodeSet.has(unitCode);
+  }).map((staff) => {
+    const unitCode = String(staff.unit || "").trim().toUpperCase();
+    const crewValue = String(staff.crew || "").replace(/^CREW\s*/i, "").trim();
+    return unitCode && crewValue ? `${unitCode}::${crewValue}` : "";
+  }).filter(Boolean))).sort((left, right) => formatFixedCrewDisplayGroup(left).localeCompare(formatFixedCrewDisplayGroup(right), void 0, { numeric: true })), [fixedCrewAssistUnitCodeSet, instructors]);
+  const fixedCrewAssistMembers = reactExports.useMemo(() => {
+    if (!selectedFixedCrewGroup) return [];
+    const [selectedUnitCode, ...selectedCrewParts] = String(selectedFixedCrewGroup || "").split("::");
+    const selectedUnit = selectedCrewParts.length > 0 ? selectedUnitCode.trim().toUpperCase() : "";
+    const selectedCrew = (selectedCrewParts.length > 0 ? selectedCrewParts.join("::") : selectedUnitCode).replace(/^CREW\s*/i, "").trim().toUpperCase();
+    return instructors.filter((staff) => {
+      const unitCode = String(staff.unit || "").trim().toUpperCase();
+      if (selectedUnit) return unitCode === selectedUnit;
+      return fixedCrewAssistUnitCodeSet.size === 0 || fixedCrewAssistUnitCodeSet.has(unitCode);
+    }).filter((staff) => String(staff.crew || "").replace(/^CREW\s*/i, "").trim().toUpperCase() === selectedCrew).filter((staff) => !staff.isAdminStaff).sort((left, right) => String(left.name || "").localeCompare(String(right.name || ""), void 0, { sensitivity: "base" }));
+  }, [fixedCrewAssistUnitCodeSet, instructors, selectedFixedCrewGroup]);
   const fixedCrewPicQualification = reactExports.useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, "fixed_crew").find((qualification) => normaliseQualificationToken(qualification.id) === "pic" || normaliseQualificationToken(qualification.code) === "pic" || normaliseQualificationToken(qualification.name) === "pic"), [staffQualificationCatalogue]);
   const fixedCrewPicCandidates = reactExports.useMemo(() => fixedCrewPicQualification ? fixedCrewAssistMembers.filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [], [fixedCrewAssistMembers, fixedCrewPicQualification, staffQualificationCatalogue]);
   const handleFixedCrewAssistGroupChange = (group) => {
@@ -72283,7 +72301,7 @@ const DfpSidePanelTimeline = ({
                   includeInBuild: false,
                   aircraftConfigId: assistCurrencyConfigId,
                   crewMember: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : "",
-                  crewGroup: isFixedCrewNeoAssist ? selectedFixedCrewGroup.replace(/^.*::/, "") : "",
+                  crewGroup: isFixedCrewNeoAssist ? selectedFixedCrewGroup.replace(/^.*::/, "").replace(/^CREW\s*/i, "").trim() : "",
                   crewGroupKey: isFixedCrewNeoAssist ? selectedFixedCrewGroup : "",
                   crewUnitCode: isFixedCrewNeoAssist ? selectedFixedCrewGroup.split("::")[0] || activeAssistUnitCode : "",
                   crewDisplayLabel: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : "",
