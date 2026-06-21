@@ -20,7 +20,7 @@ import {
     type AircraftNumberSettings,
 } from '../utils/aircraftNumberFormat';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
-import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import { getAircraftSeatEligibleRoles, type AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import {
     crewPositionValuesMatch,
     findCrewPositionEntry,
@@ -688,13 +688,29 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         if (activeUnitMemberCodes.length === 0) return true;
         return activeUnitMemberCodes.includes(staffUnit);
     };
-    const getFixedCrewRoleLabel = (role?: string | null): string => {
+    const fixedCrewAircraftRoleOptions = useMemo(() => {
+        const roles = new Set<string>();
+        (aircraftCrewComposition?.seats || []).forEach(seat => {
+            getAircraftSeatEligibleRoles(seat).forEach(role => {
+                const trimmed = String(role || '').trim();
+                if (trimmed) roles.add(trimmed);
+            });
+        });
+        return Array.from(roles);
+    }, [aircraftCrewComposition]);
+    const resolveFixedCrewAircraftRole = (role?: string | null): string => {
         const rawRole = String(role || '').trim();
-        if (!rawRole) return 'Crew';
-        return findCrewPositionEntry(rawRole, crewPositionTerminology)?.label || rawRole;
+        if (!rawRole) return '';
+        return fixedCrewAircraftRoleOptions.find(option => crewPositionValuesMatch(option, rawRole, crewPositionTerminology)) || '';
+    };
+    const getFixedCrewRoleLabel = (role?: string | null): string => {
+        const aircraftRole = resolveFixedCrewAircraftRole(role);
+        if (!aircraftRole) return 'Unconfigured role';
+        return findCrewPositionEntry(aircraftRole, crewPositionTerminology)?.label || aircraftRole;
     };
     const fixedCrewRolesMatch = (left?: string | null, right?: string | null): boolean => (
-        crewPositionValuesMatch(left, right, crewPositionTerminology)
+        Boolean(resolveFixedCrewAircraftRole(left))
+        && resolveFixedCrewAircraftRole(left) === resolveFixedCrewAircraftRole(right)
     );
     const fixedCrewGroups = useMemo(() => Array.from(new Set(instructorsData
         .filter(staff => staffMatchesActiveFixedCrewUnit(staff))

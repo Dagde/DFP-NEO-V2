@@ -18117,12 +18117,27 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (activeUnitMemberCodes.length === 0) return true;
     return activeUnitMemberCodes.includes(staffUnit);
   };
-  const getFixedCrewRoleLabel = (role) => {
+  const fixedCrewAircraftRoleOptions = reactExports.useMemo(() => {
+    const roles = /* @__PURE__ */ new Set();
+    (aircraftCrewComposition?.seats || []).forEach((seat) => {
+      getAircraftSeatEligibleRoles(seat).forEach((role) => {
+        const trimmed = String(role || "").trim();
+        if (trimmed) roles.add(trimmed);
+      });
+    });
+    return Array.from(roles);
+  }, [aircraftCrewComposition]);
+  const resolveFixedCrewAircraftRole = (role) => {
     const rawRole = String(role || "").trim();
-    if (!rawRole) return "Crew";
-    return findCrewPositionEntry(rawRole, crewPositionTerminology)?.label || rawRole;
+    if (!rawRole) return "";
+    return fixedCrewAircraftRoleOptions.find((option) => crewPositionValuesMatch(option, rawRole, crewPositionTerminology)) || "";
   };
-  const fixedCrewRolesMatch = (left, right) => crewPositionValuesMatch(left, right, crewPositionTerminology);
+  const getFixedCrewRoleLabel = (role) => {
+    const aircraftRole = resolveFixedCrewAircraftRole(role);
+    if (!aircraftRole) return "Unconfigured role";
+    return findCrewPositionEntry(aircraftRole, crewPositionTerminology)?.label || aircraftRole;
+  };
+  const fixedCrewRolesMatch = (left, right) => Boolean(resolveFixedCrewAircraftRole(left)) && resolveFixedCrewAircraftRole(left) === resolveFixedCrewAircraftRole(right);
   const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff)).map((staff) => {
     const staffCrew = String(staff.crew || "").trim();
     const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
