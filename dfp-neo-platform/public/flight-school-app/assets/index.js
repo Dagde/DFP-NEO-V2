@@ -69701,6 +69701,53 @@ const downloadNeoTaskProvenanceReport = (source = "manual") => {
   console.log("[NEO-TASK-PROVENANCE] Download triggered:", filename, { source });
   return filename;
 };
+const ASSIST_PRIORITY_STEP = 5;
+const ASSIST_PRIORITY_TOTAL_STEPS = 100 / ASSIST_PRIORITY_STEP;
+const ASSIST_PRIORITY_COLOURS = [
+  "#22d3ee",
+  "#a78bfa",
+  "#34d399",
+  "#f59e0b",
+  "#f472b6",
+  "#60a5fa",
+  "#fb7185",
+  "#c084fc",
+  "#2dd4bf",
+  "#facc15"
+];
+const snapAssistPriorityWeight = (value) => Math.max(0, Math.min(100, Math.round((Number(value) || 0) / ASSIST_PRIORITY_STEP) * ASSIST_PRIORITY_STEP));
+const normaliseAssistPriorityWeights = (items) => {
+  const enabled = items.filter((item) => item.enabled !== false);
+  if (enabled.length === 0) return items.map((item) => ({ ...item, weight: 0 }));
+  const enabledTotal = enabled.reduce((sum, item) => sum + Math.max(0, Number(item.weight) || 0), 0);
+  if (enabledTotal <= 0) {
+    const baseSteps = Math.floor(ASSIST_PRIORITY_TOTAL_STEPS / enabled.length);
+    let extraSteps = ASSIST_PRIORITY_TOTAL_STEPS - baseSteps * enabled.length;
+    return items.map((item) => {
+      if (item.enabled === false) return { ...item, weight: 0 };
+      const steps = baseSteps + (extraSteps > 0 ? 1 : 0);
+      if (extraSteps > 0) extraSteps -= 1;
+      return { ...item, weight: steps * ASSIST_PRIORITY_STEP };
+    });
+  }
+  const targets = enabled.map((item, index) => {
+    const exactSteps = Math.max(0, Number(item.weight) || 0) / enabledTotal * ASSIST_PRIORITY_TOTAL_STEPS;
+    return { item, index, exactSteps, steps: Math.max(0, Math.round(exactSteps)) };
+  });
+  let stepDelta = ASSIST_PRIORITY_TOTAL_STEPS - targets.reduce((sum, target) => sum + target.steps, 0);
+  while (stepDelta !== 0) {
+    const candidates = stepDelta > 0 ? targets.slice().sort((left, right) => right.exactSteps - right.steps - (left.exactSteps - left.steps) || left.index - right.index) : targets.filter((target2) => target2.steps > 0).sort((left, right) => left.exactSteps - left.steps - (right.exactSteps - right.steps) || left.index - right.index);
+    const target = candidates[0];
+    if (!target) break;
+    target.steps += stepDelta > 0 ? 1 : -1;
+    stepDelta += stepDelta > 0 ? -1 : 1;
+  }
+  const stepsByItem = new Map(targets.map((target) => [target.item, target.steps]));
+  return items.map((item) => ({
+    ...item,
+    weight: item.enabled === false ? 0 : (stepsByItem.get(item) || 0) * ASSIST_PRIORITY_STEP
+  }));
+};
 const TASKING_REQUEST_STORAGE_KEY = "neoTaskingRequests";
 const TASKING_REQUESTS_UPDATED_EVENT = "neoTaskingRequestsUpdated";
 const DfpSidePanelTimeline = ({
@@ -69737,6 +69784,8 @@ const DfpSidePanelTimeline = ({
   currencyNames,
   airCombatSchedulingWeights,
   onUpdateAirCombatSchedulingWeights,
+  fixedCrewTrainingPriorities = [],
+  onUpdateFixedCrewTrainingPriorities,
   highestPriorityEvents,
   onAddPriorityEvents,
   onDeletePriorityEvent,
@@ -70670,6 +70719,138 @@ const DfpSidePanelTimeline = ({
       trainingPackages: 100 - courses
     });
   };
+  const assistFixedCrewPriorityTrackRef = reactExports.useRef(null);
+  const assistFixedCrewPriorityStreams = reactExports.useMemo(() => {
+    if (!isFixedCrewNeoAssist) return [];
+    const activeCodes = new Set(
+      activeAssistUnitCode.split(/[+\/,]/).map((code) => code.trim().toUpperCase()).filter(Boolean)
+    );
+    const savedStreams = normaliseFixedCrewTrainingPriorityWeights(fixedCrewTrainingPriorities);
+    const saved = new Map(savedStreams.map((stream) => [stream.key, stream]));
+    const savedOrder = new Map(savedStreams.map((stream, index) => [stream.key, index]));
+    const grouped = /* @__PURE__ */ new Map();
+    syllabusDetails.filter((item) => item.isActive !== false).filter((item) => !isSyllabusCourseShell(item)).forEach((item) => {
+      const itemUnit = String(item.unit || "").trim().toUpperCase();
+      if (activeCodes.size > 0 && itemUnit && !activeCodes.has(itemUnit)) return;
+      if (activeCodes.size > 0 && !itemUnit) return;
+      const kind = getFixedCrewTrainingKindForLmpType(item.lmpType);
+      const code = getFixedCrewTrainingCodeFromItem(item);
+      if (!code) return;
+      const key = getFixedCrewTrainingKey(kind, code, item.location || locationCode, itemUnit || activeAssistUnitCode || locationCode);
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.eventCount = (existing.eventCount || 0) + 1;
+        return;
+      }
+      const savedStream = saved.get(key);
+      grouped.set(key, {
+        key,
+        kind,
+        code,
+        title: getFixedCrewTrainingTitleFromItem(item),
+        locationCode: String(item.location || locationCode || "").trim().toUpperCase(),
+        unitCode: itemUnit || activeAssistUnitCode,
+        weight: savedStream?.weight ?? 10,
+        enabled: savedStream?.enabled ?? true,
+        eventCount: 1
+      });
+    });
+    return normaliseAssistPriorityWeights(Array.from(grouped.values())).sort((left, right) => {
+      if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
+      const leftSavedOrder = savedOrder.get(left.key);
+      const rightSavedOrder = savedOrder.get(right.key);
+      if (leftSavedOrder !== void 0 && rightSavedOrder !== void 0) return leftSavedOrder - rightSavedOrder;
+      if (leftSavedOrder !== void 0) return -1;
+      if (rightSavedOrder !== void 0) return 1;
+      return right.weight - left.weight || left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code, void 0, { numeric: true });
+    });
+  }, [activeAssistUnitCode, fixedCrewTrainingPriorities, isFixedCrewNeoAssist, locationCode, syllabusDetails]);
+  const activeAssistFixedCrewPriorityStreams = assistFixedCrewPriorityStreams.filter((stream) => stream.enabled);
+  const assistFixedCrewPriorityBoundaries = activeAssistFixedCrewPriorityStreams.reduce((boundaries, stream, index) => {
+    const previous = boundaries[index - 1] || 0;
+    boundaries.push(previous + stream.weight);
+    return boundaries;
+  }, []);
+  const assistFixedCrewColourByKey = reactExports.useMemo(() => {
+    const colours = /* @__PURE__ */ new Map();
+    assistFixedCrewPriorityStreams.forEach((stream, index) => {
+      colours.set(stream.key, ASSIST_PRIORITY_COLOURS[index % ASSIST_PRIORITY_COLOURS.length]);
+    });
+    return colours;
+  }, [assistFixedCrewPriorityStreams]);
+  const sortedAssistFixedCrewPriorityStreams = assistFixedCrewPriorityStreams.slice().sort((left, right) => {
+    if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
+    if (right.weight !== left.weight) return right.weight - left.weight;
+    return String(left.title || left.code).localeCompare(String(right.title || right.code));
+  });
+  const persistAssistFixedCrewPriorityStreams = (streams) => {
+    const prepared = normaliseAssistPriorityWeights(streams);
+    const order = new Map(prepared.map((stream, index) => [stream.key, index]));
+    onUpdateFixedCrewTrainingPriorities?.(
+      prepared.slice().sort((left, right) => {
+        if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
+        if (right.weight !== left.weight) return right.weight - left.weight;
+        return (order.get(left.key) ?? 0) - (order.get(right.key) ?? 0);
+      }).map(({ eventCount: _eventCount, ...stream }) => stream)
+    );
+  };
+  const equaliseAssistFixedCrewPriorities = (streams) => normaliseAssistPriorityWeights(streams.map((stream) => ({ ...stream, enabled: true, weight: 1 })));
+  const updateAssistFixedCrewPriorityBoundary = (boundaryIndex, nextBoundaryPercent) => {
+    if (boundaryIndex < 0 || boundaryIndex >= activeAssistFixedCrewPriorityStreams.length - 1) return;
+    const leftStream = activeAssistFixedCrewPriorityStreams[boundaryIndex];
+    const rightStream = activeAssistFixedCrewPriorityStreams[boundaryIndex + 1];
+    const previousBoundary = boundaryIndex === 0 ? 0 : assistFixedCrewPriorityBoundaries[boundaryIndex - 1];
+    const followingBoundary = assistFixedCrewPriorityBoundaries[boundaryIndex + 1] ?? 100;
+    const boundedBoundary = Math.max(
+      previousBoundary,
+      Math.min(followingBoundary, snapAssistPriorityWeight(nextBoundaryPercent))
+    );
+    const leftWeight = boundedBoundary - previousBoundary;
+    const rightWeight = followingBoundary - boundedBoundary;
+    persistAssistFixedCrewPriorityStreams(assistFixedCrewPriorityStreams.map((stream) => {
+      if (stream.key === leftStream.key) return { ...stream, weight: leftWeight };
+      if (stream.key === rightStream.key) return { ...stream, weight: rightWeight };
+      return stream;
+    }));
+  };
+  const handleAssistFixedCrewStreamToggle = (streamKey) => {
+    const current = assistFixedCrewPriorityStreams.map((stream) => ({ ...stream }));
+    const target = current.find((stream) => stream.key === streamKey);
+    if (target?.enabled && current.filter((stream) => stream.enabled).length <= 1) return;
+    persistAssistFixedCrewPriorityStreams(
+      normaliseAssistPriorityWeights(current.map((stream) => stream.key === streamKey ? {
+        ...stream,
+        enabled: !stream.enabled,
+        weight: 0
+      } : stream))
+    );
+  };
+  const handleAssistFixedCrewPriorityHandlePointerDown = (boundaryIndex, event) => {
+    if (!assistFixedCrewPriorityTrackRef.current) return;
+    event.preventDefault();
+    const track = assistFixedCrewPriorityTrackRef.current;
+    const pointerId = event.pointerId;
+    event.currentTarget.setPointerCapture(pointerId);
+    const updateFromClientX = (clientX) => {
+      const rect = track.getBoundingClientRect();
+      updateAssistFixedCrewPriorityBoundary(boundaryIndex, (clientX - rect.left) / Math.max(1, rect.width) * 100);
+    };
+    updateFromClientX(event.clientX);
+    const handlePointerMove = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      moveEvent.preventDefault();
+      updateFromClientX(moveEvent.clientX);
+    };
+    const handlePointerUp = (upEvent) => {
+      if (upEvent.pointerId !== pointerId) return;
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+  };
   const buildTaskRequestEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = taskProfileAbbreviations[tasking] || "";
@@ -71561,74 +71742,181 @@ const DfpSidePanelTimeline = ({
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-cyan-100", children: "Priority order" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: [
-            ["01", "Mandatory taskings", `${scheduledTaskCount} scheduled`],
-            ["02", "Directed currency", `${scheduledCurrencyCount} scheduled`],
-            ["03", "Training packages", `${airCombatSchedulingWeights.trainingPackages}% training share`],
-            ["04", "Course events", `${airCombatSchedulingWeights.courses}% training share`]
-          ].map(([number, label, detail]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-slate-500", children: number }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: label }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-slate-400", children: detail })
-          ] }, number)) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
+        isFixedCrewNeoAssist ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Course/Package" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after directed events." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Priority order" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Fixed Crew course/package allocation." })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100", children: [
-              airCombatSchedulingWeights.courses,
-              "/",
-              airCombatSchedulingWeights.trainingPackages
-            ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => persistAssistFixedCrewPriorityStreams(equaliseAssistFixedCrewPriorities(assistFixedCrewPriorityStreams)),
+                disabled: assistFixedCrewPriorityStreams.length < 2,
+                className: "rounded border border-emerald-400/30 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-emerald-100 transition hover:border-emerald-300/70 disabled:cursor-not-allowed disabled:opacity-40",
+                children: "Reset Evenly"
+              }
+            )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_64px_64px] items-end gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Course Weight" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "range",
-                  min: 0,
-                  max: 100,
-                  step: 5,
-                  value: airCombatSchedulingWeights.courses,
-                  onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
-                  className: "mt-2 w-full accent-violet-500"
-                }
-              )
+          assistFixedCrewPriorityStreams.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/55 px-2 py-2 text-slate-400", children: "No Fixed Crew course or training package events found for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700/80 bg-slate-950/60 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative px-2 pb-12 pt-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                ref: assistFixedCrewPriorityTrackRef,
+                className: "relative h-4 cursor-ew-resize overflow-visible rounded-full border border-slate-600 bg-slate-900 shadow-inner",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -top-7 left-0 -translate-x-1/2 font-mono text-[9px] font-bold text-slate-400", children: "0%" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -top-7 left-full -translate-x-1/2 font-mono text-[9px] font-bold text-slate-400", children: "100%" }),
+                  activeAssistFixedCrewPriorityStreams.map((stream, index) => {
+                    const start = index === 0 ? 0 : assistFixedCrewPriorityBoundaries[index - 1];
+                    const colour = assistFixedCrewColourByKey.get(stream.key) || ASSIST_PRIORITY_COLOURS[index % ASSIST_PRIORITY_COLOURS.length];
+                    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "div",
+                      {
+                        className: "absolute top-0 h-full first:rounded-l-full last:rounded-r-full",
+                        style: { left: `${start}%`, width: `${stream.weight}%`, background: colour },
+                        children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none absolute left-1/2 top-7 -translate-x-1/2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "font-mono text-[10px] font-bold text-emerald-100", children: [
+                          stream.weight,
+                          "%"
+                        ] }) })
+                      },
+                      stream.key
+                    );
+                  }),
+                  assistFixedCrewPriorityBoundaries.slice(0, -1).map((boundary, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      "aria-label": `Move priority boundary at ${boundary}%`,
+                      onPointerDown: (event) => handleAssistFixedCrewPriorityHandlePointerDown(index, event),
+                      className: "absolute top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-950 bg-white shadow-lg ring-2 ring-cyan-300/70 transition hover:scale-110",
+                      style: { left: `${boundary}%` },
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9px] font-bold text-cyan-100", children: [
+                        boundary,
+                        "%"
+                      ] })
+                    },
+                    `${activeAssistFixedCrewPriorityStreams[index]?.key || index}-assist-handle`
+                  ))
+                ]
+              }
+            ) }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded border border-slate-700/80 bg-slate-950/60", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[28px_1fr_48px_56px] gap-2 border-b border-slate-700/70 bg-slate-950/80 px-2 py-1 text-[8px] font-bold uppercase tracking-wide text-slate-500", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Rank" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Course/Package" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right", children: "%" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right", children: "Status" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-slate-800/80", children: sortedAssistFixedCrewPriorityStreams.map((stream, index) => {
+                const colour = assistFixedCrewColourByKey.get(stream.key) || ASSIST_PRIORITY_COLOURS[index % ASSIST_PRIORITY_COLOURS.length];
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: `grid grid-cols-[28px_1fr_48px_56px] items-center gap-2 bg-slate-950/55 px-2 py-2 transition-transform duration-200 ease-out ${stream.enabled ? "" : "opacity-70"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-slate-500", children: stream.enabled ? index + 1 : "-" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 items-center gap-1.5", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2.5 w-2.5 shrink-0 rounded-full", style: { backgroundColor: colour } }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate font-semibold text-slate-100", children: stream.title || stream.code })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-[8px] text-slate-500", children: [
+                          stream.kind === "course" ? "Course" : "Package",
+                          " • ",
+                          stream.code,
+                          stream.unitCode ? ` • ${stream.unitCode}` : ""
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right font-mono text-[11px] font-bold text-emerald-200", children: stream.enabled ? `${stream.weight}%` : "0%" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => handleAssistFixedCrewStreamToggle(stream.key),
+                          className: `justify-self-end rounded px-1.5 py-1 text-[8px] font-bold uppercase tracking-wide ${stream.enabled ? "border border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : "border border-slate-600 bg-slate-900 text-slate-400"}`,
+                          children: stream.enabled ? "On" : "Off"
+                        }
+                      )
+                    ]
+                  },
+                  stream.key
+                );
+              }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end border-t border-slate-700/70 bg-slate-950/80 px-2 py-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-0.5 text-[9px] font-bold text-emerald-100", children: "Total: 100%" }) })
+            ] })
+          ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-cyan-100", children: "Priority order" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: [
+              ["01", "Mandatory taskings", `${scheduledTaskCount} scheduled`],
+              ["02", "Directed currency", `${scheduledCurrencyCount} scheduled`],
+              ["03", "Training packages", `${airCombatSchedulingWeights.trainingPackages}% training share`],
+              ["04", "Course events", `${airCombatSchedulingWeights.courses}% training share`]
+            ].map(([number, label, detail]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-slate-500", children: number }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: label }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-slate-400", children: detail })
+            ] }, number)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Course/Package" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after directed events." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100", children: [
+                airCombatSchedulingWeights.courses,
+                "/",
+                airCombatSchedulingWeights.trainingPackages
+              ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Courses" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "number",
-                  min: 0,
-                  max: 100,
-                  step: 5,
-                  value: airCombatSchedulingWeights.courses,
-                  onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
-                  className: "mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-white"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Packages" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "number",
-                  value: airCombatSchedulingWeights.trainingPackages,
-                  readOnly: true,
-                  disabled: true,
-                  className: "mt-1 w-full cursor-not-allowed rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400 opacity-80"
-                }
-              )
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_64px_64px] items-end gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Course Weight" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "range",
+                    min: 0,
+                    max: 100,
+                    step: 5,
+                    value: airCombatSchedulingWeights.courses,
+                    onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
+                    className: "mt-2 w-full accent-violet-500"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Courses" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "number",
+                    min: 0,
+                    max: 100,
+                    step: 5,
+                    value: airCombatSchedulingWeights.courses,
+                    onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
+                    className: "mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-white"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Packages" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "number",
+                    value: airCombatSchedulingWeights.trainingPackages,
+                    readOnly: true,
+                    disabled: true,
+                    className: "mt-1 w-full cursor-not-allowed rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400 opacity-80"
+                  }
+                )
+              ] })
             ] })
           ] })
         ] })
