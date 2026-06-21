@@ -101,13 +101,20 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
   const didDragRef = useRef(false);
 
   useEffect(() => {
-    const timerId = setInterval(() => {
+    const getTodayString = () => {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    };
+    const updateCurrentTime = () => {
       const timezoneOffset = parseFloat(localStorage.getItem('timezoneOffset') || '0');
       const offsetMs = timezoneOffset * 60 * 60 * 1000;
       setCurrentTime(new Date(Date.now() + offsetMs));
-    }, 1000);
+    };
+    updateCurrentTime();
+    if (buildDfpDate !== getTodayString()) return undefined;
+    const timerId = setInterval(updateCurrentTime, 1000);
     return () => clearInterval(timerId);
-  }, []);
+  }, [buildDfpDate]);
 
   const formatDate = (dateString: string | undefined): string => {
     if (!dateString) return '-';

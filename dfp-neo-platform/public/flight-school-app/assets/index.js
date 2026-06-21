@@ -25059,9 +25059,15 @@ const NextDayBuildView = ({
   const selectionStartPoint = reactExports.useRef(null);
   const [selectionRect, setSelectionRect] = reactExports.useState(null);
   reactExports.useEffect(() => {
+    const getTodayString = () => {
+      const now = /* @__PURE__ */ new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    };
+    setCurrentTime(/* @__PURE__ */ new Date());
+    if (date !== getTodayString()) return void 0;
     const timerId = setInterval(() => setCurrentTime(/* @__PURE__ */ new Date()), 1e3);
     return () => clearInterval(timerId);
-  }, []);
+  }, [date]);
   const getExternalDropPlacement = (event) => {
     if (!scheduleGridRef.current) return null;
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
@@ -67692,9 +67698,15 @@ const NextDayInstructorScheduleView = ({
   const scheduleGridRef = reactExports.useRef(null);
   const didDragRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
+    const getTodayString = () => {
+      const now = /* @__PURE__ */ new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    };
+    setCurrentTime(/* @__PURE__ */ new Date());
+    if (buildDfpDate !== getTodayString()) return void 0;
     const timerId = setInterval(() => setCurrentTime(/* @__PURE__ */ new Date()), 1e3);
     return () => clearInterval(timerId);
-  }, []);
+  }, [buildDfpDate]);
   const formatDate2 = (dateString) => {
     if (!dateString) return "-";
     try {
@@ -68160,13 +68172,20 @@ const NextDayTraineeScheduleView = ({
   const prevZoomLevelRef = reactExports.useRef(zoomLevel);
   const didDragRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
-    const timerId = setInterval(() => {
+    const getTodayString = () => {
+      const now = /* @__PURE__ */ new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    };
+    const updateCurrentTime = () => {
       const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
       const offsetMs = timezoneOffset * 60 * 60 * 1e3;
       setCurrentTime(new Date(Date.now() + offsetMs));
-    }, 1e3);
+    };
+    updateCurrentTime();
+    if (buildDfpDate !== getTodayString()) return void 0;
+    const timerId = setInterval(updateCurrentTime, 1e3);
     return () => clearInterval(timerId);
-  }, []);
+  }, [buildDfpDate]);
   const formatDate2 = (dateString) => {
     if (!dateString) return "-";
     try {

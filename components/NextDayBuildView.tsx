@@ -151,9 +151,15 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     const [selectionRect, setSelectionRect] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
 
     useEffect(() => {
+        const getTodayString = () => {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        };
+        setCurrentTime(new Date());
+        if (date !== getTodayString()) return undefined;
         const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timerId);
-    }, []);
+    }, [date]);
 
     const getExternalDropPlacement = (event: React.DragEvent<HTMLDivElement>) => {
         if (!scheduleGridRef.current) return null;
