@@ -1739,15 +1739,8 @@ const DfpSidePanelTimeline: React.FC<{
     });
     const persistAssistFixedCrewPriorityStreams = (streams: AssistFixedCrewPriorityStream[]) => {
         const prepared = normaliseAssistPriorityWeights(streams);
-        const order = new Map(prepared.map((stream, index) => [stream.key, index]));
         onUpdateFixedCrewTrainingPriorities?.(
             prepared
-                .slice()
-                .sort((left, right) => {
-                    if (right.enabled !== left.enabled) return Number(right.enabled) - Number(left.enabled);
-                    if (right.weight !== left.weight) return right.weight - left.weight;
-                    return (order.get(left.key) ?? 0) - (order.get(right.key) ?? 0);
-                })
                 .map(({ eventCount: _eventCount, ...stream }) => stream)
         );
     };
