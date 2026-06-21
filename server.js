@@ -3429,8 +3429,9 @@ app.post('/api/personnel/bulk', async (req, res) => {
     const errors = [];
 
     for (const rawBody of personnelList) {
+      let body = {};
       try {
-        const body = normalisePersonnelPayloadForUnit(rawBody);
+        body = normalisePersonnelPayloadForUnit(rawBody);
         // Auto-link to existing User by PMKEYS
         let linkedUserId = null;
         if (body.idNumber) {
@@ -3470,6 +3471,16 @@ app.post('/api/personnel/bulk', async (req, res) => {
           permissions: body.permissions || [],
           unavailability: body.unavailability || [],
           priorExperience: body.priorExperience || null,
+          qualifications: body.qualifications || null,
+          preferences: {
+            ...(body.preferences && typeof body.preferences === 'object' && !Array.isArray(body.preferences) ? body.preferences : {}),
+            ...(body.callsign !== undefined ? { callsign: body.callsign || null } : {}),
+            ...(body.secondaryCallsign !== undefined ? { secondaryCallsign: body.secondaryCallsign || null } : {}),
+            ...(body.crew !== undefined ? { crew: body.crew || null } : {}),
+            ...(Array.isArray(body.qualificationIds) ? { qualifications: body.qualificationIds } : {}),
+            ...(Array.isArray(body.assignedQualifications) ? { qualifications: body.assignedQualifications } : {}),
+            ...(Array.isArray(body.preferences?.qualifications) ? { qualifications: body.preferences.qualifications } : {}),
+          },
           isActive: body.isActive !== false,
           ...(linkedUserId ? { userId: linkedUserId } : {}),
         };
@@ -3490,8 +3501,8 @@ app.post('/api/personnel/bulk', async (req, res) => {
           inserted++;
         }
       } catch (err) {
-        console.error(`❌ Failed to upsert ${body.name}:`, err.message);
-        errors.push({ name: body.name, error: err.message });
+        console.error(`❌ Failed to upsert ${body.name || rawBody?.name || 'unknown personnel'}:`, err.message);
+        errors.push({ name: body.name || rawBody?.name || 'unknown personnel', error: err.message });
       }
     }
 
