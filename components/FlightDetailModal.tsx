@@ -825,7 +825,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         if (!isFixedCrewCrewedEvent) return null;
         const bookingWindow = getEventBookingWindow(event);
         return (
-            <div className="mt-3 rounded-lg border border-gray-700 bg-gray-900/50 p-3 space-y-3">
+            <div className="mt-3 rounded-lg border border-gray-700 bg-gray-900/50 p-3 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <strong className="text-emerald-200">Crew Roster</strong>
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
@@ -833,25 +833,24 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     </span>
                 </div>
                 {fixedCrewRosterStatus.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                         {fixedCrewRosterStatus.map(({ staff, conflicts, isClear }) => (
                             <div
                                 key={staff.id || staff.name}
-                                className={`rounded border px-3 py-2 ${isClear ? 'border-emerald-500/30 bg-emerald-950/20' : 'border-red-500/40 bg-red-950/20'}`}
+                                className={`rounded border px-2.5 py-1.5 ${isClear ? 'border-emerald-500/25 bg-emerald-950/15' : 'border-red-500/40 bg-red-950/20'}`}
                             >
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <div className="truncate text-sm font-semibold text-gray-100">{[staff.rank, staff.name].filter(Boolean).join(' ')}</div>
-                                        <div className="text-xs text-gray-400">{staff.role || 'Crew'}</div>
-                                    </div>
-                                    <div className={`flex-shrink-0 text-xs font-bold uppercase tracking-wider ${isClear ? 'text-emerald-300' : 'text-red-300'}`}>
-                                        {isClear ? 'No conflict' : 'Conflict'}
+                                <div className="min-w-0">
+                                    <div className="flex min-w-0 items-baseline gap-1.5">
+                                        <span className={`truncate text-xs font-semibold ${isClear ? 'text-emerald-300' : 'text-red-300'}`}>
+                                            {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                        </span>
+                                        <span className="shrink-0 text-[11px] text-gray-400">{staff.role || 'Crew'}</span>
                                     </div>
                                 </div>
                                 {!isClear && (
-                                    <div className="mt-2 space-y-1">
+                                    <div className="mt-1 space-y-0.5">
                                         {conflicts.map((conflict, index) => (
-                                            <div key={`${staff.name}-conflict-${index}`} className="text-xs text-red-200">
+                                            <div key={`${staff.name}-conflict-${index}`} className="text-[11px] text-red-200">
                                                 {conflict.label}
                                             </div>
                                         ))}
@@ -3134,6 +3133,18 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         <p><strong>CONFIG:</strong> {aircraftConfigOptions.find(definition => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label}</p>
                                     )}
                                     {isFixedCrewCrewedEvent && (
+                                        <div className="grid grid-cols-2 gap-2 text-sm">
+                                            <div className="rounded bg-gray-900/50 px-3 py-2">
+                                                <span className="block text-xs uppercase tracking-wider text-gray-500">Duration</span>
+                                                <span className="text-gray-100">{event.duration.toFixed(1)} hours</span>
+                                            </div>
+                                            <div className="rounded bg-gray-900/50 px-3 py-2">
+                                                <span className="block text-xs uppercase tracking-wider text-gray-500">Start Time</span>
+                                                <span className="text-gray-100">{Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {isFixedCrewCrewedEvent && (
                                         <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2">
                                             <div className="flex items-center justify-between gap-3">
                                                 <strong className="text-emerald-200">Fixed Crew Manifest</strong>
@@ -3198,8 +3209,12 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             )}
                                         </>
                                     )}
-                                    <p><strong>Duration:</strong> {event.duration.toFixed(1)} hours</p>
-                                    <p><strong>Start Time:</strong> {Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</p>
+                                    {!isFixedCrewCrewedEvent && (
+                                        <>
+                                            <p><strong>Duration:</strong> {event.duration.toFixed(1)} hours</p>
+                                            <p><strong>Start Time:</strong> {Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</p>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
