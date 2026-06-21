@@ -28075,7 +28075,7 @@ const PrioritiesView = ({
     ] });
   };
   const standardPriorityEvents = highestPriorityEvents;
-  const incompleteRemedials = reactExports.useMemo(() => {
+  reactExports.useMemo(() => {
     const list = [];
     traineesData.forEach((t) => {
       if (t.isPaused) return;
@@ -28090,6 +28090,7 @@ const PrioritiesView = ({
     });
     return list.sort((a, b) => a.trainee.name.localeCompare(b.trainee.name));
   }, [traineesData, traineeLMPs, scores, syllabusDetails]);
+  const showRemedialPriorityQueue = false;
   const PriorityEventTable = ({ events }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
@@ -29214,11 +29215,11 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(PriorityEventTable, { events: standardPriorityEvents })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400 mb-2", children: "Optional SCT Events" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-4", children: 'MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.' }),
-        sctFlights.filter((r) => r.priority !== "High").length === 0 && sctFtds.filter((r) => r.priority !== "High").length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic", children: "No MEDIUM or LOW priority SCT events. Add specific currency requests with MEDIUM or LOW priority in the Specific Currency Requests section above." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400 mb-2", children: "Optional Currency Events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-4", children: 'MEDIUM and LOW priority currency events can be manually included in the NEO Build. Check the "Include" box to add to the build.' }),
+        sctFlights.filter((r) => r.priority !== "High").length === 0 && sctFtds.filter((r) => r.priority !== "High").length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic", children: "No MEDIUM or LOW priority currency events. Add specific currency requests with MEDIUM or LOW priority in the Specific Currency Requests section above." }),
         sctFlights.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "SCT Flights" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "Currency Flights" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
@@ -29257,7 +29258,7 @@ const PrioritiesView = ({
         ] }),
         sctFtds.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: [
-            "SCT ",
+            "Currency ",
             ftdLabel,
             "s"
           ] }),
@@ -29300,48 +29301,7 @@ const PrioritiesView = ({
           ] }) })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Remedial Priority Queue" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Trainee" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Course" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Staff" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Config" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Force Schedule" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: incompleteRemedials.map(({ trainee, item }) => {
-            const existingRequest = remedialRequests.find((r) => r.traineeId === trainee.idNumber && r.eventCode === item.code);
-            const forceSchedule = existingRequest?.forceSchedule || false;
-            const allocatedStaff = item.resourcesHuman && item.resourcesHuman.length > 0 ? item.resourcesHuman[0] : "Not Assigned";
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 font-semibold text-white", children: trainee.name }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: trainee.course }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-mono", children: item.code }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: allocatedStaff }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                AircraftConfigSelect,
-                {
-                  value: existingRequest?.aircraftConfigId,
-                  definitions: aircraftConfigOptions,
-                  disabled: item.type !== "Flight",
-                  onChange: (aircraftConfigId) => onUpdateRemedialAircraftConfig(trainee.idNumber, item.code, aircraftConfigId)
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: forceSchedule,
-                  onChange: () => onToggleRemedialRequest(trainee.idNumber, item.code),
-                  className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
-                }
-              ) })
-            ] }, `${trainee.idNumber}-${item.code}`);
-          }) })
-        ] }) })
-      ] })
+      showRemedialPriorityQueue
     ] })
   ] });
 };
@@ -29389,7 +29349,7 @@ const PrioritiesViewWithMenu = (props) => {
       step: "04",
       label: "Directed Events",
       shortLabel: "Exceptions",
-      description: "Manage SCT requests, high-priority events, optional SCT and remedial queues."
+      description: "Manage currency requests, high-priority events and optional currency queues."
     }
   ].filter((item) => !item.hidden);
   reactExports.useEffect(() => {

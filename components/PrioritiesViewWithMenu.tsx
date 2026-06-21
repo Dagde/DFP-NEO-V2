@@ -130,7 +130,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             step: '04',
             label: 'Directed Events',
             shortLabel: 'Exceptions',
-            description: 'Manage SCT requests, high-priority events, optional SCT and remedial queues.',
+            description: 'Manage currency requests, high-priority events and optional currency queues.',
         },
     ].filter(item => !item.hidden);
 

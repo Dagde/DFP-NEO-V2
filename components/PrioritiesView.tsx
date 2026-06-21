@@ -2859,6 +2859,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         });
         return list.sort((a, b) => a.trainee.name.localeCompare(b.trainee.name));
     }, [traineesData, traineeLMPs, scores, syllabusDetails]);
+  const showRemedialPriorityQueue = false;
 
 
   const PriorityEventTable: React.FC<{ events: ScheduleEvent[] }> = ({ events }) => (
@@ -4031,18 +4032,18 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <PriorityEventTable events={standardPriorityEvents} />
         </div>
 
-        {/* MEDIUM/LOW Priority SCT Events - User can manually include in build */}
+        {/* MEDIUM/LOW Priority Currency Events - User can manually include in build */}
         <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional SCT Events</h2>
-            <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
+            <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional Currency Events</h2>
+            <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority currency events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
             {sctFlights.filter(r => r.priority !== 'High').length === 0 && sctFtds.filter(r => r.priority !== 'High').length === 0 && (
-              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority SCT events. Add specific currency requests with MEDIUM or LOW priority in the Specific Currency Requests section above.</p>
+              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority currency events. Add specific currency requests with MEDIUM or LOW priority in the Specific Currency Requests section above.</p>
             )}
 
-              {/* SCT Flights - MEDIUM/LOW */}
+              {/* Currency Flights - MEDIUM/LOW */}
               {sctFlights.filter(r => r.priority !== 'High').length > 0 && (
                 <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-sky-300 mb-2">SCT Flights</h3>
+                  <h3 className="text-sm font-semibold text-sky-300 mb-2">Currency Flights</h3>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead className="text-xs text-gray-400 uppercase">
@@ -4087,10 +4088,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 </div>
               )}
 
-              {/* SCT FTDs - MEDIUM/LOW */}
+              {/* Currency FTDs - MEDIUM/LOW */}
               {sctFtds.filter(r => r.priority !== 'High').length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-sky-300 mb-2">SCT {ftdLabel}s</h3>
+                  <h3 className="text-sm font-semibold text-sky-300 mb-2">Currency {ftdLabel}s</h3>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead className="text-xs text-gray-400 uppercase">
@@ -4137,6 +4138,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               )}
           </div>
 
+        {showRemedialPriorityQueue && (
         <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Remedial Priority Queue</h2>
             <div className="overflow-x-auto">
@@ -4190,6 +4192,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               </table>
             </div>
         </div>
+        )}
         </div>
        </>
   );
