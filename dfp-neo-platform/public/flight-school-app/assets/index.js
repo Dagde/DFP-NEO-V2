@@ -7226,7 +7226,7 @@ const formatFixedCrewDisplayGroup$3 = (crew) => {
   const crewLabel = parts.slice(1).join("::").trim();
   return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
 };
-const getLocalDateStringFromAdjustedTime = (date) => {
+const getLocalDateStringFromAdjustedTime$1 = (date) => {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -7247,7 +7247,7 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
     return "";
   }
   const resolvedSettings = normaliseTileStatusSettings(settings);
-  const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
+  const todayStr = getLocalDateStringFromAdjustedTime$1(currentTime);
   if (event.date !== todayStr) {
     return "";
   }
@@ -7322,7 +7322,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       return "ring-transparent";
     }
     const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
-    const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
+    const todayStr = getLocalDateStringFromAdjustedTime$1(currentTime);
     if (event.date !== todayStr) {
       return "ring-transparent";
     }
@@ -7401,7 +7401,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || "");
     const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
     const eventEndTime = event.startTime + event.duration;
-    const isEventFinished = nowInHours >= eventEndTime && event.date === getLocalDateStringFromAdjustedTime(currentTime);
+    const isEventFinished = nowInHours >= eventEndTime && event.date === getLocalDateStringFromAdjustedTime$1(currentTime);
     if (conflictedPersonnelName === picName || picHasUnavailability && !isEventFinished) {
       picClasses = "font-bold truncate text-red-500";
     } else if (textColorClass) {
@@ -8583,14 +8583,14 @@ const VisualAdjustGuide = ({
     }
   );
 };
-const PIXELS_PER_HOUR$5 = 200;
-const ROW_HEIGHT$5 = 32;
-const START_HOUR$5 = 0;
-const END_HOUR$5 = 24;
-const TOTAL_HOURS$5 = END_HOUR$5 - START_HOUR$5;
+const PIXELS_PER_HOUR$6 = 200;
+const ROW_HEIGHT$6 = 32;
+const START_HOUR$6 = 0;
+const END_HOUR$6 = 24;
+const TOTAL_HOURS$6 = END_HOUR$6 - START_HOUR$6;
 const AIRFRAME_COLUMN_WIDTH$1 = 108;
 const RESOURCE_COLUMN_WIDTH = 105;
-const TIME_HEADER_HEIGHT$5 = 40;
+const TIME_HEADER_HEIGHT$6 = 40;
 const isOverlapping$2 = (f1, f2) => {
   if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
   const f1_end = f1.startTime + f1.duration;
@@ -8788,9 +8788,9 @@ const ScheduleView = ({
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const relativeX = event.clientX - gridRect.left;
     const relativeY = event.clientY - gridRect.top;
-    const rawStartTime = START_HOUR$5 + relativeX / (PIXELS_PER_HOUR$5 * zoomLevel);
-    const startTime = Math.max(START_HOUR$5, Math.min(END_HOUR$5, Math.round(rawStartTime * 12) / 12));
-    const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$5)));
+    const rawStartTime = START_HOUR$6 + relativeX / (PIXELS_PER_HOUR$6 * zoomLevel);
+    const startTime = Math.max(START_HOUR$6, Math.min(END_HOUR$6, Math.round(rawStartTime * 12) / 12));
+    const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$6)));
     const resourceId = resources[rowIndex];
     if (!resourceId) return null;
     return { startTime, resourceId };
@@ -8834,15 +8834,15 @@ const ScheduleView = ({
     if (!scrollContainer) return;
     if (isInitialLoad.current) {
       const defaultStartHour = 8;
-      const initialScrollLeft = (defaultStartHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+      const initialScrollLeft = (defaultStartHour - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
       scrollContainer.scrollLeft = initialScrollLeft;
       isInitialLoad.current = false;
     } else {
       const prevZoom = prevZoomLevelRef.current;
       if (prevZoom === zoomLevel) return;
       const { scrollLeft, clientWidth } = scrollContainer;
-      const timeAtCenterInHoursFromStart = (scrollLeft + clientWidth / 2) / (PIXELS_PER_HOUR$5 * prevZoom);
-      const newScrollLeft = timeAtCenterInHoursFromStart * PIXELS_PER_HOUR$5 * zoomLevel - clientWidth / 2;
+      const timeAtCenterInHoursFromStart = (scrollLeft + clientWidth / 2) / (PIXELS_PER_HOUR$6 * prevZoom);
+      const newScrollLeft = timeAtCenterInHoursFromStart * PIXELS_PER_HOUR$6 * zoomLevel - clientWidth / 2;
       scrollContainer.scrollLeft = newScrollLeft;
     }
     prevZoomLevelRef.current = zoomLevel;
@@ -8888,9 +8888,9 @@ const ScheduleView = ({
       if (!scheduleGridRef.current) return;
       const gridRect = scheduleGridRef.current.getBoundingClientRect();
       const xInGrid = e.clientX - gridRect.left;
-      const startTime = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
+      const startTime = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
       const yInGrid = e.clientY - gridRect.top;
-      const row = Math.floor(yInGrid / ROW_HEIGHT$5);
+      const row = Math.floor(yInGrid / ROW_HEIGHT$6);
       const resourceId = resources[row] || resources[0];
       onOracleMouseDown(startTime, resourceId);
       return;
@@ -8967,13 +8967,13 @@ const ScheduleView = ({
     const xInGrid = e.clientX - gridRect.left;
     const yInGrid = e.clientY - gridRect.top;
     if (showDepartureDensityOverlay) {
-      const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
+      const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
       setValidateOverlayTime(mouseTimeInHours);
     }
     if (isOracleMode && oraclePreviewEvent) {
       console.log("Early return: Oracle mode with preview event");
-      const startTime = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
-      const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT$5)] || resources[0];
+      const startTime = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
+      const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT$6)] || resources[0];
       onOracleMouseMove(startTime, resourceId);
     } else {
       if (selectionStartPoint.current) {
@@ -8993,10 +8993,10 @@ const ScheduleView = ({
         events.forEach((ev) => {
           const rowIndex = resources.indexOf(ev.resourceId);
           if (rowIndex === -1) return;
-          const tileTop = rowIndex * ROW_HEIGHT$5;
-          const tileBottom = tileTop + ROW_HEIGHT$5;
-          const tileLeft = (ev.startTime - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
-          const tileRight = tileLeft + ev.duration * PIXELS_PER_HOUR$5 * zoomLevel;
+          const tileTop = rowIndex * ROW_HEIGHT$6;
+          const tileBottom = tileTop + ROW_HEIGHT$6;
+          const tileLeft = (ev.startTime - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
+          const tileRight = tileLeft + ev.duration * PIXELS_PER_HOUR$6 * zoomLevel;
           if (rectLeft < tileRight && rectRight > tileLeft && rectTop < tileBottom && rectBottom > tileTop) {
             newSelectedIds.add(ev.id);
           }
@@ -9010,8 +9010,8 @@ const ScheduleView = ({
       }
       const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
       if (!mainEventInitialPos) return;
-      const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$5 - mainEventInitialPos.startTime;
-      const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$5 / 2) / ROW_HEIGHT$5) - mainEventInitialPos.rowIndex;
+      const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$6 - mainEventInitialPos.startTime;
+      const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$6 / 2) / ROW_HEIGHT$6) - mainEventInitialPos.rowIndex;
       console.log("Drag calculation - timeShift:", timeShift, "rowShift:", rowShift, "xInGrid:", xInGrid, "yInGrid:", yInGrid);
       const updates = [];
       const tempEvents = [...events];
@@ -9024,8 +9024,8 @@ const ScheduleView = ({
         let newRowIndex = initialPos.rowIndex + rowShift;
         if (newRowIndex < 0) newRowIndex = 0;
         if (newRowIndex >= resources.length) newRowIndex = resources.length - 1;
-        if (newStartTime < START_HOUR$5) newStartTime = START_HOUR$5;
-        if (newStartTime + eventData.duration > END_HOUR$5) newStartTime = END_HOUR$5 - eventData.duration;
+        if (newStartTime < START_HOUR$6) newStartTime = START_HOUR$6;
+        if (newStartTime + eventData.duration > END_HOUR$6) newStartTime = END_HOUR$6 - eventData.duration;
         const snappedStartTime = Math.round(newStartTime * 12) / 12;
         const newResourceId = resources[newRowIndex];
         updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
@@ -9137,21 +9137,21 @@ const ScheduleView = ({
   }, []);
   const renderTimeHeaders = () => {
     const markers = [];
-    for (let i = START_HOUR$5; i <= END_HOUR$5; i++) {
+    for (let i = START_HOUR$6; i <= END_HOUR$6; i++) {
       markers.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-time-label": "true", className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }) }, i)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-time-label": "true", className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }) }, i)
       );
     }
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     if (firstLightHour !== null) {
-      const flLeft = (firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+      const flLeft = (firstLightHour - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
       markers.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-daylight-label": "true", className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: flLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }) }, "fl-label")
       );
     }
     if (lastLightHour !== null) {
-      const llLeft = (lastLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+      const llLeft = (lastLightHour - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
       markers.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-daylight-label": "true", className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: llLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }) }, "ll-label")
       );
@@ -9160,19 +9160,19 @@ const ScheduleView = ({
   };
   const renderGridLines = () => {
     const lines = [];
-    for (let i = START_HOUR$5; i <= END_HOUR$5; i++) {
+    for (let i = START_HOUR$6; i <= END_HOUR$6; i++) {
       lines.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-hour-line": "true", className: "absolute h-full top-0", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/50" }) }, `v-${i}`)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-hour-line": "true", className: "absolute h-full top-0", style: { left: (i - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/50" }) }, `v-${i}`)
       );
-      if (i < END_HOUR$5) {
+      if (i < END_HOUR$6) {
         lines.push(
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-half-hour-line": "true", className: "absolute h-full top-0", style: { left: (i - START_HOUR$5 + 0.5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/25" }) }, `v-${i}-30`)
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-half-hour-line": "true", className: "absolute h-full top-0", style: { left: (i - START_HOUR$6 + 0.5) * PIXELS_PER_HOUR$6 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/25" }) }, `v-${i}-30`)
         );
       }
     }
     for (let i = 1; i <= resources.length; i++) {
       lines.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-row-line": "true", className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$5, height: "1px" } }, `h-${i}`)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-row-line": "true", className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$6, height: "1px" } }, `h-${i}`)
       );
     }
     return lines;
@@ -9189,7 +9189,7 @@ const ScheduleView = ({
             {
               "data-schedule-separator": "true",
               className: "absolute left-0 w-full border-t-2 border-gray-500 z-10",
-              style: { top: i * ROW_HEIGHT$5 }
+              style: { top: i * ROW_HEIGHT$6 }
             },
             `sep-${i}`
           )
@@ -9208,7 +9208,7 @@ const ScheduleView = ({
         {
           className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
           "data-schedule-daylight-line": "true",
-          style: { left: `${(firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel}px` }
+          style: { left: `${(firstLightHour - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px` }
         }
       ),
       lastLightHour !== null && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -9216,7 +9216,7 @@ const ScheduleView = ({
         {
           className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
           "data-schedule-daylight-line": "true",
-          style: { left: `${(lastLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel}px` }
+          style: { left: `${(lastLightHour - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px` }
         }
       )
     ] });
@@ -9225,8 +9225,8 @@ const ScheduleView = ({
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     const shades = [];
-    if (firstLightHour !== null && firstLightHour > START_HOUR$5) {
-      const width = (firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+    if (firstLightHour !== null && firstLightHour > START_HOUR$6) {
+      const width = (firstLightHour - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
@@ -9239,9 +9239,9 @@ const ScheduleView = ({
         )
       );
     }
-    if (lastLightHour !== null && lastLightHour < END_HOUR$5) {
-      const left = (lastLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
-      const width = (END_HOUR$5 - lastLightHour) * PIXELS_PER_HOUR$5 * zoomLevel;
+    if (lastLightHour !== null && lastLightHour < END_HOUR$6) {
+      const left = (lastLightHour - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
+      const width = (END_HOUR$6 - lastLightHour) * PIXELS_PER_HOUR$6 * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
@@ -9257,26 +9257,26 @@ const ScheduleView = ({
     return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: shades });
   };
   const renderExclusionPeriods = () => {
-    const gridHeight = resources.length * ROW_HEIGHT$5;
+    const gridHeight = resources.length * ROW_HEIGHT$6;
     const segments = flyingWindowExclusions.flatMap((period) => {
       const rawStart = Number(period.startTime);
       const rawEnd = Number(period.endTime);
       if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd) || rawStart === rawEnd) return [];
       const periodSegments = rawEnd > rawStart ? [{ start: rawStart, end: rawEnd }] : [
-        { start: rawStart, end: END_HOUR$5 },
-        { start: START_HOUR$5, end: rawEnd }
+        { start: rawStart, end: END_HOUR$6 },
+        { start: START_HOUR$6, end: rawEnd }
       ];
       return periodSegments.map((segment) => ({
         id: period.id,
         restriction: period.restriction,
-        start: Math.max(START_HOUR$5, segment.start),
-        end: Math.min(END_HOUR$5, segment.end)
+        start: Math.max(START_HOUR$6, segment.start),
+        end: Math.min(END_HOUR$6, segment.end)
       })).filter((segment) => segment.end > segment.start);
     });
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       segments.map((segment, index) => {
-        const left = (segment.start - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
-        const width = (segment.end - segment.start) * PIXELS_PER_HOUR$5 * zoomLevel;
+        const left = (segment.start - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
+        const width = (segment.end - segment.start) * PIXELS_PER_HOUR$6 * zoomLevel;
         const title = `Exclusion period ${segment.start.toFixed(2)}-${segment.end.toFixed(2)} (${segment.restriction})`;
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
@@ -9290,8 +9290,8 @@ const ScheduleView = ({
         );
       }),
       segments.map((segment, index) => {
-        const left = (segment.start - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
-        const right = (segment.end - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+        const left = (segment.start - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
+        const right = (segment.end - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
@@ -9324,8 +9324,8 @@ const ScheduleView = ({
     if (date !== todayStr) return null;
     const now = currentTime;
     const currentHour = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-    if (currentHour < START_HOUR$5 || currentHour > END_HOUR$5) return null;
-    const leftPosition = (currentHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+    if (currentHour < START_HOUR$6 || currentHour > END_HOUR$6) return null;
+    const leftPosition = (currentHour - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
@@ -9359,8 +9359,8 @@ const ScheduleView = ({
       if (event.isCancelled) return false;
       return event.startTime >= windowStart && event.startTime < windowEnd;
     }).length;
-    const leftX = (windowStart - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
-    const rightX = (windowEnd - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+    const leftX = (windowStart - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
+    const rightX = (windowEnd - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel;
     const width = rightX - leftX;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -9477,9 +9477,9 @@ const ScheduleView = ({
             },
             onMouseLeave: () => {
             },
-            pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
-            rowHeight: ROW_HEIGHT$5,
-            startHour: START_HOUR$5,
+            pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
+            rowHeight: ROW_HEIGHT$6,
+            startHour: START_HOUR$6,
             row: rowIndex,
             isDragging: isDraggedTile,
             isConflicting,
@@ -9506,11 +9506,11 @@ const ScheduleView = ({
     "div",
     {
       style: {
-        width: `${AIRFRAME_COLUMN_WIDTH$1 + TOTAL_HOURS$5 * PIXELS_PER_HOUR$5 * zoomLevel}px`,
-        height: `${TIME_HEADER_HEIGHT$5 + resources.length * ROW_HEIGHT$5}px`,
+        width: `${AIRFRAME_COLUMN_WIDTH$1 + TOTAL_HOURS$6 * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+        height: `${TIME_HEADER_HEIGHT$6 + resources.length * ROW_HEIGHT$6}px`,
         display: "grid",
         gridTemplateColumns: `${AIRFRAME_COLUMN_WIDTH$1}px 1fr`,
-        gridTemplateRows: `${TIME_HEADER_HEIGHT$5}px 1fr`
+        gridTemplateRows: `${TIME_HEADER_HEIGHT$6}px 1fr`
       },
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-corner": "true", className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
@@ -9608,7 +9608,7 @@ const ScheduleView = ({
           {
             resources,
             onReorder: onReorderResources,
-            rowHeight: ROW_HEIGHT$5,
+            rowHeight: ROW_HEIGHT$6,
             airframeCount,
             standbyCount,
             ftdCount,
@@ -9623,8 +9623,8 @@ const ScheduleView = ({
           {
             ref: scheduleGridRef,
             "data-schedule-grid": "true",
-            "data-schedule-start-hour": START_HOUR$5,
-            "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$5 * zoomLevel,
+            "data-schedule-start-hour": START_HOUR$6,
+            "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$6 * zoomLevel,
             className: "relative bg-gray-900",
             onMouseDown: (e) => handleMouseDown(e),
             onMouseMove: handleMouseMove,
@@ -9652,10 +9652,10 @@ const ScheduleView = ({
                   unitCode,
                   dayFlyingStart,
                   dayFlyingEnd,
-                  gridHeight: resources.length * ROW_HEIGHT$5,
-                  rowHeight: ROW_HEIGHT$5,
-                  pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
-                  startHour: START_HOUR$5,
+                  gridHeight: resources.length * ROW_HEIGHT$6,
+                  rowHeight: ROW_HEIGHT$6,
+                  pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
+                  startHour: START_HOUR$6,
                   onAvailabilityChange,
                   onUserChange: isReadOnly ? void 0 : onUserAvailabilityChange,
                   showLiveAvailabilityLine,
@@ -9668,9 +9668,9 @@ const ScheduleView = ({
                 {
                   event: visualAdjustEvent,
                   onTimeChange: onVisualAdjustTimeChange,
-                  scheduleStartHour: START_HOUR$5,
-                  scheduleEndHour: END_HOUR$5,
-                  pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel
+                  scheduleStartHour: START_HOUR$6,
+                  scheduleEndHour: END_HOUR$6,
+                  pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel
                 }
               ),
               isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -9687,9 +9687,9 @@ const ScheduleView = ({
                     },
                     onMouseLeave: () => {
                     },
-                    pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
-                    rowHeight: ROW_HEIGHT$5,
-                    startHour: START_HOUR$5,
+                    pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
+                    rowHeight: ROW_HEIGHT$6,
+                    startHour: START_HOUR$6,
                     row: resources.indexOf(oraclePreviewEvent.resourceId),
                     isDragging: false,
                     traineesData,
@@ -9704,9 +9704,9 @@ const ScheduleView = ({
                   {
                     className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
                     style: {
-                      left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel}px`,
-                      width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$5 * zoomLevel}px`,
-                      top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$5 + ROW_HEIGHT$5 / 2}px`
+                      left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                      width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                      top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
                     }
                   }
                 ),
@@ -9715,9 +9715,9 @@ const ScheduleView = ({
                   {
                     className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
                     style: {
-                      left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel}px`,
-                      width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$5 * zoomLevel}px`,
-                      top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$5 + ROW_HEIGHT$5 / 2}px`
+                      left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                      width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                      top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
                     }
                   }
                 )
@@ -9916,13 +9916,13 @@ const PersonnelColumn = ({
     })
   ] }, unit)) }) });
 };
-const PIXELS_PER_HOUR$4 = 200;
-const ROW_HEIGHT$4 = 32;
-const START_HOUR$4 = 0;
-const END_HOUR$4 = 24;
-const TOTAL_HOURS$4 = END_HOUR$4 - START_HOUR$4;
+const PIXELS_PER_HOUR$5 = 200;
+const ROW_HEIGHT$5 = 32;
+const START_HOUR$5 = 0;
+const END_HOUR$5 = 24;
+const TOTAL_HOURS$5 = END_HOUR$5 - START_HOUR$5;
 const PERSONNEL_COLUMN_WIDTH$3 = 160;
-const TIME_HEADER_HEIGHT$4 = 40;
+const TIME_HEADER_HEIGHT$5 = 40;
 const addPersonnelName$1 = (personnel, value) => {
   const name = String(value || "").trim();
   if (name) personnel.add(name);
@@ -10082,15 +10082,15 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     if (!scrollContainer) return;
     if (isInitialLoad.current) {
       const defaultStartHour = 8;
-      const initialScrollLeft = (defaultStartHour - START_HOUR$4) * PIXELS_PER_HOUR$4 * zoomLevel;
+      const initialScrollLeft = (defaultStartHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
       scrollContainer.scrollLeft = initialScrollLeft;
       isInitialLoad.current = false;
     } else {
       const prevZoom = prevZoomLevelRef.current;
       if (prevZoom === zoomLevel) return;
       const { scrollLeft, clientWidth } = scrollContainer;
-      const timeAtCenterInHoursFromStart = (scrollLeft + clientWidth / 2) / (PIXELS_PER_HOUR$4 * prevZoom);
-      const newScrollLeft = timeAtCenterInHoursFromStart * PIXELS_PER_HOUR$4 * zoomLevel - clientWidth / 2;
+      const timeAtCenterInHoursFromStart = (scrollLeft + clientWidth / 2) / (PIXELS_PER_HOUR$5 * prevZoom);
+      const newScrollLeft = timeAtCenterInHoursFromStart * PIXELS_PER_HOUR$5 * zoomLevel - clientWidth / 2;
       scrollContainer.scrollLeft = newScrollLeft;
     }
     prevZoomLevelRef.current = zoomLevel;
@@ -10146,6 +10146,667 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     didDragRef.current = true;
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
+    const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$5 + START_HOUR$5;
+    const eventData = eventsWithUnavailability.find((ev) => ev.id === draggingState.mainEventId);
+    if (!eventData) return;
+    let clampedStartTime = newStartTime;
+    if (clampedStartTime < START_HOUR$5) clampedStartTime = START_HOUR$5;
+    if (clampedStartTime + eventData.duration > END_HOUR$5) clampedStartTime = END_HOUR$5 - eventData.duration;
+    const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
+    const proposedEvent = { ...eventData, startTime: snappedStartTime };
+    const otherEvents = eventsWithUnavailability.filter((event) => event.id !== draggingState.mainEventId);
+    const conflict = findConflict([proposedEvent], otherEvents);
+    setRealtimeConflict(conflict ? {
+      conflictingEventId: conflict.conflictingEvent.id,
+      conflictedPersonName: conflict.personName
+    } : null);
+    const hasChanged = snappedStartTime !== eventData.startTime;
+    if (hasChanged) {
+      onUpdateEvent([{
+        eventId: draggingState.mainEventId,
+        newStartTime: snappedStartTime
+      }]);
+    }
+  };
+  const handleMouseUp = () => {
+    document.body.classList.remove("no-select");
+    setDraggingState(null);
+    setRealtimeConflict(null);
+    setTimeout(() => {
+      didDragRef.current = false;
+    }, 0);
+  };
+  const totalRows = instructors.length;
+  console.log("📏 CALCULATING DIMENSIONS:");
+  console.log("  - TOTAL_HOURS:", TOTAL_HOURS$5);
+  console.log("  - PIXELS_PER_HOUR:", PIXELS_PER_HOUR$5);
+  console.log("  - zoomLevel:", zoomLevel);
+  console.log("  - ROW_HEIGHT:", ROW_HEIGHT$5);
+  console.log("  - totalRows (instructors.length):", totalRows);
+  const timelineWidth = TOTAL_HOURS$5 * PIXELS_PER_HOUR$5 * zoomLevel;
+  const containerHeight = totalRows * ROW_HEIGHT$5;
+  console.log("📏 CALCULATED VALUES:");
+  console.log("  - timelineWidth:", timelineWidth);
+  console.log("  - containerHeight:", containerHeight);
+  const timeStringToHours2 = reactExports.useCallback((timeString) => {
+    if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) return null;
+    const [hours, minutes] = timeString.split(":").map(Number);
+    return hours + minutes / 60;
+  }, []);
+  const renderTimeHeaders = () => {
+    const markers = [];
+    for (let i = START_HOUR$5; i <= END_HOUR$5; i++) {
+      markers.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }) }, i)
+      );
+    }
+    const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
+    const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
+    if (firstLightHour !== null) {
+      const flLeft = (firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+      markers.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: flLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }) }, "fl-label")
+      );
+    }
+    if (lastLightHour !== null) {
+      const llLeft = (lastLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+      markers.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: llLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }) }, "ll-label")
+      );
+    }
+    return markers;
+  };
+  const renderGridLines = () => {
+    const lines = [];
+    for (let i = START_HOUR$5; i <= END_HOUR$5; i++) {
+      lines.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/50" }) }, `v-${i}`)
+      );
+      if (i < END_HOUR$5) {
+        lines.push(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$5 + 0.5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/25" }) }, `v-${i}-30`)
+        );
+      }
+    }
+    for (let i = 1; i <= totalRows; i++) {
+      lines.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$5, height: "1px" } }, `h-${i}`)
+      );
+    }
+    return lines;
+  };
+  const renderDaylightLines = () => {
+    const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
+    const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      firstLightHour !== null && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
+          style: { left: `${(firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel}px` }
+        }
+      ),
+      lastLightHour !== null && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
+          style: { left: `${(lastLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel}px` }
+        }
+      )
+    ] });
+  };
+  const renderNightShade = () => {
+    const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
+    const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
+    const shades = [];
+    if (firstLightHour !== null && firstLightHour > START_HOUR$5) {
+      const width = (firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+      shades.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]",
+            style: { width: `${width}px` }
+          },
+          "night-shade-morning"
+        )
+      );
+    }
+    if (lastLightHour !== null && lastLightHour < END_HOUR$5) {
+      const left = (lastLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+      const width = (END_HOUR$5 - lastLightHour) * PIXELS_PER_HOUR$5 * zoomLevel;
+      shades.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "absolute top-0 h-full bg-white/5 pointer-events-none z-[1]",
+            style: { left: `${left}px`, width: `${width}px` }
+          },
+          "night-shade-evening"
+        )
+      );
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: shades });
+  };
+  const renderCurrentTimeIndicator = () => {
+    const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
+    const offsetMs = timezoneOffset * 60 * 60 * 1e3;
+    const adjustedDate = new Date(Date.now() + offsetMs);
+    const todayStr = `${adjustedDate.getUTCFullYear()}-${String(adjustedDate.getUTCMonth() + 1).padStart(2, "0")}-${String(adjustedDate.getUTCDate()).padStart(2, "0")}`;
+    if (date !== todayStr) {
+      return null;
+    }
+    const now = currentTime;
+    const currentHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+    if (currentHour < START_HOUR$5 || currentHour > END_HOUR$5) return null;
+    const leftPosition = (currentHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "absolute top-0 h-full z-[30] pointer-events-none",
+        style: { left: `${leftPosition}px` },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-0.5 h-full bg-white animate-pulse" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              className: "absolute -top-2.5 -translate-x-1/2 w-0 h-0",
+              style: {
+                borderLeft: "5px solid transparent",
+                borderRight: "5px solid transparent",
+                borderTop: "7px solid white"
+              }
+            }
+          )
+        ]
+      }
+    );
+  };
+  console.log("🎯 INSTRUCTOR SCHEDULE VIEW - About to render");
+  console.log("🎯 Final calculations:");
+  console.log("  - totalRows:", instructors?.length);
+  console.log("  - timelineWidth:", typeof timelineWidth !== "undefined" ? timelineWidth : "NOT_CALCULATED");
+  console.log("  - containerHeight:", typeof containerHeight !== "undefined" ? containerHeight : "NOT_CALCULATED");
+  if (typeof timelineWidth === "undefined") {
+    console.error("❌ CRITICAL: timelineWidth is undefined - this will cause rendering failure");
+  }
+  if (typeof containerHeight === "undefined") {
+    console.error("❌ CRITICAL: containerHeight is undefined - this will cause rendering failure");
+  }
+  console.log("🎯 Returning JSX...");
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: scrollContainerRef, className: "flex-1 overflow-auto relative bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      style: {
+        width: `${PERSONNEL_COLUMN_WIDTH$3 + timelineWidth}px`,
+        height: `${TIME_HEADER_HEIGHT$5 + containerHeight}px`,
+        display: "grid",
+        gridTemplateColumns: `${PERSONNEL_COLUMN_WIDTH$3}px 1fr`,
+        gridTemplateRows: `${TIME_HEADER_HEIGHT$5}px 1fr`
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2 relative", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onDateChange(-1), className: "p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z", clipRule: "evenodd" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => setShowCalendarDropdown((v) => !v),
+              className: "flex-grow min-w-0 text-center font-semibold text-white hover:bg-gray-600 rounded px-1 truncate",
+              title: "Click to select date",
+              children: formattedDisplayDate
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onDateChange(1), className: "p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z", clipRule: "evenodd" }) }) }),
+          showCalendarDropdown && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-full left-0 z-50 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3", style: { minWidth: "220px", width: "256px" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-2 font-semibold", children: "Select Date" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                defaultValue: date,
+                className: "w-full bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-500 mb-2",
+                onChange: (e) => {
+                  if (e.target.value) {
+                    if (onDateSelect) {
+                      onDateSelect(e.target.value);
+                    } else {
+                      const diff = Math.round(((/* @__PURE__ */ new Date(`${e.target.value}T00:00:00Z`)).getTime() - (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime()) / 864e5);
+                      if (diff !== 0) onDateChange(diff);
+                    }
+                    setShowCalendarDropdown(false);
+                  }
+                }
+              }
+            ),
+            snapshotDates && snapshotDates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1 font-semibold", children: "Saved Schedules" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-40 overflow-y-auto space-y-1", children: snapshotDates.slice(0, 30).map((d) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => {
+                    if (onDateSelect) {
+                      onDateSelect(d);
+                    } else {
+                      const diff = Math.round(((/* @__PURE__ */ new Date(`${d}T00:00:00Z`)).getTime() - (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime()) / 864e5);
+                      if (diff !== 0) onDateChange(diff);
+                    }
+                    setShowCalendarDropdown(false);
+                  },
+                  className: `w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-600 ${d === date ? "bg-blue-700 text-white" : "text-gray-300"}`,
+                  children: (/* @__PURE__ */ new Date(`${d}T00:00:00Z`)).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })
+                },
+                d
+              )) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowCalendarDropdown(false), className: "mt-2 w-full text-xs text-gray-400 hover:text-white text-center", children: "Close" })
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700", children: [
+          " ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", style: { width: timelineWidth, height: TIME_HEADER_HEIGHT$5 }, children: renderTimeHeaders() })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: [
+          " ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            PersonnelColumn,
+            {
+              personnel: instructors,
+              rowHeight: ROW_HEIGHT$5,
+              onPersonClick: onSelectInstructor,
+              onRowEnter: setHoveredRowIndex,
+              onRowLeave: () => setHoveredRowIndex(null),
+              showUnits: false,
+              useUnitColors: true,
+              useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
+              crewPositionTerminology,
+              instructorLabel
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            ref: scheduleGridRef,
+            className: "relative",
+            onMouseMove: handleMouseMove,
+            onMouseUp: handleMouseUp,
+            onMouseLeave: handleMouseUp,
+            children: [
+              renderGridLines(),
+              renderNightShade(),
+              renderDaylightLines(),
+              renderCurrentTimeIndicator(),
+              instructors.flatMap((instructor, rowIndex) => {
+                const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: "absolute top-0 left-0 right-0 pointer-events-none z-10",
+                    style: {
+                      height: ROW_HEIGHT$5,
+                      top: rowIndex * ROW_HEIGHT$5,
+                      backgroundColor: "rgba(255, 255, 255, 0.05)"
+                    }
+                  },
+                  `row-highlight-${rowIndex}`
+                ) : null;
+                const barsForThisRow = [];
+                if (showValidation) {
+                  const instructorEventsForBars = eventsWithUnavailability.filter((e) => getPersonnel$5(e).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
+                  for (let i = 0; i < instructorEventsForBars.length; i++) {
+                    const currentEvent = instructorEventsForBars[i];
+                    const prevEvent = instructorEventsForBars[i - 1];
+                    const nextEvent = instructorEventsForBars[i + 1];
+                    const currentSyllabus = syllabusDetails.find((d) => d.id === currentEvent.flightNumber);
+                    if (!currentSyllabus) continue;
+                    const hasPreConflict = prevEvent && (() => {
+                      const prevSyllabus = syllabusDetails.find((d) => d.id === prevEvent.flightNumber);
+                      if (!prevSyllabus) return false;
+                      const prevPostEnd = prevEvent.startTime + prevEvent.duration + prevSyllabus.postFlightTime;
+                      const currentPreStart = currentEvent.startTime - currentSyllabus.preFlightTime;
+                      return prevPostEnd > currentPreStart;
+                    })();
+                    const hasPostConflict = nextEvent && (() => {
+                      const nextSyllabus = syllabusDetails.find((d) => d.id === nextEvent.flightNumber);
+                      if (!nextSyllabus) return false;
+                      const currentPostEnd = currentEvent.startTime + currentEvent.duration + currentSyllabus.postFlightTime;
+                      const nextPreStart = nextEvent.startTime - nextSyllabus.preFlightTime;
+                      return currentPostEnd > nextPreStart;
+                    })();
+                    const isHovered = hoveredEventId === currentEvent.id;
+                    const hasAnyConflict = hasPreConflict || hasPostConflict;
+                    if (!isHovered && !hasAnyConflict) continue;
+                    const renderBar = (duration, startTime, isConflicting, key) => {
+                      const barWidth = duration * PIXELS_PER_HOUR$5 * zoomLevel;
+                      const barHeight = ROW_HEIGHT$5 * 0.25;
+                      const barTop = rowIndex * ROW_HEIGHT$5 + (ROW_HEIGHT$5 - barHeight) / 2;
+                      const barLeft = (startTime - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+                      const baseClassName = "absolute pointer-events-none z-20 rounded-full border shadow-lg backdrop-blur-sm transition-colors duration-200";
+                      const className = `${baseClassName} ${isConflicting ? "bg-red-500/50 border-red-400/30" : "bg-white/50 border-white/30"}`;
+                      const style = {
+                        left: `${barLeft}px`,
+                        top: `${barTop}px`,
+                        width: `${barWidth}px`,
+                        height: `${barHeight}px`
+                      };
+                      barsForThisRow.push(/* @__PURE__ */ jsxRuntimeExports.jsx("div", { style, className }, key));
+                    };
+                    if (currentSyllabus.preFlightTime > 0) {
+                      const preStartTime = currentEvent.startTime - currentSyllabus.preFlightTime;
+                      renderBar(currentSyllabus.preFlightTime, preStartTime, hasPreConflict || false, `${currentEvent.id}-pre-${rowIndex}`);
+                    }
+                    if (currentSyllabus.postFlightTime > 0) {
+                      const postStartTime = currentEvent.startTime + currentEvent.duration;
+                      renderBar(currentSyllabus.postFlightTime, postStartTime, hasPostConflict || false, `${currentEvent.id}-post-${rowIndex}`);
+                    }
+                  }
+                }
+                const instructorEvents = eventsWithUnavailability.filter((event) => getPersonnel$5(event).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
+                const eventTiles = instructorEvents.map((event) => {
+                  const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
+                  const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
+                  const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
+                  const unavailabilityConflictData = unavailabilityConflicts.get(event.id);
+                  const isUnavailability = !!unavailabilityConflictData;
+                  const unavailablePeople = unavailabilityConflictData || [];
+                  let personToHighlight = null;
+                  if (realtimeConflict) {
+                    const personnelOnThisTile = getPersonnel$5(event);
+                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
+                      personToHighlight = realtimeConflict.conflictedPersonName;
+                    }
+                  }
+                  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    FlightTile$1,
+                    {
+                      event,
+                      traineesData,
+                      onSelectEvent: () => {
+                        if (!didDragRef.current) onSelectEvent(event);
+                      },
+                      onSelectAcademicTile: (tile) => {
+                        if (didDragRef.current) return;
+                        const syntheticEvent = {
+                          ...event,
+                          flightNumber: tile.lessonCode,
+                          startTime: tile.startTime,
+                          duration: tile.duration,
+                          notes: tile.label && tile.label !== tile.lessonCode ? tile.label.replace(new RegExp("^" + tile.lessonCode + "[s:—-]*"), "").trim() : "",
+                          _academicTileClick: true
+                        };
+                        onSelectEvent(syntheticEvent);
+                      },
+                      onMouseDown: (e) => handleMouseDown(e, event),
+                      onMouseEnter: () => setHoveredEventId(event.id),
+                      onMouseLeave: () => setHoveredEventId(null),
+                      pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
+                      rowHeight: ROW_HEIGHT$5,
+                      startHour: START_HOUR$5,
+                      row: rowIndex,
+                      isDragging: isDraggedTile,
+                      isConflicting,
+                      isUnavailabilityConflict: isUnavailability,
+                      unavailablePersonnel: unavailablePeople,
+                      conflictedPersonnelName: personToHighlight,
+                      personnelData,
+                      seatConfigs,
+                      isDraggable: event.type !== "unavailability",
+                      currentTime,
+                      aircraftNumberSettings
+                    },
+                    `${event.id}-${instructor.name}`
+                  );
+                });
+                return [rowHighlight, ...barsForThisRow, ...eventTiles];
+              })
+            ]
+          }
+        )
+      ]
+    }
+  ) });
+};
+const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeClick, onRowRef, courseColors = {}, traineesData = [] }) => {
+  const parseTraineeName = (fullName) => {
+    const parts = fullName.split(" – ");
+    return {
+      name: parts[0] || fullName,
+      course: parts[1] || ""
+    };
+  };
+  const getCourse = (fullName, parsedCourse) => {
+    if (parsedCourse) return parsedCourse;
+    const traineeObj = traineesData.find(
+      (t) => t.fullName === fullName || t.name === fullName
+    );
+    return traineeObj?.course || "";
+  };
+  const BASE_COLOR_MAP = {
+    "bg-sky-400": "#38BDF8",
+    "bg-purple-400": "#C084FC",
+    "bg-yellow-400": "#FACC15",
+    "bg-pink-400": "#F472B6",
+    "bg-teal-400": "#2DD4BF",
+    "bg-indigo-400": "#818CF8",
+    "bg-cyan-400": "#22D3EE",
+    "bg-blue-400": "#60A5FA",
+    "bg-green-400": "#4ADE80",
+    "bg-orange-400": "#FB923C",
+    "bg-red-400": "#F87171",
+    "bg-gray-400": "#9CA3AF",
+    "bg-amber-500": "#F59E0B",
+    "bg-fuchsia-400": "#E879F9",
+    "bg-gray-500": "#6B7280",
+    "bg-sky-500": "#0EA5E9"
+  };
+  const convertTailwindToHex = (tailwindClass) => {
+    if (tailwindClass.startsWith("#") || tailwindClass.startsWith("rgb")) {
+      return tailwindClass;
+    }
+    if (BASE_COLOR_MAP[tailwindClass]) {
+      return BASE_COLOR_MAP[tailwindClass];
+    }
+    const withoutOpacity = tailwindClass.replace(/\/\d+$/, "");
+    if (BASE_COLOR_MAP[withoutOpacity]) {
+      return BASE_COLOR_MAP[withoutOpacity];
+    }
+    return "#9CA3AF";
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: trainees.map((fullName, index) => {
+    const { name, course: parsedCourse } = parseTraineeName(fullName);
+    const course = getCourse(fullName, parsedCourse);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "li",
+      {
+        ref: (el) => onRowRef?.(fullName, el),
+        className: `flex items-center justify-start pl-3 text-xs transition-colors duration-150 text-gray-300 border-b border-gray-700/50 ${onTraineeClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
+        style: { height: rowHeight },
+        onMouseEnter: () => onRowEnter?.(index),
+        onMouseLeave: () => onRowLeave?.(),
+        onClick: () => onTraineeClick?.(fullName),
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-medium leading-tight", children: name }),
+          course && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono leading-tight", style: { color: convertTailwindToHex(courseColors[course] || "bg-gray-400/50") }, children: course })
+        ] })
+      }
+    );
+  }) }) });
+};
+const PIXELS_PER_HOUR$4 = 200;
+const ROW_HEIGHT$4 = 32;
+const START_HOUR$4 = 0;
+const END_HOUR$4 = 24;
+const TOTAL_HOURS$4 = END_HOUR$4 - START_HOUR$4;
+const PERSONNEL_COLUMN_WIDTH$2 = 160;
+const TIME_HEADER_HEIGHT$4 = 40;
+const getPersonnel$4 = (event) => {
+  const personnel = [];
+  if (event.flightType === "Solo") {
+    if (event.pilot) personnel.push(event.pilot);
+  } else {
+    if (event.instructor) personnel.push(event.instructor);
+    if (event.student) personnel.push(event.student);
+  }
+  return personnel;
+};
+const createUnavailabilityEvents = (date, personnelData) => {
+  const unavailabilityEvents = [];
+  personnelData.forEach((person) => {
+    const unavailabilityPeriods = person.unavailability || [];
+    unavailabilityPeriods.forEach((period) => {
+      const currentDate = /* @__PURE__ */ new Date(date + "T00:00:00Z");
+      const startDate = /* @__PURE__ */ new Date(period.startDate + "T00:00:00Z");
+      const endDate = /* @__PURE__ */ new Date(period.endDate + "T00:00:00Z");
+      const effectiveEndDate = new Date(endDate);
+      if (period.allDay) {
+        effectiveEndDate.setDate(effectiveEndDate.getDate() - 1);
+      }
+      if (currentDate >= startDate && currentDate <= effectiveEndDate) {
+        let startTime = period.allDay ? 0.0167 : parseFloat(period.startTime) / 100;
+        let endTime = period.allDay ? 23.983 : parseFloat(period.endTime) / 100;
+        if (!period.allDay) {
+          if (currentDate.getTime() === startDate.getTime() && currentDate.getTime() === effectiveEndDate.getTime()) {
+            startTime = period.startTime ? parseFloat(period.startTime) / 100 : 0.0167;
+            endTime = period.endTime ? parseFloat(period.endTime) / 100 : 23.983;
+          } else if (currentDate.getTime() === startDate.getTime() && period.startTime) {
+            startTime = parseFloat(period.startTime) / 100;
+            endTime = 23.983;
+          } else if (currentDate.getTime() === effectiveEndDate.getTime() && period.endTime) {
+            startTime = 0.0167;
+            endTime = parseFloat(period.endTime) / 100;
+          } else if (currentDate > startDate && currentDate < effectiveEndDate) {
+            startTime = 0.0167;
+            endTime = 23.983;
+          }
+        }
+        const duration = endTime - startTime;
+        const unavailabilityEvent = {
+          id: `unavailability-${person.fullName}-${period.id}`,
+          date,
+          startTime,
+          duration,
+          type: "unavailability",
+          student: person.fullName,
+          pilot: person.fullName,
+          flightNumber: "UNAVAIL",
+          resourceName: person.fullName,
+          resourceId: `TRAINEE-${person.fullName}`,
+          eventType: "UNAVAILABILITY",
+          allDay: period.allDay,
+          reason: period.reason,
+          notes: period.notes
+        };
+        unavailabilityEvents.push(unavailabilityEvent);
+      }
+    });
+  });
+  return unavailabilityEvents;
+};
+const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
+  const scrollContainerRef = reactExports.useRef(null);
+  const [currentTime, setCurrentTime] = reactExports.useState(() => {
+    const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
+    const offsetMs = timezoneOffset * 60 * 60 * 1e3;
+    return new Date(Date.now() + offsetMs);
+  });
+  const [draggingState, setDraggingState] = reactExports.useState(null);
+  const [realtimeConflict, setRealtimeConflict] = reactExports.useState(null);
+  const [hoveredEventId, setHoveredEventId] = reactExports.useState(null);
+  const [hoveredRowIndex, setHoveredRowIndex] = reactExports.useState(null);
+  const scheduleGridRef = reactExports.useRef(null);
+  const isInitialLoad = reactExports.useRef(true);
+  const prevZoomLevelRef = reactExports.useRef(zoomLevel);
+  const didDragRef = reactExports.useRef(false);
+  reactExports.useEffect(() => {
+    const timerId = setInterval(() => {
+      const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
+      const offsetMs = timezoneOffset * 60 * 60 * 1e3;
+      setCurrentTime(new Date(Date.now() + offsetMs));
+    }, 1e3);
+    return () => clearInterval(timerId);
+  }, []);
+  const [showCalendarDropdown, setShowCalendarDropdown] = React.useState(false);
+  const formattedDisplayDate = reactExports.useMemo(() => {
+    const [year, month, day] = date.split("-").map(Number);
+    const dateObj = new Date(Date.UTC(year, month - 1, day));
+    return dateObj.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      timeZone: "UTC"
+    });
+  }, [date]);
+  const eventsWithUnavailability = reactExports.useMemo(() => {
+    const unavailabilityEvents = createUnavailabilityEvents(date, traineesData);
+    return [...events, ...unavailabilityEvents];
+  }, [date, events, traineesData]);
+  reactExports.useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+    if (isInitialLoad.current) {
+      const defaultStartHour = 8;
+      const initialScrollLeft = (defaultStartHour - START_HOUR$4) * PIXELS_PER_HOUR$4 * zoomLevel;
+      scrollContainer.scrollLeft = initialScrollLeft;
+      isInitialLoad.current = false;
+    } else {
+      const prevZoom = prevZoomLevelRef.current;
+      if (prevZoom === zoomLevel) return;
+      const { scrollLeft, clientWidth } = scrollContainer;
+      const timeAtCenterInHoursFromStart = (scrollLeft + clientWidth / 2) / (PIXELS_PER_HOUR$4 * prevZoom);
+      const newScrollLeft = timeAtCenterInHoursFromStart * PIXELS_PER_HOUR$4 * zoomLevel - clientWidth / 2;
+      scrollContainer.scrollLeft = newScrollLeft;
+    }
+    prevZoomLevelRef.current = zoomLevel;
+  }, [zoomLevel]);
+  const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
+    for (const eventToCheck of eventsToCheck) {
+      const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
+      if (!s1) continue;
+      const e1StartWithPre = eventToCheck.startTime - s1.preFlightTime;
+      const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + s1.postFlightTime;
+      for (const existingEvent of existingEvents) {
+        const s2 = syllabusDetails.find((d) => d.id === existingEvent.flightNumber);
+        if (!s2) continue;
+        const e2StartWithPre = existingEvent.startTime - s2.preFlightTime;
+        const e2EndWithPost = existingEvent.startTime + existingEvent.duration + s2.postFlightTime;
+        if (e1StartWithPre < e2EndWithPost && e1EndWithPost > e2StartWithPre) {
+          const personnelToCheck = getPersonnel$4(eventToCheck);
+          const existingPersonnel = getPersonnel$4(existingEvent);
+          const conflictedPersonName = personnelToCheck.find((p) => existingPersonnel.includes(p));
+          if (conflictedPersonName) {
+            return {
+              conflictingEvent: existingEvent,
+              personName: conflictedPersonName
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }, [syllabusDetails]);
+  const handleMouseDown = (e, event) => {
+    if (e.button !== 0) return;
+    didDragRef.current = false;
+    document.body.classList.add("no-select");
+    const tileElement = e.currentTarget;
+    const rect = tileElement.getBoundingClientRect();
+    const initialPositions = /* @__PURE__ */ new Map();
+    const traineeName = event.student || event.pilot || "";
+    const rowIndex = trainees.findIndex((t) => t === traineeName);
+    if (rowIndex !== -1) {
+      initialPositions.set(event.id, { startTime: event.startTime, rowIndex });
+    }
+    if (initialPositions.size > 0) {
+      setDraggingState({
+        mainEventId: event.id,
+        xOffset: (e.clientX - rect.left) / zoomLevel,
+        initialPositions
+      });
+    }
+  };
+  const handleMouseMove = (e) => {
+    if (!draggingState || !scheduleGridRef.current) return;
+    didDragRef.current = true;
+    const gridRect = scheduleGridRef.current.getBoundingClientRect();
+    const xInGrid = e.clientX - gridRect.left;
     const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$4 + START_HOUR$4;
     const eventData = eventsWithUnavailability.find((ev) => ev.id === draggingState.mainEventId);
     if (!eventData) return;
@@ -10176,18 +10837,9 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
       didDragRef.current = false;
     }, 0);
   };
-  const totalRows = instructors.length;
-  console.log("📏 CALCULATING DIMENSIONS:");
-  console.log("  - TOTAL_HOURS:", TOTAL_HOURS$4);
-  console.log("  - PIXELS_PER_HOUR:", PIXELS_PER_HOUR$4);
-  console.log("  - zoomLevel:", zoomLevel);
-  console.log("  - ROW_HEIGHT:", ROW_HEIGHT$4);
-  console.log("  - totalRows (instructors.length):", totalRows);
+  const totalRows = trainees.length;
   const timelineWidth = TOTAL_HOURS$4 * PIXELS_PER_HOUR$4 * zoomLevel;
   const containerHeight = totalRows * ROW_HEIGHT$4;
-  console.log("📏 CALCULATED VALUES:");
-  console.log("  - timelineWidth:", timelineWidth);
-  console.log("  - containerHeight:", containerHeight);
   const timeStringToHours2 = reactExports.useCallback((timeString) => {
     if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) return null;
     const [hours, minutes] = timeString.split(":").map(Number);
@@ -10322,26 +10974,14 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
       }
     );
   };
-  console.log("🎯 INSTRUCTOR SCHEDULE VIEW - About to render");
-  console.log("🎯 Final calculations:");
-  console.log("  - totalRows:", instructors?.length);
-  console.log("  - timelineWidth:", typeof timelineWidth !== "undefined" ? timelineWidth : "NOT_CALCULATED");
-  console.log("  - containerHeight:", typeof containerHeight !== "undefined" ? containerHeight : "NOT_CALCULATED");
-  if (typeof timelineWidth === "undefined") {
-    console.error("❌ CRITICAL: timelineWidth is undefined - this will cause rendering failure");
-  }
-  if (typeof containerHeight === "undefined") {
-    console.error("❌ CRITICAL: containerHeight is undefined - this will cause rendering failure");
-  }
-  console.log("🎯 Returning JSX...");
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: scrollContainerRef, className: "flex-1 overflow-auto relative bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       style: {
-        width: `${PERSONNEL_COLUMN_WIDTH$3 + timelineWidth}px`,
+        width: `${PERSONNEL_COLUMN_WIDTH$2 + timelineWidth}px`,
         height: `${TIME_HEADER_HEIGHT$4 + containerHeight}px`,
         display: "grid",
-        gridTemplateColumns: `${PERSONNEL_COLUMN_WIDTH$3}px 1fr`,
+        gridTemplateColumns: `${PERSONNEL_COLUMN_WIDTH$2}px 1fr`,
         gridTemplateRows: `${TIME_HEADER_HEIGHT$4}px 1fr`
       },
       children: [
@@ -10401,648 +11041,8 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowCalendarDropdown(false), className: "mt-2 w-full text-xs text-gray-400 hover:text-white text-center", children: "Close" })
           ] })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700", children: [
-          " ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", style: { width: timelineWidth, height: TIME_HEADER_HEIGHT$4 }, children: renderTimeHeaders() })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: [
-          " ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PersonnelColumn,
-            {
-              personnel: instructors,
-              rowHeight: ROW_HEIGHT$4,
-              onPersonClick: onSelectInstructor,
-              onRowEnter: setHoveredRowIndex,
-              onRowLeave: () => setHoveredRowIndex(null),
-              showUnits: false,
-              useUnitColors: true,
-              useRoleColors: normaliseOperationalModel(operationalModel2) === "air_combat",
-              crewPositionTerminology,
-              instructorLabel
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            ref: scheduleGridRef,
-            className: "relative",
-            onMouseMove: handleMouseMove,
-            onMouseUp: handleMouseUp,
-            onMouseLeave: handleMouseUp,
-            children: [
-              renderGridLines(),
-              renderNightShade(),
-              renderDaylightLines(),
-              renderCurrentTimeIndicator(),
-              instructors.flatMap((instructor, rowIndex) => {
-                const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: "absolute top-0 left-0 right-0 pointer-events-none z-10",
-                    style: {
-                      height: ROW_HEIGHT$4,
-                      top: rowIndex * ROW_HEIGHT$4,
-                      backgroundColor: "rgba(255, 255, 255, 0.05)"
-                    }
-                  },
-                  `row-highlight-${rowIndex}`
-                ) : null;
-                const barsForThisRow = [];
-                if (showValidation) {
-                  const instructorEventsForBars = eventsWithUnavailability.filter((e) => getPersonnel$5(e).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
-                  for (let i = 0; i < instructorEventsForBars.length; i++) {
-                    const currentEvent = instructorEventsForBars[i];
-                    const prevEvent = instructorEventsForBars[i - 1];
-                    const nextEvent = instructorEventsForBars[i + 1];
-                    const currentSyllabus = syllabusDetails.find((d) => d.id === currentEvent.flightNumber);
-                    if (!currentSyllabus) continue;
-                    const hasPreConflict = prevEvent && (() => {
-                      const prevSyllabus = syllabusDetails.find((d) => d.id === prevEvent.flightNumber);
-                      if (!prevSyllabus) return false;
-                      const prevPostEnd = prevEvent.startTime + prevEvent.duration + prevSyllabus.postFlightTime;
-                      const currentPreStart = currentEvent.startTime - currentSyllabus.preFlightTime;
-                      return prevPostEnd > currentPreStart;
-                    })();
-                    const hasPostConflict = nextEvent && (() => {
-                      const nextSyllabus = syllabusDetails.find((d) => d.id === nextEvent.flightNumber);
-                      if (!nextSyllabus) return false;
-                      const currentPostEnd = currentEvent.startTime + currentEvent.duration + currentSyllabus.postFlightTime;
-                      const nextPreStart = nextEvent.startTime - nextSyllabus.preFlightTime;
-                      return currentPostEnd > nextPreStart;
-                    })();
-                    const isHovered = hoveredEventId === currentEvent.id;
-                    const hasAnyConflict = hasPreConflict || hasPostConflict;
-                    if (!isHovered && !hasAnyConflict) continue;
-                    const renderBar = (duration, startTime, isConflicting, key) => {
-                      const barWidth = duration * PIXELS_PER_HOUR$4 * zoomLevel;
-                      const barHeight = ROW_HEIGHT$4 * 0.25;
-                      const barTop = rowIndex * ROW_HEIGHT$4 + (ROW_HEIGHT$4 - barHeight) / 2;
-                      const barLeft = (startTime - START_HOUR$4) * PIXELS_PER_HOUR$4 * zoomLevel;
-                      const baseClassName = "absolute pointer-events-none z-20 rounded-full border shadow-lg backdrop-blur-sm transition-colors duration-200";
-                      const className = `${baseClassName} ${isConflicting ? "bg-red-500/50 border-red-400/30" : "bg-white/50 border-white/30"}`;
-                      const style = {
-                        left: `${barLeft}px`,
-                        top: `${barTop}px`,
-                        width: `${barWidth}px`,
-                        height: `${barHeight}px`
-                      };
-                      barsForThisRow.push(/* @__PURE__ */ jsxRuntimeExports.jsx("div", { style, className }, key));
-                    };
-                    if (currentSyllabus.preFlightTime > 0) {
-                      const preStartTime = currentEvent.startTime - currentSyllabus.preFlightTime;
-                      renderBar(currentSyllabus.preFlightTime, preStartTime, hasPreConflict || false, `${currentEvent.id}-pre-${rowIndex}`);
-                    }
-                    if (currentSyllabus.postFlightTime > 0) {
-                      const postStartTime = currentEvent.startTime + currentEvent.duration;
-                      renderBar(currentSyllabus.postFlightTime, postStartTime, hasPostConflict || false, `${currentEvent.id}-post-${rowIndex}`);
-                    }
-                  }
-                }
-                const instructorEvents = eventsWithUnavailability.filter((event) => getPersonnel$5(event).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
-                const eventTiles = instructorEvents.map((event) => {
-                  const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
-                  const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
-                  const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
-                  const unavailabilityConflictData = unavailabilityConflicts.get(event.id);
-                  const isUnavailability = !!unavailabilityConflictData;
-                  const unavailablePeople = unavailabilityConflictData || [];
-                  let personToHighlight = null;
-                  if (realtimeConflict) {
-                    const personnelOnThisTile = getPersonnel$5(event);
-                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
-                      personToHighlight = realtimeConflict.conflictedPersonName;
-                    }
-                  }
-                  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    FlightTile$1,
-                    {
-                      event,
-                      traineesData,
-                      onSelectEvent: () => {
-                        if (!didDragRef.current) onSelectEvent(event);
-                      },
-                      onSelectAcademicTile: (tile) => {
-                        if (didDragRef.current) return;
-                        const syntheticEvent = {
-                          ...event,
-                          flightNumber: tile.lessonCode,
-                          startTime: tile.startTime,
-                          duration: tile.duration,
-                          notes: tile.label && tile.label !== tile.lessonCode ? tile.label.replace(new RegExp("^" + tile.lessonCode + "[s:—-]*"), "").trim() : "",
-                          _academicTileClick: true
-                        };
-                        onSelectEvent(syntheticEvent);
-                      },
-                      onMouseDown: (e) => handleMouseDown(e, event),
-                      onMouseEnter: () => setHoveredEventId(event.id),
-                      onMouseLeave: () => setHoveredEventId(null),
-                      pixelsPerHour: PIXELS_PER_HOUR$4 * zoomLevel,
-                      rowHeight: ROW_HEIGHT$4,
-                      startHour: START_HOUR$4,
-                      row: rowIndex,
-                      isDragging: isDraggedTile,
-                      isConflicting,
-                      isUnavailabilityConflict: isUnavailability,
-                      unavailablePersonnel: unavailablePeople,
-                      conflictedPersonnelName: personToHighlight,
-                      personnelData,
-                      seatConfigs,
-                      isDraggable: event.type !== "unavailability",
-                      currentTime,
-                      aircraftNumberSettings
-                    },
-                    `${event.id}-${instructor.name}`
-                  );
-                });
-                return [rowHighlight, ...barsForThisRow, ...eventTiles];
-              })
-            ]
-          }
-        )
-      ]
-    }
-  ) });
-};
-const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeClick, onRowRef, courseColors = {}, traineesData = [] }) => {
-  const parseTraineeName = (fullName) => {
-    const parts = fullName.split(" – ");
-    return {
-      name: parts[0] || fullName,
-      course: parts[1] || ""
-    };
-  };
-  const getCourse = (fullName, parsedCourse) => {
-    if (parsedCourse) return parsedCourse;
-    const traineeObj = traineesData.find(
-      (t) => t.fullName === fullName || t.name === fullName
-    );
-    return traineeObj?.course || "";
-  };
-  const BASE_COLOR_MAP = {
-    "bg-sky-400": "#38BDF8",
-    "bg-purple-400": "#C084FC",
-    "bg-yellow-400": "#FACC15",
-    "bg-pink-400": "#F472B6",
-    "bg-teal-400": "#2DD4BF",
-    "bg-indigo-400": "#818CF8",
-    "bg-cyan-400": "#22D3EE",
-    "bg-blue-400": "#60A5FA",
-    "bg-green-400": "#4ADE80",
-    "bg-orange-400": "#FB923C",
-    "bg-red-400": "#F87171",
-    "bg-gray-400": "#9CA3AF",
-    "bg-amber-500": "#F59E0B",
-    "bg-fuchsia-400": "#E879F9",
-    "bg-gray-500": "#6B7280",
-    "bg-sky-500": "#0EA5E9"
-  };
-  const convertTailwindToHex = (tailwindClass) => {
-    if (tailwindClass.startsWith("#") || tailwindClass.startsWith("rgb")) {
-      return tailwindClass;
-    }
-    if (BASE_COLOR_MAP[tailwindClass]) {
-      return BASE_COLOR_MAP[tailwindClass];
-    }
-    const withoutOpacity = tailwindClass.replace(/\/\d+$/, "");
-    if (BASE_COLOR_MAP[withoutOpacity]) {
-      return BASE_COLOR_MAP[withoutOpacity];
-    }
-    return "#9CA3AF";
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: trainees.map((fullName, index) => {
-    const { name, course: parsedCourse } = parseTraineeName(fullName);
-    const course = getCourse(fullName, parsedCourse);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "li",
-      {
-        ref: (el) => onRowRef?.(fullName, el),
-        className: `flex items-center justify-start pl-3 text-xs transition-colors duration-150 text-gray-300 border-b border-gray-700/50 ${onTraineeClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
-        style: { height: rowHeight },
-        onMouseEnter: () => onRowEnter?.(index),
-        onMouseLeave: () => onRowLeave?.(),
-        onClick: () => onTraineeClick?.(fullName),
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-medium leading-tight", children: name }),
-          course && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono leading-tight", style: { color: convertTailwindToHex(courseColors[course] || "bg-gray-400/50") }, children: course })
-        ] })
-      }
-    );
-  }) }) });
-};
-const PIXELS_PER_HOUR$3 = 200;
-const ROW_HEIGHT$3 = 32;
-const START_HOUR$3 = 0;
-const END_HOUR$3 = 24;
-const TOTAL_HOURS$3 = END_HOUR$3 - START_HOUR$3;
-const PERSONNEL_COLUMN_WIDTH$2 = 160;
-const TIME_HEADER_HEIGHT$3 = 40;
-const getPersonnel$4 = (event) => {
-  const personnel = [];
-  if (event.flightType === "Solo") {
-    if (event.pilot) personnel.push(event.pilot);
-  } else {
-    if (event.instructor) personnel.push(event.instructor);
-    if (event.student) personnel.push(event.student);
-  }
-  return personnel;
-};
-const createUnavailabilityEvents = (date, personnelData) => {
-  const unavailabilityEvents = [];
-  personnelData.forEach((person) => {
-    const unavailabilityPeriods = person.unavailability || [];
-    unavailabilityPeriods.forEach((period) => {
-      const currentDate = /* @__PURE__ */ new Date(date + "T00:00:00Z");
-      const startDate = /* @__PURE__ */ new Date(period.startDate + "T00:00:00Z");
-      const endDate = /* @__PURE__ */ new Date(period.endDate + "T00:00:00Z");
-      const effectiveEndDate = new Date(endDate);
-      if (period.allDay) {
-        effectiveEndDate.setDate(effectiveEndDate.getDate() - 1);
-      }
-      if (currentDate >= startDate && currentDate <= effectiveEndDate) {
-        let startTime = period.allDay ? 0.0167 : parseFloat(period.startTime) / 100;
-        let endTime = period.allDay ? 23.983 : parseFloat(period.endTime) / 100;
-        if (!period.allDay) {
-          if (currentDate.getTime() === startDate.getTime() && currentDate.getTime() === effectiveEndDate.getTime()) {
-            startTime = period.startTime ? parseFloat(period.startTime) / 100 : 0.0167;
-            endTime = period.endTime ? parseFloat(period.endTime) / 100 : 23.983;
-          } else if (currentDate.getTime() === startDate.getTime() && period.startTime) {
-            startTime = parseFloat(period.startTime) / 100;
-            endTime = 23.983;
-          } else if (currentDate.getTime() === effectiveEndDate.getTime() && period.endTime) {
-            startTime = 0.0167;
-            endTime = parseFloat(period.endTime) / 100;
-          } else if (currentDate > startDate && currentDate < effectiveEndDate) {
-            startTime = 0.0167;
-            endTime = 23.983;
-          }
-        }
-        const duration = endTime - startTime;
-        const unavailabilityEvent = {
-          id: `unavailability-${person.fullName}-${period.id}`,
-          date,
-          startTime,
-          duration,
-          type: "unavailability",
-          student: person.fullName,
-          pilot: person.fullName,
-          flightNumber: "UNAVAIL",
-          resourceName: person.fullName,
-          resourceId: `TRAINEE-${person.fullName}`,
-          eventType: "UNAVAILABILITY",
-          allDay: period.allDay,
-          reason: period.reason,
-          notes: period.notes
-        };
-        unavailabilityEvents.push(unavailabilityEvent);
-      }
-    });
-  });
-  return unavailabilityEvents;
-};
-const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
-  const scrollContainerRef = reactExports.useRef(null);
-  const [currentTime, setCurrentTime] = reactExports.useState(() => {
-    const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
-    const offsetMs = timezoneOffset * 60 * 60 * 1e3;
-    return new Date(Date.now() + offsetMs);
-  });
-  const [draggingState, setDraggingState] = reactExports.useState(null);
-  const [realtimeConflict, setRealtimeConflict] = reactExports.useState(null);
-  const [hoveredEventId, setHoveredEventId] = reactExports.useState(null);
-  const [hoveredRowIndex, setHoveredRowIndex] = reactExports.useState(null);
-  const scheduleGridRef = reactExports.useRef(null);
-  const isInitialLoad = reactExports.useRef(true);
-  const prevZoomLevelRef = reactExports.useRef(zoomLevel);
-  const didDragRef = reactExports.useRef(false);
-  reactExports.useEffect(() => {
-    const timerId = setInterval(() => {
-      const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
-      const offsetMs = timezoneOffset * 60 * 60 * 1e3;
-      setCurrentTime(new Date(Date.now() + offsetMs));
-    }, 1e3);
-    return () => clearInterval(timerId);
-  }, []);
-  const [showCalendarDropdown, setShowCalendarDropdown] = React.useState(false);
-  const formattedDisplayDate = reactExports.useMemo(() => {
-    const [year, month, day] = date.split("-").map(Number);
-    const dateObj = new Date(Date.UTC(year, month - 1, day));
-    return dateObj.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      timeZone: "UTC"
-    });
-  }, [date]);
-  const eventsWithUnavailability = reactExports.useMemo(() => {
-    const unavailabilityEvents = createUnavailabilityEvents(date, traineesData);
-    return [...events, ...unavailabilityEvents];
-  }, [date, events, traineesData]);
-  reactExports.useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer) return;
-    if (isInitialLoad.current) {
-      const defaultStartHour = 8;
-      const initialScrollLeft = (defaultStartHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
-      scrollContainer.scrollLeft = initialScrollLeft;
-      isInitialLoad.current = false;
-    } else {
-      const prevZoom = prevZoomLevelRef.current;
-      if (prevZoom === zoomLevel) return;
-      const { scrollLeft, clientWidth } = scrollContainer;
-      const timeAtCenterInHoursFromStart = (scrollLeft + clientWidth / 2) / (PIXELS_PER_HOUR$3 * prevZoom);
-      const newScrollLeft = timeAtCenterInHoursFromStart * PIXELS_PER_HOUR$3 * zoomLevel - clientWidth / 2;
-      scrollContainer.scrollLeft = newScrollLeft;
-    }
-    prevZoomLevelRef.current = zoomLevel;
-  }, [zoomLevel]);
-  const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
-    for (const eventToCheck of eventsToCheck) {
-      const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
-      if (!s1) continue;
-      const e1StartWithPre = eventToCheck.startTime - s1.preFlightTime;
-      const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + s1.postFlightTime;
-      for (const existingEvent of existingEvents) {
-        const s2 = syllabusDetails.find((d) => d.id === existingEvent.flightNumber);
-        if (!s2) continue;
-        const e2StartWithPre = existingEvent.startTime - s2.preFlightTime;
-        const e2EndWithPost = existingEvent.startTime + existingEvent.duration + s2.postFlightTime;
-        if (e1StartWithPre < e2EndWithPost && e1EndWithPost > e2StartWithPre) {
-          const personnelToCheck = getPersonnel$4(eventToCheck);
-          const existingPersonnel = getPersonnel$4(existingEvent);
-          const conflictedPersonName = personnelToCheck.find((p) => existingPersonnel.includes(p));
-          if (conflictedPersonName) {
-            return {
-              conflictingEvent: existingEvent,
-              personName: conflictedPersonName
-            };
-          }
-        }
-      }
-    }
-    return null;
-  }, [syllabusDetails]);
-  const handleMouseDown = (e, event) => {
-    if (e.button !== 0) return;
-    didDragRef.current = false;
-    document.body.classList.add("no-select");
-    const tileElement = e.currentTarget;
-    const rect = tileElement.getBoundingClientRect();
-    const initialPositions = /* @__PURE__ */ new Map();
-    const traineeName = event.student || event.pilot || "";
-    const rowIndex = trainees.findIndex((t) => t === traineeName);
-    if (rowIndex !== -1) {
-      initialPositions.set(event.id, { startTime: event.startTime, rowIndex });
-    }
-    if (initialPositions.size > 0) {
-      setDraggingState({
-        mainEventId: event.id,
-        xOffset: (e.clientX - rect.left) / zoomLevel,
-        initialPositions
-      });
-    }
-  };
-  const handleMouseMove = (e) => {
-    if (!draggingState || !scheduleGridRef.current) return;
-    didDragRef.current = true;
-    const gridRect = scheduleGridRef.current.getBoundingClientRect();
-    const xInGrid = e.clientX - gridRect.left;
-    const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$3 + START_HOUR$3;
-    const eventData = eventsWithUnavailability.find((ev) => ev.id === draggingState.mainEventId);
-    if (!eventData) return;
-    let clampedStartTime = newStartTime;
-    if (clampedStartTime < START_HOUR$3) clampedStartTime = START_HOUR$3;
-    if (clampedStartTime + eventData.duration > END_HOUR$3) clampedStartTime = END_HOUR$3 - eventData.duration;
-    const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
-    const proposedEvent = { ...eventData, startTime: snappedStartTime };
-    const otherEvents = eventsWithUnavailability.filter((event) => event.id !== draggingState.mainEventId);
-    const conflict = findConflict([proposedEvent], otherEvents);
-    setRealtimeConflict(conflict ? {
-      conflictingEventId: conflict.conflictingEvent.id,
-      conflictedPersonName: conflict.personName
-    } : null);
-    const hasChanged = snappedStartTime !== eventData.startTime;
-    if (hasChanged) {
-      onUpdateEvent([{
-        eventId: draggingState.mainEventId,
-        newStartTime: snappedStartTime
-      }]);
-    }
-  };
-  const handleMouseUp = () => {
-    document.body.classList.remove("no-select");
-    setDraggingState(null);
-    setRealtimeConflict(null);
-    setTimeout(() => {
-      didDragRef.current = false;
-    }, 0);
-  };
-  const totalRows = trainees.length;
-  const timelineWidth = TOTAL_HOURS$3 * PIXELS_PER_HOUR$3 * zoomLevel;
-  const containerHeight = totalRows * ROW_HEIGHT$3;
-  const timeStringToHours2 = reactExports.useCallback((timeString) => {
-    if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) return null;
-    const [hours, minutes] = timeString.split(":").map(Number);
-    return hours + minutes / 60;
-  }, []);
-  const renderTimeHeaders = () => {
-    const markers = [];
-    for (let i = START_HOUR$3; i <= END_HOUR$3; i++) {
-      markers.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }) }, i)
-      );
-    }
-    const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
-    const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
-    if (firstLightHour !== null) {
-      const flLeft = (firstLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
-      markers.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: flLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }) }, "fl-label")
-      );
-    }
-    if (lastLightHour !== null) {
-      const llLeft = (lastLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
-      markers.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: llLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }) }, "ll-label")
-      );
-    }
-    return markers;
-  };
-  const renderGridLines = () => {
-    const lines = [];
-    for (let i = START_HOUR$3; i <= END_HOUR$3; i++) {
-      lines.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/50" }) }, `v-${i}`)
-      );
-      if (i < END_HOUR$3) {
-        lines.push(
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$3 + 0.5) * PIXELS_PER_HOUR$3 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/25" }) }, `v-${i}-30`)
-        );
-      }
-    }
-    for (let i = 1; i <= totalRows; i++) {
-      lines.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$3, height: "1px" } }, `h-${i}`)
-      );
-    }
-    return lines;
-  };
-  const renderDaylightLines = () => {
-    const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
-    const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      firstLightHour !== null && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
-          style: { left: `${(firstLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel}px` }
-        }
-      ),
-      lastLightHour !== null && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
-          style: { left: `${(lastLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel}px` }
-        }
-      )
-    ] });
-  };
-  const renderNightShade = () => {
-    const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
-    const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
-    const shades = [];
-    if (firstLightHour !== null && firstLightHour > START_HOUR$3) {
-      const width = (firstLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
-      shades.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            className: "absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]",
-            style: { width: `${width}px` }
-          },
-          "night-shade-morning"
-        )
-      );
-    }
-    if (lastLightHour !== null && lastLightHour < END_HOUR$3) {
-      const left = (lastLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
-      const width = (END_HOUR$3 - lastLightHour) * PIXELS_PER_HOUR$3 * zoomLevel;
-      shades.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            className: "absolute top-0 h-full bg-white/5 pointer-events-none z-[1]",
-            style: { left: `${left}px`, width: `${width}px` }
-          },
-          "night-shade-evening"
-        )
-      );
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: shades });
-  };
-  const renderCurrentTimeIndicator = () => {
-    const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
-    const offsetMs = timezoneOffset * 60 * 60 * 1e3;
-    const adjustedDate = new Date(Date.now() + offsetMs);
-    const todayStr = `${adjustedDate.getUTCFullYear()}-${String(adjustedDate.getUTCMonth() + 1).padStart(2, "0")}-${String(adjustedDate.getUTCDate()).padStart(2, "0")}`;
-    if (date !== todayStr) {
-      return null;
-    }
-    const now = currentTime;
-    const currentHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
-    if (currentHour < START_HOUR$3 || currentHour > END_HOUR$3) return null;
-    const leftPosition = (currentHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        className: "absolute top-0 h-full z-[30] pointer-events-none",
-        style: { left: `${leftPosition}px` },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-0.5 h-full bg-white animate-pulse" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "div",
-            {
-              className: "absolute -top-2.5 -translate-x-1/2 w-0 h-0",
-              style: {
-                borderLeft: "5px solid transparent",
-                borderRight: "5px solid transparent",
-                borderTop: "7px solid white"
-              }
-            }
-          )
-        ]
-      }
-    );
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: scrollContainerRef, className: "flex-1 overflow-auto relative bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    "div",
-    {
-      style: {
-        width: `${PERSONNEL_COLUMN_WIDTH$2 + timelineWidth}px`,
-        height: `${TIME_HEADER_HEIGHT$3 + containerHeight}px`,
-        display: "grid",
-        gridTemplateColumns: `${PERSONNEL_COLUMN_WIDTH$2}px 1fr`,
-        gridTemplateRows: `${TIME_HEADER_HEIGHT$3}px 1fr`
-      },
-      children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2 relative", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onDateChange(-1), className: "p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z", clipRule: "evenodd" }) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => setShowCalendarDropdown((v) => !v),
-              className: "flex-grow min-w-0 text-center font-semibold text-white hover:bg-gray-600 rounded px-1 truncate",
-              title: "Click to select date",
-              children: formattedDisplayDate
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onDateChange(1), className: "p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z", clipRule: "evenodd" }) }) }),
-          showCalendarDropdown && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-full left-0 z-50 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3", style: { minWidth: "220px", width: "256px" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-2 font-semibold", children: "Select Date" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "date",
-                defaultValue: date,
-                className: "w-full bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-500 mb-2",
-                onChange: (e) => {
-                  if (e.target.value) {
-                    if (onDateSelect) {
-                      onDateSelect(e.target.value);
-                    } else {
-                      const diff = Math.round(((/* @__PURE__ */ new Date(`${e.target.value}T00:00:00Z`)).getTime() - (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime()) / 864e5);
-                      if (diff !== 0) onDateChange(diff);
-                    }
-                    setShowCalendarDropdown(false);
-                  }
-                }
-              }
-            ),
-            snapshotDates && snapshotDates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1 font-semibold", children: "Saved Schedules" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-40 overflow-y-auto space-y-1", children: snapshotDates.slice(0, 30).map((d) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => {
-                    if (onDateSelect) {
-                      onDateSelect(d);
-                    } else {
-                      const diff = Math.round(((/* @__PURE__ */ new Date(`${d}T00:00:00Z`)).getTime() - (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime()) / 864e5);
-                      if (diff !== 0) onDateChange(diff);
-                    }
-                    setShowCalendarDropdown(false);
-                  },
-                  className: `w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-600 ${d === date ? "bg-blue-700 text-white" : "text-gray-300"}`,
-                  children: (/* @__PURE__ */ new Date(`${d}T00:00:00Z`)).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })
-                },
-                d
-              )) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowCalendarDropdown(false), className: "mt-2 w-full text-xs text-gray-400 hover:text-white text-center", children: "Close" })
-          ] })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", style: { width: timelineWidth, height: TIME_HEADER_HEIGHT$3 }, children: renderTimeHeaders() }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeColumn, { trainees, rowHeight: ROW_HEIGHT$3, onTraineeClick: onSelectTrainee, courseColors, onRowEnter: setHoveredRowIndex, onRowLeave: () => setHoveredRowIndex(null), traineesData }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", style: { width: timelineWidth, height: TIME_HEADER_HEIGHT$4 }, children: renderTimeHeaders() }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeColumn, { trainees, rowHeight: ROW_HEIGHT$4, onTraineeClick: onSelectTrainee, courseColors, onRowEnter: setHoveredRowIndex, onRowLeave: () => setHoveredRowIndex(null), traineesData }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
@@ -11062,8 +11062,8 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                   {
                     className: "absolute top-0 left-0 right-0 pointer-events-none z-10",
                     style: {
-                      height: ROW_HEIGHT$3,
-                      top: rowIndex * ROW_HEIGHT$3,
+                      height: ROW_HEIGHT$4,
+                      top: rowIndex * ROW_HEIGHT$4,
                       backgroundColor: "rgba(255, 255, 255, 0.05)"
                     }
                   },
@@ -11096,10 +11096,10 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                     const hasAnyConflict = hasPreConflict || hasPostConflict;
                     if (!isHovered && !hasAnyConflict) continue;
                     const renderBar = (duration, startTime, isConflicting, key) => {
-                      const barWidth = duration * PIXELS_PER_HOUR$3 * zoomLevel;
-                      const barHeight = ROW_HEIGHT$3 * 0.25;
-                      const barTop = rowIndex * ROW_HEIGHT$3 + (ROW_HEIGHT$3 - barHeight) / 2;
-                      const barLeft = (startTime - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
+                      const barWidth = duration * PIXELS_PER_HOUR$4 * zoomLevel;
+                      const barHeight = ROW_HEIGHT$4 * 0.25;
+                      const barTop = rowIndex * ROW_HEIGHT$4 + (ROW_HEIGHT$4 - barHeight) / 2;
+                      const barLeft = (startTime - START_HOUR$4) * PIXELS_PER_HOUR$4 * zoomLevel;
                       const baseClassName = "absolute pointer-events-none z-20 rounded-full border shadow-lg backdrop-blur-sm transition-colors duration-200";
                       const className = `${baseClassName} ${isConflicting ? "bg-red-500/50 border-red-400/30" : "bg-white/50 border-white/30"}`;
                       const style = {
@@ -11161,9 +11161,9 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                       onMouseDown: (e) => handleMouseDown(e, event),
                       onMouseEnter: () => setHoveredEventId(event.id),
                       onMouseLeave: () => setHoveredEventId(null),
-                      pixelsPerHour: PIXELS_PER_HOUR$3 * zoomLevel,
-                      rowHeight: ROW_HEIGHT$3,
-                      startHour: START_HOUR$3,
+                      pixelsPerHour: PIXELS_PER_HOUR$4 * zoomLevel,
+                      rowHeight: ROW_HEIGHT$4,
+                      startHour: START_HOUR$4,
                       row: rowIndex,
                       isDragging: isDraggedTile,
                       isConflicting,
@@ -24951,13 +24951,13 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
     ] })
   ] }) });
 };
-const PIXELS_PER_HOUR$2 = 200;
-const ROW_HEIGHT$2 = 32;
-const START_HOUR$2 = 0;
-const END_HOUR$2 = 24;
-const TOTAL_HOURS$2 = END_HOUR$2 - START_HOUR$2;
+const PIXELS_PER_HOUR$3 = 200;
+const ROW_HEIGHT$3 = 32;
+const START_HOUR$3 = 0;
+const END_HOUR$3 = 24;
+const TOTAL_HOURS$3 = END_HOUR$3 - START_HOUR$3;
 const AIRFRAME_COLUMN_WIDTH = 144;
-const TIME_HEADER_HEIGHT$2 = 40;
+const TIME_HEADER_HEIGHT$3 = 40;
 const isOverlapping$1 = (f1, f2) => {
   if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
   const f1_end = f1.startTime + f1.duration;
@@ -25067,9 +25067,9 @@ const NextDayBuildView = ({
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const relativeX = event.clientX - gridRect.left;
     const relativeY = event.clientY - gridRect.top;
-    const rawStartTime = START_HOUR$2 + relativeX / (PIXELS_PER_HOUR$2 * zoomLevel);
-    const startTime = Math.max(START_HOUR$2, Math.min(END_HOUR$2, Math.round(rawStartTime * 12) / 12));
-    const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$2)));
+    const rawStartTime = START_HOUR$3 + relativeX / (PIXELS_PER_HOUR$3 * zoomLevel);
+    const startTime = Math.max(START_HOUR$3, Math.min(END_HOUR$3, Math.round(rawStartTime * 12) / 12));
+    const rowIndex = Math.max(0, Math.min(resources.length - 1, Math.floor(relativeY / ROW_HEIGHT$3)));
     const resourceId = resources[rowIndex];
     if (!resourceId) return null;
     return { startTime, resourceId };
@@ -25107,15 +25107,15 @@ const NextDayBuildView = ({
     if (!scrollContainer) return;
     if (isInitialLoad.current) {
       const defaultStartHour = 8;
-      const initialScrollLeft = (defaultStartHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+      const initialScrollLeft = (defaultStartHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
       scrollContainer.scrollLeft = initialScrollLeft;
       isInitialLoad.current = false;
     } else {
       const prevZoom = prevZoomLevelRef.current;
       if (prevZoom === zoomLevel) return;
       const { scrollLeft, clientWidth } = scrollContainer;
-      const timeAtCenterInHoursFromStart = (scrollLeft + clientWidth / 2) / (PIXELS_PER_HOUR$2 * prevZoom);
-      const newScrollLeft = timeAtCenterInHoursFromStart * PIXELS_PER_HOUR$2 * zoomLevel - clientWidth / 2;
+      const timeAtCenterInHoursFromStart = (scrollLeft + clientWidth / 2) / (PIXELS_PER_HOUR$3 * prevZoom);
+      const newScrollLeft = timeAtCenterInHoursFromStart * PIXELS_PER_HOUR$3 * zoomLevel - clientWidth / 2;
       scrollContainer.scrollLeft = newScrollLeft;
     }
     prevZoomLevelRef.current = zoomLevel;
@@ -25154,9 +25154,9 @@ const NextDayBuildView = ({
       if (!scheduleGridRef.current) return;
       const gridRect = scheduleGridRef.current.getBoundingClientRect();
       const xInGrid = e.clientX - gridRect.left;
-      const startTime = xInGrid / (PIXELS_PER_HOUR$2 * zoomLevel) + START_HOUR$2;
+      const startTime = xInGrid / (PIXELS_PER_HOUR$3 * zoomLevel) + START_HOUR$3;
       const yInGrid = e.clientY - gridRect.top;
-      const row = Math.floor(yInGrid / ROW_HEIGHT$2);
+      const row = Math.floor(yInGrid / ROW_HEIGHT$3);
       const resourceId = resources[row] || resources[0];
       onOracleMouseDown(startTime, resourceId);
       return;
@@ -25218,12 +25218,12 @@ const NextDayBuildView = ({
     const xInGrid = e.clientX - gridRect.left;
     const yInGrid = e.clientY - gridRect.top;
     if (showDepartureDensityOverlay) {
-      const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$2 * zoomLevel) + START_HOUR$2;
+      const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$3 * zoomLevel) + START_HOUR$3;
       setValidateOverlayTime(mouseTimeInHours);
     }
     if (isOracleMode && oraclePreviewEvent) {
-      const startTime = xInGrid / (PIXELS_PER_HOUR$2 * zoomLevel) + START_HOUR$2;
-      const row = Math.floor(yInGrid / ROW_HEIGHT$2);
+      const startTime = xInGrid / (PIXELS_PER_HOUR$3 * zoomLevel) + START_HOUR$3;
+      const row = Math.floor(yInGrid / ROW_HEIGHT$3);
       const resourceId = resources[row] || resources[0];
       onOracleMouseMove(startTime, resourceId);
       return;
@@ -25244,10 +25244,10 @@ const NextDayBuildView = ({
       events.forEach((ev) => {
         const rowIndex = resources.indexOf(ev.resourceId);
         if (rowIndex === -1) return;
-        const tileTop = rowIndex * ROW_HEIGHT$2;
-        const tileBottom = tileTop + ROW_HEIGHT$2;
-        const tileLeft = (ev.startTime - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
-        const tileRight = tileLeft + ev.duration * PIXELS_PER_HOUR$2 * zoomLevel;
+        const tileTop = rowIndex * ROW_HEIGHT$3;
+        const tileBottom = tileTop + ROW_HEIGHT$3;
+        const tileLeft = (ev.startTime - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
+        const tileRight = tileLeft + ev.duration * PIXELS_PER_HOUR$3 * zoomLevel;
         if (rectLeft < tileRight && rectRight > tileLeft && rectTop < tileBottom && rectBottom > tileTop) {
           newSelectedIds.add(ev.id);
         }
@@ -25258,8 +25258,8 @@ const NextDayBuildView = ({
     if (!draggingState) return;
     const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
     if (!mainEventInitialPos) return;
-    const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$2 - mainEventInitialPos.startTime;
-    const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$2 / 2) / ROW_HEIGHT$2) - mainEventInitialPos.rowIndex;
+    const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$3 - mainEventInitialPos.startTime;
+    const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$3 / 2) / ROW_HEIGHT$3) - mainEventInitialPos.rowIndex;
     const updates = [];
     const tempEvents = [...events];
     let resourceConflictId = null;
@@ -25271,8 +25271,8 @@ const NextDayBuildView = ({
       let newRowIndex = initialPos.rowIndex + rowShift;
       if (newRowIndex < 0) newRowIndex = 0;
       if (newRowIndex >= resources.length) newRowIndex = resources.length - 1;
-      if (newStartTime < START_HOUR$2) newStartTime = START_HOUR$2;
-      if (newStartTime + eventData.duration > END_HOUR$2) newStartTime = END_HOUR$2 - eventData.duration;
+      if (newStartTime < START_HOUR$3) newStartTime = START_HOUR$3;
+      if (newStartTime + eventData.duration > END_HOUR$3) newStartTime = END_HOUR$3 - eventData.duration;
       const snappedStartTime = Math.round(newStartTime * 12) / 12;
       const newResourceId = resources[newRowIndex];
       updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
@@ -25356,21 +25356,21 @@ const NextDayBuildView = ({
   }, []);
   const renderTimeHeaders = () => {
     const markers = [];
-    for (let i = START_HOUR$2; i <= END_HOUR$2; i++) {
+    for (let i = START_HOUR$3; i <= END_HOUR$3; i++) {
       markers.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }) }, i)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }) }, i)
       );
     }
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     if (firstLightHour !== null) {
-      const flLeft = (firstLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+      const flLeft = (firstLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
       markers.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: flLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }) }, "fl-label")
       );
     }
     if (lastLightHour !== null) {
-      const llLeft = (lastLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+      const llLeft = (lastLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
       markers.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: llLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }) }, "ll-label")
       );
@@ -25381,7 +25381,7 @@ const NextDayBuildView = ({
         const m = Math.round((dec - h) * 60);
         return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
       };
-      const psLeft = (pauseWindowStart - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+      const psLeft = (pauseWindowStart - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
       markers.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
@@ -25404,7 +25404,7 @@ const NextDayBuildView = ({
         )
       );
       if (pauseWindowEnd != null) {
-        const peLeft = (pauseWindowEnd - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+        const peLeft = (pauseWindowEnd - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
         markers.push(
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
@@ -25432,19 +25432,19 @@ const NextDayBuildView = ({
   };
   const renderGridLines = () => {
     const lines = [];
-    for (let i = START_HOUR$2; i <= END_HOUR$2; i++) {
+    for (let i = START_HOUR$3; i <= END_HOUR$3; i++) {
       lines.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/50" }) }, `v-${i}`)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/50" }) }, `v-${i}`)
       );
-      if (i < END_HOUR$2) {
+      if (i < END_HOUR$3) {
         lines.push(
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$2 + 0.5) * PIXELS_PER_HOUR$2 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/25" }) }, `v-${i}-30`)
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$3 + 0.5) * PIXELS_PER_HOUR$3 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/25" }) }, `v-${i}-30`)
         );
       }
     }
     for (let i = 1; i <= resources.length; i++) {
       lines.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$2, height: "1px" } }, `h-${i}`)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$3, height: "1px" } }, `h-${i}`)
       );
     }
     return lines;
@@ -25460,7 +25460,7 @@ const NextDayBuildView = ({
             "div",
             {
               className: "absolute left-0 w-full border-t-2 border-gray-500 z-10",
-              style: { top: i * ROW_HEIGHT$2 }
+              style: { top: i * ROW_HEIGHT$3 }
             },
             `sep-${i}`
           )
@@ -25478,14 +25478,14 @@ const NextDayBuildView = ({
         "div",
         {
           className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
-          style: { left: `${(firstLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel}px` }
+          style: { left: `${(firstLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel}px` }
         }
       ),
       lastLightHour !== null && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "div",
         {
           className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
-          style: { left: `${(lastLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel}px` }
+          style: { left: `${(lastLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel}px` }
         }
       )
     ] });
@@ -25493,8 +25493,8 @@ const NextDayBuildView = ({
   const renderPauseWindow = () => {
     if (pauseWindowStart == null || pauseWindowEnd == null) return null;
     if (pauseWindowEnd <= pauseWindowStart) return null;
-    const leftPx = (pauseWindowStart - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
-    const rightPx = (pauseWindowEnd - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+    const leftPx = (pauseWindowStart - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
+    const rightPx = (pauseWindowEnd - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
     const widthPx = rightPx - leftPx;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -25544,8 +25544,8 @@ const NextDayBuildView = ({
       if (event.isCancelled) return false;
       return event.startTime >= windowStart && event.startTime < windowEnd;
     }).length;
-    const leftX = (windowStart - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
-    const rightX = (windowEnd - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+    const leftX = (windowStart - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
+    const rightX = (windowEnd - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
     const width = rightX - leftX;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -25592,8 +25592,8 @@ const NextDayBuildView = ({
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
     const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
     const shades = [];
-    if (firstLightHour !== null && firstLightHour > START_HOUR$2) {
-      const width = (firstLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+    if (firstLightHour !== null && firstLightHour > START_HOUR$3) {
+      const width = (firstLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
@@ -25605,9 +25605,9 @@ const NextDayBuildView = ({
         )
       );
     }
-    if (lastLightHour !== null && lastLightHour < END_HOUR$2) {
-      const left = (lastLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
-      const width = (END_HOUR$2 - lastLightHour) * PIXELS_PER_HOUR$2 * zoomLevel;
+    if (lastLightHour !== null && lastLightHour < END_HOUR$3) {
+      const left = (lastLightHour - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel;
+      const width = (END_HOUR$3 - lastLightHour) * PIXELS_PER_HOUR$3 * zoomLevel;
       shades.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
@@ -25686,9 +25686,9 @@ const NextDayBuildView = ({
             },
             onMouseLeave: () => {
             },
-            pixelsPerHour: PIXELS_PER_HOUR$2 * zoomLevel,
-            rowHeight: ROW_HEIGHT$2,
-            startHour: START_HOUR$2,
+            pixelsPerHour: PIXELS_PER_HOUR$3 * zoomLevel,
+            rowHeight: ROW_HEIGHT$3,
+            startHour: START_HOUR$3,
             row: rowIndex,
             isDragging: isDraggedTile,
             isConflicting,
@@ -25744,11 +25744,11 @@ const NextDayBuildView = ({
         "div",
         {
           style: {
-            width: `${AIRFRAME_COLUMN_WIDTH + TOTAL_HOURS$2 * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-            height: `${TIME_HEADER_HEIGHT$2 + resources.length * ROW_HEIGHT$2}px`,
+            width: `${AIRFRAME_COLUMN_WIDTH + TOTAL_HOURS$3 * PIXELS_PER_HOUR$3 * zoomLevel}px`,
+            height: `${TIME_HEADER_HEIGHT$3 + resources.length * ROW_HEIGHT$3}px`,
             display: "grid",
             gridTemplateColumns: `${AIRFRAME_COLUMN_WIDTH}px 1fr`,
-            gridTemplateRows: `${TIME_HEADER_HEIGHT$2}px 1fr`
+            gridTemplateRows: `${TIME_HEADER_HEIGHT$3}px 1fr`
           },
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
@@ -25781,7 +25781,7 @@ const NextDayBuildView = ({
               {
                 resources,
                 onReorder: onReorderResources,
-                rowHeight: ROW_HEIGHT$2,
+                rowHeight: ROW_HEIGHT$3,
                 airframeCount,
                 standbyCount,
                 ftdCount,
@@ -25796,8 +25796,8 @@ const NextDayBuildView = ({
               {
                 ref: scheduleGridRef,
                 "data-schedule-grid": "true",
-                "data-schedule-start-hour": START_HOUR$2,
-                "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$2 * zoomLevel,
+                "data-schedule-start-hour": START_HOUR$3,
+                "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$3 * zoomLevel,
                 className: "relative bg-gray-900",
                 onMouseDown: (e) => handleMouseDown(e),
                 onMouseMove: handleMouseMove,
@@ -25818,9 +25818,9 @@ const NextDayBuildView = ({
                     {
                       event: visualAdjustEvent,
                       onTimeChange: onVisualAdjustTimeChange,
-                      scheduleStartHour: START_HOUR$2,
-                      scheduleEndHour: END_HOUR$2,
-                      pixelsPerHour: PIXELS_PER_HOUR$2 * zoomLevel
+                      scheduleStartHour: START_HOUR$3,
+                      scheduleEndHour: END_HOUR$3,
+                      pixelsPerHour: PIXELS_PER_HOUR$3 * zoomLevel
                     }
                   ),
                   isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -25837,9 +25837,9 @@ const NextDayBuildView = ({
                         },
                         onMouseLeave: () => {
                         },
-                        pixelsPerHour: PIXELS_PER_HOUR$2 * zoomLevel,
-                        rowHeight: ROW_HEIGHT$2,
-                        startHour: START_HOUR$2,
+                        pixelsPerHour: PIXELS_PER_HOUR$3 * zoomLevel,
+                        rowHeight: ROW_HEIGHT$3,
+                        startHour: START_HOUR$3,
                         row: resources.indexOf(oraclePreviewEvent.resourceId),
                         isDragging: false,
                         traineesData,
@@ -25854,9 +25854,9 @@ const NextDayBuildView = ({
                       {
                         className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
                         style: {
-                          left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-                          width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-                          top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$2 + ROW_HEIGHT$2 / 2}px`
+                          left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel}px`,
+                          width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$3 * zoomLevel}px`,
+                          top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$3 + ROW_HEIGHT$3 / 2}px`
                         }
                       }
                     ),
@@ -25865,9 +25865,9 @@ const NextDayBuildView = ({
                       {
                         className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
                         style: {
-                          left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-                          width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$2 * zoomLevel}px`,
-                          top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$2 + ROW_HEIGHT$2 / 2}px`
+                          left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$3) * PIXELS_PER_HOUR$3 * zoomLevel}px`,
+                          width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$3 * zoomLevel}px`,
+                          top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$3 + ROW_HEIGHT$3 / 2}px`
                         }
                       }
                     )
@@ -30637,14 +30637,14 @@ const CourseMetricsTab = ({
   };
   const getEventPersonnel = (e) => {
     const personnel = /* @__PURE__ */ new Set();
-    const addPerson = (name) => {
+    const addPerson2 = (name) => {
       const normalised = stripCourseSuffix(String(name || ""));
       if (normalised && !/^TBA$/i.test(normalised)) personnel.add(normalised);
     };
-    addPerson(e.instructor);
-    addPerson(e.student);
-    addPerson(e.pilot);
-    if (e.attendees) e.attendees.forEach(addPerson);
+    addPerson2(e.instructor);
+    addPerson2(e.student);
+    addPerson2(e.pilot);
+    if (e.attendees) e.attendees.forEach(addPerson2);
     return Array.from(personnel);
   };
   const courseStats = reactExports.useMemo(() => {
@@ -37331,7 +37331,7 @@ const getEventDateValue = (event) => {
   const timestamp = rawDate ? (/* @__PURE__ */ new Date(`${rawDate}T00:00:00`)).getTime() : 0;
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
-const getEventPeople = (event) => {
+const getEventPeople$1 = (event) => {
   const rawPeople = [
     event.instructor,
     event.student,
@@ -37343,7 +37343,7 @@ const getEventPeople = (event) => {
 };
 const eventIncludesStaff = (event, staffName) => {
   const target = staffName.trim().toLowerCase();
-  return Boolean(target) && getEventPeople(event).some((person) => person.toLowerCase() === target);
+  return Boolean(target) && getEventPeople$1(event).some((person) => person.toLowerCase() === target);
 };
 const InstructorProfileFlyout = ({
   instructor,
@@ -40168,11 +40168,314 @@ const InstructorListView = ({
     )
   ] });
 };
+const PIXELS_PER_HOUR$2 = 200;
+const ROW_HEIGHT$2 = 34;
+const UNIT_HEADER_HEIGHT = 28;
+const START_HOUR$2 = 0;
+const END_HOUR$2 = 24;
+const TOTAL_HOURS$2 = END_HOUR$2 - START_HOUR$2;
+const CREW_COLUMN_WIDTH = 180;
+const TIME_HEADER_HEIGHT$2 = 40;
+const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
+const normaliseCrewLabel = (value) => String(value || "").replace(/^CREW\s*/i, "").replace(/\s*\/\s*[A-Z0-9-]+$/i, "").trim();
+const makeCrewKey = (unit, crew) => {
+  const unitCode = normaliseUnitCode(unit);
+  const crewLabel = normaliseCrewLabel(crew);
+  return unitCode && crewLabel ? `${unitCode}::${crewLabel}` : "";
+};
+const formatCrewDisplay = (crewKey) => {
+  const [unitCode, ...crewParts] = crewKey.split("::");
+  const crewLabel = crewParts.join("::").trim();
+  return unitCode && crewLabel ? `CREW ${crewLabel}/${unitCode}` : crewKey;
+};
+const getEventCrewKey = (event) => {
+  const fixedCrewGroup = String(event.fixedCrewGroup || "").trim();
+  if (fixedCrewGroup.includes("::")) {
+    const [unitCode, ...crewParts] = fixedCrewGroup.split("::");
+    return makeCrewKey(unitCode, crewParts.join("::"));
+  }
+  const displayCrew = String(event.crew || event.group || event.student || "").trim();
+  const displayMatch = displayCrew.match(/CREW\s+(.+?)\s*\/\s*([A-Z0-9-]+)/i);
+  if (displayMatch) return makeCrewKey(displayMatch[2], displayMatch[1]);
+  return "";
+};
+const addPerson = (set, value) => {
+  const person = String(value || "").trim().toLowerCase();
+  if (person) set.add(person);
+};
+const getEventPeople = (event) => {
+  const people = /* @__PURE__ */ new Set();
+  addPerson(people, event.instructor);
+  addPerson(people, event.pilot);
+  addPerson(people, event.crew);
+  addPerson(people, event.student);
+  event.attendees?.forEach((person) => addPerson(people, person));
+  event.crewSelectionOrder?.forEach((person) => addPerson(people, person));
+  return people;
+};
+const getLocalDateStringFromAdjustedTime = (date) => {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+const CrewScheduleView = ({
+  date,
+  onDateChange,
+  onDateSelect,
+  events,
+  instructorsData,
+  traineesData,
+  onSelectEvent,
+  zoomLevel,
+  daylightTimes,
+  personnelData,
+  seatConfigs,
+  conflictingEventIds,
+  aircraftNumberSettings
+}) => {
+  const scrollContainerRef = reactExports.useRef(null);
+  const isInitialLoad = reactExports.useRef(true);
+  const prevZoomLevelRef = reactExports.useRef(zoomLevel);
+  const [showCalendarDropdown, setShowCalendarDropdown] = reactExports.useState(false);
+  const [currentTime, setCurrentTime] = reactExports.useState(() => {
+    const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
+    return new Date(Date.now() + timezoneOffset * 60 * 60 * 1e3);
+  });
+  reactExports.useEffect(() => {
+    const timerId = setInterval(() => {
+      const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
+      setCurrentTime(new Date(Date.now() + timezoneOffset * 60 * 60 * 1e3));
+    }, 1e3);
+    return () => clearInterval(timerId);
+  }, []);
+  const crewsByUnit = reactExports.useMemo(() => {
+    const unitMap = /* @__PURE__ */ new Map();
+    instructorsData.forEach((staff) => {
+      const key = makeCrewKey(staff.unit, staff.crew);
+      if (!key) return;
+      const unit = normaliseUnitCode(staff.unit);
+      const unitCrews = unitMap.get(unit) || /* @__PURE__ */ new Map();
+      const crew = unitCrews.get(key) || { key, label: formatCrewDisplay(key), unit, members: [] };
+      if (staff.name && !crew.members.includes(staff.name)) crew.members.push(staff.name);
+      unitCrews.set(key, crew);
+      unitMap.set(unit, unitCrews);
+    });
+    return Array.from(unitMap.entries()).sort(([left], [right]) => left.localeCompare(right, void 0, { numeric: true })).map(([unit, crewMap]) => ({
+      unit,
+      crews: Array.from(crewMap.values()).sort(
+        (left, right) => left.label.localeCompare(right.label, void 0, { numeric: true })
+      )
+    }));
+  }, [instructorsData]);
+  const rowLayouts = reactExports.useMemo(() => {
+    let top = 0;
+    return crewsByUnit.flatMap((group) => {
+      const header = { type: "header", unit: group.unit, top, height: UNIT_HEADER_HEIGHT };
+      top += UNIT_HEADER_HEIGHT;
+      const rows = group.crews.map((crew) => {
+        const row = { type: "crew", ...crew, top, height: ROW_HEIGHT$2 };
+        top += ROW_HEIGHT$2;
+        return row;
+      });
+      return [header, ...rows];
+    });
+  }, [crewsByUnit]);
+  const crewRows = rowLayouts.filter((row) => row.type === "crew");
+  const crewRowsByKey = new Map(crewRows.map((row) => [row.key, row]));
+  const crewMembersByKey = reactExports.useMemo(() => new Map(crewRows.map((row) => [
+    row.key,
+    new Set(row.members.map((member) => member.trim().toLowerCase()).filter(Boolean))
+  ])), [crewRows]);
+  const getCrewKeyForEvent = (event) => {
+    const explicitCrewKey = getEventCrewKey(event);
+    if (explicitCrewKey && crewRowsByKey.has(explicitCrewKey)) return explicitCrewKey;
+    const eventPeople = getEventPeople(event);
+    for (const [crewKey, members] of crewMembersByKey.entries()) {
+      for (const member of members) {
+        if (eventPeople.has(member)) return crewKey;
+      }
+    }
+    return explicitCrewKey;
+  };
+  const timelineWidth = TOTAL_HOURS$2 * PIXELS_PER_HOUR$2 * zoomLevel;
+  const containerHeight = rowLayouts.reduce((sum, row) => sum + row.height, 0);
+  reactExports.useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+    if (isInitialLoad.current) {
+      scrollContainer.scrollLeft = 8 * PIXELS_PER_HOUR$2 * zoomLevel;
+      isInitialLoad.current = false;
+    } else if (prevZoomLevelRef.current !== zoomLevel) {
+      const { scrollLeft, clientWidth } = scrollContainer;
+      const timeAtCenter = (scrollLeft + clientWidth / 2) / (PIXELS_PER_HOUR$2 * prevZoomLevelRef.current);
+      scrollContainer.scrollLeft = timeAtCenter * PIXELS_PER_HOUR$2 * zoomLevel - clientWidth / 2;
+    }
+    prevZoomLevelRef.current = zoomLevel;
+  }, [zoomLevel]);
+  const formattedDisplayDate = reactExports.useMemo(() => {
+    const [year, month, day] = date.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      timeZone: "UTC"
+    });
+  }, [date]);
+  const timeStringToHours2 = (timeString) => {
+    if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) return null;
+    const [hours, minutes] = timeString.split(":").map(Number);
+    return hours + minutes / 60;
+  };
+  const renderTimeHeaders = () => {
+    const markers = [];
+    for (let hour = START_HOUR$2; hour <= END_HOUR$2; hour += 1) {
+      markers.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 flex h-full items-center text-xs text-gray-500", style: { left: (hour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `${String(hour).padStart(2, "0")}:00` }) }, hour)
+      );
+    }
+    const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
+    const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
+    if (firstLightHour !== null) {
+      markers.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 flex h-full items-center text-xs font-bold text-white", style: { left: (firstLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }) }, "fl")
+      );
+    }
+    if (lastLightHour !== null) {
+      markers.push(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 flex h-full items-center text-xs font-bold text-white", style: { left: (lastLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }) }, "ll")
+      );
+    }
+    return markers;
+  };
+  const renderGridLines = () => {
+    const lines = [];
+    for (let hour = START_HOUR$2; hour <= END_HOUR$2; hour += 1) {
+      lines.push(/* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 h-full w-px bg-gray-700/50", style: { left: (hour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel } }, `v-${hour}`));
+      if (hour < END_HOUR$2) {
+        lines.push(/* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 h-full w-px bg-gray-700/25", style: { left: (hour - START_HOUR$2 + 0.5) * PIXELS_PER_HOUR$2 * zoomLevel } }, `v-${hour}-30`));
+      }
+    }
+    rowLayouts.forEach((row) => {
+      lines.push(/* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 w-full bg-gray-700/25", style: { top: row.top + row.height, height: 1 } }, `h-${row.type}-${row.top}`));
+      if (row.type === "header") {
+        lines.push(/* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 w-full bg-cyan-950/25", style: { top: row.top, height: row.height } }, `header-bg-${row.unit}`));
+      }
+    });
+    return lines;
+  };
+  const renderDaylightLines = () => {
+    const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
+    const lastLightHour = timeStringToHours2(daylightTimes.lastLight);
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      firstLightHour !== null && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 z-[5] h-full border-l border-dashed border-white/30", style: { left: (firstLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel } }),
+      lastLightHour !== null && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0 z-[5] h-full border-l border-dashed border-white/30", style: { left: (lastLightHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel } })
+    ] });
+  };
+  const renderCurrentTimeIndicator = () => {
+    const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
+    if (date !== todayStr) return null;
+    const currentHour = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60 + currentTime.getUTCSeconds() / 3600;
+    if (currentHour < START_HOUR$2 || currentHour > END_HOUR$2) return null;
+    const left = (currentHour - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel;
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pointer-events-none absolute top-0 z-30 h-full", style: { left }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full w-0.5 animate-pulse bg-white" }) });
+  };
+  const scheduledCrewEvents = events.map((event) => ({ event, crewKey: getCrewKeyForEvent(event) })).filter((item) => item.crewKey && crewRowsByKey.has(item.crewKey));
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: scrollContainerRef, className: "relative flex-1 overflow-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      style: {
+        width: `${CREW_COLUMN_WIDTH + timelineWidth}px`,
+        height: `${TIME_HEADER_HEIGHT$2 + Math.max(containerHeight, ROW_HEIGHT$2)}px`,
+        display: "grid",
+        gridTemplateColumns: `${CREW_COLUMN_WIDTH}px 1fr`,
+        gridTemplateRows: `${TIME_HEADER_HEIGHT$2}px 1fr`
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky left-0 top-0 z-40 border-b border-r border-gray-700 bg-gray-800 p-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-full items-center justify-center rounded-md bg-gray-700 px-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onDateChange(-1), className: "rounded-full p-1 text-white hover:bg-gray-600", type: "button", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z", clipRule: "evenodd" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowCalendarDropdown((value) => !value), className: "min-w-0 flex-1 truncate rounded px-1 text-center text-sm font-semibold text-white hover:bg-gray-600", type: "button", children: formattedDisplayDate }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onDateChange(1), className: "rounded-full p-1 text-white hover:bg-gray-600", type: "button", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z", clipRule: "evenodd" }) }) }),
+          showCalendarDropdown && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-xl", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-semibold text-gray-400", children: "Select Date" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                defaultValue: date,
+                className: "mb-2 w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-xs text-white",
+                onChange: (event) => {
+                  if (!event.target.value) return;
+                  if (onDateSelect) onDateSelect(event.target.value);
+                  else {
+                    const diff = Math.round(((/* @__PURE__ */ new Date(`${event.target.value}T00:00:00Z`)).getTime() - (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime()) / 864e5);
+                    if (diff !== 0) onDateChange(diff);
+                  }
+                  setShowCalendarDropdown(false);
+                }
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowCalendarDropdown(false), className: "w-full text-center text-xs text-gray-400 hover:text-white", type: "button", children: "Close" })
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 border-b border-gray-700 bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", style: { width: timelineWidth, height: TIME_HEADER_HEIGHT$2 }, children: renderTimeHeaders() }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky left-0 z-30 border-r border-gray-700 bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", style: { height: containerHeight }, children: rowLayouts.map((row) => row.type === "header" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 flex w-full items-center border-b border-cyan-400/20 bg-cyan-950/40 px-3 text-xs font-bold uppercase tracking-[0.2em] text-cyan-200", style: { top: row.top, height: row.height }, children: row.unit }, `label-${row.unit}`) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 flex w-full items-center border-b border-gray-700/60 px-3", style: { top: row.top, height: row.height }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-sm font-semibold text-white", children: row.label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate text-[10px] uppercase tracking-[0.14em] text-gray-500", children: [
+            row.members.length,
+            " crew"
+          ] })
+        ] }) }, `label-${row.key}`)) }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", style: { height: containerHeight }, children: [
+          renderGridLines(),
+          renderDaylightLines(),
+          renderCurrentTimeIndicator(),
+          crewsByUnit.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-4 top-4 rounded-md border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-gray-300", children: "No fixed crew groups found for this unit context." }),
+          scheduledCrewEvents.map(({ event, crewKey }) => {
+            const row = crewRowsByKey.get(crewKey);
+            if (!row) return null;
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              FlightTile$1,
+              {
+                event,
+                traineesData,
+                onSelectEvent: () => onSelectEvent(event),
+                onMouseDown: () => {
+                },
+                onMouseEnter: () => {
+                },
+                onMouseLeave: () => {
+                },
+                pixelsPerHour: PIXELS_PER_HOUR$2 * zoomLevel,
+                rowHeight: ROW_HEIGHT$2,
+                startHour: START_HOUR$2,
+                row: 0,
+                isDragging: false,
+                isConflicting: conflictingEventIds.has(event.id),
+                personnelData,
+                seatConfigs,
+                isDraggable: false,
+                currentTime,
+                aircraftNumberSettings
+              },
+              `${event.id}-${crewKey}`
+            );
+          }).map((tile, index) => {
+            if (!tile) return null;
+            const item = scheduledCrewEvents[index];
+            const row = crewRowsByKey.get(item.crewKey);
+            if (!row) return null;
+            return React.cloneElement(tile, { row: row.top / ROW_HEIGHT$2 });
+          })
+        ] })
+      ]
+    }
+  ) });
+};
 const StaffView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("profile");
-  const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
-  const sharedUnitTabs = reactExports.useMemo(() => Array.from(new Set((props.sharedUnitTabs || []).map(normaliseUnitCode).filter(Boolean))), [props.sharedUnitTabs]);
-  const [activeUnitTab, setActiveUnitTab] = reactExports.useState(() => sharedUnitTabs[0] || normaliseUnitCode(props.activeUnitCode));
+  const normaliseUnitCode2 = (value) => String(value || "").trim().toUpperCase();
+  const sharedUnitTabs = reactExports.useMemo(() => Array.from(new Set((props.sharedUnitTabs || []).map(normaliseUnitCode2).filter(Boolean))), [props.sharedUnitTabs]);
+  const [activeUnitTab, setActiveUnitTab] = reactExports.useState(() => sharedUnitTabs[0] || normaliseUnitCode2(props.activeUnitCode));
   reactExports.useEffect(() => {
     if (sharedUnitTabs.length === 0) return;
     if (!sharedUnitTabs.includes(activeUnitTab)) {
@@ -40181,9 +40484,15 @@ const StaffView = (props) => {
   }, [activeUnitTab, sharedUnitTabs]);
   useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
-  const shouldShowUnitTabs = String(props.operationalModel || "").trim().toLowerCase() === "fixed_crew" && sharedUnitTabs.length > 1;
-  const scopedInstructorsData = shouldShowUnitTabs ? props.instructorsData.filter((instructor) => normaliseUnitCode(instructor.unit) === activeUnitTab) : props.instructorsData;
-  const scopedArchivedInstructorsData = shouldShowUnitTabs ? props.archivedInstructorsData.filter((instructor) => normaliseUnitCode(instructor.unit) === activeUnitTab) : props.archivedInstructorsData;
+  const isFixedCrewModel = String(props.operationalModel || "").trim().toLowerCase() === "fixed_crew";
+  const shouldShowUnitTabs = isFixedCrewModel && sharedUnitTabs.length > 1;
+  reactExports.useEffect(() => {
+    if (!isFixedCrewModel && activeTab === "crewSchedule") {
+      setActiveTab("schedule");
+    }
+  }, [activeTab, isFixedCrewModel]);
+  const scopedInstructorsData = shouldShowUnitTabs ? props.instructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : props.instructorsData;
+  const scopedArchivedInstructorsData = shouldShowUnitTabs ? props.archivedInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : props.archivedInstructorsData;
   const locationFilteredInstructorsForSchedule = scopedInstructorsData.sort((a, b) => {
     const roleA = a.role === "QFI" || a.role === "Pilot" ? 0 : 1;
     const roleB = b.role === "QFI" || b.role === "Pilot" ? 0 : 1;
@@ -40222,6 +40531,14 @@ const StaffView = (props) => {
             onClick: () => setActiveTab("schedule"),
             className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
             children: "Staff Schedule"
+          }
+        ),
+        isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setActiveTab("crewSchedule"),
+            className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "crewSchedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+            children: "Crew Schedule"
           }
         )
       ] })
@@ -40292,6 +40609,22 @@ const StaffView = (props) => {
           operationalModel: props.operationalModel,
           crewPositionTerminology: props.crewPositionTerminology,
           instructorLabel: props.instructorLabel
+        }
+      ),
+      activeTab === "crewSchedule" && isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        CrewScheduleView,
+        {
+          date: props.date,
+          onDateChange: props.onDateChange,
+          events: props.eventSegmentsForDate,
+          instructorsData: props.instructorsData,
+          traineesData: props.traineesData,
+          onSelectEvent: props.onSelectEvent,
+          zoomLevel: props.zoomLevel,
+          daylightTimes: props.daylightTimes,
+          personnelData: props.personnelData,
+          seatConfigs: props.seatConfigs,
+          conflictingEventIds: props.conflictingEventIds
         }
       )
     ] })
@@ -56121,9 +56454,9 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   );
   const activeCrewPositionEntries = crewPositionTerminology.positions.filter((entry) => activeCrewRoleKeys.has(entry.genericName.toUpperCase()));
   const visibleCrewPositionEntries = activeCrewPositionEntries.length > 0 ? activeCrewPositionEntries : crewPositionTerminology.positions;
-  const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
-  const parseUnitContextCodes = (value) => String(value || "").split(/[+/]/).map(normaliseUnitCode).filter(Boolean);
-  const activeContextUnitCodes = (Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0 ? activeUnitCodes.map(normaliseUnitCode).filter(Boolean) : [
+  const normaliseUnitCode2 = (value) => String(value || "").trim().toUpperCase();
+  const parseUnitContextCodes = (value) => String(value || "").split(/[+/]/).map(normaliseUnitCode2).filter(Boolean);
+  const activeContextUnitCodes = (Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0 ? activeUnitCodes.map(normaliseUnitCode2).filter(Boolean) : [
     ...parseUnitContextCodes(activeCompositeUnitCode),
     ...parseUnitContextCodes(activeUnitCode)
   ]).filter((value, index, values) => values.indexOf(value) === index);
@@ -56132,8 +56465,8 @@ This removes it from the Aircraft & Resource Pools draft. Click Save afterwards 
   const activeStandardMissionUnitCode = activeContextUnitCodes.length > 1 ? activeContextUnitCodes.join("+") : String(activeCompositeUnitCode || activeUnitCode || activePrimaryUnitCode).trim().toUpperCase() || activePrimaryUnitCode;
   const activeStandardMissionUnitLabel = activeContextUnitCodes.length > 1 ? activeContextUnitCodes.join("/") : activeStandardMissionUnitCode;
   const isProfileInActiveUnitContext = (profile) => {
-    const profileUnitCode = normaliseUnitCode(profile.unitCode);
-    const profileCompositeUnitCode = normaliseUnitCode(profile.compositeUnitCode);
+    const profileUnitCode = normaliseUnitCode2(profile.unitCode);
+    const profileCompositeUnitCode = normaliseUnitCode2(profile.compositeUnitCode);
     if (activeContextUnitCodes.length > 1) {
       return !profileUnitCode || profileCompositeUnitCode === activeStandardMissionUnitCode || activeContextUnitCodes.includes(profileUnitCode) || profileUnitCode === activeStandardMissionUnitCode;
     }
@@ -84545,14 +84878,14 @@ const App = () => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
     const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
     const locationAliases = new Set(activeLocation ? getLocationSelectorAliases(activeLocation) : [normalisedLocationCode]);
-    const normaliseUnitCode = (value) => String(value || "").trim().toUpperCase();
+    const normaliseUnitCode2 = (value) => String(value || "").trim().toUpperCase();
     const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
       code: String(unit.code || "").trim(),
       name: String(unit.name || unit.code || "").trim(),
       model: getUnitOperationalModel(unit)
     })).filter((unit) => unit.code);
     if (configuredUnits.length > 0) {
-      const configuredByCode = new Map(configuredUnits.map((unit) => [normaliseUnitCode(unit.code), unit]));
+      const configuredByCode = new Map(configuredUnits.map((unit) => [normaliseUnitCode2(unit.code), unit]));
       const sharingGroups2 = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0 ? organisationSettings.resourceSharingGroups : (organisationSettings.selectedUnits || []).length > 1 ? [{
         id: "legacy-resource-sharing",
         name: `${organisationSettings.selectedUnits.join("+")} Shared Fleet`,
@@ -84565,7 +84898,7 @@ const App = () => {
       const sharedContextOptions = organisationSettings.fleetSharingEnabled ? sharingGroups2.flatMap((group) => {
         if (group?.enabled === false) return [];
         const sharedUnitCodes = Array.from(new Set(
-          (group?.selectedUnits || []).map(normaliseUnitCode).filter((unitCode) => configuredByCode.has(unitCode))
+          (group?.selectedUnits || []).map(normaliseUnitCode2).filter((unitCode) => configuredByCode.has(unitCode))
         ));
         if (sharedUnitCodes.length <= 1) return [];
         const sharedUnits = sharedUnitCodes.map((unitCode) => configuredByCode.get(unitCode)).filter((unit) => Boolean(unit));
@@ -84581,11 +84914,11 @@ const App = () => {
       const sharedContextByMemberUnit = /* @__PURE__ */ new Map();
       sharedContextOptions.forEach((sharedOption) => {
         (sharedOption.memberUnits || []).forEach((unitCode) => {
-          sharedContextByMemberUnit.set(normaliseUnitCode(unitCode), sharedOption);
+          sharedContextByMemberUnit.set(normaliseUnitCode2(unitCode), sharedOption);
         });
       });
       const configuredUnitsWithSharedContextLock = configuredUnits.map((unit) => {
-        const sharedOption = sharedContextByMemberUnit.get(normaliseUnitCode(unit.code));
+        const sharedOption = sharedContextByMemberUnit.get(normaliseUnitCode2(unit.code));
         return sharedOption ? {
           ...unit,
           disabled: true,
@@ -84614,7 +84947,7 @@ const App = () => {
     const sharedFallbackContexts = organisationSettings.fleetSharingEnabled ? sharingGroups.flatMap((group) => {
       if (group?.enabled === false) return [];
       const sharedFallbackUnits = Array.from(new Set(
-        (group?.selectedUnits || []).map(normaliseUnitCode).filter((unitCode) => fallbackCodes.includes(unitCode))
+        (group?.selectedUnits || []).map(normaliseUnitCode2).filter((unitCode) => fallbackCodes.includes(unitCode))
       ));
       if (sharedFallbackUnits.length <= 1) return [];
       return [{
@@ -84628,11 +84961,11 @@ const App = () => {
     const sharedFallbackContextByMemberUnit = /* @__PURE__ */ new Map();
     sharedFallbackContexts.forEach((sharedOption) => {
       (sharedOption.memberUnits || []).forEach((unitCode) => {
-        sharedFallbackContextByMemberUnit.set(normaliseUnitCode(unitCode), sharedOption);
+        sharedFallbackContextByMemberUnit.set(normaliseUnitCode2(unitCode), sharedOption);
       });
     });
     const fallbackUnitsWithSharedContextLock = fallbackUnits.map((unit) => {
-      const sharedOption = sharedFallbackContextByMemberUnit.get(normaliseUnitCode(unit.code));
+      const sharedOption = sharedFallbackContextByMemberUnit.get(normaliseUnitCode2(unit.code));
       return sharedOption ? {
         ...unit,
         disabled: true,

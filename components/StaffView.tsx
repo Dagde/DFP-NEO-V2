@@ -2,6 +2,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useEffect, useMemo, useState } from 'react';
 import InstructorListView from './InstructorListView';
 import InstructorScheduleView from './InstructorScheduleView';
+import CrewScheduleView from './CrewScheduleView';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
@@ -50,7 +51,7 @@ interface StaffViewProps {
 
   // Props for InstructorScheduleView
   date: string;
-  onDateChange: (date: string) => void;
+  onDateChange: (increment: number) => void;
   eventSegmentsForDate: any[];
   zoomLevel: number;
   daylightTimes: { firstLight: string | null; lastLight: string | null };
@@ -65,7 +66,7 @@ interface StaffViewProps {
 }
 
 const StaffView: React.FC<StaffViewProps> = (props) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'schedule' | 'crewSchedule'>('profile');
   const normaliseUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
   const sharedUnitTabs = useMemo(() => (
     Array.from(new Set((props.sharedUnitTabs || []).map(normaliseUnitCode).filter(Boolean)))
@@ -79,7 +80,13 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   }, [activeUnitTab, sharedUnitTabs]);
   const { isFrozen } = useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
-  const shouldShowUnitTabs = String(props.operationalModel || '').trim().toLowerCase() === 'fixed_crew' && sharedUnitTabs.length > 1;
+  const isFixedCrewModel = String(props.operationalModel || '').trim().toLowerCase() === 'fixed_crew';
+  const shouldShowUnitTabs = isFixedCrewModel && sharedUnitTabs.length > 1;
+  useEffect(() => {
+    if (!isFixedCrewModel && activeTab === 'crewSchedule') {
+      setActiveTab('schedule');
+    }
+  }, [activeTab, isFixedCrewModel]);
   const scopedInstructorsData = shouldShowUnitTabs
     ? props.instructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
     : props.instructorsData;
@@ -148,6 +155,18 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
           >
             Staff Schedule
           </button>
+          {isFixedCrewModel && (
+            <button
+              onClick={() => setActiveTab('crewSchedule')}
+              className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${
+                activeTab === 'crewSchedule'
+                  ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
+                  : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
+              }`}
+            >
+              Crew Schedule
+            </button>
+          )}
         </div>
       </div>
 
@@ -216,6 +235,21 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             operationalModel={props.operationalModel}
             crewPositionTerminology={props.crewPositionTerminology}
             instructorLabel={props.instructorLabel}
+          />
+        )}
+        {activeTab === 'crewSchedule' && isFixedCrewModel && (
+          <CrewScheduleView
+            date={props.date}
+            onDateChange={props.onDateChange}
+            events={props.eventSegmentsForDate}
+            instructorsData={props.instructorsData}
+            traineesData={props.traineesData}
+            onSelectEvent={props.onSelectEvent}
+            zoomLevel={props.zoomLevel}
+            daylightTimes={props.daylightTimes}
+            personnelData={props.personnelData}
+            seatConfigs={props.seatConfigs}
+            conflictingEventIds={props.conflictingEventIds}
           />
         )}
       </div>
