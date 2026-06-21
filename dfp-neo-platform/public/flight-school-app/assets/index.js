@@ -18117,6 +18117,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (activeUnitMemberCodes.length === 0) return true;
     return activeUnitMemberCodes.includes(staffUnit);
   };
+  const getFixedCrewRoleLabel = (role) => {
+    const rawRole = String(role || "").trim();
+    if (!rawRole) return "Crew";
+    return findCrewPositionEntry(rawRole, crewPositionTerminology)?.label || rawRole;
+  };
+  const fixedCrewRolesMatch = (left, right) => crewPositionValuesMatch(left, right, crewPositionTerminology);
   const fixedCrewGroups = reactExports.useMemo(() => Array.from(new Set(instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff)).map((staff) => {
     const staffCrew = String(staff.crew || "").trim();
     const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
@@ -18201,13 +18207,13 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const getAvailableFixedCrewRoleAlternatives = (staff, bookingWindow, eventDate) => {
     const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || "";
     const crewUnit = splitFixedCrewGroupKey(eventCrewKey).unit || normaliseFixedCrewUnitCode(staff.unit);
-    const role = String(staff.role || "").trim().toUpperCase();
+    const role = String(staff.role || "").trim();
     if (!crewUnit || !role) return [];
     const assignedToCurrentEvent = new Set([
       ...getPersonnelForConflictCheck(event),
       ...rosteredFixedCrewMembers.map((member) => member.name)
     ].map((name) => String(name || "").trim()).filter(Boolean));
-    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => String(candidate.role || "").trim().toUpperCase() === role).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => fixedCrewRolesMatch(candidate.role, role)).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   };
   const fixedCrewRosterStatus = reactExports.useMemo(() => {
     const bookingWindow = getEventBookingWindow2(event);
@@ -18249,11 +18255,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       const aPic = a.staff.name === picName ? 0 : 1;
       const bPic = b.staff.name === picName ? 0 : 1;
       if (aPic !== bPic) return aPic - bPic;
-      const roleDiff = roleRank(a.staff.role) - roleRank(b.staff.role);
+      const roleDiff = roleRank(getFixedCrewRoleLabel(a.staff.role)) - roleRank(getFixedCrewRoleLabel(b.staff.role));
       if (roleDiff !== 0) return roleDiff;
       return comparePeopleByConfiguredRank(a.staff, b.staff, personnelDisplaySettings, "staff");
     }).reduce((groups, status) => {
-      const role = status.staff.role || "Crew";
+      const role = getFixedCrewRoleLabel(status.staff.role);
       const existing = groups.find((group) => group.role === role);
       if (existing) existing.members.push(status);
       else groups.push({ role, members: [status] });
@@ -18364,7 +18370,7 @@ ${swapNote}` : swapNote
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 text-[11px] text-gray-400", children: [
-                staff.role || "Crew",
+                getFixedCrewRoleLabel(staff.role),
                 isPic ? " / PIC" : ""
               ] })
             ] }, staff.id || staff.name);
@@ -18377,7 +18383,7 @@ ${swapNote}` : swapNote
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 border-t border-gray-800 pt-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300", children: [
               "Available same-unit ",
-              activeCrewConflict.staff.role || "crew"
+              getFixedCrewRoleLabel(activeCrewConflict.staff.role)
             ] }),
             activeCrewConflict.alternatives.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-0.5", children: activeCrewConflict.alternatives.slice(0, 10).map((candidate) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",

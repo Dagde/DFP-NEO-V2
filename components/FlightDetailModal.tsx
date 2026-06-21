@@ -21,7 +21,11 @@ import {
 } from '../utils/aircraftNumberFormat';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
-import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import {
+    crewPositionValuesMatch,
+    findCrewPositionEntry,
+    type CrewPositionTerminology,
+} from '../utils/crewPositionTerminology';
 import { normaliseOperationalModel } from '../utils/platformConfigService';
 import {
     getQualificationsForOperationalModel,
@@ -684,6 +688,14 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         if (activeUnitMemberCodes.length === 0) return true;
         return activeUnitMemberCodes.includes(staffUnit);
     };
+    const getFixedCrewRoleLabel = (role?: string | null): string => {
+        const rawRole = String(role || '').trim();
+        if (!rawRole) return 'Crew';
+        return findCrewPositionEntry(rawRole, crewPositionTerminology)?.label || rawRole;
+    };
+    const fixedCrewRolesMatch = (left?: string | null, right?: string | null): boolean => (
+        crewPositionValuesMatch(left, right, crewPositionTerminology)
+    );
     const fixedCrewGroups = useMemo(() => Array.from(new Set(instructorsData
         .filter(staff => staffMatchesActiveFixedCrewUnit(staff))
         .map(staff => {
@@ -810,7 +822,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     ): Instructor[] => {
         const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || '';
         const crewUnit = splitFixedCrewGroupKey(eventCrewKey).unit || normaliseFixedCrewUnitCode(staff.unit);
-        const role = String(staff.role || '').trim().toUpperCase();
+        const role = String(staff.role || '').trim();
         if (!crewUnit || !role) return [];
         const assignedToCurrentEvent = new Set([
             ...getPersonnelForConflictCheck(event),
@@ -821,7 +833,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             .filter(candidate => !assignedToCurrentEvent.has(candidate.name))
             .filter(candidate => !candidate.isAdminStaff)
             .filter(candidate => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit)
-            .filter(candidate => String(candidate.role || '').trim().toUpperCase() === role)
+            .filter(candidate => fixedCrewRolesMatch(candidate.role, role))
             .filter(candidate => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate))
             .filter(candidate => !staffHasEventConflict(candidate, bookingWindow))
             .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
@@ -880,12 +892,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 const aPic = a.staff.name === picName ? 0 : 1;
                 const bPic = b.staff.name === picName ? 0 : 1;
                 if (aPic !== bPic) return aPic - bPic;
-                const roleDiff = roleRank(a.staff.role) - roleRank(b.staff.role);
+                const roleDiff = roleRank(getFixedCrewRoleLabel(a.staff.role)) - roleRank(getFixedCrewRoleLabel(b.staff.role));
                 if (roleDiff !== 0) return roleDiff;
                 return comparePeopleByConfiguredRank(a.staff, b.staff, personnelDisplaySettings, 'staff');
             })
             .reduce<Array<{ role: string; members: typeof fixedCrewRosterStatus }>>((groups, status) => {
-                const role = status.staff.role || 'Crew';
+                const role = getFixedCrewRoleLabel(status.staff.role);
                 const existing = groups.find(group => group.role === role);
                 if (existing) existing.members.push(status);
                 else groups.push({ role, members: [status] });
@@ -1000,7 +1012,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                                     >
                                                         {[staff.rank, staff.name].filter(Boolean).join(' ')}
                                                     </button>
-                                                    <span className="shrink-0 text-[11px] text-gray-400">{staff.role || 'Crew'}{isPic ? ' / PIC' : ''}</span>
+                                                    <span className="shrink-0 text-[11px] text-gray-400">{getFixedCrewRoleLabel(staff.role)}{isPic ? ' / PIC' : ''}</span>
                                                 </div>
                                             );
                                         })}
@@ -1023,7 +1035,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                 </div>
                                 <div className="mt-3 border-t border-gray-800 pt-2">
                                     <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
-                                        Available same-unit {activeCrewConflict.staff.role || 'crew'}
+                                        Available same-unit {getFixedCrewRoleLabel(activeCrewConflict.staff.role)}
                                     </div>
                                     {activeCrewConflict.alternatives.length > 0 ? (
                                         <div className="space-y-0.5">
