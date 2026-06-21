@@ -583,6 +583,9 @@ export interface SctRequest {
     crewDisplayLabel?: string;
     crewIndividual?: string;
     crewRequirement?: CrewRequirement;
+    callsignBase?: string;
+    callsignNumber?: number;
+    callsign?: string;
 }
 
 export type PermissionRole = 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';

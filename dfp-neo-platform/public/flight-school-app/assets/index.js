@@ -71936,6 +71936,37 @@ const DfpSidePanelTimeline = ({
             "CONFIG",
             /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: assistCurrencyConfigId, onChange: (event) => setAssistCurrencyConfigId(event.target.value), className: fieldClass2, children: aircraftConfigurationDefinitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id)) })
           ] }),
+          isFixedCrewNeoAssist && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Callsign",
+            assistUnitCallsignEntries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: assistUnitCallsignBase || defaultAssistUnitCallsign,
+                  onChange: (event) => {
+                    setAssistUnitCallsignBase(event.target.value);
+                    setAssistCallsign(buildUnitEventCallsign(event.target.value, assistUnitCallsignNumber));
+                  },
+                  className: fieldClass2,
+                  children: assistUnitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: entry.callsign }, `assist-currency-callsign-${entry.id}`))
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: assistUnitCallsignNumber,
+                  onChange: (event) => {
+                    const nextNumber = Number(event.target.value);
+                    setAssistUnitCallsignNumber(nextNumber);
+                    setAssistCallsign(buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, nextNumber));
+                  },
+                  className: fieldClass2,
+                  children: assistCallsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `assist-currency-callsign-number-${option.value}`))
+                }
+              )
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${fieldClass2} border-amber-400/40 bg-amber-500/10 text-amber-100`, children: "Configure unit callsigns in Settings" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[9px] font-semibold normal-case tracking-normal text-cyan-100", children: fixedCrewAssistCallsign || "No unit callsign configured" })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71961,7 +71992,10 @@ const DfpSidePanelTimeline = ({
                   crewGroupKey: isFixedCrewNeoAssist ? selectedFixedCrewGroup : "",
                   crewUnitCode: isFixedCrewNeoAssist ? selectedFixedCrewGroup.split("::")[0] || activeAssistUnitCode : "",
                   crewDisplayLabel: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : "",
-                  crewIndividual: isFixedCrewNeoAssist ? selectedFixedCrewPic : ""
+                  crewIndividual: isFixedCrewNeoAssist ? selectedFixedCrewPic : "",
+                  callsignBase: isFixedCrewNeoAssist ? assistUnitCallsignBase || defaultAssistUnitCallsign : "",
+                  callsignNumber: isFixedCrewNeoAssist ? assistUnitCallsignNumber : 0,
+                  callsign: isFixedCrewNeoAssist ? buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, assistUnitCallsignNumber) : ""
                 };
                 onAddSctRequestFromAssist(requestType, nextRequest);
                 window.setTimeout(onSyncSctRequestsFromAssist, 120);
@@ -91849,6 +91883,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const getSctCrewDisplayLabel = (sctReq) => String(sctReq.crewDisplayLabel || "").trim();
     const getSctSelectedPerson = (sctReq) => String(sctReq.crewIndividual || sctReq.name || "").trim();
     const getSctTileCrew = (sctReq) => getSctCrewDisplayLabel(sctReq) || (sctReq.flightType === "Dual" ? String(sctReq.crewMember || "").trim() : "") || "TBA";
+    const getSctCallsign = (sctReq) => {
+      const explicitCallsign = String(sctReq.callsign || "").trim();
+      if (explicitCallsign) return explicitCallsign;
+      const callsignBase = String(sctReq.callsignBase || "").trim();
+      if (!callsignBase) return "";
+      const callsignNumber = Number.isFinite(Number(sctReq.callsignNumber)) ? Number(sctReq.callsignNumber) : 0;
+      return buildUnitEventCallsign(callsignBase, callsignNumber);
+    };
     const hasSctParticipant = (sctReq) => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
     console.log("🔍 SCT Sync - buildDfpDate:", buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
@@ -91863,6 +91905,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
       const sctSelectedPerson = getSctSelectedPerson(sctReq);
       const sctTileCrew = getSctTileCrew(sctReq);
+      const sctCallsign = getSctCallsign(sctReq);
       const existingInPriorityIndex = newPriorityEvents.findIndex(
         (e) => e.id === `sct-flight-${sctReq.id}`
       );
@@ -91883,6 +91926,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           student: sctReq.flightType === "Dual" ? sctTileCrew : "",
           pilot: sctSelectedPerson,
           flightNumber: sctEventCode,
+          callsign: sctCallsign,
           duration,
           startTime,
           flightType: sctReq.flightType,
@@ -91920,6 +91964,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           pilot: sctSelectedPerson,
           // Optional selected individual/PIC candidate.
           flightNumber: sctEventCode,
+          callsign: sctCallsign,
           duration,
           startTime,
           // Use requested time
@@ -91955,6 +92000,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
       const sctSelectedPerson = getSctSelectedPerson(sctReq);
       const sctTileCrew = getSctTileCrew(sctReq);
+      const sctCallsign = getSctCallsign(sctReq);
       const existingInPriorityIndex = newPriorityEvents.findIndex(
         (e) => e.id === `sct-ftd-${sctReq.id}`
       );
@@ -91974,6 +92020,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           student: sctReq.flightType === "Dual" ? sctTileCrew : "",
           pilot: sctSelectedPerson,
           flightNumber: sctEventCode,
+          callsign: sctCallsign,
           duration,
           startTime,
           flightType: "Dual",
@@ -92008,6 +92055,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           pilot: sctSelectedPerson,
           // Optional selected individual/PIC candidate.
           flightNumber: sctEventCode,
+          callsign: sctCallsign,
           duration,
           startTime,
           // Use requested time

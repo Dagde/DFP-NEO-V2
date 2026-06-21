@@ -2939,6 +2939,47 @@ const DfpSidePanelTimeline: React.FC<{
                                     {aircraftConfigurationDefinitions.map(definition => <option key={definition.id} value={definition.id}>{definition.label}</option>)}
                                 </select>
                             </label>
+                            {isFixedCrewNeoAssist && (
+                                <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                    Callsign
+                                    {assistUnitCallsignEntries.length > 0 ? (
+                                        <div className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
+                                            <select
+                                                value={assistUnitCallsignBase || defaultAssistUnitCallsign}
+                                                onChange={event => {
+                                                    setAssistUnitCallsignBase(event.target.value);
+                                                    setAssistCallsign(buildUnitEventCallsign(event.target.value, assistUnitCallsignNumber));
+                                                }}
+                                                className={fieldClass}
+                                            >
+                                                {assistUnitCallsignEntries.map(entry => (
+                                                    <option key={`assist-currency-callsign-${entry.id}`} value={entry.callsign}>{entry.callsign}</option>
+                                                ))}
+                                            </select>
+                                            <select
+                                                value={assistUnitCallsignNumber}
+                                                onChange={event => {
+                                                    const nextNumber = Number(event.target.value);
+                                                    setAssistUnitCallsignNumber(nextNumber);
+                                                    setAssistCallsign(buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, nextNumber));
+                                                }}
+                                                className={fieldClass}
+                                            >
+                                                {assistCallsignNumberOptions.map(option => (
+                                                    <option key={`assist-currency-callsign-number-${option.value}`} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ) : (
+                                        <div className={`${fieldClass} border-amber-400/40 bg-amber-500/10 text-amber-100`}>
+                                            Configure unit callsigns in Settings
+                                        </div>
+                                    )}
+                                    <span className="mt-1 block text-[9px] font-semibold normal-case tracking-normal text-cyan-100">
+                                        {fixedCrewAssistCallsign || 'No unit callsign configured'}
+                                    </span>
+                                </label>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => {
@@ -2963,6 +3004,11 @@ const DfpSidePanelTimeline: React.FC<{
                                         crewUnitCode: isFixedCrewNeoAssist ? selectedFixedCrewGroup.split('::')[0] || activeAssistUnitCode : '',
                                         crewDisplayLabel: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : '',
                                         crewIndividual: isFixedCrewNeoAssist ? selectedFixedCrewPic : '',
+                                        callsignBase: isFixedCrewNeoAssist ? (assistUnitCallsignBase || defaultAssistUnitCallsign) : '',
+                                        callsignNumber: isFixedCrewNeoAssist ? assistUnitCallsignNumber : 0,
+                                        callsign: isFixedCrewNeoAssist
+                                            ? buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, assistUnitCallsignNumber)
+                                            : '',
                                     };
                                     onAddSctRequestFromAssist(requestType, nextRequest);
                                     window.setTimeout(onSyncSctRequestsFromAssist, 120);
@@ -27723,6 +27769,14 @@ const App: React.FC = () => {
             || (sctReq.flightType === 'Dual' ? String(sctReq.crewMember || '').trim() : '')
             || 'TBA'
         );
+        const getSctCallsign = (sctReq: SctRequest): string => {
+            const explicitCallsign = String(sctReq.callsign || '').trim();
+            if (explicitCallsign) return explicitCallsign;
+            const callsignBase = String(sctReq.callsignBase || '').trim();
+            if (!callsignBase) return '';
+            const callsignNumber = Number.isFinite(Number(sctReq.callsignNumber)) ? Number(sctReq.callsignNumber) : 0;
+            return buildUnitEventCallsign(callsignBase, callsignNumber);
+        };
         const hasSctParticipant = (sctReq: SctRequest): boolean => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
 
         // 1. Auto-add HIGH priority SCT requests AND MEDIUM/LOW with includeInBuild=true
@@ -27741,6 +27795,7 @@ const App: React.FC = () => {
             const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
             const sctSelectedPerson = getSctSelectedPerson(sctReq);
             const sctTileCrew = getSctTileCrew(sctReq);
+            const sctCallsign = getSctCallsign(sctReq);
             // Check both highestPriorityEvents AND nextDayBuildEvents for existing event
             const existingInPriorityIndex = newPriorityEvents.findIndex(e =>
                 e.id === `sct-flight-${sctReq.id}`
@@ -27768,6 +27823,7 @@ const App: React.FC = () => {
                     student: sctReq.flightType === 'Dual' ? sctTileCrew : '',
                     pilot: sctSelectedPerson,
                     flightNumber: sctEventCode,
+                    callsign: sctCallsign,
                     duration: duration,
                     startTime: startTime,
                     flightType: sctReq.flightType,
@@ -27805,6 +27861,7 @@ const App: React.FC = () => {
                     student: sctReq.flightType === 'Dual' ? sctTileCrew : '', // Fixed Crew tiles display the selected crew group.
                     pilot: sctSelectedPerson, // Optional selected individual/PIC candidate.
                     flightNumber: sctEventCode,
+                    callsign: sctCallsign,
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
@@ -27839,6 +27896,7 @@ const App: React.FC = () => {
             const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
             const sctSelectedPerson = getSctSelectedPerson(sctReq);
             const sctTileCrew = getSctTileCrew(sctReq);
+            const sctCallsign = getSctCallsign(sctReq);
             // Check both highestPriorityEvents AND nextDayBuildEvents for existing event
             const existingInPriorityIndex = newPriorityEvents.findIndex(e =>
                 e.id === `sct-ftd-${sctReq.id}`
@@ -27865,6 +27923,7 @@ const App: React.FC = () => {
                     student: sctReq.flightType === 'Dual' ? sctTileCrew : '',
                     pilot: sctSelectedPerson,
                     flightNumber: sctEventCode,
+                    callsign: sctCallsign,
                     duration: duration,
                     startTime: startTime,
                     flightType: 'Dual',
@@ -27899,6 +27958,7 @@ const App: React.FC = () => {
                     student: sctReq.flightType === 'Dual' ? sctTileCrew : '', // Fixed Crew tiles display the selected crew group.
                     pilot: sctSelectedPerson, // Optional selected individual/PIC candidate.
                     flightNumber: sctEventCode,
+                    callsign: sctCallsign,
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
