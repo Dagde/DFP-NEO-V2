@@ -74124,12 +74124,39 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
   };
   const priorityResourceConflict = (candidate, existing) => {
-    if (!candidate.resourceId || candidate.resourceId !== existing.resourceId) return false;
-    const candidateTurnaround = getPriorityTurnaround(candidate);
-    const existingTurnaround = getPriorityTurnaround(existing);
-    const candidateEndWithTurnaround = candidate.startTime + candidate.duration + candidateTurnaround;
-    const existingEndWithTurnaround = existing.startTime + existing.duration + existingTurnaround;
-    return candidate.startTime < existingEndWithTurnaround && existing.startTime < candidateEndWithTurnaround;
+    return !!getPriorityResourceConflictDetail(candidate, existing);
+  };
+  const getPriorityResourceConflictDetail = (candidate, existing) => {
+    if (!candidate.resourceId || candidate.resourceId !== existing.resourceId) return null;
+    const candidateStartsFirst = candidate.startTime <= existing.startTime;
+    const previousEvent = candidateStartsFirst ? candidate : existing;
+    const nextEvent = candidateStartsFirst ? existing : candidate;
+    const previousEndTime = previousEvent.startTime + previousEvent.duration;
+    const nextStartTime = nextEvent.startTime;
+    const baseTurnaround = getPriorityTurnaround(previousEvent);
+    const commonPersonnel = getPersonnel(previousEvent).filter((person) => person && eventHasPerson(nextEvent, person));
+    const previousSyllabus = syllabusDetails.find((s) => s.id === previousEvent.flightNumber || s.code === previousEvent.flightNumber);
+    const nextSyllabus = syllabusDetails.find((s) => s.id === nextEvent.flightNumber || s.code === nextEvent.flightNumber);
+    const previousOffsets = getScheduleEventBookingOffsets(previousEvent, previousSyllabus);
+    const nextOffsets = getScheduleEventBookingOffsets(nextEvent, nextSyllabus);
+    const sharedCrewGap = commonPersonnel.length > 0 ? previousOffsets.postOffset + nextOffsets.preOffset : null;
+    const requiredGap = Math.max(baseTurnaround, sharedCrewGap ?? 0);
+    const actualGap = nextStartTime - previousEndTime;
+    if (actualGap + 1e-4 >= requiredGap) return null;
+    return {
+      reason: commonPersonnel.length > 0 && (sharedCrewGap ?? 0) > baseTurnaround ? "RESOURCE_SHARED_CREW_TURNAROUND" : "RESOURCE_CONFLICT",
+      conflictingEvent: existing.flightNumber,
+      resourceId: candidate.resourceId,
+      previousEvent: previousEvent.flightNumber,
+      nextEvent: nextEvent.flightNumber,
+      previousEndTime,
+      nextStartTime,
+      gapMinutes: Math.max(0, Math.round(actualGap * 60)),
+      requiredGapMinutes: Math.round(requiredGap * 60),
+      baseTurnaroundMinutes: Math.round(baseTurnaround * 60),
+      sharedCrewGapMinutes: sharedCrewGap === null ? null : Math.round(sharedCrewGap * 60),
+      commonPersonnel
+    };
   };
   const priorityPersonnelConflict = (candidate, existing) => {
     if (!getPersonnel(candidate).some((person) => person && eventHasPerson(existing, person))) return false;
@@ -74927,11 +74954,25 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           fixedCrewPerf.counters.resourceConflictChecks += 1;
           const resourceConflictStart = fixedCrewPerfNow();
-          const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
+          let resourceConflictDetail = null;
+          const resourceConflict = generatedEvents.find((existing) => {
+            resourceConflictDetail = getPriorityResourceConflictDetail(candidate, existing);
+            return !!resourceConflictDetail;
+          });
           addFixedCrewPerfTiming("resourceConflictChecks", resourceConflictStart);
           if (resourceConflict) {
-            incrementFixedCrewRejection("RESOURCE_CONFLICT");
-            pushFixedCrewAttempt({ event: candidate.flightNumber, source, startTime, resourceId, outcome: "rejected", reason: "RESOURCE_CONFLICT", conflictingEvent: resourceConflict.flightNumber });
+            const reason = resourceConflictDetail?.reason || "RESOURCE_CONFLICT";
+            incrementFixedCrewRejection(reason);
+            pushFixedCrewAttempt({
+              event: candidate.flightNumber,
+              source,
+              startTime,
+              resourceId,
+              outcome: "rejected",
+              reason,
+              conflictingEvent: resourceConflict.flightNumber,
+              resourceConflictDetail
+            });
             continue;
           }
           const selectCrewStart = fixedCrewPerfNow();
@@ -74941,6 +74982,40 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const candidateBookingWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
           const crewOverlap = findPlacedFixedCrewOverlap(assignment.crew, candidateBookingWindow);
           const assignmentCrewDisplay = getFixedCrewDisplayCrew(assignment.crew);
+          const candidateWithAssignedCrew = {
+            ...candidate,
+            instructor: assignment.pic.name,
+            pilot: assignment.pic.name,
+            student: assignmentCrewDisplay,
+            crew: assignmentCrewDisplay,
+            attendees: assignment.members.map((staff) => staff.name),
+            fixedCrewGroup: assignment.crew,
+            fixedCrewPic: assignment.pic.name
+          };
+          let assignedCrewResourceConflictDetail = null;
+          const assignedCrewResourceConflict = generatedEvents.find((existing) => {
+            assignedCrewResourceConflictDetail = getPriorityResourceConflictDetail(candidateWithAssignedCrew, existing);
+            return !!assignedCrewResourceConflictDetail;
+          });
+          if (assignedCrewResourceConflict) {
+            const reason = assignedCrewResourceConflictDetail?.reason || "RESOURCE_CONFLICT";
+            incrementFixedCrewRejection(reason);
+            pushFixedCrewAttempt({
+              event: candidate.flightNumber,
+              source,
+              crew: assignment.crew,
+              crewLabel: getFixedCrewCrewLabel(assignment.crew),
+              crewUnit: getFixedCrewCrewUnit(assignment.crew) || null,
+              startTime,
+              resourceId,
+              pic: assignment.pic.name,
+              outcome: "rejected",
+              reason,
+              conflictingEvent: assignedCrewResourceConflict.flightNumber,
+              resourceConflictDetail: assignedCrewResourceConflictDetail
+            });
+            continue;
+          }
           if (crewOverlap) {
             incrementFixedCrewRejection("CREW_GROUP_CONFLICT");
             pushFixedCrewAttempt({
@@ -80177,12 +80252,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           return null;
         }
         const candidate = {
+          id: `air-combat-formation-resource-${groupId}-${resourceId}`,
           type: "flight",
+          instructor: "",
+          student: "",
           pilot: member.staff.name,
+          crew: "",
           flightNumber: member.item.code,
           duration: member.item.duration,
           startTime,
           resourceId,
+          flightType: "Solo",
           preStart: member.item.preFlightTime,
           postEnd: member.item.postFlightTime,
           acceptableAircraftConfigs: normaliseAircraftConfigRequirement(member.item),
